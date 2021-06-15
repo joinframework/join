@@ -466,6 +466,10 @@ TEST (JsonReader, fail)
     Value value;
 
     stream.clear ();
+    stream.str ("\"payload should be an object or array, not a string\"");
+    ASSERT_EQ (value.jsonRead (stream), -1);
+
+    stream.clear ();
     stream.str ("[Infinit]");
     ASSERT_EQ (value.jsonRead (stream), -1);
 
@@ -479,10 +483,6 @@ TEST (JsonReader, fail)
 
     stream.clear ();
     stream.str ("[fals]");
-    ASSERT_EQ (value.jsonRead (stream), -1);
-
-    stream.clear ();
-    stream.str ("\"payload should be an object or array, not a string\"");
     ASSERT_EQ (value.jsonRead (stream), -1);
 
     stream.clear ();
@@ -511,6 +511,10 @@ TEST (JsonReader, fail)
 
     stream.clear ();
     stream.str ("[\"Extra close\"]]");
+    ASSERT_EQ (value.jsonRead (stream), -1);
+
+    stream.clear ();
+    stream.str ("[\"Missing quote]");
     ASSERT_EQ (value.jsonRead (stream), -1);
 
     stream.clear ();

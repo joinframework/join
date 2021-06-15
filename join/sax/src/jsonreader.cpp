@@ -72,22 +72,33 @@ int JsonReader::readValue (View& document)
 {
     if (skipComment (document) == 0)
     {
-        switch (document.peek ())
+        if (document.getIf ('n'))
         {
-            case 'n':
-                return readNull (document);
-            case 't':
-                return readTrue (document);
-            case 'f':
-                return readFalse (document);
-            case '"':
-                return readString (document);
-            case '[':
-                return readArray (document);
-            case '{':
-                return readObject (document);
-            default:
-                return readNumber (document);
+            return readNull (document);
+        }
+        else if (document.getIf ('t'))
+        {
+            return readTrue (document);
+        }
+        else if (document.getIf ('f'))
+        {
+            return readFalse (document);
+        }
+        else if (document.getIf ('"'))
+        {
+            return readString (document);
+        }
+        else if (document.getIf ('['))
+        {
+            return readArray (document);
+        }
+        else if (document.getIf ('{'))
+        {
+            return readObject (document);
+        }
+        else
+        {
+            return readNumber (document);
         }
     }
 
@@ -100,7 +111,7 @@ int JsonReader::readValue (View& document)
 // =========================================================================
 int JsonReader::readNull (View& document)
 {
-    if (unlikely ((document.get () != 'n') || (document.get () != 'u') || (document.get () != 'l') || (document.get () != 'l')))
+    if (unlikely ((document.get () != 'u') || (document.get () != 'l') || (document.get () != 'l')))
     {
         join::lastError = make_error_code (SaxErrc::InvalidValue);
         return -1;
@@ -115,7 +126,7 @@ int JsonReader::readNull (View& document)
 // =========================================================================
 int JsonReader::readTrue (View& document)
 {
-    if (unlikely ((document.get () != 't') || (document.get () != 'r') || (document.get () != 'u') || (document.get () != 'e')))
+    if (unlikely ((document.get () != 'r') || (document.get () != 'u') || (document.get () != 'e')))
     {
         join::lastError = make_error_code (SaxErrc::InvalidValue);
         return -1;
@@ -130,7 +141,7 @@ int JsonReader::readTrue (View& document)
 // =========================================================================
 int JsonReader::readFalse (View& document)
 {
-    if (unlikely ((document.get () != 'f') || (document.get () != 'a') || (document.get () != 'l') || (document.get () != 's') || (document.get () != 'e')))
+    if (unlikely ((document.get () != 'a') || (document.get () != 'l') || (document.get () != 's') || (document.get () != 'e')))
     {
         join::lastError = make_error_code (SaxErrc::InvalidValue);
         return -1;
@@ -635,12 +646,6 @@ int JsonReader::readStringSlow (View& document, bool isKey, std::string& output)
 // =========================================================================
 int JsonReader::readString (View& document, bool isKey)
 {
-    if (unlikely (!document.getIf ('"')))
-    {
-        join::lastError = make_error_code (JsonErrc::MissingQuote);
-        return -1;
-    }
-
     auto start = document.data ();
     size_t len = document.size ();
 
@@ -660,7 +665,7 @@ int JsonReader::readString (View& document, bool isKey)
         }
     }
 
-    join::lastError = make_error_code (JsonErrc::IllegalCharacter);
+    join::lastError = make_error_code (JsonErrc::MissingQuote);
     return false;
 }
 
@@ -670,12 +675,6 @@ int JsonReader::readString (View& document, bool isKey)
 // =========================================================================
 int JsonReader::readArray (View& document)
 {
-    if (unlikely (!document.getIf ('[')))
-    {
-        join::lastError = make_error_code (JsonErrc::MissingSquareBracket);
-        return -1;
-    }
-
     if (startArray () == -1)
     {
         return -1;
@@ -732,12 +731,6 @@ int JsonReader::readArray (View& document)
 // =========================================================================
 int JsonReader::readObject (View& document)
 {
-    if (unlikely (!document.getIf ('{')))
-    {
-        join::lastError = make_error_code (JsonErrc::MissingCurlyBracket);
-        return -1;
-    }
-
     if (startObject () == -1)
     {
         return -1;
@@ -755,7 +748,7 @@ int JsonReader::readObject (View& document)
 
     for (;;)
     {
-        if (document.peek () != '"')
+        if (unlikely (document.get () != '"'))
         {
             join::lastError = make_error_code (JsonErrc::MissingQuote);
             return -1;
