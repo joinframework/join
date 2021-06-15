@@ -25,7 +25,7 @@ jobs:
 
     - name: Test
       working-directory: ${{github.workspace}}/build
-      run: sudo ctest -VV -C Debug
+      run: ctest --output-on-failure -C Debug
 
     - name: Generate coverage report
       run: lcov --directory . --capture --output-file lcov.info
