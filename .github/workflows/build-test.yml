@@ -31,7 +31,7 @@ jobs:
       run: lcov --directory . --capture --output-file lcov.info
 
     - name: Cleanup coverage report
-      run: lcov --remove lcov.info '${{github.workspace}}/dconv/tests/*' '${{github.workspace}}/build/*' '/usr/include/*' -o lcov.info
+      run: lcov --remove lcov.info '${{github.workspace}}/build/*' '${{github.workspace}}/join/core/tests/*' '${{github.workspace}}/join/sax/tests/*' '/usr/include/*' -o lcov.info
 
     - name: Deploy coverage
       uses: coverallsapp/github-action@v1.1.2
