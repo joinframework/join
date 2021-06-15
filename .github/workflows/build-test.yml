@@ -1,0 +1,40 @@
+name: build-test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Fetch
+      uses: actions/checkout@v2
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=OFF -DJOIN_ENABLE_TESTS=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config Debug
+
+    - name: Install lcov
+      run: sudo apt install lcov -y
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: sudo ctest -VV -C Debug
+
+    - name: Generate coverage report
+      run: lcov --directory . --capture --output-file lcov.info
+
+    - name: Cleanup coverage report
+      run: lcov --remove lcov.info '${{github.workspace}}/dconv/tests/*' '${{github.workspace}}/build/*' '/usr/include/*' -o lcov.info
+
+    - name: Deploy coverage
+      uses: coverallsapp/github-action@v1.1.2
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        path-to-lcov: ./lcov.info
