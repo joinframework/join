@@ -338,6 +338,11 @@ void JsonWriter::writeInt (int32_t value)
         append ('-');
         writeUint64 (static_cast <uint64_t> (std::numeric_limits <int32_t>::max ()) + 1);
     }
+    else if (value < 0)
+    {
+        append ('-');
+        writeUint64 (-value);
+    }
     else
     {
         writeInt64 (value);
