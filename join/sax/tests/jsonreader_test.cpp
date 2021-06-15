@@ -32,6 +32,9 @@
 #include <sstream>
 #include <fstream>
 
+// C.
+#include <cmath>
+
 using join::sax::Array;
 using join::sax::Member;
 using join::sax::Object;
@@ -85,6 +88,54 @@ TEST (JsonReader, pass)
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     ASSERT_DOUBLE_EQ (value[0].getDouble (), 1.234567890E+34);
+
+    stream.clear ();
+    stream.str ("[NaN]");
+    ASSERT_NE (value.jsonRead (stream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    ASSERT_TRUE (!std::signbit (value[0].getDouble ()) && std::isnan (value[0].getDouble ()));
+
+    stream.clear ();
+    stream.str ("[-NaN]");
+    ASSERT_NE (value.jsonRead (stream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    ASSERT_TRUE (std::signbit (value[0].getDouble ()) && std::isnan (value[0].getDouble ()));
+
+    stream.clear ();
+    stream.str ("[Inf]");
+    ASSERT_NE (value.jsonRead (stream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    ASSERT_TRUE (!std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
+
+    stream.clear ();
+    stream.str ("[-Inf]");
+    ASSERT_NE (value.jsonRead (stream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    ASSERT_TRUE (std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
+
+    stream.clear ();
+    stream.str ("[Infinity]");
+    ASSERT_NE (value.jsonRead (stream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    ASSERT_TRUE (!std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
+
+    stream.clear ();
+    stream.str ("[-Infinity]");
+    ASSERT_NE (value.jsonRead (stream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    ASSERT_TRUE (std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
 
     stream.clear ();
     stream.str ("[true]");
@@ -415,6 +466,22 @@ TEST (JsonReader, fail)
     Value value;
 
     stream.clear ();
+    stream.str ("[Infinit]");
+    ASSERT_EQ (value.jsonRead (stream), -1);
+
+    stream.clear ();
+    stream.str ("[nul]");
+    ASSERT_EQ (value.jsonRead (stream), -1);
+
+    stream.clear ();
+    stream.str ("[tru]");
+    ASSERT_EQ (value.jsonRead (stream), -1);
+
+    stream.clear ();
+    stream.str ("[fals]");
+    ASSERT_EQ (value.jsonRead (stream), -1);
+
+    stream.clear ();
     stream.str ("\"payload should be an object or array, not a string\"");
     ASSERT_EQ (value.jsonRead (stream), -1);
 
@@ -543,7 +610,7 @@ TEST (JsonReader, fail)
     ASSERT_EQ (value.jsonRead (stream), -1);
 
     stream.clear ();
-    stream.str ("[\"mismatch\"}");
+    stream.str ("[\"Mismatch\"}");
     ASSERT_EQ (value.jsonRead (stream), -1);
 }
 
