@@ -199,6 +199,18 @@ TEST (View, at)
 }
 
 /**
+ * @brief increment test.
+ */
+TEST (View, increment)
+{
+    View view ("hello world");
+    ASSERT_EQ (view.size (), 11);
+    ++view;
+    ASSERT_EQ (view.peek (), 'e');
+    ASSERT_EQ (view.size (), 10);
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char **argv)

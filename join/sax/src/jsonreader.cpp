@@ -72,33 +72,28 @@ int JsonReader::readValue (View& document)
 {
     if (skipComment (document) == 0)
     {
-        if (document.getIf ('n'))
+        switch (document.peek ())
         {
-            return readNull (document);
-        }
-        else if (document.getIf ('t'))
-        {
-            return readTrue (document);
-        }
-        else if (document.getIf ('f'))
-        {
-            return readFalse (document);
-        }
-        else if (document.getIf ('"'))
-        {
-            return readString (document);
-        }
-        else if (document.getIf ('['))
-        {
-            return readArray (document);
-        }
-        else if (document.getIf ('{'))
-        {
-            return readObject (document);
-        }
-        else
-        {
-            return readNumber (document);
+            case 'n':
+                ++document;
+                return readNull (document);
+            case 't':
+                ++document;
+                return readTrue (document);
+            case 'f':
+                ++document;
+                return readFalse (document);
+            case '"':
+                ++document;
+                return readString (document);
+            case '[':
+                ++document;
+                return readArray (document);
+            case '{':
+                ++document;
+                return readObject (document);
+            default:
+                return readNumber (document);
         }
     }
 
@@ -195,11 +190,6 @@ const double& JsonReader::pow10 (size_t exponent)
         1e+306, 1e+307, 1e+308
     };
 
-    if (exponent > 308)
-    {
-        throw std::invalid_argument ("exponent is invalid");
-    }
-
     return result [exponent];
 }
 
@@ -252,7 +242,7 @@ int JsonReader::readNumber (View& document)
             }
 
             u = (u * 10) + digit;
-            document.get ();
+            ++document;
         }
     }
     else if (likely (document.getIf ('I') && document.getIf ('n') && document.getIf ('f')))
@@ -332,7 +322,7 @@ int JsonReader::readNumber (View& document)
                     exp = (exp * 10) + digit;
                 }
 
-                document.get ();
+                ++document;
             }
         }
         else
@@ -812,7 +802,7 @@ void JsonReader::skipWhitespace (View& document)
     char current;
     while ((current = document.peek ()) == ' ' || current == '\n' || current == '\r' || current == '\t')
     {
-        document.get ();
+        ++document;
     }
 }
 

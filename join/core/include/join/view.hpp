@@ -167,9 +167,20 @@ namespace join
          * @return reference to the requested element.
          * @throw std::bad_cast.
          */
-        const char& operator[] (size_t pos) const
+        constexpr const char& operator[] (size_t pos) const
         {
             return _ptr[pos];
+        }
+
+        /**
+         * @brief perform pre-increment operation.
+         * @return a reference of the current object.
+         */
+        constexpr View& operator++ ()
+        {
+            ++_ptr;
+            --_len;
+            return *this;
         }
 
     protected:
