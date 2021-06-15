@@ -2,8 +2,8 @@ extraction:
   cpp:
     prepare:
       packages:
-        - libcurl4-gnutls-dev
         - wget
+        - libssl-dev
     after_prepare:
       - DEPS_DIR="$HOME/deps"
       - mkdir ${DEPS_DIR} && cd ${DEPS_DIR}

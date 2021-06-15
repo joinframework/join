@@ -23,6 +23,7 @@ if(JOIN_ENABLE_TESTS)
         URL https://github.com/google/googletest/archive/refs/heads/master.zip
     )
     FetchContent_MakeAvailable(googletest)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
     enable_testing()
 endif()
 

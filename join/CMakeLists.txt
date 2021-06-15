@@ -1,21 +1,31 @@
 cmake_minimum_required(VERSION 3.14)
 
+find_package(OpenSSL REQUIRED)
+include_directories(${OPENSSL_INCLUDE_DIR})
+
 set(PRIVATE_HEADER_DIRS
     core/src
+    sax/src
 )
 
 set(PUBLIC_HEADER_DIRS
     core/include
+    sax/include
 )
 
 set(PUBLIC_HEADERS
     core/include/join/error.hpp
     core/include/join/traits.hpp
     core/include/join/variant.hpp
+    core/include/join/view.hpp
 )
 
 set(SOURCES
     core/src/error.cpp
+    sax/src/value.cpp
+    sax/src/jsonwriter.cpp
+    sax/src/jsonreader.cpp
+    sax/src/sax.cpp
 )
 
 add_library(${PROJECT_NAME} ${SOURCES})
@@ -37,4 +47,5 @@ configure_file(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION lib/pkgconfig)
 
 add_subdirectory(core)
+add_subdirectory(sax)
 
