@@ -78,35 +78,35 @@ namespace sax
 
     protected:
         /**
-         * @brief Parse a document.
+         * @brief parse a document.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
         virtual int read (join::View& document) override;
 
         /**
-         * @brief Parse a JSON value.
+         * @brief parse a JSON value.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
         int readValue (join::View& document);
 
         /**
-         * @brief Parse a null value.
+         * @brief parse a null value.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
         int readNull (join::View& document);
 
         /**
-         * @brief Parse a true value.
+         * @brief parse a true value.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
         int readTrue (join::View& document);
 
         /**
-         * @brief Parse a false value.
+         * @brief parse a false value.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
@@ -121,7 +121,7 @@ namespace sax
         const double& pow10 (size_t exponent);
 
         /**
-         * @brief Parse a number value.
+         * @brief parse a number value.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
@@ -138,45 +138,45 @@ namespace sax
         /**
          * @brief .
          * @param codepoint UTF8 codepoint.
-         * @param output Parse output string.
+         * @param output parse output string.
          */
         void encodeUtf8 (uint32_t codepoint, std::string& output);
 
         /**
-         * @brief Parse unicode.
+         * @brief parse unicode.
          * @param document document to parse.
-         * @param output Parse output string.
+         * @param output parse output string.
          * @return 0 on success, -1 otherwise.
          */
         int readUnicode (join::View& document, std::string& output);
 
         /**
-         * @brief Parse escaped sequence.
+         * @brief parse escaped sequence.
          * @param document document to parse.
-         * @param output Parse output string.
+         * @param output parse output string.
          * @return 0 on success, -1 otherwise.
          */
         int readEscaped (join::View& document, std::string& output);
 
         /**
-         * @brief Parse UTF8.
+         * @brief parse UTF8.
          * @param document document to parse.
-         * @param output Parse output string.
+         * @param output parse output string.
          * @return 0 on success, -1 otherwise.
          */
-        int readUtf8 (join::View& document, std::string& output);
+        //int readUtf8 (join::View& document, std::string& output);
 
         /**
-         * @brief Parse a string value.
+         * @brief parse a string value.
          * @param document document to parse.
          * @param isKey indicate whether the string to parse is a key or not.
-         * @param output Parse output string.
+         * @param output parse output string.
          * @return 0 on success, -1 otherwise.
          */
         int readStringSlow (View& document, bool isKey, std::string& output);
 
         /**
-         * @brief Parse a string value.
+         * @brief parse a string value.
          * @param document document to parse.
          * @param isKey indicate whether the string to parse is a key or not.
          * @return 0 on success, -1 otherwise.
@@ -184,27 +184,27 @@ namespace sax
         int readString (join::View& document, bool isKey = false);
 
         /**
-         * @brief Parse an array value.
+         * @brief parse an array value.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
         int readArray (join::View& document);
 
         /**
-         * @brief Parse an object value.
+         * @brief parse an object value.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
         int readObject (join::View& document);
 
         /**
-         * @brief Skip whitespace.
+         * @brief skip whitespace.
          * @param document document to parse.
          */
         void skipWhitespace (join::View& document);
 
         /**
-         * @brief Skip comment.
+         * @brief skip comment.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */

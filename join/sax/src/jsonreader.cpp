@@ -547,7 +547,7 @@ int JsonReader::readEscaped (View& document, std::string& output)
 //   CLASS     : JsonReader
 //   METHOD    : readUtf8
 // =========================================================================
-int JsonReader::readUtf8 (View& document, std::string& output)
+/*int JsonReader::readUtf8 (View& document, std::string& output)
 {
     size_t count = 0;
 
@@ -588,7 +588,7 @@ int JsonReader::readUtf8 (View& document, std::string& output)
     }
 
     return 0;
-}
+}*/
 
 // =========================================================================
 //   CLASS     : JsonReader
@@ -614,13 +614,13 @@ int JsonReader::readStringSlow (View& document, bool isKey, std::string& output)
             join::lastError = make_error_code (JsonErrc::IllegalCharacter);
             return -1;
         }
-        //else if (unlikely (static_cast <uint8_t> (document.peek ()) > 0x7F))
-        //{
-        //    if (readUtf8 (document, output) == -1)
-        //    {
-        //        return -1;
-        //    }
-        //}
+        /*else if (unlikely (static_cast <uint8_t> (document.peek ()) > 0x7F))
+        {
+            if (readUtf8 (document, output) == -1)
+            {
+                return -1;
+            }
+        }*/
         else
         {
             output.push_back (document.get ());
