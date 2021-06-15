@@ -333,10 +333,10 @@ int JsonWriter::stopObject ()
 // =========================================================================
 void JsonWriter::writeInt (int32_t value)
 {
-    if (value == std::numeric_limits <int64_t>::min ())
+    if (value == std::numeric_limits <int32_t>::min ())
     {
         append ('-');
-        writeUint64 (static_cast <uint64_t> (std::numeric_limits <int64_t>::max ()) + 1);
+        writeUint64 (static_cast <uint64_t> (std::numeric_limits <int32_t>::max ()) + 1);
     }
     else
     {
