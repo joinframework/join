@@ -16,3 +16,7 @@ add_executable(variant.gtest variant_test.cpp)
 target_link_libraries(variant.gtest ${PROJECT_NAME} gtest gtest_main pthread gcov)
 gtest_discover_tests(variant.gtest)
 
+add_executable(view.gtest view_test.cpp)
+target_link_libraries(view.gtest ${PROJECT_NAME} gtest gtest_main pthread gcov)
+gtest_discover_tests(view.gtest)
+
