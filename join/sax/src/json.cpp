@@ -1294,8 +1294,6 @@ int JsonReader::readArray (View& document)
             {
                 return -1;
             }
-
-            continue;
         }
         else if (document.getIf (']'))
         {
@@ -1372,8 +1370,6 @@ int JsonReader::readObject (View& document)
             {
                 return -1;
             }
-
-            continue;
         }
         else if (document.getIf ('}'))
         {
