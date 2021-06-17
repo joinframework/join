@@ -261,7 +261,7 @@ namespace join
              * @brief copy constructor.
              * @param other object to copy.
              */
-            VariantStorage (const VariantStorage& other)
+            constexpr VariantStorage (const VariantStorage& other)
             : _which (other._which)
             {
                 VariantHelper <Ts...>::copy (other._which, other.storage (), storage ());
@@ -271,7 +271,7 @@ namespace join
              * @brief move constructor.
              * @param other object to move.
              */
-            VariantStorage (VariantStorage&& other) noexcept
+            constexpr VariantStorage (VariantStorage&& other) noexcept
             : _which (other._which)
             {
                 VariantHelper <Ts...>::move (other._which, other.storage (), storage ());
@@ -301,7 +301,7 @@ namespace join
              * @param other object to copy.
              * @return a reference of the current object.
              */
-            VariantStorage& operator= (const VariantStorage& other)
+            constexpr VariantStorage& operator= (const VariantStorage& other)
             {
                 VariantHelper <Ts...>::destroy (_which, storage ());
                 VariantHelper <Ts...>::copy (other._which, other.storage (), storage ());
@@ -314,7 +314,7 @@ namespace join
              * @param other object to move.
              * @return a reference of the current object.
              */
-            VariantStorage& operator= (VariantStorage&& other) noexcept
+            constexpr VariantStorage& operator= (VariantStorage&& other) noexcept
             {
                 VariantHelper <Ts...>::destroy (_which, storage ());
                 VariantHelper <Ts...>::move (other._which, other.storage (), storage ());
@@ -326,7 +326,7 @@ namespace join
              * @brief get storage address removing const qualifier.
              * @return storage address.
              */
-            void* storage () const
+            constexpr void* storage () const
             {
                 return const_cast <void *> (static_cast <const void *> (std::addressof (_data)));
             }
@@ -373,19 +373,19 @@ namespace join
         /**
          * @brief default constructor.
          */
-        Variant () = default;
+        constexpr Variant () = default;
 
         /**
          * @brief copy constructor.
          * @param other object to copy.
          */
-        Variant (const Variant&) = default;
+        constexpr Variant (const Variant&) = default;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        Variant (Variant&&) = default;
+        constexpr Variant (Variant&&) = default;
 
         /**
          * @brief constructs a Variant holding the alternative selected by overload resolution.
@@ -459,14 +459,14 @@ namespace join
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        Variant& operator= (const Variant& other) = default;
+        constexpr Variant& operator= (const Variant& other) = default;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        Variant& operator= (Variant&& other) = default;
+        constexpr Variant& operator= (Variant&& other) = default;
 
         /**
          * @brief assign a Variant holding the alternative selected by overload resolution.
@@ -474,7 +474,7 @@ namespace join
          * @return a reference of the current object.
          */
         template <typename T, typename Match = match_t <T&&, Ts...>>
-        std::enable_if_t <is_unique <Match, Ts...>::value
+        constexpr std::enable_if_t <is_unique <Match, Ts...>::value
             && std::is_constructible <Match, T&&>::value, Variant&>
         operator= (T&& t) noexcept
         {
@@ -509,7 +509,7 @@ namespace join
          * @param args argument(s) to set.
          */
         template <typename T, typename... Args>
-        std::enable_if_t <is_unique <T, Ts...>::value
+        constexpr std::enable_if_t <is_unique <T, Ts...>::value
             && std::is_constructible <T, Args&&...>::value, T&>
         set (Args&& ...args)
         {
@@ -521,7 +521,7 @@ namespace join
          * @param args argument(s) to set.
          */
         template <typename T, typename Up, typename... Args>
-        std::enable_if_t <is_unique <T, Ts...>::value
+        constexpr std::enable_if_t <is_unique <T, Ts...>::value
             && std::is_constructible <T, std::initializer_list <Up>&, Args&&...>::value, T&>
         set (std::initializer_list <Up> il, Args&&... args)
         {
@@ -533,7 +533,7 @@ namespace join
          * @param args argument(s) to set.
          */
         template <std::size_t I, typename... Args>
-        std::enable_if_t <std::is_constructible <
+        constexpr std::enable_if_t <std::is_constructible <
             find_element_t <I, Ts...>, Args&&...>::value, find_element_t <I, Ts...>&>
         set (Args&& ...args)
         {
@@ -547,7 +547,7 @@ namespace join
          * @param args argument(s) to set.
          */
         template <std::size_t I, class Up, class... Args>
-        std::enable_if_t <
+        constexpr std::enable_if_t <
             std::is_constructible <find_element_t <I, Ts...>,
                 std::initializer_list <Up>&, Args&&...>::value, find_element_t <I, Ts...>&>
         set (std::initializer_list <Up> il, Args&&... args)
@@ -660,47 +660,13 @@ namespace join
             return details::VariantHelper <Ts...>::isLower (this->_which, this->storage (), rhs.storage ());
         }
 
-        /**
-         * @brief check if greater than.
-         * @param rhs value to compare to.
-         * @return true if greater than, false otherwise.
-         */
-        constexpr bool greater (const Variant& rhs) const
-        {
-            if (index () > rhs.index ())
-            {
-                return true;
-            }
-            if (index () < rhs.index ())
-            {
-                return false;
-            }
-            return details::VariantHelper <Ts...>::isGreater (this->_which, this->storage (), rhs.storage ());
-        }
-
         // friendship with equal operator.
         template <typename... _Ts>
         friend constexpr bool operator== (const Variant <_Ts...>& lhs, const Variant <_Ts...>& rhs);
 
-        // friendship with not equal operator.
-        template <typename... _Ts>
-        friend constexpr bool operator!= (const Variant <_Ts...>& lhs, const Variant <_Ts...>& rhs);
-
         // friendship with lower operator.
         template <typename... _Ts>
         friend constexpr bool operator< (const Variant <_Ts...>& lhs, const Variant <_Ts...>& rhs);
-
-        // friendship with greater operator.
-        template <typename... _Ts>
-        friend constexpr bool operator> (const Variant <_Ts...>& lhs, const Variant <_Ts...>& rhs);
-
-        // friendship with lower or equal operator.
-        template <typename... _Ts>
-        friend constexpr bool operator<= (const Variant <_Ts...>& lhs, const Variant <_Ts...>& rhs);
-
-        // friendship with greater or equal operator.
-        template <typename... _Ts>
-        friend constexpr bool operator>= (const Variant <_Ts...>& lhs, const Variant <_Ts...>& rhs);
     };
 
     /**
@@ -710,7 +676,7 @@ namespace join
      * @return true if equal.
      */
     template <typename... Ts>
-    inline constexpr bool operator== (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
+    constexpr bool operator== (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
     {
         return lhs.equal (rhs);
     }
@@ -722,9 +688,9 @@ namespace join
      * @return true if not equal.
      */
     template <typename... Ts>
-    inline constexpr bool operator!= (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
+    constexpr bool operator!= (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
     {
-        return !lhs.equal (rhs);
+        return !(lhs == rhs);
     }
 
     /**
@@ -734,7 +700,7 @@ namespace join
      * @return true if lower than.
      */
     template <typename... Ts>
-    inline constexpr bool operator< (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
+    constexpr bool operator< (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
     {
         return lhs.lower (rhs);
     }
@@ -746,9 +712,9 @@ namespace join
      * @return true if greater than.
      */
     template <typename... Ts>
-    inline constexpr bool operator> (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
+    constexpr bool operator> (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
     {
-        return lhs.greater (rhs);
+        return rhs < lhs;
     }
 
     /**
@@ -758,9 +724,9 @@ namespace join
      * @return true if lower or equal than.
      */
     template <typename... Ts>
-    inline constexpr bool operator<= (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
+    constexpr bool operator<= (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
     {
-        return !lhs.greater (rhs);
+        return !(rhs < lhs);
     }
 
     /**
@@ -770,9 +736,9 @@ namespace join
      * @return true if greater or equal than.
      */
     template <typename... Ts>
-    inline constexpr bool operator>= (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
+    constexpr bool operator>= (const Variant <Ts...>& lhs, const Variant <Ts...>& rhs)
     {
-        return !lhs.lower (rhs);
+        return !(lhs < rhs);
     }
 }
 

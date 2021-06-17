@@ -26,15 +26,17 @@
 #define __JOIN_VALUE_HPP__
 
 // libjoin.
-#include <join/jsonwriter.hpp>
-#include <join/jsonreader.hpp>
 #include <join/variant.hpp>
 #include <join/error.hpp>
 
 // C++.
 #include <functional>
+#include <ostream>
 #include <string>
 #include <vector>
+
+// C.
+#include <cmath>
 
 namespace join
 {
@@ -53,496 +55,1252 @@ namespace sax
     using Object = std::vector <Member>;
 
     /**
-     * @brief Value.
+     * @brief value class.
      */
     class Value : public Variant <std::nullptr_t, bool, int32_t, uint32_t, int64_t, uint64_t, double, std::string, Array, Object>
     {
     public:
         /**
-         * @brief Value index.
+         * @brief nested value type index.
          */
         enum Index : size_t
         {
-            Null        = 0,    /**< Index of the std::nullptr_t alternative that can be held by the Value object. */
-            Boolean     = 1,    /**< Index of the boolean alternative that can be held by the Value object. */
-            Integer     = 2,    /**< Index of the 32 bits integer alternative that can be held by the Value object. */
-            Unsigned    = 3,    /**< Index of the 32 bits unsigned integer alternative that can be held by the Value object. */
-            Integer64   = 4,    /**< Index of the 64 bits integer alternative that can be held by the Value object. */
-            Unsigned64  = 5,    /**< Index of the 64 bits unsigned integer alternative that can be held by the Value object. */
-            Real        = 6,    /**< Index of the real alternative that can be held by the Value object. */
-            String      = 7,    /**< Index of the std::string alternative that can be held by the Value object. */
-            ArrayValue  = 8,    /**< Index of the Array alternative that can be held by the Value object. */
-            ObjectValue = 9,    /**< Index of the Object alternative that can be held by the Value object. */
+            Null        = 0,    /**< index of the std::nullptr_t alternative that can be held by the Value object. */
+            Boolean     = 1,    /**< index of the boolean alternative that can be held by the Value object. */
+            Integer     = 2,    /**< index of the 32 bits integer alternative that can be held by the Value object. */
+            Unsigned    = 3,    /**< index of the 32 bits unsigned integer alternative that can be held by the Value object. */
+            Integer64   = 4,    /**< index of the 64 bits integer alternative that can be held by the Value object. */
+            Unsigned64  = 5,    /**< index of the 64 bits unsigned integer alternative that can be held by the Value object. */
+            Real        = 6,    /**< index of the real alternative that can be held by the Value object. */
+            String      = 7,    /**< index of the std::string alternative that can be held by the Value object. */
+            ArrayValue  = 8,    /**< index of the Array alternative that can be held by the Value object. */
+            ObjectValue = 9,    /**< index of the Object alternative that can be held by the Value object. */
         };
 
-        /// Pointer.
+        /// pointer.
         using Ptr = Value*;
 
-        /// Inherits parent's constructors.
+        /// inherits parent's constructors.
         using Variant::Variant;
 
-        /// Inherits parent's assignment operators.
+        /// inherits parent's assignment operators.
         using Variant::operator=;
 
         /**
-         * @brief Default constructor.
+         * @brief default constructor.
          */
-        Value () = default;
+        constexpr Value () = default;
 
         /**
-         * @brief Constructs the value with the copy of the contents of a C-style string.
-         * @param other C-style string to use as data source.
+         * @brief constructs the value with the copy of the contents of a C-style string.
+         * @param other c-style string to use as data source.
          */
-        Value (const char* other);
+        constexpr Value (const char* other)
+        : Variant (in_place_index_t <String> {}, other)
+        {
+        }
 
         /**
-         * @brief Replaces the contents with a copy of a C-style string.
-         * @param other C-style string to use as data source.
-         * @return A reference of the current value.
+         * @brief replaces the contents with a copy of a C-style string.
+         * @param other c-style string to use as data source.
+         * @return a reference of the current value.
          */
-        Value& operator= (const char* other);
+        Value& operator= (const char* other)
+        {
+            Variant::operator= (Value (in_place_index_t <String> {}, other));
+            return *this;
+        }
 
         /**
-         * @brief Copy constructor.
+         * @brief copy constructor.
          * @param other object to copy.
          */
-        Value (const Value& other) = default;
+        constexpr Value (const Value& other) = default;
 
         /**
-         * @brief Copy assignment.
+         * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        Value& operator= (const Value& other) = default;
+        constexpr Value& operator= (const Value& other) = default;
 
         /**
-         * @brief Move constructor.
+         * @brief move constructor.
          * @param other object to move.
          */
-        Value (Value&& other) = default;
+        constexpr Value (Value&& other) = default;
 
         /**
-         * @brief Move assignment.
+         * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        Value& operator= (Value&& other) = default;
+        constexpr Value& operator= (Value&& other) = default;
 
         /**
-         * @brief Destroy the Value instance.
+         * @brief destroy the Value instance.
          */
         virtual ~Value () = default;
 
         /**
-         * @brief Check if the variable held by value is a null value.
+         * @brief check if the variable held by value is a null value.
          * @return true if the variable held by value is null, false otherwise.
          */
-        bool isNull () const;
+        constexpr bool isNull () const
+        {
+            return index () == Null;
+        }
 
         /**
-         * @brief Check if the variable held by value is a boolean value.
+         * @brief check if the variable held by value is a boolean value.
          * @return true if the variable held by value is a boolean value, false otherwise.
          */
-        bool isBool () const;
+        constexpr bool isBool () const
+        {
+            return index () == Boolean;
+        }
 
         /**
-         * @brief Explicit conversion function for boolean value.
-         * @return Converted boolean value.
+         * @brief get variable held by value as a boolean value.
+         * @return variable held by value as a boolean value.
          * @throw std::bad_cast.
          */
-        explicit operator bool () const;
+        constexpr bool getBool () const
+        {
+            switch (index ())
+            {
+                case Null:
+                    return false;
+
+                case Boolean:
+                    return get <Boolean> ();
+
+                case Integer:
+                    return get <Integer> ();
+
+                case Unsigned:
+                    return get <Unsigned> ();
+
+                case Integer64:
+                    return get <Integer64> ();
+
+                case Unsigned64:
+                    return get <Unsigned64> ();
+
+                case Real:
+                    return get <Real> ();
+
+                default:
+                    break;
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Get variable held by value as a boolean value.
-         * @return Variable held by value as a boolean value.
+         * @brief explicit conversion function for boolean value.
+         * @return converted boolean value.
          * @throw std::bad_cast.
          */
-        bool getBool () const;
+        explicit operator bool () const
+        {
+            return getBool ();
+        }
 
         /**
-         * @brief Check if the content of the value is true.
-         * @return True if the content of the value is true, false otherwise.
+         * @brief check if the content of the value is true.
+         * @return true if the content of the value is true, false otherwise.
          * @throw std::bad_cast.
          */
-        bool isTrue () const;
+        constexpr bool isTrue () const
+        {
+            return getBool ();
+        }
 
         /**
-         * @brief Check if the content of the value is false.
-         * @return True if the content of the value is false, false otherwise.
+         * @brief check if the content of the value is false.
+         * @return true if the content of the value is false, false otherwise.
          * @throw std::bad_cast.
          */
-        bool isFalse () const;
+        constexpr bool isFalse () const
+        {
+            return !getBool ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a number value.
+         * @brief check if the variable held by value is a number value.
          * @return true if the variable held by value is a number, false otherwise.
          */
-        bool isNumber () const;
+        constexpr bool isNumber () const
+        {
+            return index () == Integer || index () == Unsigned || index () == Integer64 || index () == Unsigned64 || index () == Real;
+        }
 
         /**
-         * @brief Check if the variable held by value is a 8 bits integer value.
+         * @brief check if the variable held by value is a 8 bits integer value.
          * @return true if the variable held by value is a 8 bits integer value, false otherwise.
          */
-        bool isInt8 () const;
+        constexpr bool isInt8 () const
+        {
+            switch (index ())
+            {
+                case Integer:
+                    return get <Integer> () >= static_cast <int32_t> (std::numeric_limits <int8_t>::min ()) &&
+                           get <Integer> () <= static_cast <int32_t> (std::numeric_limits <int8_t>::max ());
+
+                case Unsigned:
+                    return get <Unsigned> () <= static_cast <uint32_t> (std::numeric_limits <int8_t>::max ());
+
+                case Integer64:
+                    return get <Integer64> () >= static_cast <int64_t> (std::numeric_limits <int8_t>::min ()) &&
+                           get <Integer64> () <= static_cast <int64_t> (std::numeric_limits <int8_t>::max ());
+
+                case Unsigned64:
+                    return get <Unsigned64> () <= static_cast <uint64_t> (std::numeric_limits <int8_t>::max ());
+
+                case Real:
+                    return std::trunc (get <Real> ()) == get <Real> () &&
+                           get <Real> () >= static_cast <double> (std::numeric_limits <int8_t>::min ()) &&
+                           get <Real> () <= static_cast <double> (std::numeric_limits <int8_t>::max ());
+
+                default:
+                    break;
+            }
+
+            return false;
+        }
 
         /**
-         * @brief Get variable held by value as a 8 bits integer.
-         * @return Variable held by value as a 8 bits integer.
+         * @brief get variable held by value as a 8 bits integer.
+         * @return variable held by value as a 8 bits integer.
          * @throw std::bad_cast.
          */
-        int8_t getInt8 () const;
+        constexpr int8_t getInt8 () const
+        {
+            if (isInt8 ())
+            {
+                switch (index ())
+                {
+                    case Integer:
+                        return static_cast <int8_t> (get <Integer> ());
+
+                    case Unsigned:
+                        return static_cast <int8_t> (get <Unsigned> ());
+
+                    case Integer64:
+                        return static_cast <int8_t> (get <Integer64> ());
+
+                    case Unsigned64:
+                        return static_cast <int8_t> (get <Unsigned64> ());
+
+                    case Real:
+                        return static_cast <int8_t> (get <Real> ());
+
+                    default:
+                        break;
+                }
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Explicit conversion function for 8 bits integer value.
-         * @return Converted char value.
+         * @brief explicit conversion function for 8 bits integer value.
+         * @return converted char value.
          * @throw std::bad_cast.
          */
-        explicit operator int8_t () const;
+        explicit operator int8_t () const
+        {
+            return getInt8 ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a 8 bits unsigned integer value.
+         * @brief check if the variable held by value is a 8 bits unsigned integer value.
          * @return true if the variable held by value is a 8 bits unsigned integer value, false otherwise.
          */
-        bool isUint8 () const;
+        constexpr bool isUint8 () const
+        {
+            switch (index ())
+            {
+                case Integer:
+                    return get <Integer> () >= 0 &&
+                           get <Integer> () <= static_cast <int32_t> (std::numeric_limits <uint8_t>::max ());
+
+                case Unsigned:
+                    return get <Unsigned> () <= static_cast <uint32_t> (std::numeric_limits <uint8_t>::max ());
+
+                case Integer64:
+                    return get <Integer64> () >= 0 &&
+                           get <Integer64> () <= static_cast <int64_t> (std::numeric_limits <uint8_t>::max ());
+
+                case Unsigned64:
+                    return get <Unsigned64> () <= static_cast <uint64_t> (std::numeric_limits <uint8_t>::max ());
+
+                case Real:
+                    return std::trunc (get <Real> ()) == get <Real> () &&
+                           get <Real> () >= 0 &&
+                           get <Real> () <= static_cast <double> (std::numeric_limits <uint8_t>::max ());
+
+                default:
+                    break;
+            }
+
+            return false;
+        }
 
         /**
-         * @brief Get variable held by value as a 8 bits unsigned integer.
-         * @return Variable held by value as a 8 bits unsigned integer.
+         * @brief get variable held by value as a 8 bits unsigned integer.
+         * @return variable held by value as a 8 bits unsigned integer.
          * @throw std::bad_cast.
          */
-        uint8_t getUint8 () const;
+        constexpr uint8_t getUint8 () const
+        {
+            if (isUint8 ())
+            {
+                switch (index ())
+                {
+                    case Integer:
+                        return static_cast <uint8_t> (get <Integer> ());
+
+                    case Unsigned:
+                        return static_cast <uint8_t> (get <Unsigned> ());
+
+                    case Integer64:
+                        return static_cast <uint8_t> (get <Integer64> ());
+
+                    case Unsigned64:
+                        return static_cast <uint8_t> (get <Unsigned64> ());
+
+                    case Real:
+                        return static_cast <uint8_t> (get <Real> ());
+
+                    default:
+                        break;
+                }
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Explicit conversion function for 8 bits unsigned integer value.
-         * @return Converted unsihed char value.
+         * @brief explicit conversion function for 8 bits unsigned integer value.
+         * @return converted unsihed char value.
          * @throw std::bad_cast.
          */
-        explicit operator uint8_t () const;
+        explicit operator uint8_t () const
+        {
+            return getUint8 ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a 16 bits integer value.
+         * @brief check if the variable held by value is a 16 bits integer value.
          * @return true if the variable held by value is a 16 bits integer value, false otherwise.
          */
-        bool isInt16 () const;
+        constexpr bool isInt16 () const
+        {
+            switch (index ())
+            {
+                case Integer:
+                    return get <Integer> () >= static_cast <int32_t> (std::numeric_limits <int16_t>::min ()) &&
+                           get <Integer> () <= static_cast <int32_t> (std::numeric_limits <int16_t>::max ());
+
+                case Unsigned:
+                    return get <Unsigned> () <= static_cast <uint32_t> (std::numeric_limits <int16_t>::max ());
+
+                case Integer64:
+                    return get <Integer64> () >= static_cast <int64_t> (std::numeric_limits <int16_t>::min ()) &&
+                           get <Integer64> () <= static_cast <int64_t> (std::numeric_limits <int16_t>::max ());
+
+                case Unsigned64:
+                    return get <Unsigned64> () <= static_cast <uint64_t> (std::numeric_limits <int16_t>::max ());
+
+                case Real:
+                    return std::trunc (get <Real> ()) == get <Real> () &&
+                           get <Real> () >= static_cast <double> (std::numeric_limits <int16_t>::min ()) &&
+                           get <Real> () <= static_cast <double> (std::numeric_limits <int16_t>::max ());
+
+                default:
+                    break;
+            }
+
+            return false;
+        }
 
         /**
-         * @brief Get variable held by value as a 16 bits integer.
-         * @return Variable held by value as a 16 bits integer.
+         * @brief get variable held by value as a 16 bits integer.
+         * @return variable held by value as a 16 bits integer.
          * @throw std::bad_cast.
          */
-        int16_t getInt16 () const;
+        constexpr int16_t getInt16 () const
+        {
+            if (isInt16 ())
+            {
+                switch (index ())
+                {
+                    case Integer:
+                        return static_cast <int16_t> (get <Integer> ());
+
+                    case Unsigned:
+                        return static_cast <int16_t> (get <Unsigned> ());
+
+                    case Integer64:
+                        return static_cast <int16_t> (get <Integer64> ());
+
+                    case Unsigned64:
+                        return static_cast <int16_t> (get <Unsigned64> ());
+
+                    case Real:
+                        return static_cast <int16_t> (get <Real> ());
+
+                    default:
+                        break;
+                }
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Explicit conversion function for 16 bits integer value.
-         * @return Converted short value.
+         * @brief explicit conversion function for 16 bits integer value.
+         * @return converted short value.
          * @throw std::bad_cast.
          */
-        explicit operator int16_t () const;
+        explicit operator int16_t () const
+        {
+            return getInt16 ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a 16 bits unsigned integer value.
+         * @brief check if the variable held by value is a 16 bits unsigned integer value.
          * @return true if the variable held by value is a 16 bits unsigned integer value, false otherwise.
          */
-        bool isUint16 () const;
+        constexpr bool isUint16 () const
+        {
+            switch (index ())
+            {
+                case Integer:
+                    return get <Integer> () >= 0 &&
+                           get <Integer> () <= static_cast <int32_t> (std::numeric_limits <uint16_t>::max ());
+
+                case Unsigned:
+                    return get <Unsigned> () <= static_cast <uint32_t> (std::numeric_limits <uint16_t>::max ());
+
+                case Integer64:
+                    return get <Integer64> () >= 0 &&
+                           get <Integer64> () <= static_cast <int64_t> (std::numeric_limits <uint16_t>::max ());
+
+                case Unsigned64:
+                    return get <Unsigned64> () <= static_cast <uint64_t> (std::numeric_limits <uint16_t>::max ());
+
+                case Real:
+                    return std::trunc (get <Real> ()) == get <Real> () &&
+                           get <Real> () >= 0 &&
+                           get <Real> () <= static_cast <double> (std::numeric_limits <uint16_t>::max ());
+
+                default:
+                    break;
+            }
+
+            return false;
+        }
 
         /**
-         * @brief Get variable held by value as a 16 bits unsigned integer.
-         * @return Variable held by value as a 16 bits unsigned integer.
+         * @brief get variable held by value as a 16 bits unsigned integer.
+         * @return variable held by value as a 16 bits unsigned integer.
          * @throw std::bad_cast.
          */
-        uint16_t getUint16 () const;
+        constexpr uint16_t getUint16 () const
+        {
+            if (isUint16 ())
+            {
+                switch (index ())
+                {
+                    case Integer:
+                        return static_cast <uint16_t> (get <Integer> ());
+
+                    case Unsigned:
+                        return static_cast <uint16_t> (get <Unsigned> ());
+
+                    case Integer64:
+                        return static_cast <uint16_t> (get <Integer64> ());
+
+                    case Unsigned64:
+                        return static_cast <uint16_t> (get <Unsigned64> ());
+
+                    case Real:
+                        return static_cast <uint16_t> (get <Real> ());
+
+                    default:
+                        break;
+                }
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Explicit conversion function for 16 bits unsigned integer value.
-         * @return Converted unsigned short value.
+         * @brief explicit conversion function for 16 bits unsigned integer value.
+         * @return converted unsigned short value.
          * @throw std::bad_cast.
          */
-        explicit operator uint16_t () const;
+        explicit operator uint16_t () const
+        {
+            return getUint16 ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a 32 bits integer value.
+         * @brief check if the variable held by value is a 32 bits integer value.
          * @return true if the variable held by value is a 32 bits integer value, false otherwise.
          */
-        bool isInt () const;
+        constexpr bool isInt () const
+        {
+            switch (index ())
+            {
+                case Integer:
+                    return true;
+
+                case Unsigned:
+                    return get <Unsigned> () <= static_cast <uint32_t> (std::numeric_limits <int32_t>::max ());
+
+                case Integer64:
+                    return get <Integer64> () >= static_cast <int64_t> (std::numeric_limits <int32_t>::min ()) &&
+                           get <Integer64> () <= static_cast <int64_t> (std::numeric_limits <int32_t>::max ());
+
+                case Unsigned64:
+                    return get <Unsigned64> () <= static_cast <uint64_t> (std::numeric_limits <int32_t>::max ());
+
+                case Real:
+                    return std::trunc (get <Real> ()) == get <Real> () &&
+                           get <Real> () >= static_cast <double> (std::numeric_limits <int32_t>::min ()) &&
+                           get <Real> () <= static_cast <double> (std::numeric_limits <int32_t>::max ());
+
+                default:
+                    break;
+            }
+
+            return false;
+        }
 
         /**
-         * @brief Get variable held by value as a 32 bits integer.
-         * @return Variable held by value as a 32 bits integer.
+         * @brief get variable held by value as a 32 bits integer.
+         * @return variable held by value as a 32 bits integer.
          * @throw std::bad_cast.
          */
-        int32_t getInt () const;
+        constexpr int32_t getInt () const
+        {
+            if (isInt ())
+            {
+                switch (index ())
+                {
+                    case Integer:
+                        return get <Integer> ();
+
+                    case Unsigned:
+                        return static_cast <int32_t> (get <Unsigned> ());
+
+                    case Integer64:
+                        return static_cast <int32_t> (get <Integer64> ());
+
+                    case Unsigned64:
+                        return static_cast <int32_t> (get <Unsigned64> ());
+
+                    case Real:
+                        return static_cast <int32_t> (get <Real> ());
+
+                    default:
+                        break;
+                }
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Explicit conversion function for 32 bits integer value.
-         * @return Converted integer value.
+         * @brief explicit conversion function for 32 bits integer value.
+         * @return converted integer value.
          * @throw std::bad_cast.
          */
-        explicit operator int32_t () const;
+        explicit operator int32_t () const
+        {
+            return getInt ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a 32 bits unsigned integer value.
+         * @brief check if the variable held by value is a 32 bits unsigned integer value.
          * @return true if the variable held by value is a 32 bits unsigned integer value, false otherwise.
          */
-        bool isUint () const;
+        constexpr bool isUint () const
+        {
+            switch (index ())
+            {
+                case Integer:
+                    return get <Integer> () >= 0;
+
+                case Unsigned:
+                    return true;
+
+                case Integer64:
+                    return get <Integer64> () >= 0 &&
+                           get <Integer64> () <= static_cast <int64_t> (std::numeric_limits <uint32_t>::max ());
+
+                case Unsigned64:
+                    return get <Unsigned64> () <= static_cast <uint64_t> (std::numeric_limits <uint32_t>::max ());
+
+                case Real:
+                    return std::trunc (get <Real> ()) == get <Real> () &&
+                           get <Real> () >= 0 &&
+                           get <Real> () <= static_cast <double> (std::numeric_limits <uint32_t>::max ());
+
+                default:
+                    break;
+            }
+
+            return false;
+        }
 
         /**
-         * @brief Get variable held by value as a 32 bits unsigned integer value.
-         * @return Variable held by value as a 32 bits unsigned integer value.
+         * @brief get variable held by value as a 32 bits unsigned integer value.
+         * @return variable held by value as a 32 bits unsigned integer value.
          * @throw std::bad_cast.
          */
-        uint32_t getUint () const;
+        constexpr uint32_t getUint () const
+        {
+            if (isUint ())
+            {
+                switch (index ())
+                {
+                    case Integer:
+                        return static_cast <uint32_t> (get <Integer> ());
+
+                    case Unsigned:
+                        return get <Unsigned> ();
+
+                    case Integer64:
+                        return static_cast <uint32_t> (get <Integer64> ());
+
+                    case Unsigned64:
+                        return static_cast <uint32_t> (get <Unsigned64> ());
+
+                    case Real:
+                        return static_cast <uint32_t> (get <Real> ());
+
+                    default:
+                        break;
+                }
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Explicit conversion function for 32 bits unsigned integer value.
-         * @return Converted unsigned integer value.
+         * @brief explicit conversion function for 32 bits unsigned integer value.
+         * @return converted unsigned integer value.
          * @throw std::bad_cast.
          */
-        explicit operator uint32_t () const;
+        explicit operator uint32_t () const
+        {
+            return getUint ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a 64 bits integer value.
+         * @brief check if the variable held by value is a 64 bits integer value.
          * @return true if the variable held by value is a 64 bits integer value, false otherwise.
          */
-        bool isInt64 () const;
+        constexpr bool isInt64 () const
+        {
+            switch (index ())
+            {
+                case Integer:
+                case Unsigned:
+                case Integer64:
+                    return true;
+
+                case Unsigned64:
+                    return get <Unsigned64> () <= static_cast <uint64_t> (std::numeric_limits <int64_t>::max ());
+
+                case Real:
+                    return std::trunc (get <Real> ()) == get <Real> () &&
+                           get <Real> () >= static_cast <double> (std::numeric_limits <int64_t>::min ()) &&
+                           get <Real> () <  static_cast <double> (std::numeric_limits <int64_t>::max ());
+
+                default:
+                    break;
+            }
+
+            return false;
+        }
 
         /**
-         * @brief Get variable held by value as a 64 bits integer value.
-         * @return Variable held by value as a 64 bits integer value.
+         * @brief get variable held by value as a 64 bits integer value.
+         * @return variable held by value as a 64 bits integer value.
          * @throw std::bad_cast.
          */
-        int64_t getInt64 () const;
+        constexpr int64_t getInt64 () const
+        {
+            if (isInt64 ())
+            {
+                switch (index ())
+                {
+                    case Integer:
+                        return static_cast <int64_t> (get <Integer> ());
+
+                    case Unsigned:
+                        return static_cast <int64_t> (get <Unsigned> ());
+
+                    case Integer64:
+                        return get <Integer64> ();
+
+                    case Unsigned64:
+                        return static_cast <int64_t> (get <Unsigned64> ());
+
+                    case Real:
+                        return static_cast <int64_t> (get <Real> ());
+
+                    default:
+                        break;
+                }
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Explicit conversion function for 64 bits integer value.
-         * @return Converted integer 64 bits value.
+         * @brief explicit conversion function for 64 bits integer value.
+         * @return converted integer 64 bits value.
          * @throw std::bad_cast.
          */
-        explicit operator int64_t () const;
+        explicit operator int64_t () const
+        {
+            return getInt64 ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a 64 bits unsigned integer value.
+         * @brief check if the variable held by value is a 64 bits unsigned integer value.
          * @return true if the variable held by value is a 64 bits unsigned integer value, false otherwise.
          */
-        bool isUint64 () const;
+        constexpr bool isUint64 () const
+        {
+            switch (index ())
+            {
+                case Integer:
+                    return get <Integer> () >= 0;
+
+                case Unsigned:
+                    return true;
+
+                case Integer64:
+                    return get <Integer64> () >= 0;
+
+                case Unsigned64:
+                    return true;
+
+                case Real:
+                    return std::trunc (get <Real> ()) == get <Real> () &&
+                           get <Real> () >= 0 &&
+                           get <Real> () < static_cast <double> (std::numeric_limits <uint64_t>::max ());
+
+                default:
+                    break;
+            }
+
+            return false;
+        }
 
         /**
-         * @brief Get variable held by value as a 64 bits unsigned integer value.
-         * @return Variable held by value as a 64 bits unsigned integer value.
+         * @brief get variable held by value as a 64 bits unsigned integer value.
+         * @return variable held by value as a 64 bits unsigned integer value.
          * @throw std::bad_cast.
          */
-        uint64_t getUint64 () const;
+        constexpr uint64_t getUint64 () const
+        {
+            if (isUint64 ())
+            {
+                switch (index ())
+                {
+                    case Integer:
+                        return static_cast <uint64_t> (get <Integer> ());
+
+                    case Unsigned:
+                        return static_cast <uint64_t> (get <Unsigned> ());
+
+                    case Integer64:
+                        return static_cast <uint64_t> (get <Integer64> ());
+
+                    case Unsigned64:
+                        return get <Unsigned64> ();
+
+                    case Real:
+                        return static_cast <uint64_t> (get <Real> ());
+
+                    default:
+                        break;
+                }
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Explicit conversion function for 64 bits unsigned integer value.
-         * @return Converted 64 bits unsigned integer value.
+         * @brief explicit conversion function for 64 bits unsigned integer value.
+         * @return converted 64 bits unsigned integer value.
          * @throw std::bad_cast.
          */
-        explicit operator uint64_t () const;
+        explicit operator uint64_t () const
+        {
+            return getUint64 ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a float value.
+         * @brief check if the variable held by value is a float value.
          * @return true if the variable held by value is a float value, false otherwise.
          */
-        bool isFloat () const;
+        constexpr bool isFloat () const
+        {
+            return isNumber ();
+        }
 
         /**
-         * @brief Get variable held by value as a float value.
-         * @return Variable held by value as a float value.
+         * @brief get variable held by value as a float value.
+         * @return variable held by value as a float value.
          * @throw std::bad_cast.
          */
-        float getFloat () const;
+        constexpr float getFloat () const
+        {
+            switch (index ())
+            {
+                case Integer:
+                    return static_cast <float> (get <Integer> ());
+
+                case Unsigned:
+                    return static_cast <float> (get <Unsigned> ());
+
+                case Integer64:
+                    return static_cast <float> (get <Integer64> ());
+
+                case Unsigned64:
+                    return static_cast <float> (get <Unsigned64> ());
+
+                case Real:
+                    return static_cast <float> (get <Real> ());
+
+                default:
+                    break;
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Explicit conversion function for float value.
-         * @return Converted float value.
+         * @brief explicit conversion function for float value.
+         * @return converted float value.
          * @throw std::bad_cast.
          */
-        explicit operator float () const;
+        explicit operator float () const
+        {
+            return getFloat ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a double value.
+         * @brief check if the variable held by value is a double value.
          * @return true if the variable held by value is a double value, false otherwise.
          */
-        bool isDouble () const;
+        constexpr bool isDouble () const
+        {
+            return isNumber ();
+        }
 
         /**
-         * @brief Get variable held by value as a double value.
-         * @return Variable held by value as a double value.
+         * @brief get variable held by value as a double value.
+         * @return variable held by value as a double value.
          * @throw std::bad_cast.
          */
-        double getDouble () const;
+        constexpr double getDouble () const
+        {
+            switch (index ())
+            {
+                case Integer:
+                    return static_cast <double> (get <Integer> ());
+
+                case Unsigned:
+                    return static_cast <double> (get <Unsigned> ());
+
+                case Integer64:
+                    return static_cast <double> (get <Integer64> ());
+
+                case Unsigned64:
+                    return static_cast <double> (get <Unsigned64> ());
+
+                case Real:
+                    return get <Real> ();
+
+                default:
+                    break;
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Explicit conversion function for double value.
-         * @return Converted double value.
+         * @brief explicit conversion function for double value.
+         * @return converted double value.
          * @throw std::bad_cast.
          */
-        explicit operator double () const;
+        explicit operator double () const
+        {
+            return getDouble ();
+        }
 
         /**
-         * @brief Check if the variable held by value is a string value.
+         * @brief check if the variable held by value is a string value.
          * @return true if the variable held by value is a string value, false otherwise.
          */
-        bool isString () const;
+        constexpr bool isString () const
+        {
+            return index () == String;
+        }
 
         /**
-         * @brief Get variable held by value as a string value.
-         * @return Variable held by value as a string value.
+         * @brief get variable held by value as a string value.
+         * @return variable held by value as a string value.
          * @throw std::bad_cast.
          */
-        std::string& getString () const;
+        constexpr std::string& getString () const
+        {
+            return get <String> ();
+        }
 
         /**
-         * @brief Explicit conversion function for string value.
-         * @return Converted string value.
+         * @brief explicit conversion function for string value.
+         * @return converted string value.
          * @throw std::bad_cast.
          */
-        explicit operator const char * () const;
+        explicit operator const char * () const
+        {
+            return getString ().c_str ();
+        }
 
         /**
-         * @brief Check if the variable held by value is an array.
+         * @brief check if the variable held by value is an array.
          * @return true if the variable held by value is an array, false otherwise.
          */
-        bool isArray () const;
+        constexpr bool isArray () const
+        {
+            return index () == ArrayValue;
+        }
 
         /**
-         * @brief Get variable held by value as an array.
-         * @return Variable held by value as an array.
+         * @brief get variable held by value as an array.
+         * @return variable held by value as an array.
          * @throw std::bad_cast.
          */
-        Array& getArray () const;
+        constexpr Array& getArray () const
+        {
+            return get <ArrayValue> ();
+        }
 
         /**
-         * @brief Check if the variable held by value is an object.
-         * @return True if the variable held by value is an object, false otherwise.
+         * @brief check if the variable held by value is an object.
+         * @return true if the variable held by value is an object, false otherwise.
          */
-        bool isObject () const;
+        constexpr bool isObject () const
+        {
+            return index () == ObjectValue;
+        }
 
         /**
-         * @brief Get variable held by value as an object.
-         * @return Variable held by value as an object.
+         * @brief get variable held by value as an object.
+         * @return variable held by value as an object.
          * @throw std::bad_cast.
          */
-        Object& getObject () const;
+        constexpr Object& getObject () const
+        {
+            return get <ObjectValue> ();
+        }
 
         /**
-         * @brief Returns a reference to the element at specified location pos.
+         * @brief returns a reference to the element at specified location pos.
          * @param pos Position of the element to return.
-         * @return Reference to the requested element.
+         * @return a reference to the requested element.
          * @throw std::bad_cast.
          */
-        Value& at (size_t pos);
+        Value& at (size_t pos)
+        {
+            return get <ArrayValue> ().at (pos);
+        }
 
         /**
-         * @brief Returns a reference to the element at specified location pos.
+         * @brief returns a reference to the element at specified location pos.
          * @param pos Position of the element to return.
-         * @return Reference to the requested element.
+         * @return a reference to the requested element.
          * @throw std::bad_cast.
          */
-        const Value& at (size_t pos) const;
+        const Value& at (size_t pos) const
+        {
+            return get <ArrayValue> ().at (pos);
+        }
 
         /**
-         * @brief Returns a reference to the value that is mapped to a key.
-         * @param key The key of the element to find.
-         * @return Reference to the mapped element.
+         * @brief returns a reference to the value that is mapped to a key.
+         * @param key the key of the element to find.
+         * @return a reference to the mapped element.
          * @throw std::bad_cast.
          */
-        Value& at (const std::string& key);
+        Value& at (const std::string& key)
+        {
+            for (auto& member : get <ObjectValue> ())
+            {
+                if (member.first == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throw std::out_of_range ("invalid key");
+        }
 
         /**
-         * @brief Returns a reference to the value that is mapped to a key.
-         * @param key The key of the element to find.
-         * @return Reference to the mapped element.
+         * @brief returns a reference to the value that is mapped to a key.
+         * @param key the key of the element to find.
+         * @return a reference to the mapped element.
          * @throw std::bad_cast.
          */
-        const Value& at (const std::string& key) const;
+        const Value& at (const std::string& key) const
+        {
+            for (auto const& member : get <ObjectValue> ())
+            {
+                if (member.first == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throw std::out_of_range ("invalid key");
+        }
 
         /**
-         * @brief Returns a reference to the element at specified location pos.
+         * @brief returns a reference to the element at specified location pos.
          * @param pos Position of the element to return.
-         * @return Reference to the requested element.
+         * @return a reference to the requested element.
          * @throw std::bad_cast.
          */
-        Value& operator[] (size_t pos);
+        Value& operator[] (size_t pos)
+        {
+            return get <ArrayValue> ()[pos];
+        }
 
         /**
-         * @brief Returns a reference to the element at specified location pos.
+         * @brief returns a reference to the element at specified location pos.
          * @param pos Position of the element to return.
-         * @return Reference to the requested element.
+         * @return a reference to the requested element.
          * @throw std::bad_cast.
          */
-        const Value& operator[] (size_t pos) const;
+        const Value& operator[] (size_t pos) const
+        {
+            return get <ArrayValue> ()[pos];
+        }
 
         /**
-         * @brief Returns a reference to the value that is mapped to a key.
-         * @param key The key of the element to find.
-         * @return Reference to the mapped element.
+         * @brief returns a reference to the value that is mapped to a key.
+         * @param key the key of the element to find.
+         * @return a reference to the mapped element.
          * @throw std::bad_cast.
          */
-        Value& operator[] (const std::string& key);
+        Value& operator[] (const std::string& key)
+        {
+            if (index () == Null)
+            {
+                set <ObjectValue> ();
+            }
+
+            for (auto& member : get <ObjectValue> ())
+            {
+                if (member.first == key)
+                {
+                    return member.second;
+                }
+            }
+
+            get <ObjectValue> ().emplace_back (key, nullptr);
+
+            return get <ObjectValue> ().back ().second;
+        }
 
         /**
-         * @brief Returns a reference to the value that is mapped to a key.
-         * @param key The key of the element to find.
-         * @return Reference to the mapped element.
+         * @brief returns a reference to the value that is mapped to a key.
+         * @param key the key of the element to find.
+         * @return a reference to the mapped element.
          * @throw std::bad_cast.
          */
-        const Value& operator[] (const std::string& key) const;
+        const Value& operator[] (const std::string& key) const
+        {
+            for (auto& member : get <ObjectValue> ())
+            {
+                if (member.first == key)
+                {
+                    return member.second;
+                }
+            }
+
+            get <ObjectValue> ().emplace_back (key, nullptr);
+
+            return get <ObjectValue> ().back ().second;
+        }
 
         /**
-         * @brief Check if the nested container is empty.
-         * @return True if empty, false otherwise.
+         * @brief check if the nested container is empty.
+         * @return true if empty, false otherwise.
          * @throw std::bad_cast.
          */
-        bool empty () const;
+        bool empty () const
+        {
+            switch (index ())
+            {
+                case String:
+                    return get <String> ().empty ();
+
+                case ArrayValue:
+                    return get <ArrayValue> ().empty ();
+
+                case ObjectValue:
+                    return get <ObjectValue> ().empty ();
+
+                default:
+                    break;
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Returns the number of elements in the nested container.
-         * @return The number of elements in the nested container.
+         * @brief returns the number of elements in the nested container.
+         * @return the number of elements in the nested container.
          * @throw std::bad_cast.
          */
-        size_t size () const;
+        size_t size () const
+        {
+            switch (index ())
+            {
+                case String:
+                    return get <String> ().size ();
+
+                case ArrayValue:
+                    return get <ArrayValue> ().size ();
+
+                case ObjectValue:
+                    return get <ObjectValue> ().size ();
+
+                default:
+                    break;
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Increase the capacity of the nested container.
+         * @brief increase the capacity of the nested container.
          * @param cap new capacity.
          * @throw std::bad_cast.
          */
-        void reserve (size_t cap);
+        void reserve (size_t cap)
+        {
+                switch (index ())
+            {
+                case String:
+                    get <String> ().reserve (cap);
+                    return;
+
+                case ArrayValue:
+                    get <ArrayValue> ().reserve (cap);
+                    return;
+
+                case ObjectValue:
+                    get <ObjectValue> ().reserve (cap);
+                    return;
+
+                default:
+                    break;
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Erases all elements in the nested container.
+         * @brief erases all elements in the nested container.
          * @throw std::bad_cast.
          */
-        void clear ();
+        void clear ()
+        {
+            switch (index ())
+            {
+                case String:
+                    get <String> ().clear ();
+                    return;
+
+                case ArrayValue:
+                    get <ArrayValue> ().clear ();
+                    return;
+
+                case ObjectValue:
+                    get <ObjectValue> ().clear ();
+                    return;
+
+                default:
+                    break;
+            }
+
+            throw std::bad_cast ();
+        }
 
         /**
-         * @brief Insert element in the nested container.
-         * @param element The element to insert in the nested container.
-         * @return A reference to the inserted element.
+         * @brief insert element in the nested container.
+         * @param member the element to insert in the nested container.
+         * @return a reference to the inserted element.
          * @throw std::bad_cast.
          */
-        Value& insert (const Member& element);
+        Value& insert (const Member& member)
+        {
+            get <ObjectValue> ().push_back (member);
+            return get <ObjectValue> ().back ().second;
+        }
 
         /**
-         * @brief Insert element in the nested container.
-         * @param element The element to insert in the nested container.
-         * @return A reference to the inserted element.
+         * @brief insert element in the nested container.
+         * @param member the element to insert in the nested container.
+         * @return a reference to the inserted element.
          * @throw std::bad_cast.
          */
-        Value& insert (Member&& element);
+        Value& insert (Member&& member)
+        {
+            get <ObjectValue> ().emplace_back (std::move (member));
+            return get <ObjectValue> ().back ().second;
+        }
 
         /**
-         * @brief Removes member with the key equivalent to key.
-         * @param key Key value of the member to remove.
-         * @return Number of elements removed.
+         * @brief removes member with the key equivalent to key.
+         * @param key key value of the member to remove.
+         * @return number of elements removed.
          * @throw std::bad_cast.
          */
-        size_t erase (const std::string& key);
+        size_t erase (const std::string& key)
+        {
+            auto beg = get <ObjectValue> ().begin ();
+            auto end = get <ObjectValue> ().end ();
+
+            for (auto it = beg; it != end; ++it)
+            {
+                if (it->first == key)
+                {
+                    get <ObjectValue> ().erase (it);
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
 
         /**
-         * @brief Appends element at the end of the nested container.
-         * @param value The element to append.
+         * @brief appends element at the end of the nested container.
+         * @param value the element to append.
          * @return a reference to the pushed object.
          * @throw std::bad_cast.
          */
@@ -553,158 +1311,255 @@ namespace sax
         }
 
         /**
-         * @brief Appends element at the end of the nested container.
-         * @param value The element to append.
+         * @brief appends element at the end of the nested container.
+         * @param value the element to append.
          * @return a reference to the pushed object.
          * @throw std::bad_cast.
          */
-        Value& pushBack (const Value& value);
+        Value& pushBack (const Value& value)
+        {
+            get <ArrayValue> ().push_back (value);
+            return get <ArrayValue> ().back ();
+        }
 
         /**
-         * @brief Appends element at the end of the nested container.
-         * @param value The element to append.
+         * @brief appends element at the end of the nested container.
+         * @param value the element to append.
          * @return a reference to the pushed object.
          * @throw std::bad_cast.
          */
-        Value& pushBack (Value&& value);
+        Value& pushBack (Value&& value)
+        {
+            get <ArrayValue> ().emplace_back (std::move (value));
+            return get <ArrayValue> ().back ();
+        }
 
         /**
-         * @brief Removes the last element of the nested container.
+         * @brief removes the last element of the nested container.
          * @throw std::bad_cast.
          */
-        void popBack ();
+        void popBack ()
+        {
+            get <ArrayValue> ().pop_back ();
+        }
 
         /**
-         * @brief Checks if the nested container contains an element at position pos.
-         * @return True if the nested container contains an element at position pos, false otherwise.
+         * @brief checks if the nested container contains an element at position pos.
+         * @return true if the nested container contains an element at position pos, false otherwise.
          * @throw std::bad_cast.
          */
-        bool contains (size_t pos) const;
+        bool contains (size_t pos) const
+        {
+            return get <ArrayValue> ().size () > pos;
+        }
 
         /**
-         * @brief Checks if the nested container contains an element that is mapped to key.
-         * @return True if the nested container contains an element mapped to key, false otherwise.
+         * @brief checks if the nested container contains an element that is mapped to key.
+         * @return true if the nested container contains an element mapped to key, false otherwise.
          * @throw std::bad_cast.
          */
-        bool contains (const std::string& key) const;
+        bool contains (const std::string& key) const
+        {
+            for (auto& member : get <ObjectValue> ())
+            {
+                if (member.first == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         /**
-         * @brief Exchanges the contents of the value with those of other.
-         * @param other Value to exchange the contents with.
+         * @brief exchanges the contents of the value with those of other.
+         * @param other value to exchange the contents with.
          */
-        void swap (Value& other);
+        void swap (Value& other)
+        {
+            Value temp (std::move (*this));
+            *this = std::move (other);
+            other = std::move (temp);
+        }
 
         /**
-         * @brief Deserialize a JSON document.
-         * @param document JSON document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        int jsonRead (const char* document);
+        template <typename Reader>
+        int deserialize (const char* document)
+        {
+            Reader reader (*this);
+            return reader.deserialize (document);
+        }
 
         /**
-         * @brief Deserialize a JSON document.
-         * @param document JSON document to parse.
-         * @param length The length of the JSON document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @param length the length of the document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        int jsonRead (const char* document, size_t length);
+        template <typename Reader>
+        int deserialize (const char* document, size_t length)
+        {
+            Reader reader (*this);
+            return reader.deserialize (document, length);
+        }
 
         /**
-         * @brief Deserialize a JSON document.
-         * @param first The first character of the JSON document to parse.
-         * @param last The last character of the JSON document to parse.
+         * @brief deserialize a document.
+         * @param first the first character of the document to deserialize.
+         * @param last the last character of the document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        int jsonRead (const char* first, const char* last);
+        template <typename Reader>
+        int deserialize (const char* first, const char* last)
+        {
+            Reader reader (*this);
+            return reader.deserialize (first, last);
+        }
 
         /**
-         * @brief Deserialize a JSON document.
-         * @param document JSON document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        int jsonRead (const std::string& document);
+        template <typename Reader>
+        int deserialize (const std::string& document)
+        {
+            Reader reader (*this);
+            return reader.deserialize (document);
+        }
 
         /**
-         * @brief Parse a JSON document.
-         * @param document JSON document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        int jsonRead (std::istream& document);
+        template <typename Reader>
+        int deserialize (std::istream& document)
+        {
+            Reader reader (*this);
+            return reader.deserialize (document);
+        }
 
         /**
-         * @brief Serialize data to JSON format.
+         * @brief serialize data.
          * @param document Document where to serialize data.
-         * @param indentation number of characters used to indent JSON.
          * @return 0 on success, -1 otherwise.
          */
-        bool jsonWrite (std::ostream& document, size_t indentation = 0) const;
+        template <typename Writer>
+        int serialize (std::ostream& document) const
+        {
+            Writer writer (document);
+            return writer.serialize (*this);
+        }
 
         // friendship with equal operator.
-        friend bool operator== (const Value& lhs, const Value& rhs);
-
-        // friendship with not equal operator.
-        friend bool operator!= (const Value& lhs, const Value& rhs);
+        friend constexpr bool operator== (const Value& lhs, const Value& rhs);
 
         // friendship with lower operator.
-        friend bool operator< (const Value& lhs, const Value& rhs);
-
-        // friendship with greater operator.
-        friend bool operator> (const Value& lhs, const Value& rhs);
-
-        // friendship with lower or equal operator.
-        friend bool operator<= (const Value& lhs, const Value& rhs);
-
-        // friendship with greater or equal operator.
-        friend bool operator>= (const Value& lhs, const Value& rhs);
+        friend constexpr bool operator< (const Value& lhs, const Value& rhs);
     };
 
     /**
-     * @brief Compare if equal.
+     * @brief compare if equal.
      * @param lhs value to compare.
      * @param rhs value to compare to.
      * @return true if equal.
      */
-    bool operator== (const Value& lhs, const Value& rhs);
+    constexpr bool operator== (const Value& lhs, const Value& rhs)
+    {
+        if (lhs.isNumber () && rhs.isNumber () && (lhs.index () != rhs.index ()))
+        {
+            if (lhs.isDouble () || rhs.isDouble ())
+            {
+                return lhs.getDouble () == rhs.getDouble ();
+            }
+            else if (lhs.isInt64 () && rhs.isUint64 ())
+            {
+                return lhs.getInt64 () >= 0 && uint64_t (lhs.getInt64 ()) == rhs.getUint64 ();
+            }
+            else if (lhs.isUint64 () && rhs.isInt64 ())
+            {
+                return rhs.getInt64 () >= 0 && uint64_t (rhs.getInt64 ()) == lhs.getUint64 () ;
+            }
+        }
+
+        return lhs.equal (rhs);
+    }
 
     /**
-     * @brief Compare if not equal.
+     * @brief compare if not equal.
      * @param lhs value to compare.
      * @param rhs value to compare to.
      * @return true if not equal.
      */
-    bool operator!= (const Value& lhs, const Value& rhs);
+    constexpr bool operator!= (const Value& lhs, const Value& rhs)
+    {
+        return !(lhs == rhs);
+    }
 
     /**
-     * @brief Compare if lower than.
+     * @brief compare if lower than.
      * @param lhs value to compare.
      * @param rhs value to compare to.
      * @return true if lower than.
      */
-    bool operator< (const Value& lhs, const Value& rhs);
+    constexpr bool operator< (const Value& lhs, const Value& rhs)
+    {
+        if (lhs.isNumber () && rhs.isNumber () && (lhs.index () != rhs.index ()))
+        {
+            if (lhs.isDouble () || rhs.isDouble ())
+            {
+                return lhs.getDouble () < rhs.getDouble ();
+            }
+            else if (lhs.isInt64 () && rhs.isUint64 ())
+            {
+                return lhs.getInt64 () < 0 || uint64_t (lhs.getInt64 ()) < rhs.getUint64 ();
+            }
+            else if (lhs.isUint64 () && rhs.isInt64 ())
+            {
+                return rhs.getInt64 () >= 0 && lhs.getUint64 () < uint64_t (rhs.getInt64 ());
+            }
+        }
+
+        return lhs.lower (rhs);
+    }
 
     /**
-     * @brief Compare if greater than.
+     * @brief compare if greater than.
      * @param lhs value to compare.
      * @param rhs value to compare to.
      * @return true if greater than.
      */
-    bool operator> (const Value& lhs, const Value& rhs);
+    constexpr bool operator> (const Value& lhs, const Value& rhs)
+    {
+        return rhs < lhs;
+    }
 
     /**
-     * @brief Compare if lower or equal than.
+     * @brief compare if lower or equal than.
      * @param lhs value to compare.
      * @param rhs value to compare to.
      * @return true if lower or equal than.
      */
-    bool operator<= (const Value& lhs, const Value& rhs);
+    constexpr bool operator<= (const Value& lhs, const Value& rhs)
+    {
+        return !(rhs < lhs);
+    }
 
     /**
-     * @brief Compare if greater or equal than.
+     * @brief compare if greater or equal than.
      * @param lhs value to compare.
      * @param rhs value to compare to.
      * @return true if greater or equal than.
      */
-    bool operator>= (const Value& lhs, const Value& rhs);
+    constexpr bool operator>= (const Value& lhs, const Value& rhs)
+    {
+        return !(lhs < rhs);
+    }
 }
 }
 

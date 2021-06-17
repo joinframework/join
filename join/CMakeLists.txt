@@ -18,13 +18,16 @@ set(PUBLIC_HEADERS
     core/include/join/traits.hpp
     core/include/join/variant.hpp
     core/include/join/view.hpp
+    sax/include/join/diyfp.hpp
+    sax/include/join/dtoa.hpp
+    sax/include/join/value.hpp
+    sax/include/join/json.hpp
+    sax/include/join/sax.hpp
 )
 
 set(SOURCES
     core/src/error.cpp
-    sax/src/value.cpp
-    sax/src/jsonwriter.cpp
-    sax/src/jsonreader.cpp
+    sax/src/json.cpp
     sax/src/sax.cpp
 )
 

@@ -23,23 +23,619 @@
  */
 
 // libjoin.
-#include <join/jsonreader.hpp>
+#include <join/error.hpp>
+#include <join/json.hpp>
+#include <join/dtoa.hpp>
 
 // C.
 #include <cstdlib>
 
-#define likely(x)   __builtin_expect((x), 1)
-#define unlikely(x) __builtin_expect((x), 0)
-
 using join::sax::Value;
+using join::sax::JsonErrc;
+using join::sax::JsonCategory;
 using join::sax::JsonReader;
+using join::sax::JsonWriter;
+
+// =========================================================================
+//   CLASS     : JsonCategory
+//   METHOD    : name
+// =========================================================================
+const char* JsonCategory::name () const noexcept
+{
+    return "libjoin";
+}
+
+// =========================================================================
+//   CLASS     : JsonCategory
+//   METHOD    : message
+// =========================================================================
+std::string JsonCategory::message (int code) const
+{
+    switch (static_cast <JsonErrc> (code))
+    {
+        case JsonErrc::InvalidComment:
+            return "comment is invalid";
+        case JsonErrc::InvalidEscaping:
+            return "character escaping is invalid";
+        case JsonErrc::InvalidEncoding:
+            return "character encoding is invalid";
+        case JsonErrc::IllegalCharacter:
+            return "illegal character";
+        case JsonErrc::MissingCurlyBracket:
+            return "missing curly bracket";
+        case JsonErrc::MissingSquareBracket:
+            return "missing square bracket";
+        case JsonErrc::MissingQuote:
+            return "missing quote";
+        case JsonErrc::MissingColon:
+            return "missing colon";
+        case JsonErrc::MissingComma:
+            return "missing comma";
+        default:
+            return "success";
+    }
+}
+
+// =========================================================================
+//   CLASS     :
+//   METHOD    : jsonCategory
+// =========================================================================
+const std::error_category& join::sax::jsonCategory ()
+{
+    static JsonCategory instance;
+    return instance;
+}
+
+// =========================================================================
+//   CLASS     :
+//   METHOD    : make_error_code
+// =========================================================================
+std::error_code join::sax::make_error_code (JsonErrc code)
+{
+    return std::error_code (static_cast <int> (code), jsonCategory ());
+}
+
+// =========================================================================
+//   CLASS     :
+//   METHOD    : make_error_condition
+// =========================================================================
+std::error_condition join::sax::make_error_condition (JsonErrc code)
+{
+    return std::error_condition (static_cast <int> (code), jsonCategory ());
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : JsonWriter
+// =========================================================================
+JsonWriter::JsonWriter (std::ostream& document, size_t indentation)
+: StreamWriter (document),
+  _indentation (indentation)
+{
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : setNull
+// =========================================================================
+int JsonWriter::setNull ()
+{
+    array ();
+    append ("null", 4);
+    _first = false;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : setBool
+// =========================================================================
+int JsonWriter::setBool (bool value)
+{
+    array ();
+    if (value)
+    {
+        append ("true", 4);
+    }
+    else
+    {
+        append ("false", 5);
+    }
+    _first = false;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : setInt
+// =========================================================================
+int JsonWriter::setInt (int32_t value)
+{
+    array ();
+    writeInt (value);
+    _first = false;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : setUint
+// =========================================================================
+int JsonWriter::setUint (uint32_t value)
+{
+    array ();
+    writeUint (value);
+    _first = false;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : setInt64
+// =========================================================================
+int JsonWriter::setInt64 (int64_t value)
+{
+    array ();
+    writeInt64 (value);
+    _first = false;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : setUint64
+// =========================================================================
+int JsonWriter::setUint64 (uint64_t value)
+{
+    array ();
+    writeUint64 (value);
+    _first = false;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : setDouble
+// =========================================================================
+int JsonWriter::setDouble (double value)
+{
+    array ();
+    if (std::isfinite (value))
+    {
+        writeDouble (value);
+    }
+    else if (std::isnan (value))
+    {
+        if (std::signbit (value))
+        {
+            append ("-NaN", 4);
+        }
+        else
+        {
+            append ("NaN", 3);
+        }
+    }
+    else
+    {
+        if (std::signbit (value))
+        {
+            append ("-Inf", 4);
+        }
+        else
+        {
+            append ("Inf", 3);
+        }
+    }
+    _first = false;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : setString
+// =========================================================================
+int JsonWriter::setString (const std::string& value)
+{
+    array ();
+    append ('"');
+    if (writeEscaped (value) == -1)
+    {
+        return -1;
+    }
+    append ('"');
+    _first = false;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : startArray
+// =========================================================================
+int JsonWriter::startArray ([[maybe_unused]] uint32_t size)
+{
+    array ();
+    append ('[');
+    _tab.append (_indentation, ' ');
+    _first = true;
+    _stack.push (true);
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : stopArray
+// =========================================================================
+int JsonWriter::stopArray ()
+{
+    _tab.erase (_tab.size () - _indentation);
+    if (!_first)
+    {
+        endLine ();
+        indent ();
+    }
+    append (']');
+    _first = false;
+    _stack.pop ();
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : startObject
+// =========================================================================
+int JsonWriter::startObject ([[maybe_unused]] uint32_t size)
+{
+    array ();
+    append ('{');
+    _tab.append (_indentation, ' ');
+    _first = true;
+    _stack.push (false);
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : setKey
+// =========================================================================
+int JsonWriter::setKey (const std::string& key)
+{
+    comma ();
+    endLine ();
+    indent ();
+    append ('"');
+    if (writeEscaped (key) == -1)
+    {
+        return -1;
+    }
+    append ('"');
+    append (':');
+    space ();
+    _first = true;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : stopObject
+// =========================================================================
+int JsonWriter::stopObject ()
+{
+    _tab.erase (_tab.size () - _indentation);
+    if (!_first)
+    {
+        endLine ();
+        indent ();
+    }
+    append ('}');
+    _first = false;
+    _stack.pop ();
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : writeInt
+// =========================================================================
+void JsonWriter::writeInt (int32_t value)
+{
+    if (value == std::numeric_limits <int32_t>::min ())
+    {
+        append ('-');
+        writeUint64 (static_cast <uint64_t> (std::numeric_limits <int32_t>::max ()) + 1);
+    }
+    else if (value < 0)
+    {
+        append ('-');
+        writeUint64 (-value);
+    }
+    else
+    {
+        writeInt64 (value);
+    }
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : writeUint
+// =========================================================================
+void JsonWriter::writeUint (uint32_t value)
+{
+    writeUint64 (static_cast <uint64_t> (value));
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : writeInt64
+// =========================================================================
+void JsonWriter::writeInt64 (int64_t value)
+{
+    if (value == std::numeric_limits <int64_t>::min ())
+    {
+        append ('-');
+        writeUint64 (static_cast <uint64_t> (std::numeric_limits <int64_t>::max ()) + 1);
+    }
+    else if (value < 0)
+    {
+        append ('-');
+        writeUint64 (-value);
+    }
+    else
+    {
+        writeUint64 (value);
+    }
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : writeUint64
+// =========================================================================
+void JsonWriter::writeUint64 (uint64_t value)
+{
+    std::stack <char> stack;
+    while (value)
+    {
+        stack.push ((value % 10) + '0');
+        value /= 10;
+    }
+    if (stack.empty ())
+    {
+        append ('0');
+    }
+    while (!stack.empty ())
+    {
+        append (stack.top ());
+        stack.pop ();
+    }
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : writeDouble
+// =========================================================================
+void JsonWriter::writeDouble (double value)
+{
+    char buf[25];
+    char* end = join::sax::dtoa (buf, value);
+    append (buf, end - buf);
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : utf8Codepoint
+// =========================================================================
+int JsonWriter::utf8Codepoint (std::string::const_iterator& cur, std::string::const_iterator& end, uint32_t& codepoint)
+{
+    uint8_t u0 = static_cast <uint8_t> (*cur);
+    if (u0 < 0x80)
+    {
+        codepoint = u0;
+        return 0;
+    }
+
+    if (++cur == end)
+    {
+        return -1;
+    }
+
+    uint8_t u1 = static_cast <uint8_t> (*cur);
+    if (u0 < 0xE0)
+    {
+        codepoint = ((u0 & 0x1F) << 6) | (u1 & 0x3F);
+        if (codepoint < 0x80)
+        {
+            return -1;
+        }
+        return 0;
+    }
+
+    if (++cur == end)
+    {
+        return -1;
+    }
+
+    uint8_t u2 = static_cast <uint8_t> (*cur);
+    if (u0 < 0xF0)
+    {
+        codepoint = ((u0 & 0x0F) << 12) | ((u1 & 0x3F) << 6) | (u2 & 0x3F);
+        if ((codepoint > 0xD7FF) && (codepoint < 0xE000))
+        {
+            return -1;
+        }
+        if (codepoint < 0x800)
+        {
+            return -1;
+        }
+        return 0;
+    }
+
+    if (++cur == end)
+    {
+        return -1;
+    }
+
+    uint8_t u3 = static_cast <uint8_t> (*cur);
+    if (u0 < 0xF8)
+    {
+        codepoint = ((u0 & 0x07) << 18) | ((u1 & 0x3F) << 12) | ((u2 & 0x3F) << 6) | (u3 & 0x3F);
+        if (codepoint < 0x10000)
+        {
+            return -1;
+        }
+        return 0;
+    }
+
+    return -1;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : writeEscaped
+// =========================================================================
+int JsonWriter::writeEscaped (const std::string& value)
+{
+    auto cur = value.cbegin ();
+    auto end = value.cend ();
+
+    while (cur != end)
+    {
+        uint8_t ch = static_cast <uint8_t> (*cur);
+
+        if (ch == '\"')
+        {
+            append ("\\\"", 2);
+        }
+        else if (ch == '\\')
+        {
+            append ("\\\\", 2);
+        }
+        else if (ch == '\b')
+        {
+            append ("\\b", 2);
+        }
+        else if (ch == '\f')
+        {
+            append ("\\f", 2);
+        }
+        else if (ch == '\n')
+        {
+            append ("\\n", 2);
+        }
+        else if (ch == '\r')
+        {
+            append ("\\r", 2);
+        }
+        else if (ch == '\t')
+        {
+            append ("\\t", 2);
+        }
+        else if ((ch < 0x20) /*|| (ch > 0x7F)*/)
+        {
+            uint32_t codepoint = 0;
+            char hex[5];
+
+            if (utf8Codepoint (cur, end, codepoint) == -1)
+            {
+                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
+                return -1;
+            }
+
+            if (codepoint <= 0xFFFF)
+            {
+                append ("\\u", 2);
+                snprintf (hex, sizeof (hex), "%04x", uint16_t (codepoint));
+                append (hex, 4);
+            }
+            else
+            {
+                codepoint -= 0x10000;
+                append ("\\u", 2);
+                snprintf (hex, sizeof (hex), "%04x", uint16_t (0xD800 + ((codepoint >> 10) & 0x3FF)));
+                append (hex, 4);
+                append ("\\u", 2);
+                snprintf (hex, sizeof (hex), "%04x", uint16_t (0xDC00 + (codepoint & 0x3FF)));
+                append (hex, 4);
+            }
+        }
+        else
+        {
+            append (*cur);
+        }
+
+        ++cur;
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : comma
+// =========================================================================
+void JsonWriter::comma ()
+{
+    if (!_stack.empty () && !_first)
+    {
+        append (',');
+    }
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : indent
+// =========================================================================
+void JsonWriter::indent ()
+{
+    if (_indentation)
+    {
+        append (_tab.c_str (), _tab.size ());
+    }
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : space
+// =========================================================================
+void JsonWriter::space ()
+{
+    if (_indentation)
+    {
+        append (' ');
+    }
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : endLine
+// =========================================================================
+void JsonWriter::endLine ()
+{
+    if (_indentation)
+    {
+        append ('\n');
+    }
+}
+
+// =========================================================================
+//   CLASS     : JsonWriter
+//   METHOD    : array
+// =========================================================================
+void JsonWriter::array ()
+{
+    comma ();
+    if (!_stack.empty () && _stack.top ())
+    {
+        endLine ();
+        indent ();
+    }
+}
 
 // =========================================================================
 //   CLASS     : JsonReader
 //   METHOD    : JsonReader
 // =========================================================================
-JsonReader::JsonReader (Value& root)
-: StreamReader (root)
+JsonReader::JsonReader (Value& root, JsonReadMode readMode)
+: StreamReader (root),
+  _mode (readMode)
 {
 }
 
@@ -51,7 +647,7 @@ int JsonReader::read (View& document)
 {
     if (readValue (document) == 0)
     {
-        skipWhitespace (document);
+        skipWhitespaces (document);
 
         if (document.peek () == std::char_traits <char>::eof ())
         {
@@ -70,10 +666,16 @@ int JsonReader::read (View& document)
 // =========================================================================
 int JsonReader::readValue (View& document)
 {
-    if (skipComment (document) == 0)
+    if (skipComments (document) == 0)
     {
         switch (document.peek ())
         {
+            case '[':
+                ++document;
+                return readArray (document);
+            case '{':
+                ++document;
+                return readObject (document);
             case 'n':
                 ++document;
                 return readNull (document);
@@ -86,12 +688,6 @@ int JsonReader::readValue (View& document)
             case '"':
                 ++document;
                 return readString (document);
-            case '[':
-                ++document;
-                return readArray (document);
-            case '{':
-                ++document;
-                return readObject (document);
             default:
                 return readNumber (document);
         }
@@ -106,7 +702,7 @@ int JsonReader::readValue (View& document)
 // =========================================================================
 int JsonReader::readNull (View& document)
 {
-    if (unlikely ((document.get () != 'u') || (document.get () != 'l') || (document.get () != 'l')))
+    if (JOIN_SAX_UNLIKELY ((document.get () != 'u') || (document.get () != 'l') || (document.get () != 'l')))
     {
         join::lastError = make_error_code (SaxErrc::InvalidValue);
         return -1;
@@ -121,7 +717,7 @@ int JsonReader::readNull (View& document)
 // =========================================================================
 int JsonReader::readTrue (View& document)
 {
-    if (unlikely ((document.get () != 'r') || (document.get () != 'u') || (document.get () != 'e')))
+    if (JOIN_SAX_UNLIKELY ((document.get () != 'r') || (document.get () != 'u') || (document.get () != 'e')))
     {
         join::lastError = make_error_code (SaxErrc::InvalidValue);
         return -1;
@@ -136,7 +732,7 @@ int JsonReader::readTrue (View& document)
 // =========================================================================
 int JsonReader::readFalse (View& document)
 {
-    if (unlikely ((document.get () != 'a') || (document.get () != 'l') || (document.get () != 's') || (document.get () != 'e')))
+    if (JOIN_SAX_UNLIKELY ((document.get () != 'a') || (document.get () != 'l') || (document.get () != 's') || (document.get () != 'e')))
     {
         join::lastError = make_error_code (SaxErrc::InvalidValue);
         return -1;
@@ -217,9 +813,9 @@ int JsonReader::readNumber (View& document)
     bool isDouble = false;
     uint64_t u = 0;
 
-    if (unlikely (document.getIf ('0')))
+    if (JOIN_SAX_UNLIKELY (document.getIf ('0')))
     {
-        if (unlikely (isDigit (document.peek ())))
+        if (JOIN_SAX_UNLIKELY (isDigit (document.peek ())))
         {
             join::lastError = make_error_code (SaxErrc::InvalidValue);
             return -1;
@@ -227,15 +823,15 @@ int JsonReader::readNumber (View& document)
 
         digitsStart++;
     }
-    else if (likely (isDigit (document.peek ())))
+    else if (JOIN_SAX_LIKELY (isDigit (document.peek ())))
     {
         u = document.get () - '0';
 
-        while (likely (isDigit (document.peek ())))
+        while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
         {
             int digit = document.peek () - '0';
 
-            if (unlikely (u > ((max64 - digit) / 10)))
+            if (JOIN_SAX_UNLIKELY (u > ((max64 - digit) / 10)))
             {
                 isDouble = true;
                 break;
@@ -245,9 +841,9 @@ int JsonReader::readNumber (View& document)
             ++document;
         }
     }
-    else if (likely (document.getIf ('I') && document.getIf ('n') && document.getIf ('f')))
+    else if (JOIN_SAX_LIKELY (document.getIf ('I') && document.getIf ('n') && document.getIf ('f')))
     {
-        if (unlikely (document.getIf ('i') && !((document.get () == 'n') && (document.get () == 'i') && (document.get () == 't') && (document.get () == 'y'))))
+        if (JOIN_SAX_UNLIKELY (document.getIf ('i') && !((document.get () == 'n') && (document.get () == 'i') && (document.get () == 't') && (document.get () == 'y'))))
         {
             join::lastError = make_error_code (SaxErrc::InvalidValue);
             return -1;
@@ -255,7 +851,7 @@ int JsonReader::readNumber (View& document)
 
         return setDouble (negative ? -std::numeric_limits <double>::infinity () : std::numeric_limits <double>::infinity ());
     }
-    else if (likely (document.getIf ('N') && (document.get () == 'a') && (document.get () == 'N')))
+    else if (JOIN_SAX_LIKELY (document.getIf ('N') && (document.get () == 'a') && (document.get () == 'N')))
     {
         return setDouble (negative ? -std::numeric_limits <double>::quiet_NaN () : std::numeric_limits <double>::quiet_NaN ());
     }
@@ -267,7 +863,7 @@ int JsonReader::readNumber (View& document)
 
     if (isDouble)
     {
-        while (likely (isDigit (document.peek ())))
+        while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
         {
             u = (u * 10) + (document.get () - '0');
         }
@@ -282,11 +878,11 @@ int JsonReader::readNumber (View& document)
         digitsOffset = 1;
         isDouble = true;
 
-        while (likely (isDigit (document.peek ())))
+        while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
         {
             u = (u * 10) + (document.get () - '0');
 
-            if (unlikely (u == 0))
+            if (JOIN_SAX_UNLIKELY (u == 0))
             {
                 digitsStart++;
             }
@@ -309,15 +905,15 @@ int JsonReader::readNumber (View& document)
 
         int exp = 0;
 
-        if (likely (isDigit (document.peek ())))
+        if (JOIN_SAX_LIKELY (isDigit (document.peek ())))
         {
             exp = (document.get () - '0');
 
-            while (likely (isDigit (document.peek ())))
+            while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
             {
                 int digit = document.peek () - '0';
 
-                if (likely (exp <= ((std::numeric_limits <int>::max () - digit) / 10)))
+                if (JOIN_SAX_LIKELY (exp <= ((std::numeric_limits <int>::max () - digit) / 10)))
                 {
                     exp = (exp * 10) + digit;
                 }
@@ -336,7 +932,7 @@ int JsonReader::readNumber (View& document)
 
     if (isDouble)
     {
-        if (unlikely ((digits > std::numeric_limits <double>::max_digits10) || (exponent < -308) || (exponent > 308)))
+        if (JOIN_SAX_UNLIKELY ((digits > std::numeric_limits <double>::max_digits10) || (exponent < -308) || (exponent > 308)))
         {
             char* end = nullptr;
             static locale_t locale = newlocale (LC_ALL_MASK, "C", nullptr);
@@ -351,7 +947,7 @@ int JsonReader::readNumber (View& document)
 
         double d = static_cast <double> (u);
 
-        if (likely (d != 0.0))
+        if (JOIN_SAX_LIKELY (d != 0.0))
         {
             if (exponent >= 0)
             {
@@ -598,23 +1194,23 @@ int JsonReader::readStringSlow (View& document, bool isKey, std::string& output)
 {
     for (;;)
     {
-        if (unlikely (document.getIf ('"')))
+        if (JOIN_SAX_UNLIKELY (document.getIf ('"')))
         {
             break;
         }
-        else if (unlikely (static_cast <uint8_t> (document.peek ()) == '\\'))
+        else if (JOIN_SAX_UNLIKELY (static_cast <uint8_t> (document.peek ()) == '\\'))
         {
             if (readEscaped (document, output) == -1)
             {
                 return -1;
             }
         }
-        else if (unlikely (static_cast <uint8_t> (document.peek ()) < 0x20))
+        else if (JOIN_SAX_UNLIKELY (static_cast <uint8_t> (document.peek ()) < 0x20))
         {
             join::lastError = make_error_code (JsonErrc::IllegalCharacter);
             return -1;
         }
-        /*else if (unlikely (static_cast <uint8_t> (document.peek ()) > 0x7F))
+        /*else if (JOIN_SAX_UNLIKELY (static_cast <uint8_t> (document.peek ()) > 0x7F))
         {
             if (readUtf8 (document, output) == -1)
             {
@@ -646,7 +1242,7 @@ int JsonReader::readString (View& document, bool isKey)
             std::string output (start, start + pos);
             document.removePrefix (pos);
 
-            if (document.getIf ('"'))
+            if (JOIN_SAX_LIKELY (document.getIf ('"')))
             {
                 return isKey ? setKey (output) : setString (output);
             }
@@ -665,12 +1261,12 @@ int JsonReader::readString (View& document, bool isKey)
 // =========================================================================
 int JsonReader::readArray (View& document)
 {
-    if (startArray () == -1)
+    if (JOIN_SAX_UNLIKELY (startArray () == -1))
     {
         return -1;
     }
 
-    if (skipComment (document) == -1)
+    if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
     {
         return -1;
     }
@@ -682,19 +1278,19 @@ int JsonReader::readArray (View& document)
 
     for (;;)
     {
-        if (readValue (document) == -1)
+        if (JOIN_SAX_UNLIKELY (readValue (document) == -1))
         {
             return -1;
         }
 
-        if (skipComment (document) == -1)
+        if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
         {
             return -1;
         }
 
         if (document.getIf (','))
         {
-            if (skipComment (document) == -1)
+            if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
             {
                 return -1;
             }
@@ -721,12 +1317,12 @@ int JsonReader::readArray (View& document)
 // =========================================================================
 int JsonReader::readObject (View& document)
 {
-    if (startObject () == -1)
+    if (JOIN_SAX_UNLIKELY (startObject () == -1))
     {
         return -1;
     }
 
-    if (skipComment (document) == -1)
+    if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
     {
         return -1;
     }
@@ -738,41 +1334,41 @@ int JsonReader::readObject (View& document)
 
     for (;;)
     {
-        if (unlikely (document.get () != '"'))
+        if (JOIN_SAX_UNLIKELY (document.get () != '"'))
         {
             join::lastError = make_error_code (JsonErrc::MissingQuote);
             return -1;
         }
 
-        if (readString (document, true) == -1)
+        if (JOIN_SAX_UNLIKELY (readString (document, true) == -1))
         {
             return -1;
         }
 
-        if (skipComment (document) == -1)
+        if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
         {
             return -1;
         }
 
-        if (document.get () != ':')
+        if (JOIN_SAX_UNLIKELY (document.get () != ':'))
         {
             join::lastError = make_error_code (JsonErrc::MissingColon);
             return -1;
         }
 
-        if (readValue (document) == -1)
+        if (JOIN_SAX_UNLIKELY (readValue (document) == -1))
         {
             return -1;
         }
 
-        if (skipComment (document) == -1)
+        if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
         {
             return -1;
         }
 
         if (document.getIf (','))
         {
-            if (skipComment (document) == -1)
+            if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
             {
                 return -1;
             }
@@ -791,53 +1387,4 @@ int JsonReader::readObject (View& document)
     }
 
     return stopObject ();
-}
-
-// =========================================================================
-//   CLASS     : JsonReader
-//   METHOD    : skipWhitespace
-// =========================================================================
-void JsonReader::skipWhitespace (View& document)
-{
-    char current;
-    while ((current = document.peek ()) == ' ' || current == '\n' || current == '\r' || current == '\t')
-    {
-        ++document;
-    }
-}
-
-// =========================================================================
-//   CLASS     : JsonReader
-//   METHOD    : skipComment
-// =========================================================================
-int JsonReader::skipComment (View& document)
-{
-    skipWhitespace (document);
-
-    while (document.getIf ('/'))
-    {
-        if (document.getIf ('*'))
-        {
-            while ((document.get () != '*') || (document.get () != '/'))
-            {
-                // ignore comment.
-            }
-        }
-        else if (document.getIf ('/'))
-        {
-            while (document.get () != '\n')
-            {
-                // ignore comment.
-            }
-        }
-        else
-        {
-            join::lastError = make_error_code (JsonErrc::InvalidComment);
-            return -1;
-        }
-
-        skipWhitespace (document);
-    }
-
-    return 0;
 }
