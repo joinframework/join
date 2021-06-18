@@ -1203,7 +1203,7 @@ namespace sax
          */
         void reserve (size_t cap)
         {
-                switch (index ())
+            switch (index ())
             {
                 case String:
                     get <String> ().reserve (cap);

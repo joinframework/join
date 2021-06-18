@@ -50,7 +50,7 @@ using join::sax::StreamReader;
 // =========================================================================
 const char* SaxCategory::name () const noexcept
 {
-    return "libjoin";
+    return "join";
 }
 
 // =========================================================================

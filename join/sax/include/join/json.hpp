@@ -62,7 +62,7 @@ namespace sax
          */
         virtual const char* name () const noexcept
         {
-            return "libjoin";
+            return "join";
         }
 
         /**
@@ -93,7 +93,7 @@ namespace sax
                 case JsonErrc::MissingComma:
                     return "missing comma";
                 case JsonErrc::EndOfFile:
-                    return "unexpected end of file";
+                    return "end of file";
                 default:
                     return "success";
             }

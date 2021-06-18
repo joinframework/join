@@ -112,18 +112,6 @@ namespace join
             {
                 return 0 < 0;
             }
-
-            /**
-             * @brief external routine to compare if one object is greater than an other of the same type.
-             * @param index object data type index.
-             * @param data storage pointer.
-             * @param otherData other storage pointer.
-             * @return true if greater than, false otherwise.
-             */
-            inline static bool isGreater (std::size_t /*index*/, const void* /*data*/, const void* /*otherData*/)
-            {
-                return 0 > 0;
-            }
         };
 
         /**
@@ -220,25 +208,6 @@ namespace join
                 else
                 {
                     return VariantHelper <Ts...>::isLower (index, data, otherData);
-                }
-            }
-
-            /**
-             * @brief external routine to compare if one object is greater than an other of the same type.
-             * @param index object data type index.
-             * @param data storage pointer.
-             * @param otherData other storage pointer.
-             * @return true if greater than, false otherwise.
-             */
-            inline static bool isGreater (std::size_t index, const void* data, const void* otherData)
-            {
-                if (index == sizeof... (Ts))
-                {
-                    return *reinterpret_cast <const First *> (data) > *reinterpret_cast <const First *> (otherData);
-                }
-                else
-                {
-                    return VariantHelper <Ts...>::isGreater (index, data, otherData);
                 }
             }
         };

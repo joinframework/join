@@ -4228,6 +4228,8 @@ TEST (Value, at)
 
     value["object"] = Object ({{"foo", 1}, {"bar", 2}});
     ASSERT_TRUE (value.at ("object").isObject ());
+
+    ASSERT_THROW (value.at ("non existing path"), std::out_of_range);
 }
 
 /**
@@ -4455,6 +4457,101 @@ TEST (Value, size)
 
     value = Object ({{"i", 1}});
     ASSERT_EQ (value.size (), 1);
+}
+/**
+ * @brief Test reserve method.
+ */
+TEST (Value, reserve)
+{
+    Value value;
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = nullptr;
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = true;
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = false;
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <int8_t>::min ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <int8_t>::max ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <uint8_t>::min ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <uint8_t>::max ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <int16_t>::min ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <int16_t>::max ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <uint16_t>::min ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <uint16_t>::max ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <int32_t>::min ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <int32_t>::max ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <uint32_t>::min ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <uint32_t>::max ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <int64_t>::min ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <int64_t>::max ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <uint64_t>::min ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <uint64_t>::max ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <float>::min ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <float>::max ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <double>::min ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = std::numeric_limits <double>::max ();
+    ASSERT_THROW (value.reserve (12), std::bad_cast);
+
+    value = "";
+    ASSERT_NO_THROW (value.reserve (12));
+
+    value = "foo";
+    ASSERT_NO_THROW (value.reserve (12));
+
+    value = "02:42:64:2f:6a:d0";
+    ASSERT_NO_THROW (value.reserve (12));
+
+    value = "127.0.0.1";
+    ASSERT_NO_THROW (value.reserve (12));
+
+    value = Array ({1});
+    ASSERT_NO_THROW (value.reserve (12));
+
+    value = Object ({{"i", 1}});
+    ASSERT_NO_THROW (value.reserve (12));
 }
 
 /**
@@ -4754,7 +4851,8 @@ TEST (Value, erase)
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
     value = Object ({{"i", 1}});
-    ASSERT_NO_THROW (value.erase ("i"));
+    ASSERT_EQ (value.erase ("i"), 1);
+    ASSERT_EQ (value.erase ("j"), 0);
 }
 
 /**
