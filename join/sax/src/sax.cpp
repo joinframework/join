@@ -32,8 +32,6 @@
 // C.
 #include <cstring>
 
-using join::View;
-
 using join::sax::Value;
 using join::sax::Array;
 using join::sax::Member;
@@ -208,57 +206,6 @@ StreamReader::StreamReader (Value& root)
 : SaxHandler (),
   root_ (root)
 {
-}
-
-// =========================================================================
-//   CLASS     : StreamReader
-//   METHOD    : deserialize
-// =========================================================================
-int StreamReader::deserialize (const char* document)
-{
-    View in (document);
-    return read (in);
-}
-
-// =========================================================================
-//   CLASS     : StreamReader
-//   METHOD    : deserialize
-// =========================================================================
-int StreamReader::deserialize (const char* document, size_t length)
-{
-    View in (document, length);
-    return read (in);
-}
-
-// =========================================================================
-//   CLASS     : StreamReader
-//   METHOD    : deserialize
-// =========================================================================
-int StreamReader::deserialize (const char* first, const char* last)
-{
-    View in (first, last);
-    return read (in);
-}
-
-// =========================================================================
-//   CLASS     : StreamReader
-//   METHOD    : deserialize
-// =========================================================================
-int StreamReader::deserialize (const std::string& document)
-{
-    View in (document.c_str (), document.size ());
-    return read (in);
-}
-
-// =========================================================================
-//   CLASS     : StreamReader
-//   METHOD    : deserialize
-// =========================================================================
-int StreamReader::deserialize (std::istream& document)
-{
-    std::stringstream in;
-    in << document.rdbuf ();
-    return deserialize (in.str ());
 }
 
 // =========================================================================

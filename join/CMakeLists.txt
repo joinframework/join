@@ -27,7 +27,6 @@ set(PUBLIC_HEADERS
 
 set(SOURCES
     core/src/error.cpp
-    sax/src/json.cpp
     sax/src/sax.cpp
 )
 

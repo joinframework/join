@@ -345,7 +345,7 @@ namespace sax
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (const char* document);
+        virtual int deserialize (const char* document) = 0;
 
         /**
          * @brief Deserialize a document.
@@ -353,7 +353,7 @@ namespace sax
          * @param length The length of the document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (const char* document, size_t length);
+        virtual int deserialize (const char* document, size_t length) = 0;
 
         /**
          * @brief Deserialize a document.
@@ -361,30 +361,23 @@ namespace sax
          * @param last The last character of the document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (const char* first, const char* last);
+        virtual int deserialize (const char* first, const char* last) = 0;
 
         /**
          * @brief Deserialize a document.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (const std::string& document);
+        virtual int deserialize (const std::string& document) = 0;
 
         /**
          * @brief Parse a document.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::istream& document);
+        virtual int deserialize (std::istream& document) = 0;
 
     protected:
-        /**
-         * @brief Parse a document.
-         * @param document document to read.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int read (join::View& document) = 0;
-
         /**
          * @brief set null value.
          * @return 0 on success, -1 otherwise.

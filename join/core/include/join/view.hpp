@@ -27,6 +27,7 @@
 
 // C++.
 #include <stdexcept>
+#include <istream>
 
 // C.
 #include <cstring>
@@ -35,39 +36,39 @@
 namespace join
 {
     /**
-     * @brief char array view.
+     * @brief string view.
      */
-    class View
+    class StringView
     {
     public:
         /**
          * @brief default constructor.
-         * @param s pointer to a character array.
-         * @param count number of characters in the sequence.
+         * @param in input string.
+         * @param count number of characters.
          */
-        constexpr View (const char * s, size_t count)
-        : _ptr (s),
+        StringView (const char* in, size_t count)
+        : _buf (in),
           _len (count)
         {
         }
 
         /**
          * @brief default constructor.
-         * @param s pointer to a character array.
+         * @param in input string.
          */
-        constexpr View (const char * s)
-        : _ptr (s),
-          _len (strlen (s))
+        StringView (const char * in)
+        : _buf (in),
+          _len (strlen (in))
         {
         }
 
         /**
          * @brief default constructor.
-         * @param first pointer to the first character of the sequence.
-         * @param last pointer to the last character of the sequence.
+         * @param first pointer to the first character of the string.
+         * @param last pointer to the last character of the string.
          */
-        constexpr View (const char * first, const char * last)
-        : _ptr (first),
+        StringView (const char * first, const char * last)
+        : _buf (first),
           _len (last - first)
         {
         }
@@ -76,47 +77,42 @@ namespace join
          * @brief copy constructor.
          * @param other object to copy.
          */
-        constexpr View (const View& other) noexcept = default;
+        StringView (const StringView& other) = delete;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        constexpr View& operator= (const View& other) noexcept = default;
+        StringView& operator= (const StringView& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other object to move.
+         */
+        StringView (StringView&& other) = delete;
+
+        /**
+         * @brief move assignment.
+         * @param other object to move.
+         * @return a reference of the current object.
+         */
+        StringView& operator=(StringView&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        virtual ~View () = default;
-
-        /**
-         * @brief returns a pointer to the first character of a view.
-         * @return a pointer to the first character of a view.
-         */
-        constexpr const char * data () const noexcept
-        {
-            return _ptr;
-        }
-
-        /**
-         * @brief returns the number of characters in the view.
-         * @return the number of characters in the view.
-         */
-        constexpr size_t size () const noexcept
-        {
-            return _len;
-        }
+        virtual ~StringView () = default;
 
         /**
          * @brief get character without extracting it.
          * @return extracted character.
          */
-        constexpr int peek () const noexcept
+        int peek () const noexcept
         {
             if (_len)
             {
-                return *_ptr;
+                return _buf[_pos];
             }
             return std::char_traits <char>::eof ();
         }
@@ -125,12 +121,12 @@ namespace join
          * @brief extracts character.
          * @return extracted character.
          */
-        constexpr int get () noexcept
+        int get () noexcept
         {
             if (_len)
             {
                 --_len;
-                return *_ptr++;
+                return _buf[_pos++];
             }
             return std::char_traits <char>::eof ();
         }
@@ -140,55 +136,173 @@ namespace join
          * @param expected expected character.
          * @return true if extracted, false otherwise.
          */
-        constexpr bool getIf (char expected) noexcept
+        bool getIf (char expected) noexcept
         {
-            if (_len && (*_ptr == expected))
+            if (_len && (_buf[_pos] == expected))
             {
-                ++_ptr;
                 --_len;
+                ++_pos;
                 return true;
             }
             return false;
         }
 
         /**
-         * @brief moves the start of the view forward by n characters.
-         * @param n number of characters to remove from the start of the view.
+         * @brief .
+         * @param buf .
+         * @param count .
          */
-        constexpr void removePrefix (size_t n)
+        size_t read (char* buf, size_t count)
         {
-            _ptr += n;
-            _len -= n;
+            count = std::min (_len, count);
+            ::memcpy (buf, &_buf[_pos], count);
+            _pos += count;
+            _len -= count;
+            return count;
         }
 
         /**
-         * @brief returns a reference to the element at the specified location pos.
-         * @param pos position of the element to return.
-         * @return reference to the requested element.
-         * @throw std::bad_cast.
+         * @brief get input position indicator.
+         * @return current position.
          */
-        constexpr const char& operator[] (size_t pos) const
+        size_t tell ()
         {
-            return _ptr[pos];
+            return _pos;
         }
 
         /**
-         * @brief perform pre-increment operation.
+         * @brief rewind the view.
+         * @param n number of characters to rewind.
+         */
+        void rewind (size_t n)
+        {
+            _pos -= n;
+            _len += n;
+        }
+
+    private:
+        /// input buffer start pointer.
+        const char * _buf = nullptr;
+
+        /// string remaining size.
+        size_t _len = 0;
+
+        /// current position.
+        size_t _pos = 0;
+    };
+
+    /**
+     * @brief stream view.
+     */
+    class StreamView
+    {
+    public:
+        /**
+         * @brief default constructor.
+         * @param in input stream.
+         */
+        StreamView (std::istream& in)
+        : _in (std::addressof (in))
+        {
+        }
+
+        /**
+         * @brief copy constructor.
+         * @param other object to copy.
+         */
+        StreamView (const StreamView& other) = delete;
+
+        /**
+         * @brief copy assignment.
+         * @param other object to copy.
          * @return a reference of the current object.
          */
-        constexpr View& operator++ ()
+        StreamView& operator= (const StreamView& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other object to move.
+         */
+        StreamView (StreamView&& other) = delete;
+
+        /**
+         * @brief move assignment.
+         * @param other object to move.
+         * @return a reference of the current object.
+         */
+        StreamView& operator=(StreamView&& other) = delete;
+
+        /**
+         * @brief destroy instance.
+         */
+        virtual ~StreamView () = default;
+
+        /**
+         * @brief get character without extracting it.
+         * @return extracted character.
+         */
+        int peek () const noexcept
         {
-            ++_ptr;
-            --_len;
-            return *this;
+            return _in->peek ();
         }
 
-    protected:
-        /// view start pointer.
-        const char * _ptr;
+        /**
+         * @brief extracts character.
+         * @return extracted character.
+         */
+        int get () noexcept
+        {
+            return _in->get ();
+        }
 
-        /// view size.
-        size_t _len;
+        /**
+         * @brief extracts expected character.
+         * @param expected expected character.
+         * @return true if extracted, false otherwise.
+         */
+        bool getIf (char expected) noexcept
+        {
+            if (_in->peek () == expected)
+            {
+                _in->get ();
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * @brief .
+         * @param buf .
+         * @param count .
+         */
+        size_t read (char* buf, size_t count)
+        {
+            _in->read (buf, count);
+            return _in->gcount ();
+        }
+
+        /**
+         * @brief input position indicator.
+         * @return current position.
+         */
+        size_t tell ()
+        {
+            return _in->tellg ();
+        }
+
+        /**
+         * @brief rewind the view.
+         * @param n number of characters to rewind.
+         */
+        void rewind (size_t n)
+        {
+            _in->clear ();
+            _in->seekg (tell () - n);
+        }
+
+    private:
+        /// input stream.
+        std::istream* _in;
     };
 }
 

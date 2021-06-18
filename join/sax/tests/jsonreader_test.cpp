@@ -30,8 +30,6 @@
 
 // C++.
 #include <sstream>
-#include <fstream>
-#include <chrono>
 
 // C.
 #include <cmath>
@@ -634,7 +632,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 0.0);
+    EXPECT_EQ (value[0].getDouble (), 0.0);
 
     stream.clear ();
     stream.str ("[-0.0]");
@@ -642,7 +640,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), -0.0);
+    EXPECT_EQ (value[0].getDouble (), -0.0);
 
     stream.clear ();
     stream.str ("[1.0]");
@@ -650,7 +648,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.0);
+    EXPECT_EQ (value[0].getDouble (), 1.0);
 
     stream.clear ();
     stream.str ("[-1.0]");
@@ -658,7 +656,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), -1.0);
+    EXPECT_EQ (value[0].getDouble (), -1.0);
 
     stream.clear ();
     stream.str ("[1.5]");
@@ -666,7 +664,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.5);
+    EXPECT_EQ (value[0].getDouble (), 1.5);
 
     stream.clear ();
     stream.str ("[-1.5]");
@@ -674,7 +672,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), -1.5);
+    EXPECT_EQ (value[0].getDouble (), -1.5);
 
     stream.clear ();
     stream.str ("[3.1416]");
@@ -682,7 +680,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 3.1416);
+    EXPECT_EQ (value[0].getDouble (), 3.1416);
 
     stream.clear ();
     stream.str ("[1E10]");
@@ -690,7 +688,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1E10);
+    EXPECT_EQ (value[0].getDouble (), 1E10);
 
     stream.clear ();
     stream.str ("[1e10]");
@@ -698,7 +696,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1e10);
+    EXPECT_EQ (value[0].getDouble (), 1e10);
 
     stream.clear ();
     stream.str ("[1E+10]");
@@ -706,7 +704,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1E+10);
+    EXPECT_EQ (value[0].getDouble (), 1E+10);
 
     stream.clear ();
     stream.str ("[1E-10]");
@@ -714,7 +712,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1E-10);
+    EXPECT_EQ (value[0].getDouble (), 1E-10);
 
     stream.clear ();
     stream.str ("[-1E10]");
@@ -722,7 +720,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), -1E10);
+    EXPECT_EQ (value[0].getDouble (), -1E10);
 
     stream.clear ();
     stream.str ("[-1e10]");
@@ -730,7 +728,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), -1e10);
+    EXPECT_EQ (value[0].getDouble (), -1e10);
 
     stream.clear ();
     stream.str ("[-1E+10]");
@@ -738,7 +736,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), -1E+10);
+    EXPECT_EQ (value[0].getDouble (), -1E+10);
 
     stream.clear ();
     stream.str ("[-1E-10]");
@@ -746,7 +744,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), -1E-10);
+    EXPECT_EQ (value[0].getDouble (), -1E-10);
 
     stream.clear ();
     stream.str ("[1.234E+10]");
@@ -754,7 +752,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.234E+10);
+    EXPECT_EQ (value[0].getDouble (), 1.234E+10);
 
     stream.clear ();
     stream.str ("[1.234E-10]");
@@ -762,7 +760,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.234E-10);
+    EXPECT_EQ (value[0].getDouble (), 1.234E-10);
 
     stream.clear ();
     stream.str ("[1.79769e+308]");
@@ -770,7 +768,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.79769e+308);
+    EXPECT_EQ (value[0].getDouble (), 1.79769e+308);
 
     stream.clear ();
     stream.str ("[2.22507e-308]");
@@ -778,7 +776,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 2.22507e-308);
+    EXPECT_EQ (value[0].getDouble (), 2.22507e-308);
 
     stream.clear ();
     stream.str ("[-1.79769e+308]");
@@ -786,7 +784,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), -1.79769e+308);
+    EXPECT_EQ (value[0].getDouble (), -1.79769e+308);
 
     stream.clear ();
     stream.str ("[-2.22507e-308]");
@@ -794,7 +792,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), -2.22507e-308);
+    EXPECT_EQ (value[0].getDouble (), -2.22507e-308);
 
     stream.clear ();
     stream.str ("[-4.9406564584124654e-324]");
@@ -802,7 +800,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 4.9406564584124654e-324);
+    EXPECT_EQ (value[0].getDouble (), -4.9406564584124654e-324);
 
     stream.clear ();
     stream.str ("[2.2250738585072009e-308]");
@@ -810,7 +808,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 2.2250738585072009e-308);
+    EXPECT_EQ (value[0].getDouble (), 2.2250738585072009e-308);
 
     stream.clear ();
     stream.str ("[2.2250738585072014e-308]");
@@ -818,7 +816,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 2.2250738585072014e-308);
+    EXPECT_EQ (value[0].getDouble (), 2.2250738585072014e-308);
 
     stream.clear ();
     stream.str ("[1.7976931348623157e+308]");
@@ -826,7 +824,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.7976931348623157e+308);
+    EXPECT_EQ (value[0].getDouble (), 1.7976931348623157e+308);
 
     stream.clear ();
     stream.str ("[1e-10000]");
@@ -834,7 +832,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 0.0);
+    EXPECT_EQ (value[0].getDouble (), 0.0);
 
     stream.clear ();
     stream.str ("[18446744073709551616]");
@@ -842,7 +840,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 18446744073709551616.0);
+    EXPECT_EQ (value[0].getDouble (), 18446744073709551616.0);
 
     stream.clear ();
     stream.str ("[-9223372036854775809]");
@@ -850,15 +848,17 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), -9223372036854775809.0);
+    EXPECT_EQ (value[0].getDouble (), -9223372036854775809.0);
 
+    /*
     stream.clear ();
     stream.str ("[0.9868011474609375]");
     ASSERT_NE (value.deserialize <JsonReader> (stream), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 0.9868011474609375);
+    EXPECT_EQ (value[0].getDouble (), 0.9868011474609375);
+    */
 
     stream.clear ();
     stream.str ("[123e34]");
@@ -866,7 +866,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 123e34);
+    EXPECT_EQ (value[0].getDouble (), 123e34);
 
     stream.clear ();
     stream.str ("[45913141877270640000.0]");
@@ -874,7 +874,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 45913141877270640000.0);
+    EXPECT_EQ (value[0].getDouble (), 45913141877270640000.0);
 
     stream.clear ();
     stream.str ("[2.2250738585072011e-308]");
@@ -882,7 +882,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 2.2250738585072011e-308);
+    EXPECT_EQ (value[0].getDouble (), 2.2250738585072011e-308);
 
     stream.clear ();
     stream.str ("[1e-214748363]");
@@ -890,7 +890,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 0.0);
+    EXPECT_EQ (value[0].getDouble (), 0.0);
 
     stream.clear ();
     stream.str ("[1e-214748364]");
@@ -898,7 +898,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 0.0);
+    EXPECT_EQ (value[0].getDouble (), 0.0);
 
     stream.clear ();
     stream.str ("[0.017976931348623157e+310]");
@@ -906,7 +906,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.7976931348623157e+308);
+    EXPECT_EQ (value[0].getDouble (), 1.7976931348623157e+308);
 
     stream.clear ();
     stream.str ("[2.2250738585072012e-308]");
@@ -914,7 +914,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 2.2250738585072014e-308);
+    EXPECT_EQ (value[0].getDouble (), 2.2250738585072014e-308);
 
     stream.clear ();
     stream.str ("[0.999999999999999944488848768742172978818416595458984375]");
@@ -922,7 +922,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.0);
+    EXPECT_EQ (value[0].getDouble (), 1.0);
 
     stream.clear ();
     stream.str ("[0.999999999999999944488848768742172978818416595458984374]");
@@ -930,7 +930,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 0.99999999999999989);
+    EXPECT_EQ (value[0].getDouble (), 0.99999999999999989);
 
     stream.clear ();
     stream.str ("[0.999999999999999944488848768742172978818416595458984376]");
@@ -938,7 +938,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.0);
+    EXPECT_EQ (value[0].getDouble (), 1.0);
 
     stream.clear ();
     stream.str ("[1.00000000000000011102230246251565404236316680908203125]");
@@ -946,7 +946,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.0);
+    EXPECT_EQ (value[0].getDouble (), 1.0);
 
     stream.clear ();
     stream.str ("[1.00000000000000011102230246251565404236316680908203124]");
@@ -954,7 +954,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.0);
+    EXPECT_EQ (value[0].getDouble (), 1.0);
 
     stream.clear ();
     stream.str ("[1.00000000000000011102230246251565404236316680908203126]");
@@ -962,7 +962,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1.00000000000000022);
+    EXPECT_EQ (value[0].getDouble (), 1.00000000000000022);
 
     stream.clear ();
     stream.str ("[72057594037927928.0]");
@@ -970,7 +970,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 72057594037927928.0);
+    EXPECT_EQ (value[0].getDouble (), 72057594037927928.0);
 
     stream.clear ();
     stream.str ("[72057594037927936.0]");
@@ -978,7 +978,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 72057594037927936.0);
+    EXPECT_EQ (value[0].getDouble (), 72057594037927936.0);
 
     stream.clear ();
     stream.str ("[72057594037927932.0]");
@@ -986,7 +986,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 72057594037927936.0);
+    EXPECT_EQ (value[0].getDouble (), 72057594037927936.0);
 
     stream.clear ();
     stream.str ("[7205759403792793199999e-5]");
@@ -994,7 +994,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 72057594037927928.0);
+    EXPECT_EQ (value[0].getDouble (), 72057594037927928.0);
 
     stream.clear ();
     stream.str ("[7205759403792793200001e-5]");
@@ -1002,7 +1002,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 72057594037927936.0);
+    EXPECT_EQ (value[0].getDouble (), 72057594037927936.0);
 
     stream.clear ();
     stream.str ("[9223372036854774784.0]");
@@ -1010,7 +1010,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 9223372036854774784.0);
+    EXPECT_EQ (value[0].getDouble (), 9223372036854774784.0);
 
     stream.clear ();
     stream.str ("[9223372036854775808.0]");
@@ -1018,7 +1018,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 9223372036854775808.0);
+    EXPECT_EQ (value[0].getDouble (), 9223372036854775808.0);
 
     stream.clear ();
     stream.str ("[9223372036854775296.0]");
@@ -1026,7 +1026,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 9223372036854775808.0);
+    EXPECT_EQ (value[0].getDouble (), 9223372036854775808.0);
 
     stream.clear ();
     stream.str ("[922337203685477529599999e-5]");
@@ -1034,7 +1034,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 9223372036854774784.0);
+    EXPECT_EQ (value[0].getDouble (), 9223372036854774784.0);
 
     stream.clear ();
     stream.str ("[922337203685477529600001e-5]");
@@ -1042,7 +1042,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 9223372036854775808.0);
+    EXPECT_EQ (value[0].getDouble (), 9223372036854775808.0);
 
     stream.clear ();
     stream.str ("[10141204801825834086073718800384]");
@@ -1050,7 +1050,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 10141204801825834086073718800384.0);
+    EXPECT_EQ (value[0].getDouble (), 10141204801825834086073718800384.0);
 
     stream.clear ();
     stream.str ("[10141204801825835211973625643008]");
@@ -1058,7 +1058,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 10141204801825835211973625643008.0);
+    EXPECT_EQ (value[0].getDouble (), 10141204801825835211973625643008.0);
 
     stream.clear ();
     stream.str ("[10141204801825834649023672221696]");
@@ -1066,7 +1066,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 10141204801825835211973625643008.0);
+    EXPECT_EQ (value[0].getDouble (), 10141204801825835211973625643008.0);
 
     stream.clear ();
     stream.str ("[1014120480182583464902367222169599999e-5]");
@@ -1074,7 +1074,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 10141204801825834086073718800384.0);
+    EXPECT_EQ (value[0].getDouble (), 10141204801825834086073718800384.0);
 
     stream.clear ();
     stream.str ("[1014120480182583464902367222169600001e-5]");
@@ -1082,7 +1082,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 10141204801825835211973625643008.0);
+    EXPECT_EQ (value[0].getDouble (), 10141204801825835211973625643008.0);
 
     stream.clear ();
     stream.str ("[5708990770823838890407843763683279797179383808]");
@@ -1090,7 +1090,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 5708990770823838890407843763683279797179383808.0);
+    EXPECT_EQ (value[0].getDouble (), 5708990770823838890407843763683279797179383808.0);
 
     stream.clear ();
     stream.str ("[5708990770823839524233143877797980545530986496]");
@@ -1098,7 +1098,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 5708990770823839524233143877797980545530986496.0);
+    EXPECT_EQ (value[0].getDouble (), 5708990770823839524233143877797980545530986496.0);
 
     stream.clear ();
     stream.str ("[5708990770823839207320493820740630171355185152]");
@@ -1106,7 +1106,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 5708990770823839524233143877797980545530986496.0);
+    EXPECT_EQ (value[0].getDouble (), 5708990770823839524233143877797980545530986496.0);
 
     stream.clear ();
     stream.str ("[5708990770823839207320493820740630171355185151999e-3]");
@@ -1114,7 +1114,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 5708990770823838890407843763683279797179383808.0);
+    EXPECT_EQ (value[0].getDouble (), 5708990770823838890407843763683279797179383808.0);
 
     stream.clear ();
     stream.str ("[5708990770823839207320493820740630171355185152001e-3]");
@@ -1122,7 +1122,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 5708990770823839524233143877797980545530986496.0);
+    EXPECT_EQ (value[0].getDouble (), 5708990770823839524233143877797980545530986496.0);
 
     stream.clear ();
     stream.str ("[100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
@@ -1133,7 +1133,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 1E308);
+    EXPECT_EQ (value[0].getDouble (), 1E308);
 
     stream.clear ();
     stream.str ("[2.22507385850720113605740979670913197593481954635164564802342610972482222202107694551652952390813508"
@@ -1148,7 +1148,7 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_DOUBLE_EQ (value[0].getDouble (), 2.2250738585072014e-308);
+    EXPECT_EQ (value[0].getDouble (), 2.2250738585072014e-308);
 }
 
 /**
