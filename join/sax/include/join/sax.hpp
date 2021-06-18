@@ -294,7 +294,7 @@ namespace sax
         void append (char data);
 
         /// output stream.
-        std::ostream& outstream_;
+        std::ostream& _outstream;
     };
 
     /**
@@ -474,16 +474,16 @@ namespace sax
         virtual int setValue (Value&& value);
 
         /// max stack depth.
-        static constexpr size_t maxdepth_ = 19;
+        static constexpr size_t _maxdepth = 19;
 
         /// stack.
-        std::stack <Value*> stack_;
+        std::stack <Value*> _stack;
 
         /// current key.
-        std::string curkey_;
+        std::string _curkey;
 
         /// root.
-        Value& root_;
+        Value& _root;
     };
 }
 }

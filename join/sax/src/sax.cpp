@@ -108,7 +108,7 @@ std::error_condition join::sax::make_error_condition (SaxErrc code)
 // =========================================================================
 StreamWriter::StreamWriter (std::ostream& document)
 : SaxHandler (),
-  outstream_ (document)
+  _outstream (document)
 {
 }
 
@@ -186,7 +186,7 @@ int StreamWriter::serialize (const Value& value)
 // =========================================================================
 void StreamWriter::append (const char* data, uint32_t size)
 {
-    outstream_.write (data, size);
+    _outstream.write (data, size);
 }
 
 // =========================================================================
@@ -195,7 +195,7 @@ void StreamWriter::append (const char* data, uint32_t size)
 // =========================================================================
 void StreamWriter::append (char data)
 {
-    outstream_.put (data);
+    _outstream.put (data);
 }
 
 // =========================================================================
@@ -204,7 +204,7 @@ void StreamWriter::append (char data)
 // =========================================================================
 StreamReader::StreamReader (Value& root)
 : SaxHandler (),
-  root_ (root)
+  _root (root)
 {
 }
 
@@ -290,29 +290,29 @@ int StreamReader::startArray (uint32_t size)
     // reserve at least 2.
     array.reserve ((size) ? size : 2);
 
-    if (stack_.empty ())
+    if (_stack.empty ())
     {
-        root_ = std::move (array);
-        stack_.push (&root_);
+        _root = std::move (array);
+        _stack.push (&_root);
     }
     else
     {
-        if (stack_.size () >= maxdepth_)
+        if (_stack.size () >= _maxdepth)
         {
             join::lastError = make_error_code (SaxErrc::StackOverflow);
             return -1;
         }
 
-        Value::Ptr parent = stack_.top ();
+        Value::Ptr parent = _stack.top ();
 
         if (parent->is <Value::ObjectValue> ())
         {
-            stack_.push (&parent->insert (Member (curkey_, std::move (array))));
-            curkey_.clear ();
+            _stack.push (&parent->insert (Member (_curkey, std::move (array))));
+            _curkey.clear ();
         }
         else if (parent->is <Value::ArrayValue> ())
         {
-            stack_.push (&parent->pushBack (std::move (array)));
+            _stack.push (&parent->pushBack (std::move (array)));
         }
         else
         {
@@ -330,9 +330,9 @@ int StreamReader::startArray (uint32_t size)
 // =========================================================================
 int StreamReader::stopArray ()
 {
-    if (stack_.size ())
+    if (_stack.size ())
     {
-        stack_.pop ();
+        _stack.pop ();
     }
 
     return 0;
@@ -348,29 +348,29 @@ int StreamReader::startObject (uint32_t size)
     // reserve at least 2.
     object.reserve ((size) ? size : 2);
 
-    if (stack_.empty ())
+    if (_stack.empty ())
     {
-        root_ = std::move (object);
-        stack_.push (&root_);
+        _root = std::move (object);
+        _stack.push (&_root);
     }
     else
     {
-        if (stack_.size () >= maxdepth_)
+        if (_stack.size () >= _maxdepth)
         {
             join::lastError = make_error_code (SaxErrc::StackOverflow);
             return -1;
         }
 
-        Value::Ptr parent = stack_.top ();
+        Value::Ptr parent = _stack.top ();
 
         if (parent->is <Value::ObjectValue> ())
         {
-            stack_.push (&parent->insert (Member (curkey_, std::move (object))));
-            curkey_.clear ();
+            _stack.push (&parent->insert (Member (_curkey, std::move (object))));
+            _curkey.clear ();
         }
         else if (parent->is <Value::ArrayValue> ())
         {
-            stack_.push (&parent->pushBack (std::move (object)));
+            _stack.push (&parent->pushBack (std::move (object)));
         }
         else
         {
@@ -388,7 +388,7 @@ int StreamReader::startObject (uint32_t size)
 // =========================================================================
 int StreamReader::setKey (const std::string& key)
 {
-    curkey_ = key;
+    _curkey = key;
     return 0;
 }
 
@@ -398,9 +398,9 @@ int StreamReader::setKey (const std::string& key)
 // =========================================================================
 int StreamReader::stopObject ()
 {
-    if (stack_.size ())
+    if (_stack.size ())
     {
-        stack_.pop ();
+        _stack.pop ();
     }
 
     return 0;
@@ -412,18 +412,18 @@ int StreamReader::stopObject ()
 // =========================================================================
 int StreamReader::setValue (Value&& value)
 {
-    if (stack_.empty ())
+    if (_stack.empty ())
     {
         join::lastError = make_error_code (SaxErrc::InvalidParent);
         return -1;
     }
 
-    Value::Ptr parent = stack_.top ();
+    Value::Ptr parent = _stack.top ();
 
     if (parent->is <Value::ObjectValue> ())
     {
-        parent->insert (Member (curkey_, std::move (value)));
-        curkey_.clear ();
+        parent->insert (Member (_curkey, std::move (value)));
+        _curkey.clear ();
     }
     else if (parent->is <Value::ArrayValue> ())
     {
