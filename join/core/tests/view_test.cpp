@@ -28,174 +28,294 @@
 // libraries.
 #include <gtest/gtest.h>
 
-using join::View;
+// C++.
+#include <sstream>
+
+using join::StringView;
+using join::StreamView;
 
 /**
  * @brief create test.
  */
-TEST (View, create)
+TEST (StringView, create)
 {
     char msg[] = "hello world";
 
-    View view1 (msg);
-    ASSERT_NE (view1.data (), nullptr);
-    ASSERT_EQ (view1.size (), 11);
+    StringView view1 (msg);
+    ASSERT_NE (view1.peek (), std::char_traits <char>::eof ());
 
-    View view2 (msg, strlen (msg));
-    ASSERT_NE (view2.data (), nullptr);
-    ASSERT_EQ (view2.size (), 11);
+    StringView view2 (msg, strlen (msg));
+    ASSERT_NE (view2.peek (), std::char_traits <char>::eof ());
 
-    View view3 (msg, msg + strlen (msg));
-    ASSERT_NE (view3.data (), nullptr);
-    ASSERT_EQ (view3.size (), 11);
-}
-
-/**
- * @brief assign test.
- */
-TEST (View, assign)
-{
-    View view = View ("other");
-    ASSERT_NE (view.data (), nullptr);
-    ASSERT_EQ (view.size (), 5);
-
-    view = View ("hello world");
-    ASSERT_NE (view.data (), nullptr);
-    ASSERT_EQ (view.size (), 11);
-}
-
-/**
- * @brief data test.
- */
-TEST (View, data)
-{
-    View view ("hello world");
-    ASSERT_NE (view.data (), nullptr);
-    ASSERT_EQ (*view.data (), 'h');
-}
-
-/**
- * @brief size test.
- */
-TEST (View, size)
-{
-    View view ("hello world");
-    ASSERT_EQ (view.size (), 11);
+    StringView view3 (msg, msg + strlen (msg));
+    ASSERT_NE (view3.peek (), std::char_traits <char>::eof ());
 }
 
 /**
  * @brief peek test.
  */
-TEST (View, peek)
+TEST (StringView, peek)
 {
-    View view ("hello world");
-    ASSERT_EQ (view.size (), 11);
+    StringView view ("hello world");
+
     ASSERT_EQ (view.peek (), 'h');
     ASSERT_EQ (view.get (), 'h');
-    ASSERT_EQ (view.size (), 10);
     ASSERT_EQ (view.peek (), 'e');
     ASSERT_EQ (view.get (), 'e');
-    ASSERT_EQ (view.size (), 9);
     ASSERT_EQ (view.peek (), 'l');
     ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.size (), 8);
     ASSERT_EQ (view.peek (), 'l');
     ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.size (), 7);
     ASSERT_EQ (view.peek (), 'o');
     ASSERT_EQ (view.get (), 'o');
-    ASSERT_EQ (view.size (), 6);
     ASSERT_EQ (view.peek (), ' ');
     ASSERT_EQ (view.get (), ' ');
-    ASSERT_EQ (view.size (), 5);
     ASSERT_EQ (view.peek (), 'w');
     ASSERT_EQ (view.get (), 'w');
-    ASSERT_EQ (view.size (), 4);
     ASSERT_EQ (view.peek (), 'o');
     ASSERT_EQ (view.get (), 'o');
-    ASSERT_EQ (view.size (), 3);
     ASSERT_EQ (view.peek (), 'r');
     ASSERT_EQ (view.get (), 'r');
-    ASSERT_EQ (view.size (), 2);
     ASSERT_EQ (view.peek (), 'l');
     ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.size (), 1);
     ASSERT_EQ (view.peek (), 'd');
     ASSERT_EQ (view.get (), 'd');
-    ASSERT_EQ (view.size (), 0);
     ASSERT_EQ (view.peek (), std::char_traits <char>::eof ());
-    ASSERT_EQ (view.get (), std::char_traits <char>::eof ());
 }
 
 /**
  * @brief get test.
  */
-TEST (View, get)
+TEST (StringView, get)
 {
-    View view ("hello world");
-    ASSERT_EQ (view.size (), 11);
+    StringView view ("hello world");
+
     ASSERT_EQ (view.get (), 'h');
-    ASSERT_EQ (view.size (), 10);
     ASSERT_EQ (view.get (), 'e');
-    ASSERT_EQ (view.size (), 9);
     ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.size (), 8);
     ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.size (), 7);
     ASSERT_EQ (view.get (), 'o');
-    ASSERT_EQ (view.size (), 6);
     ASSERT_EQ (view.get (), ' ');
-    ASSERT_EQ (view.size (), 5);
     ASSERT_EQ (view.get (), 'w');
-    ASSERT_EQ (view.size (), 4);
     ASSERT_EQ (view.get (), 'o');
-    ASSERT_EQ (view.size (), 3);
     ASSERT_EQ (view.get (), 'r');
-    ASSERT_EQ (view.size (), 2);
     ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.size (), 1);
     ASSERT_EQ (view.get (), 'd');
-    ASSERT_EQ (view.size (), 0);
     ASSERT_EQ (view.get (), std::char_traits <char>::eof ());
 }
 
 /**
  * @brief getIf test.
  */
-TEST (View, getIf)
+TEST (StringView, getIf)
 {
-    View view ("hello world");
-    ASSERT_EQ (view.size (), 11);
+    StringView view ("hello world");
+
     ASSERT_FALSE (view.getIf ('x'));
-    ASSERT_EQ (view.size (), 11);
-    ASSERT_TRUE (view.getIf ('h'));
-    ASSERT_EQ (view.size (), 10);
+    ASSERT_TRUE  (view.getIf ('h'));
+    ASSERT_TRUE  (view.getIf ('e'));
+}
+
+/**
+ * @brief read test.
+ */
+TEST (StringView, read)
+{
+    StringView view ("hello world");
+    char buf[8] = {};
+
+    ASSERT_EQ (view.read (buf, 5), 5);
+    ASSERT_EQ (view.read (buf, 8), 6);
+    ASSERT_EQ (view.read (buf, 8), 0);
+}
+
+/**
+ * @brief rewind test.
+ */
+TEST (StringView, tell)
+{
+    StringView view ("hello world");
+
+    ASSERT_EQ (view.tell (), 0);
+    ASSERT_EQ (view.get (), 'h');
+    ASSERT_EQ (view.tell (), 1);
+    ASSERT_EQ (view.get (), 'e');
+    ASSERT_EQ (view.tell (), 2);
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.tell (), 3);
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.tell (), 4);
+    ASSERT_EQ (view.get (), 'o');
+    ASSERT_EQ (view.tell (), 5);
+    ASSERT_EQ (view.get (), ' ');
+    ASSERT_EQ (view.tell (), 6);
+    ASSERT_EQ (view.get (), 'w');
+    ASSERT_EQ (view.tell (), 7);
+    ASSERT_EQ (view.get (), 'o');
+    ASSERT_EQ (view.tell (), 8);
+    ASSERT_EQ (view.get (), 'r');
+    ASSERT_EQ (view.tell (), 9);
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.tell (), 10);
+    ASSERT_EQ (view.get (), 'd');
+    ASSERT_EQ (view.tell (), 11);
+}
+
+/**
+ * @brief rewind test.
+ */
+TEST (StringView, rewind)
+{
+    StringView view ("hello world");
+
+    ASSERT_EQ (view.get (), 'h');
+    ASSERT_EQ (view.get (), 'e');
+    ASSERT_EQ (view.get (), 'l');
+    view.rewind (2);
+    ASSERT_EQ (view.get (), 'e');
+    ASSERT_EQ (view.get (), 'l');
+}
+
+/**
+ * @brief create test.
+ */
+TEST (StreamView, create)
+{
+    std::stringstream msg ("hello world");
+    StreamView view (msg);
+
+    ASSERT_NE (view.peek (), std::char_traits <char>::eof ());
+}
+
+/**
+ * @brief peek test.
+ */
+TEST (StreamView, peek)
+{
+    std::stringstream msg ("hello world");
+    StreamView view (msg);
+
+    ASSERT_EQ (view.peek (), 'h');
+    ASSERT_EQ (view.get (), 'h');
     ASSERT_EQ (view.peek (), 'e');
-}
-
-/**
- * @brief removePrefix test.
- */
-TEST (View, removePrefix)
-{
-    View view ("hello world");
-    ASSERT_EQ (view.size (), 11);
-    view.removePrefix (6);
+    ASSERT_EQ (view.get (), 'e');
+    ASSERT_EQ (view.peek (), 'l');
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.peek (), 'l');
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.peek (), 'o');
+    ASSERT_EQ (view.get (), 'o');
+    ASSERT_EQ (view.peek (), ' ');
+    ASSERT_EQ (view.get (), ' ');
     ASSERT_EQ (view.peek (), 'w');
-    ASSERT_EQ (view.size (), 5);
+    ASSERT_EQ (view.get (), 'w');
+    ASSERT_EQ (view.peek (), 'o');
+    ASSERT_EQ (view.get (), 'o');
+    ASSERT_EQ (view.peek (), 'r');
+    ASSERT_EQ (view.get (), 'r');
+    ASSERT_EQ (view.peek (), 'l');
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.peek (), 'd');
+    ASSERT_EQ (view.get (), 'd');
+    ASSERT_EQ (view.peek (), std::char_traits <char>::eof ());
 }
 
 /**
- * @brief at test.
+ * @brief get test.
  */
-TEST (View, at)
+TEST (StreamView, get)
 {
-    View view ("hello world");
-    ASSERT_EQ (view[0], 'h');
-    ASSERT_EQ (view[1], 'e');
-    ASSERT_EQ (view[2], 'l');
-    ASSERT_EQ (view[3], 'l');
-    ASSERT_EQ (view[4], 'o');
+    std::stringstream msg ("hello world");
+    StreamView view (msg);
+
+    ASSERT_EQ (view.get (), 'h');
+    ASSERT_EQ (view.get (), 'e');
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.get (), 'o');
+    ASSERT_EQ (view.get (), ' ');
+    ASSERT_EQ (view.get (), 'w');
+    ASSERT_EQ (view.get (), 'o');
+    ASSERT_EQ (view.get (), 'r');
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.get (), 'd');
+    ASSERT_EQ (view.get (), std::char_traits <char>::eof ());
+}
+
+/**
+ * @brief getIf test.
+ */
+TEST (StreamView, getIf)
+{
+    std::stringstream msg ("hello world");
+    StreamView view (msg);
+
+    ASSERT_FALSE (view.getIf ('x'));
+    ASSERT_TRUE  (view.getIf ('h'));
+    ASSERT_TRUE  (view.getIf ('e'));
+}
+
+/**
+ * @brief read test.
+ */
+TEST (StreamView, read)
+{
+    std::stringstream msg ("hello world");
+    StreamView view (msg);
+    char buf[8] = {};
+
+    ASSERT_EQ (view.read (buf, 5), 5);
+    ASSERT_EQ (view.read (buf, 8), 6);
+    ASSERT_EQ (view.read (buf, 8), 0);
+}
+
+/**
+ * @brief rewind test.
+ */
+TEST (StreamView, tell)
+{
+    std::stringstream msg ("hello world");
+    StreamView view (msg);
+
+    ASSERT_EQ (view.tell (), 0);
+    ASSERT_EQ (view.get (), 'h');
+    ASSERT_EQ (view.tell (), 1);
+    ASSERT_EQ (view.get (), 'e');
+    ASSERT_EQ (view.tell (), 2);
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.tell (), 3);
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.tell (), 4);
+    ASSERT_EQ (view.get (), 'o');
+    ASSERT_EQ (view.tell (), 5);
+    ASSERT_EQ (view.get (), ' ');
+    ASSERT_EQ (view.tell (), 6);
+    ASSERT_EQ (view.get (), 'w');
+    ASSERT_EQ (view.tell (), 7);
+    ASSERT_EQ (view.get (), 'o');
+    ASSERT_EQ (view.tell (), 8);
+    ASSERT_EQ (view.get (), 'r');
+    ASSERT_EQ (view.tell (), 9);
+    ASSERT_EQ (view.get (), 'l');
+    ASSERT_EQ (view.tell (), 10);
+    ASSERT_EQ (view.get (), 'd');
+    ASSERT_EQ (view.tell (), 11);
+}
+
+/**
+ * @brief rewind test.
+ */
+TEST (StreamView, rewind)
+{
+    std::stringstream msg ("hello world");
+    StreamView view (msg);
+
+    ASSERT_EQ (view.get (), 'h');
+    ASSERT_EQ (view.get (), 'e');
+    ASSERT_EQ (view.get (), 'l');
+    view.rewind (2);
+    ASSERT_EQ (view.get (), 'e');
+    ASSERT_EQ (view.get (), 'l');
 }
 
 /**

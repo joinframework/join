@@ -47,6 +47,7 @@ TEST (ErrorCategory, name)
  */
 TEST (ErrorCategory, message)
 {
+    EXPECT_STREQ (ErrorCategory ().message (0).c_str (), "success");
     EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::InUse)).c_str (), "already in use");
     EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::InvalidParam)).c_str (), "invalid parameters");
     EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::ConnectionRefused)).c_str (), "connection refused");
@@ -67,6 +68,7 @@ TEST (ErrorCategory, message)
  */
 TEST (ErrorCategory, default_error_condition)
 {
+    EXPECT_EQ (ErrorCategory ().default_error_condition (0).message(), "success");
     EXPECT_EQ (ErrorCategory ().default_error_condition (1).message(), "already in use");
     EXPECT_EQ (ErrorCategory ().default_error_condition (2).message(), "invalid parameters");
     EXPECT_EQ (ErrorCategory ().default_error_condition (3).message(), "connection refused");
