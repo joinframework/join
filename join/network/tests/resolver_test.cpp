@@ -184,20 +184,11 @@ TEST (Resolver, resolveAllHost)
  */
 TEST (Resolver, resolveAddress)
 {
-    std::string name = Udp::Resolver::resolveAddress ("::1");
-    EXPECT_EQ (name, "ip6-localhost");
-
-    name = Udp::Resolver::resolveAddress ("127.0.0.1");
+    std::string name = Udp::Resolver::resolveAddress ("127.0.0.1");
     EXPECT_EQ (name, "localhost");
-
-    name = Icmp::Resolver::resolveAddress ("::1");
-    EXPECT_EQ (name, "ip6-localhost");
 
     name = Icmp::Resolver::resolveAddress ("127.0.0.1");
     EXPECT_EQ (name, "localhost");
-
-    name = Tcp::Resolver::resolveAddress ("::1");
-    EXPECT_EQ (name, "ip6-localhost");
 
     name = Tcp::Resolver::resolveAddress ("127.0.0.1");
     EXPECT_EQ (name, "localhost");
