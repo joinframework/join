@@ -969,7 +969,7 @@ const IpAddress IpAddress::ipv4Broadcast = "255.255.255.255";
 // =========================================================================
 IpAddress::IpAddress ()
 {
-    ip_ = std::make_unique <Ipv6Address> ();
+    ip_ = std::make_unique <Ipv4Address> ();
 }
 
 // =========================================================================

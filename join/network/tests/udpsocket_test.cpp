@@ -370,7 +370,7 @@ TEST_F (UdpSocket, family)
 {
     Udp::Socket udpSocket;
 
-    ASSERT_EQ (udpSocket.family (), AF_INET6);
+    ASSERT_EQ (udpSocket.family (), AF_INET);
 
     ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
     ASSERT_EQ (udpSocket.family (), AF_INET);

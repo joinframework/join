@@ -39,8 +39,8 @@ using join::net::IpAddress;
 TEST (IpAddress, defaultConstruct)
 {
     IpAddress ip;
-    ASSERT_EQ (ip.family (), AF_INET6);
-    ASSERT_STREQ (ip.toString ().c_str (), "::");
+    ASSERT_EQ (ip.family (), AF_INET);
+    ASSERT_STREQ (ip.toString ().c_str (), "0.0.0.0");
 }
 
 /**

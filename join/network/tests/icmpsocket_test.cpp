@@ -390,7 +390,9 @@ TEST_F (IcmpSocket, encrypted)
  */
 TEST_F (IcmpSocket, family)
 {
-    Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
+    Icmp::Socket icmpSocket;
+
+    ASSERT_EQ (icmpSocket.family (), AF_INET);
 
     ASSERT_EQ (icmpSocket.bind ({IpAddress (AF_INET6)}), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.family (), AF_INET6);

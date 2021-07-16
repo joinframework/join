@@ -497,7 +497,7 @@ TEST_F (TcpSocket, family)
 {
     Tcp::Socket tcpSocket;
 
-    ASSERT_EQ (tcpSocket.family (), AF_INET6);
+    ASSERT_EQ (tcpSocket.family (), AF_INET);
 
     ASSERT_EQ (tcpSocket.bind (IpAddress (AF_INET6)), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.family (), AF_INET6);

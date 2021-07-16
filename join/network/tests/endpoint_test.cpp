@@ -170,7 +170,7 @@ TEST (Endpoint, port)
  */
 TEST (Endpoint, protocol)
 {
-    ASSERT_EQ (Udp::Endpoint ().protocol (), Udp::v6 ());
+    ASSERT_EQ (Udp::Endpoint ().protocol (), Udp::v4 ());
     ASSERT_EQ (Udp::Endpoint (Udp::v4 ()).protocol (), Udp::v4 ());
     ASSERT_NE (Udp::Endpoint (Udp::v4 ()).protocol (), Udp::v6 ());
     ASSERT_EQ (Udp::Endpoint (Udp::v6 ()).protocol (), Udp::v6 ());
@@ -179,7 +179,7 @@ TEST (Endpoint, protocol)
     ASSERT_NE (Udp::Endpoint ("::").protocol (), Udp::v4 ());
     ASSERT_EQ (Udp::Endpoint ("::").protocol (), Udp::v6 ());
 
-    ASSERT_EQ (Icmp::Endpoint ().protocol (), Icmp::v6 ());
+    ASSERT_EQ (Icmp::Endpoint ().protocol (), Icmp::v4 ());
     ASSERT_EQ (Icmp::Endpoint (Icmp::v4 ()).protocol (), Icmp::v4 ());
     ASSERT_NE (Icmp::Endpoint (Icmp::v4 ()).protocol (), Icmp::v6 ());
     ASSERT_EQ (Icmp::Endpoint (Icmp::v6 ()).protocol (), Icmp::v6 ());
@@ -188,7 +188,7 @@ TEST (Endpoint, protocol)
     ASSERT_NE (Icmp::Endpoint ("::").protocol (), Icmp::v4 ());
     ASSERT_EQ (Icmp::Endpoint ("::").protocol (), Icmp::v6 ());
 
-    ASSERT_EQ (Tcp::Endpoint ().protocol (), Tcp::v6 ());
+    ASSERT_EQ (Tcp::Endpoint ().protocol (), Tcp::v4 ());
     ASSERT_EQ (Tcp::Endpoint (Tcp::v4 ()).protocol (), Tcp::v4 ());
     ASSERT_NE (Tcp::Endpoint (Tcp::v4 ()).protocol (), Tcp::v6 ());
     ASSERT_EQ (Tcp::Endpoint (Tcp::v6 ()).protocol (), Tcp::v6 ());

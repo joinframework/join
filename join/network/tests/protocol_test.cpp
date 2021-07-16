@@ -43,13 +43,13 @@ TEST (Protocol, family)
     ASSERT_EQ (UnixDgram ().family (), AF_UNIX);
     ASSERT_EQ (UnixStream ().family (), AF_UNIX);
     ASSERT_EQ (Raw ().family (), AF_PACKET);
-    ASSERT_EQ (Udp ().family (), AF_INET6);
+    ASSERT_EQ (Udp ().family (), AF_INET);
     ASSERT_EQ (Udp::v6 ().family (), AF_INET6);
     ASSERT_EQ (Udp::v4 ().family (), AF_INET);
-    ASSERT_EQ (Icmp ().family (), AF_INET6);
+    ASSERT_EQ (Icmp ().family (), AF_INET);
     ASSERT_EQ (Icmp::v6 ().family (), AF_INET6);
     ASSERT_EQ (Icmp::v4 ().family (), AF_INET);
-    ASSERT_EQ (Tcp ().family (), AF_INET6);
+    ASSERT_EQ (Tcp ().family (), AF_INET);
     ASSERT_EQ (Tcp::v6 ().family (), AF_INET6);
     ASSERT_EQ (Tcp::v4 ().family (), AF_INET);
 }
