@@ -85,22 +85,6 @@ TEST (Resolver, resolve)
     endpoint = Udp::Resolver::resolve ("https://localhost:5000", AF_INET);
     EXPECT_EQ (endpoint.ip (), "127.0.0.1");
     EXPECT_EQ (endpoint.port (), 5000);
-
-    endpoint = Udp::Resolver::resolve ("ip6-localhost", AF_INET6);
-    EXPECT_EQ (endpoint.ip (), "::1");
-    EXPECT_EQ (endpoint.port (), 0);
-
-    endpoint = Udp::Resolver::resolve ("http://ip6-localhost", AF_INET6);
-    EXPECT_EQ (endpoint.ip (), "::1");
-    EXPECT_EQ (endpoint.port (), 80);
-
-    endpoint = Udp::Resolver::resolve ("http://ip6-localhost:5001", AF_INET6);
-    EXPECT_EQ (endpoint.ip (), "::1");
-    EXPECT_EQ (endpoint.port (), 5001);
-
-    endpoint = Udp::Resolver::resolve ("https://ip6-localhost", AF_INET);
-    EXPECT_TRUE (endpoint.ip ().isWildcard ());
-    EXPECT_EQ (endpoint.port (), 0);
 }
 
 /**
@@ -117,13 +101,6 @@ TEST (Resolver, resolveHost)
     address = Udp::Resolver::resolveHost ("localhost", AF_INET);
     EXPECT_TRUE (address.isIpv4Address ());
     EXPECT_TRUE (address.isLoopBack ());
-    
-    address = Udp::Resolver::resolveHost ("ip6-localhost", AF_INET6);
-    EXPECT_TRUE (address.isIpv6Address ());
-    EXPECT_TRUE (address.isLoopBack ());
-
-    address = Udp::Resolver::resolveHost ("ip6-localhost", AF_INET);
-    EXPECT_TRUE (address.isWildcard ());
 
     address = Icmp::Resolver::resolveHost ("localhost");
     EXPECT_TRUE (address.isLoopBack ());
@@ -134,13 +111,6 @@ TEST (Resolver, resolveHost)
     address = Icmp::Resolver::resolveHost ("localhost", AF_INET);
     EXPECT_TRUE (address.isIpv4Address ());
     EXPECT_TRUE (address.isLoopBack ());
-    
-    address = Icmp::Resolver::resolveHost ("ip6-localhost", AF_INET6);
-    EXPECT_TRUE (address.isIpv6Address ());
-    EXPECT_TRUE (address.isLoopBack ());
-
-    address = Icmp::Resolver::resolveHost ("ip6-localhost", AF_INET);
-    EXPECT_TRUE (address.isWildcard ());
 
     address = Tcp::Resolver::resolveHost ("localhost");
     EXPECT_TRUE (address.isLoopBack ());
@@ -151,13 +121,6 @@ TEST (Resolver, resolveHost)
     address = Tcp::Resolver::resolveHost ("localhost", AF_INET);
     EXPECT_TRUE (address.isIpv4Address ());
     EXPECT_TRUE (address.isLoopBack ());
-    
-    address = Tcp::Resolver::resolveHost ("ip6-localhost", AF_INET6);
-    EXPECT_TRUE (address.isIpv6Address ());
-    EXPECT_TRUE (address.isLoopBack ());
-
-    address = Tcp::Resolver::resolveHost ("ip6-localhost", AF_INET);
-    EXPECT_TRUE (address.isWildcard ());
 }
 
 /**
