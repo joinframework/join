@@ -190,7 +190,7 @@ namespace net
          * @brief construct the udp protocol instance.
          * @param family IP address family.
          */
-        constexpr Udp (int family = AF_INET6) noexcept
+        constexpr Udp (int family = AF_INET) noexcept
         : family_ (family)
         {
         }
@@ -283,7 +283,7 @@ namespace net
          * @brief create the icmp protocol instance.
          * @param family IP address family.
          */
-        constexpr Icmp (int family = AF_INET6) noexcept
+        constexpr Icmp (int family = AF_INET) noexcept
         : family_ (family)
         {
         }
@@ -382,7 +382,7 @@ namespace net
          * @brief create the tcp protocol  instance.
          * @param family IP address family.
          */
-        constexpr Tcp (int family = AF_INET6) noexcept
+        constexpr Tcp (int family = AF_INET) noexcept
         : family_ (family)
         {
         }

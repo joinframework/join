@@ -31,7 +31,7 @@
 using join::net::IpAddress;
 using join::net::Tcp;
 
-IpAddress address = "::1";
+IpAddress address = "127.0.0.1";
 uint16_t  port    = 5000;
 
 /**
@@ -134,7 +134,7 @@ TEST (TcpAcceptor, family)
     Tcp::Acceptor server;
 
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.family (), AF_INET6);
+    ASSERT_EQ (server.family (), AF_INET);
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
 

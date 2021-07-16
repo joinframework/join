@@ -448,11 +448,7 @@ TEST_F (IcmpSocket, mtu)
 {
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
-    ASSERT_EQ (icmpSocket.connect ({"::1"}), 0) << join::lastError.message ();
-    ASSERT_NE (icmpSocket.mtu (), -1) << join::lastError.message ();
-    ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
-
-    ASSERT_EQ (icmpSocket.connect ({"127.0.0.1"}), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
     ASSERT_NE (icmpSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
 }

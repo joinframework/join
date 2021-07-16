@@ -39,10 +39,10 @@ using join::net::Icmp;
 TEST (Resolver, nameServers)
 {
     IpAddressList servers = Udp::Resolver::nameServers ();
-    ASSERT_GT (servers.size (), 0);
+    EXPECT_GT (servers.size (), 0);
 
     servers = Icmp::Resolver::nameServers ();
-    ASSERT_GT (servers.size (), 0);
+    EXPECT_GT (servers.size (), 0);
 }
 
 /**
@@ -51,56 +51,56 @@ TEST (Resolver, nameServers)
 TEST (Resolver, resolve)
 {
     Udp::Endpoint endpoint = Udp::Resolver::resolve ("localhost");
-    ASSERT_EQ (endpoint.ip (), "127.0.0.1");
-    ASSERT_EQ (endpoint.port (), 0);
+    EXPECT_EQ (endpoint.ip (), "127.0.0.1");
+    EXPECT_EQ (endpoint.port (), 0);
 
     endpoint = Udp::Resolver::resolve ("https://localhost");
-    ASSERT_EQ (endpoint.ip (), "127.0.0.1");
-    ASSERT_EQ (endpoint.port (), 443);
+    EXPECT_EQ (endpoint.ip (), "127.0.0.1");
+    EXPECT_EQ (endpoint.port (), 443);
 
     endpoint = Udp::Resolver::resolve ("https://localhost:5000");
-    ASSERT_EQ (endpoint.ip (), "127.0.0.1");
-    ASSERT_EQ (endpoint.port (), 5000);
+    EXPECT_EQ (endpoint.ip (), "127.0.0.1");
+    EXPECT_EQ (endpoint.port (), 5000);
 
     endpoint = Udp::Resolver::resolve ("https://192.168.0.1:5000");
-    ASSERT_EQ (endpoint.ip (), "192.168.0.1");
-    ASSERT_EQ (endpoint.port (), 5000);
+    EXPECT_EQ (endpoint.ip (), "192.168.0.1");
+    EXPECT_EQ (endpoint.port (), 5000);
 
     endpoint = Udp::Resolver::resolve ("https://[::1]:5000");
-    ASSERT_EQ (endpoint.ip (), "::1");
-    ASSERT_EQ (endpoint.port (), 5000);
+    EXPECT_EQ (endpoint.ip (), "::1");
+    EXPECT_EQ (endpoint.port (), 5000);
 
     endpoint = Udp::Resolver::resolve ("localhost", AF_INET);
-    ASSERT_EQ (endpoint.ip (), "127.0.0.1");
-    ASSERT_EQ (endpoint.port (), 0);
+    EXPECT_EQ (endpoint.ip (), "127.0.0.1");
+    EXPECT_EQ (endpoint.port (), 0);
 
     endpoint = Udp::Resolver::resolve ("http://localhost", AF_INET6);
-    ASSERT_TRUE (endpoint.ip ().isWildcard ());
-    ASSERT_EQ (endpoint.port (), 0);
+    EXPECT_TRUE (endpoint.ip ().isWildcard ());
+    EXPECT_EQ (endpoint.port (), 0);
 
     endpoint = Udp::Resolver::resolve ("https://localhost", AF_INET);
-    ASSERT_EQ (endpoint.ip (), "127.0.0.1");
-    ASSERT_EQ (endpoint.port (), 443);
+    EXPECT_EQ (endpoint.ip (), "127.0.0.1");
+    EXPECT_EQ (endpoint.port (), 443);
 
     endpoint = Udp::Resolver::resolve ("https://localhost:5000", AF_INET);
-    ASSERT_EQ (endpoint.ip (), "127.0.0.1");
-    ASSERT_EQ (endpoint.port (), 5000);
+    EXPECT_EQ (endpoint.ip (), "127.0.0.1");
+    EXPECT_EQ (endpoint.port (), 5000);
 
     endpoint = Udp::Resolver::resolve ("ip6-localhost", AF_INET6);
-    ASSERT_EQ (endpoint.ip (), "::1");
-    ASSERT_EQ (endpoint.port (), 0);
+    EXPECT_EQ (endpoint.ip (), "::1");
+    EXPECT_EQ (endpoint.port (), 0);
 
     endpoint = Udp::Resolver::resolve ("http://ip6-localhost", AF_INET6);
-    ASSERT_EQ (endpoint.ip (), "::1");
-    ASSERT_EQ (endpoint.port (), 80);
+    EXPECT_EQ (endpoint.ip (), "::1");
+    EXPECT_EQ (endpoint.port (), 80);
 
     endpoint = Udp::Resolver::resolve ("http://ip6-localhost:5001", AF_INET6);
-    ASSERT_EQ (endpoint.ip (), "::1");
-    ASSERT_EQ (endpoint.port (), 5001);
+    EXPECT_EQ (endpoint.ip (), "::1");
+    EXPECT_EQ (endpoint.port (), 5001);
 
     endpoint = Udp::Resolver::resolve ("https://ip6-localhost", AF_INET);
-    ASSERT_TRUE (endpoint.ip ().isWildcard ());
-    ASSERT_EQ (endpoint.port (), 0);
+    EXPECT_TRUE (endpoint.ip ().isWildcard ());
+    EXPECT_EQ (endpoint.port (), 0);
 }
 
 /**
@@ -109,38 +109,38 @@ TEST (Resolver, resolve)
 TEST (Resolver, resolveHost)
 {
     IpAddress address = Udp::Resolver::resolveHost ("localhost");
-    ASSERT_TRUE (address.isLoopBack ());
+    EXPECT_TRUE (address.isLoopBack ());
 
     address = Udp::Resolver::resolveHost ("localhost", AF_INET6);
-    ASSERT_TRUE (address.isWildcard ());
+    EXPECT_TRUE (address.isWildcard ());
 
     address = Udp::Resolver::resolveHost ("localhost", AF_INET);
-    ASSERT_TRUE (address.isIpv4Address ());
-    ASSERT_TRUE (address.isLoopBack ());
+    EXPECT_TRUE (address.isIpv4Address ());
+    EXPECT_TRUE (address.isLoopBack ());
     
     address = Udp::Resolver::resolveHost ("ip6-localhost", AF_INET6);
-    ASSERT_TRUE (address.isIpv6Address ());
-    ASSERT_TRUE (address.isLoopBack ());
+    EXPECT_TRUE (address.isIpv6Address ());
+    EXPECT_TRUE (address.isLoopBack ());
 
     address = Udp::Resolver::resolveHost ("ip6-localhost", AF_INET);
-    ASSERT_TRUE (address.isWildcard ());
+    EXPECT_TRUE (address.isWildcard ());
 
     address = Icmp::Resolver::resolveHost ("localhost");
-    ASSERT_TRUE (address.isLoopBack ());
+    EXPECT_TRUE (address.isLoopBack ());
 
     address = Icmp::Resolver::resolveHost ("localhost", AF_INET6);
-    ASSERT_TRUE (address.isWildcard ());
+    EXPECT_TRUE (address.isWildcard ());
 
     address = Icmp::Resolver::resolveHost ("localhost", AF_INET);
-    ASSERT_TRUE (address.isIpv4Address ());
-    ASSERT_TRUE (address.isLoopBack ());
+    EXPECT_TRUE (address.isIpv4Address ());
+    EXPECT_TRUE (address.isLoopBack ());
     
     address = Icmp::Resolver::resolveHost ("ip6-localhost", AF_INET6);
-    ASSERT_TRUE (address.isIpv6Address ());
-    ASSERT_TRUE (address.isLoopBack ());
+    EXPECT_TRUE (address.isIpv6Address ());
+    EXPECT_TRUE (address.isLoopBack ());
 
     address = Icmp::Resolver::resolveHost ("ip6-localhost", AF_INET);
-    ASSERT_TRUE (address.isWildcard ());
+    EXPECT_TRUE (address.isWildcard ());
 }
 
 /**
@@ -149,10 +149,10 @@ TEST (Resolver, resolveHost)
 TEST (Resolver, resolveAllHost)
 {
     IpAddressList addressList = Udp::Resolver::resolveAllHost ("localhost");
-    ASSERT_GT (addressList.size (), 0);
+    EXPECT_GT (addressList.size (), 0);
 
     addressList = Icmp::Resolver::resolveAllHost ("localhost");
-    ASSERT_GT (addressList.size (), 0);
+    EXPECT_GT (addressList.size (), 0);
 }
 
 /**
@@ -161,16 +161,16 @@ TEST (Resolver, resolveAllHost)
 TEST (Resolver, resolveAddress)
 {
     std::string name = Udp::Resolver::resolveAddress ("::1");
-    ASSERT_EQ (name, "ip6-localhost");
+    EXPECT_EQ (name, "ip6-localhost");
 
     name = Udp::Resolver::resolveAddress ("127.0.0.1");
-    ASSERT_EQ (name, "localhost");
+    EXPECT_EQ (name, "localhost");
 
     name = Icmp::Resolver::resolveAddress ("::1");
-    ASSERT_EQ (name, "ip6-localhost");
+    EXPECT_EQ (name, "ip6-localhost");
 
     name = Icmp::Resolver::resolveAddress ("127.0.0.1");
-    ASSERT_EQ (name, "localhost");
+    EXPECT_EQ (name, "localhost");
 }
 
 /**
@@ -178,15 +178,15 @@ TEST (Resolver, resolveAddress)
  */
 TEST (Resolver, resolveService)
 {
-    ASSERT_EQ (Udp::Resolver::resolveService ("ssh"), 22);
-    ASSERT_EQ (Udp::Resolver::resolveService ("smtp"), 25);
-    ASSERT_EQ (Udp::Resolver::resolveService ("http"), 80);
-    ASSERT_EQ (Udp::Resolver::resolveService ("https"), 443);
+    EXPECT_EQ (Udp::Resolver::resolveService ("ssh"), 22);
+    EXPECT_EQ (Udp::Resolver::resolveService ("smtp"), 25);
+    EXPECT_EQ (Udp::Resolver::resolveService ("http"), 80);
+    EXPECT_EQ (Udp::Resolver::resolveService ("https"), 443);
 
-    ASSERT_EQ (Icmp::Resolver::resolveService ("ssh"), 22);
-    ASSERT_EQ (Icmp::Resolver::resolveService ("smtp"), 25);
-    ASSERT_EQ (Icmp::Resolver::resolveService ("http"), 80);
-    ASSERT_EQ (Icmp::Resolver::resolveService ("https"), 443);
+    EXPECT_EQ (Icmp::Resolver::resolveService ("ssh"), 22);
+    EXPECT_EQ (Icmp::Resolver::resolveService ("smtp"), 25);
+    EXPECT_EQ (Icmp::Resolver::resolveService ("http"), 80);
+    EXPECT_EQ (Icmp::Resolver::resolveService ("https"), 443);
 }
 
 /**
