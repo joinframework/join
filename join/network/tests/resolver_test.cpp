@@ -32,6 +32,7 @@ using join::net::IpAddress;
 using join::net::IpAddressList;
 using join::net::Udp;
 using join::net::Icmp;
+using join::net::Tcp;
 
 /**
  * @brief test the nameServers method.
@@ -42,6 +43,9 @@ TEST (Resolver, nameServers)
     EXPECT_GT (servers.size (), 0);
 
     servers = Icmp::Resolver::nameServers ();
+    EXPECT_GT (servers.size (), 0);
+
+    servers = Tcp::Resolver::nameServers ();
     EXPECT_GT (servers.size (), 0);
 }
 
@@ -141,6 +145,23 @@ TEST (Resolver, resolveHost)
 
     address = Icmp::Resolver::resolveHost ("ip6-localhost", AF_INET);
     EXPECT_TRUE (address.isWildcard ());
+
+    address = Tcp::Resolver::resolveHost ("localhost");
+    EXPECT_TRUE (address.isLoopBack ());
+
+    address = Tcp::Resolver::resolveHost ("localhost", AF_INET6);
+    EXPECT_TRUE (address.isWildcard ());
+
+    address = Tcp::Resolver::resolveHost ("localhost", AF_INET);
+    EXPECT_TRUE (address.isIpv4Address ());
+    EXPECT_TRUE (address.isLoopBack ());
+    
+    address = Tcp::Resolver::resolveHost ("ip6-localhost", AF_INET6);
+    EXPECT_TRUE (address.isIpv6Address ());
+    EXPECT_TRUE (address.isLoopBack ());
+
+    address = Tcp::Resolver::resolveHost ("ip6-localhost", AF_INET);
+    EXPECT_TRUE (address.isWildcard ());
 }
 
 /**
@@ -152,6 +173,9 @@ TEST (Resolver, resolveAllHost)
     EXPECT_GT (addressList.size (), 0);
 
     addressList = Icmp::Resolver::resolveAllHost ("localhost");
+    EXPECT_GT (addressList.size (), 0);
+
+    addressList = Tcp::Resolver::resolveAllHost ("localhost");
     EXPECT_GT (addressList.size (), 0);
 }
 
@@ -171,6 +195,12 @@ TEST (Resolver, resolveAddress)
 
     name = Icmp::Resolver::resolveAddress ("127.0.0.1");
     EXPECT_EQ (name, "localhost");
+
+    name = Tcp::Resolver::resolveAddress ("::1");
+    EXPECT_EQ (name, "ip6-localhost");
+
+    name = Tcp::Resolver::resolveAddress ("127.0.0.1");
+    EXPECT_EQ (name, "localhost");
 }
 
 /**
@@ -187,6 +217,11 @@ TEST (Resolver, resolveService)
     EXPECT_EQ (Icmp::Resolver::resolveService ("smtp"), 25);
     EXPECT_EQ (Icmp::Resolver::resolveService ("http"), 80);
     EXPECT_EQ (Icmp::Resolver::resolveService ("https"), 443);
+
+    EXPECT_EQ (Tcp::Resolver::resolveService ("ssh"), 22);
+    EXPECT_EQ (Tcp::Resolver::resolveService ("smtp"), 25);
+    EXPECT_EQ (Tcp::Resolver::resolveService ("http"), 80);
+    EXPECT_EQ (Tcp::Resolver::resolveService ("https"), 443);
 }
 
 /**

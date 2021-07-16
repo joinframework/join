@@ -22,7 +22,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config Debug
 
     - name: Test
-      run: ${{github.workspace}}/build && sudo ctest --output-on-failure -C Debug
+      run: cd ${{github.workspace}}/build && ctest --output-on-failure -C Debug
 
     - name: Generate coverage report
       run: lcov --directory . --capture --output-file lcov.info
