@@ -70,10 +70,6 @@ TEST (Resolver, resolve)
     EXPECT_EQ (endpoint.ip (), "192.168.0.1");
     EXPECT_EQ (endpoint.port (), 5000);
 
-    endpoint = Udp::Resolver::resolve ("https://[::1]:5000");
-    EXPECT_EQ (endpoint.ip (), "::1");
-    EXPECT_EQ (endpoint.port (), 5000);
-
     endpoint = Udp::Resolver::resolve ("localhost", AF_INET);
     EXPECT_EQ (endpoint.ip (), "127.0.0.1");
     EXPECT_EQ (endpoint.port (), 0);
