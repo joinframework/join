@@ -39,8 +39,8 @@ using join::net::IpAddress;
 TEST (IpAddress, defaultConstruct)
 {
     IpAddress ip;
-    ASSERT_EQ (ip.family (), AF_INET);
-    ASSERT_STREQ (ip.toString ().c_str (), "0.0.0.0");
+    EXPECT_EQ (ip.family (), AF_INET);
+    EXPECT_STREQ (ip.toString ().c_str (), "0.0.0.0");
 }
 
 /**
@@ -49,12 +49,12 @@ TEST (IpAddress, defaultConstruct)
 TEST (IpAddress, familyConstruct)
 {
     IpAddress ip4 (AF_INET);
-    ASSERT_EQ (ip4.family (), AF_INET);
-    ASSERT_STREQ (ip4.toString ().c_str (), "0.0.0.0");
+    EXPECT_EQ (ip4.family (), AF_INET);
+    EXPECT_STREQ (ip4.toString ().c_str (), "0.0.0.0");
 
     IpAddress ip6 (AF_INET6);
-    ASSERT_EQ (ip6.family (), AF_INET6);
-    ASSERT_STREQ (ip6.toString ().c_str (), "::");
+    EXPECT_EQ (ip6.family (), AF_INET6);
+    EXPECT_STREQ (ip6.toString ().c_str (), "::");
 }
 
 /**
