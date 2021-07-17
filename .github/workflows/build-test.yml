@@ -28,7 +28,7 @@ jobs:
       run: lcov -d ${{github.workspace}}/build -c -o lcov.info
 
     - name: Cleanup coverage report
-      run: lcov -d ${{github.workspace}}/build -r lcov.info '${{github.workspace}}/build/*' '${{github.workspace}}/join/core/tests/*' '${{github.workspace}}/join/crypto/tests/*' '${{github.workspace}}/join/network/tests/*' '${{github.workspace}}/join/sax/tests/*' '/usr/include/*' -o lcov.info
+      run: lcov -d ${{github.workspace}}/build -r lcov.info '${{github.workspace}}/build/*' '${{github.workspace}}/core/tests/*' '${{github.workspace}}/crypto/tests/*' '${{github.workspace}}/network/tests/*' '${{github.workspace}}/sax/tests/*' '/usr/include/*' -o lcov.info
 
     - name: Deploy coverage
       uses: coverallsapp/github-action@v1.1.2
