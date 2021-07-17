@@ -16,7 +16,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Configure CMake
-      run: pwd && ls -l ${{github.workspace}} && cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=OFF -DJOIN_ENABLE_TESTS=ON
+      run: pwd && ls -l . && cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=OFF -DJOIN_ENABLE_TESTS=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config Debug
