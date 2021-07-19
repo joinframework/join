@@ -15,23 +15,23 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Install dependencies
-      run: sudo apt install libssl-dev lcov -y
+      run: pwd && ls -l && sudo apt install libssl-dev lcov -y
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=OFF -DJOIN_ENABLE_TESTS=ON
+      run: pwd && ls -l && cmake -B ${{github.workspace}}/build -DJOIN_ENABLE_TESTS=ON
 
     - name: Build
-      run: cmake --build ${{github.workspace}}/build --config Debug
+      run: pwd && ls -l && cmake --build ${{github.workspace}}/build --config Debug
 
     - name: Test
       working-directory: ${{github.workspace}}/build
-      run: ctest --output-on-failure -C Debug
+      run: pwd && ls -l && ctest --output-on-failure -C Debug
 
     - name: Generate coverage report
-      run: lcov --directory . --capture --output-file lcov.info
+      run: pwd && ls -l && lcov --directory . --capture --output-file lcov.info
 
     - name: Cleanup coverage report
-      run: lcov --remove lcov.info '${{github.workspace}}/build/*' '${{github.workspace}}/join/core/tests/*' '${{github.workspace}}/join/sax/tests/*' '/usr/include/*' -o lcov.info
+      run: pwd && ls -l && lcov --remove lcov.info '${{github.workspace}}/build/*' '${{github.workspace}}/join/core/tests/*' '${{github.workspace}}/join/sax/tests/*' '/usr/include/*' -o lcov.info
 
     - name: Deploy coverage
       uses: coverallsapp/github-action@v1.1.2
