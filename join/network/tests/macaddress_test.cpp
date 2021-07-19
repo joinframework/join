@@ -72,8 +72,11 @@ TEST (MacAddress, arrayConstruct)
 {
     uint8_t tmp[] = {0x4c, 0x34, 0x88, 0x25, 0x41, 0xee};
 
-    MacAddress mac = tmp;
-    EXPECT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
+    MacAddress mac1 (tmp);
+    EXPECT_STREQ (mac1.toString ().c_str (), "4c:34:88:25:41:ee");
+
+    MacAddress mac2 (tmp, 3);
+    EXPECT_STREQ (mac2.toString ().c_str (), "4c:34:88:00:00:00");
 }
 
 /**

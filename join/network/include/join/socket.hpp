@@ -45,8 +45,6 @@
 #include <cassert>
 #include <fcntl.h>
 
-#define DEBUG
-
 namespace join
 {
 namespace net

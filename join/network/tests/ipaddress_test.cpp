@@ -524,6 +524,27 @@ TEST (IpAddress, scope)
 }
 
 /**
+ * @brief Test prefix method.
+ */
+TEST (IpAddress, prefix)
+{
+    IpAddress ip ("0.0.0.0");
+    ASSERT_EQ (ip.prefix (), 0);
+
+    ip = "255.0.0.0";
+    ASSERT_EQ (ip.prefix (), 8);
+
+    ip = "255.255.0.0";
+    ASSERT_EQ (ip.prefix (), 16);
+
+    ip = "255.255.255.0";
+    ASSERT_EQ (ip.prefix (), 24);
+
+    ip = "255.255.255.255";
+    ASSERT_EQ (ip.prefix (), 32);
+}
+
+/**
  * @brief Test isWildcard method.
  */
 TEST (IpAddress, isWildcard)
