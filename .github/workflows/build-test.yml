@@ -16,7 +16,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
+      run: cmake -G "Unix Makefiles" -B ${{github.workspace}}/build -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config Debug
@@ -33,5 +33,5 @@ jobs:
     - name: Deploy coverage
       uses: coverallsapp/github-action@v1.1.2
       with:
-        github-token: ${{secrets.GITHUB_TOKEN}}
-        path-to-lcov: ./lcov.info
+        github-token: ${{secrets.github_token}}
+        path-to-lcov: ${{github.workspace}}/lcov.info
