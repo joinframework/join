@@ -10,29 +10,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container: joinframework/join-ci:latest
+    env:
+      WORKSPACE: /__w/join/join
 
     steps:
     - name: Fetch
       uses: actions/checkout@v2
 
     - name: Configure CMake
-      run: cmake -G "Unix Makefiles" -B /__w/join/join/build -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
+      run: cmake -G "Unix Makefiles" -B $WORKSPACE/build -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
 
     - name: Build
-      run: cmake --build /__w/join/join/build --config Debug
+      run: cmake --build $WORKSPACE/build --config Debug
 
     - name: Test
-      run: ctest --test-dir /__w/join/join/build --output-on-failure -C Debug
+      run: ctest --test-dir $WORKSPACE/build --output-on-failure -C Debug
 
     - name: Generate coverage report
-      working-directory: ${{github.workspace}}
       run: lcov --directory . --capture --output-file lcov.info
 
     - name: Cleanup coverage report
-      run: lcov --remove lcov.info '/__w/join/join/build/*' '/__w/join/join/join/core/tests/*' '/__w/join/join/join/crypto/tests/*' '/__w/join/join/join/network/tests/*' '/__w/join/join/join/sax/tests/*' '/usr/include/*' --output-file lcov.info
+      run: lcov --remove lcov.info '$WORKSPACE/build/*' '$WORKSPACE/join/core/tests/*' '$WORKSPACE/join/crypto/tests/*' '$WORKSPACE/join/network/tests/*' '$WORKSPACE/join/sax/tests/*' '/usr/include/*' --output-file lcov.info
 
     - name: Deploy coverage
       uses: coverallsapp/github-action@v1.1.2
       with:
         github-token: ${{secrets.github_token}}
-        path-to-lcov: /__w/join/join/lcov.info
+        path-to-lcov: $WORKSPACE/lcov.info
