@@ -16,19 +16,19 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Configure CMake
-      run: cmake -G "Unix Makefiles" -B  $GITHUB_WORKSPACE/build -DJOIN_ENABLE_TESTS=ON
+      run: pwd && echo $GITHUB_WORKSPACE && ls -l && cmake -G "Unix Makefiles" -B $GITHUB_WORKSPACE/build -DJOIN_ENABLE_TESTS=ON
 
     - name: Build
-      run: cmake --build $GITHUB_WORKSPACE/build --config Debug
+      run: pwd && echo $GITHUB_WORKSPACE && ls -l && cmake --build $GITHUB_WORKSPACE/build --config Debug
 
     - name: Test
-      run: ctest --test-dir $GITHUB_WORKSPACE/build --output-on-failure -C Debug
+      run: pwd && echo $GITHUB_WORKSPACE && ls -l && ctest --test-dir $GITHUB_WORKSPACE/build --output-on-failure -C Debug
 
     - name: Generate coverage report
-      run: lcov --directory . --capture --output-file lcov.info
+      run: pwd && echo $GITHUB_WORKSPACE && ls -l && lcov --directory . --capture --output-file lcov.info
 
     - name: Cleanup coverage report
-      run: lcov --remove lcov.info '$GITHUB_WORKSPACE/build/*' '$GITHUB_WORKSPACE/join/core/tests/*' '$GITHUB_WORKSPACE/join/sax/tests/*' '/usr/include/*' -o lcov.info
+      run: pwd && echo $GITHUB_WORKSPACE && ls -l && lcov --remove lcov.info '$GITHUB_WORKSPACE/build/*' '$GITHUB_WORKSPACE/join/core/tests/*' '$GITHUB_WORKSPACE/join/sax/tests/*' '/usr/include/*' -o lcov.info
 
     - name: Deploy coverage
       uses: coverallsapp/github-action@v1.1.2
