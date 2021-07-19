@@ -9,23 +9,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: joinframework/join-ci:latest
 
     steps:
     - name: Fetch
       uses: actions/checkout@v2
 
-    - name: Install dependencies
-      run: pwd && ls -l && sudo apt install libssl-dev lcov -y
-
     - name: Configure CMake
-      run: pwd && ls -l && cmake -B ${{github.workspace}}/build -DJOIN_ENABLE_TESTS=ON
+      run: pwd && ls -l && cmake -G "Unix Makefiles" -B ${{github.workspace}}/build -DJOIN_ENABLE_TESTS=ON
 
     - name: Build
       run: pwd && ls -l && cmake --build ${{github.workspace}}/build --config Debug
 
     - name: Test
-      working-directory: ${{github.workspace}}/build
-      run: pwd && ls -l && ctest --output-on-failure -C Debug
+      run: pwd && ls -l && ctest --test-dir ${{github.workspace}}/build --output-on-failure -C Debug
 
     - name: Generate coverage report
       run: pwd && ls -l && lcov --directory . --capture --output-file lcov.info
