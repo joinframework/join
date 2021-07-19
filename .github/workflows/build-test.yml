@@ -33,7 +33,6 @@ jobs:
       run: lcov --remove lcov.info '${{github.workspace}}/build/*' '${{github.workspace}}/join/core/tests/*' '${{github.workspace}}/join/crypto/tests/*' '${{github.workspace}}/join/network/tests/*' '${{github.workspace}}/join/sax/tests/*' '/usr/include/*' --output-file lcov.info
 
     - name: Deploy coverage
-      working-directory: ${{github.workspace}}
       uses: coverallsapp/github-action@v1.1.2
       with:
         github-token: ${{secrets.github_token}}
