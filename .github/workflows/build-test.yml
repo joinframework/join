@@ -16,19 +16,19 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Configure CMake
-      run: pwd && ls -l && cmake -G "Unix Makefiles" -B ${{github.workspace}}/build -DJOIN_ENABLE_TESTS=ON
+      run: pwd && ls -l && echo $GITHUB_WORKSPACE && cmake -G "Unix Makefiles" -B ${{github.workspace}}/build -DJOIN_ENABLE_TESTS=ON
 
     - name: Build
-      run: pwd && ls -l && cmake --build ${{github.workspace}}/build --config Debug
+      run: pwd && ls -l && echo $GITHUB_WORKSPACE && cmake --build ${{github.workspace}}/build --config Debug
 
     - name: Test
-      run: pwd && ls -l && ctest --test-dir ${{github.workspace}}/build --output-on-failure -C Debug
+      run: pwd && ls -l && echo $GITHUB_WORKSPACE && ctest --test-dir ${{github.workspace}}/build --output-on-failure -C Debug
 
     - name: Generate coverage report
-      run: pwd && ls -l && lcov --directory . --capture --output-file lcov.info
+      run: pwd && ls -l && echo $GITHUB_WORKSPACE && lcov --directory . --capture --output-file lcov.info
 
     - name: Cleanup coverage report
-      run: pwd && ls -l && lcov --remove lcov.info '${{github.workspace}}/build/*' '${{github.workspace}}/join/core/tests/*' '${{github.workspace}}/join/sax/tests/*' '/usr/include/*' -o lcov.info
+      run: pwd && ls -l && echo $GITHUB_WORKSPACE && lcov --remove lcov.info '${{github.workspace}}/build/*' '${{github.workspace}}/join/core/tests/*' '${{github.workspace}}/join/sax/tests/*' '/usr/include/*' -o lcov.info
 
     - name: Deploy coverage
       uses: coverallsapp/github-action@v1.1.2
