@@ -25,13 +25,16 @@ jobs:
       run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C Debug
 
     - name: Generate coverage report
-      run: lcov --directory ${{github.workspace}} --capture --output-file ${{github.workspace}}/lcov.info
+      working-directory: ${{github.workspace}}
+      run: lcov --directory . --capture --output-file lcov.info
 
     - name: Cleanup coverage report
-      run: lcov --remove ${{github.workspace}}/lcov.info '${{github.workspace}}/build/*' '${{github.workspace}}/join/core/tests/*' '${{github.workspace}}/join/crypto/tests/*' '${{github.workspace}}/join/network/tests/*' '${{github.workspace}}/join/sax/tests/*' '/usr/include/*' --output-file ${{github.workspace}}/lcov.info
+      working-directory: ${{github.workspace}}
+      run: lcov --remove lcov.info '${{github.workspace}}/build/*' '${{github.workspace}}/join/core/tests/*' '${{github.workspace}}/join/crypto/tests/*' '${{github.workspace}}/join/network/tests/*' '${{github.workspace}}/join/sax/tests/*' '/usr/include/*' --output-file lcov.info
 
     - name: Deploy coverage
+      working-directory: ${{github.workspace}}
       uses: coverallsapp/github-action@v1.1.2
       with:
         github-token: ${{secrets.github_token}}
-        path-to-lcov: ${{github.workspace}}/lcov.info
+        path-to-lcov: ./lcov.info
