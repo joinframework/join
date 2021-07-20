@@ -178,7 +178,10 @@ namespace net
          */
         virtual ~BasicSocket ()
         {
-            this->close ();
+            if (this->handle_ != -1)
+            {
+                ::close (this->handle_);
+            }
         }
 
         /**
@@ -2116,7 +2119,7 @@ namespace net
          * @brief shutdown the connection.
          * @return 0 on success, -1 on failure.
          */
-        int disconnect () override
+        virtual int disconnect () override
         {
             if (this->encrypted ())
             {
@@ -2184,10 +2187,11 @@ namespace net
          * @brief close the socket handle.
          * @return 0 on success, -1 on failure.
          */
-        int close () noexcept override
+        virtual int close () noexcept override
         {
             this->tlsState_ = TlsState::NonEncrypted;
             this->tlsHandle_.reset ();
+
             return BasicStreamSocket <Protocol>::close ();
         }
 
@@ -2196,7 +2200,7 @@ namespace net
          * @param timeout timeout in milliseconds (0: infinite).
          * @return true if there is new data available for reading, false otherwise.
          */
-        bool waitReadyRead (int timeout = 0) const noexcept override
+        virtual bool waitReadyRead (int timeout = 0) const noexcept override
         {
             if (this->encrypted () && (SSL_want_read (this->tlsHandle_.get ()) || SSL_want_write (this->tlsHandle_.get ())))
             {
@@ -2210,7 +2214,7 @@ namespace net
          * @brief get the number of readable bytes.
          * @return The number of readable bytes, -1 on failure.
          */
-        int canRead () const noexcept override
+        virtual int canRead () const noexcept override
         {
             if (this->encrypted ())
             {
@@ -2226,7 +2230,7 @@ namespace net
          * @param maxSize maximum number of bytes to read.
          * @return the number of bytes received, -1 on failure.
          */
-        int read (char *data, unsigned long maxSize) noexcept override
+        virtual int read (char *data, unsigned long maxSize) noexcept override
         {
             if (this->encrypted ())
             {
@@ -2301,7 +2305,7 @@ namespace net
          * @param timeout timeout in milliseconds (0: infinite).
          * @return true if data can be written on the socket, false otherwise.
          */
-        bool waitReadyWrite (int timeout = 0) const noexcept override
+        virtual bool waitReadyWrite (int timeout = 0) const noexcept override
         {
             if (this->encrypted () && (SSL_want_read (this->tlsHandle_.get ()) || SSL_want_write (this->tlsHandle_.get ())))
             {
@@ -2317,7 +2321,7 @@ namespace net
          * @param maxSize maximum number of bytes to write.
          * @return the number of bytes written, -1 on failure.
          */
-        int write (const char *data, unsigned long maxSize) noexcept override
+        virtual int write (const char *data, unsigned long maxSize) noexcept override
         {
             if (this->encrypted ())
             {
@@ -2380,7 +2384,7 @@ namespace net
          * @brief check if the socket is secure.
          * @return true if the socket is secure, false otherwise.
          */
-        bool encrypted () const noexcept override
+        virtual bool encrypted () const noexcept override
         {
             return (this->tlsState_ == TlsState::Encrypted);
         }
