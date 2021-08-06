@@ -42,6 +42,7 @@
 #include <netinet/tcp.h>
 #include <linux/icmp.h>
 #include <sys/ioctl.h>
+#include <fnmatch.h>
 #include <cassert>
 #include <fcntl.h>
 
@@ -1281,8 +1282,8 @@ namespace net
     class BasicStreamSocket : public BasicDatagramSocket <Protocol>
     {
     public:
-        using Observer = BasicObserver <BasicTlsSocket <Protocol>>;
-        using Ptr      = std::unique_ptr <BasicTlsSocket <Protocol>>;
+        using Observer = BasicObserver <BasicStreamSocket <Protocol>>;
+        using Ptr      = std::unique_ptr <BasicStreamSocket <Protocol>>;
         using Mode     = typename BasicDatagramSocket <Protocol>::Mode;
         using Option   = typename BasicDatagramSocket <Protocol>::Option;
         using State    = typename BasicDatagramSocket <Protocol>::State;
@@ -1392,7 +1393,7 @@ namespace net
                     return false;
                 }
 
-                if (this->waitReadyWrite (timeout) == false)
+                if (!this->waitReadyWrite (timeout))
                 {
                     return false;
                 }
@@ -1462,7 +1463,7 @@ namespace net
 
                 while ((lastError == Errc::TemporaryError) && (elapsed <= timeout))
                 {
-                    if (this->waitReadyRead (timeout - elapsed) == false)
+                    if (!this->waitReadyRead (timeout - elapsed))
                     {
                         return false;
                     }
@@ -1969,6 +1970,8 @@ namespace net
           tlsMode_ (other.tlsMode_),
           tlsState_ (other.tlsState_)
         {
+            SSL_set_app_data (this->tlsHandle_.get (), this);
+
             other.tlsMode_ = TlsMode::ClientMode;
             other.tlsState_ = TlsState::NonEncrypted;
         }
@@ -1982,10 +1985,12 @@ namespace net
         {
             BasicStreamSocket <Protocol>::operator= (std::move (other));
 
-            tlsContext_ = std::move (other.tlsContext_);
-            tlsHandle_ = std::move (other.tlsHandle_);
-            tlsMode_ = other.tlsMode_;
-            tlsState_ = other.tlsState_;
+            this->tlsContext_ = std::move (other.tlsContext_);
+            this->tlsHandle_ = std::move (other.tlsHandle_);
+            this->tlsMode_ = other.tlsMode_;
+            this->tlsState_ = other.tlsState_;
+
+            SSL_set_app_data (this->tlsHandle_.get (), this);
 
             other.tlsMode_ = TlsMode::ClientMode;
             other.tlsState_ = TlsState::NonEncrypted;
@@ -2059,7 +2064,7 @@ namespace net
                 #ifdef DEBUG
                     // Set info callback.
                     SSL_set_info_callback (this->tlsHandle_.get (), infoWrapper);
-                #endif // DEBUG
+                #endif
                 }
 
                 return startHandshake ();
@@ -2098,7 +2103,7 @@ namespace net
 
                 while ((lastError == Errc::TemporaryError) && (SSL_want_read  (this->tlsHandle_.get ()) || SSL_want_write (this->tlsHandle_.get ())))
                 {
-                    if (this->wait (this->handle_, SSL_want_read (this->tlsHandle_.get ()), SSL_want_write (this->tlsHandle_.get ()), timeout) < 1)
+                    if (this->wait (SSL_want_read (this->tlsHandle_.get ()), SSL_want_write (this->tlsHandle_.get ()), timeout) == -1)
                     {
                         return false;
                     }
@@ -2204,7 +2209,7 @@ namespace net
         {
             if (this->encrypted () && (SSL_want_read (this->tlsHandle_.get ()) || SSL_want_write (this->tlsHandle_.get ())))
             {
-                return (this->wait (SSL_want_read (this->tlsHandle_.get ()), SSL_want_write (this->tlsHandle_.get ()), timeout) > 0);
+                return (this->wait (SSL_want_read (this->tlsHandle_.get ()), SSL_want_write (this->tlsHandle_.get ()), timeout) == 0);
             }
 
             return BasicStreamSocket <Protocol>::waitReadyRead (timeout);
@@ -2309,7 +2314,7 @@ namespace net
         {
             if (this->encrypted () && (SSL_want_read (this->tlsHandle_.get ()) || SSL_want_write (this->tlsHandle_.get ())))
             {
-                return (this->wait (SSL_want_read (this->tlsHandle_.get ()), SSL_want_write (this->tlsHandle_.get ()), timeout) > 0);
+                return (this->wait (SSL_want_read (this->tlsHandle_.get ()), SSL_want_write (this->tlsHandle_.get ()), timeout) == 0);
             }
 
             return BasicStreamSocket <Protocol>::waitReadyWrite (timeout);
@@ -2507,7 +2512,7 @@ namespace net
 
             return 0;
         }
-    #endif // OPENSSL_VERSION_NUMBER >= 0x10101000L
+    #endif
 
     protected:
         /**
@@ -2608,28 +2613,25 @@ namespace net
                 std::cout << SSL_state_string_long (this->tlsHandle_.get ());
                 std::cout << std::endl;
             }
-            else if (where & (SSL_CB_HANDSHAKE_START | SSL_CB_HANDSHAKE_DONE))
+            else if (where & SSL_CB_HANDSHAKE_START)
             {
-                std::cout << "SSL/TLS Handshake ";
-                (where & SSL_CB_HANDSHAKE_START) ? std::cout << "[Start] " : std::cout << "[Done] ";
-                std::cout << SSL_state_string_long (this->tlsHandle_.get ());
-                std::cout << std::endl;
-
-                if (where & (SSL_CB_HANDSHAKE_DONE))
-                {
-                    std::cout << SSL_CTX_sess_number (this->tlsContext_.get ()) << " items in the session cache"<< std::endl;
-                    std::cout << SSL_CTX_sess_connect (this->tlsContext_.get ()) << " client connects"<< std::endl;
-                    std::cout << SSL_CTX_sess_connect_good (this->tlsContext_.get ()) << " client connects that finished"<< std::endl;
-                    std::cout << SSL_CTX_sess_connect_renegotiate (this->tlsContext_.get ()) << " client renegotiations requested"<< std::endl;
-                    std::cout << SSL_CTX_sess_accept (this->tlsContext_.get ()) << " server connects"<< std::endl;
-                    std::cout << SSL_CTX_sess_accept_good (this->tlsContext_.get ()) << " server connects that finished"<< std::endl;
-                    std::cout << SSL_CTX_sess_accept_renegotiate (this->tlsContext_.get ()) << " server renegotiations requested"<< std::endl;
-                    std::cout << SSL_CTX_sess_hits (this->tlsContext_.get ()) << " session cache hits"<< std::endl;
-                    std::cout << SSL_CTX_sess_cb_hits (this->tlsContext_.get ()) << " external session cache hits"<< std::endl;
-                    std::cout << SSL_CTX_sess_misses (this->tlsContext_.get ()) << " session cache misses"<< std::endl;
-                    std::cout << SSL_CTX_sess_timeouts (this->tlsContext_.get ()) << " session cache timeouts"<< std::endl;
-                    std::cout << "negotiated " << SSL_get_cipher (this->tlsHandle_.get ()) << " cipher suite"<< std::endl;
-                }
+                std::cout << "SSL/TLS Handshake [Start] "<< SSL_state_string_long (this->tlsHandle_.get ()) << std::endl;
+            }
+            else if (where & SSL_CB_HANDSHAKE_DONE)
+            {
+                std::cout << "SSL/TLS Handshake [Done] "<< SSL_state_string_long (this->tlsHandle_.get ()) << std::endl;
+                std::cout << SSL_CTX_sess_number (this->tlsContext_.get ()) << " items in the session cache"<< std::endl;
+                std::cout << SSL_CTX_sess_connect (this->tlsContext_.get ()) << " client connects"<< std::endl;
+                std::cout << SSL_CTX_sess_connect_good (this->tlsContext_.get ()) << " client connects that finished"<< std::endl;
+                std::cout << SSL_CTX_sess_connect_renegotiate (this->tlsContext_.get ()) << " client renegotiations requested"<< std::endl;
+                std::cout << SSL_CTX_sess_accept (this->tlsContext_.get ()) << " server connects"<< std::endl;
+                std::cout << SSL_CTX_sess_accept_good (this->tlsContext_.get ()) << " server connects that finished"<< std::endl;
+                std::cout << SSL_CTX_sess_accept_renegotiate (this->tlsContext_.get ()) << " server renegotiations requested"<< std::endl;
+                std::cout << SSL_CTX_sess_hits (this->tlsContext_.get ()) << " session cache hits"<< std::endl;
+                std::cout << SSL_CTX_sess_cb_hits (this->tlsContext_.get ()) << " external session cache hits"<< std::endl;
+                std::cout << SSL_CTX_sess_misses (this->tlsContext_.get ()) << " session cache misses"<< std::endl;
+                std::cout << SSL_CTX_sess_timeouts (this->tlsContext_.get ()) << " session cache timeouts"<< std::endl;
+                std::cout << "negotiated " << SSL_get_cipher (this->tlsHandle_.get ()) << " cipher suite" << std::endl;
             }
         }
 

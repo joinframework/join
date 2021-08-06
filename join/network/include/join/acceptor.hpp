@@ -33,39 +33,39 @@ namespace join
 namespace net
 {
     /**
-     * @brief basic stream acceptor class.
+     * @brief basic acceptor class.
      */
     template <class Protocol>
-    class BasicStreamAcceptor
+    class BasicAcceptor
     {
     public:
-        using Observer = BasicObserver <BasicStreamAcceptor <Protocol>>;
-        using Socket   = BasicStreamSocket <Protocol>;
+        using Observer = BasicObserver <BasicAcceptor <Protocol>>;
+        using Socket   = BasicSocket <Protocol>;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
          * @brief create the acceptor instance.
          */
-        BasicStreamAcceptor () = default;
+        BasicAcceptor () = default;
 
         /**
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicStreamAcceptor (const BasicStreamAcceptor& other) = delete;
+        BasicAcceptor (const BasicAcceptor& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicStreamAcceptor& operator= (const BasicStreamAcceptor& other) = delete;
+        BasicAcceptor& operator= (const BasicAcceptor& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicStreamAcceptor (BasicStreamAcceptor&& other)
+        BasicAcceptor (BasicAcceptor&& other)
         : handle_ (other.handle_),
           protocol_ (other.protocol_)
         {
@@ -78,7 +78,7 @@ namespace net
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicStreamAcceptor& operator= (BasicStreamAcceptor&& other)
+        BasicAcceptor& operator= (BasicAcceptor&& other)
         {
             this->close ();
 
@@ -94,9 +94,12 @@ namespace net
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicStreamAcceptor ()
+        virtual ~BasicAcceptor ()
         {
-            this->close ();
+            if (this->handle_ != -1)
+            {
+                ::close (this->handle_);
+            }
         }
 
         /**
@@ -218,47 +221,6 @@ namespace net
         }
 
         /**
-         * @brief accept new connection and fill in the client object with connection parameters.
-         * @note the client socket object is allocated and must be released.
-         * @return The client socket object on success, nullptr on failure.
-         */
-        virtual Socket accept () const
-        {
-            if (!this->opened ())
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return {};
-            }
-
-            Endpoint endpoint;
-            socklen_t addrLen = endpoint.length ();
-            Socket client;
-
-            client.handle_ = ::accept (this->handle_, endpoint.addr (), &addrLen);
-            if (client.handle_ == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return {};
-            }
-
-            client.state_ = Socket::Connected;
-
-            if (client.setMode (Socket::NonBlocking) == -1)
-            {
-                client.close ();
-                return {};
-            }
-
-            if (client.protocol () == IPPROTO_TCP && client.setOption (Socket::NoDelay, 1) == -1)
-            {
-                client.close ();
-                return {};
-            }
-
-            return client;
-        }
-
-        /**
          * @brief determine the local endpoint associated with this socket.
          * @return local endpoint.
          */
@@ -330,10 +292,99 @@ namespace net
     };
 
     /**
+     * @brief basic stream acceptor class.
+     */
+    template <class Protocol>
+    class BasicStreamAcceptor : public BasicAcceptor <Protocol>
+    {
+    public:
+        using Observer = BasicObserver <BasicStreamAcceptor <Protocol>>;
+        using Socket   = BasicStreamSocket <Protocol>;
+        using Endpoint = typename Protocol::Endpoint;
+
+        /**
+         * @brief create the acceptor instance.
+         */
+        BasicStreamAcceptor () = default;
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        BasicStreamAcceptor (const BasicStreamAcceptor& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to assign.
+         * @return assigned object.
+         */
+        BasicStreamAcceptor& operator= (const BasicStreamAcceptor& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        BasicStreamAcceptor (BasicStreamAcceptor&& other) = default;
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to assign.
+         * @return assigned object.
+         */
+        BasicStreamAcceptor& operator= (BasicStreamAcceptor&& other) = default;
+
+        /**
+         * @brief destroy instance.
+         */
+        virtual ~BasicStreamAcceptor () = default;
+
+        /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @note the client socket object is allocated and must be released.
+         * @return The client socket object on success, nullptr on failure.
+         */
+        virtual Socket accept () const
+        {
+            if (!this->opened ())
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return {};
+            }
+
+            Endpoint endpoint;
+            socklen_t addrLen = endpoint.length ();
+            Socket client;
+
+            client.handle_ = ::accept (this->handle_, endpoint.addr (), &addrLen);
+            if (client.handle_ == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                return {};
+            }
+
+            client.state_ = Socket::Connected;
+
+            if (client.setMode (Socket::NonBlocking) == -1)
+            {
+                client.close ();
+                return {};
+            }
+
+            if (client.protocol () == IPPROTO_TCP && client.setOption (Socket::NoDelay, 1) == -1)
+            {
+                client.close ();
+                return {};
+            }
+
+            return client;
+        }
+    };
+
+    /**
      * @brief basic TLS acceptor class.
      */
     template <class Protocol>
-    class BasicTlsAcceptor : public BasicStreamAcceptor <Protocol>
+    class BasicTlsAcceptor : public BasicAcceptor <Protocol>
     {
     public:
         using Observer = BasicObserver <BasicTlsAcceptor <Protocol>>;
@@ -344,7 +395,7 @@ namespace net
          * @brief create the acceptor instance.
          */
         BasicTlsAcceptor ()
-        : BasicStreamAcceptor <Protocol> (),
+        : BasicAcceptor <Protocol> (),
         #if OPENSSL_VERSION_NUMBER < 0x10100000L
           tlsContext_ (SSL_CTX_new (SSLv23_method ()), join::crypto::SslCtxDelete ()),
         #else
@@ -390,7 +441,7 @@ namespace net
             //  set default TLSv1.3 cipher suites.
             SSL_CTX_set_ciphersuites (tlsContext_.get (), join::crypto::defaultCipher_1_3_.c_str ());
 
-            // disallow clent-side renegotiation.
+            // disallow client-side renegotiation.
             SSL_CTX_set_options (tlsContext_.get (), SSL_OP_NO_RENEGOTIATION);
         #endif
 
@@ -427,7 +478,7 @@ namespace net
          * @param other other object to move.
          */
         BasicTlsAcceptor (BasicTlsAcceptor&& other)
-        : BasicStreamAcceptor <Protocol> (std::move (other)),
+        : BasicAcceptor <Protocol> (std::move (other)),
           tlsContext_ (std::move (other.tlsContext_)),
           sessionId_ (other.sessionId_)
         {
@@ -441,7 +492,7 @@ namespace net
          */
         BasicTlsAcceptor& operator= (BasicTlsAcceptor&& other)
         {
-            BasicStreamAcceptor <Protocol>::operator= (std::move (other));
+            BasicAcceptor <Protocol>::operator= (std::move (other));
 
             tlsContext_ = std::move (other.tlsContext_);
             sessionId_ = other.sessionId_;
@@ -456,7 +507,7 @@ namespace net
          * @note the client socket object is allocated and must be released.
          * @return The client socket object on success, nullptr on failure.
          */
-        virtual Socket accept () const override
+        virtual Socket accept () const
         {
             if (!this->opened ())
             {
@@ -468,6 +519,7 @@ namespace net
             socklen_t addrLen = endpoint.length ();
             Socket client (this->tlsContext_, Socket::ServerMode);
 
+            // accept connection.
             client.handle_ = ::accept (this->handle_, endpoint.addr (), &addrLen);
             if (client.handle_ == -1)
             {
@@ -477,18 +529,21 @@ namespace net
 
             client.state_ = Socket::Connected;
 
+            // set client socket mode.
             if (client.setMode (Socket::NonBlocking) == -1)
             {
                 client.close ();
                 return {};
             }
 
+            // set the no delay option.
             if (client.setOption (Socket::NoDelay, 1) == -1)
             {
                 client.close ();
                 return {};
             }
 
+            //  create an SSL object for the connection.
             client.tlsHandle_.reset (SSL_new (client.tlsContext_.get ()));
             if (client.tlsHandle_ == nullptr)
             {
@@ -497,6 +552,7 @@ namespace net
                 return {};
             }
 
+            // set the file descriptor as the input/output facility for the TLS/SSL handle.
             if (SSL_set_fd (client.tlsHandle_.get (), client.handle_) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
@@ -504,13 +560,16 @@ namespace net
                 return {};
             }
 
-            SSL_set_app_data (client.tlsHandle_.get (), &client);  
+            // prepare the object to work in server mode.
             SSL_set_accept_state (client.tlsHandle_.get ());
 
+            // save the internal context.
+            SSL_set_app_data (client.tlsHandle_.get (), &client);
+
         #ifdef DEBUG
-            // Set info callback.
+            // set info callback.
             SSL_set_info_callback (client.tlsHandle_.get (), Socket::infoWrapper);
-        #endif // DEBUG
+        #endif
 
             client.tlsState_ = Socket::Encrypted;
 
@@ -629,7 +688,7 @@ namespace net
 
             return 0;
         }
-    #endif // OPENSSL_VERSION_NUMBER >= 0x10101000L
+    #endif
 
         /**
          * @brief create a random number for message id.
@@ -653,34 +712,34 @@ namespace net
         static DH* getDh2236 ()
         {
             static unsigned char dhp_2236[] = {
-                0x0C, 0xE0, 0x86, 0x60, 0xA9, 0x7C, 0x2D, 0x02, 0xF5, 0x58,
-                0x08, 0x0C, 0x92, 0x1D, 0x07, 0xC6, 0xF1, 0xBF, 0x66, 0xBA,
-                0x9B, 0xDB, 0x0D, 0x3F, 0x06, 0x1E, 0x9F, 0x33, 0x9F, 0xC9,
-                0x37, 0x89, 0xD4, 0x9E, 0x33, 0x4B, 0x37, 0x0B, 0xC2, 0x96,
-                0x30, 0xA9, 0x17, 0x15, 0xA5, 0xF2, 0x33, 0x1E, 0x1E, 0xFB,
-                0xE8, 0xBF, 0x23, 0xCD, 0xEC, 0xBA, 0x95, 0x12, 0xBB, 0xA1,
-                0x15, 0x5E, 0x4D, 0x1A, 0xA3, 0x6F, 0xA3, 0x64, 0x65, 0x6A,
-                0xF2, 0x9F, 0x2F, 0xFB, 0xE8, 0xC5, 0xD7, 0x38, 0xA2, 0xF0,
-                0x32, 0x5F, 0x87, 0x73, 0x37, 0x26, 0x9B, 0x88, 0xF3, 0x5A,
-                0x2C, 0x8C, 0x1E, 0x33, 0x84, 0x5D, 0x05, 0xEC, 0x92, 0x47,
-                0x04, 0xDA, 0xEC, 0x33, 0x89, 0x33, 0x57, 0x50, 0x1D, 0x76,
-                0x86, 0x5D, 0x67, 0x35, 0x72, 0x50, 0x83, 0x56, 0x99, 0x58,
-                0xA2, 0x3E, 0x06, 0xB9, 0x49, 0xD6, 0xA6, 0x4A, 0x92, 0xE5,
-                0x32, 0xAB, 0x1C, 0x76, 0x1E, 0xDC, 0x41, 0x1A, 0xBA, 0x0B,
-                0xF9, 0x12, 0x0A, 0xFD, 0x34, 0x0C, 0xFD, 0xD8, 0x5F, 0x85,
-                0x03, 0x1B, 0xBE, 0x12, 0xAE, 0x5A, 0x5E, 0xEA, 0xB9, 0x1E,
-                0x93, 0x82, 0x7F, 0x65, 0x10, 0x8E, 0x33, 0x11, 0x73, 0x23,
-                0x3C, 0x8C, 0x22, 0x4D, 0xBA, 0xFD, 0x62, 0xAD, 0x0B, 0x6B,
-                0x84, 0x79, 0x0E, 0xFC, 0x92, 0x49, 0x16, 0x0D, 0x52, 0x29,
-                0x95, 0x61, 0x83, 0x50, 0xF2, 0xD8, 0xD0, 0x57, 0x3D, 0x00,
-                0xE4, 0x38, 0xB0, 0x17, 0x93, 0xE5, 0x70, 0x39, 0x77, 0xAE,
-                0x96, 0x25, 0x2E, 0x97, 0xDC, 0x37, 0xC4, 0x21, 0x34, 0xBC,
-                0x8E, 0xF5, 0xD9, 0xC7, 0x9D, 0x92, 0xBF, 0xE1, 0xAD, 0x45,
-                0x61, 0x3C, 0xD6, 0xAC, 0x9E, 0x8A, 0xBC, 0xCD, 0x0C, 0xE3,
-                0x7C, 0x7A, 0x99, 0xE5, 0x7A, 0x10, 0xD8, 0xF1, 0xAC, 0x6B,
-                0x72, 0x58, 0xB9, 0xBD, 0x2C, 0x1C, 0xAC, 0xBA, 0xFA, 0x65,
-                0x5B, 0xCF, 0x5D, 0x0B, 0x2F, 0xE8, 0x69, 0xA3, 0xD2, 0x52,
-                0xAB, 0x17, 0x65, 0xBC, 0x72, 0x35, 0x6D, 0x84, 0x5B, 0x9B
+                0x0C, 0xA5, 0x51, 0x2B, 0x8F, 0xF7, 0xA8, 0x74, 0x4D, 0x52,
+                0xD7, 0xED, 0x97, 0x83, 0xA4, 0xD2, 0x8B, 0xF3, 0xE7, 0x92,
+                0xF0, 0x27, 0x1B, 0xA0, 0x80, 0x83, 0x19, 0xDD, 0x02, 0xEF,
+                0xA3, 0xE6, 0x13, 0x0A, 0x47, 0xE6, 0xF1, 0x3B, 0xC1, 0x5F,
+                0x63, 0xC4, 0x03, 0xBA, 0xAC, 0xAA, 0xA3, 0x44, 0xC2, 0x03,
+                0x6D, 0x62, 0x33, 0xAA, 0xF9, 0xA2, 0x5A, 0x98, 0xC2, 0xC0,
+                0x71, 0x6F, 0xB0, 0x93, 0x6A, 0x26, 0x92, 0x90, 0x95, 0xEA,
+                0xE8, 0x5F, 0x81, 0x50, 0x57, 0xB3, 0xB7, 0xE6, 0x3A, 0x3A,
+                0x90, 0x15, 0x01, 0x2F, 0xC7, 0x8F, 0xAA, 0x0C, 0xAE, 0xC0,
+                0xFF, 0x3A, 0xA7, 0x26, 0x5C, 0x87, 0xC2, 0x00, 0x68, 0xCA,
+                0x02, 0x06, 0x50, 0x44, 0xEE, 0x75, 0xE7, 0xFF, 0x16, 0xD1,
+                0x0F, 0x64, 0x51, 0x97, 0x52, 0x54, 0x69, 0xF0, 0x31, 0x81,
+                0x4D, 0xEB, 0xF5, 0xA8, 0xB3, 0x7B, 0x48, 0x60, 0xBD, 0xC7,
+                0xC9, 0x6E, 0x97, 0x86, 0x9B, 0xE6, 0x66, 0x4E, 0x1D, 0xE5,
+                0x6F, 0xBA, 0xC5, 0x3D, 0xFD, 0x3F, 0x34, 0x69, 0x6F, 0xC0,
+                0xFA, 0x8D, 0x42, 0x73, 0xA2, 0x49, 0xDE, 0xB6, 0x8D, 0x71,
+                0x15, 0xFC, 0xB4, 0x18, 0x31, 0x5A, 0x24, 0xD0, 0x5E, 0xA8,
+                0xE0, 0xD8, 0x1C, 0xF8, 0x0F, 0x1F, 0x59, 0x22, 0x5A, 0x07,
+                0x75, 0x06, 0x98, 0x58, 0xE1, 0xF6, 0xA5, 0x53, 0xFD, 0x66,
+                0x1E, 0x8F, 0x41, 0x63, 0x61, 0xA1, 0x79, 0x0D, 0x3B, 0xA7,
+                0xF4, 0xBD, 0x72, 0xEB, 0xE1, 0xDC, 0xE2, 0xC9, 0x9B, 0x41,
+                0xF6, 0x33, 0x3F, 0x9F, 0x0C, 0x33, 0x7B, 0xF2, 0x90, 0x68,
+                0x28, 0xD3, 0x5A, 0xC1, 0x5C, 0xDE, 0x15, 0x11, 0xF4, 0xDD,
+                0xCB, 0x09, 0x78, 0x63, 0x3B, 0xB6, 0xE8, 0xEE, 0x9A, 0x48,
+                0xE9, 0x79, 0x80, 0x3F, 0x34, 0x8D, 0xB9, 0x24, 0x8D, 0x94,
+                0x88, 0xA9, 0x75, 0xA5, 0x19, 0x05, 0x8D, 0x77, 0x20, 0xAF,
+                0xC2, 0xC9, 0x7B, 0xD2, 0x51, 0xEE, 0x17, 0x22, 0xAC, 0x33,
+                0xA8, 0xA6, 0x1B, 0x8B, 0xE3, 0x79, 0xF3, 0xE8, 0x3B, 0x6B
             };
             static unsigned char dhg_2236[] = {
                 0x02

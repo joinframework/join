@@ -60,26 +60,26 @@ protected:
      */
     virtual void onReceive () override
     {
-        UnixStream::Socket socket = accept ();
-        if (socket.connected ())
+        UnixStream::Socket sock = accept ();
+        if (sock.connected ())
         {
             char buf[1024];
             for (;;)
             {
                 // echo received data.
-                int nread = socket.read (buf, sizeof (buf));
+                int nread = sock.read (buf, sizeof (buf));
                 if (nread == -1)
                 {
                     if (join::lastError == Errc::TemporaryError)
                     {
-                        if (socket.waitReadyRead (timeout_))
+                        if (sock.waitReadyRead (timeout_))
                             continue;
                     }
                     break;
                 }
-                socket.writeData (buf, nread);
+                sock.writeData (buf, nread);
             }
-            socket.close ();
+            sock.close ();
         }
     }
 

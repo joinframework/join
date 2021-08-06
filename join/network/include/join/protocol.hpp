@@ -376,7 +376,9 @@ namespace net
         using Endpoint    = BasicInternetEndpoint <Tcp>;
         using Resolver    = BasicResolver <Tcp>;
         using Socket      = BasicStreamSocket <Tcp>;
+        using TlsSocket   = BasicTlsSocket <Tcp>;
         using Acceptor    = BasicStreamAcceptor <Tcp>;
+        using TlsAcceptor = BasicTlsAcceptor <Tcp>;
 
         /**
          * @brief create the tcp protocol  instance.

@@ -31,6 +31,7 @@
 using join::Errc;
 using join::net::IpAddress;
 using join::net::Tcp;
+
 /**
  * @brief Class used to test the TCP socket API.
  */
@@ -61,26 +62,26 @@ protected:
      */
     virtual void onReceive () override
     {
-        Tcp::Socket socket = accept ();
-        if (socket.connected ())
+        Tcp::Socket sock = accept ();
+        if (sock.connected ())
         {
             char buf[1024];
             for (;;)
             {
                 // echo received data.
-                int nread = socket.read (buf, sizeof (buf));
+                int nread = sock.read (buf, sizeof (buf));
                 if (nread == -1)
                 {
                     if (join::lastError == Errc::TemporaryError)
                     {
-                        if (socket.waitReadyRead (timeout_))
+                        if (sock.waitReadyRead (timeout_))
                             continue;
                     }
                     break;
                 }
-                socket.writeData (buf, nread);
+                sock.writeData (buf, nread);
             }
-            socket.close ();
+            sock.close ();
         }
     }
 
@@ -424,7 +425,7 @@ TEST_F (TcpSocket, localEndpoint)
 }
 
 /**
- * @brief Test mtu method.
+ * @brief Test remoteEndpoint method.
  */
 TEST_F (TcpSocket, remoteEndpoint)
 {

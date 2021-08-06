@@ -81,13 +81,13 @@ TEST (UnixAcceptor, listen)
  */
 TEST (UnixAcceptor, accept)
 {
-    UnixStream::Socket clientSocket (UnixStream::Socket::Blocking), serverSocket;
+    UnixStream::Socket clientSocket (UnixStream::Socket::Blocking);
     UnixStream::Acceptor server;
 
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect (path), 0) << join::lastError.message ();
-    ASSERT_NO_THROW (serverSocket = server.accept ());
+    UnixStream::Socket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
     ASSERT_EQ (serverSocket.localEndpoint ().device (), path);
     ASSERT_EQ (clientSocket.close (), 0) << join::lastError.message ();

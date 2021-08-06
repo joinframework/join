@@ -83,13 +83,13 @@ TEST (TcpAcceptor, listen)
  */
 TEST (TcpAcceptor, accept)
 {
-    Tcp::Socket clientSocket (Tcp::Socket::Blocking), serverSocket;
+    Tcp::Socket clientSocket (Tcp::Socket::Blocking);
     Tcp::Acceptor server;
 
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect ({address, port}), 0) << join::lastError.message ();
-    ASSERT_NO_THROW (serverSocket = server.accept ());
+    Tcp::Socket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
     ASSERT_EQ (serverSocket.localEndpoint ().ip (), address);
     ASSERT_EQ (serverSocket.localEndpoint ().port (), port);
