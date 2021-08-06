@@ -25,3 +25,4 @@ gtest_discover_tests(jsonreader.gtest)
 add_executable(roundtrip.gtest roundtrip_test.cpp)
 target_link_libraries(roundtrip.gtest ${PROJECT_NAME} gtest gtest_main pthread gcov)
 gtest_discover_tests(roundtrip.gtest)
+
