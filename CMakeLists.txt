@@ -39,7 +39,7 @@ endif()
 
 if(JOIN_ENABLE_COVERAGE)
     if(NOT (CMAKE_BUILD_TYPE STREQUAL "Debug"))
-        message(WARNING "Code coverage results with a non-Debug build may be misleading")
+        message(FATAL_ERROR "Code coverage results with a non-Debug build may be misleading")
     endif()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage" CACHE STRING "CXXFLAGS" FORCE)
 endif()
