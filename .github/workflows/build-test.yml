@@ -39,6 +39,5 @@ jobs:
     - name: Deploy coverage report to codecove
       uses: codecov/codecov-action@v2
       with:
-        directory: /__w/join/join
-        verbose: true
+        file: /__w/join/join/lcov.info
 
