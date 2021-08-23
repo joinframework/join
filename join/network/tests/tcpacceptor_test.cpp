@@ -28,11 +28,28 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::Errc;
 using join::net::IpAddress;
 using join::net::Tcp;
 
 IpAddress address = "127.0.0.1";
 uint16_t  port    = 5000;
+
+/**
+ * @brief Assign by move.
+ */
+TEST (TcpAcceptor, move)
+{
+    Tcp::Acceptor server1, server2;
+
+    ASSERT_EQ (server1.open (), 0) << join::lastError.message ();
+
+    server2 = std::move (server1);
+    ASSERT_TRUE (server2.opened ());
+
+    Tcp::Acceptor server3 = std::move (server2);
+    ASSERT_TRUE (server3.opened ());
+}
 
 /**
  * @brief Test open method.
@@ -42,6 +59,8 @@ TEST (TcpAcceptor, open)
     Tcp::Acceptor server;
 
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
 }
 /**
  * @brief Test close method.
@@ -73,6 +92,8 @@ TEST (TcpAcceptor, listen)
 {
     Tcp::Acceptor server;
 
+    ASSERT_EQ (server.listen (20), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
@@ -86,6 +107,8 @@ TEST (TcpAcceptor, accept)
     Tcp::Socket clientSocket (Tcp::Socket::Blocking);
     Tcp::Acceptor server;
 
+    ASSERT_FALSE (server.accept ().connected ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect ({address, port}), 0) << join::lastError.message ();
@@ -105,6 +128,7 @@ TEST (TcpAcceptor, localEndpoint)
 {
     Tcp::Acceptor server;
 
+    ASSERT_EQ (server.localEndpoint (), Tcp::Endpoint {});
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), address);
