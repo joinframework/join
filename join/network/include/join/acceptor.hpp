@@ -742,23 +742,27 @@ namespace net
                 0xC2, 0xC9, 0x7B, 0xD2, 0x51, 0xEE, 0x17, 0x22, 0xAC, 0x33,
                 0xA8, 0xA6, 0x1B, 0x8B, 0xE3, 0x79, 0xF3, 0xE8, 0x3B, 0x6B
             };
+
             static unsigned char dhg_2236[] = {
                 0x02
             };
-            DH *dh = DH_new();
-            BIGNUM *p, *g;
 
-            if (dh == NULL)
-                return NULL;
-            p = BN_bin2bn(dhp_2236, sizeof(dhp_2236), NULL);
-            g = BN_bin2bn(dhg_2236, sizeof(dhg_2236), NULL);
-            if (p == NULL || g == NULL
-                    || !DH_set0_pqg(dh, p, NULL, g)) {
-                DH_free(dh);
-                BN_free(p);
-                BN_free(g);
-                return NULL;
+            DH *dh = DH_new ();
+            if (dh == nullptr)
+            {
+                return nullptr;
             }
+
+            BIGNUM *p = BN_bin2bn (dhp_2236, sizeof (dhp_2236), nullptr);
+            BIGNUM *g = BN_bin2bn (dhg_2236, sizeof (dhg_2236), nullptr);
+            if (p == nullptr || g == nullptr || !DH_set0_pqg (dh, p, nullptr, g))
+            {
+                DH_free (dh);
+                BN_free (p);
+                BN_free (g);
+                return nullptr;
+            }
+
             return dh;
         }
 

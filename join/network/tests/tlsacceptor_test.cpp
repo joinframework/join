@@ -298,6 +298,10 @@ TEST_F (TlsServerTest, setCertificate)
 {
     Tcp::TlsAcceptor server;
 
+    ASSERT_EQ (server.setCertificate ("foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (server.setCertificate (cert, "foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (server.setCertificate (cert, key), 0) << join::lastError.message ();
 }
 
@@ -308,6 +312,10 @@ TEST_F (TlsServerTest, setCaCertificate)
 {
     Tcp::TlsAcceptor server;
 
+    ASSERT_EQ (server.setCaCertificate ("foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (server.setCaCertificate (key), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (server.setCaCertificate (cert), 0) << join::lastError.message ();
 }
 
@@ -318,6 +326,8 @@ TEST_F (TlsServerTest, setCipher)
 {
     Tcp::TlsAcceptor server;
 
+    ASSERT_EQ (server.setCipher ("foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (server.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
 }
 
