@@ -28,6 +28,7 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::Errc;
 using join::net::UnixStream;
 
 std::string path = "/tmp/unixacceptor_test.sock";
@@ -40,6 +41,8 @@ TEST (UnixAcceptor, open)
     UnixStream::Acceptor server;
 
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
 }
 /**
  * @brief Test close method.
@@ -71,6 +74,8 @@ TEST (UnixAcceptor, listen)
 {
     UnixStream::Acceptor server;
 
+    ASSERT_EQ (server.listen (20), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
@@ -84,6 +89,8 @@ TEST (UnixAcceptor, accept)
     UnixStream::Socket clientSocket (UnixStream::Socket::Blocking);
     UnixStream::Acceptor server;
 
+    ASSERT_FALSE (server.accept ().connected ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect (path), 0) << join::lastError.message ();
@@ -102,6 +109,7 @@ TEST (UnixAcceptor, localEndpoint)
 {
     UnixStream::Acceptor server;
 
+    ASSERT_EQ (server.localEndpoint (), UnixStream::Endpoint {});
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().device (), path);

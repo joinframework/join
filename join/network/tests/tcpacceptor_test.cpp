@@ -28,6 +28,7 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::Errc;
 using join::net::IpAddress;
 using join::net::Tcp;
 
@@ -42,6 +43,8 @@ TEST (TcpAcceptor, open)
     Tcp::Acceptor server;
 
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
 }
 /**
  * @brief Test close method.
@@ -73,6 +76,8 @@ TEST (TcpAcceptor, listen)
 {
     Tcp::Acceptor server;
 
+    ASSERT_EQ (server.listen (20), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
@@ -86,6 +91,8 @@ TEST (TcpAcceptor, accept)
     Tcp::Socket clientSocket (Tcp::Socket::Blocking);
     Tcp::Acceptor server;
 
+    ASSERT_FALSE (server.accept ().connected ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect ({address, port}), 0) << join::lastError.message ();
@@ -105,6 +112,7 @@ TEST (TcpAcceptor, localEndpoint)
 {
     Tcp::Acceptor server;
 
+    ASSERT_EQ (server.localEndpoint (), Tcp::Endpoint {});
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), address);

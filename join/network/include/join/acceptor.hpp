@@ -207,6 +207,7 @@ namespace net
         {
             if (!this->opened ())
             {
+                lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 

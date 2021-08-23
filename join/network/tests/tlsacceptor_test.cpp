@@ -31,6 +31,7 @@
 // C++.
 #include <fstream>
 
+using join::Errc;
 using join::net::IpAddress;
 using join::net::Tcp;
 
@@ -148,6 +149,8 @@ TEST_F (TlsServerTest, open)
     Tcp::TlsAcceptor server;
 
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
 }
 
 /**
@@ -180,6 +183,8 @@ TEST_F (TlsServerTest, listen)
 {
     Tcp::TlsAcceptor server;
 
+    ASSERT_EQ (server.listen (20), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
@@ -193,6 +198,8 @@ TEST_F (TlsServerTest, accept)
     Tcp::TlsSocket clientSocket (Tcp::TlsSocket::Blocking);
     Tcp::TlsAcceptor server;
 
+    ASSERT_FALSE (server.accept ().connected ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect({address, port}), 0) << join::lastError.message ();
@@ -212,6 +219,7 @@ TEST_F (TlsServerTest, localEndpoint)
 {
     Tcp::TlsAcceptor server;
 
+    ASSERT_EQ (server.localEndpoint (), Tcp::Endpoint {});
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), address);
