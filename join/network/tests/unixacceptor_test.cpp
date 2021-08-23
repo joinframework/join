@@ -34,6 +34,22 @@ using join::net::UnixStream;
 std::string path = "/tmp/unixacceptor_test.sock";
 
 /**
+ * @brief Assign by move.
+ */
+TEST (UnixAcceptor, move)
+{
+    UnixStream::Acceptor server1, server2;
+
+    ASSERT_EQ (server1.open (), 0) << join::lastError.message ();
+
+    server2 = std::move (server1);
+    ASSERT_TRUE (server2.opened ());
+
+    UnixStream::Acceptor server3 = std::move (server2);
+    ASSERT_TRUE (server3.opened ());
+}
+
+/**
  * @brief Test open method.
  */
 TEST (UnixAcceptor, open)

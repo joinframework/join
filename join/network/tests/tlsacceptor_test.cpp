@@ -142,6 +142,22 @@ const std::string TlsServerTest::cert    = "/tmp/tlsserver_test.cert";
 const std::string TlsServerTest::key     = "/tmp/tlsserver_test.key";
 
 /**
+ * @brief Assign by move.
+ */
+TEST_F (TlsServerTest, move)
+{
+    Tcp::TlsAcceptor server1, server2;
+
+    ASSERT_EQ (server1.open (), 0) << join::lastError.message ();
+
+    server2 = std::move (server1);
+    ASSERT_TRUE (server2.opened ());
+
+    Tcp::TlsAcceptor server3 = std::move (server2);
+    ASSERT_TRUE (server3.opened ());
+}
+
+/**
  * @brief Test open method.
  */
 TEST_F (TlsServerTest, open)

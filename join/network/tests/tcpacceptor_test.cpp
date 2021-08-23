@@ -36,6 +36,22 @@ IpAddress address = "127.0.0.1";
 uint16_t  port    = 5000;
 
 /**
+ * @brief Assign by move.
+ */
+TEST (TcpAcceptor, move)
+{
+    Tcp::Acceptor server1, server2;
+
+    ASSERT_EQ (server1.open (), 0) << join::lastError.message ();
+
+    server2 = std::move (server1);
+    ASSERT_TRUE (server2.opened ());
+
+    Tcp::Acceptor server3 = std::move (server2);
+    ASSERT_TRUE (server3.opened ());
+}
+
+/**
  * @brief Test open method.
  */
 TEST (TcpAcceptor, open)
