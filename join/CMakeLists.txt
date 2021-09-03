@@ -45,7 +45,6 @@ set(SOURCES
     crypto/src/openssl.cpp
     network/src/macaddress.cpp
     network/src/ipaddress.cpp
-    sax/src/sax.cpp
 )
 
 add_library(${PROJECT_NAME} ${SOURCES})
