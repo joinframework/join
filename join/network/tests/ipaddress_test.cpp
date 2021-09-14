@@ -39,8 +39,8 @@ using join::net::IpAddress;
 TEST (IpAddress, defaultConstruct)
 {
     IpAddress ip;
-    EXPECT_EQ (ip.family (), AF_INET);
-    EXPECT_STREQ (ip.toString ().c_str (), "0.0.0.0");
+    ASSERT_EQ (ip.family (), AF_INET);
+    ASSERT_STREQ (ip.toString ().c_str (), "0.0.0.0");
 }
 
 /**
@@ -48,13 +48,15 @@ TEST (IpAddress, defaultConstruct)
  */
 TEST (IpAddress, familyConstruct)
 {
+    ASSERT_THROW (IpAddress (AF_UNSPEC), std::invalid_argument);
+
     IpAddress ip4 (AF_INET);
-    EXPECT_EQ (ip4.family (), AF_INET);
-    EXPECT_STREQ (ip4.toString ().c_str (), "0.0.0.0");
+    ASSERT_EQ (ip4.family (), AF_INET);
+    ASSERT_STREQ (ip4.toString ().c_str (), "0.0.0.0");
 
     IpAddress ip6 (AF_INET6);
-    EXPECT_EQ (ip6.family (), AF_INET6);
-    EXPECT_STREQ (ip6.toString ().c_str (), "::");
+    ASSERT_EQ (ip6.family (), AF_INET6);
+    ASSERT_STREQ (ip6.toString ().c_str (), "::");
 }
 
 /**
@@ -94,8 +96,13 @@ TEST (IpAddress, moveConstruct)
  */
 TEST (IpAddress, sockaddrConstruct)
 {
+    struct sockaddr_storage sa;
+    memset (&sa, 0, sizeof (sa));
+
+    ASSERT_THROW (IpAddress (*reinterpret_cast <struct sockaddr*> (&sa)), std::invalid_argument);
+
     struct sockaddr_storage sa4;
-    bzero (&sa4, sizeof (sa4));
+    memset (&sa4, 0, sizeof (sa4));
 
     reinterpret_cast <struct sockaddr_in*> (&sa4)->sin_family = AF_INET;
     IpAddress ip4 (*reinterpret_cast <struct sockaddr*> (&sa4));
@@ -103,7 +110,7 @@ TEST (IpAddress, sockaddrConstruct)
     ASSERT_STREQ (ip4.toString ().c_str (), "0.0.0.0");
 
     struct sockaddr_storage sa6;
-    bzero (&sa6, sizeof (sa6));
+    memset (&sa6, 0, sizeof (sa6));
 
     reinterpret_cast <struct sockaddr_in6*> (&sa6)->sin6_family = AF_INET6;
     IpAddress ip6 (*reinterpret_cast <struct sockaddr*> (&sa6));
@@ -116,15 +123,20 @@ TEST (IpAddress, sockaddrConstruct)
  */
 TEST (IpAddress, addrConstruct)
 {
+    char sa[1];
+    memset (&sa, 0, sizeof (sa));
+
+    ASSERT_THROW (IpAddress (&sa, sizeof (sa)), std::invalid_argument);
+
     struct in_addr sa4;
-    bzero (&sa4, sizeof (sa4));
+    memset (&sa4, 0, sizeof (sa4));
 
     IpAddress ip4 (&sa4, sizeof (sa4));
     ASSERT_EQ (ip4.family (), AF_INET);
     ASSERT_STREQ (ip4.toString ().c_str (), "0.0.0.0");
 
     struct in6_addr sa6;
-    bzero (&sa6, sizeof (sa6));
+    memset (&sa6, 0, sizeof (sa6));
 
     IpAddress ip6 (&sa6, sizeof (sa6));
     ASSERT_EQ (ip6.family (), AF_INET6);
@@ -266,6 +278,8 @@ TEST (IpAddress, stringConstruct)
  */
 TEST (IpAddress, prefixConstruct)
 {
+    ASSERT_THROW (IpAddress (0, AF_UNSPEC), std::invalid_argument);
+
     ASSERT_THROW (IpAddress (40, AF_INET), std::invalid_argument);
     ASSERT_THROW (IpAddress (-8, AF_INET), std::invalid_argument);
 
@@ -542,6 +556,58 @@ TEST (IpAddress, prefix)
 
     ip = "255.255.255.255";
     ASSERT_EQ (ip.prefix (), 32);
+
+    ip = "::";
+    ASSERT_EQ (ip.prefix (), 0);
+
+    ip = "ff00::";
+    ASSERT_EQ (ip.prefix (), 8);
+
+    ip = "ffff::";
+    ASSERT_EQ (ip.prefix (), 16);
+
+    ip = "ffff:ff00::";
+    ASSERT_EQ (ip.prefix (), 24);
+
+    ip = "ffff:ffff::";
+    ASSERT_EQ (ip.prefix (), 32);
+
+    ip = "ffff:ffff:ff00::";
+    ASSERT_EQ (ip.prefix (), 40);
+
+    ip = "ffff:ffff:ffff::";
+    ASSERT_EQ (ip.prefix (), 48);
+
+    ip = "ffff:ffff:ffff:ff00::";
+    ASSERT_EQ (ip.prefix (), 56);
+
+    ip = "ffff:ffff:ffff:ffff::";
+    ASSERT_EQ (ip.prefix (), 64);
+
+    ip = "ffff:ffff:ffff:ffff:ff00::";
+    ASSERT_EQ (ip.prefix (), 72);
+
+    ip = "ffff:ffff:ffff:ffff:ffff::";
+    ASSERT_EQ (ip.prefix (), 80);
+
+    ip = "ffff:ffff:ffff:ffff:ffff:ff00::";
+    ASSERT_EQ (ip.prefix (), 88);
+
+    ip = "ffff:ffff:ffff:ffff:ffff:ffff::";
+    ASSERT_EQ (ip.prefix (), 96);
+
+    ip = "ffff:ffff:ffff:ffff:ffff:ffff:ff00::";
+    ASSERT_EQ (ip.prefix (), 104);
+
+    ip = "ffff:ffff:ffff:ffff:ffff:ffff:ffff::";
+    ASSERT_EQ (ip.prefix (), 112);
+
+    ip = "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ff00";
+    ASSERT_EQ (ip.prefix (), 120);
+
+
+    ip = "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff";
+    ASSERT_EQ (ip.prefix (), 128);
 }
 
 /**
