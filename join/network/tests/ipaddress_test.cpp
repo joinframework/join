@@ -1507,6 +1507,12 @@ TEST (IpAddress, toString)
 
     ip = "fe80::57f3:baa4:fc3a:890a";
     ASSERT_STREQ (ip.toString ().c_str (), "fe80::57f3:baa4:fc3a:890a");
+
+    ip = "fe80::57f3:baa4:fc3a:890a%lo";
+    ASSERT_STREQ (ip.toString ().c_str (), "fe80::57f3:baa4:fc3a:890a%lo");
+
+    ip = "fe80::57f3:baa4:fc3a:890a%8";
+    ASSERT_STREQ (ip.toString ().c_str (), "fe80::57f3:baa4:fc3a:890a%8");
 }
 
 /**
