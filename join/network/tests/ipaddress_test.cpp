@@ -345,8 +345,24 @@ TEST (IpAddress, prefixConstruct)
  */
 TEST (IpAddress, copyAssign)
 {
-    IpAddress ip6 ("::"), ip;
+    IpAddress ip4 ("0.0.0.0"), ip;
+    ip = ip4;
 
+    ASSERT_EQ (ip.family (), AF_INET);
+    ASSERT_NE (ip.addr (), nullptr);
+    ASSERT_EQ (ip.length (), sizeof (struct in_addr));
+    ASSERT_EQ (ip.scope (), 0);
+    ASSERT_TRUE (ip.isWildcard ());
+    ASSERT_FALSE (ip.isLoopBack ());
+    ASSERT_FALSE (ip.isLinkLocal ());
+    ASSERT_FALSE (ip.isSiteLocal ());
+    ASSERT_FALSE (ip.isUnicast ());
+    ASSERT_FALSE (ip.isBroadcast ());
+    ASSERT_FALSE (ip.isMulticast ());
+    ASSERT_TRUE (ip.isIpv4Mapped ());
+    ASSERT_STREQ (ip.toString ().c_str (), "0.0.0.0");
+
+    IpAddress ip6 ("::");
     ip = ip6;
 
     ASSERT_EQ (ip.family (), AF_INET6);
@@ -1614,9 +1630,9 @@ TEST (IpAddress, clear)
 }
 
 /**
- * @brief Test assign method.
+ * @brief Test at method.
  */
-TEST (IpAddress, assign)
+TEST (IpAddress, at)
 {
     IpAddress ip4 (AF_INET);
     ASSERT_THROW (ip4[4], std::invalid_argument);
@@ -1632,6 +1648,9 @@ TEST (IpAddress, assign)
     ip4[2] = 45;
     ip4[3] = 2;
     ASSERT_STREQ (ip4.toString ().c_str (), "10.41.45.2");
+
+    const uint8_t a = ip4[0];
+    ASSERT_EQ (a, 10);
 
     IpAddress ip6 (AF_INET6);
     ASSERT_THROW (ip6[16], std::invalid_argument);
@@ -1650,6 +1669,9 @@ TEST (IpAddress, assign)
     ip6[14] = 0x89;
     ip6[15] = 0x0a;
     ASSERT_STREQ (ip6.toString ().c_str (), "fe80::57f3:baa4:fc3a:890a");
+
+    const uint8_t b = ip6[0];
+    ASSERT_EQ (b, 0xfe);
 }
 
 /**
