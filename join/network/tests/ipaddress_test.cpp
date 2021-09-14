@@ -1794,6 +1794,12 @@ TEST (IpAddress, different)
 
     ip2 = "2001:db8:1234:5678::1";
     ASSERT_FALSE ("2001:db8:1234:5678::1" != ip2);
+
+    ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
+    ASSERT_FALSE (ip1 != "fe80::57f3:baa4:fc3a:890a%lo");
+
+    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ASSERT_TRUE (ip1 != ip2);
 }
 
 /**
@@ -1872,6 +1878,12 @@ TEST (IpAddress, lower)
 
     ip2 = "2001:db8:1234:5678::1";
     ASSERT_FALSE ("2001:db8:1234:5678::1" < ip2);
+
+    ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
+    ASSERT_FALSE (ip1 < "fe80::57f3:baa4:fc3a:890a%lo");
+
+    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ASSERT_TRUE (ip1 < ip2);
 }
 
 /**
@@ -1951,6 +1963,12 @@ TEST (IpAddress, lowerOrEqual)
 
     ip2 = "2001:db8:1234:5678::1";
     ASSERT_TRUE ("2001:db8:1234:5678::1" <= ip2);
+
+    ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
+    ASSERT_TRUE (ip1 <= "fe80::57f3:baa4:fc3a:890a%lo");
+
+    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ASSERT_TRUE (ip1 <= ip2);
 }
 
 /**
@@ -2029,6 +2047,12 @@ TEST (IpAddress, greater)
 
     ip2 = "2001:db8:1234:5678::1";
     ASSERT_FALSE ("2001:db8:1234:5678::1" > ip2);
+
+    ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
+    ASSERT_FALSE (ip1 > "fe80::57f3:baa4:fc3a:890a%lo");
+
+    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ASSERT_FALSE (ip1 > ip2);
 }
 
 /**
@@ -2107,6 +2131,12 @@ TEST (IpAddress, greaterOrEqual)
 
     ip2 = "2001:db8:1234:5678::1";
     ASSERT_TRUE ("2001:db8:1234:5678::1" >= ip2);
+
+    ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
+    ASSERT_TRUE (ip1 >= "fe80::57f3:baa4:fc3a:890a%lo");
+
+    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ASSERT_FALSE (ip1 >= ip2);
 }
 
 /**
