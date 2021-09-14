@@ -127,6 +127,7 @@ TEST (IpAddress, addrConstruct)
     memset (&sa, 0, sizeof (sa));
 
     ASSERT_THROW (IpAddress (&sa, sizeof (sa)), std::invalid_argument);
+    ASSERT_THROW (IpAddress (&sa, sizeof (sa), 0), std::invalid_argument);
 
     struct in_addr sa4;
     memset (&sa4, 0, sizeof (sa4));
@@ -135,12 +136,20 @@ TEST (IpAddress, addrConstruct)
     ASSERT_EQ (ip4.family (), AF_INET);
     ASSERT_STREQ (ip4.toString ().c_str (), "0.0.0.0");
 
+    IpAddress scopedIp4 (&sa4, sizeof (sa4), 0);
+    ASSERT_EQ (scopedIp4.family (), AF_INET);
+    ASSERT_STREQ (scopedIp4.toString ().c_str (), "0.0.0.0");
+
     struct in6_addr sa6;
     memset (&sa6, 0, sizeof (sa6));
 
     IpAddress ip6 (&sa6, sizeof (sa6));
     ASSERT_EQ (ip6.family (), AF_INET6);
     ASSERT_STREQ (ip6.toString ().c_str (), "::");
+
+    IpAddress scopedIp6 (&sa6, sizeof (sa6), 0);
+    ASSERT_EQ (scopedIp6.family (), AF_INET6);
+    ASSERT_STREQ (scopedIp6.toString ().c_str (), "::");
 }
 
 /**
