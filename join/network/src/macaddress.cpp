@@ -80,7 +80,7 @@ MacAddress::MacAddress (const uint8_t* address, size_t size)
 {
     if (size > mac_.size ())
     {
-        throw std::invalid_argument ("out of range");
+        throw std::out_of_range ("out of range");
     }
 
     memcpy (&mac_[0], address, size);
@@ -103,7 +103,7 @@ MacAddress::MacAddress (std::initializer_list <uint8_t> address)
 {
     if (address.size () > mac_.size ())
     {
-        throw std::invalid_argument ("out of range");
+        throw std::out_of_range ("out of range");
     }
 
     std::copy (address.begin (), address.end (), std::begin (mac_));

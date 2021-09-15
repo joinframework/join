@@ -40,7 +40,7 @@ using join::net::MacAddress;
 TEST (MacAddress, defaultConstruct)
 {
     MacAddress mac;
-    EXPECT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:00");
+    ASSERT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:00");
 }
 
 /**
@@ -51,7 +51,7 @@ TEST (MacAddress, copyConstruct)
     MacAddress tmp ("50:7b:9d:13:82:df");
 
     MacAddress mac = tmp;
-    EXPECT_STREQ (MacAddress (mac).toString ().c_str (), "50:7b:9d:13:82:df");
+    ASSERT_STREQ (MacAddress (mac).toString ().c_str (), "50:7b:9d:13:82:df");
 }
 
 /**
@@ -62,7 +62,7 @@ TEST (MacAddress, moveConstruct)
     MacAddress tmp ("02:42:64:2f:6a:d0");
 
     MacAddress mac = std::move (tmp);
-    EXPECT_STREQ (mac.toString ().c_str (), "02:42:64:2f:6a:d0");
+    ASSERT_STREQ (mac.toString ().c_str (), "02:42:64:2f:6a:d0");
 }
 
 /**
@@ -73,10 +73,12 @@ TEST (MacAddress, arrayConstruct)
     uint8_t tmp[] = {0x4c, 0x34, 0x88, 0x25, 0x41, 0xee};
 
     MacAddress mac1 (tmp);
-    EXPECT_STREQ (mac1.toString ().c_str (), "4c:34:88:25:41:ee");
+    ASSERT_STREQ (mac1.toString ().c_str (), "4c:34:88:25:41:ee");
 
     MacAddress mac2 (tmp, 3);
-    EXPECT_STREQ (mac2.toString ().c_str (), "4c:34:88:00:00:00");
+    ASSERT_STREQ (mac2.toString ().c_str (), "4c:34:88:00:00:00");
+
+    ASSERT_THROW (MacAddress (tmp, 7), std::out_of_range);
 }
 
 /**
@@ -85,7 +87,9 @@ TEST (MacAddress, arrayConstruct)
 TEST (MacAddress, initListConstruct)
 {
     MacAddress mac = {0x4c, 0x34, 0x88, 0x25, 0x41, 0xee};
-    EXPECT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
+    ASSERT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
+
+    ASSERT_THROW (MacAddress ({0x4c, 0x34, 0x88, 0x25, 0x41, 0xee, 0xab}), std::out_of_range);
 }
 
 /**
@@ -100,7 +104,10 @@ TEST (MacAddress, sockaddrConstruct)
     memcpy (hwaddr.sa_data, tmp, sizeof (tmp));
 
     MacAddress mac (hwaddr);
-    EXPECT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
+    ASSERT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
+
+    hwaddr.sa_family = ARPHRD_NETROM;
+    ASSERT_THROW (MacAddress {hwaddr}, std::invalid_argument);
 }
 
 /**
@@ -109,32 +116,32 @@ TEST (MacAddress, sockaddrConstruct)
 TEST (MacAddress, stringConstruct)
 {
     MacAddress mac = "00:00:00:00:00:00";
-    EXPECT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:00");
+    ASSERT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:00");
 
     mac = MacAddress ("4c:34:88:25:41:ee");
-    EXPECT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
+    ASSERT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
 
     mac = MacAddress ("4C:34:88:25:41:EE");
-    EXPECT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
+    ASSERT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
 
-    EXPECT_THROW (mac = MacAddress ("xx:xx:xx:xx:xx:xx"), std::invalid_argument);
-    EXPECT_THROW (mac = MacAddress ("XX:XX:XX:XX:XX:XX"), std::invalid_argument);
+    ASSERT_THROW (mac = MacAddress ("xx:xx:xx:xx:xx:xx"), std::invalid_argument);
+    ASSERT_THROW (mac = MacAddress ("XX:XX:XX:XX:XX:XX"), std::invalid_argument);
 
-    EXPECT_THROW (mac = MacAddress ("foo"), std::invalid_argument);
+    ASSERT_THROW (mac = MacAddress ("foo"), std::invalid_argument);
 
     mac = MacAddress (std::string ("00:00:00:00:00:00"));
-    EXPECT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:00");
+    ASSERT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:00");
 
     mac = MacAddress (std::string ("4c:34:88:25:41:ee"));
-    EXPECT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
+    ASSERT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
 
     mac = MacAddress (std::string ("4C:34:88:25:41:EE"));
-    EXPECT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
+    ASSERT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
 
-    EXPECT_THROW (mac = MacAddress (std::string ("xx:xx:xx:xx:xx:xx")), std::invalid_argument);
-    EXPECT_THROW (mac = MacAddress (std::string ("XX:XX:XX:XX:XX:XX")), std::invalid_argument);
+    ASSERT_THROW (mac = MacAddress (std::string ("xx:xx:xx:xx:xx:xx")), std::invalid_argument);
+    ASSERT_THROW (mac = MacAddress (std::string ("XX:XX:XX:XX:XX:XX")), std::invalid_argument);
 
-    EXPECT_THROW (mac = MacAddress (std::string ("foo")), std::invalid_argument);
+    ASSERT_THROW (mac = MacAddress (std::string ("foo")), std::invalid_argument);
 }
 
 /**
@@ -152,7 +159,7 @@ TEST (MacAddress, family)
 TEST (MacAddress, addr)
 {
     MacAddress mac;
-    EXPECT_NE (mac.addr (), nullptr);
+    ASSERT_NE (mac.addr (), nullptr);
 }
 
 /**
@@ -161,7 +168,7 @@ TEST (MacAddress, addr)
 TEST (MacAddress, length)
 {
     MacAddress mac;
-    EXPECT_EQ (mac.length (), IFHWADDRLEN);
+    ASSERT_EQ (mac.length (), IFHWADDRLEN);
 }
 
 /**
@@ -213,19 +220,19 @@ TEST (MacAddress, isMacAddress)
 TEST (MacAddress, toString)
 {
     MacAddress mac = "00:00:00:00:00:00";
-    EXPECT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:00");
+    ASSERT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:00");
 
     mac = "4c:34:88:25:41:ee";
-    EXPECT_STREQ (mac.toString (std::nouppercase).c_str (), "4c:34:88:25:41:ee");
-    EXPECT_STREQ (mac.toString (std::uppercase).c_str (), "4C:34:88:25:41:EE");
+    ASSERT_STREQ (mac.toString (std::nouppercase).c_str (), "4c:34:88:25:41:ee");
+    ASSERT_STREQ (mac.toString (std::uppercase).c_str (), "4C:34:88:25:41:EE");
 
     mac = "02:42:64:2f:6a:d0";
-    EXPECT_STREQ (mac.toString (std::nouppercase).c_str (), "02:42:64:2f:6a:d0");
-    EXPECT_STREQ (mac.toString (std::uppercase).c_str (), "02:42:64:2F:6A:D0");
+    ASSERT_STREQ (mac.toString (std::nouppercase).c_str (), "02:42:64:2f:6a:d0");
+    ASSERT_STREQ (mac.toString (std::uppercase).c_str (), "02:42:64:2F:6A:D0");
 
     mac = "50:7b:9d:13:82:df";
-    EXPECT_STREQ (mac.toString (std::nouppercase).c_str (), "50:7b:9d:13:82:df");
-    EXPECT_STREQ (mac.toString (std::uppercase).c_str (), "50:7B:9D:13:82:DF");
+    ASSERT_STREQ (mac.toString (std::nouppercase).c_str (), "50:7b:9d:13:82:df");
+    ASSERT_STREQ (mac.toString (std::uppercase).c_str (), "50:7B:9D:13:82:DF");
 }
 
 /**
@@ -234,8 +241,8 @@ TEST (MacAddress, toString)
 TEST (MacAddress, toIpv6)
 {
     MacAddress mac = "00:14:3e:48:d4:5b";
-    EXPECT_TRUE (mac.toIpv6 ("2001:db8::", 32).isGlobal());
-    EXPECT_EQ (mac.toIpv6 ("2001:db8::", 32).toString (), "2001:db8::214:3eff:fe48:d45b");
+    ASSERT_TRUE (mac.toIpv6 ("2001:db8::", 32).isGlobal());
+    ASSERT_EQ (mac.toIpv6 ("2001:db8::", 32).toString (), "2001:db8::214:3eff:fe48:d45b");
 }
 
 /**
@@ -244,8 +251,8 @@ TEST (MacAddress, toIpv6)
 TEST (MacAddress, toLinkLocalIpv6)
 {
     MacAddress mac = "e0:3f:49:45:9d:7b";
-    EXPECT_TRUE (mac.toLinkLocalIpv6 ().isLinkLocal ());
-    EXPECT_EQ (mac.toLinkLocalIpv6 ().toString (), "fe80::e23f:49ff:fe45:9d7b");
+    ASSERT_TRUE (mac.toLinkLocalIpv6 ().isLinkLocal ());
+    ASSERT_EQ (mac.toLinkLocalIpv6 ().toString (), "fe80::e23f:49ff:fe45:9d7b");
 }
 
 /**
@@ -254,7 +261,7 @@ TEST (MacAddress, toLinkLocalIpv6)
 TEST (MacAddress, toUniqueLocalIpv6)
 {
     MacAddress mac = "e0:3f:49:45:9d:7b";
-    EXPECT_TRUE (mac.toUniqueLocalIpv6 ().isUniqueLocal ());
+    ASSERT_TRUE (mac.toUniqueLocalIpv6 ().isUniqueLocal ());
 }
 
 /**
@@ -263,10 +270,10 @@ TEST (MacAddress, toUniqueLocalIpv6)
 TEST (MacAddress, clear)
 {
     MacAddress mac = "e0:3f:49:45:9d:7b";
-    EXPECT_FALSE (mac.isWildcard ());
+    ASSERT_FALSE (mac.isWildcard ());
 
     mac.clear ();
-    EXPECT_TRUE (mac.isWildcard ());
+    ASSERT_TRUE (mac.isWildcard ());
 }
 
 /**
@@ -277,10 +284,10 @@ TEST (MacAddress, begin)
     MacAddress mac = "4c:34:88:25:41:ee";
 
     MacAddress::iterator beg = mac.begin ();
-    EXPECT_EQ (*beg, 0x4c);
+    ASSERT_EQ (*beg, 0x4c);
 
-    MacAddress::const_iterator cbeg = mac.begin ();
-    EXPECT_EQ (*cbeg, 0x4c);
+    MacAddress::const_iterator cbeg = ((const MacAddress*)&mac)->begin ();
+    ASSERT_EQ (*cbeg, 0x4c);
 }
 
 /**
@@ -290,8 +297,8 @@ TEST (MacAddress, cbegin)
 {
     MacAddress mac = "4c:34:88:25:41:ee";
 
-    auto beg = mac.cbegin ();
-    EXPECT_EQ (*beg, 0x4c);
+    MacAddress::const_iterator cbeg = mac.cbegin ();
+    ASSERT_EQ (*cbeg, 0x4c);
 }
 
 /**
@@ -302,10 +309,10 @@ TEST (MacAddress, end)
     MacAddress mac = "4c:34:88:25:41:ee";
 
     MacAddress::iterator end = mac.end ();
-    EXPECT_EQ (*(--end), 0xee);
+    ASSERT_EQ (*(--end), 0xee);
 
-    MacAddress::const_iterator cend = mac.cend ();
-    EXPECT_EQ (*(--cend), 0xee);
+    MacAddress::const_iterator cend = ((const MacAddress*)&mac)->end ();
+    ASSERT_EQ (*(--cend), 0xee);
 }
 
 /**
@@ -315,8 +322,8 @@ TEST (MacAddress, cend)
 {
     MacAddress mac = "4c:34:88:25:41:ee";
 
-    auto end = mac.cend ();
-    EXPECT_EQ (*(--end), 0xee);
+    auto cend = mac.cend ();
+    ASSERT_EQ (*(--cend), 0xee);
 }
 
 /**
@@ -327,7 +334,7 @@ TEST (MacAddress, copyAssign)
     MacAddress tmp ("50:7b:9d:13:82:df"), mac;
 
     mac = tmp;
-    EXPECT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
+    ASSERT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
 }
 
 /**
@@ -338,7 +345,7 @@ TEST (MacAddress, moveAssign)
     MacAddress tmp ("50:7b:9d:13:82:df"), mac;
 
     mac = std::move (tmp);
-    EXPECT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
+    ASSERT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
 }
 
 /**
@@ -350,7 +357,7 @@ TEST (MacAddress, arrayAssign)
     uint8_t tmp[] = {0x4c, 0x34, 0x88, 0x25, 0x41, 0xee};
 
     mac = tmp;
-    EXPECT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
+    ASSERT_STREQ (mac.toString ().c_str (), "4c:34:88:25:41:ee");
 }
 
 /**
@@ -361,15 +368,15 @@ TEST (MacAddress, initListAssign)
     MacAddress mac;
 
     mac = {};
-    EXPECT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:00");
+    ASSERT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:00");
 
     mac = {0x50, 0x7b, 0x9d};
-    EXPECT_STREQ (mac.toString ().c_str (), "50:7b:9d:00:00:00");
+    ASSERT_STREQ (mac.toString ().c_str (), "50:7b:9d:00:00:00");
 
     mac = {0x50, 0x7b, 0x9d, 0x13, 0x82, 0xdf};
-    EXPECT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
+    ASSERT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
 
-    EXPECT_THROW ((mac = {0x50, 0x7b, 0x9d, 0x13, 0x82, 0xdf, 0xff}), std::invalid_argument);
+    ASSERT_THROW ((mac = {0x50, 0x7b, 0x9d, 0x13, 0x82, 0xdf, 0xff}), std::invalid_argument);
 }
 
 /**
@@ -385,7 +392,10 @@ TEST (MacAddress, sockaddrAssign)
     memcpy (hwaddr.sa_data, hw, 6);
 
     mac = hwaddr;
-    EXPECT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
+    ASSERT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
+
+    hwaddr.sa_family = ARPHRD_NETROM;
+    ASSERT_THROW (mac = hwaddr, std::invalid_argument);
 }
 
 /**
@@ -396,10 +406,10 @@ TEST (MacAddress, addAssign)
     MacAddress mac;
 
     mac += 255;
-    EXPECT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:ff");
+    ASSERT_STREQ (mac.toString ().c_str (), "00:00:00:00:00:ff");
 
     mac += 65535;
-    EXPECT_STREQ (mac.toString ().c_str (), "00:00:00:01:00:fe");
+    ASSERT_STREQ (mac.toString ().c_str (), "00:00:00:01:00:fe");
 }
 
 /**
@@ -408,32 +418,32 @@ TEST (MacAddress, addAssign)
 TEST (MacAddress, preIncrement)
 {
     MacAddress mac = "02:42:64:2f:6a:de";
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:6a:df");
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:6a:e0");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:6a:df");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:6a:e0");
 
     mac = "02:42:64:2f:6a:fe";
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:6a:ff");
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:6b:00");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:6a:ff");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:6b:00");
 
     mac = "02:42:64:2f:fe:ff";
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:ff:00");
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:ff:01");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:ff:00");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:42:64:2f:ff:01");
 
     mac = "02:42:64:fe:ff:ff";
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:42:64:ff:00:00");
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:42:64:ff:00:01");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:42:64:ff:00:00");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:42:64:ff:00:01");
 
     mac = "02:42:fe:ff:ff:ff";
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:42:ff:00:00:00");
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:42:ff:00:00:01");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:42:ff:00:00:00");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:42:ff:00:00:01");
 
     mac = "02:fe:ff:ff:ff:ff";
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:ff:00:00:00:00");
-    EXPECT_STREQ ((++mac).toString ().c_str (), "02:ff:00:00:00:01");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:ff:00:00:00:00");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "02:ff:00:00:00:01");
 
     mac = "fe:ff:ff:ff:ff:ff";
-    EXPECT_STREQ ((++mac).toString ().c_str (), "ff:00:00:00:00:00");
-    EXPECT_STREQ ((++mac).toString ().c_str (), "ff:00:00:00:00:01");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "ff:00:00:00:00:00");
+    ASSERT_STREQ ((++mac).toString ().c_str (), "ff:00:00:00:00:01");
 }
 
 /**
@@ -442,39 +452,39 @@ TEST (MacAddress, preIncrement)
 TEST (MacAddress, postIncrement)
 {
     MacAddress mac = "02:42:64:2f:6a:de";
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6a:de");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6a:df");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6a:e0");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6a:de");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6a:df");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6a:e0");
 
     mac = "02:42:64:2f:6a:fe";
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6a:fe");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6a:ff");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6b:00");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6a:fe");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6a:ff");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:6b:00");
 
     mac = "02:42:64:2f:fe:ff";
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:fe:ff");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:ff:00");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:ff:01");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:fe:ff");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:ff:00");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:2f:ff:01");
 
     mac = "02:42:64:fe:ff:ff";
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:fe:ff:ff");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:ff:00:00");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:64:ff:00:01");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:fe:ff:ff");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:ff:00:00");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:64:ff:00:01");
 
     mac = "02:42:fe:ff:ff:ff";
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:fe:ff:ff:ff");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:ff:00:00:00");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:42:ff:00:00:01");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:fe:ff:ff:ff");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:ff:00:00:00");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:42:ff:00:00:01");
 
     mac = "02:fe:ff:ff:ff:ff";
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:fe:ff:ff:ff:ff");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:ff:00:00:00:00");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "02:ff:00:00:00:01");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:fe:ff:ff:ff:ff");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:ff:00:00:00:00");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "02:ff:00:00:00:01");
 
     mac = "fe:ff:ff:ff:ff:ff";
-    EXPECT_STREQ ((mac++).toString ().c_str (), "fe:ff:ff:ff:ff:ff");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "ff:00:00:00:00:00");
-    EXPECT_STREQ ((mac++).toString ().c_str (), "ff:00:00:00:00:01");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "fe:ff:ff:ff:ff:ff");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "ff:00:00:00:00:00");
+    ASSERT_STREQ ((mac++).toString ().c_str (), "ff:00:00:00:00:01");
 }
 
 /**
@@ -484,41 +494,41 @@ TEST (MacAddress, getElement)
 {
     MacAddress mac ("50:7b:9d:13:82:df");
 
-    EXPECT_EQ (mac[0], 0x50);
-    EXPECT_EQ (mac[1], 0x7b);
-    EXPECT_EQ (mac[2], 0x9d);
-    EXPECT_EQ (mac[3], 0x13);
-    EXPECT_EQ (mac[4], 0x82);
-    EXPECT_EQ (mac[5], 0xdf);
+    ASSERT_EQ (mac[0], 0x50);
+    ASSERT_EQ (mac[1], 0x7b);
+    ASSERT_EQ (mac[2], 0x9d);
+    ASSERT_EQ (mac[3], 0x13);
+    ASSERT_EQ (mac[4], 0x82);
+    ASSERT_EQ (mac[5], 0xdf);
 
-    EXPECT_EQ (mac[0], 80);
-    EXPECT_EQ (mac[1], 123);
-    EXPECT_EQ (mac[2], 157);
-    EXPECT_EQ (mac[3], 19);
-    EXPECT_EQ (mac[4], 130);
-    EXPECT_EQ (mac[5], 223);
+    ASSERT_EQ (mac[0], 80);
+    ASSERT_EQ (mac[1], 123);
+    ASSERT_EQ (mac[2], 157);
+    ASSERT_EQ (mac[3], 19);
+    ASSERT_EQ (mac[4], 130);
+    ASSERT_EQ (mac[5], 223);
 
-    EXPECT_NO_THROW (mac[0] = 0x00);
-    EXPECT_NO_THROW (mac[1] = 0x0a);
-    EXPECT_NO_THROW (mac[2] = 0xd4);
-    EXPECT_NO_THROW (mac[3] = 0x7f);
-    EXPECT_NO_THROW (mac[4] = 0x04);
-    EXPECT_NO_THROW (mac[5] = 0xff);
+    ASSERT_NO_THROW (mac[0] = 0x00);
+    ASSERT_NO_THROW (mac[1] = 0x0a);
+    ASSERT_NO_THROW (mac[2] = 0xd4);
+    ASSERT_NO_THROW (mac[3] = 0x7f);
+    ASSERT_NO_THROW (mac[4] = 0x04);
+    ASSERT_NO_THROW (mac[5] = 0xff);
 
-    EXPECT_STREQ (mac.toString ().c_str (), "00:0a:d4:7f:04:ff");
+    ASSERT_STREQ (mac.toString ().c_str (), "00:0a:d4:7f:04:ff");
 
-    EXPECT_NO_THROW (mac[0] = 255);
-    EXPECT_NO_THROW (mac[1] = 4);
-    EXPECT_NO_THROW (mac[2] = 127);
-    EXPECT_NO_THROW (mac[3] = 212);
-    EXPECT_NO_THROW (mac[4] = 10);
-    EXPECT_NO_THROW (mac[5] = 0);
+    ASSERT_NO_THROW (mac[0] = 255);
+    ASSERT_NO_THROW (mac[1] = 4);
+    ASSERT_NO_THROW (mac[2] = 127);
+    ASSERT_NO_THROW (mac[3] = 212);
+    ASSERT_NO_THROW (mac[4] = 10);
+    ASSERT_NO_THROW (mac[5] = 0);
 
-    EXPECT_STREQ (mac.toString ().c_str (), "ff:04:7f:d4:0a:00");
+    ASSERT_STREQ (mac.toString ().c_str (), "ff:04:7f:d4:0a:00");
 
-    EXPECT_THROW (mac[CHAR_MAX] = 0x00, std::invalid_argument);
-    EXPECT_THROW (mac[SHRT_MAX] = 0x00, std::invalid_argument);
-    EXPECT_THROW (mac[INT_MAX] = 0x00, std::invalid_argument);
+    ASSERT_THROW (mac[CHAR_MAX] = 0x00, std::invalid_argument);
+    ASSERT_THROW (mac[SHRT_MAX] = 0x00, std::invalid_argument);
+    ASSERT_THROW (mac[INT_MAX] = 0x00, std::invalid_argument);
 }
 
 /**
@@ -530,7 +540,7 @@ TEST (MacAddress, notOperation)
 
     mac = "02:42:64:2f:6a:d0";
     result = ~mac;
-    EXPECT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:2f");
+    ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:2f");
 }
 
 /**
@@ -542,13 +552,13 @@ TEST (MacAddress, add)
 
     mac1 = "fd:bd:9b:d0:95:2f";
     mac2 = mac1 + 1;
-    EXPECT_STREQ (mac1.toString ().c_str (), "fd:bd:9b:d0:95:2f");
-    EXPECT_STREQ (mac2.toString ().c_str (), "fd:bd:9b:d0:95:30");
+    ASSERT_STREQ (mac1.toString ().c_str (), "fd:bd:9b:d0:95:2f");
+    ASSERT_STREQ (mac2.toString ().c_str (), "fd:bd:9b:d0:95:30");
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = 1 + mac1;
-    EXPECT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
-    EXPECT_STREQ (mac2.toString ().c_str (), "02:42:64:2f:6a:d1");
+    ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
+    ASSERT_STREQ (mac2.toString ().c_str (), "02:42:64:2f:6a:d1");
 }
 
 /**
@@ -560,33 +570,33 @@ TEST (MacAddress, equal)
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE (mac1 == mac2);
+    ASSERT_TRUE (mac1 == mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_FALSE (mac1 == mac2);
+    ASSERT_FALSE (mac1 == mac2);
 
     mac1 = "50:7b:9d:13:82:df";
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_FALSE (mac1 == mac2);
+    ASSERT_FALSE (mac1 == mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE (mac1 == "02:42:64:2f:6a:d0");
+    ASSERT_TRUE (mac1 == "02:42:64:2f:6a:d0");
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE (mac1 == "50:7b:9d:13:82:df");
+    ASSERT_FALSE (mac1 == "50:7b:9d:13:82:df");
 
     mac1 = "50:7b:9d:13:82:df";
-    EXPECT_FALSE (mac1 == "4c:34:88:25:41:ee");
+    ASSERT_FALSE (mac1 == "4c:34:88:25:41:ee");
 
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE ("02:42:64:2f:6a:d0" == mac2);
+    ASSERT_TRUE ("02:42:64:2f:6a:d0" == mac2);
 
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_FALSE ("02:42:64:2f:6a:d0" == mac2);
+    ASSERT_FALSE ("02:42:64:2f:6a:d0" == mac2);
 
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_FALSE ("50:7b:9d:13:82:df" == mac2);
+    ASSERT_FALSE ("50:7b:9d:13:82:df" == mac2);
 }
 
 /**
@@ -598,33 +608,33 @@ TEST (MacAddress, different)
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE (mac1 != mac2);
+    ASSERT_FALSE (mac1 != mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_TRUE (mac1 != mac2);
+    ASSERT_TRUE (mac1 != mac2);
 
     mac1 = "50:7b:9d:13:82:df";
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_TRUE (mac1 != mac2);
+    ASSERT_TRUE (mac1 != mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE (mac1 != "02:42:64:2f:6a:d0");
+    ASSERT_FALSE (mac1 != "02:42:64:2f:6a:d0");
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE (mac1 != "50:7b:9d:13:82:df");
+    ASSERT_TRUE (mac1 != "50:7b:9d:13:82:df");
 
     mac1 = "50:7b:9d:13:82:df";
-    EXPECT_TRUE (mac1 != "4c:34:88:25:41:ee");
+    ASSERT_TRUE (mac1 != "4c:34:88:25:41:ee");
 
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE ("02:42:64:2f:6a:d0" != mac2);
+    ASSERT_FALSE ("02:42:64:2f:6a:d0" != mac2);
 
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_TRUE ("02:42:64:2f:6a:d0" != mac2);
+    ASSERT_TRUE ("02:42:64:2f:6a:d0" != mac2);
 
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_TRUE ("50:7b:9d:13:82:df" != mac2);
+    ASSERT_TRUE ("50:7b:9d:13:82:df" != mac2);
 }
 
 /**
@@ -636,33 +646,33 @@ TEST (MacAddress, lower)
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE (mac1 < mac2);
+    ASSERT_FALSE (mac1 < mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_TRUE (mac1 < mac2);
+    ASSERT_TRUE (mac1 < mac2);
 
     mac1 = "50:7b:9d:13:82:df";
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_FALSE (mac1 < mac2);
+    ASSERT_FALSE (mac1 < mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE (mac1 < "02:42:64:2f:6a:d0");
+    ASSERT_FALSE (mac1 < "02:42:64:2f:6a:d0");
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE (mac1 < "50:7b:9d:13:82:df");
+    ASSERT_TRUE (mac1 < "50:7b:9d:13:82:df");
 
     mac1 = "50:7b:9d:13:82:df";
-    EXPECT_FALSE (mac1 < "4c:34:88:25:41:ee");
+    ASSERT_FALSE (mac1 < "4c:34:88:25:41:ee");
 
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE ("02:42:64:2f:6a:d0" < mac2);
+    ASSERT_FALSE ("02:42:64:2f:6a:d0" < mac2);
 
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_TRUE ("02:42:64:2f:6a:d0" < mac2);
+    ASSERT_TRUE ("02:42:64:2f:6a:d0" < mac2);
 
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_FALSE ("50:7b:9d:13:82:df" < mac2);
+    ASSERT_FALSE ("50:7b:9d:13:82:df" < mac2);
 }
 
 /**
@@ -674,33 +684,33 @@ TEST (MacAddress, lowerOrEqual)
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE (mac1 <= mac2);
+    ASSERT_TRUE (mac1 <= mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_TRUE (mac1 <= mac2);
+    ASSERT_TRUE (mac1 <= mac2);
 
     mac1 = "50:7b:9d:13:82:df";
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_FALSE (mac1 <= mac2);
+    ASSERT_FALSE (mac1 <= mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE (mac1 <= "02:42:64:2f:6a:d0");
+    ASSERT_TRUE (mac1 <= "02:42:64:2f:6a:d0");
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE (mac1 <= "50:7b:9d:13:82:df");
+    ASSERT_TRUE (mac1 <= "50:7b:9d:13:82:df");
 
     mac1 = "50:7b:9d:13:82:df";
-    EXPECT_FALSE (mac1 <= "4c:34:88:25:41:ee");
+    ASSERT_FALSE (mac1 <= "4c:34:88:25:41:ee");
 
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE ("02:42:64:2f:6a:d0" <= mac2);
+    ASSERT_TRUE ("02:42:64:2f:6a:d0" <= mac2);
 
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_TRUE ("02:42:64:2f:6a:d0" <= mac2);
+    ASSERT_TRUE ("02:42:64:2f:6a:d0" <= mac2);
 
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_FALSE ("50:7b:9d:13:82:df" <= mac2);
+    ASSERT_FALSE ("50:7b:9d:13:82:df" <= mac2);
 }
 
 /**
@@ -712,33 +722,33 @@ TEST (MacAddress, greater)
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE (mac1 > mac2);
+    ASSERT_FALSE (mac1 > mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_FALSE (mac1 > mac2);
+    ASSERT_FALSE (mac1 > mac2);
 
     mac1 = "50:7b:9d:13:82:df";
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_TRUE (mac1 > mac2);
+    ASSERT_TRUE (mac1 > mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE (mac1 > "02:42:64:2f:6a:d0");
+    ASSERT_FALSE (mac1 > "02:42:64:2f:6a:d0");
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE (mac1 > "50:7b:9d:13:82:df");
+    ASSERT_FALSE (mac1 > "50:7b:9d:13:82:df");
 
     mac1 = "50:7b:9d:13:82:df";
-    EXPECT_TRUE (mac1 > "4c:34:88:25:41:ee");
+    ASSERT_TRUE (mac1 > "4c:34:88:25:41:ee");
 
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE ("02:42:64:2f:6a:d0" > mac2);
+    ASSERT_FALSE ("02:42:64:2f:6a:d0" > mac2);
 
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_FALSE ("02:42:64:2f:6a:d0" > mac2);
+    ASSERT_FALSE ("02:42:64:2f:6a:d0" > mac2);
 
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_TRUE ("50:7b:9d:13:82:df" > mac2);
+    ASSERT_TRUE ("50:7b:9d:13:82:df" > mac2);
 }
 
 /**
@@ -750,33 +760,33 @@ TEST (MacAddress, greaterOrEqual)
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE (mac1 >= mac2);
+    ASSERT_TRUE (mac1 >= mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_FALSE (mac1 >= mac2);
+    ASSERT_FALSE (mac1 >= mac2);
 
     mac1 = "50:7b:9d:13:82:df";
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_TRUE (mac1 >= mac2);
+    ASSERT_TRUE (mac1 >= mac2);
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE (mac1 >= "02:42:64:2f:6a:d0");
+    ASSERT_TRUE (mac1 >= "02:42:64:2f:6a:d0");
 
     mac1 = "02:42:64:2f:6a:d0";
-    EXPECT_FALSE (mac1 >= "50:7b:9d:13:82:df");
+    ASSERT_FALSE (mac1 >= "50:7b:9d:13:82:df");
 
     mac1 = "50:7b:9d:13:82:df";
-    EXPECT_TRUE (mac1 >= "4c:34:88:25:41:ee");
+    ASSERT_TRUE (mac1 >= "4c:34:88:25:41:ee");
 
     mac2 = "02:42:64:2f:6a:d0";
-    EXPECT_TRUE ("02:42:64:2f:6a:d0" >= mac2);
+    ASSERT_TRUE ("02:42:64:2f:6a:d0" >= mac2);
 
     mac2 = "50:7b:9d:13:82:df";
-    EXPECT_FALSE ("02:42:64:2f:6a:d0" >= mac2);
+    ASSERT_FALSE ("02:42:64:2f:6a:d0" >= mac2);
 
     mac2 = "4c:34:88:25:41:ee";
-    EXPECT_TRUE ("50:7b:9d:13:82:df" >= mac2);
+    ASSERT_TRUE ("50:7b:9d:13:82:df" >= mac2);
 }
 
 /**
@@ -789,19 +799,19 @@ TEST (MacAddress, and)
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "ff:ff:ff:ff:ff:00";
     result = mac1 & mac2;
-    EXPECT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
-    EXPECT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
-    EXPECT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
+    ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
+    ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
+    ASSERT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
 
     mac1 = "02:42:64:2f:6a:d0";
     result = mac1 & "ff:ff:ff:ff:ff:00";
-    EXPECT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
-    EXPECT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
+    ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
+    ASSERT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
 
     mac2 = "ff:ff:ff:ff:ff:00";
     result = "02:42:64:2f:6a:d0" & mac2;
-    EXPECT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
-    EXPECT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
+    ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
+    ASSERT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
 }
 
 /**
@@ -814,19 +824,19 @@ TEST (MacAddress, or)
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "ff:ff:ff:ff:ff:00";
     result = mac1 | mac2;
-    EXPECT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
-    EXPECT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
-    EXPECT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
+    ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
+    ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
+    ASSERT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
 
     mac1 = "02:42:64:2f:6a:d0";
     result = mac1 | "ff:ff:ff:ff:ff:00";
-    EXPECT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
-    EXPECT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
+    ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
+    ASSERT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
 
     mac2 = "ff:ff:ff:ff:ff:00";
     result = "02:42:64:2f:6a:d0" | mac2;
-    EXPECT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
-    EXPECT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
+    ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
+    ASSERT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
 }
 
 /**
@@ -839,19 +849,19 @@ TEST (MacAddress, xor)
     mac1 = "02:42:64:2f:6a:d0";
     mac2 = "ff:ff:ff:ff:ff:00";
     result = mac1 ^ mac2;
-    EXPECT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
-    EXPECT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
-    EXPECT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
+    ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
+    ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
+    ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
 
     mac1 = "02:42:64:2f:6a:d0";
     result = mac1 ^ "ff:ff:ff:ff:ff:00";
-    EXPECT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
-    EXPECT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
+    ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
+    ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
 
     mac2 = "ff:ff:ff:ff:ff:00";
     result = "02:42:64:2f:6a:d0" ^ mac2;
-    EXPECT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
-    EXPECT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
+    ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
+    ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
 }
 
 /**
@@ -862,8 +872,8 @@ TEST (MacAddress, serialize)
     MacAddress mac = "50:7b:9d:13:82:df";
 
     std::stringstream stream;
-    EXPECT_NO_THROW (stream << mac);
-    EXPECT_STREQ (stream.str ().c_str (), "50:7b:9d:13:82:df");
+    ASSERT_NO_THROW (stream << mac);
+    ASSERT_STREQ (stream.str ().c_str (), "50:7b:9d:13:82:df");
 }
 
 /**
