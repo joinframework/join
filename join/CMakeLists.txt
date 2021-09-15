@@ -19,6 +19,7 @@ set(PUBLIC_HEADER_DIRS
 
 set(PUBLIC_HEADERS
     core/include/join/error.hpp
+    core/include/join/utils.hpp
     core/include/join/traits.hpp
     core/include/join/variant.hpp
     core/include/join/view.hpp
@@ -35,8 +36,9 @@ set(PUBLIC_HEADERS
     sax/include/join/diyfp.hpp
     sax/include/join/dtoa.hpp
     sax/include/join/value.hpp
-    sax/include/join/json.hpp
     sax/include/join/sax.hpp
+    sax/include/join/json.hpp
+    sax/include/join/pack.hpp
 )
 
 set(SOURCES
