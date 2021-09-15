@@ -1688,6 +1688,11 @@ TEST (IpAddress, at)
     ip4[3] = 2;
     ASSERT_STREQ (ip4.toString ().c_str (), "10.41.45.2");
 
+    ASSERT_EQ (((const IpAddress*)&ip4)->operator[] (0), 10);
+    ASSERT_EQ (((const IpAddress*)&ip4)->operator[] (1), 41);
+    ASSERT_EQ (((const IpAddress*)&ip4)->operator[] (2), 45);
+    ASSERT_EQ (((const IpAddress*)&ip4)->operator[] (3), 2);
+
     IpAddress ip6 (AF_INET6);
     ASSERT_THROW (ip6[16], std::invalid_argument);
 
@@ -1705,6 +1710,17 @@ TEST (IpAddress, at)
     ip6[14] = 0x89;
     ip6[15] = 0x0a;
     ASSERT_STREQ (ip6.toString ().c_str (), "fe80::57f3:baa4:fc3a:890a");
+
+    ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (0), 0xfe);
+    ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (1), 0x80);
+    ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (8), 0x57);
+    ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (9), 0xf3);
+    ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (10), 0xba);
+    ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (11), 0xa4);
+    ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (12), 0xfc);
+    ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (13), 0x3a);
+    ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (14), 0x89);
+    ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (15), 0x0a);
 }
 
 /**
