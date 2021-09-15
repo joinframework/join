@@ -260,11 +260,11 @@ TEST (PackWriter, setInt64)
     EXPECT_EQ (stream.str (), std::string ({'\xCE', '\x49', '\x96', '\x02', '\xd2'}));
 
     stream.str ("");
-    EXPECT_EQ (packWriter.setUint64 (4294967295), 0);
+    EXPECT_EQ (packWriter.setInt64 (4294967295), 0);
     EXPECT_EQ (stream.str (), std::string ({'\xCE', '\xFF', '\xFF', '\xFF', '\xFF'}));
 
     stream.str ("");
-    EXPECT_EQ (packWriter.setUint64 (4294967296), 0);
+    EXPECT_EQ (packWriter.setInt64 (4294967296), 0);
     EXPECT_EQ (stream.str (), std::string ({'\xCF', '\x00', '\x00', '\x00', '\x01', '\x00', '\x00', '\x00', '\x00'}));
 }
 
