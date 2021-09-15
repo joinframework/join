@@ -1674,31 +1674,24 @@ TEST (IpAddress, clear)
 TEST (IpAddress, at)
 {
     IpAddress ip4 (AF_INET);
-    ASSERT_THROW (ip4[4], std::invalid_argument);
-
-    ip4[0] = 127;
-    ip4[1] = 0;
-    ip4[2] = 0;
-    ip4[3] = 1;
-    ASSERT_STREQ (ip4.toString ().c_str (), "127.0.0.1");
-
     ip4[0] = 10;
     ip4[1] = 41;
     ip4[2] = 45;
     ip4[3] = 2;
-    ASSERT_STREQ (ip4.toString ().c_str (), "10.41.45.2");
+
+    ASSERT_EQ (ip4[0], 10);
+    ASSERT_EQ (ip4[1], 41);
+    ASSERT_EQ (ip4[2], 45);
+    ASSERT_EQ (ip4[3], 2);
+    ASSERT_THROW (ip4[4], std::out_of_range);
 
     ASSERT_EQ (((const IpAddress*)&ip4)->operator[] (0), 10);
     ASSERT_EQ (((const IpAddress*)&ip4)->operator[] (1), 41);
     ASSERT_EQ (((const IpAddress*)&ip4)->operator[] (2), 45);
     ASSERT_EQ (((const IpAddress*)&ip4)->operator[] (3), 2);
+    ASSERT_THROW (((const IpAddress*)&ip4)->operator[] (4), std::out_of_range);
 
     IpAddress ip6 (AF_INET6);
-    ASSERT_THROW (ip6[16], std::invalid_argument);
-
-    ip6[15] = 1;
-    ASSERT_STREQ (ip6.toString ().c_str (), "::1");
-
     ip6[0] = 0xfe;
     ip6[1] = 0x80;
     ip6[8] = 0x57;
@@ -1709,7 +1702,18 @@ TEST (IpAddress, at)
     ip6[13] = 0x3a;
     ip6[14] = 0x89;
     ip6[15] = 0x0a;
-    ASSERT_STREQ (ip6.toString ().c_str (), "fe80::57f3:baa4:fc3a:890a");
+
+    ASSERT_EQ (ip6[0], 0xfe);
+    ASSERT_EQ (ip6[1], 0x80);
+    ASSERT_EQ (ip6[8], 0x57);
+    ASSERT_EQ (ip6[9], 0xf3);
+    ASSERT_EQ (ip6[10], 0xba);
+    ASSERT_EQ (ip6[11], 0xa4);
+    ASSERT_EQ (ip6[12], 0xfc);
+    ASSERT_EQ (ip6[13], 0x3a);
+    ASSERT_EQ (ip6[14], 0x89);
+    ASSERT_EQ (ip6[15], 0x0a);
+    ASSERT_THROW (ip6[16], std::out_of_range);
 
     ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (0), 0xfe);
     ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (1), 0x80);
@@ -1721,6 +1725,7 @@ TEST (IpAddress, at)
     ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (13), 0x3a);
     ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (14), 0x89);
     ASSERT_EQ (((const IpAddress*)&ip6)->operator[] (15), 0x0a);
+    ASSERT_THROW (((const IpAddress*)&ip6)->operator[] (16), std::out_of_range);
 }
 
 /**

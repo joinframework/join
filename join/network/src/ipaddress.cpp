@@ -175,14 +175,6 @@ namespace net
          * @throw invalid_argument if position is out of range.
          */
         virtual uint8_t& operator[] (size_t position) = 0;
-
-       /**
-        * @brief returns a reference to the element at the specified location.
-        * @param position position of the element to return.
-        * @return reference to the requested element.
-        * @throw invalid_argument if position is out of range.
-        */
-        virtual const uint8_t& operator[] (size_t position) const = 0;
     };
 
     /**
@@ -493,26 +485,10 @@ namespace net
         {
             if (position > length () - 1)
             {
-                throw std::invalid_argument ("position is out of range");
+                throw std::out_of_range ("position is out of range");
             }
 
             return *(reinterpret_cast <uint8_t*> (&addr_) + position);
-        }
-
-       /**
-        * @brief returns a reference to the element at the specified location.
-        * @param position position of the element to return.
-        * @return reference to the requested element.
-        * @throw invalid_argument if position is out of range.
-        */
-        const uint8_t& operator[] (size_t position) const
-        {
-            if (position > length () - 1)
-            {
-                throw std::invalid_argument ("position is out of range");
-            }
-
-            return *(reinterpret_cast <const uint8_t*> (&addr_) + position);
         }
 
     private:
@@ -911,23 +887,7 @@ namespace net
         {
             if (position > length () - 1)
             {
-                throw std::invalid_argument ("position is out of range");
-            }
-
-            return addr_.s6_addr[position];
-        }
-
-       /**
-        * @brief returns a reference to the element at the specified location.
-        * @param position position of the element to return.
-        * @return reference to the requested element.
-        * @throw invalid_argument if position is out of range.
-        */
-        const uint8_t& operator[] (size_t position) const
-        {
-            if (position > length () - 1)
-            {
-                throw std::invalid_argument ("position is out of range");
+                throw std::out_of_range ("position is out of range");
             }
 
             return addr_.s6_addr[position];
