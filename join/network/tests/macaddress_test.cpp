@@ -492,43 +492,30 @@ TEST (MacAddress, postIncrement)
  */
 TEST (MacAddress, getElement)
 {
-    MacAddress mac ("50:7b:9d:13:82:df");
+    MacAddress mac;
 
-    ASSERT_EQ (mac[0], 0x50);
-    ASSERT_EQ (mac[1], 0x7b);
-    ASSERT_EQ (mac[2], 0x9d);
-    ASSERT_EQ (mac[3], 0x13);
-    ASSERT_EQ (mac[4], 0x82);
-    ASSERT_EQ (mac[5], 0xdf);
+    mac[0] = 0x00;
+    mac[1] = 0x0a;
+    mac[2] = 0xd4;
+    mac[3] = 0x7f;
+    mac[4] = 0x04;
+    mac[5] = 0xff;
 
-    ASSERT_EQ (mac[0], 80);
-    ASSERT_EQ (mac[1], 123);
-    ASSERT_EQ (mac[2], 157);
-    ASSERT_EQ (mac[3], 19);
-    ASSERT_EQ (mac[4], 130);
-    ASSERT_EQ (mac[5], 223);
+    ASSERT_EQ (mac[0], 0x00);
+    ASSERT_EQ (mac[1], 0x0a);
+    ASSERT_EQ (mac[2], 0xd4);
+    ASSERT_EQ (mac[3], 0x7f);
+    ASSERT_EQ (mac[4], 0x04);
+    ASSERT_EQ (mac[5], 0xff);
+    ASSERT_THROW (mac[6], std::out_of_range);
 
-    ASSERT_NO_THROW (mac[0] = 0x00);
-    ASSERT_NO_THROW (mac[1] = 0x0a);
-    ASSERT_NO_THROW (mac[2] = 0xd4);
-    ASSERT_NO_THROW (mac[3] = 0x7f);
-    ASSERT_NO_THROW (mac[4] = 0x04);
-    ASSERT_NO_THROW (mac[5] = 0xff);
-
-    ASSERT_STREQ (mac.toString ().c_str (), "00:0a:d4:7f:04:ff");
-
-    ASSERT_NO_THROW (mac[0] = 255);
-    ASSERT_NO_THROW (mac[1] = 4);
-    ASSERT_NO_THROW (mac[2] = 127);
-    ASSERT_NO_THROW (mac[3] = 212);
-    ASSERT_NO_THROW (mac[4] = 10);
-    ASSERT_NO_THROW (mac[5] = 0);
-
-    ASSERT_STREQ (mac.toString ().c_str (), "ff:04:7f:d4:0a:00");
-
-    ASSERT_THROW (mac[CHAR_MAX] = 0x00, std::invalid_argument);
-    ASSERT_THROW (mac[SHRT_MAX] = 0x00, std::invalid_argument);
-    ASSERT_THROW (mac[INT_MAX] = 0x00, std::invalid_argument);
+    ASSERT_EQ (((const MacAddress*)&mac)->operator[] (0), 0x00);
+    ASSERT_EQ (((const MacAddress*)&mac)->operator[] (1), 0x0a);
+    ASSERT_EQ (((const MacAddress*)&mac)->operator[] (2), 0xd4);
+    ASSERT_EQ (((const MacAddress*)&mac)->operator[] (3), 0x7f);
+    ASSERT_EQ (((const MacAddress*)&mac)->operator[] (4), 0x04);
+    ASSERT_EQ (((const MacAddress*)&mac)->operator[] (5), 0xff);
+    ASSERT_THROW (((const MacAddress*)&mac)->operator[] (6), std::out_of_range);
 }
 
 /**

@@ -446,7 +446,7 @@ uint8_t& MacAddress::operator[] (size_t position)
 {
     if (position > mac_.size () - 1)
     {
-        throw std::invalid_argument ("position is out of range");
+        throw std::out_of_range ("position is out of range");
     }
 
     return mac_[position];
@@ -460,7 +460,7 @@ const uint8_t& MacAddress::operator[] (size_t position) const
 {
     if (position > mac_.size () - 1)
     {
-        throw std::invalid_argument ("position is out of range");
+        throw std::out_of_range ("position is out of range");
     }
 
     return mac_[position];
