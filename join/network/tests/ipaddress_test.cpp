@@ -82,11 +82,15 @@ TEST (IpAddress, copyConstruct)
  */
 TEST (IpAddress, moveConstruct)
 {
-    IpAddress ip4 (IpAddress ("0.0.0.0"));
+    IpAddress ip = "0.0.0.0";
+
+    IpAddress ip4 (std::move (ip));
     ASSERT_EQ (ip4.family (), AF_INET);
     ASSERT_STREQ (ip4.toString ().c_str (), "0.0.0.0");
 
-    IpAddress ip6 (IpAddress ("::"));
+    ip = "::";
+
+    IpAddress ip6 (std::move (ip));
     ASSERT_EQ (ip6.family (), AF_INET6);
     ASSERT_STREQ (ip6.toString ().c_str (), "::");
 }
@@ -1684,9 +1688,6 @@ TEST (IpAddress, at)
     ip4[3] = 2;
     ASSERT_STREQ (ip4.toString ().c_str (), "10.41.45.2");
 
-    const uint8_t a = ip4[0];
-    ASSERT_EQ (a, 10);
-
     IpAddress ip6 (AF_INET6);
     ASSERT_THROW (ip6[16], std::invalid_argument);
 
@@ -1704,9 +1705,6 @@ TEST (IpAddress, at)
     ip6[14] = 0x89;
     ip6[15] = 0x0a;
     ASSERT_STREQ (ip6.toString ().c_str (), "fe80::57f3:baa4:fc3a:890a");
-
-    const uint8_t b = ip6[0];
-    ASSERT_EQ (b, 0xfe);
 }
 
 /**
@@ -2202,6 +2200,10 @@ TEST (IpAddress, and)
 
     result = "ffff:ffff:ffff:ffff::" & ip1;
     ASSERT_STREQ (result.toString ().c_str (), "2001:db8:abcd:12::");
+
+    ip1 = "192.168.13.31";
+    ip2 = "2001:db8:abcd:12::1";
+    ASSERT_THROW (ip1 & ip2, std::invalid_argument);
 }
 
 /**
@@ -2232,6 +2234,10 @@ TEST (IpAddress, or)
 
     result = "ffff:ffff:ffff:ffff::" | ip1;
     ASSERT_STREQ (result.toString ().c_str (), "ffff:ffff:ffff:ffff::1");
+
+    ip1 = "192.168.13.31";
+    ip2 = "2001:db8:abcd:12::1";
+    ASSERT_THROW (ip1 | ip2, std::invalid_argument);
 }
 
 /**
@@ -2262,6 +2268,10 @@ TEST (IpAddress, xor)
 
     result = "ffff:ffff:ffff:ffff::" ^ ip1;
     ASSERT_STREQ (result.toString ().c_str (), "dffe:f247:5432:ffed::1");
+
+    ip1 = "192.168.13.31";
+    ip2 = "2001:db8:abcd:12::1";
+    ASSERT_THROW (ip1 ^ ip2, std::invalid_argument);
 }
 
 /**

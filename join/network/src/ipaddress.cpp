@@ -1520,14 +1520,12 @@ IpAddress IpAddress::operator~ () const
         Ipv6Address result = ~first;
         return IpAddress (result.addr (), result.length (), result.scope ());
     }
-    else if (family () == AF_INET)
+    else
     {
         Ipv4Address first (addr ());
         Ipv4Address result = ~first;
         return IpAddress (result.addr(), result.length ());
     }
-
-    throw std::invalid_argument ("invalid IP address family");
 }
 
 // =========================================================================
