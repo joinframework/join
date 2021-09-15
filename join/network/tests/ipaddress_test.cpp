@@ -385,7 +385,25 @@ TEST (IpAddress, copyAssign)
  */
 TEST (IpAddress, moveAssign)
 {
-    IpAddress ip6 ("::"), ip;
+    IpAddress ip4 ("0.0.0.0"), ip;
+
+    ip = std::move (ip4);
+
+    ASSERT_EQ (ip.family (), AF_INET);
+    ASSERT_NE (ip.addr (), nullptr);
+    ASSERT_EQ (ip.length (), sizeof (struct in_addr));
+    ASSERT_EQ (ip.scope (), 0);
+    ASSERT_TRUE (ip.isWildcard ());
+    ASSERT_FALSE (ip.isLoopBack ());
+    ASSERT_FALSE (ip.isLinkLocal ());
+    ASSERT_FALSE (ip.isSiteLocal ());
+    ASSERT_FALSE (ip.isUnicast ());
+    ASSERT_FALSE (ip.isBroadcast ());
+    ASSERT_FALSE (ip.isMulticast ());
+    ASSERT_TRUE (ip.isIpv4Mapped ());
+    ASSERT_STREQ (ip.toString ().c_str (), "0.0.0.0");
+
+    IpAddress ip6 ("::");
 
     ip = std::move (ip6);
 
@@ -409,28 +427,45 @@ TEST (IpAddress, moveAssign)
  */
 TEST (IpAddress, sockaddrAssign)
 {
-    IpAddress ip;
-    struct sockaddr_in6 ip6;
+    IpAddress ip4;
+    struct sockaddr_in sa4;
+    memset (&sa4, 0, sizeof (struct sockaddr_in));
+    sa4.sin_family = AF_INET;
 
-    ip6.sin6_family   = AF_INET6;
-    ip6.sin6_addr     = in6addr_any;
-    ip6.sin6_scope_id = 0;
+    ip4 = *reinterpret_cast <struct sockaddr*> (&sa4);
+    ASSERT_EQ (ip4.family (), AF_INET);
+    ASSERT_NE (ip4.addr (), nullptr);
+    ASSERT_EQ (ip4.length (), sizeof (struct in_addr));
+    ASSERT_EQ (ip4.scope (), 0);
+    ASSERT_TRUE (ip4.isWildcard ());
+    ASSERT_FALSE (ip4.isLoopBack ());
+    ASSERT_FALSE (ip4.isLinkLocal ());
+    ASSERT_FALSE (ip4.isSiteLocal ());
+    ASSERT_FALSE (ip4.isUnicast ());
+    ASSERT_FALSE (ip4.isBroadcast ());
+    ASSERT_FALSE (ip4.isMulticast ());
+    ASSERT_TRUE (ip4.isIpv4Mapped ());
+    ASSERT_STREQ (ip4.toString ().c_str (), "0.0.0.0");
 
-    ip = *reinterpret_cast <struct sockaddr*> (&ip6);
+    IpAddress ip6;
+    struct sockaddr_in6 sa6;
+    memset (&sa6, 0, sizeof (struct sockaddr_in6));
+    sa6.sin6_family = AF_INET6;
 
-    ASSERT_EQ (ip.family (), AF_INET6);
-    ASSERT_NE (ip.addr (), nullptr);
-    ASSERT_EQ (ip.length (), sizeof (struct in6_addr));
-    ASSERT_EQ (ip.scope (), 0);
-    ASSERT_TRUE (ip.isWildcard ());
-    ASSERT_FALSE (ip.isLoopBack ());
-    ASSERT_FALSE (ip.isLinkLocal ());
-    ASSERT_FALSE (ip.isSiteLocal ());
-    ASSERT_FALSE (ip.isUnicast ());
-    ASSERT_FALSE (ip.isBroadcast ());
-    ASSERT_FALSE (ip.isMulticast ());
-    ASSERT_FALSE (ip.isIpv4Mapped ());
-    ASSERT_STREQ (ip.toString ().c_str (), "::");
+    ip6 = *reinterpret_cast <struct sockaddr*> (&sa6);
+    ASSERT_EQ (ip6.family (), AF_INET6);
+    ASSERT_NE (ip6.addr (), nullptr);
+    ASSERT_EQ (ip6.length (), sizeof (struct in6_addr));
+    ASSERT_EQ (ip6.scope (), 0);
+    ASSERT_TRUE (ip6.isWildcard ());
+    ASSERT_FALSE (ip6.isLoopBack ());
+    ASSERT_FALSE (ip6.isLinkLocal ());
+    ASSERT_FALSE (ip6.isSiteLocal ());
+    ASSERT_FALSE (ip6.isUnicast ());
+    ASSERT_FALSE (ip6.isBroadcast ());
+    ASSERT_FALSE (ip6.isMulticast ());
+    ASSERT_FALSE (ip6.isIpv4Mapped ());
+    ASSERT_STREQ (ip6.toString ().c_str (), "::");
 }
 
 /**
