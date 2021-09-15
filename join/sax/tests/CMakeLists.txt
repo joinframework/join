@@ -26,3 +26,6 @@ add_executable(roundtrip.gtest roundtrip_test.cpp)
 target_link_libraries(roundtrip.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(roundtrip.gtest)
 
+add_executable(packwriter.gtest packwriter_test.cpp)
+target_link_libraries(packwriter.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(packwriter.gtest)

@@ -779,7 +779,6 @@ namespace sax
         {
         }
 
-
         /**
          * @brief copy constructor.
          * @param other object to copy.

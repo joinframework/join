@@ -29,6 +29,7 @@
 #include <join/resolver.hpp>
 #include <join/observer.hpp>
 #include <join/openssl.hpp>
+#include <join/utils.hpp>
 
 // Libraries.
 #include <openssl/err.h>
@@ -600,37 +601,6 @@ namespace net
         int handle () const noexcept
         {
             return this->handle_;
-        }
-
-        /**
-         * @brief swaps the byte orders for unsigned 16 bits.
-         * @param variable variable to swap.
-         * @return The swapped unsigned 16 bits value.
-         */
-        static uint16_t& swap (uint16_t &variable)
-        {
-            if (BYTE_ORDER == LITTLE_ENDIAN)
-            {
-                variable = (variable >> 8) | (variable << 8);
-            }
-
-            return variable;
-        }
-
-        /**
-         * @brief swaps the byte orders for unsigned 32 bits.
-         * @param variable variable to swap.
-         * @return The swapped unsigned 32 bits value.
-         */
-        static uint32_t& swap (uint32_t &variable)
-        {
-            if (BYTE_ORDER == LITTLE_ENDIAN)
-            {
-                variable = ((variable & 0xFF000000) >> 24) | ((variable & 0x00FF0000) >> 8) |
-                           ((variable & 0x0000FF00) << 8)  | ((variable & 0x000000FF) << 24);
-            }
-
-            return variable;
         }
 
         /**

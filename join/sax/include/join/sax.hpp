@@ -236,7 +236,10 @@ namespace sax
          * @brief stop array.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int stopArray () = 0;
+        virtual int stopArray ()
+        {
+            return 0;
+        }
 
         /**
          * @brief start object.
@@ -256,7 +259,10 @@ namespace sax
          * @brief stop object.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int stopObject () = 0;
+        virtual int stopObject ()
+        {
+            return 0;
+        }
     };
 
     /**
