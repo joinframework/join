@@ -191,6 +191,10 @@ TEST (JsonWriter, setString)
     stream.str ("");
     EXPECT_EQ (jsonWriter.setString ("foo"), 0);
     EXPECT_EQ (stream.str (), "\"foo\"");
+
+    stream.str ("");
+    EXPECT_EQ (jsonWriter.setString ("\"\\\b\f\n\r\t\x19"), 0);
+    EXPECT_EQ (stream.str (), "\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\"");
 }
 
 /**
@@ -199,7 +203,7 @@ TEST (JsonWriter, setString)
 TEST (JsonWriter, startArray)
 {
     std::stringstream stream;
-    JsonWriter jsonWriter (stream);
+    JsonWriter jsonWriter (stream, 2);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.startArray (), 0);
@@ -211,7 +215,7 @@ TEST (JsonWriter, startArray)
     EXPECT_EQ (jsonWriter.setInt (1), 0);
     EXPECT_EQ (jsonWriter.setInt (2), 0);
     EXPECT_EQ (jsonWriter.stopArray (), 0);
-    EXPECT_EQ (stream.str (), "[1,2]");
+    EXPECT_EQ (stream.str (), "[\n  1,\n  2\n]");
 }
 
 /**
@@ -220,7 +224,7 @@ TEST (JsonWriter, startArray)
 TEST (JsonWriter, startObject)
 {
     std::stringstream stream;
-    JsonWriter jsonWriter (stream);
+    JsonWriter jsonWriter (stream, 2);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.startObject (), 0);
@@ -228,11 +232,13 @@ TEST (JsonWriter, startObject)
     EXPECT_EQ (stream.str (), "{}");
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.startObject (1), 0);
+    EXPECT_EQ (jsonWriter.startObject (2), 0);
     EXPECT_EQ (jsonWriter.setKey ("foo"), 0);
     EXPECT_EQ (jsonWriter.setString ("bar"), 0);
+    EXPECT_EQ (jsonWriter.setKey ("fuzz"), 0);
+    EXPECT_EQ (jsonWriter.setString ("bazz"), 0);
     EXPECT_EQ (jsonWriter.stopObject (), 0);
-    EXPECT_EQ (stream.str (), "{\"foo\":\"bar\"}");
+    EXPECT_EQ (stream.str (), "{\n  \"foo\": \"bar\",\n  \"fuzz\": \"bazz\"\n}");
 }
 
 /**
@@ -246,6 +252,10 @@ TEST (JsonWriter, setKey)
     stream.str ("");
     EXPECT_EQ (jsonWriter.setKey ("foo"), 0);
     EXPECT_EQ (stream.str (), "\"foo\":");
+
+    stream.str ("");
+    EXPECT_EQ (jsonWriter.setKey ("\"\\\b\f\n\r\t\x19"), 0);
+    EXPECT_EQ (stream.str (), "\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\":");
 }
 
 /**
