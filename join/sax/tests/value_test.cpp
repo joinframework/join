@@ -4278,7 +4278,32 @@ TEST (Value, index)
  */
 TEST (Value, at)
 {
-    Value value;
+    Value value = Array ();
+
+    value.pushBack (nullptr);
+    ASSERT_TRUE (value.at (0).isNull ());
+
+    value.pushBack (true);
+    ASSERT_TRUE (value.at (1).isBool ());
+
+    value.pushBack (std::numeric_limits <int64_t>::max ());
+    ASSERT_TRUE (value.at (2).isInt64 ());
+
+    value.pushBack (std::numeric_limits <double>::max ());
+    ASSERT_TRUE (value.at (3).isDouble ());
+
+    value.pushBack ("foobar");
+    ASSERT_TRUE (value.at (4).isString ());
+
+    value.pushBack (Array ({1, 2, 3, 4}));
+    ASSERT_TRUE (value.at (5).isArray ());
+
+    value.pushBack (Object ({{"foo", 1}, {"bar", 2}}));
+    ASSERT_TRUE (value.at (6).isObject ());
+
+    ASSERT_THROW (value.at (7), std::out_of_range);
+
+    value = Object ();
 
     value["null"] = nullptr;
     ASSERT_TRUE (value.at ("null").isNull ());
