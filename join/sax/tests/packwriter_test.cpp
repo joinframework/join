@@ -31,12 +31,6 @@
 // C++.
 #include <sstream>
 
-using join::sax::Array;
-using join::sax::Member;
-using join::sax::Object;
-using join::sax::Value;
-
-using join::sax::SaxErrc;
 using join::sax::PackWriter;
 
 /**
@@ -389,18 +383,22 @@ TEST (PackWriter, startArray)
 
     stream.str ("");
     EXPECT_EQ (packWriter.startArray (15), 0);
+    EXPECT_EQ (packWriter.stopArray (), 0);
     EXPECT_EQ (stream.str (), std::string ({'\x9F'}));
 
     stream.str ("");
     EXPECT_EQ (packWriter.startArray (16), 0);
+    EXPECT_EQ (packWriter.stopArray (), 0);
     EXPECT_EQ (stream.str (), std::string ({'\xDC', '\x00', '\x10'}));
 
     stream.str ("");
     EXPECT_EQ (packWriter.startArray (65535), 0);
+    EXPECT_EQ (packWriter.stopArray (), 0);
     EXPECT_EQ (stream.str (), std::string ({'\xDC', '\xFF', '\xFF'}));
 
     stream.str ("");
     EXPECT_EQ (packWriter.startArray (65536), 0);
+    EXPECT_EQ (packWriter.stopArray (), 0);
     EXPECT_EQ (stream.str (), std::string ({'\xDD', '\x00', '\x01', '\x00', '\x00'}));
 }
 
@@ -414,18 +412,22 @@ TEST (PackWriter, startObject)
 
     stream.str ("");
     EXPECT_EQ (packWriter.startObject (15), 0);
+    EXPECT_EQ (packWriter.stopObject (), 0);
     EXPECT_EQ (stream.str (), std::string ({'\x8F'}));
 
     stream.str ("");
     EXPECT_EQ (packWriter.startObject (16), 0);
+    EXPECT_EQ (packWriter.stopObject (), 0);
     EXPECT_EQ (stream.str (), std::string ({'\xDE', '\x00', '\x10'}));
 
     stream.str ("");
     EXPECT_EQ (packWriter.startObject (65535), 0);
+    EXPECT_EQ (packWriter.stopObject (), 0);
     EXPECT_EQ (stream.str (), std::string ({'\xDE', '\xFF', '\xFF'}));
 
     stream.str ("");
     EXPECT_EQ (packWriter.startObject (65536), 0);
+    EXPECT_EQ (packWriter.stopObject (), 0);
     EXPECT_EQ (stream.str (), std::string ({'\xDF', '\x00', '\x01', '\x00', '\x00'}));
 }
 
