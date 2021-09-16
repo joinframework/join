@@ -22,10 +22,14 @@ add_executable(jsonreader.gtest jsonreader_test.cpp)
 target_link_libraries(jsonreader.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(jsonreader.gtest)
 
-add_executable(roundtrip.gtest roundtrip_test.cpp)
-target_link_libraries(roundtrip.gtest ${PROJECT_NAME} gtest gtest_main pthread)
-gtest_discover_tests(roundtrip.gtest)
+add_executable(jsonwriter.gtest jsonwriter_test.cpp)
+target_link_libraries(jsonwriter.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(jsonwriter.gtest)
 
 add_executable(packwriter.gtest packwriter_test.cpp)
 target_link_libraries(packwriter.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(packwriter.gtest)
+
+add_executable(roundtrip.gtest roundtrip_test.cpp)
+target_link_libraries(roundtrip.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(roundtrip.gtest)
