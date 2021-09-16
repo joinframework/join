@@ -262,7 +262,7 @@ namespace join
          */
         bool getIf (char expected) noexcept
         {
-            if (_in->peek () == expected)
+            if (!_in->eof () && (static_cast <char> (_in->peek ()) == expected))
             {
                 _in->get ();
                 return true;

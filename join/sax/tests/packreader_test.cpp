@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/json.hpp>
+#include <join/pack.hpp>
 
 // libraries.
 #include <gtest/gtest.h>
@@ -39,129 +39,85 @@ using join::sax::Member;
 using join::sax::Object;
 using join::sax::Value;
 
-using join::sax::JsonReader;
+using join::sax::PackReader;
 
 /**
- * @brief Test JSON parsing pass.
+ * @brief Test MessagePack parsing pass.
  */
-TEST (JsonReader, pass)
+TEST (PackReader, pass)
 {
     std::stringstream stream;
     Value value;
 
     stream.clear ();
-    stream.str ("[]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
     stream.clear ();
-    stream.str ("[1234567890]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xce', '\x49', '\x96', '\x02', '\xd2'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1234567890);
 
     stream.clear ();
-    stream.str ("[-9876.543210]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xc0', '\xc3', '\x4a', '\x45', '\x87', '\xe7', '\xc0', '\x6e'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     ASSERT_DOUBLE_EQ (value[0].getDouble (), -9876.543210);
 
     stream.clear ();
-    stream.str ("[0.123456789e-12]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     ASSERT_DOUBLE_EQ (value[0].getDouble (), 0.123456789e-12);
 
     stream.clear ();
-    stream.str ("[1.234567890E+34]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x47', '\x03', '\x05', '\x82', '\xff', '\xd7', '\x14', '\x75'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     ASSERT_DOUBLE_EQ (value[0].getDouble (), 1.234567890E+34);
 
     stream.clear ();
-    stream.str ("[NaN]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (!std::signbit (value[0].getDouble ()) && std::isnan (value[0].getDouble ()));
-
-    stream.clear ();
-    stream.str ("[-NaN]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (std::signbit (value[0].getDouble ()) && std::isnan (value[0].getDouble ()));
-
-    stream.clear ();
-    stream.str ("[Inf]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (!std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
-
-    stream.clear ();
-    stream.str ("[-Inf]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
-
-    stream.clear ();
-    stream.str ("[Infinity]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (!std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
-
-    stream.clear ();
-    stream.str ("[-Infinity]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
-
-    stream.clear ();
-    stream.str ("[true]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc3'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isBool ());
     ASSERT_EQ (value[0], true);
 
     stream.clear ();
-    stream.str ("[false]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc2'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isBool ());
     ASSERT_EQ (value[0], false);
 
     stream.clear ();
-    stream.str ("[null]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc0'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isNull ());
     ASSERT_EQ (value[0], nullptr);
 
     stream.clear ();
-    stream.str ("[0.5 ,98.6\n,\n99.44\n,\n1066,\n1e1\n,0.1e1\n,1e-1\n,1e00\n,2e+00\n,2e-00\n,\"rosebud\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x0b', '\xcb', '\x3f', '\xe0', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\xcb', '\x40', '\x58', '\xa6', '\x66', '\x66',
+                              '\x66', '\x66', '\x66', '\xcb', '\x40', '\x58', '\xdc', '\x28', '\xf5', '\xc2', '\x8f', '\x5c', '\xcd', '\x04', '\x2a', '\xcb', '\x40', '\x24', '\x00', '\x00',
+                              '\x00', '\x00', '\x00', '\x00', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\xcb', '\x3f', '\xb9', '\x99', '\x99', '\x99', '\x99',
+                              '\x99', '\x9a', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\xcb', '\x40', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00',
+                              '\xcb', '\x40', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\xa7', '\x72', '\x6f', '\x73', '\x65', '\x62', '\x75', '\x64'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_EQ (value.size (), 11);
@@ -186,221 +142,237 @@ TEST (JsonReader, pass)
     ASSERT_TRUE (value[9].isDouble ());
     ASSERT_DOUBLE_EQ (value[9].getDouble (), 2e-00);
     ASSERT_TRUE (value[10].isString ());
-    ASSERT_STREQ (value[10].getString ().c_str (), "rosebud");
+    ASSERT_EQ (value[10], "rosebud");
 
     stream.clear ();
-    stream.str ("[[[[[[[[[[[[[[[[[[[\"Not too deep\"]]]]]]]]]]]]]]]]]]]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xac', '\x4e', '\x6f', '\x74', '\x20',
+                              '\x74', '\x6f', '\x6f', '\x20', '\x64', '\x65', '\x65', '\x70'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
 
     stream.clear ();
-    stream.str ("{}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.empty ());
 
     stream.clear ();
-    stream.str ("{\"integer\": 1234567890}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa7', '\x69', '\x6e', '\x74', '\x65', '\x67', '\x65', '\x72', '\xce', '\x49', '\x96', '\x02', '\xd2'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["integer"].isInt ());
     ASSERT_EQ (value["integer"], 1234567890);
 
     stream.clear ();
-    stream.str ("{\"real\": -9876.543210}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa4', '\x72', '\x65', '\x61', '\x6c', '\xcb', '\xc0', '\xc3', '\x4a', '\x45', '\x87', '\xe7', '\xc0', '\x6e'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["real"].isDouble ());
     ASSERT_DOUBLE_EQ (value["real"].getDouble (), -9876.543210);
 
     stream.clear ();
-    stream.str ("{\"e\": 0.123456789e-12}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa1', '\x65', '\xcb', '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["e"].isDouble ());
     ASSERT_DOUBLE_EQ (value["e"].getDouble (), 0.123456789e-12);
 
     stream.clear ();
-    stream.str ("{\"E\": 1.234567890E+34}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa1', '\x45', '\xcb', '\x47', '\x03', '\x05', '\x82', '\xff', '\xd7', '\x14', '\x75'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["E"].isDouble ());
     ASSERT_DOUBLE_EQ (value["E"].getDouble (), 1.234567890E+34);
 
     stream.clear ();
-    stream.str ("{\"\":  23456789012E66}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa0', '\xcb', '\x4f', '\xc9', '\xee', '\x09', '\x3a', '\x64', '\xb8', '\x54'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[""].isDouble ());
     ASSERT_DOUBLE_EQ (value[""].getDouble (), 23456789012E66);
 
     stream.clear ();
-    stream.str ("{\"zero\": 0}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa4', '\x7a', '\x65', '\x72', '\x6f', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["zero"].isInt ());
     ASSERT_EQ (value["zero"], 0);
 
     stream.clear ();
-    stream.str ("{\"one\": 1}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa3', '\x6f', '\x6e', '\x65', '\x01'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["one"].isInt ());
     ASSERT_EQ (value["one"], 1);
 
     stream.clear ();
-    stream.str ("{\"space\": \" \"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x73', '\x70', '\x61', '\x63', '\x65', '\xa1', '\x20'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["space"].isString ());
     ASSERT_EQ (value["space"], " ");
 
     stream.clear ();
-    stream.str ("{\"quote\": \"\\\"\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x71', '\x75', '\x6f', '\x74', '\x65', '\xa1', '\x22'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["quote"].isString ());
     ASSERT_EQ (value["quote"], "\"");
 
     stream.clear ();
-    stream.str ("{\"backslash\": \"\\\\\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa9', '\x62', '\x61', '\x63', '\x6b', '\x73', '\x6c', '\x61', '\x73', '\x68', '\xa1', '\x5c'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["backslash"].isString ());
     ASSERT_EQ (value["backslash"], "\\");
 
     stream.clear ();
-    stream.str ("{\"controls\": \"\\b\\f\\n\\r\\t\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa8', '\x63', '\x6f', '\x6e', '\x74', '\x72', '\x6f', '\x6c', '\x73', '\xa5', '\x08', '\x0c', '\x0a', '\x0d', '\x09'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["controls"].isString ());
     ASSERT_EQ (value["controls"], "\b\f\n\r\t");
 
     stream.clear ();
-    stream.str ("{\"slash\": \"/ & \\\\/\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x73', '\x6c', '\x61', '\x73', '\x68', '\xa6', '\x2f', '\x20', '\x26', '\x20', '\x5c', '\x2f'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["slash"].isString ());
     ASSERT_EQ (value["slash"], "/ & \\/");
 
     stream.clear ();
-    stream.str ("{\"alpha\": \"abcdefghijklmnopqrstuvwyz\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x61', '\x6c', '\x70', '\x68', '\x61', '\xb9', '\x61', '\x62', '\x63', '\x64', '\x65', '\x66', '\x67', '\x68',
+                              '\x69', '\x6a', '\x6b', '\x6c', '\x6d', '\x6e', '\x6f', '\x70', '\x71', '\x72', '\x73', '\x74', '\x75', '\x76', '\x77', '\x79', '\x7a'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["alpha"].isString ());
     ASSERT_EQ (value["alpha"], "abcdefghijklmnopqrstuvwyz");
 
     stream.clear ();
-    stream.str ("{\"ALPHA\": \"ABCDEFGHIJKLMNOPQRSTUVWYZ\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x41', '\x4c', '\x50', '\x48', '\x41', '\xb9', '\x41', '\x42', '\x43', '\x44', '\x45', '\x46', '\x47', '\x48',
+                              '\x49', '\x4a', '\x4b', '\x4c', '\x4d', '\x4e', '\x4f', '\x50', '\x51', '\x52', '\x53', '\x54', '\x55', '\x56', '\x57', '\x59', '\x5a'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["ALPHA"].isString ());
     ASSERT_EQ (value["ALPHA"], "ABCDEFGHIJKLMNOPQRSTUVWYZ");
 
     stream.clear ();
-    stream.str ("{\"digit\": \"0123456789\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x64', '\x69', '\x67', '\x69', '\x74', '\xaa', '\x30', '\x31', '\x32', '\x33', '\x34', '\x35', '\x36', '\x37',
+                              '\x38', '\x39'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["digit"].isString ());
     ASSERT_EQ (value["digit"], "0123456789");
 
     stream.clear ();
-    stream.str ("{\"0123456789\": \"digit\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xaa', '\x30', '\x31', '\x32', '\x33', '\x34', '\x35', '\x36', '\x37', '\x38', '\x39', '\xa5', '\x64', '\x69', '\x67',
+                              '\x69', '\x74'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["0123456789"].isString ());
     ASSERT_EQ (value["0123456789"], "digit");
 
     stream.clear ();
-    stream.str ("{\"special\": \"`1~!@#$%^&*()_+-={':[,]}|;.</>?\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa7', '\x73', '\x70', '\x65', '\x63', '\x69', '\x61', '\x6c', '\xbf', '\x60', '\x31', '\x7e', '\x21', '\x40', '\x23',
+                              '\x24', '\x25', '\x5e', '\x26', '\x2a', '\x28', '\x29', '\x5f', '\x2b', '\x2d', '\x3d', '\x7b', '\x27', '\x3a', '\x5b', '\x2c', '\x5d', '\x7d', '\x7c', '\x3b',
+                              '\x2e', '\x3c', '\x2f', '\x3e', '\x3f'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["special"].isString ());
     ASSERT_EQ (value["special"], "`1~!@#$%^&*()_+-={':[,]}|;.</>?");
 
     stream.clear ();
-    stream.str ("{\"hex\": \"\\u0123\\u4567\\u89AB\\uCDEF\\uabcd\\uef4A\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa3', '\x68', '\x65', '\x78', '\xb1', '\xc4', '\xa3', '\xe4', '\x95', '\xa7', '\xe8', '\xa6', '\xab', '\xec', '\xb7',
+                              '\xaf', '\xea', '\xaf', '\x8d', '\xee', '\xbd', '\x8a'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["hex"].isString ());
-    ASSERT_EQ (value["hex"].getString (), std::string ("\xC4\xA3\xE4\x95\xA7\xE8\xA6\xAB\xEC\xB7\xAF\xEA\xAF\x8D\xEE\xBD\x8A"));
+    ASSERT_EQ (value["hex"].getString (), std::string ({'\xC4', '\xA3', '\xE4', '\x95', '\xA7', '\xE8', '\xA6', '\xAB', '\xEC', '\xB7', '\xAF', '\xEA', '\xAF', '\x8D', '\xEE', '\xBD', '\x8A'}));
 
     stream.clear ();
-    stream.str ("{\"true\": true}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa4', '\x74', '\x72', '\x75', '\x65', '\xc3'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["true"].isBool ());
     ASSERT_EQ (value["true"], true);
 
     stream.clear ();
-    stream.str ("{\"false\": false}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x66', '\x61', '\x6c', '\x73', '\x65', '\xc2'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["false"].isBool ());
     ASSERT_EQ (value["false"], false);
 
     stream.clear ();
-    stream.str ("{\"null\": null}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa4', '\x6e', '\x75', '\x6c', '\x6c', '\xc0'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["null"].isNull ());
     ASSERT_EQ (value["null"], nullptr);
 
     stream.clear ();
-    stream.str ("{\"array\":[  ]}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x61', '\x72', '\x72', '\x61', '\x79', '\xdd', '\x00', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["array"].isArray ());
     ASSERT_TRUE (value["array"].empty ());
 
     stream.clear ();
-    stream.str ("{\"object\":{  }}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa6', '\x6f', '\x62', '\x6a', '\x65', '\x63', '\x74', '\xdf', '\x00', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["object"].isObject ());
     ASSERT_TRUE (value["object"].empty ());
 
     stream.clear ();
-    stream.str ("{\"address\": \"50 St. James Street\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa7', '\x61', '\x64', '\x64', '\x72', '\x65', '\x73', '\x73', '\xb3', '\x35', '\x30', '\x20', '\x53', '\x74', '\x2e',
+                              '\x20', '\x4a', '\x61', '\x6d', '\x65', '\x73', '\x20', '\x53', '\x74', '\x72', '\x65', '\x65', '\x74'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["address"].isString ());
     ASSERT_EQ (value["address"], "50 St. James Street");
 
     stream.clear ();
-    stream.str ("{\"url\": \"https://www.joinframework.net/\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa3', '\x75', '\x72', '\x6c', '\xbe', '\x68', '\x74', '\x74', '\x70', '\x73', '\x3a', '\x2f', '\x2f', '\x77', '\x77',
+                              '\x77', '\x2e', '\x6a', '\x6f', '\x69', '\x6e', '\x66', '\x72', '\x61', '\x6d', '\x65', '\x77', '\x6f', '\x72', '\x6b', '\x2e', '\x6e', '\x65', '\x74', '\x2f'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["url"].isString ());
     ASSERT_EQ (value["url"], "https://www.joinframework.net/");
 
     stream.clear ();
-    stream.str ("{\"comment\": \"// /* <!-- --\",\n\"# -- --> */\": \" \"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x02', '\xa7', '\x63', '\x6f', '\x6d', '\x6d', '\x65', '\x6e', '\x74', '\xad', '\x2f', '\x2f', '\x20', '\x2f', '\x2a', '\x20',
+                              '\x3c', '\x21', '\x2d', '\x2d', '\x20', '\x2d', '\x2d', '\xab', '\x23', '\x20', '\x2d', '\x2d', '\x20', '\x2d', '\x2d', '\x3e', '\x20', '\x2a', '\x2f', '\xa1',
+                              '\x20'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["comment"].isString ());
@@ -409,8 +381,10 @@ TEST (JsonReader, pass)
     ASSERT_EQ (value["# -- --> */"], " ");
 
     stream.clear ();
-    stream.str ("{\" s p a c e d \" :[1,2 , 3\n\n,\n4 , 5        ,          6           ,7        ],\"compact\":[1,2,3,4,5,6,7]}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x02', '\xad', '\x20', '\x73', '\x20', '\x70', '\x20', '\x61', '\x20', '\x63', '\x20', '\x65', '\x20', '\x64', '\x20', '\xdd',
+                              '\x00', '\x00', '\x00', '\x07', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\xa7', '\x63', '\x6f', '\x6d', '\x70', '\x61', '\x63', '\x74', '\xdd',
+                              '\x00', '\x00', '\x00', '\x07', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[" s p a c e d "].isArray ());
@@ -431,24 +405,30 @@ TEST (JsonReader, pass)
     ASSERT_EQ (value["compact"][6], 7);
 
     stream.clear ();
-    stream.str ("{\"object with 1 member\":[\"array with 1 element\"]}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xb4', '\x6f', '\x62', '\x6a', '\x65', '\x63', '\x74', '\x20', '\x77', '\x69', '\x74', '\x68', '\x20', '\x31', '\x20',
+                              '\x6d', '\x65', '\x6d', '\x62', '\x65', '\x72', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xb4', '\x61', '\x72', '\x72', '\x61', '\x79', '\x20', '\x77', '\x69',
+                              '\x74', '\x68', '\x20', '\x31', '\x20', '\x65', '\x6c', '\x65', '\x6d', '\x65', '\x6e', '\x74'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["object with 1 member"].isArray ());
     ASSERT_EQ (value["object with 1 member"][0], "array with 1 element");
 
     stream.clear ();
-    stream.str ("{\"quotes\": \"&#34; \\u0022 %22 0x22 034 &#x22;\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa6', '\x71', '\x75', '\x6f', '\x74', '\x65', '\x73', '\xbb', '\x26', '\x23', '\x33', '\x34', '\x3b', '\x20', '\x22',
+                              '\x20', '\x25', '\x32', '\x32', '\x20', '\x30', '\x78', '\x32', '\x32', '\x20', '\x30', '\x33', '\x34', '\x20', '\x26', '\x23', '\x78', '\x32', '\x32', '\x3b'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["quotes"].isString ());
     ASSERT_EQ (value["quotes"], "&#34; \" %22 0x22 034 &#x22;");
 
     stream.clear ();
-    stream.str ("{\"\\u0022\\b\\f\\n\\r\\t`1~!@#$%^&*()_+-=[]{}|;:',./<>?\"\n: \"A key can be any string\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xd9', '\x25', '\x22', '\x08', '\x0c', '\x0a', '\x0d', '\x09', '\x60', '\x31', '\x7e', '\x21', '\x40', '\x23', '\x24',
+                              '\x25', '\x5e', '\x26', '\x2a', '\x28', '\x29', '\x5f', '\x2b', '\x2d', '\x3d', '\x5b', '\x5d', '\x7b', '\x7d', '\x7c', '\x3b', '\x3a', '\x27', '\x2c', '\x2e',
+                              '\x2f', '\x3c', '\x3e', '\x3f', '\xb7', '\x41', '\x20', '\x6b', '\x65', '\x79', '\x20', '\x63', '\x61', '\x6e', '\x20', '\x62', '\x65', '\x20', '\x61', '\x6e',
+                              '\x79', '\x20', '\x73', '\x74', '\x72', '\x69', '\x6e', '\x67'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["\"\b\f\n\r\t`1~!@#$%^&*()_+-=[]{}|;:',./<>?"].isString ());
@@ -456,353 +436,184 @@ TEST (JsonReader, pass)
 }
 
 /**
- * @brief Test JSON parsing fail.
+ * @brief Test MessagePack parsing fail.
  */
-TEST (JsonReader, fail)
+TEST (PackReader, fail)
 {
     std::stringstream stream;
     Value value;
 
     stream.clear ();
-    stream.str ("\"payload should be an object or array, not a string\"");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
+    stream.str (std::string ({'\xd9', '\x32', '\x70', '\x61', '\x79', '\x6c', '\x6f', '\x61', '\x64', '\x20', '\x73', '\x68', '\x6f', '\x75', '\x6c', '\x64', '\x20', '\x62', '\x65', '\x20',
+                              '\x61', '\x6e', '\x20', '\x6f', '\x62', '\x6a', '\x65', '\x63', '\x74', '\x20', '\x6f', '\x72', '\x20', '\x61', '\x72', '\x72', '\x61', '\x79', '\x2c', '\x20',
+                              '\x6e', '\x6f', '\x74', '\x20', '\x61', '\x20', '\x73', '\x74', '\x72', '\x69', '\x6e', '\x67'}));
+    ASSERT_NE (value.deserialize <PackReader> (stream), 0);
 
     stream.clear ();
-    stream.str ("[Infinit]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[nul]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[tru]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[fals]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"Unclosed array\"");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{unquoted_key: \"keys must be quoted\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"extra comma\",]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"double extra comma\",,]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[   , \"<-- missing value\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"Comma after the close\"],");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"Extra close\"]]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"Missing quote]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{\"Extra comma\": true,}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{\"Extra value after close\": true} \"misplaced quoted value\"");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{\"Illegal expression\": 1 + 2}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{\"Illegal invocation\": alert()}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{\"Numbers cannot have leading zeroes\": 013}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{\"Numbers cannot be hex\": 0x14}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"Illegal backslash escape: \\x15\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\\naked]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"Illegal backslash escape: \\017\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[[[[[[[[[[[[[[[[[[[[\"Too deep\"]]]]]]]]]]]]]]]]]]]]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{\"Missing colon\" null}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{\"Double colon\":: null}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{\"Comma instead of colon\", null}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"Colon instead of comma\": false]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"Bad value\", truth]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("['single quote']");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"\ttab\tcharacter\tin\tstring\t\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"tab\\\t  character\\\t  in\\\t  string\\\t  \"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"line\nbreak\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"line\\\nbreak\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[0e]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[0e+]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[0e+-1]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("{\"Comma instead of closing brace\": true,");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
-
-    stream.clear ();
-    stream.str ("[\"Mismatch\"}");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xa8', '\x54', '\x6f', '\x6f', '\x20', '\x64', '\x65', '\x65', '\x70'}));
+    ASSERT_NE (value.deserialize <PackReader> (stream), 0);
 }
 
 /**
- * @brief Test JSON parse double.
+ * @brief Test MessagePack parse double.
  */
-TEST (JsonReader, dbl)
+TEST (PackReader, dbl)
 {
     std::stringstream stream;
     Value value;
 
     stream.clear ();
-    stream.str ("[0.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 0.0);
 
     stream.clear ();
-    stream.str ("[-0.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x80', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), -0.0);
 
     stream.clear ();
-    stream.str ("[1.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 1.0);
 
     stream.clear ();
-    stream.str ("[-1.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xbf', '\xf0', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), -1.0);
 
     stream.clear ();
-    stream.str ("[1.5]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xf8', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 1.5);
 
     stream.clear ();
-    stream.str ("[-1.5]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xbf', '\xf8', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), -1.5);
 
     stream.clear ();
-    stream.str ("[3.1416]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x40', '\x09', '\x21', '\xff', '\x2e', '\x48', '\xe8', '\xa7'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 3.1416);
 
     stream.clear ();
-    stream.str ("[1E10]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x42', '\x02', '\xa0', '\x5f', '\x20', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 1E10);
 
     stream.clear ();
-    stream.str ("[1e10]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_EQ (value[0].getDouble (), 1e10);
-
-    stream.clear ();
-    stream.str ("[1E+10]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_EQ (value[0].getDouble (), 1E+10);
-
-    stream.clear ();
-    stream.str ("[1E-10]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3d', '\xdb', '\x7C', '\xdf', '\xd9', '\xd7', '\xbd', '\xbb'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 1E-10);
 
     stream.clear ();
-    stream.str ("[-1E10]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xc2', '\x02', '\xa0', '\x5f', '\x20', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), -1E10);
 
     stream.clear ();
-    stream.str ("[-1e10]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_EQ (value[0].getDouble (), -1e10);
-
-    stream.clear ();
-    stream.str ("[-1E+10]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    EXPECT_EQ (value[0].getDouble (), -1E+10);
-
-    stream.clear ();
-    stream.str ("[-1E-10]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xbd', '\xdb', '\x7c', '\xdf', '\xd9', '\xd7', '\xbd', '\xbb'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), -1E-10);
 
     stream.clear ();
-    stream.str ("[1.234E+10]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x42', '\x06', '\xfc', '\x2b', '\xa8', '\x00', '\x00', '\x00'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 1.234E+10);
 
     stream.clear ();
-    stream.str ("[1.234E-10]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3d', '\xe0', '\xf5', '\xc0', '\x63', '\x56', '\x43', '\xa8'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 1.234E-10);
 
     stream.clear ();
-    stream.str ("[1.79769e+308]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x7f', '\xef', '\xff', '\xfc', '\x57', '\xca', '\x82', '\xae'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 1.79769e+308);
 
     stream.clear ();
-    stream.str ("[2.22507e-308]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x0f', '\xff', '\xfe', '\x2e', '\x81', '\x59', '\xd0'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 2.22507e-308);
 
     stream.clear ();
-    stream.str ("[-1.79769e+308]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xff', '\xef', '\xff', '\xfc', '\x57', '\xca', '\x82', '\xae'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), -1.79769e+308);
 
     stream.clear ();
-    stream.str ("[-2.22507e-308]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x80', '\x0f', '\xff', '\xfe', '\x2e', '\x81', '\x59', '\xd0'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), -2.22507e-308);
 
     stream.clear ();
-    stream.str ("[-4.9406564584124654e-324]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x80', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x01'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), -4.9406564584124654e-324);
 
     stream.clear ();
-    stream.str ("[2.2250738585072009e-308]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x0f', '\xff', '\xff', '\xff', '\xff', '\xff', '\xff'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -810,7 +621,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[2.2250738585072014e-308]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -818,7 +629,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[1.7976931348623157e+308]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -826,7 +637,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[1e-10000]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -834,7 +645,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[18446744073709551616]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -842,25 +653,23 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[-9223372036854775809]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), -9223372036854775809.0);
 
-    /*
     stream.clear ();
     stream.str ("[0.9868011474609375]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 0.9868011474609375);
-    */
 
     stream.clear ();
     stream.str ("[123e34]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -868,7 +677,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[45913141877270640000.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -876,7 +685,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[2.2250738585072011e-308]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -884,7 +693,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[1e-214748363]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -892,7 +701,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[1e-214748364]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -900,7 +709,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[0.017976931348623157e+310]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -908,7 +717,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[2.2250738585072012e-308]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -916,7 +725,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[0.999999999999999944488848768742172978818416595458984375]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -924,7 +733,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[0.999999999999999944488848768742172978818416595458984374]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -932,7 +741,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[0.999999999999999944488848768742172978818416595458984376]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -940,7 +749,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[1.00000000000000011102230246251565404236316680908203125]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -948,7 +757,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[1.00000000000000011102230246251565404236316680908203124]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -956,7 +765,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[1.00000000000000011102230246251565404236316680908203126]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -964,7 +773,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[72057594037927928.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -972,7 +781,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[72057594037927936.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -980,7 +789,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[72057594037927932.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -988,7 +797,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[7205759403792793199999e-5]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -996,7 +805,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[7205759403792793200001e-5]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1004,7 +813,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[9223372036854774784.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1012,7 +821,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[9223372036854775808.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1020,7 +829,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[9223372036854775296.0]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1028,7 +837,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[922337203685477529599999e-5]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1036,7 +845,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[922337203685477529600001e-5]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1044,7 +853,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[10141204801825834086073718800384]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1052,7 +861,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[10141204801825835211973625643008]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1060,7 +869,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[10141204801825834649023672221696]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1068,7 +877,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[1014120480182583464902367222169599999e-5]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1076,7 +885,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[1014120480182583464902367222169600001e-5]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1084,7 +893,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[5708990770823838890407843763683279797179383808]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1092,7 +901,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[5708990770823839524233143877797980545530986496]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1100,7 +909,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[5708990770823839207320493820740630171355185152]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1108,7 +917,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[5708990770823839207320493820740630171355185151999e-3]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1116,7 +925,7 @@ TEST (JsonReader, dbl)
 
     stream.clear ();
     stream.str ("[5708990770823839207320493820740630171355185152001e-3]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1127,7 +936,7 @@ TEST (JsonReader, dbl)
                 "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
                 "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
                 "0000000000]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1142,7 +951,7 @@ TEST (JsonReader, dbl)
                 "89880258182545180325707018860872113128079512233426288368622321503775666622503982534335974568884423900"
                 "26549819838548794829220689472168983109969836584681402285424333066033985088644580400103493397042756718"
                 "6443383770486037861622771738545623065874679014086723327636718751234567890123456789012345678901e-308]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1152,78 +961,78 @@ TEST (JsonReader, dbl)
 /**
  * @brief Test JSON parse string.
  */
-TEST (JsonReader, str)
+TEST (PackReader, str)
 {
     std::stringstream stream;
     Value value;
 
     stream.clear ();
-    stream.str ("[\"\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xa0'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "");
 
     stream.clear ();
-    stream.str ("[\"Hello\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x48', '\x65', '\x6c', '\x6c', '\x6f'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "Hello");
 
     stream.clear ();
-    stream.str ("[\"Hello\\nWorld\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xab', '\x48', '\x65', '\x6c', '\x6c', '\x6f', '\x0a', '\x57', '\x6f', '\x72', '\x6c', '\x64'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "Hello\nWorld");
 
     stream.clear ();
-    stream.str ("[\"Hello\\u0000World\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xab', '\x48', '\x65', '\x6c', '\x6c', '\x6f', '\x00', '\x57', '\x6f', '\x72', '\x6c', '\x64'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "Hello\0World");
 
     stream.clear ();
-    stream.str ("[\"\\\"\\\\/\\b\\f\\n\\r\\t\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xa8', '\x22', '\x5c', '\x2f', '\x08', '\x0c', '\x0a', '\x0d', '\x09'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "\"\\/\b\f\n\r\t");
 
     stream.clear ();
-    stream.str ("[\"\\u0024\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xa1', '\x24'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "\x24");
 
     stream.clear ();
-    stream.str ("[\"\\u00A2\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xa2', '\xc2', '\xa2'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "\xC2\xA2");
 
     stream.clear ();
-    stream.str ("[\"\\u20AC\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xa3', '\xe2', '\x82', '\xac'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "\xE2\x82\xAC");
 
     stream.clear ();
-    stream.str ("[\"\\uD834\\uDD1E\"]");
-    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xa4', '\xf0', '\x9d', '\x84', '\x9e'}));
+    ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());

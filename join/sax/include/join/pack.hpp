@@ -116,51 +116,31 @@ namespace sax
         {
             if (value < -(1 << 15))
             {
-                char buf[5];
-                buf[0] = 0xd2;
-                storeUint32 (&buf[1], static_cast <uint32_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xd2, static_cast <uint32_t> (value));
             }
             else if (value < -(1 << 7))
             {
-                char buf[3];
-                buf[0] = 0xd1;
-                storeUint16 (&buf[1], static_cast <uint16_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xd1, static_cast <uint16_t> (value));
             }
             else if (value < -(1 << 5))
             {
-                char buf[2];
-                buf[0] = 0xd0;
-                storeUint8 (&buf[1], static_cast <uint8_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xd0, static_cast <uint8_t> (value));
             }
             else if (value < (1 << 7))
             {
-                char buf;
-                storeUint8 (&buf, static_cast <uint8_t> (value));
-                append (buf);
+                append (static_cast <uint8_t> (value));
             }
             else if (value < (1 << 8))
             {
-                char buf[2];
-                buf[0] = 0xcc;
-                storeUint8 (&buf[1], static_cast <uint8_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xcc, static_cast <uint8_t> (value));
             }
             else if (value < (1 << 16))
             {
-                char buf[3];
-                buf[0] = 0xcd;
-                storeUint16 (&buf[1], static_cast <uint16_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xcd, static_cast <uint16_t> (value));
             }
             else
             {
-                char buf[5];
-                buf[0] = 0xce;
-                storeUint32 (&buf[1], static_cast <uint32_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xce, static_cast <uint32_t> (value));
             }
             return 0;
         }
@@ -174,30 +154,19 @@ namespace sax
         {
             if (value < (1 << 7))
             {
-                char buf;
-                storeUint8 (&buf, static_cast <uint8_t> (value));
-                append (buf);
+                append (static_cast <uint8_t> (value));
             }
             else if (value < (1 << 8))
             {
-                char buf[2];
-                buf[0] = 0xcc;
-                storeUint8 (&buf[1], static_cast <uint8_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xcc, static_cast <uint8_t> (value));
             }
             else if (value < (1 << 16))
             {
-                char buf[3];
-                buf[0] = 0xcd;
-                storeUint16 (&buf[1], static_cast <uint16_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xcd, static_cast <uint16_t> (value));
             }
             else
             {
-                char buf[5];
-                buf[0] = 0xce;
-                storeUint32 (&buf[1], value);
-                append (buf, sizeof (buf));
+                pack (0xce, value);
             }
             return 0;
         }
@@ -209,67 +178,41 @@ namespace sax
          */
         virtual int setInt64 (int64_t value) override
         {
-            if(value < -(1LL << 31)) 
+            if (value < -(1LL << 31)) 
             {
-                char buf[9];
-                buf[0] = 0xd3;
-                storeUint64 (&buf[1], static_cast <uint64_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xd3, static_cast <uint64_t> (value));
             }
             else if (value < -(1LL << 15))
             {
-                char buf[5];
-                buf[0] = 0xd2;
-                storeUint32 (&buf[1], static_cast <uint32_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xd2, static_cast <uint32_t> (value));
             }
             else if (value < -(1LL << 7))
             {
-                char buf[3];
-                buf[0] = 0xd1;
-                storeUint16 (&buf[1], static_cast <uint16_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xd1, static_cast <uint16_t> (value));
             }
             else if (value < -(1LL << 5))
             {
-                char buf[2];
-                buf[0] = 0xd0;
-                storeUint8 (&buf[1], static_cast <uint8_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xd0, static_cast <uint8_t> (value));
             }
             else if (value < (1LL << 7))
             {
-                char buf;
-                storeUint8 (&buf, static_cast <uint8_t> (value));
-                append (buf);
+                append (static_cast <uint8_t> (value));
             }
             else if (value < (1LL << 8))
             {
-                char buf[2];
-                buf[0] = 0xcc;
-                storeUint8 (&buf[1], static_cast <uint8_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xcc, static_cast <uint8_t> (value));
             }
             else if (value < (1LL << 16))
             {
-                char buf[3];
-                buf[0] = 0xcd;
-                storeUint16 (&buf[1], static_cast <uint16_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xcd, static_cast <uint16_t> (value));
             }
             else if (value < (1LL << 32))
             {
-                char buf[5];
-                buf[0] = 0xce;
-                storeUint32 (&buf[1], static_cast <uint32_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xce, static_cast <uint32_t> (value));
             }
             else
             {
-                char buf[9];
-                buf[0] = 0xcf;
-                storeUint64 (&buf[1], static_cast <uint64_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xcf, static_cast <uint64_t> (value));
             }
             return 0;
         }
@@ -283,37 +226,23 @@ namespace sax
         {
             if (value < (1ULL << 7))
             {
-                char buf;
-                storeUint8 (&buf, static_cast <uint8_t> (value));
-                append (buf);
+                append (static_cast <uint8_t> (value));
             }
             else if (value < (1ULL << 8))
             {
-                char buf[2];
-                buf[0] = 0xcc;
-                storeUint8 (&buf[1], static_cast <uint8_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xcc, static_cast <uint8_t> (value));
             }
             else if (value < (1ULL << 16))
             {
-                char buf[3];
-                buf[0] = 0xcd;
-                storeUint16 (&buf[1], static_cast <uint16_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xcd, static_cast <uint16_t> (value));
             }
             else if (value < (1ULL << 32))
             {
-                char buf[5];
-                buf[0] = 0xce;
-                storeUint32 (&buf[1], static_cast <uint32_t> (value));
-                append (buf, sizeof (buf));
+                pack (0xce, static_cast <uint32_t> (value));
             }
             else
             {
-                char buf[9];
-                buf[0] = 0xcf;
-                storeUint64 (&buf[1], value);
-                append (buf, sizeof (buf));
+                pack (0xcf, value);
             }
             return 0;
         }
@@ -325,10 +254,7 @@ namespace sax
          */
         virtual int setDouble (double value) override
         {
-            char buf[9];
-            buf[0] = 0xcb;
-            storeReal (&buf[1], value);
-            append (buf, sizeof (buf));
+            pack (0xcb, value);
             return 0;
         }
 
@@ -339,7 +265,24 @@ namespace sax
          */
         virtual int setString (const std::string& value) override
         {
-            return setStringData (value.c_str (), value.size ());
+            if (value.size () < 32)
+            {
+                append (static_cast <char> (0xa0 | value.size ()));
+            } 
+            else if (value.size () < 256)
+            {
+                pack (0xd9, static_cast <uint8_t> (value.size ()));
+            }
+            else if (value.size () < 65536)
+            {
+                pack (0xda, static_cast <uint16_t> (value.size ()));
+            }
+            else
+            {
+                pack (0xdb, static_cast <uint32_t> (value.size ()));
+            }
+            append (value.c_str (), value.size ());
+            return 0;
         }
 
         /**
@@ -351,21 +294,15 @@ namespace sax
         {
             if (size < 16) 
             {
-                append (static_cast <char> (0x90u | size));
+                append (static_cast <char> (0x90 | size));
             }
             else if (size < 65536)
             {
-                char buf[3];
-                buf[0] = 0xdc; 
-                storeUint16 (&buf[1], static_cast <uint16_t> (size));
-                append (buf, sizeof (buf));
+                pack (0xdc, static_cast <uint16_t> (size));
             }
             else
             {
-                char buf[5];
-                buf[0] = 0xdd; 
-                storeUint32 (&buf[1], static_cast <uint32_t> (size));
-                append (buf, sizeof (buf));
+                pack (0xdd, size);
             }
             return 0;
         }
@@ -383,17 +320,11 @@ namespace sax
             } 
             else if (size < 65536) 
             {
-                char buf[3];
-                buf[0] = 0xde;
-                storeUint16 (&buf[1], static_cast <uint16_t> (size));
-                append (buf, sizeof (buf));
+                pack (0xde, static_cast <uint16_t> (size));
             } 
             else 
             {
-                char buf[5];
-                buf[0] = 0xdf;
-                storeUint32 (&buf[1], static_cast <uint32_t> (size));
-                append (buf, sizeof (buf));
+                pack (0xdf, size);
             }
             return 0;
         }
@@ -405,95 +336,552 @@ namespace sax
          */
         virtual int setKey (const std::string& key) override
         {
-            return setStringData (key.c_str (), key.size ());
+            return setString (key);
         }
 
-    private:
+    protected:
         /**
-         * @brief set data stored as string.
-         * @param data data to set.
-         * @param size data size.
+         * @brief pack value into stream.
+         * @param head pack header.
+         * @param value value to pack.
+         */
+        template <typename Type>
+        void pack (char head, Type value)
+        {
+            append (head);
+            append (reinterpret_cast <const char *> (&utils::swap (value)), sizeof (value));
+        }
+    };
+
+    /**
+     * @brief message pack reader class.
+     */
+    class PackReader : public StreamReader
+    {
+    public:
+        /**
+         * @brief default constructor.
+         * @param root Value to write.
+         */
+        PackReader (Value& root)
+        : StreamReader (root)
+        {
+        }
+
+        /**
+         * @brief copy constructor.
+         * @param other object to copy.
+         */
+        PackReader (const PackReader& other) = delete;
+
+        /**
+         * @brief copy assignment.
+         * @param other object to copy.
+         * @return a reference of the current object.
+         */
+        PackReader& operator= (const PackReader& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other object to move.
+         */
+        PackReader (PackReader&& other) = delete;
+
+        /**
+         * @brief move assignment.
+         * @param other object to move.
+         * @return a reference of the current object.
+         */
+        PackReader& operator= (PackReader&& other) = delete;
+
+        /**
+         * @brief destroy instance.
+         */
+        virtual ~PackReader () = default;
+
+        /**
+         * @brief Deserialize a document.
+         * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        int setStringData (const char* data, uint32_t size)
+        int deserialize (const char* document) override
         {
-            if (size < 32)
+            StringView in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief Deserialize a document.
+         * @param document document to parse.
+         * @param length The length of the document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (const char* document, size_t length) override
+        {
+            StringView in (document, length);
+            return read (in);
+        }
+
+        /**
+         * @brief Deserialize a document.
+         * @param first The first character of the document to parse.
+         * @param last The last character of the document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (const char* first, const char* last) override
+        {
+            StringView in (first, last);
+            return read (in);
+        }
+
+        /**
+         * @brief Deserialize a document.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (const std::string& document) override
+        {
+            StringView in (document.c_str (), document.size ());
+            return read (in);
+        }
+
+        /**
+         * @brief Parse a document.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::istream& document) override
+        {
+            StreamView in (document);
+            return read (in);
+        }
+
+    protected:
+        /**
+         * @brief parse a document.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int read (ViewType& document)
+        {
+            if (readValue (document) == 0)
             {
-                append (static_cast <char> (0xa0 | size));
-            } 
-            else if (size < 256)
-            {
-                char buf[2];
-                buf[0] = 0xd9;
-                storeUint8 (&buf[1], static_cast <uint8_t> (size));
-                append (buf, sizeof (buf));
+                if (document.peek () == std::char_traits <char>::eof ())
+                {
+                    return 0;
+                }
+
+                join::lastError = make_error_code (SaxErrc::ExtraData);
             }
-            else if (size < 65536)
+
+            return -1;
+        }
+
+        /**
+         * @brief parse value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int readValue (ViewType& document)
+        {
+            char head = document.peek ();
+
+            if (isArray (static_cast <uint8_t> (head)))
             {
-                char buf[3];
-                buf[0] = 0xda;
-                storeUint16 (&buf[1], static_cast <uint16_t> (size));
-                append (buf, sizeof (buf));
+                return readArray (document);
+            }
+            else if (isObject (static_cast <uint8_t> (head)))
+            {
+                return readObject (document);
+            }
+            else if (isNull (static_cast <uint8_t> (head)))
+            {
+                return readNull (document);
+            }
+            else if (isFalse (static_cast <uint8_t> (head)))
+            {
+                return readFalse (document);
+            }
+            else if (isTrue (static_cast <uint8_t> (head)))
+            {
+                return readTrue (document);
+            }
+            else if (isString (static_cast <uint8_t> (head)))
+            {
+                return readString (document);
+            }
+            else if (isNumber (static_cast <uint8_t> (head)))
+            {
+                return readNumber (document);
             }
             else
             {
-                char buf[5];
-                buf[0] = 0xdb;
-                storeUint32 (&buf[1], static_cast <uint32_t> (size));
-                append (buf, sizeof (buf));
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
             }
-            append (data, size);
+
             return 0;
         }
 
         /**
-         * @brief store unsigned 8 bits integer into destination buffer.
-         * @param dest destination.
-         * @param src source.
+         * @brief parse a null value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
          */
-        void storeUint8 (char* dest, uint8_t src)
+        template <typename ViewType>
+        int readNull (ViewType& document)
         {
-            memcpy (dest, &utils::swap (src), sizeof (src));
+            if (JOIN_SAX_UNLIKELY (document.get () != 0xc0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            return setNull ();
         }
 
         /**
-         * @brief store unsigned 16 bits integer into destination buffer.
-         * @param dest destination.
-         * @param src source.
+         * @brief parse a false value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
          */
-        void storeUint16 (char* dest, uint16_t src)
+        template <typename ViewType>
+        int readFalse (ViewType& document)
         {
-            memcpy (dest, &utils::swap (src), sizeof (src));
+            if (JOIN_SAX_UNLIKELY (document.get () != 0xc2))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            return setBool (false);
         }
 
         /**
-         * @brief store unsigned 32 bits integer into destination buffer.
-         * @param dest destination.
-         * @param src source.
+         * @brief parse a true value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
          */
-        void storeUint32 (char* dest, uint32_t src)
+        template <typename ViewType>
+        int readTrue (ViewType& document)
         {
-            memcpy (dest, &utils::swap (src), sizeof (src));
+            if (JOIN_SAX_UNLIKELY (document.get () != 0xc3))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            return setBool (true);
         }
 
         /**
-         * @brief store unsigned 64 bits integer into destination buffer.
-         * @param dest destination.
-         * @param src source.
+         * @brief parse an array value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
          */
-        void storeUint64 (char* dest, uint64_t src)
+        template <typename ViewType>
+        int readArray (ViewType& document)
         {
-            memcpy (dest, &utils::swap (src), sizeof (src));
+            uint32_t len = 0;
+
+            if (document.getIf (0xdd))
+            {
+                len = unpack <uint32_t> (document);
+            }
+            else if (document.getIf (0xdc))
+            {
+                len = unpack <uint16_t> (document);
+            }
+            else
+            {
+                len = document.get () & ~0x90;
+            }
+
+            if (JOIN_SAX_UNLIKELY (startArray (len) == -1))
+            {
+                return -1;
+            }
+
+            while (len)
+            {
+                if (JOIN_SAX_UNLIKELY (readValue (document) == -1))
+                {
+                    return -1;
+                }
+
+                --len;
+            }
+
+            return stopArray ();
         }
 
         /**
-         * @brief store real into destination buffer.
-         * @param dest destination.
-         * @param src source.
+         * @brief parse an object value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
          */
-        void storeReal (char* dest, double src)
+        template <typename ViewType>
+        int readObject (ViewType& document)
         {
-            memcpy (dest, &utils::swap (src), sizeof (src));
+            uint32_t len = 0;
+
+            if (document.getIf (0xdf))
+            {
+                len = unpack <uint32_t> (document);
+            }
+            else if (document.getIf (0xde))
+            {
+                len = unpack <uint16_t> (document);
+            }
+            else
+            {
+                len = document.get () & ~0x80;
+            }
+
+            if (JOIN_SAX_UNLIKELY (startObject (len) == -1))
+            {
+                return -1;
+            }
+
+            while (len)
+            {
+                if (JOIN_SAX_UNLIKELY (readString (document, true) == -1))
+                {
+                    return -1;
+                }
+
+                if (JOIN_SAX_UNLIKELY (readValue (document) == -1))
+                {
+                    return -1;
+                }
+
+                --len;
+            }
+
+            return stopObject ();
+        }
+
+        /**
+         * @brief parse a string value.
+         * @param document document to parse.
+         * @param isKey indicate whether the string to parse is a key or not.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int readString (ViewType& document, bool isKey = false)
+        {
+            uint32_t len = 0;
+
+            if (document.getIf (0xdb))
+            {
+                len = unpack <uint32_t> (document);
+            }
+            else if (document.getIf (0xda))
+            {
+                len = unpack <uint16_t> (document);
+            }
+            else if (document.getIf (0xd9))
+            {
+                len = unpack <uint8_t> (document);
+            }
+            else
+            {
+                len = document.get () & ~0xa0;
+            }
+
+            std::string output;
+            output.resize (len);
+            document.read (&output[0], len);
+
+            return isKey ? setKey (output) : setString (output);
+        }
+
+        /**
+         * @brief parse a number value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int readNumber (ViewType& document)
+        {
+            if (document.getIf (0xd3))
+            {
+                return setInt64 (unpack <int64_t> (document));
+            }
+            else if (document.getIf (0xcf))
+            {
+                return setUint64 (unpack <uint64_t> (document));
+            }
+            else if (document.getIf (0xcb))
+            {
+                return setDouble (unpack <double> (document));
+            }
+            else if (document.getIf (0xd2))
+            {
+                return setInt (unpack <int32_t> (document));
+            }
+            else if (document.getIf (0xce))
+            {
+                return setUint (unpack <uint32_t> (document));
+            }
+            else if (document.getIf (0xca))
+            {
+                return setDouble (unpack <float> (document));
+            }
+            else if (document.getIf (0xd1))
+            {
+                return setInt (unpack <int16_t> (document));
+            }
+            else if (document.getIf (0xcd))
+            {
+                return setUint (unpack <uint16_t> (document));
+            }
+            else if (document.getIf (0xd0))
+            {
+                return setInt (unpack <int8_t> (document));
+            }
+            else if (document.getIf (0xcc))
+            {
+                return setUint (unpack <uint8_t> (document));
+            }
+
+            return setInt (document.get ());
+        }
+
+        /**
+         * @brief unpack value from stream.
+         * @param document document to parse.
+         * @return unpacked value.
+         */
+        template <typename Type, typename ViewType>
+        std::enable_if_t <std::is_arithmetic <Type>::value, Type>
+        static unpack (ViewType& document)
+        {
+            Type value;
+            document.read (reinterpret_cast <char *> (&value), sizeof (value));
+            return utils::swap (value);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isNull (uint8_t c)
+        {
+            return (c == 0xc0);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isFalse (uint8_t c)
+        {
+            return (c == 0xc2);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isTrue (uint8_t c)
+        {
+            return (c == 0xc3);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isInt (uint8_t c)
+        {
+            return ((c <= 0x7f) || (c >= 0xe0)) || (c == 0xd0) || (c == 0xd1) || (c == 0xd2) || (c == 0xd3);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isUint (uint8_t c)
+        {
+            return (c == 0xcc) || (c == 0xcd) || (c == 0xce);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isInt64 (uint8_t c)
+        {
+            return (c == 0xd3);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isUint64 (uint8_t c)
+        {
+            return (c == 0xcf);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isReal (uint8_t c)
+        {
+            return (c == 0xca) || (c == 0xcb);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isNumber (uint8_t c)
+        {
+            return isInt (c) || isUint (c) || isInt64 (c) || isUint64 (c) || isReal (c);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isString (uint8_t c)
+        {
+            return ((c >= 0xa0) && (c <= 0xbf)) || (c == 0xd9) || (c == 0xda) || (c == 0xdb);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isArray (uint8_t c)
+        {
+            return ((c >= 0x90) && (c <= 0x9f)) || (c == 0xdc) || (c == 0xdd);
+        }
+
+        /**
+         * @brief 
+         * @param c 
+         * @return 
+         */
+        constexpr bool isObject (uint8_t c)
+        {
+            return ((c >= 0x80) && (c <= 0x8f)) || (c == 0xde) || (c == 0xdf);
         }
     };
 }
