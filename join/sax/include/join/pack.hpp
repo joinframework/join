@@ -116,15 +116,18 @@ namespace sax
         {
             if (value < -(1 << 15))
             {
-                pack (0xd2, static_cast <uint32_t> (value));
+                append (0xd2);
+                pack (static_cast <uint32_t> (value));
             }
             else if (value < -(1 << 7))
             {
-                pack (0xd1, static_cast <uint16_t> (value));
+                append (0xd1);
+                pack (static_cast <uint16_t> (value));
             }
             else if (value < -(1 << 5))
             {
-                pack (0xd0, static_cast <uint8_t> (value));
+                append (0xd0);
+                pack (static_cast <uint8_t> (value));
             }
             else if (value < (1 << 7))
             {
@@ -132,15 +135,18 @@ namespace sax
             }
             else if (value < (1 << 8))
             {
-                pack (0xcc, static_cast <uint8_t> (value));
+                append (0xcc);
+                pack (static_cast <uint8_t> (value));
             }
             else if (value < (1 << 16))
             {
-                pack (0xcd, static_cast <uint16_t> (value));
+                append (0xcd);
+                pack (static_cast <uint16_t> (value));
             }
             else
             {
-                pack (0xce, static_cast <uint32_t> (value));
+                append (0xce);
+                pack (static_cast <uint32_t> (value));
             }
             return 0;
         }
@@ -158,15 +164,18 @@ namespace sax
             }
             else if (value < (1 << 8))
             {
-                pack (0xcc, static_cast <uint8_t> (value));
+                append (0xcc);
+                pack (static_cast <uint8_t> (value));
             }
             else if (value < (1 << 16))
             {
-                pack (0xcd, static_cast <uint16_t> (value));
+                append (0xcd);
+                pack (static_cast <uint16_t> (value));
             }
             else
             {
-                pack (0xce, value);
+                append (0xce);
+                pack (value);
             }
             return 0;
         }
@@ -180,19 +189,23 @@ namespace sax
         {
             if (value < -(1LL << 31)) 
             {
-                pack (0xd3, static_cast <uint64_t> (value));
+                append (0xd3);
+                pack (static_cast <uint64_t> (value));
             }
             else if (value < -(1LL << 15))
             {
-                pack (0xd2, static_cast <uint32_t> (value));
+                append (0xd2);
+                pack (static_cast <uint32_t> (value));
             }
             else if (value < -(1LL << 7))
             {
-                pack (0xd1, static_cast <uint16_t> (value));
+                append (0xd1);
+                pack (static_cast <uint16_t> (value));
             }
             else if (value < -(1LL << 5))
             {
-                pack (0xd0, static_cast <uint8_t> (value));
+                append (0xd0);
+                pack (static_cast <uint8_t> (value));
             }
             else if (value < (1LL << 7))
             {
@@ -200,19 +213,23 @@ namespace sax
             }
             else if (value < (1LL << 8))
             {
-                pack (0xcc, static_cast <uint8_t> (value));
+                append (0xcc);
+                pack (static_cast <uint8_t> (value));
             }
             else if (value < (1LL << 16))
             {
-                pack (0xcd, static_cast <uint16_t> (value));
+                append (0xcd);
+                pack (static_cast <uint16_t> (value));
             }
             else if (value < (1LL << 32))
             {
-                pack (0xce, static_cast <uint32_t> (value));
+                append (0xce);
+                pack (static_cast <uint32_t> (value));
             }
             else
             {
-                pack (0xcf, static_cast <uint64_t> (value));
+                append (0xcf);
+                pack (static_cast <uint64_t> (value));
             }
             return 0;
         }
@@ -230,19 +247,23 @@ namespace sax
             }
             else if (value < (1ULL << 8))
             {
-                pack (0xcc, static_cast <uint8_t> (value));
+                append (0xcc);
+                pack (static_cast <uint8_t> (value));
             }
             else if (value < (1ULL << 16))
             {
-                pack (0xcd, static_cast <uint16_t> (value));
+                append (0xcd);
+                pack (static_cast <uint16_t> (value));
             }
             else if (value < (1ULL << 32))
             {
-                pack (0xce, static_cast <uint32_t> (value));
+                append (0xce);
+                pack (static_cast <uint32_t> (value));
             }
             else
             {
-                pack (0xcf, value);
+                append (0xcf);
+                pack (value);
             }
             return 0;
         }
@@ -254,7 +275,8 @@ namespace sax
          */
         virtual int setDouble (double value) override
         {
-            pack (0xcb, value);
+            append (0xcb);
+            pack (value);
             return 0;
         }
 
@@ -271,15 +293,18 @@ namespace sax
             } 
             else if (value.size () < 256)
             {
-                pack (0xd9, static_cast <uint8_t> (value.size ()));
+                append (0xd9);
+                pack (static_cast <uint8_t> (value.size ()));
             }
             else if (value.size () < 65536)
             {
-                pack (0xda, static_cast <uint16_t> (value.size ()));
+                append (0xda);
+                pack (static_cast <uint16_t> (value.size ()));
             }
             else
             {
-                pack (0xdb, static_cast <uint32_t> (value.size ()));
+                append (0xdb);
+                pack (static_cast <uint32_t> (value.size ()));
             }
             append (value.c_str (), value.size ());
             return 0;
@@ -298,11 +323,13 @@ namespace sax
             }
             else if (size < 65536)
             {
-                pack (0xdc, static_cast <uint16_t> (size));
+                append (0xdc);
+                pack (static_cast <uint16_t> (size));
             }
             else
             {
-                pack (0xdd, size);
+                append (0xdd);
+                pack (size);
             }
             return 0;
         }
@@ -320,11 +347,13 @@ namespace sax
             } 
             else if (size < 65536) 
             {
-                pack (0xde, static_cast <uint16_t> (size));
+                append (0xde);
+                pack (static_cast <uint16_t> (size));
             } 
             else 
             {
-                pack (0xdf, size);
+                append (0xdf);
+                pack (size);
             }
             return 0;
         }
@@ -342,13 +371,11 @@ namespace sax
     protected:
         /**
          * @brief pack value into stream.
-         * @param head pack header.
          * @param value value to pack.
          */
         template <typename Type>
-        void pack (char head, Type value)
+        void pack (Type value)
         {
-            append (head);
             append (reinterpret_cast <const char *> (&utils::swap (value)), sizeof (value));
         }
     };
@@ -765,9 +792,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if null.
+         * @param c character to check.
+         * @return true if null, false otherwise.
          */
         constexpr bool isNull (uint8_t c)
         {
@@ -775,9 +802,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if false.
+         * @param c character to check.
+         * @return true if false, false otherwise.
          */
         constexpr bool isFalse (uint8_t c)
         {
@@ -785,9 +812,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if true.
+         * @param c character to check.
+         * @return true if true, false otherwise.
          */
         constexpr bool isTrue (uint8_t c)
         {
@@ -795,9 +822,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if 32 bits integer.
+         * @param c character to check.
+         * @return true if 32 bits integer, false otherwise.
          */
         constexpr bool isInt (uint8_t c)
         {
@@ -805,9 +832,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if unsigned 32 bits integer.
+         * @param c character to check.
+         * @return true if unsigned 32 bits integer, false otherwise.
          */
         constexpr bool isUint (uint8_t c)
         {
@@ -815,9 +842,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if 64 bits integer.
+         * @param c character to check.
+         * @return true if 64 bits integer, false otherwise.
          */
         constexpr bool isInt64 (uint8_t c)
         {
@@ -825,9 +852,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if unsigned 64 bits integer.
+         * @param c character to check.
+         * @return true if unsigned 64 bits integer, false otherwise.
          */
         constexpr bool isUint64 (uint8_t c)
         {
@@ -835,9 +862,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if real.
+         * @param c character to check.
+         * @return true if real, false otherwise.
          */
         constexpr bool isReal (uint8_t c)
         {
@@ -845,9 +872,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if number.
+         * @param c character to check.
+         * @return true if number, false otherwise.
          */
         constexpr bool isNumber (uint8_t c)
         {
@@ -855,9 +882,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if string.
+         * @param c character to check.
+         * @return true if string, false otherwise.
          */
         constexpr bool isString (uint8_t c)
         {
@@ -865,9 +892,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if array.
+         * @param c character to check.
+         * @return true if array, false otherwise.
          */
         constexpr bool isArray (uint8_t c)
         {
@@ -875,9 +902,9 @@ namespace sax
         }
 
         /**
-         * @brief 
-         * @param c 
-         * @return 
+         * @brief check if object.
+         * @param c character to check.
+         * @return true if object, false otherwise.
          */
         constexpr bool isObject (uint8_t c)
         {

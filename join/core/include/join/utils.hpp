@@ -36,28 +36,28 @@ namespace utils
 {
     namespace details
     {
-        template <typename T, size_t sz>
+        template <typename Type, size_t sz>
         struct _byteswap
         {
-            inline T operator() (T val)
+            inline Type operator() (Type val)
             {
                 throw std::out_of_range ("data size");
             }
         };
 
-        template <typename T>
-        struct _byteswap <T, 1>
+        template <typename Type>
+        struct _byteswap <Type, 1>
         {
-            inline T operator() (T val)
+            inline Type operator() (Type val)
             {
                 return val;
             }
         };
 
-        template <typename T>
-        struct _byteswap <T, 2>
+        template <typename Type>
+        struct _byteswap <Type, 2>
         {
-            inline T operator() (T val)
+            inline Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -67,10 +67,10 @@ namespace utils
             }
         };
 
-        template <typename T>
-        struct _byteswap <T, 4>
+        template <typename Type>
+        struct _byteswap <Type, 4>
         {
-            inline T operator() (T val)
+            inline Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -83,10 +83,10 @@ namespace utils
             }
         };
 
-        template <typename T>
-        struct _byteswap <T, 8>
+        template <typename Type>
+        struct _byteswap <Type, 8>
         {
-            inline T operator() (T val)
+            inline Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -133,12 +133,12 @@ namespace utils
             }
         };
 
-        template <class T>
+        template <class Type>
         struct _swap
         {
-            inline T operator() (T val)
+            inline Type operator() (Type val)
             {
-                return _byteswap <T, sizeof (T)> ()(val);
+                return _byteswap <Type, sizeof (Type)> ()(val);
             }
         };
     }
@@ -148,10 +148,10 @@ namespace utils
      * @param val value to swap.
      * @return the swapped value.
      */
-    template <class T>
-    inline T& swap (T& val)
+    template <class Type>
+    inline Type& swap (Type& val)
     {
-        val = details::_swap <T> ()(val);
+        val = details::_swap <Type> ()(val);
         return val;
     }
 }
