@@ -2533,11 +2533,11 @@ TEST (Value, getInt8)
     ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
 
     value = std::numeric_limits <int16_t>::min ();
-    ASSERT_THROW (value.getUint8 (), std::bad_cast);
+    ASSERT_THROW (value.getInt8 (), std::bad_cast);
     ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
 
     value = std::numeric_limits <int16_t>::max ();
-    ASSERT_THROW (value.getUint8 (), std::bad_cast);
+    ASSERT_THROW (value.getInt8 (), std::bad_cast);
     ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
 
     value = std::numeric_limits <uint16_t>::min ();
@@ -2551,6 +2551,10 @@ TEST (Value, getInt8)
     value = std::numeric_limits <int32_t>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
     ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+
+    value = int32_t (12);
+    ASSERT_EQ (value.getInt8 (), 12);
+    ASSERT_EQ (static_cast <int8_t> (value), 12);
 
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
@@ -2567,6 +2571,10 @@ TEST (Value, getInt8)
     value = std::numeric_limits <int64_t>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
     ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+
+    value = int64_t (12);
+    ASSERT_EQ (value.getInt8 (), 12);
+    ASSERT_EQ (static_cast <int8_t> (value), 12);
 
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
@@ -2591,6 +2599,10 @@ TEST (Value, getInt8)
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
     ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+
+    value = double (12.0);
+    ASSERT_EQ (value.getInt8 (), 12);
+    ASSERT_EQ (static_cast <int8_t> (value), 12);
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
@@ -2678,6 +2690,10 @@ TEST (Value, getUint8)
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
     ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
 
+    value = int32_t (12);
+    ASSERT_EQ (value.getUint8 (), 12);
+    ASSERT_EQ (static_cast <uint8_t> (value), 12);
+
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
     ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
@@ -2694,8 +2710,12 @@ TEST (Value, getUint8)
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
     ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
 
+    value = int64_t (12);
+    ASSERT_EQ (value.getUint8 (), 12);
+    ASSERT_EQ (static_cast <uint8_t> (value), 12);
+
     value = std::numeric_limits <int64_t>::max ();
-    ASSERT_THROW (value.getInt8 (), std::bad_cast);
+    ASSERT_THROW (value.getUint8 (), std::bad_cast);
     ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
 
     value = std::numeric_limits <uint64_t>::min ();
@@ -2717,6 +2737,10 @@ TEST (Value, getUint8)
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
     ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+
+    value = double (12.0);
+    ASSERT_EQ (value.getUint8 (), 12);
+    ASSERT_EQ (static_cast <uint8_t> (value), 12);
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
@@ -2773,7 +2797,7 @@ TEST (Value, getInt16)
     ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <int8_t>::min ());
 
     value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getInt8 (), std::numeric_limits <int8_t>::max ());
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits <int8_t>::max ());
     ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <int8_t>::max ());
 
     value = std::numeric_limits <uint8_t>::min ();
@@ -2785,11 +2809,11 @@ TEST (Value, getInt16)
     ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <uint8_t>::max ());
 
     value = std::numeric_limits <int16_t>::min ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <int16_t>::min ());
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits <int16_t>::min ());
     ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <int16_t>::min ());
 
     value = std::numeric_limits <int16_t>::max ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <int16_t>::max ());
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits <int16_t>::max ());
     ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <int16_t>::max ());
 
     value = std::numeric_limits <uint16_t>::min ();
@@ -2803,6 +2827,10 @@ TEST (Value, getInt16)
     value = std::numeric_limits <int32_t>::min ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
     ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+
+    value = int32_t (12);
+    ASSERT_EQ (value.getInt16 (), 12);
+    ASSERT_EQ (static_cast <int16_t> (value), 12);
 
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
@@ -2820,6 +2848,10 @@ TEST (Value, getInt16)
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
     ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
 
+    value = int64_t (12);
+    ASSERT_EQ (value.getInt16 (), 12);
+    ASSERT_EQ (static_cast <int16_t> (value), 12);
+
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
     ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
@@ -2833,7 +2865,7 @@ TEST (Value, getInt16)
     ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
 
     value = std::numeric_limits <float>::min ();
-    ASSERT_THROW (value.getInt8 (), std::bad_cast);
+    ASSERT_THROW (value.getInt16 (), std::bad_cast);
     ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
 
     value = std::numeric_limits <float>::max ();
@@ -2841,8 +2873,12 @@ TEST (Value, getInt16)
     ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
 
     value = std::numeric_limits <double>::min ();
-    ASSERT_THROW (value.getInt8 (), std::bad_cast);
+    ASSERT_THROW (value.getInt16 (), std::bad_cast);
     ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+
+    value = double (12.0);
+    ASSERT_EQ (value.getInt16 (), 12);
+    ASSERT_EQ (static_cast <int16_t> (value), 12);
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
@@ -2930,6 +2966,10 @@ TEST (Value, getUint16)
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
     ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
 
+    value = int32_t (12);
+    ASSERT_EQ (value.getUint16 (), 12);
+    ASSERT_EQ (static_cast <uint16_t> (value), 12);
+
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
     ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
@@ -2945,6 +2985,10 @@ TEST (Value, getUint16)
     value = std::numeric_limits <int64_t>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
     ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+
+    value = int64_t (12);
+    ASSERT_EQ (value.getUint16 (), 12);
+    ASSERT_EQ (static_cast <uint16_t> (value), 12);
 
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
@@ -2969,6 +3013,10 @@ TEST (Value, getUint16)
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
     ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+
+    value = double (12.0);
+    ASSERT_EQ (value.getUint16 (), 12);
+    ASSERT_EQ (static_cast <uint16_t> (value), 12);
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
@@ -3072,6 +3120,10 @@ TEST (Value, getInt)
     ASSERT_THROW (value.getInt (), std::bad_cast);
     ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
 
+    value = int64_t (12);
+    ASSERT_EQ (value.getInt (), 12);
+    ASSERT_EQ (static_cast <int32_t> (value), 12);
+
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
     ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
@@ -3095,6 +3147,10 @@ TEST (Value, getInt)
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
     ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+
+    value = double (12.0);
+    ASSERT_EQ (value.getInt (), 12);
+    ASSERT_EQ (static_cast <int32_t> (value), 12);
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
@@ -3198,6 +3254,10 @@ TEST (Value, getUint)
     ASSERT_THROW (value.getUint (), std::bad_cast);
     ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
 
+    value = int64_t (12);
+    ASSERT_EQ (value.getUint (), 12);
+    ASSERT_EQ (static_cast <uint32_t> (value), 12);
+
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
     ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
@@ -3221,6 +3281,10 @@ TEST (Value, getUint)
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
     ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+
+    value = double (12.0);
+    ASSERT_EQ (value.getUint (), 12);
+    ASSERT_EQ (static_cast <uint32_t> (value), 12);
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
@@ -3348,6 +3412,10 @@ TEST (Value, getInt64)
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
     ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
 
+    value = double (12.0);
+    ASSERT_EQ (value.getInt64 (), 12);
+    ASSERT_EQ (static_cast <int64_t> (value), 12);
+
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
     ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
@@ -3473,6 +3541,10 @@ TEST (Value, getUint64)
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
     ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+
+    value = double (12.0);
+    ASSERT_EQ (value.getUint64 (), 12);
+    ASSERT_EQ (static_cast <uint64_t> (value), 12);
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
