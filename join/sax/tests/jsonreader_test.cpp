@@ -52,12 +52,17 @@ TEST (JsonReader, deserialize)
 
     stream.clear ();
     stream.str ("[]");
+    std::string str ("[]");
     char data[] = {'\x5b', '\x5d', '\x00'};
 
     ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
+    ASSERT_EQ (value.deserialize <JsonReader> (str), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value.empty ());
+    
     ASSERT_EQ (value.deserialize <JsonReader> (data, sizeof (data) - 1), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());

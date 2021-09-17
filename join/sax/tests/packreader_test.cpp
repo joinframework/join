@@ -52,9 +52,14 @@ TEST (PackReader, deserialize)
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x00'}));
+    std::string str ({'\xdd', '\x00', '\x00', '\x00', '\x00'});
     char data[] = {'\xdd', '\x00', '\x00', '\x00', '\x00', '\x00'};
 
     ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value.empty ());
+
+    ASSERT_EQ (value.deserialize <PackReader> (str), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
