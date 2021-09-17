@@ -42,6 +42,31 @@ using join::sax::Value;
 using join::sax::JsonReader;
 
 /**
+ * @brief Test deserialize method.
+ */
+TEST (JsonReader, deserialize)
+{
+    std::stringstream stream;
+    Value value;
+
+    stream.clear ();
+    stream.str ("[]");
+    char data[] = {'\x5b', '\x5d'};
+
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value.empty ());
+
+    ASSERT_EQ (value.deserialize <JsonReader> (data, sizeof (data)), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value.empty ());
+
+    ASSERT_EQ (value.deserialize <JsonReader> (&data[0], &data[sizeof (data)]), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value.empty ());
+}
+
+/**
  * @brief Test JSON parsing pass.
  */
 TEST (JsonReader, pass)

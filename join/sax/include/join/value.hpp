@@ -1385,18 +1385,6 @@ namespace sax
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Reader>
-        int deserialize (const char* document)
-        {
-            Reader reader (*this);
-            return reader.deserialize (document);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
          * @param length the length of the document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
