@@ -549,12 +549,7 @@ namespace sax
         template <typename ViewType>
         int readNull (ViewType& document)
         {
-            if (JOIN_SAX_UNLIKELY (document.get () != 0xc0))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
-                return -1;
-            }
-
+            document.get ();
             return setNull ();
         }
 
@@ -566,12 +561,7 @@ namespace sax
         template <typename ViewType>
         int readFalse (ViewType& document)
         {
-            if (JOIN_SAX_UNLIKELY (document.get () != 0xc2))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
-                return -1;
-            }
-
+            document.get ();
             return setBool (false);
         }
 
@@ -583,12 +573,7 @@ namespace sax
         template <typename ViewType>
         int readTrue (ViewType& document)
         {
-            if (JOIN_SAX_UNLIKELY (document.get () != 0xc3))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
-                return -1;
-            }
-
+            document.get ();
             return setBool (true);
         }
 

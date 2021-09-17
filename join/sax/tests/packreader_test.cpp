@@ -39,6 +39,7 @@ using join::sax::Member;
 using join::sax::Object;
 using join::sax::Value;
 
+using join::sax::SaxErrc;
 using join::sax::PackReader;
 
 /**
@@ -51,19 +52,22 @@ TEST (PackReader, deserialize)
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x00'}));
-    char data[] = {'\xdd', '\x00', '\x00', '\x00', '\x00'};
+    char data[] = {'\xdd', '\x00', '\x00', '\x00', '\x00', '\x00'};
 
     ASSERT_EQ (value.deserialize <PackReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
-    ASSERT_EQ (value.deserialize <PackReader> (data, sizeof (data)), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (data, sizeof (data) - 1), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
-    ASSERT_EQ (value.deserialize <PackReader> (&data[0], &data[sizeof (data)]), 0) << join::lastError.message ();
+    ASSERT_EQ (value.deserialize <PackReader> (&data[0], &data[sizeof (data) - 1]), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
+
+    ASSERT_EQ (value.deserialize <PackReader> (&data[0], &data[sizeof (data)]), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::ExtraData);
 }
 
 /**
