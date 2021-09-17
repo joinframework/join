@@ -453,13 +453,6 @@ namespace sax
         /**
          * @brief Deserialize a document.
          * @param document document to parse.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int deserialize (const char* document) = 0;
-
-        /**
-         * @brief Deserialize a document.
-         * @param document document to parse.
          * @param length The length of the document to parse.
          * @return 0 on success, -1 otherwise.
          */

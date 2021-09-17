@@ -26,6 +26,10 @@ add_executable(jsonwriter.gtest jsonwriter_test.cpp)
 target_link_libraries(jsonwriter.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(jsonwriter.gtest)
 
+add_executable(packreader.gtest packreader_test.cpp)
+target_link_libraries(packreader.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(packreader.gtest)
+
 add_executable(packwriter.gtest packwriter_test.cpp)
 target_link_libraries(packwriter.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(packwriter.gtest)
