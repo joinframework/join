@@ -189,7 +189,7 @@ namespace join
          * @param family IP address family.
          */
         constexpr Udp (int family = AF_INET) noexcept
-        : family_ (family)
+        : _family (family)
         {
         }
 
@@ -219,7 +219,7 @@ namespace join
          */
         constexpr int family () const noexcept
         {
-            return family_;
+            return _family;
         }
 
         /**
@@ -242,7 +242,7 @@ namespace join
 
     private:
         /// IP address family.
-        int family_;
+        int _family;
     };
 
     /**
@@ -282,7 +282,7 @@ namespace join
          * @param family IP address family.
          */
         constexpr Icmp (int family = AF_INET) noexcept
-        : family_ (family)
+        : _family (family)
         {
         }
 
@@ -312,7 +312,7 @@ namespace join
          */
         constexpr int family () const noexcept
         {
-            return family_;
+            return _family;
         }
 
         /**
@@ -340,7 +340,7 @@ namespace join
 
     private:
         /// IP address family.
-        int family_;
+        int _family;
     };
 
     /**
@@ -383,7 +383,7 @@ namespace join
          * @param family IP address family.
          */
         constexpr Tcp (int family = AF_INET) noexcept
-        : family_ (family)
+        : _family (family)
         {
         }
 
@@ -413,7 +413,7 @@ namespace join
          */
         constexpr int family () const noexcept
         {
-            return family_;
+            return _family;
         }
 
         /**
@@ -436,7 +436,7 @@ namespace join
 
     private:
         /// IP address family.
-        int family_;
+        int _family;
     };
 
     /**

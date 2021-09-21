@@ -59,7 +59,7 @@ MacAddress::MacAddress ()
 //   METHOD    : MacAddress
 // =========================================================================
 MacAddress::MacAddress (const MacAddress& address)
-: mac_ (address.mac_)
+: _mac (address._mac)
 {
 }
 
@@ -68,7 +68,7 @@ MacAddress::MacAddress (const MacAddress& address)
 //   METHOD    : MacAddress
 // =========================================================================
 MacAddress::MacAddress (MacAddress&& address)
-: mac_ (std::move (address.mac_))
+: _mac (std::move (address._mac))
 {
 }
 
@@ -78,12 +78,12 @@ MacAddress::MacAddress (MacAddress&& address)
 // =========================================================================
 MacAddress::MacAddress (const uint8_t* address, size_t size)
 {
-    if (size > mac_.size ())
+    if (size > _mac.size ())
     {
         throw std::out_of_range ("out of range");
     }
 
-    memcpy (&mac_[0], address, size);
+    memcpy (&_mac[0], address, size);
 }
 
 // =========================================================================
@@ -92,7 +92,7 @@ MacAddress::MacAddress (const uint8_t* address, size_t size)
 // =========================================================================
 MacAddress::MacAddress (const uint8_t (&address) [IFHWADDRLEN])
 {
-    std::copy (std::begin (address), std::end (address), std::begin (mac_));
+    std::copy (std::begin (address), std::end (address), std::begin (_mac));
 }
 
 // =========================================================================
@@ -101,12 +101,12 @@ MacAddress::MacAddress (const uint8_t (&address) [IFHWADDRLEN])
 // =========================================================================
 MacAddress::MacAddress (std::initializer_list <uint8_t> address)
 {
-    if (address.size () > mac_.size ())
+    if (address.size () > _mac.size ())
     {
         throw std::out_of_range ("out of range");
     }
 
-    std::copy (address.begin (), address.end (), std::begin (mac_));
+    std::copy (address.begin (), address.end (), std::begin (_mac));
 }
 
 // =========================================================================
@@ -116,9 +116,9 @@ MacAddress::MacAddress (std::initializer_list <uint8_t> address)
 MacAddress::MacAddress (const char* address)
 {
     if (sscanf (address, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
-                &mac_[0], &mac_[1], &mac_[2],
-                &mac_[3], &mac_[4], &mac_[5]) !=
-                static_cast <int> (mac_.size ()))
+                &_mac[0], &_mac[1], &_mac[2],
+                &_mac[3], &_mac[4], &_mac[5]) !=
+                static_cast <int> (_mac.size ()))
     {
         throw std::invalid_argument ("invalid MAC address");
     }
@@ -141,7 +141,7 @@ MacAddress::MacAddress (const struct sockaddr& address)
 {
     if (address.sa_family == ARPHRD_ETHER)
     {
-        memcpy (mac_.data (), address.sa_data, mac_.size ());
+        memcpy (_mac.data (), address.sa_data, _mac.size ());
         return;
     }
 
@@ -163,7 +163,7 @@ int MacAddress::family () const
 // =========================================================================
 const uint8_t* MacAddress::addr () const
 {
-    return mac_.data ();
+    return _mac.data ();
 }
 
 // =========================================================================
@@ -172,7 +172,7 @@ const uint8_t* MacAddress::addr () const
 // =========================================================================
 socklen_t MacAddress::length () const
 {
-    return mac_.size ();
+    return _mac.size ();
 }
 
 // =========================================================================
@@ -181,9 +181,9 @@ socklen_t MacAddress::length () const
 // =========================================================================
 bool MacAddress::isWildcard () const
 {
-    return (mac_[0] == 0 && mac_[1] == 0 &&
-            mac_[2] == 0 && mac_[3] == 0 &&
-            mac_[4] == 0 && mac_[5] == 0);
+    return (_mac[0] == 0 && _mac[1] == 0 &&
+            _mac[2] == 0 && _mac[3] == 0 &&
+            _mac[4] == 0 && _mac[5] == 0);
 }
 
 // =========================================================================
@@ -192,9 +192,9 @@ bool MacAddress::isWildcard () const
 // =========================================================================
 bool MacAddress::isBroadcast () const
 {
-    return (mac_[0] == 0xff && mac_[1] == 0xff &&
-            mac_[2] == 0xff && mac_[3] == 0xff &&
-            mac_[4] == 0xff && mac_[5] == 0xff);
+    return (_mac[0] == 0xff && _mac[1] == 0xff &&
+            _mac[2] == 0xff && _mac[3] == 0xff &&
+            _mac[4] == 0xff && _mac[5] == 0xff);
 }
 
 // =========================================================================
@@ -223,13 +223,13 @@ std::string MacAddress::toString (CaseConvert caseConvert) const
 {
     std::stringstream oss;
 
-    for (unsigned int i = 0u; i < (mac_.size () - 1); ++i)
+    for (unsigned int i = 0u; i < (_mac.size () - 1); ++i)
     {
         oss << std::hex << caseConvert << std::setw (2);
-        oss << std::setfill ('0') << static_cast <uint32_t> (mac_[i]) << ':';
+        oss << std::setfill ('0') << static_cast <uint32_t> (_mac[i]) << ':';
     }
     oss << std::hex << caseConvert << std::setw (2);
-    oss << std::setfill ('0') << static_cast <uint32_t> (mac_[mac_.size () - 1]);
+    oss << std::setfill ('0') << static_cast <uint32_t> (_mac[_mac.size () - 1]);
 
     return oss.str ();
 }
@@ -242,14 +242,14 @@ IpAddress MacAddress::toIpv6 (const IpAddress& prefix, int len) const
 {
     IpAddress address = prefix & IpAddress (len, AF_INET6);
 
-    address[8]  = mac_[0] ^ (1 << 1);
-    address[9]  = mac_[1];
-    address[10] = mac_[2];
+    address[8]  = _mac[0] ^ (1 << 1);
+    address[9]  = _mac[1];
+    address[10] = _mac[2];
     address[11] = 0xff;
     address[12] = 0xfe;
-    address[13] = mac_[3];
-    address[14] = mac_[4];
-    address[15] = mac_[5];
+    address[13] = _mac[3];
+    address[14] = _mac[4];
+    address[15] = _mac[5];
 
     return address;
 }
@@ -294,7 +294,7 @@ IpAddress MacAddress::toUniqueLocalIpv6 () const
 // =========================================================================
 void MacAddress::clear ()
 {
-    memset (mac_.data (), 0, mac_.size ());
+    memset (_mac.data (), 0, _mac.size ());
 }
 
 // =========================================================================
@@ -303,7 +303,7 @@ void MacAddress::clear ()
 // =========================================================================
 MacAddress::iterator MacAddress::begin ()
 {
-    return mac_.begin ();
+    return _mac.begin ();
 }
 
 // =========================================================================
@@ -312,7 +312,7 @@ MacAddress::iterator MacAddress::begin ()
 // =========================================================================
 MacAddress::const_iterator MacAddress::begin () const
 {
-    return mac_.begin ();
+    return _mac.begin ();
 }
 
 // =========================================================================
@@ -321,7 +321,7 @@ MacAddress::const_iterator MacAddress::begin () const
 // =========================================================================
 MacAddress::const_iterator MacAddress::cbegin () const
 {
-    return mac_.cbegin ();
+    return _mac.cbegin ();
 }
 
 // =========================================================================
@@ -330,7 +330,7 @@ MacAddress::const_iterator MacAddress::cbegin () const
 // =========================================================================
 MacAddress::iterator MacAddress::end ()
 {
-    return mac_.end ();
+    return _mac.end ();
 }
 
 // =========================================================================
@@ -339,7 +339,7 @@ MacAddress::iterator MacAddress::end ()
 // =========================================================================
 MacAddress::const_iterator MacAddress::end () const
 {
-    return mac_.end ();
+    return _mac.end ();
 }
 
 // =========================================================================
@@ -348,7 +348,7 @@ MacAddress::const_iterator MacAddress::end () const
 // =========================================================================
 MacAddress::const_iterator MacAddress::cend () const
 {
-    return mac_.cend ();
+    return _mac.cend ();
 }
 
 // =========================================================================
@@ -357,7 +357,7 @@ MacAddress::const_iterator MacAddress::cend () const
 // =========================================================================
 MacAddress& MacAddress::operator= (const MacAddress& address)
 {
-    mac_ = address.mac_;
+    _mac = address._mac;
     return *this;
 }
 
@@ -367,7 +367,7 @@ MacAddress& MacAddress::operator= (const MacAddress& address)
 // =========================================================================
 MacAddress& MacAddress::operator= (MacAddress&& address)
 {
-    mac_ = std::move (address.mac_);
+    _mac = std::move (address._mac);
     return *this;
 }
 
@@ -377,10 +377,10 @@ MacAddress& MacAddress::operator= (MacAddress&& address)
 // =========================================================================
 MacAddress& MacAddress::operator= (std::initializer_list <uint8_t> address)
 {
-    if (address.size () <= mac_.size ())
+    if (address.size () <= _mac.size ())
     {
-        mac_.fill (0);
-        std::copy (address.begin (), address.end (), std::begin (mac_));
+        _mac.fill (0);
+        std::copy (address.begin (), address.end (), std::begin (_mac));
         return *this;
     }
 
@@ -395,7 +395,7 @@ MacAddress& MacAddress::operator= (const struct sockaddr& address)
 {
     if (address.sa_family == ARPHRD_ETHER)
     {
-        memcpy (mac_.data (), address.sa_data, mac_.size ());
+        memcpy (_mac.data (), address.sa_data, _mac.size ());
         return *this;
     }
 
@@ -408,10 +408,10 @@ MacAddress& MacAddress::operator= (const struct sockaddr& address)
 // =========================================================================
 MacAddress& MacAddress::operator+= (int value)
 {
-    for (int pos = mac_.size () - 1; pos >= 0 && value != 0; --pos)
+    for (int pos = _mac.size () - 1; pos >= 0 && value != 0; --pos)
     {
-        int val = mac_[pos] + value;
-        mac_[pos] = val % 256;
+        int val = _mac[pos] + value;
+        _mac[pos] = val % 256;
         value = val / 256;
     }
 
@@ -444,12 +444,12 @@ MacAddress MacAddress::operator++ (int)
 // =========================================================================
 uint8_t& MacAddress::operator[] (size_t position)
 {
-    if (position > mac_.size () - 1)
+    if (position > _mac.size () - 1)
     {
         throw std::out_of_range ("position is out of range");
     }
 
-    return mac_[position];
+    return _mac[position];
 }
 
 // =========================================================================
@@ -458,12 +458,12 @@ uint8_t& MacAddress::operator[] (size_t position)
 // =========================================================================
 const uint8_t& MacAddress::operator[] (size_t position) const
 {
-    if (position > mac_.size () - 1)
+    if (position > _mac.size () - 1)
     {
         throw std::out_of_range ("position is out of range");
     }
 
-    return mac_[position];
+    return _mac[position];
 }
 
 // =========================================================================
@@ -473,12 +473,12 @@ const uint8_t& MacAddress::operator[] (size_t position) const
 MacAddress MacAddress::operator~ () const
 {
     MacAddress addr (*this);
-    addr.mac_[0] ^= 0xff;
-    addr.mac_[1] ^= 0xff;
-    addr.mac_[2] ^= 0xff;
-    addr.mac_[3] ^= 0xff;
-    addr.mac_[4] ^= 0xff;
-    addr.mac_[5] ^= 0xff;
+    addr._mac[0] ^= 0xff;
+    addr._mac[1] ^= 0xff;
+    addr._mac[2] ^= 0xff;
+    addr._mac[3] ^= 0xff;
+    addr._mac[4] ^= 0xff;
+    addr._mac[5] ^= 0xff;
     return addr;
 }
 

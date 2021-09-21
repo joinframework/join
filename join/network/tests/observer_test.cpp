@@ -64,9 +64,9 @@ protected:
      */
     virtual void onReceive () override
     {
-        std::lock_guard <std::mutex> lock (mut_);
-        data_ = "onReceive";
-        cond_.notify_all ();
+        std::lock_guard <std::mutex> lock (_mut);
+        _data = "onReceive";
+        _cond.notify_all ();
     }
 
     /**
@@ -74,10 +74,10 @@ protected:
      */
     virtual void onError () override
     {
-        std::lock_guard <std::mutex> lock (mut_);
+        std::lock_guard <std::mutex> lock (_mut);
         BasicObserver::onError ();
-        data_ = "onError";
-        cond_.notify_all ();
+        _data = "onError";
+        _cond.notify_all ();
     }
 
     /**
@@ -85,37 +85,37 @@ protected:
      */
     virtual void onClose () override
     {
-        std::lock_guard <std::mutex> lock (mut_);
+        std::lock_guard <std::mutex> lock (_mut);
         BasicObserver::onClose ();
-        data_ = "onClose";
-        cond_.notify_all ();
+        _data = "onClose";
+        _cond.notify_all ();
     }
 
     /// host.
-    static const std::string host_;
+    static const std::string _host;
 
     /// port.
-    static const uint16_t port_;
+    static const uint16_t _port;
 
     /// timeout.
-    static const int timeout_;
+    static const int _timeout;
 
     /// condition variable.
-    static std::condition_variable cond_;
+    static std::condition_variable _cond;
 
     /// condition mutex.
-    static std::mutex mut_;
+    static std::mutex _mut;
 
     /// data.
-    static std::string data_;
+    static std::string _data;
 };
 
-const std::string       Observer::host_    = "localhost";
-const uint16_t          Observer::port_    = 5000;
-const int               Observer::timeout_ = 1000;
-std::condition_variable Observer::cond_;
-std::mutex              Observer::mut_;
-std::string             Observer::data_;
+const std::string       Observer::_host    = "localhost";
+const uint16_t          Observer::_port    = 5000;
+const int               Observer::_timeout = 1000;
+std::condition_variable Observer::_cond;
+std::mutex              Observer::_mut;
+std::string             Observer::_data;
 
 /**
  * @brief Test start method.
@@ -161,16 +161,16 @@ TEST_F (Observer, onReceive)
     Tcp::Acceptor server;
     Tcp::Socket socket;
 
-    ASSERT_EQ (server.bind ({Tcp::Resolver::resolveHost (host_), port_}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
-    ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (host_), port_}), 0) << join::lastError.message ();
+    ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((socket = server.accept ()).connected ());
     ASSERT_EQ (start (), 0) << join::lastError.message ();
-    ASSERT_EQ (socket.writeData ("onReceive", strlen ("onReceive"), timeout_), 0) << join::lastError.message ();
+    ASSERT_EQ (socket.writeData ("onReceive", strlen ("onReceive"), _timeout), 0) << join::lastError.message ();
     {
-        std::unique_lock <std::mutex> lk (mut_);
-        ASSERT_TRUE (cond_.wait_for (lk, std::chrono::milliseconds (timeout_), [this] () {return data_ == "onReceive";}));
-        data_.clear ();
+        std::unique_lock <std::mutex> lk (_mut);
+        ASSERT_TRUE (_cond.wait_for (lk, std::chrono::milliseconds (_timeout), [this] () {return _data == "onReceive";}));
+        _data.clear ();
     }
     ASSERT_EQ (stop (), 0) << join::lastError.message ();
     ASSERT_EQ (socket.close (), 0) << join::lastError.message ();
@@ -189,17 +189,17 @@ TEST_F (Observer, onError)
     sl.l_onoff = 1;
     sl.l_linger = 0;
 
-    ASSERT_EQ (server.bind ({Tcp::Resolver::resolveHost (host_), port_}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
-    ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (host_), port_}), 0) << join::lastError.message ();
+    ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((socket = server.accept ()).connected ());
     ASSERT_EQ (start (), 0) << join::lastError.message ();
     ASSERT_EQ (setsockopt (socket.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
     ASSERT_EQ (socket.close (), 0) << join::lastError.message ();
     {
-        std::unique_lock <std::mutex> lk (mut_);
-        ASSERT_TRUE (cond_.wait_for (lk, std::chrono::milliseconds (timeout_), [this] () {return data_ == "onError";}));
-        data_.clear ();
+        std::unique_lock <std::mutex> lk (_mut);
+        ASSERT_TRUE (_cond.wait_for (lk, std::chrono::milliseconds (_timeout), [this] () {return _data == "onError";}));
+        _data.clear ();
     }
     ASSERT_EQ (stop (), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
@@ -213,16 +213,16 @@ TEST_F (Observer, onClose)
     Tcp::Acceptor server;
     Tcp::Socket socket;
 
-    ASSERT_EQ (server.bind ({Tcp::Resolver::resolveHost (host_), port_}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
-    ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (host_), port_}), 0) << join::lastError.message ();
+    ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((socket = server.accept ()).connected ());
     ASSERT_EQ (start (), 0) << join::lastError.message ();
     ASSERT_EQ (socket.close (), 0) << join::lastError.message ();
     {
-        std::unique_lock <std::mutex> lk (mut_);
-        ASSERT_TRUE (cond_.wait_for (lk, std::chrono::milliseconds (timeout_), [this] () {return data_ == "onClose";}));
-        data_.clear ();
+        std::unique_lock <std::mutex> lk (_mut);
+        ASSERT_TRUE (_cond.wait_for (lk, std::chrono::milliseconds (_timeout), [this] () {return _data == "onClose";}));
+        _data.clear ();
     }
     ASSERT_EQ (stop (), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
