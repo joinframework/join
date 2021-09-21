@@ -30,8 +30,6 @@
 
 namespace join
 {
-namespace net
-{
     /**
      * @brief basic acceptor class.
      */
@@ -772,7 +770,6 @@ namespace net
         /// SSL session id.
         int sessionId_ = 0;
     };
-}
 }
 
 #endif

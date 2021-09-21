@@ -32,8 +32,6 @@
 
 namespace join
 {
-namespace utils
-{
     namespace details
     {
         template <typename Type, size_t sz>
@@ -154,5 +152,4 @@ namespace utils
         val = details::_swap <Type> ()(val);
         return val;
     }
-}
 }

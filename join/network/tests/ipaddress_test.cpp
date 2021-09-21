@@ -31,7 +31,7 @@
 // C++.
 #include <sstream>
 
-using join::net::IpAddress;
+using join::IpAddress;
 
 /**
  * @brief Test default construction.

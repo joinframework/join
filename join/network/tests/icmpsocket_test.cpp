@@ -29,9 +29,9 @@
 #include <gtest/gtest.h>
 
 using join::Errc;
-using join::net::MacAddress;
-using join::net::IpAddress;
-using join::net::Icmp;
+using join::MacAddress;
+using join::IpAddress;
+using join::Icmp;
 
 /**
  * @brief Class used to test the ICMP socket API.

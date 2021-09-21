@@ -28,8 +28,8 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::sax::JsonErrc;
-using join::sax::JsonCategory;
+using join::JsonErrc;
+using join::JsonCategory;
 
 /**
  * @brief Test name.

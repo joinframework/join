@@ -38,8 +38,6 @@
 
 namespace join
 {
-namespace net
-{
     /**
      * @brief IP address implementation interface.
      */
@@ -901,9 +899,8 @@ namespace net
         uint32_t scope_ = 0;
     };
 }
-}
 
-using join::net::IpAddress;
+using join::IpAddress;
 
 /// wildcard IPv6 address.
 const IpAddress IpAddress::ipv6Wildcard = "::";
@@ -1510,7 +1507,7 @@ const uint8_t& IpAddress::operator[] (size_t position) const
 //   CLASS     :
 //   METHOD    : operator==
 // =========================================================================
-bool join::net::operator== (const IpAddress& a, const IpAddress& b)
+bool join::operator== (const IpAddress& a, const IpAddress& b)
 {
     if (a.length () != b.length ())
     {
@@ -1529,7 +1526,7 @@ bool join::net::operator== (const IpAddress& a, const IpAddress& b)
 //   CLASS     :
 //   METHOD    : operator!=
 // =========================================================================
-bool join::net::operator!= (const IpAddress& a, const IpAddress& b)
+bool join::operator!= (const IpAddress& a, const IpAddress& b)
 {
     return !(a == b);
 }
@@ -1538,7 +1535,7 @@ bool join::net::operator!= (const IpAddress& a, const IpAddress& b)
 //   CLASS     :
 //   METHOD    : operator<
 // =========================================================================
-bool join::net::operator< (const IpAddress& a, const IpAddress& b)
+bool join::operator< (const IpAddress& a, const IpAddress& b)
 {
     if (a.family () == b.family ())
     {
@@ -1557,7 +1554,7 @@ bool join::net::operator< (const IpAddress& a, const IpAddress& b)
 //   CLASS     :
 //   METHOD    : operator<=
 // =========================================================================
-bool join::net::operator<= (const IpAddress& a, const IpAddress& b)
+bool join::operator<= (const IpAddress& a, const IpAddress& b)
 {
     return !(b < a);
 }
@@ -1566,7 +1563,7 @@ bool join::net::operator<= (const IpAddress& a, const IpAddress& b)
 //   CLASS     :
 //   METHOD    : operator>
 // =========================================================================
-bool join::net::operator> (const IpAddress& a, const IpAddress& b)
+bool join::operator> (const IpAddress& a, const IpAddress& b)
 {
     return b < a;
 }
@@ -1575,7 +1572,7 @@ bool join::net::operator> (const IpAddress& a, const IpAddress& b)
 //   CLASS     :
 //   METHOD    : operator>=
 // =========================================================================
-bool join::net::operator>= (const IpAddress& a, const IpAddress& b)
+bool join::operator>= (const IpAddress& a, const IpAddress& b)
 {
     return !(a < b);
 }
@@ -1584,7 +1581,7 @@ bool join::net::operator>= (const IpAddress& a, const IpAddress& b)
 //   CLASS     :
 //   METHOD    : operator&
 // =========================================================================
-IpAddress join::net::operator& (const IpAddress& a, const IpAddress& b)
+IpAddress join::operator& (const IpAddress& a, const IpAddress& b)
 {
     if (a.family () == b.family ())
     {
@@ -1611,7 +1608,7 @@ IpAddress join::net::operator& (const IpAddress& a, const IpAddress& b)
 //   CLASS     :
 //   METHOD    : operator|
 // =========================================================================
-IpAddress join::net::operator| (const IpAddress& a, const IpAddress& b)
+IpAddress join::operator| (const IpAddress& a, const IpAddress& b)
 {
     if (a.family () == b.family ())
     {
@@ -1638,7 +1635,7 @@ IpAddress join::net::operator| (const IpAddress& a, const IpAddress& b)
 //   CLASS     :
 //   METHOD    : operator^
 // =========================================================================
-IpAddress join::net::operator^ (const IpAddress& a, const IpAddress& b)
+IpAddress join::operator^ (const IpAddress& a, const IpAddress& b)
 {
     if (a.family () == b.family ())
     {
@@ -1665,7 +1662,7 @@ IpAddress join::net::operator^ (const IpAddress& a, const IpAddress& b)
 //   CLASS     :
 //   METHOD    : operator<<
 // =========================================================================
-std::ostream& join::net::operator<< (std::ostream& out, const IpAddress& address)
+std::ostream& join::operator<< (std::ostream& out, const IpAddress& address)
 {
     out << address.toString ();
     return out;

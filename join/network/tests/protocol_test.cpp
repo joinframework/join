@@ -28,12 +28,12 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::net::UnixDgram;
-using join::net::UnixStream;
-using join::net::Raw;
-using join::net::Udp;
-using join::net::Icmp;
-using join::net::Tcp;
+using join::UnixDgram;
+using join::UnixStream;
+using join::Raw;
+using join::Udp;
+using join::Icmp;
+using join::Tcp;
 
 /**
  * @brief test the family method.

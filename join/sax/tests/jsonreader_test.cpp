@@ -34,13 +34,13 @@
 // C.
 #include <cmath>
 
-using join::sax::Array;
-using join::sax::Member;
-using join::sax::Object;
-using join::sax::Value;
+using join::Array;
+using join::Member;
+using join::Object;
+using join::Value;
 
-using join::sax::SaxErrc;
-using join::sax::JsonReader;
+using join::SaxErrc;
+using join::JsonReader;
 
 /**
  * @brief Test deserialize method.

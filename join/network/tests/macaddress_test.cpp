@@ -32,7 +32,7 @@
 #include <linux/if_arp.h>
 #include <climits>
 
-using join::net::MacAddress;
+using join::MacAddress;
 
 /**
  * @brief Test default construction.

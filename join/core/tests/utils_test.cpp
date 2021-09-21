@@ -28,42 +28,40 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using namespace join;
-
 /**
  * @brief test swap.
  */
 TEST (Utils, swap)
 {
     int8_t int8Val = 12;
-    EXPECT_EQ (utils::swap (int8Val), 12);
+    EXPECT_EQ (join::swap (int8Val), 12);
 
     uint8_t uint8Val = 12;
-    EXPECT_EQ (utils::swap (uint8Val), 12);
+    EXPECT_EQ (join::swap (uint8Val), 12);
 
     int16_t int16Val = 12;
-    EXPECT_EQ (utils::swap (int16Val), 3072);
+    EXPECT_EQ (join::swap (int16Val), 3072);
 
     uint16_t uint16Val = 12;
-    EXPECT_EQ (utils::swap (uint16Val), 3072);
+    EXPECT_EQ (join::swap (uint16Val), 3072);
 
     int32_t int32Val = 12;
-    EXPECT_EQ (utils::swap (int32Val), 201326592);
+    EXPECT_EQ (join::swap (int32Val), 201326592);
 
     uint32_t uint32Val = 12;
-    EXPECT_EQ (utils::swap (uint32Val), 201326592);
+    EXPECT_EQ (join::swap (uint32Val), 201326592);
 
     int64_t int64Val = 12;
-    EXPECT_EQ (utils::swap (int64Val), 864691128455135232);
+    EXPECT_EQ (join::swap (int64Val), 864691128455135232);
 
     uint64_t uint64Val = 12;
-    EXPECT_EQ (utils::swap (uint64Val), 864691128455135232);
+    EXPECT_EQ (join::swap (uint64Val), 864691128455135232);
 
     float floatVal = 12.0;
-    EXPECT_FLOAT_EQ (utils::swap (floatVal), 2.305e-41);
+    EXPECT_FLOAT_EQ (join::swap (floatVal), 2.305e-41);
 
     double doubleVal = 12.0;
-    EXPECT_DOUBLE_EQ (utils::swap (doubleVal), 5.09085e-320);
+    EXPECT_DOUBLE_EQ (join::swap (doubleVal), 5.09085e-320);
 }
 
 /**

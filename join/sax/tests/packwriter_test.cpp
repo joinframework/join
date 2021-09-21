@@ -31,7 +31,7 @@
 // C++.
 #include <sstream>
 
-using join::sax::PackWriter;
+using join::PackWriter;
 
 /**
  * @brief Test setNull method.

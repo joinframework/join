@@ -28,8 +28,8 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::sax::SaxErrc;
-using join::sax::SaxCategory;
+using join::SaxErrc;
+using join::SaxCategory;
 
 /**
  * @brief Test name.

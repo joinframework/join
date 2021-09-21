@@ -29,8 +29,8 @@
 #include <gtest/gtest.h>
 
 using join::Errc;
-using join::net::IpAddress;
-using join::net::Tcp;
+using join::IpAddress;
+using join::Tcp;
 
 IpAddress address = "127.0.0.1";
 uint16_t  port    = 5000;

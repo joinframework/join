@@ -33,8 +33,6 @@
 
 namespace join
 {
-namespace net
-{
     template <class Protocol> class BasicResolver;
 
     template <class Protocol> class BasicSocket;
@@ -462,7 +460,6 @@ namespace net
     {
         return !(a == b);
     }
-}
 }
 
 #endif

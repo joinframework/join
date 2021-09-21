@@ -32,8 +32,8 @@
 #include <fstream>
 
 using join::Errc;
-using join::net::IpAddress;
-using join::net::Tcp;
+using join::IpAddress;
+using join::Tcp;
 
 /**
  * @brief Class used to test the TLS socket API.

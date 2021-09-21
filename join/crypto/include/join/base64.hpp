@@ -33,8 +33,6 @@
 
 namespace join
 {
-namespace crypto
-{
     /// bytes array.
     using BytesArray = std::vector <uint8_t>;
 
@@ -110,7 +108,6 @@ namespace crypto
             char     c[4];      /**< access the variable bytes per bytes. */
         }un32;
     };
-}
 }
 
 #endif

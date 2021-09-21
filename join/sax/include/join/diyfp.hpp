@@ -34,8 +34,6 @@
 
 namespace join
 {
-namespace sax
-{
     /**
      * @brief hand made floating point.
      */
@@ -250,7 +248,6 @@ namespace sax
     {
         return DiyFp (lhs) *= rhs;
     }
-}
 }
 
 #endif

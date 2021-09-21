@@ -39,8 +39,6 @@
 
 namespace join
 {
-namespace net
-{
     /**
      * @brief MAC address class.
      */
@@ -403,7 +401,6 @@ namespace net
      * @return a reference to the output stream.
      */
     std::ostream& operator<< (std::ostream& out, const MacAddress& a);
-}
 }
 
 #endif

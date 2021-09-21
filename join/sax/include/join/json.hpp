@@ -31,8 +31,6 @@
 
 namespace join
 {
-namespace sax
-{
     /**
      * @brief JSON error codes.
      */
@@ -490,7 +488,7 @@ namespace sax
         void writeDouble (double value)
         {
             char buf[25];
-            char* end = join::sax::dtoa (buf, value);
+            char* end = join::dtoa (buf, value);
             append (buf, end - buf);
         }
 
@@ -1786,12 +1784,11 @@ namespace sax
         JsonReadMode _mode = JsonReadMode::None;
     };
 }
-}
 
 namespace std
 {
     /// JSON error code specialization.
-    template <> struct is_error_condition_enum <join::sax::JsonErrc> : public true_type {};
+    template <> struct is_error_condition_enum <join::JsonErrc> : public true_type {};
 }
 
 #endif

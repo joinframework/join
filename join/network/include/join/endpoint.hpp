@@ -39,8 +39,6 @@
 
 namespace join
 {
-namespace net
-{
     /**
      * @brief basic endpoint class.
      */
@@ -690,7 +688,6 @@ namespace net
             ss << ":" << endpoint.port ();
         return os << ss.str ();
     }
-}
 }
 
 #endif

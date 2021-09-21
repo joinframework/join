@@ -31,7 +31,7 @@
 // C++.
 #include <sstream>
 
-using join::sax::JsonWriter;
+using join::JsonWriter;
 
 /**
  * @brief Test setNull method.

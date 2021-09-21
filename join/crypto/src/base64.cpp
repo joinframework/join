@@ -25,8 +25,8 @@
 // libjoin.
 #include <join/base64.hpp>
 
-using join::crypto::Base64;
-using join::crypto::BytesArray;
+using join::Base64;
+using join::BytesArray;
 
 /// Base 64 encode/decode table.
 const std::string Base64::_base64Table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

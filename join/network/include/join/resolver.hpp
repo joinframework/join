@@ -39,8 +39,6 @@
 
 namespace join
 {
-namespace net
-{
     /**
      * @brief basic domain name resolution class.
      */
@@ -312,7 +310,6 @@ namespace net
             return 0;
         }
     };
-}
 }
 
 #endif

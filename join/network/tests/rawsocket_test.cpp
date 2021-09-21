@@ -33,9 +33,9 @@
 #include <netinet/udp.h>
 #include <net/ethernet.h>
 
-using join::net::MacAddress;
-using join::net::IpAddress;
-using join::net::Raw;
+using join::MacAddress;
+using join::IpAddress;
+using join::Raw;
 
 /**
  * @brief Class used to test the raw socket API.

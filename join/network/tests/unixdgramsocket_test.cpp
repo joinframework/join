@@ -28,7 +28,7 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::net::UnixDgram;
+using join::UnixDgram;
 
 /**
  * @brief Class used to test the unix datagram socket API.

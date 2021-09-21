@@ -40,8 +40,6 @@
 
 namespace join
 {
-namespace sax
-{
     /// forward declaration.
     class Value;
 
@@ -1548,7 +1546,6 @@ namespace sax
     {
         return !(lhs < rhs);
     }
-}
 }
 
 #endif

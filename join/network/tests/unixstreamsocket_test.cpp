@@ -29,7 +29,7 @@
 #include <gtest/gtest.h>
 
 using join::Errc;
-using join::net::UnixStream;
+using join::UnixStream;
 /**
  * @brief Class used to test the unix stream socket API.
  */

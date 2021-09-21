@@ -42,8 +42,6 @@
 
 namespace join
 {
-namespace net
-{
     /**
      * @brief basic observer class.
      */
@@ -301,7 +299,6 @@ namespace net
         /// epoll status.
         bool finished_ = true;
     };
-}
 }
 
 #endif

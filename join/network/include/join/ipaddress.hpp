@@ -38,8 +38,6 @@
 
 namespace join
 {
-namespace net
-{
     class IpAddress;
     class IpAddressImpl;
 
@@ -431,7 +429,6 @@ namespace net
      * @return a reference to the output stream.
      */
     std::ostream& operator<< (std::ostream& out, const IpAddress& address);
-}
 }
 
 #endif

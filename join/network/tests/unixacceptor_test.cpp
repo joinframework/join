@@ -29,7 +29,7 @@
 #include <gtest/gtest.h>
 
 using join::Errc;
-using join::net::UnixStream;
+using join::UnixStream;
 
 std::string path = "/tmp/unixacceptor_test.sock";
 

@@ -28,11 +28,11 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::net::IpAddress;
-using join::net::IpAddressList;
-using join::net::Udp;
-using join::net::Icmp;
-using join::net::Tcp;
+using join::IpAddress;
+using join::IpAddressList;
+using join::Udp;
+using join::Icmp;
+using join::Tcp;
 
 /**
  * @brief test the nameServers method.

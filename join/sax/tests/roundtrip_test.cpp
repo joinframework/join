@@ -28,15 +28,15 @@
 // libraries.
 #include <gtest/gtest.h>
 
-using join::sax::Array;
-using join::sax::Member;
-using join::sax::Object;
-using join::sax::Value;
+using join::Array;
+using join::Member;
+using join::Object;
+using join::Value;
 
-using join::sax::SaxErrc;
-using join::sax::JsonErrc;
-using join::sax::JsonWriter;
-using join::sax::JsonReader;
+using join::SaxErrc;
+using join::JsonErrc;
+using join::JsonWriter;
+using join::JsonReader;
 
 /**
  * @brief Test JSON round trip.

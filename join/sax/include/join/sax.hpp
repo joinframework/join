@@ -44,8 +44,6 @@
 
 namespace join
 {
-namespace sax
-{
     /// forward declaration.
     class Value;
 
@@ -735,12 +733,11 @@ namespace sax
         Value& _root;
     };
 }
-}
 
 namespace std
 {
     /// SAX API generic error code specialization.
-    template <> struct is_error_condition_enum <join::sax::SaxErrc> : public true_type {};
+    template <> struct is_error_condition_enum <join::SaxErrc> : public true_type {};
 }
 
 #endif

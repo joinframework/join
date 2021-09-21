@@ -28,8 +28,8 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::crypto::Base64;
-using join::crypto::BytesArray;
+using join::Base64;
+using join::BytesArray;
 
 /// string to encode.
 const std::string decoded = "this is the string to encode";

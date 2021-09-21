@@ -37,8 +37,8 @@
 #include <cstring>
 #include <cstdio>
 
-using join::net::IpAddress;
-using join::net::MacAddress;
+using join::IpAddress;
+using join::MacAddress;
 
 /// Wildcard MAC address.
 const MacAddress MacAddress::wildcard = "00:00:00:00:00:00";
@@ -486,7 +486,7 @@ MacAddress MacAddress::operator~ () const
 //   CLASS     :
 //   METHOD    : operator+
 // =========================================================================
-MacAddress join::net::operator+ (int value, const MacAddress& a)
+MacAddress join::operator+ (int value, const MacAddress& a)
 {
     MacAddress addr (a);
     addr += (value);
@@ -497,7 +497,7 @@ MacAddress join::net::operator+ (int value, const MacAddress& a)
 //   CLASS     :
 //   METHOD    : operator+
 // =========================================================================
-MacAddress join::net::operator+ (const MacAddress& a, int value)
+MacAddress join::operator+ (const MacAddress& a, int value)
 {
     return operator+ (value, a);
 }
@@ -506,7 +506,7 @@ MacAddress join::net::operator+ (const MacAddress& a, int value)
 //   CLASS     :
 //   METHOD    : operator==
 // =========================================================================
-bool join::net::operator== (const MacAddress& a, const MacAddress& b)
+bool join::operator== (const MacAddress& a, const MacAddress& b)
 {
     return memcmp (a.addr (), b.addr (), a.length ()) == 0;
 }
@@ -515,7 +515,7 @@ bool join::net::operator== (const MacAddress& a, const MacAddress& b)
 //   CLASS     :
 //   METHOD    : operator!=
 // =========================================================================
-bool join::net::operator!= (const MacAddress& a, const MacAddress& b)
+bool join::operator!= (const MacAddress& a, const MacAddress& b)
 {
     return !(a == b);
 }
@@ -524,7 +524,7 @@ bool join::net::operator!= (const MacAddress& a, const MacAddress& b)
 //   CLASS     :
 //   METHOD    : operator<
 // =========================================================================
-bool join::net::operator< (const MacAddress& a, const MacAddress& b)
+bool join::operator< (const MacAddress& a, const MacAddress& b)
 {
     return memcmp (a.addr (), b.addr (), a.length ()) < 0;
 }
@@ -533,7 +533,7 @@ bool join::net::operator< (const MacAddress& a, const MacAddress& b)
 //   CLASS     :
 //   METHOD    : operator<=
 // =========================================================================
-bool join::net::operator<= (const MacAddress& a, const MacAddress& b)
+bool join::operator<= (const MacAddress& a, const MacAddress& b)
 {
     return !(b < a);
 }
@@ -542,7 +542,7 @@ bool join::net::operator<= (const MacAddress& a, const MacAddress& b)
 //   CLASS     :
 //   METHOD    : operator>
 // =========================================================================
-bool join::net::operator> (const MacAddress& a, const MacAddress& b)
+bool join::operator> (const MacAddress& a, const MacAddress& b)
 {
     return b < a;
 }
@@ -551,7 +551,7 @@ bool join::net::operator> (const MacAddress& a, const MacAddress& b)
 //   CLASS     :
 //   METHOD    : operator>=
 // =========================================================================
-bool join::net::operator>= (const MacAddress& a, const MacAddress& b)
+bool join::operator>= (const MacAddress& a, const MacAddress& b)
 {
     return !(a < b);
 }
@@ -560,7 +560,7 @@ bool join::net::operator>= (const MacAddress& a, const MacAddress& b)
 //   CLASS     :
 //   METHOD    : operator&
 // =========================================================================
-MacAddress join::net::operator& (const MacAddress& a, const MacAddress& b)
+MacAddress join::operator& (const MacAddress& a, const MacAddress& b)
 {
     MacAddress addr (a);
     addr[0] &= b[0];
@@ -576,7 +576,7 @@ MacAddress join::net::operator& (const MacAddress& a, const MacAddress& b)
 //   CLASS     :
 //   METHOD    : operator|
 // =========================================================================
-MacAddress join::net::operator| (const MacAddress& a, const MacAddress& b)
+MacAddress join::operator| (const MacAddress& a, const MacAddress& b)
 {
     MacAddress addr (a);
     addr[0] |= b[0];
@@ -592,7 +592,7 @@ MacAddress join::net::operator| (const MacAddress& a, const MacAddress& b)
 //   CLASS     :
 //   METHOD    : operator^
 // =========================================================================
-MacAddress join::net::operator^ (const MacAddress& a, const MacAddress& b)
+MacAddress join::operator^ (const MacAddress& a, const MacAddress& b)
 {
     MacAddress addr (a);
     addr[0] ^= b[0];
@@ -608,7 +608,7 @@ MacAddress join::net::operator^ (const MacAddress& a, const MacAddress& b)
 //   CLASS     :
 //   METHOD    : operator<<
 // =========================================================================
-std::ostream& join::net::operator<< (std::ostream& out, const MacAddress& a)
+std::ostream& join::operator<< (std::ostream& out, const MacAddress& a)
 {
     out << a.toString ();
     return out;

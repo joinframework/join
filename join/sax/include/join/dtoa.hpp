@@ -34,8 +34,6 @@
 
 namespace join
 {
-namespace sax
-{
     namespace details
     {
         inline const DiyFp& cachedPower (int index)
@@ -601,7 +599,6 @@ namespace sax
             return details::prettify (buffer, length, k);
         }
     }
-}
 }
 
 #endif

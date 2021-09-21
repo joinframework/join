@@ -32,10 +32,10 @@
 // C++.
 #include <limits>
 
-using join::sax::Array;
-using join::sax::Member;
-using join::sax::Object;
-using join::sax::Value;
+using join::Array;
+using join::Member;
+using join::Object;
+using join::Value;
 
 /**
  * @brief Test create method.

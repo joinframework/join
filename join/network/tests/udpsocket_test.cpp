@@ -28,9 +28,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::net::MacAddress;
-using join::net::IpAddress;
-using join::net::Udp;
+using join::MacAddress;
+using join::IpAddress;
+using join::Udp;
 
 /**
  * @brief Class used to test the UDP socket API.

@@ -49,8 +49,6 @@
 
 namespace join
 {
-namespace net
-{
     /**
      * @brief basic socket class.
      */
@@ -2796,12 +2794,11 @@ namespace net
         return a.handle () < b.handle ();
     }
 }
-}
 
 namespace std
 {
     /// TLS error code specialization.
-    template <> struct is_error_condition_enum <join::net::TlsErrc> : public true_type {};
+    template <> struct is_error_condition_enum <join::TlsErrc> : public true_type {};
 }
 
 #endif

@@ -31,8 +31,6 @@
 
 namespace join
 {
-namespace sax
-{
     /**
      * @brief message pack writer class.
      */
@@ -376,7 +374,7 @@ namespace sax
         template <typename Type>
         void pack (Type value)
         {
-            append (reinterpret_cast <const char *> (&utils::swap (value)), sizeof (value));
+            append (reinterpret_cast <const char *> (&swap (value)), sizeof (value));
         }
     };
 
@@ -762,7 +760,7 @@ namespace sax
         {
             Type value;
             document.read (reinterpret_cast <char *> (&value), sizeof (value));
-            return utils::swap (value);
+            return swap (value);
         }
 
         /**
@@ -885,7 +883,6 @@ namespace sax
             return ((c >= 0x80) && (c <= 0x8f)) || (c == 0xde) || (c == 0xdf);
         }
     };
-}
 }
 
 #endif
