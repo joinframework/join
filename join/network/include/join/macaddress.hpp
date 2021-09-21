@@ -303,7 +303,7 @@ namespace join
 
     private:
         /// MAC address.
-        std::array <uint8_t, IFHWADDRLEN> mac_ = {};
+        std::array <uint8_t, IFHWADDRLEN> _mac = {};
     };
 
     /**

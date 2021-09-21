@@ -29,6 +29,9 @@
 #include <join/utils.hpp>
 #include <join/sax.hpp>
 
+// C++.
+#include <stdexcept>
+
 namespace join
 {
     /**
@@ -425,7 +428,7 @@ namespace join
         virtual ~PackReader () = default;
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param document document to parse.
          * @param length The length of the document to parse.
          * @return 0 on success, -1 otherwise.
@@ -437,7 +440,7 @@ namespace join
         }
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param first The first character of the document to parse.
          * @param last The last character of the document to parse.
          * @return 0 on success, -1 otherwise.
@@ -449,7 +452,7 @@ namespace join
         }
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
@@ -460,7 +463,7 @@ namespace join
         }
 
         /**
-         * @brief Parse a document.
+         * @brief parse a document.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
@@ -479,9 +482,9 @@ namespace join
         template <typename ViewType>
         int read (ViewType& document)
         {
-            if (readValue (document) == 0)
+            if (JOIN_SAX_LIKELY (readValue (document) == 0))
             {
-                if (document.peek () == std::char_traits <char>::eof ())
+                if (JOIN_SAX_LIKELY (document.peek () == std::char_traits <char>::eof ()))
                 {
                     return 0;
                 }
@@ -502,35 +505,47 @@ namespace join
         {
             char head = document.peek ();
 
-            if (isArray (static_cast <uint8_t> (head)))
+            try
             {
-                return readArray (document);
+                if (isArray (static_cast <uint8_t> (head)))
+                {
+                    return readArray (document);
+                }
+                else if (isObject (static_cast <uint8_t> (head)))
+                {
+                    return readObject (document);
+                }
+                else if (isNull (static_cast <uint8_t> (head)))
+                {
+                    return readNull (document);
+                }
+                else if (isFalse (static_cast <uint8_t> (head)))
+                {
+                    return readFalse (document);
+                }
+                else if (isTrue (static_cast <uint8_t> (head)))
+                {
+                    return readTrue (document);
+                }
+                else if (isString (static_cast <uint8_t> (head)))
+                {
+                    return readString (document);
+                }
+                else if (isBin (static_cast <uint8_t> (head)))
+                {
+                    return readBin (document);
+                }
+                else if (isNumber (static_cast <uint8_t> (head)))
+                {
+                    return readNumber (document);
+                }
+                else
+                {
+                    join::lastError = make_error_code (SaxErrc::InvalidValue);
+                    return -1;
+                }
             }
-            else if (isObject (static_cast <uint8_t> (head)))
-            {
-                return readObject (document);
-            }
-            else if (isNull (static_cast <uint8_t> (head)))
-            {
-                return readNull (document);
-            }
-            else if (isFalse (static_cast <uint8_t> (head)))
-            {
-                return readFalse (document);
-            }
-            else if (isTrue (static_cast <uint8_t> (head)))
-            {
-                return readTrue (document);
-            }
-            else if (isString (static_cast <uint8_t> (head)))
-            {
-                return readString (document);
-            }
-            else if (isNumber (static_cast <uint8_t> (head)))
-            {
-                return readNumber (document);
-            }
-            else
+            catch (...)
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -692,9 +707,54 @@ namespace join
 
             std::string output;
             output.resize (len);
-            document.read (&output[0], len);
+
+            if (JOIN_SAX_UNLIKELY (document.read (&output[0], len) != len))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
 
             return isKey ? setKey (output) : setString (output);
+        }
+
+        /**
+         * @brief parse binary data.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int readBin (ViewType& document)
+        {
+            uint32_t len = 0;
+
+            if (document.getIf (0xc6))
+            {
+                len = unpack <uint32_t> (document);
+            }
+            else if (document.getIf (0xc5))
+            {
+                len = unpack <uint16_t> (document);
+            }
+            else if (document.getIf (0xc4))
+            {
+                len = unpack <uint8_t> (document);
+            }
+            else
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            std::string output;
+            output.resize (len);
+
+            if (JOIN_SAX_UNLIKELY (document.read (&output[0], len) != len))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            return setString (output);
         }
 
         /**
@@ -759,7 +819,10 @@ namespace join
         static unpack (ViewType& document)
         {
             Type value;
-            document.read (reinterpret_cast <char *> (&value), sizeof (value));
+            if (JOIN_SAX_UNLIKELY (document.read (reinterpret_cast <char *> (&value), sizeof (value)) != sizeof (value)))
+            {
+                throw std::range_error ("not enough data to unpack");
+            }
             return swap (value);
         }
 
@@ -861,6 +924,16 @@ namespace join
         constexpr bool isString (uint8_t c)
         {
             return ((c >= 0xa0) && (c <= 0xbf)) || (c == 0xd9) || (c == 0xda) || (c == 0xdb);
+        }
+
+        /**
+         * @brief check if binary data.
+         * @param c character to check.
+         * @return true if binary data, false otherwise.
+         */
+        constexpr bool isBin (uint8_t c)
+        {
+            return (c == 0xc4) || (c == 0xc5) || (c == 0xc6);
         }
 
         /**

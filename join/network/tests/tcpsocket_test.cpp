@@ -57,7 +57,7 @@ protected:
         ASSERT_EQ (close (), 0) << join::lastError.message ();
     }
 
-        /**
+    /**
      * @brief method called on receive.
      */
     virtual void onReceive () override

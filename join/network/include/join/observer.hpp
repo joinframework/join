@@ -26,8 +26,8 @@
 #define __JOIN_OBSERVER_HPP__
 
 // libjoin.
-#include <join/error.hpp>
 #include <join/protocol.hpp>
+#include <join/error.hpp>
 
 // C++.
 #include <condition_variable>
@@ -55,18 +55,9 @@ namespace join
          * @brief default constructor.
          */
         BasicObserver ()
+        : _eventdesc (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
+          _epolldesc (epoll_create1 (EPOLL_CLOEXEC))
         {
-            eventdesc_ = eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC);
-            if (eventdesc_ == -1)
-            {
-                throw std::system_error (errno, std::generic_category ());
-            }
-
-            epolldesc_ = epoll_create1 (EPOLL_CLOEXEC);
-            if (epolldesc_ == -1)
-            {
-                throw std::system_error (errno, std::generic_category ());
-            }
         }
 
         /**
@@ -101,25 +92,21 @@ namespace join
         virtual ~BasicObserver ()
         {
             // start/stop must not occur when queue is processed.
-            std::unique_lock <std::recursive_mutex> lock (epollmx_);
+            std::unique_lock <std::recursive_mutex> lock (_epollmx);
 
-            // check if thread was running.
-            if (finished_ == false)
-            {
-                uint64_t value = 1;
+            uint64_t value = 1;
 
-                // notify event in order to stop reception thread.
-                [[maybe_unused]] ssize_t bytes = ::write (eventdesc_, &value, sizeof (uint64_t));
+            // notify event in order to stop reception thread.
+            [[maybe_unused]] ssize_t bytes = ::write (_eventdesc, &value, sizeof (uint64_t));
 
-                // wait for end of reception thread.
-                epollend_.wait (lock, [this] () {
-                    return finished_;
-                });
-            }
+            // wait for end of reception thread.
+            _epollend.wait (lock, [this] () {
+                return _finished;
+            });
 
             // close descriptors.
-            ::close (eventdesc_);
-            ::close (epolldesc_);
+            ::close (_eventdesc);
+            ::close (_epolldesc);
         }
 
         /**
@@ -129,10 +116,10 @@ namespace join
         int start ()
         {
             // start/stop must not occur when queue is processed.
-            std::lock_guard <std::recursive_mutex> lock (epollmx_);
+            std::lock_guard <std::recursive_mutex> lock (_epollmx);
 
             // check if already running.
-            if (finished_ == false)
+            if (_finished == false)
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -143,23 +130,15 @@ namespace join
             ev.data.fd = handle ();
 
             // add descriptor to epoll instance.
-            if (epoll_ctl (epolldesc_, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1)
+            if (epoll_ctl (_epolldesc, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return -1;
             }
 
-            try
-            {
-                // start reception thread.
-                std::thread (std::bind (&BasicObserver::waitReception, this)).detach ();
-                finished_ = false;
-            }
-            catch (const std::system_error& err)
-            {
-                lastError = err.code ();
-                return -1;
-            }
+            // start reception thread.
+            std::thread (std::bind (&BasicObserver::waitReception, this)).detach ();
+            _finished = false;
 
             return 0;
         }
@@ -171,26 +150,26 @@ namespace join
         int stop ()
         {
             // start/stop must not occur when queue is processed.
-            std::lock_guard <std::recursive_mutex> lock (epollmx_);
+            std::lock_guard <std::recursive_mutex> lock (_epollmx);
 
             // check if already stopped.
-            if (finished_ == true)
+            if (_finished == true)
             {
                 lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
-            // remove descriptor from epoll instance.
-            if (epoll_ctl (epolldesc_, EPOLL_CTL_DEL, handle (), nullptr) == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return -1;
             }
 
             uint64_t value = 1;
 
             // notify event in order to stop reception thread.
-            [[maybe_unused]] ssize_t bytes = ::write (eventdesc_, &value, sizeof (uint64_t));
+            [[maybe_unused]] ssize_t bytes = ::write (_eventdesc, &value, sizeof (uint64_t));
+
+            // remove descriptor from epoll instance.
+            if (epoll_ctl (_epolldesc, EPOLL_CTL_DEL, handle (), nullptr) == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                return -1;
+            }
 
             return 0;
         }
@@ -217,41 +196,35 @@ namespace join
          */
         void waitReception ()
         {
-            std::unique_lock <std::recursive_mutex> lock (epollmx_);
+            std::unique_lock <std::recursive_mutex> lock (_epollmx);
 
             fd_set setfd;
             FD_ZERO (&setfd);
-            FD_SET (eventdesc_, &setfd);
-            FD_SET (epolldesc_, &setfd);
-            int maxdesc = std::max (eventdesc_, epolldesc_);
+            FD_SET (_eventdesc, &setfd);
+            FD_SET (_epolldesc, &setfd);
+            int maxdesc = std::max (_eventdesc, _epolldesc);
 
             for (;;)
             {
                 fd_set descset = setfd;
 
                 lock.unlock ();
-
                 int nset = ::select (maxdesc + 1, &descset, nullptr, nullptr, nullptr);
+                lock.lock ();
+
                 if (nset > 0)
                 {
-                    if (FD_ISSET (eventdesc_, &descset))
+                    if (FD_ISSET (_eventdesc, &descset))
                     {
-                        lock.lock ();
-
                         uint64_t value;
-                        [[maybe_unused]] ssize_t bytes = ::read (eventdesc_, &value, sizeof (uint64_t));
-
+                        [[maybe_unused]] ssize_t bytes = ::read (_eventdesc, &value, sizeof (uint64_t));
                         break;
                     }
 
-                    if (FD_ISSET (epolldesc_, &descset))
+                    if (FD_ISSET (_epolldesc, &descset))
                     {
-                        lock.lock ();
-
                         struct epoll_event ev;
-
-                        // read event now that we are protected.
-                        nset = epoll_wait (epolldesc_, &ev, 1, 0);
+                        nset = epoll_wait (_epolldesc, &ev, 1, 0);
                         if (nset == 1)
                         {
                             if (ev.events & EPOLLERR)
@@ -267,37 +240,34 @@ namespace join
                                 onReceive ();
                             }
                         }
-
                         continue;
                     }
                 }
-
-                lock.lock ();
             }
 
             // set reception thread status to not running.
-            finished_ = true;
+            _finished = true;
 
             // signal end of reception thread.
             // instance could be destroyed immediately after lock is released.
             // nothing should be done out of the lock scope.
-            epollend_.notify_one ();
+            _epollend.notify_one ();
         }
 
         /// event descriptor.
-        int eventdesc_ = -1;
+        int _eventdesc = -1;
 
         /// epoll file descriptor.
-        int epolldesc_ = -1;
+        int _epolldesc = -1;
 
         /// epoll protection mutex.
-        std::recursive_mutex epollmx_;
+        std::recursive_mutex _epollmx;
 
         /// epoll end event.
-        std::condition_variable_any epollend_;
+        std::condition_variable_any _epollend;
 
         /// epoll status.
-        bool finished_ = true;
+        bool _finished = true;
     };
 }
 

@@ -51,7 +51,7 @@ namespace join
          */
         constexpr BasicEndpoint () noexcept
         {
-            this->addr_.ss_family = this->protocol ().family ();
+            this->_addr.ss_family = this->protocol ().family ();
         }
 
         /**
@@ -61,7 +61,7 @@ namespace join
          */
         constexpr BasicEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
         {
-            memcpy (&this->addr_, addr, len);
+            memcpy (&this->_addr, addr, len);
         }
 
         /**
@@ -70,7 +70,7 @@ namespace join
          */
         struct sockaddr* addr () noexcept
         {
-            return reinterpret_cast <struct sockaddr*> (&this->addr_);
+            return reinterpret_cast <struct sockaddr*> (&this->_addr);
         }
 
         /**
@@ -88,7 +88,7 @@ namespace join
          */
         const struct sockaddr* addr () const noexcept
         {
-            return reinterpret_cast <const struct sockaddr*> (&this->addr_);
+            return reinterpret_cast <const struct sockaddr*> (&this->_addr);
         }
 
         /**
@@ -102,7 +102,7 @@ namespace join
 
     protected:
         /// socket address storage.
-        struct sockaddr_storage addr_ = {};
+        struct sockaddr_storage _addr = {};
     };
 
     /**
@@ -137,7 +137,7 @@ namespace join
         constexpr BasicUnixEndpoint (const std::string& dev) noexcept
         : BasicUnixEndpoint ()
         {
-            struct sockaddr_un* sa = reinterpret_cast <struct sockaddr_un*> (&this->addr_);
+            struct sockaddr_un* sa = reinterpret_cast <struct sockaddr_un*> (&this->_addr);
             strncpy (sa->sun_path, dev.c_str (), sizeof (sa->sun_path) - 1);
         }
 
@@ -156,7 +156,7 @@ namespace join
          */
         void device (const std::string& dev) noexcept
         {
-            struct sockaddr_un* sa = reinterpret_cast <struct sockaddr_un*> (&this->addr_);
+            struct sockaddr_un* sa = reinterpret_cast <struct sockaddr_un*> (&this->_addr);
             strncpy (sa->sun_path, dev.c_str (), sizeof (sa->sun_path) - 1);
         }
 
@@ -166,7 +166,7 @@ namespace join
          */
         constexpr std::string device () const noexcept
         {
-            return reinterpret_cast <const struct sockaddr_un*> (&this->addr_)->sun_path;
+            return reinterpret_cast <const struct sockaddr_un*> (&this->_addr)->sun_path;
         }
     };
 
@@ -269,7 +269,7 @@ namespace join
         constexpr BasicLinkLayerEndpoint () noexcept
         : BasicEndpoint <Protocol> ()
         {
-            reinterpret_cast <struct sockaddr_ll*> (&this->addr_)->sll_protocol = this->protocol ().protocol ();
+            reinterpret_cast <struct sockaddr_ll*> (&this->_addr)->sll_protocol = this->protocol ().protocol ();
         }
 
         /**
@@ -289,7 +289,7 @@ namespace join
         constexpr BasicLinkLayerEndpoint (const std::string& dev) noexcept
         : BasicLinkLayerEndpoint ()
         {
-            reinterpret_cast <struct sockaddr_ll*> (&this->addr_)->sll_ifindex = if_nametoindex (dev.c_str ());
+            reinterpret_cast <struct sockaddr_ll*> (&this->_addr)->sll_ifindex = if_nametoindex (dev.c_str ());
         }
 
         /**
@@ -307,7 +307,7 @@ namespace join
          */
         void device (const std::string& dev) noexcept
         {
-            reinterpret_cast <struct sockaddr_ll*> (&this->addr_)->sll_ifindex = if_nametoindex (dev.c_str ());
+            reinterpret_cast <struct sockaddr_ll*> (&this->_addr)->sll_ifindex = if_nametoindex (dev.c_str ());
         }
 
         /**
@@ -317,7 +317,7 @@ namespace join
         constexpr std::string device () const noexcept
         {
             char ifname[IFNAMSIZ];
-            if (if_indextoname (reinterpret_cast <const struct sockaddr_ll*> (&this->addr_)->sll_ifindex, ifname))
+            if (if_indextoname (reinterpret_cast <const struct sockaddr_ll*> (&this->_addr)->sll_ifindex, ifname))
             {
                 return ifname;
             }
@@ -441,7 +441,7 @@ namespace join
          */
         constexpr socklen_t length () const noexcept
         {
-            return (this->addr_.ss_family == AF_INET6) ? sizeof (struct sockaddr_in6) 
+            return (this->_addr.ss_family == AF_INET6) ? sizeof (struct sockaddr_in6) 
                                                        : sizeof (struct sockaddr_in);
         }
 
@@ -455,7 +455,7 @@ namespace join
         {
             if (ip.family () == AF_INET6)
             {
-                struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->addr_);
+                struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->_addr);
                 sa->sin6_family         = AF_INET6;
                 sa->sin6_port           = htons (port);
                 memcpy (&sa->sin6_addr, ip.addr (), ip.length ());
@@ -463,7 +463,7 @@ namespace join
             }
             else
             {
-                struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->addr_);
+                struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->_addr);
                 sa->sin_family          = AF_INET;
                 sa->sin_port            = htons (port);
                 memcpy (&sa->sin_addr, ip.addr (), ip.length ());
@@ -480,13 +480,13 @@ namespace join
         {
             if (protocol.family () == AF_INET6)
             {
-                struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->addr_);
+                struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->_addr);
                 sa->sin6_family         = AF_INET6;
                 sa->sin6_port           = htons (port);
             }
             else
             {
-                struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->addr_);
+                struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->_addr);
                 sa->sin_family          = AF_INET;
                 sa->sin_port            = htons (port);
             }
@@ -500,14 +500,14 @@ namespace join
         {
             if (ip.family () == AF_INET6)
             {
-                struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->addr_);
+                struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->_addr);
                 sa->sin6_family         = AF_INET6;
                 memcpy (&sa->sin6_addr, ip.addr (), ip.length ());
                 sa->sin6_scope_id       = ip.scope ();
             }
             else
             {
-                struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->addr_);
+                struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->_addr);
                 sa->sin_family          = AF_INET;
                 memcpy (&sa->sin_addr, ip.addr (), ip.length ());
             }
@@ -519,7 +519,7 @@ namespace join
          */
         constexpr IpAddress ip () const noexcept
         {
-            return *reinterpret_cast <const struct sockaddr*> (&this->addr_);
+            return *reinterpret_cast <const struct sockaddr*> (&this->_addr);
         }
 
         /**
@@ -528,13 +528,13 @@ namespace join
          */
         void port (uint16_t p) noexcept
         {
-            if (this->addr_.ss_family == AF_INET6)
+            if (this->_addr.ss_family == AF_INET6)
             {
-                reinterpret_cast <struct sockaddr_in6*> (&this->addr_)->sin6_port = htons (p);
+                reinterpret_cast <struct sockaddr_in6*> (&this->_addr)->sin6_port = htons (p);
             }
             else
             {
-                reinterpret_cast <struct sockaddr_in*> (&this->addr_)->sin_port = htons (p);
+                reinterpret_cast <struct sockaddr_in*> (&this->_addr)->sin_port = htons (p);
             }
         }
 
@@ -544,13 +544,13 @@ namespace join
          */
         constexpr uint16_t port () const noexcept
         {
-            if (this->addr_.ss_family == AF_INET6)
+            if (this->_addr.ss_family == AF_INET6)
             {
-                return ntohs (reinterpret_cast <const struct sockaddr_in6*> (&this->addr_)->sin6_port);
+                return ntohs (reinterpret_cast <const struct sockaddr_in6*> (&this->_addr)->sin6_port);
             }
             else
             {
-                return ntohs (reinterpret_cast <const struct sockaddr_in*> (&this->addr_)->sin_port);
+                return ntohs (reinterpret_cast <const struct sockaddr_in*> (&this->_addr)->sin_port);
             }
         }
 
@@ -560,9 +560,9 @@ namespace join
          */
         void device (const std::string& dev) noexcept
         {
-            if (this->addr_.ss_family == AF_INET6)
+            if (this->_addr.ss_family == AF_INET6)
             {
-                reinterpret_cast <struct sockaddr_in6*> (&this->addr_)->sin6_scope_id = if_nametoindex (dev.c_str ());
+                reinterpret_cast <struct sockaddr_in6*> (&this->_addr)->sin6_scope_id = if_nametoindex (dev.c_str ());
             }
         }
 
@@ -572,10 +572,10 @@ namespace join
          */
         constexpr std::string device () const noexcept
         {
-            if (this->addr_.ss_family == AF_INET6)
+            if (this->_addr.ss_family == AF_INET6)
             {
                 char ifname[IFNAMSIZ];
-                if (if_indextoname (reinterpret_cast <const struct sockaddr_in6*> (&this->addr_)->sin6_scope_id, ifname))
+                if (if_indextoname (reinterpret_cast <const struct sockaddr_in6*> (&this->_addr)->sin6_scope_id, ifname))
                 {
                     return ifname;
                 }
@@ -590,7 +590,7 @@ namespace join
          */
         constexpr Protocol protocol () const noexcept
         {
-            if (this->addr_.ss_family == AF_INET)
+            if (this->_addr.ss_family == AF_INET)
             {
                 return Protocol::v4 ();
             }

@@ -18,6 +18,10 @@ add_executable(protocol.gtest protocol_test.cpp)
 target_link_libraries(protocol.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(protocol.gtest)
 
+add_executable(observer.gtest observer_test.cpp)
+target_link_libraries(observer.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(observer.gtest)
+
 add_executable(unixdgramsocket.gtest unixdgramsocket_test.cpp)
 target_link_libraries(unixdgramsocket.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(unixdgramsocket.gtest)

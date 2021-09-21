@@ -64,11 +64,11 @@ namespace join
          * @param other other object to move.
          */
         BasicAcceptor (BasicAcceptor&& other)
-        : handle_ (other.handle_),
-          protocol_ (other.protocol_)
+        : _handle (other._handle),
+          _protocol (other._protocol)
         {
-            other.handle_ = -1;
-            other.protocol_ = Protocol ();
+            other._handle = -1;
+            other._protocol = Protocol ();
         }
 
         /**
@@ -80,11 +80,11 @@ namespace join
         {
             this->close ();
 
-            this->handle_ = other.handle_;
-            this->protocol_ = other.protocol_;
+            this->_handle = other._handle;
+            this->_protocol = other._protocol;
 
-            other.handle_ = -1;
-            other.protocol_ = Protocol ();
+            other._handle = -1;
+            other._protocol = Protocol ();
 
             return *this;
         }
@@ -94,9 +94,9 @@ namespace join
          */
         virtual ~BasicAcceptor ()
         {
-            if (this->handle_ != -1)
+            if (this->_handle != -1)
             {
-                ::close (this->handle_);
+                ::close (this->_handle);
             }
         }
 
@@ -113,8 +113,8 @@ namespace join
                 return -1;
             }
 
-            this->handle_ = ::socket (protocol.family (), protocol.type () | SOCK_CLOEXEC, protocol.protocol ());
-            if (this->handle_ == -1)
+            this->_handle = ::socket (protocol.family (), protocol.type () | SOCK_CLOEXEC, protocol.protocol ());
+            if (this->_handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 this->close ();
@@ -125,7 +125,7 @@ namespace join
             {
                 int off = 0;
 
-                if (::setsockopt (this->handle_, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1)
+                if (::setsockopt (this->_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1)
                 {
                     lastError = std::make_error_code (static_cast <std::errc> (errno));
                     this->close ();
@@ -133,7 +133,7 @@ namespace join
                 }
             }
 
-            this->protocol_ = protocol;
+            this->_protocol = protocol;
 
             return 0;
         }
@@ -144,15 +144,15 @@ namespace join
          */
         virtual int close () noexcept
         {
-            if (this->handle_ != -1)
+            if (this->_handle != -1)
             {
-                if (::close (this->handle_) == -1)
+                if (::close (this->_handle) == -1)
                 {
                     lastError = std::make_error_code (static_cast <std::errc> (errno));
                     return -1;
                 }
 
-                this->handle_ = -1;
+                this->_handle = -1;
             }
 
             return 0;
@@ -178,7 +178,7 @@ namespace join
             {
                 int on = 1;
 
-                if (::setsockopt (this->handle_, SOL_SOCKET, SO_REUSEADDR, &on, sizeof (on)) == -1)
+                if (::setsockopt (this->_handle, SOL_SOCKET, SO_REUSEADDR, &on, sizeof (on)) == -1)
                 {
                     lastError = std::make_error_code (static_cast <std::errc> (errno));
                     this->close ();
@@ -186,7 +186,7 @@ namespace join
                 }
             }
 
-            if (::bind (this->handle_, endpoint.addr (), endpoint.length ()) == -1)
+            if (::bind (this->_handle, endpoint.addr (), endpoint.length ()) == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 this->close ();
@@ -209,7 +209,7 @@ namespace join
                 return -1;
             }
 
-            if (::listen (this->handle_, max) == -1)
+            if (::listen (this->_handle, max) == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 this->close ();
@@ -228,7 +228,7 @@ namespace join
             Endpoint endpoint;
             socklen_t addrLen = endpoint.length ();
 
-            if (::getsockname (this->handle_, endpoint.addr (), &addrLen) == -1)
+            if (::getsockname (this->_handle, endpoint.addr (), &addrLen) == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return {};
@@ -243,7 +243,7 @@ namespace join
          */
         bool opened () const noexcept
         {
-            return (this->handle_ != -1);
+            return (this->_handle != -1);
         }
 
         /**
@@ -252,7 +252,7 @@ namespace join
          */
         int family () const noexcept
         {
-            return this->protocol_.family ();
+            return this->_protocol.family ();
         }
 
         /**
@@ -261,7 +261,7 @@ namespace join
          */
         int type () const noexcept
         {
-            return this->protocol_.type ();
+            return this->_protocol.type ();
         }
 
         /**
@@ -270,7 +270,7 @@ namespace join
          */
         int protocol () const noexcept
         {
-            return this->protocol_.protocol ();
+            return this->_protocol.protocol ();
         }
 
         /**
@@ -279,15 +279,15 @@ namespace join
          */
         int handle () const noexcept
         {
-            return this->handle_;
+            return this->_handle;
         }
 
     protected:
         /// socket handle.
-        int handle_ = -1;
+        int _handle = -1;
 
         /// protocol.
-        Protocol protocol_;
+        Protocol _protocol;
     };
 
     /**
@@ -354,14 +354,14 @@ namespace join
             socklen_t addrLen = endpoint.length ();
             Socket client;
 
-            client.handle_ = ::accept (this->handle_, endpoint.addr (), &addrLen);
-            if (client.handle_ == -1)
+            client._handle = ::accept (this->_handle, endpoint.addr (), &addrLen);
+            if (client._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return {};
             }
 
-            client.state_ = Socket::Connected;
+            client._state = Socket::Connected;
 
             if (client.setMode (Socket::NonBlocking) == -1)
             {
@@ -396,66 +396,66 @@ namespace join
         BasicTlsAcceptor ()
         : BasicAcceptor <Protocol> (),
         #if OPENSSL_VERSION_NUMBER < 0x10100000L
-          tlsContext_ (SSL_CTX_new (SSLv23_method ()), join::crypto::SslCtxDelete ()),
+          _tlsContext (SSL_CTX_new (SSLv23_method ()), join::crypto::SslCtxDelete ()),
         #else
-          tlsContext_ (SSL_CTX_new (TLS_method ()), join::crypto::SslCtxDelete ()),
+          _tlsContext (SSL_CTX_new (TLS_method ()), join::crypto::SslCtxDelete ()),
         #endif
-          sessionId_ (randomize <int> ())
+          _sessionId (randomize <int> ())
         {
-            if (tlsContext_ == nullptr)
+            if (_tlsContext == nullptr)
             {
                 throw std::runtime_error ("OpenSSL libraries were not initialized at process start");
             }
 
             // enable the OpenSSL bug workaround options.
-            SSL_CTX_set_options (tlsContext_.get (), SSL_OP_ALL);
+            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_ALL);
 
         #if OPENSSL_VERSION_NUMBER >= 0x10100000L
             // disallow compression.
-            SSL_CTX_set_options (tlsContext_.get (), SSL_OP_NO_COMPRESSION);
+            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_COMPRESSION);
         #endif
 
             // disallow usage of SSLv2, SSLv3, TLSv1 and TLSv1.1 which are considered insecure.
-            SSL_CTX_set_options (tlsContext_.get (), SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
 
             // choose the cipher according to the server's preferences.
-            SSL_CTX_set_options (tlsContext_.get (), SSL_OP_CIPHER_SERVER_PREFERENCE);
+            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_CIPHER_SERVER_PREFERENCE);
 
             // setup write mode.
-            SSL_CTX_set_mode (tlsContext_.get (), SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+            SSL_CTX_set_mode (_tlsContext.get (), SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
             // automatically renegotiates.
-            SSL_CTX_set_mode (tlsContext_.get (), SSL_MODE_AUTO_RETRY);
+            SSL_CTX_set_mode (_tlsContext.get (), SSL_MODE_AUTO_RETRY);
 
             // enable SSL session caching.
-            SSL_CTX_set_session_id_context (tlsContext_.get (), reinterpret_cast <const unsigned char *> (&sessionId_), sizeof (sessionId_));
+            SSL_CTX_set_session_id_context (_tlsContext.get (), reinterpret_cast <const unsigned char *> (&_sessionId), sizeof (_sessionId));
 
             // no verification by default.
-            SSL_CTX_set_verify (tlsContext_.get (), SSL_VERIFY_NONE, nullptr);
+            SSL_CTX_set_verify (_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
 
             // set default TLSv1.2 and below cipher suites.
-            SSL_CTX_set_cipher_list (tlsContext_.get (), join::crypto::defaultCipher_.c_str ());
+            SSL_CTX_set_cipher_list (_tlsContext.get (), join::crypto::defaultCipher_.c_str ());
 
         #if OPENSSL_VERSION_NUMBER >= 0x10101000L
             //  set default TLSv1.3 cipher suites.
-            SSL_CTX_set_ciphersuites (tlsContext_.get (), join::crypto::defaultCipher_1_3_.c_str ());
+            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::crypto::defaultCipher_1_3_.c_str ());
 
             // disallow client-side renegotiation.
-            SSL_CTX_set_options (tlsContext_.get (), SSL_OP_NO_RENEGOTIATION);
+            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_RENEGOTIATION);
         #endif
 
             // Set Diffie-Hellman key.
             join::crypto::DhKeyPtr dh (getDh2236 ());
             if (dh)
             {
-                SSL_CTX_set_tmp_dh (tlsContext_.get (), dh.get ());
+                SSL_CTX_set_tmp_dh (_tlsContext.get (), dh.get ());
             }
 
             // Set elliptic curve Diffie-Hellman key.
             join::crypto::EcdhKeyPtr ecdh (EC_KEY_new_by_curve_name (NID_X9_62_prime256v1));
             if (ecdh)
             {
-                SSL_CTX_set_tmp_ecdh (tlsContext_.get (), ecdh.get ());
+                SSL_CTX_set_tmp_ecdh (_tlsContext.get (), ecdh.get ());
             }
         }
 
@@ -478,10 +478,10 @@ namespace join
          */
         BasicTlsAcceptor (BasicTlsAcceptor&& other)
         : BasicAcceptor <Protocol> (std::move (other)),
-          tlsContext_ (std::move (other.tlsContext_)),
-          sessionId_ (other.sessionId_)
+          _tlsContext (std::move (other._tlsContext)),
+          _sessionId (other._sessionId)
         {
-            other.sessionId_ = 0;
+            other._sessionId = 0;
         }
 
         /**
@@ -493,10 +493,10 @@ namespace join
         {
             BasicAcceptor <Protocol>::operator= (std::move (other));
 
-            tlsContext_ = std::move (other.tlsContext_);
-            sessionId_ = other.sessionId_;
+            _tlsContext = std::move (other._tlsContext);
+            _sessionId = other._sessionId;
 
-            other.sessionId_ = 0;
+            other._sessionId = 0;
 
             return *this;
         }
@@ -516,17 +516,17 @@ namespace join
 
             Endpoint endpoint;
             socklen_t addrLen = endpoint.length ();
-            Socket client (this->tlsContext_, Socket::ServerMode);
+            Socket client (this->_tlsContext, Socket::ServerMode);
 
             // accept connection.
-            client.handle_ = ::accept (this->handle_, endpoint.addr (), &addrLen);
-            if (client.handle_ == -1)
+            client._handle = ::accept (this->_handle, endpoint.addr (), &addrLen);
+            if (client._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return {};
             }
 
-            client.state_ = Socket::Connected;
+            client._state = Socket::Connected;
 
             // set client socket mode.
             if (client.setMode (Socket::NonBlocking) == -1)
@@ -543,8 +543,8 @@ namespace join
             }
 
             //  create an SSL object for the connection.
-            client.tlsHandle_.reset (SSL_new (client.tlsContext_.get ()));
-            if (client.tlsHandle_ == nullptr)
+            client._tlsHandle.reset (SSL_new (client._tlsContext.get ()));
+            if (client._tlsHandle == nullptr)
             {
                 lastError = make_error_code (Errc::OutOfMemory);
                 client.close ();
@@ -552,7 +552,7 @@ namespace join
             }
 
             // set the file descriptor as the input/output facility for the TLS/SSL handle.
-            if (SSL_set_fd (client.tlsHandle_.get (), client.handle_) == 0)
+            if (SSL_set_fd (client._tlsHandle.get (), client._handle) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 client.close ();
@@ -560,17 +560,17 @@ namespace join
             }
 
             // prepare the object to work in server mode.
-            SSL_set_accept_state (client.tlsHandle_.get ());
+            SSL_set_accept_state (client._tlsHandle.get ());
 
             // save the internal context.
-            SSL_set_app_data (client.tlsHandle_.get (), &client);
+            SSL_set_app_data (client._tlsHandle.get (), &client);
 
         #ifdef DEBUG
             // set info callback.
-            SSL_set_info_callback (client.tlsHandle_.get (), Socket::infoWrapper);
+            SSL_set_info_callback (client._tlsHandle.get (), Socket::infoWrapper);
         #endif
 
-            client.tlsState_ = Socket::Encrypted;
+            client._tlsState = Socket::Encrypted;
 
             return client;
         }
@@ -583,7 +583,7 @@ namespace join
          */
         int setCertificate (const std::string& cert, const std::string& key = "")
         {
-            if (SSL_CTX_use_certificate_file (this->tlsContext_.get (), cert.c_str (), SSL_FILETYPE_PEM) == 0)
+            if (SSL_CTX_use_certificate_file (this->_tlsContext.get (), cert.c_str (), SSL_FILETYPE_PEM) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
@@ -591,7 +591,7 @@ namespace join
 
             if (key.size ())
             {
-                if (SSL_CTX_use_PrivateKey_file (this->tlsContext_.get (), key.c_str(), SSL_FILETYPE_PEM) == 0)
+                if (SSL_CTX_use_PrivateKey_file (this->_tlsContext.get (), key.c_str(), SSL_FILETYPE_PEM) == 0)
                 {
                     lastError = make_error_code (Errc::InvalidParam);
                     return -1;
@@ -599,7 +599,7 @@ namespace join
             }
 
             // check the consistency of the private key and the certificate.
-            if (SSL_CTX_check_private_key (this->tlsContext_.get ()) == 0)
+            if (SSL_CTX_check_private_key (this->_tlsContext.get ()) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 this->close ();
@@ -623,13 +623,13 @@ namespace join
                 return -1;
             }
 
-            if (SSL_CTX_load_verify_locations (this->tlsContext_.get (), caFile.c_str (), nullptr) == 0)
+            if (SSL_CTX_load_verify_locations (this->_tlsContext.get (), caFile.c_str (), nullptr) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
 
-            SSL_CTX_set_client_CA_list (this->tlsContext_.get (), certNames.release ());
+            SSL_CTX_set_client_CA_list (this->_tlsContext.get (), certNames.release ());
 
             return 0;
         }
@@ -645,13 +645,13 @@ namespace join
             {
                 // SSL_VERIFY_PEER will lead the client to verify the server certificate.
                 // If the verification process fails, the TLS/SSL handshake is immediately terminated.
-                SSL_CTX_set_verify (this->tlsContext_.get (), SSL_VERIFY_PEER, Socket::verifyWrapper);
-                SSL_CTX_set_verify_depth (this->tlsContext_.get (), depth);
+                SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_PEER, Socket::verifyWrapper);
+                SSL_CTX_set_verify_depth (this->_tlsContext.get (), depth);
             }
             else
             {
                 // SSL_VERIFY_NONE will lead the client to continue the handshake regardless of the verification result.
-                SSL_CTX_set_verify (this->tlsContext_.get (), SSL_VERIFY_NONE, nullptr);
+                SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
             }
         }
 
@@ -662,7 +662,7 @@ namespace join
          */
         int setCipher (const std::string& cipher)
         {
-            if (SSL_CTX_set_cipher_list (this->tlsContext_.get (), cipher.c_str ()) == 0)
+            if (SSL_CTX_set_cipher_list (this->_tlsContext.get (), cipher.c_str ()) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
@@ -679,7 +679,7 @@ namespace join
          */
         int setCipher_1_3 (const std::string &cipher)
         {
-            if (SSL_CTX_set_ciphersuites (this->tlsContext_.get (), cipher.c_str ()) == 0)
+            if (SSL_CTX_set_ciphersuites (this->_tlsContext.get (), cipher.c_str ()) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
@@ -765,10 +765,10 @@ namespace join
         }
 
         /// SSL/TLS context.
-        join::crypto::SslCtxPtr tlsContext_;
+        join::crypto::SslCtxPtr _tlsContext;
 
         /// SSL session id.
-        int sessionId_ = 0;
+        int _sessionId = 0;
     };
 }
 

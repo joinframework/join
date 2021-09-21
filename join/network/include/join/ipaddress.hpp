@@ -347,7 +347,7 @@ namespace join
 
     private:
         /// IP address implementation.
-        std::unique_ptr <IpAddressImpl> ip_;
+        std::unique_ptr <IpAddressImpl> _ip;
     };
 
     /**
