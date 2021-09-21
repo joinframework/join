@@ -2003,7 +2003,6 @@ TEST (IpAddress, lowerOrEqual)
     ASSERT_TRUE (ip1 <= "fe80::57f3:baa4:fc3a:890a");
 
     ip1 = "2001:db8:1234:5678::1";
-    ip2 = "2001:db8:1234:5678::1";
     ASSERT_TRUE (ip1 <= "2001:db8:1234:5678::1");
 
     ip2 = "fe80::57f3:baa4:fc3a:890a";

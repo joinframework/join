@@ -631,13 +631,15 @@ namespace join
          */
         int prefix () const
         {
-            uint32_t bits = 0;
             uint32_t bitPos = 128;
 
             for (int i = 3; i >= 0; --i)
             {
-                if ((bits = std::bitset <32> (ntohl (addr_.s6_addr32[i])).count ()))
+                uint32_t bits = std::bitset <32> (ntohl (addr_.s6_addr32[i])).count ();
+                if (bits)
+                {
                     return (bitPos - (32 - bits));
+                }
                 bitPos -= 32;
             }
 
