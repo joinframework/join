@@ -209,27 +209,21 @@ namespace join
                 fd_set descset = setfd;
 
                 lock.unlock ();
-
                 int nset = ::select (maxdesc + 1, &descset, nullptr, nullptr, nullptr);
+                lock.lock ();
+
                 if (nset > 0)
                 {
                     if (FD_ISSET (eventdesc_, &descset))
                     {
-                        lock.lock ();
-
                         uint64_t value;
                         [[maybe_unused]] ssize_t bytes = ::read (eventdesc_, &value, sizeof (uint64_t));
-
                         break;
                     }
 
                     if (FD_ISSET (epolldesc_, &descset))
                     {
-                        lock.lock ();
-
                         struct epoll_event ev;
-
-                        // read event now that we are protected.
                         nset = epoll_wait (epolldesc_, &ev, 1, 0);
                         if (nset == 1)
                         {
@@ -246,12 +240,9 @@ namespace join
                                 onReceive ();
                             }
                         }
-
                         continue;
                     }
                 }
-
-                lock.lock ();
             }
 
             // set reception thread status to not running.
