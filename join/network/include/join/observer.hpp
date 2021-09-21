@@ -26,8 +26,8 @@
 #define __JOIN_OBSERVER_HPP__
 
 // libjoin.
-#include <join/error.hpp>
 #include <join/protocol.hpp>
+#include <join/error.hpp>
 
 // C++.
 #include <condition_variable>
@@ -55,18 +55,9 @@ namespace join
          * @brief default constructor.
          */
         BasicObserver ()
+        : eventdesc_ (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
+          epolldesc_ (epoll_create1 (EPOLL_CLOEXEC))
         {
-            eventdesc_ = eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC);
-            if (eventdesc_ == -1)
-            {
-                throw std::system_error (errno, std::generic_category ());
-            }
-
-            epolldesc_ = epoll_create1 (EPOLL_CLOEXEC);
-            if (epolldesc_ == -1)
-            {
-                throw std::system_error (errno, std::generic_category ());
-            }
         }
 
         /**
@@ -103,19 +94,15 @@ namespace join
             // start/stop must not occur when queue is processed.
             std::unique_lock <std::recursive_mutex> lock (epollmx_);
 
-            // check if thread was running.
-            if (finished_ == false)
-            {
-                uint64_t value = 1;
+            uint64_t value = 1;
 
-                // notify event in order to stop reception thread.
-                [[maybe_unused]] ssize_t bytes = ::write (eventdesc_, &value, sizeof (uint64_t));
+            // notify event in order to stop reception thread.
+            [[maybe_unused]] ssize_t bytes = ::write (eventdesc_, &value, sizeof (uint64_t));
 
-                // wait for end of reception thread.
-                epollend_.wait (lock, [this] () {
-                    return finished_;
-                });
-            }
+            // wait for end of reception thread.
+            epollend_.wait (lock, [this] () {
+                return finished_;
+            });
 
             // close descriptors.
             ::close (eventdesc_);
@@ -149,17 +136,9 @@ namespace join
                 return -1;
             }
 
-            try
-            {
-                // start reception thread.
-                std::thread (std::bind (&BasicObserver::waitReception, this)).detach ();
-                finished_ = false;
-            }
-            catch (const std::system_error& err)
-            {
-                lastError = err.code ();
-                return -1;
-            }
+            // start reception thread.
+            std::thread (std::bind (&BasicObserver::waitReception, this)).detach ();
+            finished_ = false;
 
             return 0;
         }
@@ -180,17 +159,17 @@ namespace join
                 return -1;
             }
 
+            uint64_t value = 1;
+
+            // notify event in order to stop reception thread.
+            [[maybe_unused]] ssize_t bytes = ::write (eventdesc_, &value, sizeof (uint64_t));
+
             // remove descriptor from epoll instance.
             if (epoll_ctl (epolldesc_, EPOLL_CTL_DEL, handle (), nullptr) == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return -1;
             }
-
-            uint64_t value = 1;
-
-            // notify event in order to stop reception thread.
-            [[maybe_unused]] ssize_t bytes = ::write (eventdesc_, &value, sizeof (uint64_t));
 
             return 0;
         }

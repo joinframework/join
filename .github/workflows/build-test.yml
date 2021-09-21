@@ -30,11 +30,11 @@ jobs:
     - name: Cleanup coverage report
       run: lcov --remove lcov.info '/__w/join/join/build/*' '/__w/join/join/join/core/tests/*' '/__w/join/join/join/crypto/tests/*' '/__w/join/join/join/network/tests/*' '/__w/join/join/join/sax/tests/*' '/usr/include/*' --output-file lcov.info
 
-    - name: Deploy coverage report to coveralls
-      uses: coverallsapp/github-action@v1.1.2
-      with:
-        github-token: ${{secrets.github_token}}
-        path-to-lcov: /__w/join/join/lcov.info
+#    - name: Deploy coverage report to coveralls
+#      uses: coverallsapp/github-action@v1.1.2
+#      with:
+#        github-token: ${{secrets.github_token}}
+#        path-to-lcov: /__w/join/join/lcov.info
 
     - name: Deploy coverage report to codecove
       uses: codecov/codecov-action@v2.1.0
