@@ -42,7 +42,7 @@ TEST (TcpAcceptor, move)
 {
     Tcp::Acceptor server1, server2;
 
-    ASSERT_EQ (server1.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server1.open (Tcp::v6 ()), 0) << join::lastError.message ();
 
     server2 = std::move (server1);
     ASSERT_TRUE (server2.opened ());
@@ -58,8 +58,8 @@ TEST (TcpAcceptor, open)
 {
     Tcp::Acceptor server;
 
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.open (), -1);
+    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (Tcp::v6 ()), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 }
 /**
@@ -69,7 +69,7 @@ TEST (TcpAcceptor, close)
 {
     Tcp::Acceptor server;
 
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
 
@@ -80,7 +80,6 @@ TEST (TcpAcceptor, bind)
 {
     Tcp::Acceptor server;
 
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -129,7 +128,6 @@ TEST (TcpAcceptor, localEndpoint)
     Tcp::Acceptor server;
 
     ASSERT_EQ (server.localEndpoint (), Tcp::Endpoint {});
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), address);
     ASSERT_EQ (server.localEndpoint ().port (), port);
@@ -144,7 +142,7 @@ TEST (TcpAcceptor, opened)
     Tcp::Acceptor server;
 
     ASSERT_FALSE (server.opened ());
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (server.opened ());
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
     ASSERT_FALSE (server.opened ());
@@ -194,7 +192,7 @@ TEST (TcpAcceptor, handle)
     Tcp::Acceptor server;
 
     ASSERT_EQ (server.handle (), -1);
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
     ASSERT_GT (server.handle (), -1);
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
     ASSERT_EQ (server.handle (), -1);
