@@ -122,14 +122,16 @@ std::string             Observer::data_;
  */
 TEST_F (Observer, start)
 {
+    ASSERT_EQ (close (), 0) << join::lastError.message ();
+    ASSERT_EQ (start (), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    ASSERT_EQ (open (), 0) << join::lastError.message ();
     ASSERT_EQ (start (), 0) << join::lastError.message ();
 
     ASSERT_EQ (start (), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
-
     ASSERT_EQ (stop (), 0) << join::lastError.message ();
-    ASSERT_EQ (close (), 0) << join::lastError.message ();
-    ASSERT_EQ (start (), -1);
 }
 
 /**
@@ -141,12 +143,14 @@ TEST_F (Observer, stop)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (start (), 0) << join::lastError.message ();
-    ASSERT_EQ (stop (), 0) << join::lastError.message ();
-
-    std::this_thread::sleep_for (100ms);
-    ASSERT_EQ (start (), 0) << join::lastError.message ();
     ASSERT_EQ (close (), 0) << join::lastError.message ();
     ASSERT_EQ (stop (), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    std::this_thread::sleep_for (50ms);
+    ASSERT_EQ (open (), 0) << join::lastError.message ();
+    ASSERT_EQ (start (), 0) << join::lastError.message ();
+    ASSERT_EQ (stop (), 0) << join::lastError.message ();
 }
 
 /**
