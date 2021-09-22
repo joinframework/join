@@ -37,7 +37,6 @@
 // C++.
 #include <type_traits>
 #include <iostream>
-#include <random>
 
 // C.
 #include <netinet/tcp.h>
@@ -630,19 +629,6 @@ namespace join
             sum += (sum >> 16);
 
             return static_cast <uint16_t> (~sum);
-        }
-
-        /**
-         * @brief create a random number for message id.
-         * @rerturn random number for message id.
-         */
-        template <typename Type>
-        std::enable_if_t <std::numeric_limits <Type>::is_integer, Type>
-        static randomize ()
-        {
-            std::random_device rnd;
-            std::uniform_int_distribution <Type> dist {};
-            return dist (rnd);
         }
 
     protected:

@@ -24,6 +24,8 @@
 
 // C++.
 #include <stdexcept>
+#include <random>
+#include <limits>
 
 // C.
 #include <endian.h>
@@ -151,5 +153,18 @@ namespace join
     {
         val = details::_swap <Type> ()(val);
         return val;
+    }
+
+    /**
+     * @brief create a random number.
+     * @return random number.
+     */
+    template <typename Type>
+    std::enable_if_t <std::numeric_limits <Type>::is_integer, Type>
+    static randomize ()
+    {
+        std::random_device rnd;
+        std::uniform_int_distribution <Type> dist {};
+        return dist (rnd);
     }
 }

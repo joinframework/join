@@ -66,7 +66,7 @@ public:
         packet_.ip.version  = IPVERSION;
         packet_.ip.tos      = IPTOS_CLASS_CS6 | IPTOS_ECN_NOT_ECT;
         packet_.ip.tot_len  = htons (sizeof (Packet) - sizeof (packet_.eth));
-        packet_.ip.id       = htons (Raw::Socket::randomize <uint16_t> ());
+        packet_.ip.id       = htons (join::randomize <uint16_t> ());
         packet_.ip.frag_off = htons (IP_DF);
         packet_.ip.ttl      = IPDEFTTL;
         packet_.ip.check    = Raw::Socket::checksum (reinterpret_cast <uint16_t *> (&packet_.ip), sizeof (packet_.ip));
@@ -358,14 +358,6 @@ TEST_F (RawSocket, handle)
     ASSERT_GT (rawSocket.handle (), -1);
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.handle (), -1);
-}
-
-/**
- * @brief Test randomize method.
- */
-TEST_F (RawSocket, randomize)
-{
-    ASSERT_GT (Raw::Socket::randomize <int> (), 0);
 }
 
 /**

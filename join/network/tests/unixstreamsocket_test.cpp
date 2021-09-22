@@ -540,14 +540,6 @@ TEST_F (UnixStreamSocket, mtu)
 }
 
 /**
- * @brief Test randomize method.
- */
-TEST_F (UnixStreamSocket, randomize)
-{
-    ASSERT_GT (UnixStream::Socket::randomize <int> (), 0);
-}
-
-/**
  * @brief Test lower method.
  */
 TEST_F (UnixStreamSocket, lower)

@@ -65,6 +65,14 @@ TEST (Utils, swap)
 }
 
 /**
+ * @brief Test randomize.
+ */
+TEST (Utils, randomize)
+{
+    ASSERT_GT (join::randomize <int> (), 0);
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char **argv)

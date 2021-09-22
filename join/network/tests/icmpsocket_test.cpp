@@ -456,14 +456,6 @@ TEST_F (IcmpSocket, mtu)
 }
 
 /**
- * @brief Test randomize method.
- */
-TEST_F (IcmpSocket, randomize)
-{
-    ASSERT_GT (Icmp::Socket::randomize <int> (), 0);
-}
-
-/**
  * @brief Test is lower method.
  */
 TEST_F (IcmpSocket, lower)

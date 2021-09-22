@@ -414,14 +414,6 @@ TEST_F (UnixDgramSocket, mtu)
 }
 
 /**
- * @brief Test randomize method.
- */
-TEST_F (UnixDgramSocket, randomize)
-{
-    ASSERT_GT (UnixDgram::Socket::randomize <int> (), 0);
-}
-
-/**
  * @brief Test is lower method.
  */
 TEST_F (UnixDgramSocket, lower)

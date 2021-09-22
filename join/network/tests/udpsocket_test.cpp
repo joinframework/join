@@ -428,14 +428,6 @@ TEST_F (UdpSocket, mtu)
 }
 
 /**
- * @brief Test randomize method.
- */
-TEST_F (UdpSocket, randomize)
-{
-    ASSERT_GT (Udp::Socket::randomize <int> (), 0);
-}
-
-/**
  * @brief Test is lower method.
  */
 TEST_F (UdpSocket, lower)

@@ -689,19 +689,6 @@ namespace join
         }
     #endif
 
-        /**
-         * @brief create a random number for message id.
-         * @rerturn random number for message id.
-         */
-        template <typename Type>
-        std::enable_if_t <std::numeric_limits <Type>::is_integer, Type>
-        static randomize ()
-        {
-            std::random_device rnd;
-            std::uniform_int_distribution <Type> dist {};
-            return dist (rnd);
-        }
-
     protected:
         /**
          * @brief generate openssl Diffie-Hellman parameters.

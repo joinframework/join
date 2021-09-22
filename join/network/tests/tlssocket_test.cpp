@@ -724,14 +724,6 @@ TEST_F (TlsSocket, mtu)
 }
 
 /**
- * @brief Test randomize method.
- */
-TEST_F (TlsSocket, randomize)
-{
-    ASSERT_GT (Tcp::TlsSocket::randomize <int> (), 0);
-}
-
-/**
  * @brief Test setCertificate method.
  */
 TEST_F (TlsSocket, setCertificate)

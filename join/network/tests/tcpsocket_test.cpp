@@ -563,14 +563,6 @@ TEST_F (TcpSocket, mtu)
 }
 
 /**
- * @brief Test randomize method.
- */
-TEST_F (TcpSocket, randomize)
-{
-    ASSERT_GT (Tcp::Socket::randomize <int> (), 0);
-}
-
-/**
  * @brief Test lower method.
  */
 TEST_F (TcpSocket, lower)
