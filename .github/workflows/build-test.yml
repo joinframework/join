@@ -33,11 +33,17 @@ jobs:
     - name: Deploy coverage report to coveralls
       uses: coverallsapp/github-action@v1.1.2
       with:
-        github-token: ${{secrets.github_token}}
+        github-token: ${{secrets.GITHUB_TOKEN}}
         path-to-lcov: /__w/join/join/lcov.info
 
     - name: Deploy coverage report to codecove
       uses: codecov/codecov-action@v2.1.0
       with:
         file: /__w/join/join/lcov.info
+
+    - name: Deploy coverage report to codacy
+      uses: codacy/codacy-coverage-reporter-action@v1
+      with:
+        project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
+        coverage-reports: /__w/join/join/lcov.info
 
