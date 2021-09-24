@@ -43,6 +43,8 @@ namespace join
     template <class Protocol> class BasicStreamAcceptor;
     template <class Protocol> class BasicTlsAcceptor;
 
+    template <class Protocol> class BasicSocketIoStream;
+
     /**
      * @brief unix datagram protocol class.
      */
@@ -50,7 +52,7 @@ namespace join
     {
     public:
         using Endpoint = BasicUnixEndpoint <UnixDgram>;
-        using Socket   = BasicDatagramSocket <UnixDgram>;
+        using Socket = BasicDatagramSocket <UnixDgram>;
 
         /**
          * @brief construct the unix datagram protocol instance by default.
@@ -92,7 +94,8 @@ namespace join
     {
     public:
         using Endpoint = BasicUnixEndpoint <UnixStream>;
-        using Socket   = BasicStreamSocket <UnixStream>;
+        using Socket = BasicStreamSocket <UnixStream>;
+        using SocketStream = BasicSocketIoStream <UnixStream>;
         using Acceptor = BasicStreamAcceptor <UnixStream>;
 
         /**
@@ -135,7 +138,7 @@ namespace join
     {
     public:
         using Endpoint = BasicLinkLayerEndpoint <Raw>;
-        using Socket   = BasicSocket <Raw>;
+        using Socket = BasicSocket <Raw>;
 
         /**
          * @brief default constructor.
@@ -182,7 +185,7 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint <Udp>;
         using Resolver = BasicResolver <Udp>;
-        using Socket   = BasicDatagramSocket <Udp>;
+        using Socket = BasicDatagramSocket <Udp>;
 
         /**
          * @brief construct the udp protocol instance.
@@ -275,7 +278,7 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint <Icmp>;
         using Resolver = BasicResolver <Icmp>;
-        using Socket   = BasicDatagramSocket <Icmp>;
+        using Socket = BasicDatagramSocket <Icmp>;
 
         /**
          * @brief create the icmp protocol instance.
@@ -371,11 +374,12 @@ namespace join
     class Tcp
     {
     public:
-        using Endpoint    = BasicInternetEndpoint <Tcp>;
-        using Resolver    = BasicResolver <Tcp>;
-        using Socket      = BasicStreamSocket <Tcp>;
-        using TlsSocket   = BasicTlsSocket <Tcp>;
-        using Acceptor    = BasicStreamAcceptor <Tcp>;
+        using Endpoint = BasicInternetEndpoint <Tcp>;
+        using Resolver = BasicResolver <Tcp>;
+        using Socket = BasicStreamSocket <Tcp>;
+        using TlsSocket = BasicTlsSocket <Tcp>;
+        using SocketStream = BasicSocketIoStream <Tcp>;
+        using Acceptor = BasicStreamAcceptor <Tcp>;
         using TlsAcceptor = BasicTlsAcceptor <Tcp>;
 
         /**

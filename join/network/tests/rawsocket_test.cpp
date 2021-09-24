@@ -49,32 +49,32 @@ public:
     static void SetUpTestCase ()
     {
         // fill in data.
-        memcpy (packet_.data, "this is a test", strlen ("this is a test"));
+        memcpy (_packet.data, "this is a test", strlen ("this is a test"));
 
         // fill in UDP header.
-        packet_.ip.protocol = IPPROTO_UDP;
-        packet_.ip.saddr    = *reinterpret_cast <const uint32_t *> (IpAddress ("127.0.0.1").addr ());
-        packet_.ip.daddr    = *reinterpret_cast <const uint32_t *> (IpAddress ("127.0.0.1").addr ());
-        packet_.udp.source  = htons (5000);
-        packet_.udp.dest    = htons (5000);
-        packet_.udp.len     = htons (sizeof (Packet) - sizeof (packet_.eth) - sizeof (packet_.ip));
-        packet_.ip.tot_len  = packet_.udp.len;
-        packet_.udp.check   = Raw::Socket::checksum (reinterpret_cast <uint16_t *> (&packet_.ip), sizeof (Packet) - sizeof (packet_.eth));
+        _packet.ip.protocol = IPPROTO_UDP;
+        _packet.ip.saddr    = *reinterpret_cast <const uint32_t *> (IpAddress ("127.0.0.1").addr ());
+        _packet.ip.daddr    = *reinterpret_cast <const uint32_t *> (IpAddress ("127.0.0.1").addr ());
+        _packet.udp.source  = htons (5000);
+        _packet.udp.dest    = htons (5000);
+        _packet.udp.len     = htons (sizeof (Packet) - sizeof (_packet.eth) - sizeof (_packet.ip));
+        _packet.ip.tot_len  = _packet.udp.len;
+        _packet.udp.check   = Raw::Socket::checksum (reinterpret_cast <uint16_t *> (&_packet.ip), sizeof (Packet) - sizeof (_packet.eth));
 
         // fill in IP header.
-        packet_.ip.ihl      = sizeof (packet_.ip) >> 2;
-        packet_.ip.version  = IPVERSION;
-        packet_.ip.tos      = IPTOS_CLASS_CS6 | IPTOS_ECN_NOT_ECT;
-        packet_.ip.tot_len  = htons (sizeof (Packet) - sizeof (packet_.eth));
-        packet_.ip.id       = htons (join::randomize <uint16_t> ());
-        packet_.ip.frag_off = htons (IP_DF);
-        packet_.ip.ttl      = IPDEFTTL;
-        packet_.ip.check    = Raw::Socket::checksum (reinterpret_cast <uint16_t *> (&packet_.ip), sizeof (packet_.ip));
+        _packet.ip.ihl      = sizeof (_packet.ip) >> 2;
+        _packet.ip.version  = IPVERSION;
+        _packet.ip.tos      = IPTOS_CLASS_CS6 | IPTOS_ECN_NOT_ECT;
+        _packet.ip.tot_len  = htons (sizeof (Packet) - sizeof (_packet.eth));
+        _packet.ip.id       = htons (join::randomize <uint16_t> ());
+        _packet.ip.frag_off = htons (IP_DF);
+        _packet.ip.ttl      = IPDEFTTL;
+        _packet.ip.check    = Raw::Socket::checksum (reinterpret_cast <uint16_t *> (&_packet.ip), sizeof (_packet.ip));
 
         // fill in ETH header.
-        memcpy (packet_.eth.h_dest, MacAddress::wildcard.addr (), 6);
-        memcpy (packet_.eth.h_source, MacAddress::wildcard.addr (), 6);
-        packet_.eth.h_proto = htons (ETH_P_IP);
+        memcpy (_packet.eth.h_dest, MacAddress::wildcard.addr (), 6);
+        memcpy (_packet.eth.h_source, MacAddress::wildcard.addr (), 6);
+        _packet.eth.h_proto = htons (ETH_P_IP);
     }
 
 protected:
@@ -83,7 +83,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (bind (interface_), 0) << join::lastError.message ();
+        ASSERT_EQ (bind (_interface), 0) << join::lastError.message ();
         ASSERT_EQ (start (), 0) << join::lastError.message ();
     }
 
@@ -111,7 +111,7 @@ protected:
             }
 
             Packet *data = reinterpret_cast <Packet *> (buffer.get ());
-            if (data->ip.id != packet_.ip.id)
+            if (data->ip.id != _packet.ip.id)
             {
                 return;
             }
@@ -132,18 +132,18 @@ protected:
     };
 
     /// packet.
-    static Packet packet_;
+    static Packet _packet;
 
     /// hostname.
-    static const std::string interface_;
+    static const std::string _interface;
 
     /// timeout.
-    static const int timeout_;
+    static const int _timeout;
 };
 
-RawSocket::Packet RawSocket::packet_;
-const std::string RawSocket::interface_ = "lo";
-const int         RawSocket::timeout_   = 1000;
+RawSocket::Packet RawSocket::_packet;
+const std::string RawSocket::_interface = "lo";
+const int         RawSocket::_timeout = 1000;
 
 /**
  * @brief Test open method.
@@ -164,7 +164,7 @@ TEST_F (RawSocket, close)
     Raw::Socket rawSocket (Raw::Socket::Blocking);
 
     ASSERT_FALSE (rawSocket.opened ());
-    ASSERT_EQ (rawSocket.bind (interface_), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.opened ());
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
     ASSERT_FALSE (rawSocket.opened ());
@@ -177,7 +177,7 @@ TEST_F (RawSocket, bind)
 {
     Raw::Socket rawSocket (Raw::Socket::Blocking);
 
-    ASSERT_EQ (rawSocket.bind (interface_), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -188,10 +188,10 @@ TEST_F (RawSocket, canRead)
 {
     Raw::Socket rawSocket (Raw::Socket::Blocking);
 
-    ASSERT_EQ (rawSocket.bind (interface_), 0) << join::lastError.message ();
-    ASSERT_TRUE (rawSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&packet_), sizeof (packet_)), sizeof (packet_)) << join::lastError.message ();
-    ASSERT_TRUE (rawSocket.waitReadyRead (timeout_)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (rawSocket.canRead (), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
 }
@@ -203,10 +203,10 @@ TEST_F (RawSocket, waitReadyRead)
 {
     Raw::Socket rawSocket;
 
-    ASSERT_EQ (rawSocket.bind (interface_), 0) << join::lastError.message ();
-    ASSERT_TRUE (rawSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&packet_), sizeof (packet_)), sizeof (packet_)) << join::lastError.message ();
-    ASSERT_TRUE (rawSocket.waitReadyRead (timeout_)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -218,10 +218,10 @@ TEST_F (RawSocket, read)
     Raw::Socket rawSocket (Raw::Socket::Blocking);
     char data[1024];
 
-    ASSERT_EQ (rawSocket.bind (interface_), 0) << join::lastError.message ();
-    ASSERT_TRUE (rawSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&packet_), sizeof (packet_)), sizeof (packet_)) << join::lastError.message ();
-    ASSERT_TRUE (rawSocket.waitReadyRead (timeout_)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (rawSocket.read (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
 }
@@ -233,8 +233,8 @@ TEST_F (RawSocket, waitReadyWrite)
 {
     Raw::Socket rawSocket;
 
-    ASSERT_EQ (rawSocket.bind (interface_), 0) << join::lastError.message ();
-    ASSERT_TRUE (rawSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -245,10 +245,10 @@ TEST_F (RawSocket, write)
 {
     Raw::Socket rawSocket;
 
-    ASSERT_EQ (rawSocket.bind (interface_), 0) << join::lastError.message ();
-    ASSERT_TRUE (rawSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&packet_), sizeof (packet_)), sizeof (packet_)) << join::lastError.message ();
-    ASSERT_TRUE (rawSocket.waitReadyRead (timeout_)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -272,7 +272,7 @@ TEST_F (RawSocket, setOption)
     Raw::Socket rawSocket (Raw::Socket::Blocking);
 
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::Broadcast, 1), -1);
-    ASSERT_EQ (rawSocket.bind (interface_), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::Broadcast, 1), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
 }
@@ -284,8 +284,8 @@ TEST_F (RawSocket, localEndpoint)
 {
     Raw::Socket rawSocket;
 
-    ASSERT_EQ (rawSocket.bind (interface_), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.localEndpoint ().device (), interface_);
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.localEndpoint ().device (), _interface);
 }
 
 /**

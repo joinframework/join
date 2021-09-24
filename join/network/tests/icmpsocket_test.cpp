@@ -44,9 +44,9 @@ public:
      */
     static void SetUpTestCase ()
     {
-        data_ = std::make_unique <char[]> (sizeof (struct icmphdr));
+        _data = std::make_unique <char[]> (sizeof (struct icmphdr));
 
-        struct icmphdr *icmp = reinterpret_cast <struct icmphdr *> (data_.get ());
+        struct icmphdr *icmp = reinterpret_cast <struct icmphdr *> (_data.get ());
         icmp->type = ICMP_ECHO;
         icmp->code = 0;
         icmp->checksum = 0;
@@ -57,18 +57,18 @@ public:
 
 protected:
     /// hostname.
-    static const std::string host_;
+    static const std::string _host;
 
     /// timeout.
-    static const int timeout_;
+    static const int _timeout;
 
     /// data.
-    static std::unique_ptr <char[]> data_;
+    static std::unique_ptr <char[]> _data;
 };
 
-const std::string        IcmpSocket::host_    = "localhost";
-const int                IcmpSocket::timeout_ = 1000;
-std::unique_ptr <char[]> IcmpSocket::data_;
+const std::string        IcmpSocket::_host    = "localhost";
+const int                IcmpSocket::_timeout = 1000;
+std::unique_ptr <char[]> IcmpSocket::_data;
 
 /**
  * @brief Test open method.
@@ -91,7 +91,7 @@ TEST_F (IcmpSocket, close)
 {
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -104,15 +104,15 @@ TEST_F (IcmpSocket, bind)
     Icmp::Endpoint from;
     char response[1024];
 
-    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_EQ (client.bind (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_TRUE (client.waitReadyWrite (timeout_));
-    ASSERT_GT (client.write (data_.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
-    ASSERT_TRUE (server.waitReadyRead (timeout_));
+    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_EQ (client.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.waitReadyWrite (_timeout));
+    ASSERT_GT (client.write (_data.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
+    ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (server.readFrom (response, server.canRead (), &from), -1) << join::lastError.message ();
-    ASSERT_EQ (from, Icmp::Resolver::resolve (host_));
+    ASSERT_EQ (from, Icmp::Resolver::resolve (_host));
     ASSERT_EQ (client.close (), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -124,7 +124,7 @@ TEST_F (IcmpSocket, connect)
 {
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -136,7 +136,7 @@ TEST_F (IcmpSocket, disconnect)
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
     ASSERT_FALSE (icmpSocket.connected ());
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_TRUE (icmpSocket.connected ());
     ASSERT_EQ (icmpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (icmpSocket.connected ());
@@ -153,16 +153,16 @@ TEST_F (IcmpSocket, canRead)
     Icmp::Endpoint from;
     char response[1024];
 
-    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_TRUE (client.waitReadyWrite (timeout_));
-    ASSERT_GT (client.write (data_.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
-    ASSERT_TRUE (client.waitReadyWrite (timeout_));
-    ASSERT_GT (client.write (data_.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
-    ASSERT_TRUE (server.waitReadyRead (timeout_));
+    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.waitReadyWrite (_timeout));
+    ASSERT_GT (client.write (_data.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.waitReadyWrite (_timeout));
+    ASSERT_GT (client.write (_data.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
+    ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (server.readFrom (response, server.canRead (), &from), -1) << join::lastError.message ();
-    ASSERT_TRUE (server.waitReadyRead (timeout_));
+    ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (server.readFrom (response, server.canRead (), &from), -1) << join::lastError.message ();
     ASSERT_EQ (client.close (), 0) << join::lastError.message ();
@@ -178,19 +178,19 @@ TEST_F (IcmpSocket, waitReadyRead)
     Icmp::Endpoint from;
     char response[1024];
 
-    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    if (client.connect (Icmp::Resolver::resolve (host_)) == -1)
+    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    if (client.connect (Icmp::Resolver::resolve (_host)) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
-    ASSERT_TRUE (client.waitReadyWrite (timeout_));
-    ASSERT_GT (client.write (data_.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
-    ASSERT_TRUE (server.waitReadyRead (timeout_));
+    ASSERT_TRUE (client.waitReadyWrite (_timeout));
+    ASSERT_GT (client.write (_data.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
+    ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (server.readFrom (response, server.canRead (), &from), -1) << join::lastError.message ();
-    ASSERT_EQ (from, Icmp::Resolver::resolve (host_));
-    ASSERT_NE (server.writeTo (data_.get (), sizeof (struct icmphdr), from), -1) << join::lastError.message ();
-    ASSERT_TRUE (client.waitReadyRead (timeout_));
+    ASSERT_EQ (from, Icmp::Resolver::resolve (_host));
+    ASSERT_NE (server.writeTo (_data.get (), sizeof (struct icmphdr), from), -1) << join::lastError.message ();
+    ASSERT_TRUE (client.waitReadyRead (_timeout));
     ASSERT_EQ (client.close (), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -204,16 +204,16 @@ TEST_F (IcmpSocket, read)
     Icmp::Endpoint from;
     char response[1024];
 
-    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_TRUE (client.waitReadyWrite (timeout_));
-    ASSERT_GT (client.write (data_.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
-    ASSERT_TRUE (server.waitReadyRead (timeout_));
+    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.waitReadyWrite (_timeout));
+    ASSERT_GT (client.write (_data.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
+    ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (server.readFrom (response, server.canRead (), &from), -1) << join::lastError.message ();
-    ASSERT_EQ (from, Icmp::Resolver::resolve (host_));
-    ASSERT_NE (server.writeTo (data_.get (), sizeof (struct icmphdr), from), -1) << join::lastError.message ();
-    ASSERT_TRUE (client.waitReadyRead (timeout_));
+    ASSERT_EQ (from, Icmp::Resolver::resolve (_host));
+    ASSERT_NE (server.writeTo (_data.get (), sizeof (struct icmphdr), from), -1) << join::lastError.message ();
+    ASSERT_TRUE (client.waitReadyRead (_timeout));
     ASSERT_NE (client.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (client.read (response, client.canRead ()), -1) << join::lastError.message ();
     ASSERT_EQ (client.close (), 0) << join::lastError.message ();
@@ -229,14 +229,14 @@ TEST_F (IcmpSocket, readFrom)
     Icmp::Endpoint from;
     char response[1024];
 
-    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_TRUE (client.waitReadyWrite (timeout_));
-    ASSERT_GT (client.write (data_.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
-    ASSERT_TRUE (server.waitReadyRead (timeout_));
+    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.waitReadyWrite (_timeout));
+    ASSERT_GT (client.write (_data.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
+    ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (server.readFrom (response, server.canRead (), &from), -1) << join::lastError.message ();
-    ASSERT_EQ (from, Icmp::Resolver::resolve (host_));
+    ASSERT_EQ (from, Icmp::Resolver::resolve (_host));
     ASSERT_EQ (client.close (), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -250,14 +250,14 @@ TEST_F (IcmpSocket, waitReadyWrite)
     Icmp::Endpoint from;
     char response[1024];
 
-    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_TRUE (client.waitReadyWrite (timeout_));
-    ASSERT_GT (client.write (data_.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
-    ASSERT_TRUE (server.waitReadyRead (timeout_));
+    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.waitReadyWrite (_timeout));
+    ASSERT_GT (client.write (_data.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
+    ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (server.readFrom (response, server.canRead (), &from), -1) << join::lastError.message ();
-    ASSERT_EQ (from, Icmp::Resolver::resolve (host_));
+    ASSERT_EQ (from, Icmp::Resolver::resolve (_host));
     ASSERT_EQ (client.close (), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -271,13 +271,13 @@ TEST_F (IcmpSocket, write)
     Icmp::Endpoint from;
     char response[1024];
 
-    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_GT (client.write (data_.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
-    ASSERT_TRUE (server.waitReadyRead (timeout_));
+    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_GT (client.write (_data.get (), sizeof (struct icmphdr)), 0) << join::lastError.message ();
+    ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (server.readFrom (response, server.canRead (), &from), -1) << join::lastError.message ();
-    ASSERT_EQ (from, Icmp::Resolver::resolve (host_));
+    ASSERT_EQ (from, Icmp::Resolver::resolve (_host));
     ASSERT_EQ (client.close (), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -291,12 +291,12 @@ TEST_F (IcmpSocket, writeTo)
     Icmp::Endpoint from;
     char response[1024];
 
-    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_NE (client.writeTo (data_.get (), sizeof (struct icmphdr), Icmp::Resolver::resolve (host_)), -1) << join::lastError.message ();
-    ASSERT_TRUE (server.waitReadyRead (timeout_));
+    ASSERT_EQ (server.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_NE (client.writeTo (_data.get (), sizeof (struct icmphdr), Icmp::Resolver::resolve (_host)), -1) << join::lastError.message ();
+    ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (server.readFrom (response, server.canRead (), &from), -1) << join::lastError.message ();
-    ASSERT_EQ (from, Icmp::Resolver::resolve (host_));
+    ASSERT_EQ (from, Icmp::Resolver::resolve (_host));
     ASSERT_EQ (client.close (), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -308,7 +308,7 @@ TEST_F (IcmpSocket, setMode)
 {
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.setMode (Icmp::Socket::NonBlocking), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
 }
@@ -321,7 +321,7 @@ TEST_F (IcmpSocket, setOption)
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
     ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::MulticastLoop, 1), -1);
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::MulticastLoop, 1), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
 }
@@ -333,9 +333,9 @@ TEST_F (IcmpSocket, localEndpoint)
 {
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
-    ASSERT_EQ (icmpSocket.bind (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
-    ASSERT_EQ (icmpSocket.localEndpoint ().ip (), Icmp::Resolver::resolve (host_).ip ()) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.localEndpoint ().ip (), Icmp::Resolver::resolve (_host).ip ()) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -349,7 +349,7 @@ TEST_F (IcmpSocket, opened)
     ASSERT_FALSE (icmpSocket.opened ());
     ASSERT_EQ (icmpSocket.open (Icmp::v4 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (icmpSocket.opened ());
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_TRUE (icmpSocket.opened ());
     ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
     ASSERT_FALSE (icmpSocket.opened ());
@@ -363,7 +363,7 @@ TEST_F (IcmpSocket, connected)
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
     ASSERT_FALSE (icmpSocket.connected ());
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_TRUE (icmpSocket.connected());
     ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
     ASSERT_FALSE (icmpSocket.connected ());
@@ -379,7 +379,7 @@ TEST_F (IcmpSocket, encrypted)
     ASSERT_FALSE (icmpSocket.opened ());
     ASSERT_EQ (icmpSocket.open (Icmp::v4 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (icmpSocket.encrypted ());
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolveHost (host_)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolveHost (_host)), 0) << join::lastError.message ();
     ASSERT_FALSE (icmpSocket.encrypted ());
     ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
     ASSERT_FALSE (icmpSocket.encrypted ());
@@ -450,7 +450,7 @@ TEST_F (IcmpSocket, mtu)
 {
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (host_)), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_NE (icmpSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.close (), 0) << join::lastError.message ();
 }

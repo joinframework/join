@@ -1258,8 +1258,8 @@ namespace join
         BasicStreamSocket (Mode mode)
         : BasicDatagramSocket <Protocol> (mode)
         {
-            readBuf_ = std::make_unique <char []> (bufSize_);
-            if (readBuf_ == nullptr)
+            _readBuf = std::make_unique <char []> (_bufSize);
+            if (_readBuf == nullptr)
             {
                 throw std::bad_alloc ();
             }
@@ -1284,12 +1284,12 @@ namespace join
          */
         BasicStreamSocket (BasicStreamSocket&& other)
         : BasicDatagramSocket <Protocol> (std::move (other)),
-          readBuf_ (std::move (other.readBuf_)),
-          readCount_ (other.readCount_),
-          readPos_ (other.readPos_)
+          _readBuf (std::move (other._readBuf)),
+          _readCount (other._readCount),
+          _readPos (other._readPos)
         {
-            other.readCount_ = 0;
-            other.readPos_ = 0;
+            other._readCount = 0;
+            other._readPos = 0;
         }
 
         /**
@@ -1301,12 +1301,12 @@ namespace join
         {
             BasicDatagramSocket <Protocol>::operator= (std::move (other));
 
-            readBuf_ = std::move (other.readBuf_);
-            readCount_ = other.readCount_;
-            readPos_ = other.readPos_;
+            _readBuf = std::move (other._readBuf);
+            _readCount = other._readCount;
+            _readPos = other._readPos;
 
-            other.readCount_ = 0;
-            other.readPos_ = 0;
+            other._readCount = 0;
+            other._readPos = 0;
 
             return *this;
         }
@@ -1325,8 +1325,8 @@ namespace join
             int result = BasicDatagramSocket <Protocol>::close ();
             if (result == 0)
             {
-                this->readCount_ = 0;
-                this->readPos_ = 0;
+                this->_readCount = 0;
+                this->_readPos = 0;
             }
 
             return result;
@@ -1447,11 +1447,11 @@ namespace join
          */
         int readChar (char &data, int timeout = 0)
         {
-            if (this->readCount_ == 0)
+            if (this->_readCount == 0)
             {
                 for (;;)
                 {
-                    int result = this->read (this->readBuf_.get (), this->bufSize_);
+                    int result = this->read (this->_readBuf.get (), this->_bufSize);
                     if (result == -1)
                     {
                         if (lastError == Errc::TemporaryError)
@@ -1463,14 +1463,14 @@ namespace join
                         return -1;
                     }
 
-                    this->readCount_ = result;
-                    this->readPos_ = 0;
+                    this->_readCount = result;
+                    this->_readPos = 0;
                     break;
                 }
             }
 
-            this->readCount_--;
-            data = this->readBuf_[this->readPos_++];
+            this->_readCount--;
+            data = this->_readBuf[this->_readPos++];
 
             return 0;
         }
@@ -1679,30 +1679,30 @@ namespace join
         {
             int flushSize = 0;
 
-            if (this->readCount_)
+            if (this->_readCount)
             {
-                flushSize = std::min (this->readCount_, maxSize);
+                flushSize = std::min (this->_readCount, maxSize);
 
-                ::memcpy (data, &this->readBuf_[this->readPos_], flushSize);
+                ::memcpy (data, &this->_readBuf[this->_readPos], flushSize);
 
-                this->readCount_ -= flushSize;
-                this->readPos_ += flushSize;
+                this->_readCount -= flushSize;
+                this->_readPos += flushSize;
             }
 
             return flushSize;
         }
 
         /// internal buffer size.
-        static constexpr int bufSize_ = 1500;
+        static constexpr int _bufSize = 1500;
 
         /// internal read buffer.
-        std::unique_ptr <char []> readBuf_;
+        std::unique_ptr <char []> _readBuf;
 
         /// internal read buffer count.
-        unsigned long readCount_ = 0;
+        unsigned long _readCount = 0;
 
         /// internal read buffer position.
-        unsigned long readPos_ = 0;
+        unsigned long _readPos = 0;
 
         /// friendship with basic stream acceptor
         friend class BasicStreamAcceptor <Protocol>;
@@ -2177,7 +2177,7 @@ namespace join
         {
             if (this->encrypted ())
             {
-                return SSL_pending (this->_tlsHandle.get ()) + this->readCount_;
+                return SSL_pending (this->_tlsHandle.get ()) + this->_readCount;
             }
 
             return BasicStreamSocket <Protocol>::canRead ();

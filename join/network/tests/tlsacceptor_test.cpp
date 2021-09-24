@@ -46,7 +46,7 @@ public:
      */
     static void SetUpTestCase ()
     {
-        std::ofstream certFile (cert);
+        std::ofstream certFile (_cert);
         if (certFile.is_open ())
         {
             certFile << "-----BEGIN CERTIFICATE-----" << std::endl;
@@ -78,7 +78,7 @@ public:
             certFile.close ();
         }
 
-        std::ofstream validKeyFile (validKey);
+        std::ofstream validKeyFile (_validKey);
         if (validKeyFile.is_open ())
         {
             validKeyFile << "-----BEGIN PRIVATE KEY-----" << std::endl;
@@ -112,7 +112,7 @@ public:
             validKeyFile.close ();
         }
 
-        std::ofstream invalidKeyFile (invalidKey);
+        std::ofstream invalidKeyFile (_invalidKey);
         if (invalidKeyFile.is_open ())
         {
             invalidKeyFile << "-----BEGIN PRIVATE KEY-----" << std::endl;
@@ -152,33 +152,33 @@ public:
      */
     static void TearDownTestCase ()
     {
-        unlink (cert.c_str ());
-        unlink (validKey.c_str ());
-        unlink (invalidKey.c_str ());
+        unlink (_cert.c_str ());
+        unlink (_validKey.c_str ());
+        unlink (_invalidKey.c_str ());
     }
 
 protected:
     /// host.
-    static const IpAddress address;
+    static const IpAddress _address;
 
     /// port.
-    static const uint16_t port;
+    static const uint16_t _port;
 
     /// certificate.
-    static const std::string cert;
+    static const std::string _cert;
 
     /// valid private key.
-    static const std::string validKey;
+    static const std::string _validKey;
 
     /// invalid private key.
-    static const std::string invalidKey;
+    static const std::string _invalidKey;
 };
 
-const IpAddress   TlsAcceptor::address    = "127.0.0.1";
-const uint16_t    TlsAcceptor::port       = 5000;
-const std::string TlsAcceptor::cert       = "/tmp/tlsserver_test.cert";
-const std::string TlsAcceptor::validKey   = "/tmp/tlsserver_test_valid.key";
-const std::string TlsAcceptor::invalidKey = "/tmp/tlsserver_test_invalid.key";
+const IpAddress   TlsAcceptor::_address = "127.0.0.1";
+const uint16_t    TlsAcceptor::_port = 5000;
+const std::string TlsAcceptor::_cert = "/tmp/tlsserver_test.cert";
+const std::string TlsAcceptor::_validKey = "/tmp/tlsserver_test_valid.key";
+const std::string TlsAcceptor::_invalidKey = "/tmp/tlsserver_test_invalid.key";
 
 /**
  * @brief Assign by move.
@@ -226,7 +226,7 @@ TEST_F (TlsAcceptor, bind)
 {
     Tcp::TlsAcceptor server;
 
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
 
@@ -239,7 +239,7 @@ TEST_F (TlsAcceptor, listen)
 
     ASSERT_EQ (server.listen (20), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -254,13 +254,13 @@ TEST_F (TlsAcceptor, accept)
 
     ASSERT_FALSE (server.accept ().connected ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
-    ASSERT_EQ (clientSocket.connect({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (clientSocket.connect({_address, _port}), 0) << join::lastError.message ();
     Tcp::TlsSocket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
-    ASSERT_EQ (serverSocket.localEndpoint ().ip (), address);
-    ASSERT_EQ (serverSocket.localEndpoint ().port (), port);
+    ASSERT_EQ (serverSocket.localEndpoint ().ip (), _address);
+    ASSERT_EQ (serverSocket.localEndpoint ().port (), _port);
     ASSERT_EQ (clientSocket.close (), 0) << join::lastError.message ();
     ASSERT_EQ (serverSocket.close (), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
@@ -274,9 +274,9 @@ TEST_F (TlsAcceptor, localEndpoint)
     Tcp::TlsAcceptor server;
 
     ASSERT_EQ (server.localEndpoint (), Tcp::Endpoint {});
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.localEndpoint ().ip (), address);
-    ASSERT_EQ (server.localEndpoint ().port (), port);
+    ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.localEndpoint ().ip (), _address);
+    ASSERT_EQ (server.localEndpoint ().port (), _port);
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
 
@@ -301,7 +301,7 @@ TEST_F (TlsAcceptor, family)
 {
     Tcp::TlsAcceptor server;
 
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.family (), AF_INET);
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -313,7 +313,7 @@ TEST_F (TlsAcceptor, type)
 {
     Tcp::TlsAcceptor server;
 
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.type (), SOCK_STREAM);
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -325,7 +325,7 @@ TEST_F (TlsAcceptor, protocol)
 {
     Tcp::TlsAcceptor server;
 
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.protocol (), IPPROTO_TCP);
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
@@ -353,11 +353,11 @@ TEST_F (TlsAcceptor, setCertificate)
 
     ASSERT_EQ (server.setCertificate ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (server.setCertificate (cert, "foo"), -1);
+    ASSERT_EQ (server.setCertificate (_cert, "foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (server.setCertificate (cert, invalidKey), -1);
+    ASSERT_EQ (server.setCertificate (_cert, _invalidKey), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (server.setCertificate (cert, validKey), 0) << join::lastError.message ();
+    ASSERT_EQ (server.setCertificate (_cert, _validKey), 0) << join::lastError.message ();
 }
 
 /**
@@ -369,7 +369,7 @@ TEST_F (TlsAcceptor, setCaCertificate)
 
     ASSERT_EQ (server.setCaCertificate ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (server.setCaCertificate (cert), 0) << join::lastError.message ();
+    ASSERT_EQ (server.setCaCertificate (_cert), 0) << join::lastError.message ();
 }
 
 /**

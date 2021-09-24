@@ -58,6 +58,10 @@ add_executable(tcpsocket.gtest tcpsocket_test.cpp)
 target_link_libraries(tcpsocket.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(tcpsocket.gtest)
 
+add_executable(tcpiostream.gtest tcpiostream_test.cpp)
+target_link_libraries(tcpiostream.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(tcpiostream.gtest)
+
 add_executable(tlsacceptor.gtest tlsacceptor_test.cpp)
 target_link_libraries(tlsacceptor.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(tlsacceptor.gtest)
