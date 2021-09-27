@@ -86,19 +86,19 @@ protected:
         }
     }
 
+    /// timeout.
+    static const int _timeout;
+
     /// host.
     static const std::string _host;
 
     /// port.
     static const uint16_t _port;
-
-    /// timeout.
-    static const int _timeout;
 };
 
+const int         TcpSocketIo::_timeout = 1000;
 const std::string TcpSocketIo::_host = "localhost";
 const uint16_t    TcpSocketIo::_port = 5000;
-const int         TcpSocketIo::_timeout = 1000;
 
 /**
  * @brief Test default constructor.
@@ -116,7 +116,6 @@ TEST_F (TcpSocketIo, moveConstruct)
 {
     Tcp::Stream tmp;
     ASSERT_TRUE (tmp.good ()) << join::lastError.message ();
-
     Tcp::Stream tcpStream (std::move (tmp));
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
 }
@@ -128,7 +127,6 @@ TEST_F (TcpSocketIo, moveAssign)
 {
     Tcp::Stream tmp;
     ASSERT_TRUE (tmp.good ()) << join::lastError.message ();
-
     Tcp::Stream tcpStream;
     tcpStream = std::move (tmp);
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
@@ -193,8 +191,12 @@ TEST_F (TcpSocketIo, socket)
 TEST_F (TcpSocketIo, insert)
 {
     Tcp::Stream sockStream;
+    sockStream << "test" << std::endl;
+    ASSERT_TRUE (sockStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    sockStream.clear ();
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
-
+    ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
     sockStream << "test" << std::endl;
     ASSERT_TRUE (sockStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
@@ -206,8 +208,12 @@ TEST_F (TcpSocketIo, insert)
 TEST_F (TcpSocketIo, put)
 {
     Tcp::Stream sockStream;
+    sockStream.put ('t');
+    ASSERT_TRUE (sockStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    sockStream.clear ();
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
-
+    ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
     sockStream.put ('t');
     sockStream.put ('e');
     sockStream.put ('s');
@@ -222,8 +228,12 @@ TEST_F (TcpSocketIo, put)
 TEST_F (TcpSocketIo, write)
 {
     Tcp::Stream sockStream;
+    sockStream.write ("test", 4);
+    ASSERT_TRUE (sockStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    sockStream.clear ();
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
-
+    ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
     sockStream.write ("test", 4);
     ASSERT_TRUE (sockStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
@@ -236,7 +246,7 @@ TEST_F (TcpSocketIo, flush)
 {
     Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
-
+    ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
     sockStream.put ('t');
     sockStream.flush ();
     sockStream.put ('e');
@@ -254,12 +264,16 @@ TEST_F (TcpSocketIo, flush)
  */
 TEST_F (TcpSocketIo, extract)
 {
+    int test;
     Tcp::Stream sockStream;
+    sockStream >> test;
+    ASSERT_TRUE (sockStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    sockStream.clear ();
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
     sockStream << int (123456789) << std::endl;
     sockStream.flush ();
-
-    int test;
     sockStream >> test;
     ASSERT_EQ (test, 123456789);
 }
@@ -270,10 +284,14 @@ TEST_F (TcpSocketIo, extract)
 TEST_F (TcpSocketIo, get)
 {
     Tcp::Stream sockStream;
+    sockStream.get ();
+    ASSERT_TRUE (sockStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    sockStream.clear ();
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
     sockStream.write ("test", 4);
     sockStream.flush ();
-
     ASSERT_EQ (sockStream.get (), 't');
     ASSERT_EQ (sockStream.get (), 'e');
     ASSERT_EQ (sockStream.get (), 's');
@@ -287,9 +305,9 @@ TEST_F (TcpSocketIo, peek)
 {
     Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
     sockStream.write ("test", 4);
     sockStream.flush ();
-
     ASSERT_EQ (sockStream.peek (), 't');
     ASSERT_EQ (sockStream.get (), 't');
     ASSERT_EQ (sockStream.peek (), 'e');
@@ -309,7 +327,6 @@ TEST_F (TcpSocketIo, unget)
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
-
     ASSERT_EQ (sockStream.get (), 't');
     sockStream.unget ();
     ASSERT_EQ (sockStream.get (), 't');
@@ -333,7 +350,6 @@ TEST_F (TcpSocketIo, putback)
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
-
     ASSERT_EQ (sockStream.get (), 't');
     sockStream.putback ('s');
     ASSERT_EQ (sockStream.get (), 's');
@@ -355,7 +371,6 @@ TEST_F (TcpSocketIo, getline)
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test\n", 5);
     sockStream.flush ();
-
     std::array <char, 32> test = {};
     sockStream.getline (test.data (), test.size (), '\n');
     ASSERT_STREQ (test.data (), "test");
@@ -370,7 +385,6 @@ TEST_F (TcpSocketIo, ignore)
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test\n", 5);
     sockStream.flush ();
-
     sockStream.ignore (std::numeric_limits <std::streamsize>::max (), 'e');
     ASSERT_EQ (sockStream.get (), 's');
     ASSERT_EQ (sockStream.get (), 't');
@@ -385,7 +399,6 @@ TEST_F (TcpSocketIo, read)
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
-
     std::array <char, 32> test = {};
     sockStream.read (test.data (), 4);
     ASSERT_STREQ (test.data (), "test");
@@ -400,7 +413,6 @@ TEST_F (TcpSocketIo, read)
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
-
     std::array <char, 32> test = {};
     ASSERT_EQ (sockStream.readsome (test.data (), test.size ()), 4);
     ASSERT_STREQ (test.data (), "test");
@@ -415,7 +427,6 @@ TEST_F (TcpSocketIo, gcount)
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
-
     std::array <char, 32> test = {};
     sockStream.read (test.data (), 4);
     ASSERT_EQ (sockStream.gcount (), 4);

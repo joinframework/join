@@ -66,11 +66,17 @@ namespace join
          */
         BasicSocketStreambuf (BasicSocketStreambuf&& other)
         : std::streambuf (std::move (other)),
-          _readbuf (std::move (other._readbuf)),
-          _writebuf (std::move (other._writebuf)),
+          _allocated (other._allocated),
+          _gsize (other._gsize),
+          _psize (other._psize),
+          _buf (other._buf),
           _timeout (other._timeout),
           _socket (std::move (other._socket))
         {
+            other._allocated = false;
+            other._gsize = BUFSIZ / 2;
+            other._psize = BUFSIZ / 2;
+            other._buf = nullptr;
             other._timeout = 30000;
         }
 
@@ -88,15 +94,21 @@ namespace join
          */
         BasicSocketStreambuf& operator= (BasicSocketStreambuf&& other)
         {
-            this->close();
+            this->close ();
 
             std::streambuf::operator= (std::move (other));
 
-            _readbuf = std::move (other._readbuf);
-            _writebuf = std::move (other._writebuf);
+            _allocated = other._allocated;
+            _gsize = other._gsize;
+            _psize = other._psize;
+            _buf = other._buf;
             _timeout = other._timeout;
             _socket = std::move (other._socket);
 
+            other._allocated = false;
+            other._gsize = BUFSIZ / 2;
+            other._psize = BUFSIZ / 2;
+            other._buf = nullptr;
             other._timeout = 30000;
 
             return *this;
@@ -107,7 +119,7 @@ namespace join
          */
         virtual ~BasicSocketStreambuf ()
         {
-            if (_writebuf)
+            if (_buf)
             {
                 this->overflow (traits_type::eof ());
             }
@@ -124,6 +136,8 @@ namespace join
             {
                 return nullptr;
             }
+
+            this->allocateBuffer ();
 
             if (_socket.connect (endpoint) == -1)
             {
@@ -149,7 +163,7 @@ namespace join
         {
             BasicSocketStreambuf* result = this;
 
-            if (_writebuf && (this->overflow (traits_type::eof ()) == traits_type::eof ()))
+            if (_buf && (this->overflow (traits_type::eof ()) == traits_type::eof ()))
             {
                 result = nullptr;
             }
@@ -158,6 +172,8 @@ namespace join
             {
                 result = nullptr;
             }
+
+            this->freeBuffer ();
 
             return result;
         }
@@ -196,29 +212,22 @@ namespace join
          */
         virtual int_type underflow () override
         {
-            if (_socket.opened () == false)
+            if (!_socket.connected ())
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return traits_type::eof ();
             }
 
-            if (_readbuf == nullptr)
+            if (this->eback () == nullptr)
             {
-                _readbuf = std::make_unique <char []> (_bufsize);
-                if (_readbuf == nullptr)
-                {
-                    lastError = make_error_code (Errc::OutOfMemory);
-                    return traits_type::eof ();
-                }
-
-                this->setg (_readbuf.get (), _readbuf.get (), _readbuf.get ());
+                this->setg (_buf, _buf, _buf);
             }
 
             if (this->gptr () == this->egptr ())
             {
                 for (;;)
                 {
-                    int nread = _socket.read (_readbuf.get (), _bufsize);
+                    int nread = _socket.read (this->eback (), _gsize);
                     if (nread == -1)
                     {
                         if (lastError == Errc::TemporaryError)
@@ -234,7 +243,7 @@ namespace join
                         return traits_type::eof ();
                     }
 
-                    this->setg (_readbuf.get (), _readbuf.get (), _readbuf.get () + nread);
+                    this->setg (this->eback (), this->eback (), this->eback () + nread);
                     break;
                 }
             }
@@ -276,22 +285,15 @@ namespace join
          */
         virtual int_type overflow (int_type c = traits_type::eof ()) override
         {
-            if (_socket.opened () == false)
+            if (!_socket.connected ())
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return traits_type::eof ();
             }
 
-            if (_writebuf == nullptr)
+            if (this->pbase () == nullptr)
             {
-                _writebuf = std::make_unique <char []> (_bufsize);
-                if (_writebuf == nullptr)
-                {
-                    lastError = make_error_code (Errc::OutOfMemory);
-                    return traits_type::eof ();
-                }
-
-                this->setp (_writebuf.get (), _writebuf.get () + _bufsize);
+                this->setp (_buf + _gsize, _buf + _gsize + _psize);
             }
 
             if ((this->pptr () < this->epptr ()) && (c != traits_type::eof ()))
@@ -304,7 +306,7 @@ namespace join
 
             while (n < pending)
             {
-                int nwrite = _socket.write (_writebuf.get () + n, pending - n);
+                int nwrite = _socket.write (this->pbase () + n, pending - n);
                 if (nwrite == -1)
                 {
                     if (lastError == Errc::TemporaryError)
@@ -323,7 +325,7 @@ namespace join
                 n += nwrite;
             }
 
-            this->setp (_writebuf.get (), _writebuf.get () + _bufsize);
+            this->setp (this->pbase (), this->pbase () + _psize);
 
             if (c == traits_type::eof ())
             {
@@ -339,7 +341,7 @@ namespace join
          */
         virtual int_type sync () override
         {
-            if (_writebuf)
+            if (_buf)
             {
                 return this->overflow (traits_type::eof ());
             }
@@ -353,19 +355,61 @@ namespace join
          * @param n .
          * @return .
          */
-        /*virtual std::streambuf* setbuf (char* s, std::streamsize n) override
+        virtual std::streambuf* setbuf (char* s, std::streamsize n) override
         {
+            if (!_buf)
+            {
+                if ((s == nullptr) && (n == 0))
+                {
+                    _gsize = 1;
+                    _psize = 1;
+                }
+                else
+                {
+                    auto d = std::ldiv (n, 2);
+                    _gsize = d.quot + d.rem;
+                    _psize = d.quot;
+                    _buf = s;
+                }
+            }
+
             return this;
-        }*/
+        }
+
+        /**
+         * @brief allocate internal buffer.
+         */
+        void allocateBuffer ()
+        {
+            if (!_buf)
+            {
+                _buf = new char [BUFSIZ];
+                _allocated = true;
+            }
+        }
+
+        /**
+         * @brief free internal buffer.
+         */
+        void freeBuffer ()
+        {
+            if (_allocated)
+            {
+                delete [] _buf;
+                _allocated = false;
+                _buf = nullptr;
+            }
+        }
+
+        /// internal buffer status.
+        bool _allocated = false;
 
         /// internal buffer size.
-        static constexpr int _bufsize = 1500;
+        std::streamsize _gsize = BUFSIZ / 2;
+        std::streamsize _psize = BUFSIZ / 2;
 
-        /// internal read buffer.
-        std::unique_ptr <char []> _readbuf;
-
-        /// internal write buffer.
-        std::unique_ptr <char []> _writebuf;
+        /// internal buffer.
+        char* _buf = nullptr;
 
         /// timeout.
         int _timeout = 30000;
