@@ -29,7 +29,7 @@
 #include <gtest/gtest.h>
 
 using join::UnixDgram;
-using join::UnixStream;
+using join::Unix;
 using join::Raw;
 using join::Udp;
 using join::Icmp;
@@ -41,7 +41,7 @@ using join::Tcp;
 TEST (Protocol, family)
 {
     ASSERT_EQ (UnixDgram ().family (), AF_UNIX);
-    ASSERT_EQ (UnixStream ().family (), AF_UNIX);
+    ASSERT_EQ (Unix ().family (), AF_UNIX);
     ASSERT_EQ (Raw ().family (), AF_PACKET);
     ASSERT_EQ (Udp ().family (), AF_INET);
     ASSERT_EQ (Udp::v6 ().family (), AF_INET6);
@@ -60,7 +60,7 @@ TEST (Protocol, family)
 TEST (Protocol, type)
 {
     ASSERT_EQ (UnixDgram ().type (), SOCK_DGRAM);
-    ASSERT_EQ (UnixStream ().type (), SOCK_STREAM);
+    ASSERT_EQ (Unix ().type (), SOCK_STREAM);
     ASSERT_EQ (Raw ().type (), SOCK_RAW);
     ASSERT_EQ (Udp ().type (), SOCK_DGRAM);
     ASSERT_EQ (Icmp ().type (), SOCK_RAW);
@@ -73,7 +73,7 @@ TEST (Protocol, type)
 TEST (Protocol, protocol)
 {
     ASSERT_EQ (UnixDgram ().protocol (), 0);
-    ASSERT_EQ (UnixStream ().protocol (), 0);
+    ASSERT_EQ (Unix ().protocol (), 0);
     ASSERT_EQ (Raw ().protocol (), ::htons (ETH_P_ALL));
     ASSERT_EQ (Udp ().protocol (), IPPROTO_UDP);
     ASSERT_EQ (Icmp::v6 ().protocol (), IPPROTO_ICMPV6);

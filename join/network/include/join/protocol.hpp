@@ -43,6 +43,7 @@ namespace join
     template <class Protocol> class BasicStreamAcceptor;
     template <class Protocol> class BasicTlsAcceptor;
 
+    template <class Protocol> class BasicSocketStreambuf;
     template <class Protocol> class BasicSocketIoStream;
 
     /**
@@ -90,18 +91,18 @@ namespace join
     /**
      * @brief unix stream protocol class.
      */
-    class UnixStream
+    class Unix
     {
     public:
-        using Endpoint = BasicUnixEndpoint <UnixStream>;
-        using Socket = BasicStreamSocket <UnixStream>;
-        using SocketStream = BasicSocketIoStream <UnixStream>;
-        using Acceptor = BasicStreamAcceptor <UnixStream>;
+        using Endpoint = BasicUnixEndpoint <Unix>;
+        using Socket = BasicStreamSocket <Unix>;
+        using Stream = BasicSocketIoStream <Unix>;
+        using Acceptor = BasicStreamAcceptor <Unix>;
 
         /**
          * @brief construct the unix stream protocol instance by default.
          */
-        constexpr UnixStream () noexcept = default;
+        constexpr Unix () noexcept = default;
 
         /**
          * @brief get the protocol ip address family.
@@ -378,7 +379,7 @@ namespace join
         using Resolver = BasicResolver <Tcp>;
         using Socket = BasicStreamSocket <Tcp>;
         using TlsSocket = BasicTlsSocket <Tcp>;
-        using SocketStream = BasicSocketIoStream <Tcp>;
+        using Stream = BasicSocketIoStream <Tcp>;
         using Acceptor = BasicStreamAcceptor <Tcp>;
         using TlsAcceptor = BasicTlsAcceptor <Tcp>;
 

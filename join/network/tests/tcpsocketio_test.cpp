@@ -36,7 +36,7 @@ using join::Tcp;
 /**
  * @brief Class used to test the TCP socket io stream API.
  */
-class TcpIoSocket : public ::testing::Test, public Tcp::Acceptor::Observer
+class TcpSocketIo : public ::testing::Test, public Tcp::Acceptor::Observer
 {
 protected:
     /**
@@ -96,40 +96,40 @@ protected:
     static const int _timeout;
 };
 
-const std::string TcpIoSocket::_host = "localhost";
-const uint16_t    TcpIoSocket::_port = 5000;
-const int         TcpIoSocket::_timeout = 1000;
+const std::string TcpSocketIo::_host = "localhost";
+const uint16_t    TcpSocketIo::_port = 5000;
+const int         TcpSocketIo::_timeout = 1000;
 
 /**
  * @brief Test default constructor.
  */
-TEST_F (TcpIoSocket, defaultConstruct)
+TEST_F (TcpSocketIo, defaultConstruct)
 {
-    Tcp::SocketStream tcpStream;
+    Tcp::Stream tcpStream;
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
 }
 
 /**
  * @brief Test move constructor.
  */
-TEST_F (TcpIoSocket, moveConstruct)
+TEST_F (TcpSocketIo, moveConstruct)
 {
-    Tcp::SocketStream tmp;
+    Tcp::Stream tmp;
     ASSERT_TRUE (tmp.good ()) << join::lastError.message ();
 
-    Tcp::SocketStream tcpStream (std::move (tmp));
+    Tcp::Stream tcpStream (std::move (tmp));
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
 }
 
 /**
  * @brief Test move operatore.
  */
-TEST_F (TcpIoSocket, moveAssign)
+TEST_F (TcpSocketIo, moveAssign)
 {
-    Tcp::SocketStream tmp;
+    Tcp::Stream tmp;
     ASSERT_TRUE (tmp.good ()) << join::lastError.message ();
 
-    Tcp::SocketStream tcpStream;
+    Tcp::Stream tcpStream;
     tcpStream = std::move (tmp);
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
 }
@@ -137,9 +137,9 @@ TEST_F (TcpIoSocket, moveAssign)
 /**
  * @brief Test open method.
  */
-TEST_F (TcpIoSocket, connect)
+TEST_F (TcpSocketIo, connect)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     ASSERT_FALSE (sockStream.socket ().connected ());
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
@@ -149,9 +149,9 @@ TEST_F (TcpIoSocket, connect)
 /**
  * @brief Test close method.
  */
-TEST_F (TcpIoSocket, close)
+TEST_F (TcpSocketIo, close)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     ASSERT_FALSE (sockStream.socket ().connected ());
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
@@ -164,9 +164,9 @@ TEST_F (TcpIoSocket, close)
 /**
  * @brief Test timeout method.
  */
-TEST_F (TcpIoSocket, timeout)
+TEST_F (TcpSocketIo, timeout)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     ASSERT_NE (sockStream.timeout (), _timeout);
     sockStream.timeout (_timeout);
     ASSERT_EQ (sockStream.timeout (), _timeout);
@@ -175,9 +175,9 @@ TEST_F (TcpIoSocket, timeout)
 /**
  * @brief Test socket method.
  */
-TEST_F (TcpIoSocket, socket)
+TEST_F (TcpSocketIo, socket)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     ASSERT_EQ (sockStream.socket ().handle (), -1);
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
@@ -190,48 +190,51 @@ TEST_F (TcpIoSocket, socket)
 /**
  * @brief Test insert operator.
  */
-TEST_F (TcpIoSocket, insert)
+TEST_F (TcpSocketIo, insert)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
 
-    sockStream << "This is a test" << std::endl;
+    sockStream << "test" << std::endl;
+    ASSERT_TRUE (sockStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
 }
 
 /**
  * @brief Test put method.
  */
-TEST_F (TcpIoSocket, put)
+TEST_F (TcpSocketIo, put)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
 
     sockStream.put ('t');
     sockStream.put ('e');
     sockStream.put ('s');
     sockStream.put ('t');
+    ASSERT_TRUE (sockStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
 }
 
 /**
  * @brief Test write method.
  */
-TEST_F (TcpIoSocket, write)
+TEST_F (TcpSocketIo, write)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
 
     sockStream.write ("test", 4);
+    ASSERT_TRUE (sockStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
 }
 
 /**
  * @brief Test flush method.
  */
-TEST_F (TcpIoSocket, flush)
+TEST_F (TcpSocketIo, flush)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
 
     sockStream.put ('t');
@@ -242,15 +245,16 @@ TEST_F (TcpIoSocket, flush)
     sockStream.flush ();
     sockStream.put ('t');
     sockStream.flush ();
+    ASSERT_TRUE (sockStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (sockStream.good ()) << join::lastError.message ();
 }
 
 /**
  * @brief Test extract method.
  */
-TEST_F (TcpIoSocket, extract)
+TEST_F (TcpSocketIo, extract)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream << int (123456789) << std::endl;
     sockStream.flush ();
@@ -263,9 +267,9 @@ TEST_F (TcpIoSocket, extract)
 /**
  * @brief Test get method.
  */
-TEST_F (TcpIoSocket, get)
+TEST_F (TcpSocketIo, get)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
@@ -279,9 +283,9 @@ TEST_F (TcpIoSocket, get)
 /**
  * @brief Test peek method.
  */
-TEST_F (TcpIoSocket, peek)
+TEST_F (TcpSocketIo, peek)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
@@ -299,9 +303,9 @@ TEST_F (TcpIoSocket, peek)
 /**
  * @brief Test unget method.
  */
-TEST_F (TcpIoSocket, unget)
+TEST_F (TcpSocketIo, unget)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
@@ -323,9 +327,9 @@ TEST_F (TcpIoSocket, unget)
 /**
  * @brief Test putback method.
  */
-TEST_F (TcpIoSocket, putback)
+TEST_F (TcpSocketIo, putback)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
@@ -345,9 +349,9 @@ TEST_F (TcpIoSocket, putback)
 /**
  * @brief Test getline method.
  */
-TEST_F (TcpIoSocket, getline)
+TEST_F (TcpSocketIo, getline)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test\n", 5);
     sockStream.flush ();
@@ -360,9 +364,9 @@ TEST_F (TcpIoSocket, getline)
 /**
  * @brief Test ignore method.
  */
-TEST_F (TcpIoSocket, ignore)
+TEST_F (TcpSocketIo, ignore)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test\n", 5);
     sockStream.flush ();
@@ -375,9 +379,9 @@ TEST_F (TcpIoSocket, ignore)
 /**
  * @brief Test read method.
  */
-TEST_F (TcpIoSocket, read)
+TEST_F (TcpSocketIo, read)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
@@ -390,9 +394,9 @@ TEST_F (TcpIoSocket, read)
 /**
  * @brief Test readsome method.
  */
-/*TEST_F (TcpIoSocket, readsome)
+/*TEST_F (TcpSocketIo, readsome)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
@@ -405,9 +409,9 @@ TEST_F (TcpIoSocket, read)
 /**
  * @brief Test gcount method.
  */
-TEST_F (TcpIoSocket, gcount)
+TEST_F (TcpSocketIo, gcount)
 {
-    Tcp::SocketStream sockStream;
+    Tcp::Stream sockStream;
     sockStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     sockStream.write ("test", 4);
     sockStream.flush ();
@@ -420,7 +424,7 @@ TEST_F (TcpIoSocket, gcount)
 /**
  * @brief Test sync method.
  */
-TEST_F (TcpIoSocket, sync)
+TEST_F (TcpSocketIo, sync)
 {
 }
 

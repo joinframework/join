@@ -29,11 +29,11 @@
 #include <gtest/gtest.h>
 
 using join::Errc;
-using join::UnixStream;
+using join::Unix;
 /**
  * @brief Class used to test the unix stream socket API.
  */
-class UnixStreamSocket : public ::testing::Test, public UnixStream::Acceptor::Observer
+class UnixSocket : public ::testing::Test, public Unix::Acceptor::Observer
 {
 protected:
     /**
@@ -60,7 +60,7 @@ protected:
      */
     virtual void onReceive () override
     {
-        UnixStream::Socket sock = accept ();
+        Unix::Socket sock = accept ();
         if (sock.connected ())
         {
             char buf[1024];
@@ -91,16 +91,16 @@ protected:
     static const int _timeout;
 };
 
-const std::string UnixStreamSocket::_serverpath = "/tmp/unixserver_test.sock";
-const std::string UnixStreamSocket::_clientpath = "/tmp/unixclient_test.sock";
-const int         UnixStreamSocket::_timeout = 1000;
+const std::string UnixSocket::_serverpath = "/tmp/unixserver_test.sock";
+const std::string UnixSocket::_clientpath = "/tmp/unixclient_test.sock";
+const int         UnixSocket::_timeout = 1000;
 
 /**
  * @brief Test open method.
  */
-TEST_F (UnixStreamSocket, open)
+TEST_F (UnixSocket, open)
 {
-    UnixStream::Socket unixSocket;
+    Unix::Socket unixSocket;
 
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
@@ -109,9 +109,9 @@ TEST_F (UnixStreamSocket, open)
 /**
  * @brief Test close method.
  */
-TEST_F (UnixStreamSocket, close)
+TEST_F (UnixSocket, close)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_FALSE (unixSocket.opened ());
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -125,9 +125,9 @@ TEST_F (UnixStreamSocket, close)
 /**
  * @brief Test bind method.
  */
-TEST_F (UnixStreamSocket, bind)
+TEST_F (UnixSocket, bind)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
@@ -137,9 +137,9 @@ TEST_F (UnixStreamSocket, bind)
 /**
  * @brief Test connect method.
  */
-TEST_F (UnixStreamSocket, connect)
+TEST_F (UnixSocket, connect)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
@@ -149,9 +149,9 @@ TEST_F (UnixStreamSocket, connect)
 /**
  * @brief Test waitConnected method.
  */
-TEST_F (UnixStreamSocket, waitConnected)
+TEST_F (UnixSocket, waitConnected)
 {
-    UnixStream::Socket unixSocket;
+    Unix::Socket unixSocket;
 
     if (unixSocket.connect (_serverpath) == -1)
     {
@@ -170,9 +170,9 @@ TEST_F (UnixStreamSocket, waitConnected)
 /**
  * @brief Test disconnect method.
  */
-TEST_F (UnixStreamSocket, disconnect)
+TEST_F (UnixSocket, disconnect)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_FALSE (unixSocket.connected ());
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -186,9 +186,9 @@ TEST_F (UnixStreamSocket, disconnect)
 /**
  * @brief Test waitDisconnected method.
  */
-TEST_F (UnixStreamSocket, waitDisconnected)
+TEST_F (UnixSocket, waitDisconnected)
 {
-    UnixStream::Socket unixSocket;
+    Unix::Socket unixSocket;
 
     if (unixSocket.connect (_serverpath) == -1)
     {
@@ -207,9 +207,9 @@ TEST_F (UnixStreamSocket, waitDisconnected)
 /**
  * @brief Test canRead method.
  */
-TEST_F (UnixStreamSocket, canRead)
+TEST_F (UnixSocket, canRead)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -224,9 +224,9 @@ TEST_F (UnixStreamSocket, canRead)
 /**
  * @brief Test waitReadyRead method.
  */
-TEST_F (UnixStreamSocket, waitReadyRead)
+TEST_F (UnixSocket, waitReadyRead)
 {
-    UnixStream::Socket unixSocket;
+    Unix::Socket unixSocket;
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     if (unixSocket.connect (_serverpath) == -1)
@@ -248,9 +248,9 @@ TEST_F (UnixStreamSocket, waitReadyRead)
 /**
  * @brief Test read method.
  */
-TEST_F (UnixStreamSocket, read)
+TEST_F (UnixSocket, read)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -265,9 +265,9 @@ TEST_F (UnixStreamSocket, read)
 /**
  * @brief Test readChar method.
  */
-TEST_F (UnixStreamSocket, readChar)
+TEST_F (UnixSocket, readChar)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
     char data;
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -283,9 +283,9 @@ TEST_F (UnixStreamSocket, readChar)
 /**
  * @brief Test readLine method.
  */
-TEST_F (UnixStreamSocket, readLine)
+TEST_F (UnixSocket, readLine)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
     std::string data;
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -301,9 +301,9 @@ TEST_F (UnixStreamSocket, readLine)
 /**
  * @brief Test readData method.
  */
-TEST_F (UnixStreamSocket, readData)
+TEST_F (UnixSocket, readData)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -318,9 +318,9 @@ TEST_F (UnixStreamSocket, readData)
 /**
  * @brief Test waitReadyWrite method.
  */
-TEST_F (UnixStreamSocket, waitReadyWrite)
+TEST_F (UnixSocket, waitReadyWrite)
 {
-    UnixStream::Socket unixSocket;
+    Unix::Socket unixSocket;
 
     if (unixSocket.connect (_serverpath) == -1)
     {
@@ -339,9 +339,9 @@ TEST_F (UnixStreamSocket, waitReadyWrite)
 /**
  * @brief Test write method.
  */
-TEST_F (UnixStreamSocket, write)
+TEST_F (UnixSocket, write)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -355,9 +355,9 @@ TEST_F (UnixStreamSocket, write)
 /**
  * @brief Test writeData method.
  */
-TEST_F (UnixStreamSocket, writeData)
+TEST_F (UnixSocket, writeData)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -371,12 +371,12 @@ TEST_F (UnixStreamSocket, writeData)
 /**
  * @brief Test setMode method.
  */
-TEST_F (UnixStreamSocket, setMode)
+TEST_F (UnixSocket, setMode)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::NonBlocking), 0);
+    ASSERT_EQ (unixSocket.setMode (Unix::Socket::NonBlocking), 0);
     if (unixSocket.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -388,13 +388,13 @@ TEST_F (UnixStreamSocket, setMode)
 /**
  * @brief Test setOption method.
  */
-TEST_F (UnixStreamSocket, setOption)
+TEST_F (UnixSocket, setOption)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::SndBuffer, 1500), -1);
+    ASSERT_EQ (unixSocket.setOption (Unix::Socket::SndBuffer, 1500), -1);
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (Unix::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
 }
@@ -402,35 +402,35 @@ TEST_F (UnixStreamSocket, setOption)
 /**
  * @brief Test localEndpoint method.
  */
-TEST_F (UnixStreamSocket, localEndpoint)
+TEST_F (UnixSocket, localEndpoint)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.localEndpoint (), UnixStream::Endpoint (_clientpath)) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.localEndpoint (), Unix::Endpoint (_clientpath)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
 }
 
 /**
  * @brief Test mtu method.
  */
-TEST_F (UnixStreamSocket, remoteEndpoint)
+TEST_F (UnixSocket, remoteEndpoint)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.remoteEndpoint (), UnixStream::Endpoint (_serverpath)) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.remoteEndpoint (), Unix::Endpoint (_serverpath)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
 }
 
 /**
  * @brief Test opened method.
  */
-TEST_F (UnixStreamSocket, opened)
+TEST_F (UnixSocket, opened)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_FALSE (unixSocket.opened ());
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
@@ -446,9 +446,9 @@ TEST_F (UnixStreamSocket, opened)
 /**
  * @brief Test connected method.
  */
-TEST_F (UnixStreamSocket, connected)
+TEST_F (UnixSocket, connected)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_FALSE (unixSocket.connected());
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
@@ -464,9 +464,9 @@ TEST_F (UnixStreamSocket, connected)
 /**
  * @brief Test encrypted method.
  */
-TEST_F (UnixStreamSocket, encrypted)
+TEST_F (UnixSocket, encrypted)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_FALSE (unixSocket.encrypted ());
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
@@ -482,9 +482,9 @@ TEST_F (UnixStreamSocket, encrypted)
 /**
  * @brief Test family method.
  */
-TEST_F (UnixStreamSocket, family)
+TEST_F (UnixSocket, family)
 {
-    UnixStream::Socket unixSocket;
+    Unix::Socket unixSocket;
 
     ASSERT_EQ (unixSocket.family (), AF_UNIX);
 }
@@ -492,9 +492,9 @@ TEST_F (UnixStreamSocket, family)
 /**
  * @brief Test type method.
  */
-TEST_F (UnixStreamSocket, type)
+TEST_F (UnixSocket, type)
 {
-    UnixStream::Socket unixSocket;
+    Unix::Socket unixSocket;
 
     ASSERT_EQ (unixSocket.type (), SOCK_STREAM);
 }
@@ -502,9 +502,9 @@ TEST_F (UnixStreamSocket, type)
 /**
  * @brief Test protocol method.
  */
-TEST_F (UnixStreamSocket, protocol)
+TEST_F (UnixSocket, protocol)
 {
-    UnixStream::Socket unixSocket;
+    Unix::Socket unixSocket;
 
     ASSERT_EQ (unixSocket.protocol (), 0);
 }
@@ -512,9 +512,9 @@ TEST_F (UnixStreamSocket, protocol)
 /**
  * @brief Test handle method.
  */
-TEST_F (UnixStreamSocket, handle)
+TEST_F (UnixSocket, handle)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.handle (), -1);
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
@@ -530,9 +530,9 @@ TEST_F (UnixStreamSocket, handle)
 /**
  * @brief Test mtu method.
  */
-TEST_F (UnixStreamSocket, mtu)
+TEST_F (UnixSocket, mtu)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    Unix::Socket unixSocket (Unix::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.mtu (), -1);
@@ -542,9 +542,9 @@ TEST_F (UnixStreamSocket, mtu)
 /**
  * @brief Test lower method.
  */
-TEST_F (UnixStreamSocket, lower)
+TEST_F (UnixSocket, lower)
 {
-    UnixStream::Socket unixSocket1, unixSocket2;
+    Unix::Socket unixSocket1, unixSocket2;
 
     ASSERT_EQ (unixSocket1.open (), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket2.open (), 0) << join::lastError.message ();

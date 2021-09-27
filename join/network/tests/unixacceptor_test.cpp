@@ -29,7 +29,7 @@
 #include <gtest/gtest.h>
 
 using join::Errc;
-using join::UnixStream;
+using join::Unix;
 
 std::string path = "/tmp/unixacceptor_test.sock";
 
@@ -38,14 +38,14 @@ std::string path = "/tmp/unixacceptor_test.sock";
  */
 TEST (UnixAcceptor, move)
 {
-    UnixStream::Acceptor server1, server2;
+    Unix::Acceptor server1, server2;
 
     ASSERT_EQ (server1.open (), 0) << join::lastError.message ();
 
     server2 = std::move (server1);
     ASSERT_TRUE (server2.opened ());
 
-    UnixStream::Acceptor server3 = std::move (server2);
+    Unix::Acceptor server3 = std::move (server2);
     ASSERT_TRUE (server3.opened ());
 }
 
@@ -54,7 +54,7 @@ TEST (UnixAcceptor, move)
  */
 TEST (UnixAcceptor, open)
 {
-    UnixStream::Acceptor server;
+    Unix::Acceptor server;
 
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.open (), -1);
@@ -65,7 +65,7 @@ TEST (UnixAcceptor, open)
  */
 TEST (UnixAcceptor, close)
 {
-    UnixStream::Acceptor server;
+    Unix::Acceptor server;
 
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
@@ -76,7 +76,7 @@ TEST (UnixAcceptor, close)
  */
 TEST (UnixAcceptor, bind)
 {
-    UnixStream::Acceptor server;
+    Unix::Acceptor server;
 
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
@@ -88,7 +88,7 @@ TEST (UnixAcceptor, bind)
  */
 TEST (UnixAcceptor, listen)
 {
-    UnixStream::Acceptor server;
+    Unix::Acceptor server;
 
     ASSERT_EQ (server.listen (20), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -102,15 +102,15 @@ TEST (UnixAcceptor, listen)
  */
 TEST (UnixAcceptor, accept)
 {
-    UnixStream::Socket clientSocket (UnixStream::Socket::Blocking);
-    UnixStream::Acceptor server;
+    Unix::Socket clientSocket (Unix::Socket::Blocking);
+    Unix::Acceptor server;
 
     ASSERT_FALSE (server.accept ().connected ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect (path), 0) << join::lastError.message ();
-    UnixStream::Socket serverSocket = server.accept ();
+    Unix::Socket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
     ASSERT_EQ (serverSocket.localEndpoint ().device (), path);
     ASSERT_EQ (clientSocket.close (), 0) << join::lastError.message ();
@@ -123,9 +123,9 @@ TEST (UnixAcceptor, accept)
  */
 TEST (UnixAcceptor, localEndpoint)
 {
-    UnixStream::Acceptor server;
+    Unix::Acceptor server;
 
-    ASSERT_EQ (server.localEndpoint (), UnixStream::Endpoint {});
+    ASSERT_EQ (server.localEndpoint (), Unix::Endpoint {});
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().device (), path);
@@ -137,7 +137,7 @@ TEST (UnixAcceptor, localEndpoint)
  */
 TEST (UnixAcceptor, opened)
 {
-    UnixStream::Acceptor server;
+    Unix::Acceptor server;
 
     ASSERT_FALSE (server.opened ());
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
@@ -151,7 +151,7 @@ TEST (UnixAcceptor, opened)
  */
 TEST (UnixAcceptor, family)
 {
-    UnixStream::Acceptor server;
+    Unix::Acceptor server;
 
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.family (), AF_UNIX);
@@ -163,7 +163,7 @@ TEST (UnixAcceptor, family)
  */
 TEST (UnixAcceptor, type)
 {
-    UnixStream::Acceptor server;
+    Unix::Acceptor server;
 
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.type (), SOCK_STREAM);
@@ -175,7 +175,7 @@ TEST (UnixAcceptor, type)
  */
 TEST (UnixAcceptor, protocol)
 {
-    UnixStream::Acceptor server;
+    Unix::Acceptor server;
 
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.protocol (), 0);
@@ -187,7 +187,7 @@ TEST (UnixAcceptor, protocol)
  */
 TEST (UnixAcceptor, handle)
 {
-    UnixStream::Acceptor server;
+    Unix::Acceptor server;
 
     ASSERT_EQ (server.handle (), -1);
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();

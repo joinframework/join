@@ -29,7 +29,7 @@
 #include <gtest/gtest.h>
 
 using join::UnixDgram;
-using join::UnixStream;
+using join::Unix;
 using join::Raw;
 using join::Udp;
 using join::Icmp;
@@ -43,8 +43,8 @@ TEST (Endpoint, addr)
     UnixDgram::Endpoint unixDgramEndpoint;
     ASSERT_NE (unixDgramEndpoint.addr (), nullptr);
 
-    UnixStream::Endpoint unixStreamEndpoint;
-    ASSERT_NE (unixStreamEndpoint.addr (), nullptr);
+    Unix::Endpoint unixEndpoint;
+    ASSERT_NE (unixEndpoint.addr (), nullptr);
 
     Raw::Endpoint rawEndpoint;
     ASSERT_NE (rawEndpoint.addr (), nullptr);
@@ -67,8 +67,8 @@ TEST (Endpoint, length)
     UnixDgram::Endpoint unixDgramEndpoint;
     ASSERT_EQ (unixDgramEndpoint.length (), sizeof (struct sockaddr_un));
 
-    UnixStream::Endpoint unixStreamEndpoint;
-    ASSERT_EQ (unixStreamEndpoint.length (), sizeof (struct sockaddr_un));
+    Unix::Endpoint unixEndpoint;
+    ASSERT_EQ (unixEndpoint.length (), sizeof (struct sockaddr_un));
 
     Raw::Endpoint rawEndpoint;
     ASSERT_EQ (rawEndpoint.length (), sizeof (struct sockaddr_ll));
@@ -101,9 +101,9 @@ TEST (Endpoint, device)
     unixDgramEndpoint.device ("/path/to/file");
     ASSERT_EQ (unixDgramEndpoint.device (), "/path/to/file");
 
-    UnixStream::Endpoint unixStreamEndpoint;
-    unixStreamEndpoint.device ("/path/to/other");
-    ASSERT_EQ (unixStreamEndpoint.device (), "/path/to/other");
+    Unix::Endpoint unixEndpoint;
+    unixEndpoint.device ("/path/to/other");
+    ASSERT_EQ (unixEndpoint.device (), "/path/to/other");
 
     Raw::Endpoint rawEndpoint;
     rawEndpoint.device ("lo");
@@ -208,10 +208,10 @@ TEST (Endpoint, equal)
     ASSERT_EQ (UnixDgram::Endpoint ("/path/to/other"), UnixDgram::Endpoint ("/path/to/other"));
     ASSERT_NE (UnixDgram::Endpoint ("/path/to/other"), UnixDgram::Endpoint ("/path/to/file"));
 
-    ASSERT_EQ (UnixStream::Endpoint ("/path/to/file"), UnixStream::Endpoint ("/path/to/file"));
-    ASSERT_NE (UnixStream::Endpoint ("/path/to/file"), UnixStream::Endpoint ("/path/to/other"));
-    ASSERT_EQ (UnixStream::Endpoint ("/path/to/other"), UnixStream::Endpoint ("/path/to/other"));
-    ASSERT_NE (UnixStream::Endpoint ("/path/to/other"), UnixStream::Endpoint ("/path/to/file"));
+    ASSERT_EQ (Unix::Endpoint ("/path/to/file"), Unix::Endpoint ("/path/to/file"));
+    ASSERT_NE (Unix::Endpoint ("/path/to/file"), Unix::Endpoint ("/path/to/other"));
+    ASSERT_EQ (Unix::Endpoint ("/path/to/other"), Unix::Endpoint ("/path/to/other"));
+    ASSERT_NE (Unix::Endpoint ("/path/to/other"), Unix::Endpoint ("/path/to/file"));
 
     ASSERT_EQ (Udp::Endpoint ("127.0.0.1", 80), Udp::Endpoint ("127.0.0.1", 80));
     ASSERT_NE (Udp::Endpoint ("127.0.0.1", 80), Udp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
@@ -240,8 +240,8 @@ TEST (Endpoint, serialize)
     ASSERT_EQ (stream.str (), "lo");
 
     stream.str ("");
-    UnixStream::Endpoint unixStreamEndpoint ("lo");
-    ASSERT_NO_THROW (stream << unixStreamEndpoint);
+    Unix::Endpoint unixEndpoint ("lo");
+    ASSERT_NO_THROW (stream << unixEndpoint);
     ASSERT_EQ (stream.str (), "lo");
 
     stream.str ("");
