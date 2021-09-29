@@ -306,6 +306,8 @@ TEST_F (TlsSocket, startEncryption)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
+    ASSERT_EQ (tlsSocket.startEncryption (), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.startEncryption (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
