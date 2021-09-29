@@ -33,7 +33,7 @@ using join::UnixStream;
 /**
  * @brief Class used to test the unix stream socket API.
  */
-class UnixSocket : public ::testing::Test, public UnixStream::Acceptor::Observer
+class UnixStreamSocket : public ::testing::Test, public UnixStream::Acceptor::Observer
 {
 protected:
     /**
@@ -91,14 +91,14 @@ protected:
     static const int _timeout;
 };
 
-const std::string UnixSocket::_serverpath = "/tmp/unixserver_test.sock";
-const std::string UnixSocket::_clientpath = "/tmp/unixclient_test.sock";
-const int         UnixSocket::_timeout = 1000;
+const std::string UnixStreamSocket::_serverpath = "/tmp/unixserver_test.sock";
+const std::string UnixStreamSocket::_clientpath = "/tmp/unixclient_test.sock";
+const int         UnixStreamSocket::_timeout = 1000;
 
 /**
  * @brief Test open method.
  */
-TEST_F (UnixSocket, open)
+TEST_F (UnixStreamSocket, open)
 {
     UnixStream::Socket unixSocket;
 
@@ -111,7 +111,7 @@ TEST_F (UnixSocket, open)
 /**
  * @brief Test close method.
  */
-TEST_F (UnixSocket, close)
+TEST_F (UnixStreamSocket, close)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -127,7 +127,7 @@ TEST_F (UnixSocket, close)
 /**
  * @brief Test bind method.
  */
-TEST_F (UnixSocket, bind)
+TEST_F (UnixStreamSocket, bind)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -141,7 +141,7 @@ TEST_F (UnixSocket, bind)
 /**
  * @brief Test connect method.
  */
-TEST_F (UnixSocket, connect)
+TEST_F (UnixStreamSocket, connect)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -155,7 +155,7 @@ TEST_F (UnixSocket, connect)
 /**
  * @brief Test waitConnected method.
  */
-TEST_F (UnixSocket, waitConnected)
+TEST_F (UnixStreamSocket, waitConnected)
 {
     UnixStream::Socket unixSocket;
 
@@ -176,7 +176,7 @@ TEST_F (UnixSocket, waitConnected)
 /**
  * @brief Test disconnect method.
  */
-TEST_F (UnixSocket, disconnect)
+TEST_F (UnixStreamSocket, disconnect)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -192,7 +192,7 @@ TEST_F (UnixSocket, disconnect)
 /**
  * @brief Test waitDisconnected method.
  */
-TEST_F (UnixSocket, waitDisconnected)
+TEST_F (UnixStreamSocket, waitDisconnected)
 {
     UnixStream::Socket unixSocket;
 
@@ -213,7 +213,7 @@ TEST_F (UnixSocket, waitDisconnected)
 /**
  * @brief Test canRead method.
  */
-TEST_F (UnixSocket, canRead)
+TEST_F (UnixStreamSocket, canRead)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
@@ -232,7 +232,7 @@ TEST_F (UnixSocket, canRead)
 /**
  * @brief Test waitReadyRead method.
  */
-TEST_F (UnixSocket, waitReadyRead)
+TEST_F (UnixStreamSocket, waitReadyRead)
 {
     UnixStream::Socket unixSocket;
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
@@ -258,7 +258,7 @@ TEST_F (UnixSocket, waitReadyRead)
 /**
  * @brief Test read method.
  */
-TEST_F (UnixSocket, read)
+TEST_F (UnixStreamSocket, read)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
@@ -277,7 +277,7 @@ TEST_F (UnixSocket, read)
 /**
  * @brief Test readExactly method.
  */
-TEST_F (UnixSocket, readExactly)
+TEST_F (UnixStreamSocket, readExactly)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
@@ -294,7 +294,7 @@ TEST_F (UnixSocket, readExactly)
 /**
  * @brief Test waitReadyWrite method.
  */
-TEST_F (UnixSocket, waitReadyWrite)
+TEST_F (UnixStreamSocket, waitReadyWrite)
 {
     UnixStream::Socket unixSocket;
 
@@ -317,7 +317,7 @@ TEST_F (UnixSocket, waitReadyWrite)
 /**
  * @brief Test write method.
  */
-TEST_F (UnixSocket, write)
+TEST_F (UnixStreamSocket, write)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
@@ -335,7 +335,7 @@ TEST_F (UnixSocket, write)
 /**
  * @brief Test writeExactly method.
  */
-TEST_F (UnixSocket, writeExactly)
+TEST_F (UnixStreamSocket, writeExactly)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
@@ -351,7 +351,7 @@ TEST_F (UnixSocket, writeExactly)
 /**
  * @brief Test setMode method.
  */
-TEST_F (UnixSocket, setMode)
+TEST_F (UnixStreamSocket, setMode)
 {
     UnixStream::Socket unixSocket;
 
@@ -369,7 +369,7 @@ TEST_F (UnixSocket, setMode)
 /**
  * @brief Test setOption method.
  */
-TEST_F (UnixSocket, setOption)
+TEST_F (UnixStreamSocket, setOption)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -384,7 +384,7 @@ TEST_F (UnixSocket, setOption)
 /**
  * @brief Test localEndpoint method.
  */
-TEST_F (UnixSocket, localEndpoint)
+TEST_F (UnixStreamSocket, localEndpoint)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -397,7 +397,7 @@ TEST_F (UnixSocket, localEndpoint)
 /**
  * @brief Test mtu method.
  */
-TEST_F (UnixSocket, remoteEndpoint)
+TEST_F (UnixStreamSocket, remoteEndpoint)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -410,7 +410,7 @@ TEST_F (UnixSocket, remoteEndpoint)
 /**
  * @brief Test opened method.
  */
-TEST_F (UnixSocket, opened)
+TEST_F (UnixStreamSocket, opened)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -428,7 +428,7 @@ TEST_F (UnixSocket, opened)
 /**
  * @brief Test connected method.
  */
-TEST_F (UnixSocket, connected)
+TEST_F (UnixStreamSocket, connected)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -446,7 +446,7 @@ TEST_F (UnixSocket, connected)
 /**
  * @brief Test encrypted method.
  */
-TEST_F (UnixSocket, encrypted)
+TEST_F (UnixStreamSocket, encrypted)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -464,7 +464,7 @@ TEST_F (UnixSocket, encrypted)
 /**
  * @brief Test family method.
  */
-TEST_F (UnixSocket, family)
+TEST_F (UnixStreamSocket, family)
 {
     UnixStream::Socket unixSocket;
 
@@ -474,7 +474,7 @@ TEST_F (UnixSocket, family)
 /**
  * @brief Test type method.
  */
-TEST_F (UnixSocket, type)
+TEST_F (UnixStreamSocket, type)
 {
     UnixStream::Socket unixSocket;
 
@@ -484,7 +484,7 @@ TEST_F (UnixSocket, type)
 /**
  * @brief Test protocol method.
  */
-TEST_F (UnixSocket, protocol)
+TEST_F (UnixStreamSocket, protocol)
 {
     UnixStream::Socket unixSocket;
 
@@ -494,7 +494,7 @@ TEST_F (UnixSocket, protocol)
 /**
  * @brief Test handle method.
  */
-TEST_F (UnixSocket, handle)
+TEST_F (UnixStreamSocket, handle)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -512,7 +512,7 @@ TEST_F (UnixSocket, handle)
 /**
  * @brief Test mtu method.
  */
-TEST_F (UnixSocket, mtu)
+TEST_F (UnixStreamSocket, mtu)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
@@ -526,7 +526,7 @@ TEST_F (UnixSocket, mtu)
 /**
  * @brief Test lower method.
  */
-TEST_F (UnixSocket, lower)
+TEST_F (UnixStreamSocket, lower)
 {
     UnixStream::Socket unixSocket1, unixSocket2;
 
