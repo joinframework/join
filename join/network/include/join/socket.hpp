@@ -130,7 +130,7 @@ namespace join
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
-         * @return assigned object.
+         * @return current object.
          */
         BasicSocket& operator= (const BasicSocket& other) = delete;
 
@@ -153,7 +153,7 @@ namespace join
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
-         * @return assigned object.
+         * @return current object.
          */
         BasicSocket& operator= (BasicSocket&& other)
         {

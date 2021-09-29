@@ -37,7 +37,7 @@
 namespace join
 {
     /**
-     * @brief .
+     * @brief socket stream buffer class.
      */
     template <class Protocol>
     class BasicSocketStreambuf : public std::streambuf
@@ -61,6 +61,13 @@ namespace join
         BasicSocketStreambuf (const BasicSocketStreambuf& other) = delete;
 
         /**
+         * @brief copy assignment operator.
+         * @param other other object to assign.
+         * @return current object.
+         */
+        BasicSocketStreambuf& operator= (const BasicSocketStreambuf& other) = delete;
+
+        /**
          * @brief move constructor.
          * @param other other object to move.
          */
@@ -81,16 +88,9 @@ namespace join
         }
 
         /**
-         * @brief copy assignment operator.
-         * @param other other object to assign.
-         * @return assigned object.
-         */
-        BasicSocketStreambuf& operator= (const BasicSocketStreambuf& other) = delete;
-
-        /**
          * @brief move assignment operator.
          * @param other other object to assign.
-         * @return assigned object.
+         * @return current object.
          */
         BasicSocketStreambuf& operator= (BasicSocketStreambuf&& other)
         {
@@ -115,7 +115,7 @@ namespace join
         }
 
         /**
-         * @brief destroy the socket instance.
+         * @brief destroy the socket stream buffer instance.
          */
         virtual ~BasicSocketStreambuf ()
         {
@@ -214,8 +214,8 @@ namespace join
 
     protected:
         /**
-         * @brief .
-         * @return .
+         * @brief reads characters from the associated input sequence to the get area.
+         * @return the value of the character pointed to by the get pointer after the call on success, EOF otherwise.
          */
         virtual int_type underflow () override
         {
@@ -259,9 +259,9 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @param c .
-         * @return .
+         * @brief puts a character back into the input sequence.
+         * @param c character to put back or EOF if only back out is requested.
+         * @return EOF on failure, some other value on success.
          */
         virtual int_type pbackfail (int_type c = traits_type::eof ()) override
         {
@@ -286,9 +286,9 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @param c .
-         * @return .
+         * @brief writes characters to the associated output sequence from the put area.
+         * @param c the character to store in the put area.
+         * @return EOF on failure, some other value on success.
          */
         virtual int_type overflow (int_type c = traits_type::eof ()) override
         {
@@ -343,8 +343,8 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @return .
+         * @brief synchronizes the buffers with the associated character sequence.
+         * @return EOF on failure, some other value on success.
          */
         virtual int_type sync () override
         {
@@ -357,10 +357,10 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @param s .
-         * @param n .
-         * @return .
+         * @brief replaces the buffer with user-defined array.
+         * @param s pointer to the user-provided buffer.
+         * @param n the number of elements in the user-provided buffer.
+         * @return this on success, nullptr on failure..
          */
         virtual std::streambuf* setbuf (char* s, std::streamsize n) override
         {
@@ -411,8 +411,10 @@ namespace join
         /// internal buffer status.
         bool _allocated = false;
 
-        /// internal buffer size.
+        /// internal buffer get area size.
         std::streamsize _gsize = BUFSIZ / 2;
+
+        /// internal buffer put area size.
         std::streamsize _psize = BUFSIZ / 2;
 
         /// internal buffer.
@@ -426,7 +428,7 @@ namespace join
     };
 
     /**
-     * @brief .
+     * @brief socket stream class.
      */
     template <class Protocol>
     class BasicSocketIoStream : public std::iostream
@@ -437,7 +439,7 @@ namespace join
         using Endpoint = typename Protocol::Endpoint;
 
         /**
-         * @brief .
+         * @brief default constructor.
          */
         BasicSocketIoStream ()
         : std::iostream (&_streambuf)
@@ -446,14 +448,21 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @param other .
+         * @brief copy constructor.
+         * @param other other object to copy.
          */
         BasicSocketIoStream (const BasicSocketIoStream& other) = delete;
 
         /**
-         * @brief .
-         * @param other .
+         * @brief copy assignment operator.
+         * @param other other object to assign.
+         * @return current object.
+         */
+        BasicSocketIoStream& operator=(const BasicSocketIoStream& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
          */
         BasicSocketIoStream (BasicSocketIoStream&& other)
         : std::iostream (std::move (other)),
@@ -463,14 +472,9 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @param other .
-         */
-        BasicSocketIoStream& operator=(const BasicSocketIoStream& other) = delete;
-
-        /**
-         * @brief .
-         * @param other .
+         * @brief move assignment operator.
+         * @param other other object to assign.
+         * @return current object.
          */
         BasicSocketIoStream& operator=(BasicSocketIoStream&& other)
         {
@@ -481,11 +485,14 @@ namespace join
             return *this;
         }
 
+        /**
+         * @brief destroy the socket stream instance.
+         */
         virtual ~BasicSocketIoStream () = default;
 
         /**
-         * @brief .
-         * @param endpoint .
+         * @brief make a connection to the given endpoint.
+         * @param endpoint endpoint to connect to.
          * @throw std::ios_base::failure.
          */
         void connect (const Endpoint& endpoint)
@@ -497,7 +504,7 @@ namespace join
         }
 
         /**
-         * @brief .
+         * @brief close the connection.
          * @throw std::ios_base::failure.
          */
         void close ()
@@ -509,8 +516,8 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @return .
+         * @brief get the associated stream buffer.
+         * @return The associated stream buffer.
          */
         SocketStreambuf* rdbuf () const
         {
@@ -518,8 +525,8 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @param other .
+         * @brief set the socket timeout.
+         * @param ms timeout in milliseconds.
          */
         void timeout (int ms)
         {
@@ -527,8 +534,8 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @return .
+         * @brief get the current timeout in milliseconds.
+         * @return the current timeout.
          */
         int timeout () const
         {
@@ -536,8 +543,8 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @return .
+         * @brief get the nested socket.
+         * @return the nested socket.
          */
         Socket& socket ()
         {
@@ -545,7 +552,7 @@ namespace join
         }
 
     private:
-        /// .
+        /// associated stream buffer.
         SocketStreambuf _streambuf;
     };
 }
