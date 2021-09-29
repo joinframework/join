@@ -166,7 +166,7 @@ TEST_F (Observer, onReceive)
     ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((socket = server.accept ()).connected ());
     ASSERT_EQ (start (), 0) << join::lastError.message ();
-    ASSERT_EQ (socket.writeData ("onReceive", strlen ("onReceive"), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (socket.writeExactly ("onReceive", strlen ("onReceive"), _timeout), 0) << join::lastError.message ();
     {
         std::unique_lock <std::mutex> lk (_mut);
         ASSERT_TRUE (_cond.wait_for (lk, std::chrono::milliseconds (_timeout), [this] () {return _data == "onReceive";}));

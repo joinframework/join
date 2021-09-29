@@ -33,8 +33,6 @@
 
 namespace join
 {
-    template <class Protocol> class BasicResolver;
-
     template <class Protocol> class BasicSocket;
     template <class Protocol> class BasicDatagramSocket;
     template <class Protocol> class BasicStreamSocket;
@@ -46,6 +44,8 @@ namespace join
     template <class Protocol> class BasicStreamAcceptor;
     template <class Protocol> class BasicTlsAcceptor;
 
+    template <class Protocol> class BasicResolver;
+
     /**
      * @brief unix datagram protocol class.
      */
@@ -53,7 +53,7 @@ namespace join
     {
     public:
         using Endpoint = BasicUnixEndpoint <UnixDgram>;
-        using Socket = BasicDatagramSocket <UnixDgram>;
+        using Socket   = BasicDatagramSocket <UnixDgram>;
 
         /**
          * @brief construct the unix datagram protocol instance by default.
@@ -95,8 +95,8 @@ namespace join
     {
     public:
         using Endpoint = BasicUnixEndpoint <UnixStream>;
-        using Socket = BasicStreamSocket <UnixStream>;
-        using Stream = BasicSocketStream <UnixStream>;
+        using Socket   = BasicStreamSocket <UnixStream>;
+        using Stream   = BasicSocketStream <UnixStream>;
         using Acceptor = BasicStreamAcceptor <UnixStream>;
 
         /**
@@ -139,7 +139,7 @@ namespace join
     {
     public:
         using Endpoint = BasicLinkLayerEndpoint <Raw>;
-        using Socket = BasicSocket <Raw>;
+        using Socket   = BasicSocket <Raw>;
 
         /**
          * @brief default constructor.
@@ -186,7 +186,7 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint <Udp>;
         using Resolver = BasicResolver <Udp>;
-        using Socket = BasicDatagramSocket <Udp>;
+        using Socket   = BasicDatagramSocket <Udp>;
 
         /**
          * @brief construct the udp protocol instance.
@@ -279,7 +279,7 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint <Icmp>;
         using Resolver = BasicResolver <Icmp>;
-        using Socket = BasicDatagramSocket <Icmp>;
+        using Socket   = BasicDatagramSocket <Icmp>;
 
         /**
          * @brief create the icmp protocol instance.
@@ -377,8 +377,8 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint <Tcp>;
         using Resolver = BasicResolver <Tcp>;
-        using Socket = BasicStreamSocket <Tcp>;
-        using Stream = BasicSocketStream <Tcp>;
+        using Socket   = BasicStreamSocket <Tcp>;
+        using Stream   = BasicSocketStream <Tcp>;
         using Acceptor = BasicStreamAcceptor <Tcp>;
 
         /**
@@ -472,8 +472,8 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint <Tls>;
         using Resolver = BasicResolver <Tls>;
-        using Socket = BasicTlsSocket <Tls>;
-        using Stream = BasicSocketStream <Tls>;
+        using Socket   = BasicTlsSocket <Tls>;
+        using Stream   = BasicSocketStream <Tls>;
         using Acceptor = BasicTlsAcceptor <Tls>;
 
         /**

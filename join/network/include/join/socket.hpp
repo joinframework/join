@@ -1258,11 +1258,6 @@ namespace join
         BasicStreamSocket (Mode mode)
         : BasicDatagramSocket <Protocol> (mode)
         {
-            _readBuf = std::make_unique <char []> (_bufSize);
-            if (_readBuf == nullptr)
-            {
-                throw std::bad_alloc ();
-            }
         }
 
         /**
@@ -1283,13 +1278,8 @@ namespace join
          * @param other other object to move.
          */
         BasicStreamSocket (BasicStreamSocket&& other)
-        : BasicDatagramSocket <Protocol> (std::move (other)),
-          _readBuf (std::move (other._readBuf)),
-          _readCount (other._readCount),
-          _readPos (other._readPos)
+        : BasicDatagramSocket <Protocol> (std::move (other))
         {
-            other._readCount = 0;
-            other._readPos = 0;
         }
 
         /**
@@ -1301,13 +1291,6 @@ namespace join
         {
             BasicDatagramSocket <Protocol>::operator= (std::move (other));
 
-            _readBuf = std::move (other._readBuf);
-            _readCount = other._readCount;
-            _readPos = other._readPos;
-
-            other._readCount = 0;
-            other._readPos = 0;
-
             return *this;
         }
 
@@ -1315,22 +1298,6 @@ namespace join
          * @brief destroy the instance.
          */
         virtual ~BasicStreamSocket () = default;
-
-        /**
-         * @brief close the socket handle.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int close () noexcept override
-        {
-            int result = BasicDatagramSocket <Protocol>::close ();
-            if (result == 0)
-            {
-                this->_readCount = 0;
-                this->_readPos = 0;
-            }
-
-            return result;
-        }
 
         /**
          * @brief block until connected.
@@ -1440,82 +1407,13 @@ namespace join
         }
 
         /**
-         * @brief read one byte at a time (buffered read).
-         * @param data buffer where to store the data.
-         * @param timeout timeout in milliseconds.
-         * @return 0 on success, -1 on failure.
-         */
-        int readChar (char &data, int timeout = 0)
-        {
-            if (this->_readCount == 0)
-            {
-                for (;;)
-                {
-                    int result = this->read (this->_readBuf.get (), this->_bufSize);
-                    if (result == -1)
-                    {
-                        if (lastError == Errc::TemporaryError)
-                        {
-                            if (this->waitReadyRead (timeout))
-                                continue;
-                        }
-
-                        return -1;
-                    }
-
-                    this->_readCount = result;
-                    this->_readPos = 0;
-                    break;
-                }
-            }
-
-            this->_readCount--;
-            data = this->_readBuf[this->_readPos++];
-
-            return 0;
-        }
-
-        /**
-         * @brief read data until '\n' is found, maxSize is reached or an error occurred.
-         * @param line string used to store the data received.
-         * @param maxSize maximum number of bytes to read.
-         * @param timeout timeout in milliseconds.
-         * @return 0 on success, -1 on failure.
-         */
-        int readLine (std::string &line, unsigned long maxSize, int timeout = 0)
-        {
-            char currentChar;
-            line.erase ();
-
-            while (maxSize--)
-            {
-                if (this->readChar (currentChar, timeout) == -1)
-                {
-                    return -1;
-                }
-
-                if (currentChar == '\r')
-                    continue;
-
-                if (currentChar == '\n')
-                    return 0;
-
-                line.push_back (currentChar);
-            }
-
-            lastError = make_error_code (Errc::OutOfMemory);
-
-            return -1;
-        }
-
-        /**
          * @brief read data until size is reached or an error occurred.
          * @param data buffer used to store the data received.
          * @param size number of bytes to read.
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int readData (char *data, unsigned long size, int timeout = 0)
+        int readExactly (char *data, unsigned long size, int timeout = 0)
         {
             unsigned long numRead = 0;
 
@@ -1546,7 +1444,7 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int writeData (const char *data, unsigned long size, int timeout = 0)
+        int writeExactly (const char *data, unsigned long size, int timeout = 0)
         {
             unsigned long numWrite = 0;
 
@@ -1667,42 +1565,6 @@ namespace join
 
             return true;
         }
-
-    protected:
-        /**
-         * @brief flush buffered data in the given buffer
-         * @param data buffer where to flush the data.
-         * @param maxSize maximum bytes that can be flushed.
-         * @return number of bytes flushed.
-         */
-        int flush (char *data, unsigned long maxSize)
-        {
-            int flushSize = 0;
-
-            if (this->_readCount)
-            {
-                flushSize = std::min (this->_readCount, maxSize);
-
-                ::memcpy (data, &this->_readBuf[this->_readPos], flushSize);
-
-                this->_readCount -= flushSize;
-                this->_readPos += flushSize;
-            }
-
-            return flushSize;
-        }
-
-        /// internal buffer size.
-        static constexpr int _bufSize = 1500;
-
-        /// internal read buffer.
-        std::unique_ptr <char []> _readBuf;
-
-        /// internal read buffer count.
-        unsigned long _readCount = 0;
-
-        /// internal read buffer position.
-        unsigned long _readPos = 0;
 
         /// friendship with basic stream acceptor
         friend class BasicStreamAcceptor <Protocol>;
@@ -2177,7 +2039,7 @@ namespace join
         {
             if (this->encrypted ())
             {
-                return SSL_pending (this->_tlsHandle.get ()) + this->_readCount;
+                return SSL_pending (this->_tlsHandle.get ());
             }
 
             return BasicStreamSocket <Protocol>::canRead ();
@@ -2193,19 +2055,8 @@ namespace join
         {
             if (this->encrypted ())
             {
-                // flush buffered data.
-                int offset = this->flush (data, maxSize);
-                if (offset)
-                {
-                    // no more space available in buffer or no more data pending.
-                    if ((offset == int (maxSize)) || (this->canRead () == 0))
-                    {
-                        return offset;
-                    }
-                }
-
                 // read data.
-                int result = SSL_read (this->_tlsHandle.get (), data + offset, int (maxSize) - offset);
+                int result = SSL_read (this->_tlsHandle.get (), data, int (maxSize));
                 if (result < 1)
                 {
                     switch (SSL_get_error (this->_tlsHandle.get (), result))
@@ -2253,7 +2104,7 @@ namespace join
                     return -1;
                 }
 
-                return result + offset;
+                return result;
             }
 
             return BasicStreamSocket <Protocol>::read (data, maxSize);

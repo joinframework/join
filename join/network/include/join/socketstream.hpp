@@ -43,8 +43,8 @@ namespace join
     class BasicSocketStreambuf : public std::streambuf
     {
     public:
-        using Socket = BasicStreamSocket <Protocol>;
         using Endpoint = typename Protocol::Endpoint;
+        using Socket   = typename Protocol::Socket;
 
         /**
          * @brief default constructor.
@@ -434,9 +434,9 @@ namespace join
     class BasicSocketStream : public std::iostream
     {
     public:
-        using Socket = BasicStreamSocket <Protocol>;
         using SocketStreambuf = BasicSocketStreambuf <Protocol>;
-        using Endpoint = typename Protocol::Endpoint;
+        using Endpoint        = typename Protocol::Endpoint;
+        using Socket          = typename Protocol::Socket;
 
         /**
          * @brief default constructor.

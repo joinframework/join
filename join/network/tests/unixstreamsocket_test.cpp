@@ -77,7 +77,7 @@ protected:
                     }
                     break;
                 }
-                sock.writeData (buf, nread);
+                sock.writeExactly (buf, nread);
             }
             sock.close ();
         }
@@ -214,7 +214,7 @@ TEST_F (UnixSocket, canRead)
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.writeData (data, sizeof (data)), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (unixSocket.canRead (), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
@@ -235,7 +235,7 @@ TEST_F (UnixSocket, waitReadyRead)
     }
     ASSERT_TRUE (unixSocket.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.writeData (data, sizeof (data)), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     if (unixSocket.disconnect () == -1)
     {
@@ -255,7 +255,7 @@ TEST_F (UnixSocket, read)
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.writeData (data, sizeof (data)), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (unixSocket.read (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
@@ -263,54 +263,18 @@ TEST_F (UnixSocket, read)
 }
 
 /**
- * @brief Test readChar method.
+ * @brief Test readExactly method.
  */
-TEST_F (UnixSocket, readChar)
-{
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data;
-
-    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.writeData ("b", 1), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.readChar (data), 0) << join::lastError.message ();
-    ASSERT_EQ (data, 'b');
-    ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test readLine method.
- */
-TEST_F (UnixSocket, readLine)
-{
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    std::string data;
-
-    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.writeData ("readLine\n", strlen ("readLine\n")), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.readLine (data, 1024), 0) << join::lastError.message ();
-    ASSERT_EQ (data, "readLine");
-    ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test readData method.
- */
-TEST_F (UnixSocket, readData)
+TEST_F (UnixSocket, readExactly)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.writeData (data, sizeof (data)), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.readData (data, sizeof (data)), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.readExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
 }
@@ -353,16 +317,16 @@ TEST_F (UnixSocket, write)
 }
 
 /**
- * @brief Test writeData method.
+ * @brief Test writeExactly method.
  */
-TEST_F (UnixSocket, writeData)
+TEST_F (UnixSocket, writeExactly)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.writeData (data, sizeof (data)), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
