@@ -107,9 +107,13 @@ TEST_F (TcpSocket, open)
     Tcp::Socket tcpSocket;
 
     ASSERT_EQ (tcpSocket.open (Tcp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.open (Tcp::v4 ()), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
 
     ASSERT_EQ (tcpSocket.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.open (Tcp::v6 ()), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -150,10 +154,14 @@ TEST_F (TcpSocket, connect)
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
 
     ASSERT_EQ (tcpSocket.connect (Tcp::Resolver::resolve (_host + ":" + std::to_string (_port))), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.connect (Tcp::Resolver::resolve (_host + ":" + std::to_string (_port))), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
 }
@@ -224,6 +232,8 @@ TEST_F (TcpSocket, canRead)
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
+    ASSERT_EQ (tcpSocket.canRead (), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tcpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
@@ -241,6 +251,8 @@ TEST_F (TcpSocket, waitReadyRead)
     Tcp::Socket tcpSocket;
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
+    ASSERT_FALSE (tcpSocket.waitReadyWrite (_timeout));
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     if (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -265,6 +277,8 @@ TEST_F (TcpSocket, read)
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
+    ASSERT_EQ (tcpSocket.read (data, sizeof (data)), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tcpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
@@ -298,6 +312,8 @@ TEST_F (TcpSocket, waitReadyWrite)
 {
     Tcp::Socket tcpSocket;
 
+    ASSERT_FALSE (tcpSocket.waitReadyWrite (_timeout));
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     if (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -320,6 +336,8 @@ TEST_F (TcpSocket, write)
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
+    ASSERT_EQ (tcpSocket.write (data, sizeof (data)), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tcpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_GT (tcpSocket.write (data, sizeof (data)), 0) << join::lastError.message ();
@@ -351,6 +369,7 @@ TEST_F (TcpSocket, setMode)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
+    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::Blocking), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0);
     if (tcpSocket.disconnect () == -1)
