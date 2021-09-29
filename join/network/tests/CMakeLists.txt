@@ -54,9 +54,9 @@ add_executable(tcpsocket.gtest tcpsocket_test.cpp)
 target_link_libraries(tcpsocket.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(tcpsocket.gtest)
 
-add_executable(tcpsocketio.gtest tcpsocketio_test.cpp)
-target_link_libraries(tcpsocketio.gtest ${PROJECT_NAME} gtest gtest_main pthread)
-gtest_discover_tests(tcpsocketio.gtest)
+add_executable(tcpsocketstream.gtest tcpsocketstream_test.cpp)
+target_link_libraries(tcpsocketstream.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(tcpsocketstream.gtest)
 
 add_executable(tcpacceptor.gtest tcpacceptor_test.cpp)
 target_link_libraries(tcpacceptor.gtest ${PROJECT_NAME} gtest gtest_main pthread)

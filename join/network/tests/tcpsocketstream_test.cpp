@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/socketio.hpp>
+#include <join/socketstream.hpp>
 #include <join/acceptor.hpp>
 
 // Libraries.

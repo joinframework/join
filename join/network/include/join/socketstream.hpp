@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_SOCKETIO_HPP__
-#define __JOIN_SOCKETIO_HPP__
+#ifndef __JOIN_SOCKETSTREAM_HPP__
+#define __JOIN_SOCKETSTREAM_HPP__
 
 // libjoin.
 #include <join/socket.hpp>
@@ -431,7 +431,7 @@ namespace join
      * @brief socket stream class.
      */
     template <class Protocol>
-    class BasicSocketIoStream : public std::iostream
+    class BasicSocketStream : public std::iostream
     {
     public:
         using Socket = BasicStreamSocket <Protocol>;
@@ -441,7 +441,7 @@ namespace join
         /**
          * @brief default constructor.
          */
-        BasicSocketIoStream ()
+        BasicSocketStream ()
         : std::iostream (&_streambuf)
         {
             this->setf (std::ios_base::unitbuf);
@@ -451,20 +451,20 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicSocketIoStream (const BasicSocketIoStream& other) = delete;
+        BasicSocketStream (const BasicSocketStream& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return current object.
          */
-        BasicSocketIoStream& operator=(const BasicSocketIoStream& other) = delete;
+        BasicSocketStream& operator=(const BasicSocketStream& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicSocketIoStream (BasicSocketIoStream&& other)
+        BasicSocketStream (BasicSocketStream&& other)
         : std::iostream (std::move (other)),
           _streambuf (std::move (other._streambuf))
         {
@@ -476,7 +476,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        BasicSocketIoStream& operator=(BasicSocketIoStream&& other)
+        BasicSocketStream& operator=(BasicSocketStream&& other)
         {
             std::iostream::operator= (std::move (other));
 
@@ -488,7 +488,7 @@ namespace join
         /**
          * @brief destroy the socket stream instance.
          */
-        virtual ~BasicSocketIoStream () = default;
+        virtual ~BasicSocketStream () = default;
 
         /**
          * @brief make a connection to the given endpoint.

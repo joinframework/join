@@ -32,7 +32,7 @@ set(PUBLIC_HEADERS
     network/include/join/resolver.hpp
     network/include/join/observer.hpp
     network/include/join/socket.hpp
-    network/include/join/socketio.hpp
+    network/include/join/socketstream.hpp
     network/include/join/acceptor.hpp
     sax/include/join/diyfp.hpp
     sax/include/join/dtoa.hpp

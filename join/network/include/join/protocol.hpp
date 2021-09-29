@@ -44,7 +44,7 @@ namespace join
     template <class Protocol> class BasicTlsAcceptor;
 
     template <class Protocol> class BasicSocketStreambuf;
-    template <class Protocol> class BasicSocketIoStream;
+    template <class Protocol> class BasicSocketStream;
 
     /**
      * @brief unix datagram protocol class.
@@ -96,7 +96,7 @@ namespace join
     public:
         using Endpoint = BasicUnixEndpoint <Unix>;
         using Socket = BasicStreamSocket <Unix>;
-        using Stream = BasicSocketIoStream <Unix>;
+        using Stream = BasicSocketStream <Unix>;
         using Acceptor = BasicStreamAcceptor <Unix>;
 
         /**
@@ -379,7 +379,7 @@ namespace join
         using Resolver = BasicResolver <Tcp>;
         using Socket = BasicStreamSocket <Tcp>;
         using TlsSocket = BasicTlsSocket <Tcp>;
-        using Stream = BasicSocketIoStream <Tcp>;
+        using Stream = BasicSocketStream <Tcp>;
         using Acceptor = BasicStreamAcceptor <Tcp>;
         using TlsAcceptor = BasicTlsAcceptor <Tcp>;
 
