@@ -1603,7 +1603,7 @@ namespace join
          */
         virtual const char* name () const noexcept
         {
-            return "libjoin";
+            return "join";
         }
 
         /**
@@ -1620,7 +1620,7 @@ namespace join
                 case TlsErrc::TlsProtocolError:
                     return "TLS protocol error";
                 default:
-                    return "Success";
+                    return "success";
             }
         }
     };
