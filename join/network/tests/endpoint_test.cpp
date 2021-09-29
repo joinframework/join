@@ -29,11 +29,12 @@
 #include <gtest/gtest.h>
 
 using join::UnixDgram;
-using join::Unix;
+using join::UnixStream;
 using join::Raw;
 using join::Udp;
 using join::Icmp;
 using join::Tcp;
+using join::Tls;
 
 /**
  * @brief test the addr method.
@@ -43,8 +44,8 @@ TEST (Endpoint, addr)
     UnixDgram::Endpoint unixDgramEndpoint;
     ASSERT_NE (unixDgramEndpoint.addr (), nullptr);
 
-    Unix::Endpoint unixEndpoint;
-    ASSERT_NE (unixEndpoint.addr (), nullptr);
+    UnixStream::Endpoint unixStreamEndpoint;
+    ASSERT_NE (unixStreamEndpoint.addr (), nullptr);
 
     Raw::Endpoint rawEndpoint;
     ASSERT_NE (rawEndpoint.addr (), nullptr);
@@ -57,6 +58,9 @@ TEST (Endpoint, addr)
 
     Tcp::Endpoint tcpEndpoint;
     ASSERT_NE (tcpEndpoint.addr (), nullptr);
+
+    Tls::Endpoint tlsEndpoint;
+    ASSERT_NE (tlsEndpoint.addr (), nullptr);
 }
 
 /**
@@ -67,8 +71,8 @@ TEST (Endpoint, length)
     UnixDgram::Endpoint unixDgramEndpoint;
     ASSERT_EQ (unixDgramEndpoint.length (), sizeof (struct sockaddr_un));
 
-    Unix::Endpoint unixEndpoint;
-    ASSERT_EQ (unixEndpoint.length (), sizeof (struct sockaddr_un));
+    UnixStream::Endpoint unixStreamEndpoint;
+    ASSERT_EQ (unixStreamEndpoint.length (), sizeof (struct sockaddr_un));
 
     Raw::Endpoint rawEndpoint;
     ASSERT_EQ (rawEndpoint.length (), sizeof (struct sockaddr_ll));
@@ -90,6 +94,12 @@ TEST (Endpoint, length)
 
     Tcp::Endpoint tcpEndpoint6 (Tcp::v6 ());
     ASSERT_EQ (tcpEndpoint6.length (), sizeof (struct sockaddr_in6));
+
+    Tls::Endpoint tlsEndpoint4 (Tls::v4 ());
+    ASSERT_EQ (tlsEndpoint4.length (), sizeof (struct sockaddr_in));
+
+    Tls::Endpoint tlsEndpoint6 (Tls::v6 ());
+    ASSERT_EQ (tlsEndpoint6.length (), sizeof (struct sockaddr_in6));
 }
 
 /**
@@ -101,9 +111,9 @@ TEST (Endpoint, device)
     unixDgramEndpoint.device ("/path/to/file");
     ASSERT_EQ (unixDgramEndpoint.device (), "/path/to/file");
 
-    Unix::Endpoint unixEndpoint;
-    unixEndpoint.device ("/path/to/other");
-    ASSERT_EQ (unixEndpoint.device (), "/path/to/other");
+    UnixStream::Endpoint unixStreamEndpoint;
+    unixStreamEndpoint.device ("/path/to/other");
+    ASSERT_EQ (unixStreamEndpoint.device (), "/path/to/other");
 
     Raw::Endpoint rawEndpoint;
     rawEndpoint.device ("lo");
@@ -120,6 +130,10 @@ TEST (Endpoint, device)
     Tcp::Endpoint tcpEndpoint (Tcp::v6 ());
     tcpEndpoint.device ("lo");
     ASSERT_EQ (tcpEndpoint.device (), "lo");
+
+    Tls::Endpoint tlsEndpoint (Tls::v6 ());
+    tlsEndpoint.device ("lo");
+    ASSERT_EQ (tlsEndpoint.device (), "lo");
 }
 
 /**
@@ -147,6 +161,13 @@ TEST (Endpoint, ip)
     ASSERT_EQ (tcpEndpoint.ip (), "::");
     tcpEndpoint.ip ("127.0.0.1");
     ASSERT_EQ (tcpEndpoint.ip (), "127.0.0.1");
+
+    Tls::Endpoint tlsEndpoint;
+
+    tlsEndpoint.ip ("::");
+    ASSERT_EQ (tlsEndpoint.ip (), "::");
+    tlsEndpoint.ip ("127.0.0.1");
+    ASSERT_EQ (tlsEndpoint.ip (), "127.0.0.1");
 }
 
 /**
@@ -163,6 +184,11 @@ TEST (Endpoint, port)
 
     tcpEndpoint.port (80);
     ASSERT_EQ (tcpEndpoint.port (), 80);
+
+    Tls::Endpoint tlsEndpoint;
+
+    tlsEndpoint.port (80);
+    ASSERT_EQ (tlsEndpoint.port (), 80);
 }
 
 /**
@@ -196,6 +222,15 @@ TEST (Endpoint, protocol)
     ASSERT_NE (Tcp::Endpoint ("127.0.0.1").protocol (), Tcp::v6 ());
     ASSERT_NE (Tcp::Endpoint ("::").protocol (), Tcp::v4 ());
     ASSERT_EQ (Tcp::Endpoint ("::").protocol (), Tcp::v6 ());
+
+    ASSERT_EQ (Tls::Endpoint ().protocol (), Tls::v4 ());
+    ASSERT_EQ (Tls::Endpoint (Tls::v4 ()).protocol (), Tls::v4 ());
+    ASSERT_NE (Tls::Endpoint (Tls::v4 ()).protocol (), Tls::v6 ());
+    ASSERT_EQ (Tls::Endpoint (Tls::v6 ()).protocol (), Tls::v6 ());
+    ASSERT_EQ (Tls::Endpoint ("127.0.0.1").protocol (), Tls::v4 ());
+    ASSERT_NE (Tls::Endpoint ("127.0.0.1").protocol (), Tls::v6 ());
+    ASSERT_NE (Tls::Endpoint ("::").protocol (), Tls::v4 ());
+    ASSERT_EQ (Tls::Endpoint ("::").protocol (), Tls::v6 ());
 }
 
 /**
@@ -208,10 +243,10 @@ TEST (Endpoint, equal)
     ASSERT_EQ (UnixDgram::Endpoint ("/path/to/other"), UnixDgram::Endpoint ("/path/to/other"));
     ASSERT_NE (UnixDgram::Endpoint ("/path/to/other"), UnixDgram::Endpoint ("/path/to/file"));
 
-    ASSERT_EQ (Unix::Endpoint ("/path/to/file"), Unix::Endpoint ("/path/to/file"));
-    ASSERT_NE (Unix::Endpoint ("/path/to/file"), Unix::Endpoint ("/path/to/other"));
-    ASSERT_EQ (Unix::Endpoint ("/path/to/other"), Unix::Endpoint ("/path/to/other"));
-    ASSERT_NE (Unix::Endpoint ("/path/to/other"), Unix::Endpoint ("/path/to/file"));
+    ASSERT_EQ (UnixStream::Endpoint ("/path/to/file"), UnixStream::Endpoint ("/path/to/file"));
+    ASSERT_NE (UnixStream::Endpoint ("/path/to/file"), UnixStream::Endpoint ("/path/to/other"));
+    ASSERT_EQ (UnixStream::Endpoint ("/path/to/other"), UnixStream::Endpoint ("/path/to/other"));
+    ASSERT_NE (UnixStream::Endpoint ("/path/to/other"), UnixStream::Endpoint ("/path/to/file"));
 
     ASSERT_EQ (Udp::Endpoint ("127.0.0.1", 80), Udp::Endpoint ("127.0.0.1", 80));
     ASSERT_NE (Udp::Endpoint ("127.0.0.1", 80), Udp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
@@ -227,6 +262,11 @@ TEST (Endpoint, equal)
     ASSERT_NE (Tcp::Endpoint ("127.0.0.1", 80), Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
     ASSERT_EQ (Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
     ASSERT_NE (Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tcp::Endpoint ("127.0.0.1", 80));
+
+    ASSERT_EQ (Tls::Endpoint ("127.0.0.1", 80), Tls::Endpoint ("127.0.0.1", 80));
+    ASSERT_NE (Tls::Endpoint ("127.0.0.1", 80), Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
+    ASSERT_EQ (Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
+    ASSERT_NE (Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tls::Endpoint ("127.0.0.1", 80));
 }
 
 /**
@@ -240,8 +280,8 @@ TEST (Endpoint, serialize)
     ASSERT_EQ (stream.str (), "lo");
 
     stream.str ("");
-    Unix::Endpoint unixEndpoint ("lo");
-    ASSERT_NO_THROW (stream << unixEndpoint);
+    UnixStream::Endpoint unixStreamEndpoint ("lo");
+    ASSERT_NO_THROW (stream << unixStreamEndpoint);
     ASSERT_EQ (stream.str (), "lo");
 
     stream.str ("");
@@ -262,6 +302,11 @@ TEST (Endpoint, serialize)
     stream.str ("");
     Tcp::Endpoint tcpEndpoint ("127.0.0.1", 80);
     ASSERT_NO_THROW (stream << tcpEndpoint);
+    ASSERT_EQ (stream.str (), "127.0.0.1:80");
+
+    stream.str ("");
+    Tls::Endpoint tlsEndpoint ("127.0.0.1", 80);
+    ASSERT_NO_THROW (stream << tlsEndpoint);
     ASSERT_EQ (stream.str (), "127.0.0.1:80");
 }
 

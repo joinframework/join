@@ -33,12 +33,12 @@
 
 using join::Errc;
 using join::IpAddress;
-using join::Tcp;
+using join::Tls;
 
 /**
  * @brief Class used to test the TLS socket API.
  */
-class TlsSocket : public ::testing::Test, public Tcp::TlsAcceptor::Observer
+class TlsSocket : public ::testing::Test, public Tls::Acceptor::Observer
 {
 public:
     /**
@@ -130,7 +130,7 @@ protected:
     {
         ASSERT_EQ (setCertificate (_cert, _key), 0) << join::lastError.message ();
         ASSERT_EQ (setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
-        ASSERT_EQ (bind ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (bind ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (listen (), 0) << join::lastError.message ();
         ASSERT_EQ (start (), 0) << join::lastError.message ();
     }
@@ -149,7 +149,7 @@ protected:
      */
     virtual void onReceive () override
     {
-        Tcp::TlsSocket sock = accept ();
+        Tls::Socket sock = accept ();
         if (sock.connected ())
         {
             char buf[1024];
@@ -199,12 +199,12 @@ const std::string TlsSocket::_key = "/tmp/tlssocket_test.key";
  */
 TEST_F (TlsSocket, open)
 {
-    Tcp::TlsSocket tlsSocket;
+    Tls::Socket tlsSocket;
 
-    ASSERT_EQ (tlsSocket.open (Tcp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.open (Tls::v4 ()), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
 
-    ASSERT_EQ (tlsSocket.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.open (Tls::v6 ()), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -213,10 +213,10 @@ TEST_F (TlsSocket, open)
  */
 TEST_F (TlsSocket, close)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_FALSE (tlsSocket.opened ());
-    ASSERT_EQ (tlsSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.opened());
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (tlsSocket.opened());
@@ -229,11 +229,11 @@ TEST_F (TlsSocket, close)
  */
 TEST_F (TlsSocket, bind)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_FALSE (tlsSocket.opened ());
-    ASSERT_EQ (tlsSocket.bind ({Tcp::Resolver::resolveHost (_host)}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.bind ({Tls::Resolver::resolveHost (_host)}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
 }
@@ -243,13 +243,13 @@ TEST_F (TlsSocket, bind)
  */
 TEST_F (TlsSocket, connect)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
 
-    ASSERT_EQ (tlsSocket.connect (Tcp::Resolver::resolve (_host + ":" + std::to_string (_port))), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connect (Tls::Resolver::resolve (_host + ":" + std::to_string (_port))), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
 }
@@ -259,9 +259,9 @@ TEST_F (TlsSocket, connect)
  */
 TEST_F (TlsSocket, waitConnected)
 {
-    Tcp::TlsSocket tlsSocket;
+    Tls::Socket tlsSocket;
 
-    if (tlsSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}) == -1)
+    if (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
         ASSERT_TRUE (tlsSocket.connecting ());
@@ -280,9 +280,9 @@ TEST_F (TlsSocket, waitConnected)
  */
 TEST_F (TlsSocket, connectEncrypted)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
 }
@@ -292,9 +292,9 @@ TEST_F (TlsSocket, connectEncrypted)
  */
 TEST_F (TlsSocket, startEncryption)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.startEncryption (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
@@ -305,9 +305,9 @@ TEST_F (TlsSocket, startEncryption)
  */
 TEST_F (TlsSocket, waitEncrypted)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::NonBlocking);
+    Tls::Socket tlsSocket (Tls::Socket::NonBlocking);
 
-    if (tlsSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}) == -1)
+    if (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
@@ -324,7 +324,7 @@ TEST_F (TlsSocket, waitEncrypted)
     ASSERT_TRUE (tlsSocket.waitDisconnected (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
 
-    if (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}) == -1)
+    if (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
@@ -342,10 +342,10 @@ TEST_F (TlsSocket, waitEncrypted)
  */
 TEST_F (TlsSocket, disconnect)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_FALSE (tlsSocket.connected ());
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.connected ());
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (tlsSocket.connected ());
@@ -358,9 +358,9 @@ TEST_F (TlsSocket, disconnect)
  */
 TEST_F (TlsSocket, waitDisconnected)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::NonBlocking);
+    Tls::Socket tlsSocket (Tls::Socket::NonBlocking);
 
-    if (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}) == -1)
+    if (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
@@ -378,10 +378,10 @@ TEST_F (TlsSocket, waitDisconnected)
  */
 TEST_F (TlsSocket, waitReadyRead)
 {
-    Tcp::TlsSocket tlsSocket;
+    Tls::Socket tlsSocket;
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    if (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}) == -1)
+    if (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
@@ -402,10 +402,10 @@ TEST_F (TlsSocket, waitReadyRead)
  */
 TEST_F (TlsSocket, canRead)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.writeData (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -420,10 +420,10 @@ TEST_F (TlsSocket, canRead)
  */
 TEST_F (TlsSocket, read)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.writeData (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -437,10 +437,10 @@ TEST_F (TlsSocket, read)
  */
 TEST_F (TlsSocket, readChar)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
     char data;
 
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.writeData ("b", 1), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -455,10 +455,10 @@ TEST_F (TlsSocket, readChar)
  */
 TEST_F (TlsSocket, readLine)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
     std::string data;
 
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.writeData ("readLine\n", strlen ("readLine\n")), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -473,10 +473,10 @@ TEST_F (TlsSocket, readLine)
  */
 TEST_F (TlsSocket, readData)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.writeData (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -490,9 +490,9 @@ TEST_F (TlsSocket, readData)
  */
 TEST_F (TlsSocket, waitReadyWrite)
 {
-    Tcp::TlsSocket tlsSocket;
+    Tls::Socket tlsSocket;
 
-    if (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}) == -1)
+    if (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
@@ -511,10 +511,10 @@ TEST_F (TlsSocket, waitReadyWrite)
  */
 TEST_F (TlsSocket, write)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_GT (tlsSocket.write (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -527,10 +527,10 @@ TEST_F (TlsSocket, write)
  */
 TEST_F (TlsSocket, writeData)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.writeData (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -543,10 +543,10 @@ TEST_F (TlsSocket, writeData)
  */
 TEST_F (TlsSocket, setMode)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setMode (Tcp::TlsSocket::NonBlocking), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::NonBlocking), 0) << join::lastError.message ();
     if (tlsSocket.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -560,11 +560,11 @@ TEST_F (TlsSocket, setMode)
  */
 TEST_F (TlsSocket, setOption)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.setOption (Tcp::TlsSocket::NoDelay, 1), -1);
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setOption (Tcp::TlsSocket::NoDelay, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::NoDelay, 1), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
 }
@@ -574,11 +574,11 @@ TEST_F (TlsSocket, setOption)
  */
 TEST_F (TlsSocket, localEndpoint)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.bind ({Tcp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.localEndpoint (), Tcp::Endpoint (Tcp::Resolver::resolveHost (_host), uint16_t (_port + 1))) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.bind ({Tls::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.localEndpoint (), Tls::Endpoint (Tls::Resolver::resolveHost (_host), uint16_t (_port + 1))) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -587,11 +587,11 @@ TEST_F (TlsSocket, localEndpoint)
  */
 TEST_F (TlsSocket, remoteEndpoint)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.bind ({Tcp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.remoteEndpoint (), Tcp::Endpoint (Tcp::Resolver::resolveHost (_host), _port)) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.bind ({Tls::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.remoteEndpoint (), Tls::Endpoint (Tls::Resolver::resolveHost (_host), _port)) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -600,12 +600,12 @@ TEST_F (TlsSocket, remoteEndpoint)
  */
 TEST_F (TlsSocket, opened)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_FALSE (tlsSocket.opened ());
-    ASSERT_EQ (tlsSocket.open (Tcp::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.open (Tls::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.opened ());
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.opened ());
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (tlsSocket.opened ());
@@ -618,12 +618,12 @@ TEST_F (TlsSocket, opened)
  */
 TEST_F (TlsSocket, connected)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_FALSE (tlsSocket.connected ());
-    ASSERT_EQ (tlsSocket.open (Tcp::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.open (Tls::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
     ASSERT_FALSE (tlsSocket.connected ());
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.connected ());
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (tlsSocket.connected ());
@@ -636,12 +636,12 @@ TEST_F (TlsSocket, connected)
  */
 TEST_F (TlsSocket, encrypted)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_FALSE (tlsSocket.encrypted ());
-    ASSERT_EQ (tlsSocket.open (Tcp::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.open (Tls::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
     ASSERT_FALSE (tlsSocket.encrypted ());
-    ASSERT_EQ (tlsSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_FALSE (tlsSocket.encrypted ());
     ASSERT_EQ (tlsSocket.startEncryption (), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.encrypted ());
@@ -656,7 +656,7 @@ TEST_F (TlsSocket, encrypted)
  */
 TEST_F (TlsSocket, family)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_EQ (tlsSocket.family (), AF_INET);
 
@@ -674,7 +674,7 @@ TEST_F (TlsSocket, family)
  */
 TEST_F (TlsSocket, type)
 {
-    Tcp::TlsSocket tlsSocket;
+    Tls::Socket tlsSocket;
 
     ASSERT_EQ (tlsSocket.type (), SOCK_STREAM);
 }
@@ -684,7 +684,7 @@ TEST_F (TlsSocket, type)
  */
 TEST_F (TlsSocket, protocol)
 {
-    Tcp::TlsSocket tlsSocket;
+    Tls::Socket tlsSocket;
 
     ASSERT_EQ (tlsSocket.protocol (), IPPROTO_TCP);
 }
@@ -694,12 +694,12 @@ TEST_F (TlsSocket, protocol)
  */
 TEST_F (TlsSocket, handle)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_EQ (tlsSocket.handle (), -1);
-    ASSERT_EQ (tlsSocket.open (Tcp::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.open (Tls::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
     ASSERT_GT (tlsSocket.handle (), -1);
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_GT (tlsSocket.handle (), -1);
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.handle (), -1);
@@ -712,10 +712,10 @@ TEST_F (TlsSocket, handle)
  */
 TEST_F (TlsSocket, mtu)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_EQ (tlsSocket.mtu (), -1) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_NE (tlsSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.mtu (), -1);
@@ -728,10 +728,10 @@ TEST_F (TlsSocket, mtu)
  */
 TEST_F (TlsSocket, setCertificate)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_EQ (tlsSocket.setCertificate (_cert, _key), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setCertificate (_cert, _key), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setCertificate (_cert, _key), 0) << join::lastError.message ();
@@ -743,10 +743,10 @@ TEST_F (TlsSocket, setCertificate)
  */
 TEST_F (TlsSocket, setCaCertificate)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_EQ (tlsSocket.setCaCertificate (_cert), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setCaCertificate (_cert), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setCaCertificate (_cert), 0) << join::lastError.message ();
@@ -758,10 +758,10 @@ TEST_F (TlsSocket, setCaCertificate)
  */
 TEST_F (TlsSocket, setCipher)
 {
-    Tcp::TlsSocket tlsSocket (Tcp::TlsSocket::Blocking);
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_EQ (tlsSocket.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
@@ -773,10 +773,10 @@ TEST_F (TlsSocket, setCipher)
  */
 TEST_F (TlsSocket, isLower)
 {
-    Tcp::TlsSocket tlsSocket1, tlsSocket2;
+    Tls::Socket tlsSocket1, tlsSocket2;
 
-    ASSERT_EQ (tlsSocket1.open (Tcp::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket2.open (Tcp::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket1.open (Tls::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket2.open (Tls::Resolver::resolveHost (_host).family ()), 0) << join::lastError.message ();
     if (tlsSocket1.handle () < tlsSocket2.handle ())
     {
         ASSERT_TRUE (tlsSocket1 < tlsSocket2);

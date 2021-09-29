@@ -33,7 +33,7 @@
 
 using join::Errc;
 using join::IpAddress;
-using join::Tcp;
+using join::Tls;
 
 /**
  * @brief Class used to test the TLS socket API.
@@ -185,14 +185,14 @@ const std::string TlsAcceptor::_invalidKey = "/tmp/tlsserver_test_invalid.key";
  */
 TEST_F (TlsAcceptor, move)
 {
-    Tcp::TlsAcceptor server1, server2;
+    Tls::Acceptor server1, server2;
 
-    ASSERT_EQ (server1.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server1.open (Tls::v6 ()), 0) << join::lastError.message ();
 
     server2 = std::move (server1);
     ASSERT_TRUE (server2.opened ());
 
-    Tcp::TlsAcceptor server3 = std::move (server2);
+    Tls::Acceptor server3 = std::move (server2);
     ASSERT_TRUE (server3.opened ());
 }
 
@@ -201,10 +201,10 @@ TEST_F (TlsAcceptor, move)
  */
 TEST_F (TlsAcceptor, open)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
-    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
-    ASSERT_EQ (server.open (Tcp::v6 ()), -1);
+    ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (Tls::v6 ()), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 }
 
@@ -213,9 +213,9 @@ TEST_F (TlsAcceptor, open)
  */
 TEST_F (TlsAcceptor, close)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
-    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
 }
 
@@ -224,7 +224,7 @@ TEST_F (TlsAcceptor, close)
  */
 TEST_F (TlsAcceptor, bind)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
@@ -235,7 +235,7 @@ TEST_F (TlsAcceptor, bind)
  */
 TEST_F (TlsAcceptor, listen)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
     ASSERT_EQ (server.listen (20), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -249,15 +249,15 @@ TEST_F (TlsAcceptor, listen)
  */
 TEST_F (TlsAcceptor, accept)
 {
-    Tcp::TlsSocket clientSocket (Tcp::TlsSocket::Blocking);
-    Tcp::TlsAcceptor server;
+    Tls::Socket clientSocket (Tls::Socket::Blocking);
+    Tls::Acceptor server;
 
     ASSERT_FALSE (server.accept ().connected ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect({_address, _port}), 0) << join::lastError.message ();
-    Tcp::TlsSocket serverSocket = server.accept ();
+    Tls::Socket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
     ASSERT_EQ (serverSocket.localEndpoint ().ip (), _address);
     ASSERT_EQ (serverSocket.localEndpoint ().port (), _port);
@@ -271,9 +271,9 @@ TEST_F (TlsAcceptor, accept)
  */
 TEST_F (TlsAcceptor, localEndpoint)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
-    ASSERT_EQ (server.localEndpoint (), Tcp::Endpoint {});
+    ASSERT_EQ (server.localEndpoint (), Tls::Endpoint {});
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), _address);
     ASSERT_EQ (server.localEndpoint ().port (), _port);
@@ -285,10 +285,10 @@ TEST_F (TlsAcceptor, localEndpoint)
  */
 TEST_F (TlsAcceptor, opened)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
     ASSERT_FALSE (server.opened ());
-    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (server.opened ());
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
     ASSERT_FALSE (server.opened ());
@@ -299,7 +299,7 @@ TEST_F (TlsAcceptor, opened)
  */
 TEST_F (TlsAcceptor, family)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.family (), AF_INET);
@@ -311,7 +311,7 @@ TEST_F (TlsAcceptor, family)
  */
 TEST_F (TlsAcceptor, type)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.type (), SOCK_STREAM);
@@ -323,7 +323,7 @@ TEST_F (TlsAcceptor, type)
  */
 TEST_F (TlsAcceptor, protocol)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.protocol (), IPPROTO_TCP);
@@ -335,10 +335,10 @@ TEST_F (TlsAcceptor, protocol)
  */
 TEST_F (TlsAcceptor, handle)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
     ASSERT_EQ (server.handle (), -1);
-    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
     ASSERT_GT (server.handle (), -1);
     ASSERT_EQ (server.close (), 0) << join::lastError.message ();
     ASSERT_EQ (server.handle (), -1);
@@ -349,7 +349,7 @@ TEST_F (TlsAcceptor, handle)
  */
 TEST_F (TlsAcceptor, setCertificate)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
     ASSERT_EQ (server.setCertificate ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -365,7 +365,7 @@ TEST_F (TlsAcceptor, setCertificate)
  */
 TEST_F (TlsAcceptor, setCaCertificate)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
     ASSERT_EQ (server.setCaCertificate ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -377,7 +377,7 @@ TEST_F (TlsAcceptor, setCaCertificate)
  */
 TEST_F (TlsAcceptor, setCipher)
 {
-    Tcp::TlsAcceptor server;
+    Tls::Acceptor server;
 
     ASSERT_EQ (server.setCipher ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
