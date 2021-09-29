@@ -132,7 +132,9 @@ TEST_F (UnixSocket, bind)
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
+
     unixSocket.close ();
 }
 

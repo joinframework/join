@@ -140,9 +140,14 @@ TEST_F (TcpSocket, bind)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
+    ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.bind ({Tcp::Resolver::resolveHost (_host)}), -1);
+    ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
+
     ASSERT_EQ (tcpSocket.bind ({Tcp::Resolver::resolveHost (_host)}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
+
     tcpSocket.close ();
 }
 

@@ -127,8 +127,14 @@ TEST_F (UdpSocket, bind)
 {
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
+    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.bind ({Udp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), -1);
+    ASSERT_EQ (udpSocket.disconnect (), 0) << join::lastError.message ();
+
     ASSERT_EQ (udpSocket.bind ({Udp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.disconnect (), 0) << join::lastError.message ();
+
     udpSocket.close ();
 }
 

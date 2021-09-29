@@ -234,12 +234,6 @@ namespace join
          */
         virtual int bind (const Endpoint& endpoint) noexcept
         {
-            if (this->_state == State::Connected)
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
             if ((this->_state == State::Closed) && (this->open (endpoint.protocol ()) == -1))
             {
                 return -1;

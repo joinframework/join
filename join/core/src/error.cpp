@@ -162,4 +162,3 @@ std::error_condition join::make_error_condition (join::Errc code)
 {
     return std::error_condition (static_cast <int> (code), getErrorCategory ());
 }
-

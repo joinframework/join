@@ -235,10 +235,14 @@ TEST_F (TlsSocket, bind)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_FALSE (tlsSocket.opened ());
+    ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.bind ({Tls::Resolver::resolveHost (_host)}), -1);
+    ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+
     ASSERT_EQ (tlsSocket.bind ({Tls::Resolver::resolveHost (_host)}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+
     tlsSocket.close ();
 }
 
