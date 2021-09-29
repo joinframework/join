@@ -216,23 +216,15 @@ namespace join
 
         /**
          * @brief close the socket.
-         * @return 0 on success, -1 on failure.
          */
-        virtual int close () noexcept
+        virtual void close () noexcept
         {
             if (this->_state != State::Closed)
             {
-                if (::close (this->_handle) == -1)
-                {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
-                    return -1;
-                }
-
-                this->_handle = -1;
+                ::close (this->_handle);
                 this->_state = State::Closed;
+                this->_handle = -1;
             }
-
-            return 0;
         }
 
         /**
@@ -1361,7 +1353,9 @@ namespace join
                 this->_state = State::Disconnected;
             }
 
-            return this->close ();
+            this->close ();
+
+            return 0;
         }
 
         /**
@@ -2006,14 +2000,12 @@ namespace join
 
         /**
          * @brief close the socket handle.
-         * @return 0 on success, -1 on failure.
          */
-        virtual int close () noexcept override
+        virtual void close () noexcept override
         {
+            BasicStreamSocket <Protocol>::close ();
             this->_tlsState = TlsState::NonEncrypted;
             this->_tlsHandle.reset ();
-
-            return BasicStreamSocket <Protocol>::close ();
         }
 
         /**

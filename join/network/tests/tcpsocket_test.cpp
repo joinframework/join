@@ -54,7 +54,7 @@ protected:
     void TearDown ()
     {
         ASSERT_EQ (stop (), 0) << join::lastError.message ();
-        ASSERT_EQ (close (), 0) << join::lastError.message ();
+        close ();
     }
 
     /**
@@ -109,12 +109,12 @@ TEST_F (TcpSocket, open)
     ASSERT_EQ (tcpSocket.open (Tcp::v4 ()), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.open (Tcp::v4 ()), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 
     ASSERT_EQ (tcpSocket.open (Tcp::v6 ()), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.open (Tcp::v6 ()), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -129,7 +129,7 @@ TEST_F (TcpSocket, close)
     ASSERT_TRUE (tcpSocket.opened());
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (tcpSocket.opened());
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
     ASSERT_FALSE (tcpSocket.opened());
 }
 
@@ -143,7 +143,7 @@ TEST_F (TcpSocket, bind)
     ASSERT_EQ (tcpSocket.bind ({Tcp::Resolver::resolveHost (_host)}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -157,13 +157,13 @@ TEST_F (TcpSocket, connect)
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 
     ASSERT_EQ (tcpSocket.connect (Tcp::Resolver::resolve (_host + ":" + std::to_string (_port))), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect (Tcp::Resolver::resolve (_host + ":" + std::to_string (_port))), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -184,7 +184,7 @@ TEST_F (TcpSocket, waitConnected)
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
     ASSERT_TRUE (tcpSocket.waitDisconnected (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -199,7 +199,7 @@ TEST_F (TcpSocket, disconnect)
     ASSERT_TRUE (tcpSocket.connected ());
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (tcpSocket.connected ());
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
     ASSERT_FALSE (tcpSocket.connected ());
 }
 
@@ -221,7 +221,7 @@ TEST_F (TcpSocket, waitDisconnected)
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
     ASSERT_TRUE (tcpSocket.waitDisconnected (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -240,7 +240,7 @@ TEST_F (TcpSocket, canRead)
     ASSERT_TRUE (tcpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (tcpSocket.canRead (), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -266,7 +266,7 @@ TEST_F (TcpSocket, waitReadyRead)
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
     ASSERT_TRUE (tcpSocket.waitDisconnected (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -285,7 +285,7 @@ TEST_F (TcpSocket, read)
     ASSERT_TRUE (tcpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (tcpSocket.read (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -302,7 +302,7 @@ TEST_F (TcpSocket, readExactly)
     ASSERT_TRUE (tcpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.readExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -325,7 +325,7 @@ TEST_F (TcpSocket, waitReadyWrite)
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
     ASSERT_TRUE (tcpSocket.waitDisconnected (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -343,7 +343,7 @@ TEST_F (TcpSocket, write)
     ASSERT_GT (tcpSocket.write (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (tcpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -359,7 +359,7 @@ TEST_F (TcpSocket, writeExactly)
     ASSERT_EQ (tcpSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (tcpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -377,7 +377,7 @@ TEST_F (TcpSocket, setMode)
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
     ASSERT_TRUE (tcpSocket.waitDisconnected (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -392,7 +392,7 @@ TEST_F (TcpSocket, setOption)
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::NoDelay, 1), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -405,7 +405,7 @@ TEST_F (TcpSocket, localEndpoint)
     ASSERT_EQ (tcpSocket.bind ({Tcp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.localEndpoint (), Tcp::Endpoint (Tcp::Resolver::resolveHost (_host), uint16_t (_port + 1))) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -418,7 +418,7 @@ TEST_F (TcpSocket, remoteEndpoint)
     ASSERT_EQ (tcpSocket.bind ({Tcp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.remoteEndpoint (), Tcp::Endpoint (Tcp::Resolver::resolveHost (_host), _port)) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -435,7 +435,7 @@ TEST_F (TcpSocket, opened)
     ASSERT_TRUE (tcpSocket.opened ());
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (tcpSocket.opened ());
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
     ASSERT_FALSE (tcpSocket.opened ());
 }
 
@@ -453,7 +453,7 @@ TEST_F (TcpSocket, connected)
     ASSERT_TRUE (tcpSocket.connected());
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (tcpSocket.connected());
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
     ASSERT_FALSE (tcpSocket.connected());
 }
 
@@ -471,7 +471,7 @@ TEST_F (TcpSocket, encrypted)
     ASSERT_FALSE (tcpSocket.encrypted ());
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (tcpSocket.encrypted ());
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
     ASSERT_FALSE (tcpSocket.encrypted ());
 }
 
@@ -486,11 +486,11 @@ TEST_F (TcpSocket, family)
 
     ASSERT_EQ (tcpSocket.bind (IpAddress (AF_INET6)), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.family (), AF_INET6);
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 
     ASSERT_EQ (tcpSocket.bind (IpAddress (AF_INET)), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.family (), AF_INET);
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -527,7 +527,7 @@ TEST_F (TcpSocket, handle)
     ASSERT_GT (tcpSocket.handle (), -1);
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.handle (), -1);
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
     ASSERT_EQ (tcpSocket.handle (), -1);
 }
 
@@ -543,7 +543,7 @@ TEST_F (TcpSocket, mtu)
     ASSERT_NE (tcpSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.mtu (), -1);
-    ASSERT_EQ (tcpSocket.close (), 0) << join::lastError.message ();
+    tcpSocket.close ();
     ASSERT_EQ (tcpSocket.mtu (), -1);
 }
 
@@ -564,8 +564,8 @@ TEST_F (TcpSocket, lower)
     {
         ASSERT_TRUE (tcpSocket2 < tcpSocket1);
     }
-    ASSERT_EQ (tcpSocket1.close (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket2.close (), 0) << join::lastError.message ();
+    tcpSocket1.close ();
+    tcpSocket2.close ();
 }
 
 /**

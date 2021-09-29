@@ -56,7 +56,7 @@ protected:
      */
     void TearDown ()
     {
-        ASSERT_EQ (close (), 0) << join::lastError.message ();
+        close ();
     }
 
     /**
@@ -122,7 +122,7 @@ std::string             Observer::_data;
  */
 TEST_F (Observer, start)
 {
-    ASSERT_EQ (close (), 0) << join::lastError.message ();
+    close ();
     ASSERT_EQ (start (), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
@@ -143,7 +143,7 @@ TEST_F (Observer, stop)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (start (), 0) << join::lastError.message ();
-    ASSERT_EQ (close (), 0) << join::lastError.message ();
+    close ();
     ASSERT_EQ (stop (), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
@@ -173,8 +173,8 @@ TEST_F (Observer, onReceive)
         _data.clear ();
     }
     ASSERT_EQ (stop (), 0) << join::lastError.message ();
-    ASSERT_EQ (socket.close (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    socket.close ();
+    server.close ();
 }
 
 /**
@@ -195,14 +195,14 @@ TEST_F (Observer, onError)
     ASSERT_TRUE ((socket = server.accept ()).connected ());
     ASSERT_EQ (start (), 0) << join::lastError.message ();
     ASSERT_EQ (setsockopt (socket.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
-    ASSERT_EQ (socket.close (), 0) << join::lastError.message ();
+    socket.close ();
     {
         std::unique_lock <std::mutex> lk (_mut);
         ASSERT_TRUE (_cond.wait_for (lk, std::chrono::milliseconds (_timeout), [this] () {return _data == "onError";}));
         _data.clear ();
     }
     ASSERT_EQ (stop (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -218,14 +218,14 @@ TEST_F (Observer, onClose)
     ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((socket = server.accept ()).connected ());
     ASSERT_EQ (start (), 0) << join::lastError.message ();
-    ASSERT_EQ (socket.close (), 0) << join::lastError.message ();
+    socket.close ();
     {
         std::unique_lock <std::mutex> lk (_mut);
         ASSERT_TRUE (_cond.wait_for (lk, std::chrono::milliseconds (_timeout), [this] () {return _data == "onClose";}));
         _data.clear ();
     }
     ASSERT_EQ (stop (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**

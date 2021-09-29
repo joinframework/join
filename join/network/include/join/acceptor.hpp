@@ -141,22 +141,14 @@ namespace join
 
         /**
          * @brief close acceptor.
-         * @return 0 on success, -1 on failure.
          */
-        virtual int close () noexcept
+        virtual void close () noexcept
         {
             if (this->_handle != -1)
             {
-                if (::close (this->_handle) == -1)
-                {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
-                    return -1;
-                }
-
+                ::close (this->_handle);
                 this->_handle = -1;
             }
-
-            return 0;
         }
 
         /**

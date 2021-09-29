@@ -94,7 +94,7 @@ protected:
     void TearDown ()
     {
         ASSERT_EQ (stop (), 0) << join::lastError.message ();
-        ASSERT_EQ (close (), 0) << join::lastError.message ();
+        close ();
     }
 
     /**
@@ -156,7 +156,7 @@ TEST_F (RawSocket, open)
     ASSERT_EQ (rawSocket.open (), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.open (), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
 }
 
 /**
@@ -169,7 +169,7 @@ TEST_F (RawSocket, close)
     ASSERT_FALSE (rawSocket.opened ());
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.opened ());
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
     ASSERT_FALSE (rawSocket.opened ());
 }
 
@@ -181,7 +181,7 @@ TEST_F (RawSocket, bind)
     Raw::Socket rawSocket (Raw::Socket::Blocking);
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
 }
 
 /**
@@ -198,7 +198,7 @@ TEST_F (RawSocket, canRead)
     ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (rawSocket.canRead (), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
 }
 
 /**
@@ -214,7 +214,7 @@ TEST_F (RawSocket, waitReadyRead)
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
 }
 
 /**
@@ -232,7 +232,7 @@ TEST_F (RawSocket, read)
     ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (rawSocket.read (data, sizeof (data)), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
 }
 
 /**
@@ -246,7 +246,7 @@ TEST_F (RawSocket, waitReadyWrite)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
 }
 
 /**
@@ -262,7 +262,7 @@ TEST_F (RawSocket, write)
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
 }
 
 /**
@@ -275,7 +275,7 @@ TEST_F (RawSocket, setMode)
     ASSERT_EQ (rawSocket.setMode (Raw::Socket::Blocking), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.open (), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setMode (Raw::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
 }
 
 /**
@@ -289,7 +289,7 @@ TEST_F (RawSocket, setOption)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::Broadcast, 1), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
 }
 
 /**
@@ -313,7 +313,7 @@ TEST_F (RawSocket, opened)
     ASSERT_FALSE (rawSocket.opened ());
     ASSERT_EQ (rawSocket.open (), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.opened ());
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
     ASSERT_FALSE (rawSocket.opened ());
 }
 
@@ -327,7 +327,7 @@ TEST_F (RawSocket, encrypted)
     ASSERT_FALSE (rawSocket.encrypted ());
     ASSERT_EQ (rawSocket.open (), 0) << join::lastError.message ();
     ASSERT_FALSE (rawSocket.encrypted ());
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
     ASSERT_FALSE (rawSocket.encrypted ());
 }
 
@@ -371,7 +371,7 @@ TEST_F (RawSocket, handle)
     ASSERT_EQ (rawSocket.handle (), -1);
     ASSERT_EQ (rawSocket.open (), 0) << join::lastError.message ();
     ASSERT_GT (rawSocket.handle (), -1);
-    ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
+    rawSocket.close ();
     ASSERT_EQ (rawSocket.handle (), -1);
 }
 
@@ -392,8 +392,8 @@ TEST_F (RawSocket, lower)
     {
         ASSERT_TRUE (rawSocket2 < rawSocket1);
     }
-    ASSERT_EQ (rawSocket1.close (), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket2.close (), 0) << join::lastError.message ();
+    rawSocket1.close ();
+    rawSocket2.close ();
 }
 
 /**

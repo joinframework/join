@@ -139,10 +139,7 @@ namespace join
          */
         BasicSocketStreambuf* connect (const Endpoint& endpoint)
         {
-            if (_socket.close () == -1)
-            {
-                return nullptr;
-            }
+            _socket.close ();
 
             this->allocateBuffer ();
 
@@ -175,10 +172,7 @@ namespace join
                 result = nullptr;
             }
 
-            if (_socket.close () == -1)
-            {
-                result = nullptr;
-            }
+            _socket.close ();
 
             this->freeBuffer ();
 

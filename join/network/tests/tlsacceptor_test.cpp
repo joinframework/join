@@ -216,7 +216,7 @@ TEST_F (TlsAcceptor, close)
     Tls::Acceptor server;
 
     ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -227,7 +227,7 @@ TEST_F (TlsAcceptor, bind)
     Tls::Acceptor server;
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -241,7 +241,7 @@ TEST_F (TlsAcceptor, listen)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -261,9 +261,9 @@ TEST_F (TlsAcceptor, accept)
     ASSERT_TRUE (serverSocket.connected ());
     ASSERT_EQ (serverSocket.localEndpoint ().ip (), _address);
     ASSERT_EQ (serverSocket.localEndpoint ().port (), _port);
-    ASSERT_EQ (clientSocket.close (), 0) << join::lastError.message ();
-    ASSERT_EQ (serverSocket.close (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    clientSocket.close ();
+    serverSocket.close ();
+    server.close ();
 }
 
 /**
@@ -277,7 +277,7 @@ TEST_F (TlsAcceptor, localEndpoint)
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), _address);
     ASSERT_EQ (server.localEndpoint ().port (), _port);
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -290,7 +290,7 @@ TEST_F (TlsAcceptor, opened)
     ASSERT_FALSE (server.opened ());
     ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (server.opened ());
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
     ASSERT_FALSE (server.opened ());
 }
 
@@ -303,7 +303,7 @@ TEST_F (TlsAcceptor, family)
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.family (), AF_INET);
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -315,7 +315,7 @@ TEST_F (TlsAcceptor, type)
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.type (), SOCK_STREAM);
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -327,7 +327,7 @@ TEST_F (TlsAcceptor, protocol)
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.protocol (), IPPROTO_TCP);
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -340,7 +340,7 @@ TEST_F (TlsAcceptor, handle)
     ASSERT_EQ (server.handle (), -1);
     ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
     ASSERT_GT (server.handle (), -1);
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
     ASSERT_EQ (server.handle (), -1);
 }
 
