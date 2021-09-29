@@ -178,7 +178,7 @@ TEST_F (UnixDgramSocket, waitReadyRead)
     UnixDgram::Socket unixSocket;
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_FALSE (unixSocket.waitReadyWrite (_timeout));
+    ASSERT_FALSE (unixSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -216,6 +216,8 @@ TEST_F (UnixDgramSocket, readFrom)
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
     UnixDgram::Endpoint from;
 
+    ASSERT_EQ (unixSocket.readFrom (data, sizeof (data)), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
@@ -278,7 +280,7 @@ TEST_F (UnixDgramSocket, writeTo)
  */
 TEST_F (UnixDgramSocket, setMode)
 {
-    UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
+    UnixDgram::Socket unixSocket;
 
     ASSERT_EQ (unixSocket.setMode (UnixDgram::Socket::Blocking), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -294,6 +296,7 @@ TEST_F (UnixDgramSocket, setOption)
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::SndBuffer, 1500), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
@@ -424,9 +427,11 @@ TEST_F (UnixDgramSocket, mtu)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
+    ASSERT_EQ (unixSocket.mtu (), -1);
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.mtu (), -1);
     ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.mtu (), -1);
 }
 
 /**

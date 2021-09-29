@@ -33,6 +33,7 @@
 #include <netinet/udp.h>
 #include <net/ethernet.h>
 
+using join::Errc;
 using join::MacAddress;
 using join::IpAddress;
 using join::Raw;
@@ -153,6 +154,8 @@ TEST_F (RawSocket, open)
     Raw::Socket rawSocket;
 
     ASSERT_EQ (rawSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.open (), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
 }
 
@@ -188,6 +191,8 @@ TEST_F (RawSocket, canRead)
 {
     Raw::Socket rawSocket (Raw::Socket::Blocking);
 
+    ASSERT_EQ (rawSocket.canRead (), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
@@ -203,6 +208,8 @@ TEST_F (RawSocket, waitReadyRead)
 {
     Raw::Socket rawSocket;
 
+    ASSERT_FALSE (rawSocket.waitReadyRead (_timeout));
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
@@ -218,6 +225,8 @@ TEST_F (RawSocket, read)
     Raw::Socket rawSocket (Raw::Socket::Blocking);
     char data[1024];
 
+    ASSERT_EQ (rawSocket.read (data, sizeof (data)), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
@@ -233,6 +242,8 @@ TEST_F (RawSocket, waitReadyWrite)
 {
     Raw::Socket rawSocket;
 
+    ASSERT_FALSE (rawSocket.waitReadyWrite (_timeout));
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
@@ -245,6 +256,8 @@ TEST_F (RawSocket, write)
 {
     Raw::Socket rawSocket;
 
+    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
@@ -257,8 +270,9 @@ TEST_F (RawSocket, write)
  */
 TEST_F (RawSocket, setMode)
 {
-    Raw::Socket rawSocket (Raw::Socket::Blocking);
+    Raw::Socket rawSocket;
 
+    ASSERT_EQ (rawSocket.setMode (Raw::Socket::Blocking), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.open (), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setMode (Raw::Socket::NonBlocking), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();
@@ -272,6 +286,7 @@ TEST_F (RawSocket, setOption)
     Raw::Socket rawSocket (Raw::Socket::Blocking);
 
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::Broadcast, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::Broadcast, 1), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.close (), 0) << join::lastError.message ();

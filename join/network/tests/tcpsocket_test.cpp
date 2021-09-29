@@ -251,7 +251,7 @@ TEST_F (TcpSocket, waitReadyRead)
     Tcp::Socket tcpSocket;
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_FALSE (tcpSocket.waitReadyWrite (_timeout));
+    ASSERT_FALSE (tcpSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     if (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}) == -1)
     {
@@ -367,7 +367,7 @@ TEST_F (TcpSocket, writeExactly)
  */
 TEST_F (TcpSocket, setMode)
 {
-    Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
+    Tcp::Socket tcpSocket;
 
     ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::Blocking), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
@@ -388,6 +388,7 @@ TEST_F (TcpSocket, setOption)
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
     ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::NoDelay, 1), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
@@ -537,6 +538,7 @@ TEST_F (TcpSocket, mtu)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
+    ASSERT_EQ (tcpSocket.mtu (), -1);
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_NE (tcpSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();

@@ -465,7 +465,7 @@ namespace join
         {
             if (this->_state == State::Closed)
             {
-                lastError = make_error_code (Errc::ConnectionClosed);
+                lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
@@ -1051,7 +1051,7 @@ namespace join
         {
             if (this->_state == State::Closed)
             {
-                lastError = make_error_code (Errc::ConnectionClosed);
+                lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
@@ -1173,7 +1173,7 @@ namespace join
         {
             if (this->_state == State::Closed)
             {
-                lastError = make_error_code (Errc::ConnectionClosed);
+                lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
@@ -1478,7 +1478,7 @@ namespace join
         {
             if (this->_state == State::Closed)
             {
-                lastError = make_error_code (Errc::ConnectionClosed);
+                lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 

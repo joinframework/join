@@ -389,7 +389,7 @@ TEST_F (TlsSocket, waitReadyRead)
     Tls::Socket tlsSocket;
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_FALSE (tlsSocket.waitReadyWrite (_timeout));
+    ASSERT_FALSE (tlsSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     if (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}) == -1)
     {
@@ -697,7 +697,7 @@ TEST_F (TlsSocket, mtu)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.mtu (), -1) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.mtu (), -1);
     ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_NE (tlsSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
@@ -781,4 +781,3 @@ int main (int argc, char **argv)
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }
-

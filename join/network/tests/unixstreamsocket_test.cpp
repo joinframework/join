@@ -235,7 +235,7 @@ TEST_F (UnixSocket, waitReadyRead)
     UnixStream::Socket unixSocket;
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_FALSE (unixSocket.waitReadyWrite (_timeout));
+    ASSERT_FALSE (unixSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     if (unixSocket.connect (_serverpath) == -1)
     {
@@ -351,7 +351,7 @@ TEST_F (UnixSocket, writeExactly)
  */
 TEST_F (UnixSocket, setMode)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    UnixStream::Socket unixSocket;
 
     ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::Blocking), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -372,6 +372,7 @@ TEST_F (UnixSocket, setOption)
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::SndBuffer, 1500), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
@@ -513,9 +514,11 @@ TEST_F (UnixSocket, mtu)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
+    ASSERT_EQ (unixSocket.mtu (), -1);
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.mtu (), -1);
     ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.mtu (), -1);
 }
 
 /**
