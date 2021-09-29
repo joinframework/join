@@ -122,6 +122,13 @@ namespace join
             if (_buf)
             {
                 this->overflow (traits_type::eof ());
+
+                if (_allocated)
+                {
+                    delete [] _buf;
+                    _allocated = false;
+                    _buf = nullptr;
+                }
             }
         }
 
@@ -357,7 +364,7 @@ namespace join
          */
         virtual std::streambuf* setbuf (char* s, std::streamsize n) override
         {
-            if (!_buf)
+            if (!_socket.connected ())
             {
                 if ((s == nullptr) && (n == 0))
                 {
