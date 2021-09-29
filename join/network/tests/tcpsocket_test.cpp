@@ -390,13 +390,53 @@ TEST_F (TcpSocket, setMode)
  */
 TEST_F (TcpSocket, setOption)
 {
-    Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
+    Tcp::Socket tcpSocket;
 
-    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::RcvBuffer, 1500), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+
+    ASSERT_EQ (tcpSocket.open (), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::NoDelay, 1), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::KeepIdle, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::KeepIntvl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::KeepCount, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::Ttl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::MulticastLoop, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::MulticastTtl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::PathMtuDiscover, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::RcvError, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::no_protocol_option);
+    tcpSocket.close ();
+
+    ASSERT_EQ (tcpSocket.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::NoDelay, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::KeepIdle, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::KeepIntvl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::KeepCount, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::Ttl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::MulticastLoop, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::MulticastTtl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::PathMtuDiscover, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::RcvError, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setOption (Tcp::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::no_protocol_option);
     tcpSocket.close ();
 }
 

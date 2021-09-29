@@ -371,13 +371,39 @@ TEST_F (UnixStreamSocket, setMode)
  */
 TEST_F (UnixStreamSocket, setOption)
 {
-    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+    UnixStream::Socket unixSocket;
 
-    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::SndBuffer, 1500), -1);
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::RcvBuffer, 1500), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+
+    ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::KeepIdle, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::KeepIntvl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::KeepCount, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::Ttl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::MulticastLoop, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::MulticastTtl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::PathMtuDiscover, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::RcvError, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::operation_not_supported);
     unixSocket.close ();
 }
 

@@ -547,12 +547,53 @@ TEST_F (TlsSocket, setMode)
  */
 TEST_F (TlsSocket, setOption)
 {
-    Tls::Socket tlsSocket (Tls::Socket::Blocking);
+    Tls::Socket tlsSocket;
 
-    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::NoDelay, 1), -1);
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::RcvBuffer, 1500), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (tlsSocket.open (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setOption (Tls::Socket::NoDelay, 1), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::KeepIdle, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::KeepIntvl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::KeepCount, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::Ttl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::MulticastLoop, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::MulticastTtl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::PathMtuDiscover, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::RcvError, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::no_protocol_option);
+    tlsSocket.close ();
+
+    ASSERT_EQ (tlsSocket.open (Tls::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::NoDelay, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::KeepIdle, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::KeepIntvl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::KeepCount, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::Ttl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::MulticastLoop, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::MulticastTtl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::PathMtuDiscover, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::RcvError, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setOption (Tls::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::no_protocol_option);
     tlsSocket.close ();
 }
 

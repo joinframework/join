@@ -336,12 +336,59 @@ TEST_F (IcmpSocket, setMode)
  */
 TEST_F (IcmpSocket, setOption)
 {
-    Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
+    Icmp::Socket icmpSocket;
 
-    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::MulticastLoop, 1), -1);
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::RcvBuffer, 1500), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+
+    ASSERT_EQ (icmpSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::KeepIdle, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::KeepIntvl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::KeepCount, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::Ttl, 1), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::MulticastLoop, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::MulticastTtl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::PathMtuDiscover, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::RcvError, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::no_protocol_option);
+    icmpSocket.close ();
+
+    ASSERT_EQ (icmpSocket.open (Icmp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::KeepIdle, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::KeepIntvl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::KeepCount, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::Ttl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::MulticastLoop, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::MulticastTtl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::PathMtuDiscover, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::RcvError, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.setOption (Icmp::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::no_protocol_option);
     icmpSocket.close ();
 }
 

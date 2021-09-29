@@ -283,12 +283,38 @@ TEST_F (RawSocket, setMode)
  */
 TEST_F (RawSocket, setOption)
 {
-    Raw::Socket rawSocket (Raw::Socket::Blocking);
+    Raw::Socket rawSocket;
 
-    ASSERT_EQ (rawSocket.setOption (Raw::Socket::Broadcast, 1), -1);
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::RcvBuffer, 1500), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+
+    ASSERT_EQ (rawSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::KeepIdle, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::KeepIntvl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::KeepCount, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::ReusePort, 1), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::Ttl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::MulticastLoop, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::MulticastTtl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::PathMtuDiscover, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::RcvError, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::AuxData, 1), 0) << join::lastError.message ();
     rawSocket.close ();
 }
 

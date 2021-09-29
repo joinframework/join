@@ -309,12 +309,59 @@ TEST_F (UdpSocket, setMode)
  */
 TEST_F (UdpSocket, setOption)
 {
-    Udp::Socket udpSocket (Udp::Socket::Blocking);
+    Udp::Socket udpSocket;
 
-    ASSERT_EQ (udpSocket.setOption (Udp::Socket::MulticastLoop, 1), -1);
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::RcvBuffer, 1500), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+
+    ASSERT_EQ (udpSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::KeepIdle, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::KeepIntvl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::KeepCount, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::Ttl, 1), 0) << join::lastError.message ();
     ASSERT_EQ (udpSocket.setOption (Udp::Socket::MulticastLoop, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::MulticastTtl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::PathMtuDiscover, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::RcvError, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::no_protocol_option);
+    udpSocket.close ();
+
+    ASSERT_EQ (udpSocket.open (Udp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::KeepIdle, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::KeepIntvl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::KeepCount, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::Ttl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::MulticastLoop, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::MulticastTtl, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::PathMtuDiscover, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::RcvError, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.setOption (Udp::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::no_protocol_option);
     udpSocket.close ();
 }
 

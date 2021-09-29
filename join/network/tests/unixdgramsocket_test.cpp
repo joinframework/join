@@ -296,12 +296,39 @@ TEST_F (UnixDgramSocket, setMode)
  */
 TEST_F (UnixDgramSocket, setOption)
 {
-    UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
+    UnixDgram::Socket unixSocket;
 
-    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::SndBuffer, 1500), -1);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::RcvBuffer, 1500), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+
+    ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::KeepIdle, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::KeepIntvl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::KeepCount, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::Ttl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::MulticastLoop, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::MulticastTtl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::PathMtuDiscover, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::RcvError, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::operation_not_supported);
     unixSocket.close ();
 }
 
