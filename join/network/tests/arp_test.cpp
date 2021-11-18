@@ -69,7 +69,7 @@ public:
  */
 TEST_F (ArpProtocol, mac)
 {
-    ASSERT_EQ (Arp ("dummy0").mac ("192.168.16.100"), "4e:ed:ed:ee:59:db");
+    ASSERT_EQ (Arp ("dummy0").mac ("192.168.16.100"), "4e:ed:ed:ee:59:db") << lastError.message ();
     ASSERT_EQ (Arp::mac ("192.168.16.100", "dummy0"), "4e:ed:ed:ee:59:db") << lastError.message ();
 }
 
