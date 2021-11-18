@@ -36,41 +36,12 @@ using join::Arp;
 using join::lastError;
 
 /**
- * @brief Class used to test the ARP API.
- */
-class ArpProtocol : public ::testing::Test
-{
-public:
-    /**
-     * @brief set up test case.
-     */
-    static void SetUpTestCase()
-    {
-        [[maybe_unused]] int result;
-        result = std::system ("ip link add dummy0 type dummy");
-        result = std::system ("ip link set dummy0 address 4e:ed:ed:ee:59:db");
-        result = std::system ("ip addr add 192.168.16.100/24 brd 192.168.16.255 dev dummy0");
-        result = std::system ("ip link set dummy0 up arp on multicast on");
-    }
-
-    /**
-     * @brief tear down test case.
-     */
-    static void TearDownTestCase()
-    {
-        [[maybe_unused]] int result;
-        result = std::system ("ip link set dev dummy0 down");
-        result = std::system ("ip link del dummy0");
-    }
-};
-
-/**
  * @brief Test mac method.
  */
-TEST_F (ArpProtocol, mac)
+TEST (ArpProtocol, mac)
 {
-    ASSERT_EQ (Arp ("dummy0").mac ("192.168.16.100"), "4e:ed:ed:ee:59:db") << lastError.message ();
-    ASSERT_EQ (Arp::mac ("192.168.16.100", "dummy0"), "4e:ed:ed:ee:59:db") << lastError.message ();
+    ASSERT_FALSE (Arp ("eth0").mac (IpAddress::ipv4Address ("eth0")).isWildcard ()) << lastError.message ();
+    ASSERT_FALSE (Arp::mac (IpAddress::ipv4Address ("eth0"), "eth0").isWildcard ()) << lastError.message ();
 }
 
 /**
