@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/error.hpp>
 #include <join/ipaddress.hpp>
 
 // C++.
@@ -34,6 +35,7 @@
 // C.
 #include <cstring>
 #include <net/if.h>
+#include <sys/ioctl.h>
 #include <arpa/inet.h>
 
 namespace join
@@ -1465,6 +1467,36 @@ std::string IpAddress::toArpa () const
 void IpAddress::clear ()
 {
     _ip->clear ();
+}
+
+// =========================================================================
+//   CLASS     : IpAddress
+//   METHOD    : ipv4Address
+// =========================================================================
+IpAddress IpAddress::ipv4Address (const std::string& interface)
+{
+    int fd = ::socket (AF_INET, SOCK_DGRAM, 0);
+    if (fd == -1)
+    {
+        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        return ipv4Wildcard;
+    }
+
+    struct ifreq iface;
+    ::memset (&iface, 0, sizeof (iface));
+    ::strncpy (iface.ifr_name, interface.c_str (), IFNAMSIZ - 1);
+    iface.ifr_addr.sa_family = AF_INET;
+
+    int result = ::ioctl (fd, SIOCGIFADDR, &iface);
+    if (result == -1)
+    {
+        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        close (fd);
+        return ipv4Wildcard;
+    }
+    close (fd);
+
+    return IpAddress (iface.ifr_addr);
 }
 
 // =========================================================================

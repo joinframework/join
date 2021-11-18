@@ -327,6 +327,15 @@ TEST (MacAddress, cend)
 }
 
 /**
+ * @brief Test address method.
+ */
+TEST (MacAddress, address)
+{
+    ASSERT_TRUE  (MacAddress::address ("lo").isWildcard ());
+    ASSERT_FALSE (MacAddress::address ("eth0").isWildcard ());
+}
+
+/**
  * @brief Test copy assignment method.
  */
 TEST (MacAddress, copyAssign)

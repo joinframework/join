@@ -1669,6 +1669,14 @@ TEST (IpAddress, clear)
 }
 
 /**
+ * @brief Test ipv4Address method.
+ */
+TEST (IpAddress, ipv4Address)
+{
+    ASSERT_FALSE (IpAddress::ipv4Address ("eth0").isWildcard ());
+}
+
+/**
  * @brief Test at method.
  */
 TEST (IpAddress, at)
