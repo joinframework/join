@@ -44,6 +44,11 @@ namespace join
     public:
         /**
          * @brief create the Arp instance.
+         */
+        Arp () = delete;
+
+        /**
+         * @brief create the Arp instance.
          * @param interface interface name.
          */
         Arp (const std::string& interface);
@@ -80,6 +85,22 @@ namespace join
         virtual ~Arp () = default;
 
         /**
+         * @brief discover the link layer address for the given ip address using arp cache.
+         * @param addr ip address.
+         * @param interface interface name.
+         * @return the discovered link layer address.
+         */
+        MacAddress cache (const IpAddress& addr);
+
+        /**
+         * @brief discover the link layer address for the given ip address using arp request.
+         * @param addr ip address.
+         * @param interface interface name.
+         * @return the dicovered link layer address.
+         */
+        MacAddress request (const IpAddress& addr);
+
+        /**
          * @brief discover the link layer address for the given internet layer address.
          * @param addr Iternet layer address.
          * @return The dicovered link layer address.
@@ -93,7 +114,7 @@ namespace join
          */
         static MacAddress mac (const IpAddress& addr, const std::string& interface);
 
-    protected:
+    private:
         /**
          * @brief arp packet.
          */
@@ -118,22 +139,6 @@ namespace join
             struct ethhdr eth;
             ArpPacket arp;
         };
-
-        /**
-         * @brief discover the link layer address for the given ip address using arp cache.
-         * @param addr ip address.
-         * @param interface interface name.
-         * @return the discovered link layer address.
-         */
-        MacAddress cache (const IpAddress& addr);
-
-        /**
-         * @brief discover the link layer address for the given ip address using arp request.
-         * @param addr ip address.
-         * @param interface interface name.
-         * @return the dicovered link layer address.
-         */
-        MacAddress request (const IpAddress& addr);
 
         /// interface name.
         std::string _interface;

@@ -89,9 +89,9 @@ Arp& Arp::operator= (Arp&& other)
 
 // =========================================================================
 //   CLASS     : Arp
-//   METHOD    : mac
+//   METHOD    : cache
 // =========================================================================
-MacAddress Arp::mac (const IpAddress& addr)
+MacAddress Arp::cache (const IpAddress& addr)
 {
     if (addr.family () != AF_INET)
     {
@@ -99,35 +99,6 @@ MacAddress Arp::mac (const IpAddress& addr)
         return {};
     }
 
-    if (addr == IpAddress::ipv4Address (_interface))
-    {
-        return MacAddress::address (_interface);
-    }
-
-    MacAddress mac = cache (addr);
-    if (!mac.isWildcard ())
-    {
-        return mac;
-    }
-
-    return request (addr);
-}
-
-// =========================================================================
-//   CLASS     : Arp
-//   METHOD    : mac
-// =========================================================================
-MacAddress Arp::mac (const IpAddress& addr, const std::string& interface)
-{
-    return Arp (interface).mac (addr);
-}
-
-// =========================================================================
-//   CLASS     : Arp
-//   METHOD    : cache
-// =========================================================================
-MacAddress Arp::cache (const IpAddress& addr)
-{
     int fd = ::socket (AF_INET, SOCK_DGRAM, 0);
     if (fd != -1)
     {
@@ -164,6 +135,12 @@ MacAddress Arp::cache (const IpAddress& addr)
 // =========================================================================
 MacAddress Arp::request (const IpAddress& addr)
 {
+    if (addr.family () != AF_INET)
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return {};
+    }
+
     Raw::Socket stream;
 
     // bind to interface and allow broadcast.
@@ -259,4 +236,35 @@ MacAddress Arp::request (const IpAddress& addr)
     }
 
     return {};
+}
+
+// =========================================================================
+//   CLASS     : Arp
+//   METHOD    : mac
+// =========================================================================
+MacAddress Arp::mac (const IpAddress& addr)
+{
+    if (addr.family () != AF_INET)
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return {};
+    }
+
+    if (addr == IpAddress::ipv4Address (_interface))
+    {
+        return MacAddress::address (_interface);
+    }
+
+    MacAddress mac = cache (addr);
+
+    return mac.isWildcard () ? request (addr) : mac;
+}
+
+// =========================================================================
+//   CLASS     : Arp
+//   METHOD    : mac
+// =========================================================================
+MacAddress Arp::mac (const IpAddress& addr, const std::string& interface)
+{
+    return Arp (interface).mac (addr);
 }

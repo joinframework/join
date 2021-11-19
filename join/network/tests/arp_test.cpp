@@ -54,6 +54,28 @@ TEST (ArpProtocol, mac)
 }
 
 /**
+ * @brief Test cache method.
+ */
+TEST (ArpProtocol, cache)
+{
+    ASSERT_TRUE (Arp ("bar0").cache ("192.168.16.120").isWildcard ());
+    ASSERT_TRUE (Arp ("eth0").cache (IpAddress (AF_INET6)).isWildcard ());
+    ASSERT_TRUE (Arp ("eth0").cache ("192.168.16.120").isWildcard ());
+    ASSERT_TRUE (Arp ("eth0").cache (IpAddress::ipv4Address ("eth0")).isWildcard ());
+}
+
+/**
+ * @brief Test request method.
+ */
+TEST (ArpProtocol, request)
+{
+    ASSERT_TRUE (Arp ("bar0").request ("192.168.16.120").isWildcard ());
+    ASSERT_TRUE (Arp ("eth0").request (IpAddress (AF_INET6)).isWildcard ());
+    ASSERT_TRUE (Arp ("eth0").request ("192.168.16.120").isWildcard ());
+    ASSERT_TRUE (Arp ("eth0").request (IpAddress::ipv4Address ("eth0")).isWildcard ());
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char **argv)
