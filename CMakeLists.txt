@@ -31,7 +31,7 @@ if(JOIN_ENABLE_TESTS)
     include(FetchContent)
     FetchContent_Declare(
         googletest
-        URL https://github.com/google/googletest/archive/refs/heads/master.zip
+        URL https://github.com/google/googletest/archive/refs/heads/main.zip
     )
     FetchContent_MakeAvailable(googletest)
     enable_testing()
