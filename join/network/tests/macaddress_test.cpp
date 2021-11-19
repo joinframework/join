@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/error.hpp>
 #include <join/macaddress.hpp>
 
 // Libraries.
@@ -331,8 +332,8 @@ TEST (MacAddress, cend)
  */
 TEST (MacAddress, address)
 {
-    ASSERT_TRUE  (MacAddress::address ("lo").isWildcard ());
-    ASSERT_FALSE (MacAddress::address ("eth0").isWildcard ());
+    ASSERT_TRUE  (MacAddress::address ("bar0").isWildcard ());
+    ASSERT_FALSE (MacAddress::address ("eth0").isWildcard ()) << join::lastError.message ();
 }
 
 /**

@@ -49,6 +49,32 @@ namespace join
         Arp (const std::string& interface);
 
         /**
+         * @brief create the Arp instance by copy.
+         * @param other other object to copy.
+         */
+        Arp (const Arp& other);
+
+        /**
+         * @brief assign the Arp instance by copy.
+         * @param other other object to copy.
+         * @return a reference to the current object.
+         */
+        Arp& operator= (const Arp& other);
+
+        /**
+         * @brief create the Arp instance by move.
+         * @param other other object to move.
+         */
+        Arp (Arp&& other);
+
+        /**
+         * @brief assign the Arp instance by move.
+         * @param other other object to move.
+         * @return a reference to the current object.
+         */
+        Arp& operator= (Arp&& other);
+
+        /**
          * @brief destroy the Arp instance.
          */
         virtual ~Arp () = default;
@@ -94,20 +120,20 @@ namespace join
         };
 
         /**
-         * @brief discover the link layer address for the given ip address using arp request.
-         * @param addr ip address.
-         * @param interface interface name.
-         * @return the dicovered link layer address.
-         */
-        MacAddress request (const IpAddress& addr);
-
-        /**
          * @brief discover the link layer address for the given ip address using arp cache.
          * @param addr ip address.
          * @param interface interface name.
          * @return the discovered link layer address.
          */
         MacAddress cache (const IpAddress& addr);
+
+        /**
+         * @brief discover the link layer address for the given ip address using arp request.
+         * @param addr ip address.
+         * @param interface interface name.
+         * @return the dicovered link layer address.
+         */
+        MacAddress request (const IpAddress& addr);
 
         /// interface name.
         std::string _interface;

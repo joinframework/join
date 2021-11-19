@@ -360,26 +360,23 @@ MacAddress::const_iterator MacAddress::cend () const
 MacAddress MacAddress::address (const std::string& interface)
 {
     int fd = ::socket (AF_INET, SOCK_DGRAM, 0);
-    if (fd == -1)
+    if (fd != -1)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
-        return {};
+        struct ifreq iface;
+        ::memset (&iface, 0, sizeof (iface));
+        ::strncpy (iface.ifr_name, interface.c_str (), IFNAMSIZ - 1);
+
+        int result = ::ioctl (fd, SIOCGIFHWADDR, &iface);
+        ::close (fd);
+
+        if (result != -1)
+        {
+            return MacAddress (reinterpret_cast <uint8_t*> (iface.ifr_addr.sa_data), ETH_ALEN);
+        }
     }
 
-    struct ifreq iface;
-    ::memset (&iface, 0, sizeof (iface));
-    ::strncpy (iface.ifr_name, interface.c_str (), IFNAMSIZ - 1);
-
-    int result = ::ioctl (fd, SIOCGIFHWADDR, &iface);
-    if (result == -1)
-    {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
-        close (fd);
-        return {};
-    }
-    close (fd);
-
-    return MacAddress (reinterpret_cast <uint8_t*> (iface.ifr_addr.sa_data), ETH_ALEN);
+    lastError = std::make_error_code (static_cast <std::errc> (errno));
+    return {};
 }
 
 // =========================================================================

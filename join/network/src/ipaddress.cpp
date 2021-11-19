@@ -1476,27 +1476,24 @@ void IpAddress::clear ()
 IpAddress IpAddress::ipv4Address (const std::string& interface)
 {
     int fd = ::socket (AF_INET, SOCK_DGRAM, 0);
-    if (fd == -1)
+    if (fd != -1)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
-        return ipv4Wildcard;
+        struct ifreq iface;
+        ::memset (&iface, 0, sizeof (iface));
+        ::strncpy (iface.ifr_name, interface.c_str (), IFNAMSIZ - 1);
+        iface.ifr_addr.sa_family = AF_INET;
+
+        int result = ::ioctl (fd, SIOCGIFADDR, &iface);
+        ::close (fd);
+
+        if (result != -1)
+        {
+            return IpAddress (iface.ifr_addr);
+        }
     }
 
-    struct ifreq iface;
-    ::memset (&iface, 0, sizeof (iface));
-    ::strncpy (iface.ifr_name, interface.c_str (), IFNAMSIZ - 1);
-    iface.ifr_addr.sa_family = AF_INET;
-
-    int result = ::ioctl (fd, SIOCGIFADDR, &iface);
-    if (result == -1)
-    {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
-        close (fd);
-        return ipv4Wildcard;
-    }
-    close (fd);
-
-    return IpAddress (iface.ifr_addr);
+    lastError = std::make_error_code (static_cast <std::errc> (errno));
+    return ipv4Wildcard;
 }
 
 // =========================================================================

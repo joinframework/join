@@ -40,6 +40,15 @@ using join::lastError;
  */
 TEST (ArpProtocol, mac)
 {
+    ASSERT_TRUE (Arp ("bar0").mac ("192.168.16.120").isWildcard ());
+    ASSERT_TRUE (Arp::mac ("192.168.16.120", "bar0").isWildcard ());
+
+    ASSERT_TRUE (Arp ("eth0").mac (IpAddress (AF_INET6)).isWildcard ());
+    ASSERT_TRUE (Arp::mac (IpAddress (AF_INET6), "eth0").isWildcard ());
+
+    ASSERT_TRUE (Arp ("eth0").mac ("192.168.16.120").isWildcard ());
+    ASSERT_TRUE (Arp::mac ("192.168.16.120", "eth0").isWildcard ());
+
     ASSERT_FALSE (Arp ("eth0").mac (IpAddress::ipv4Address ("eth0")).isWildcard ()) << lastError.message ();
     ASSERT_FALSE (Arp::mac (IpAddress::ipv4Address ("eth0"), "eth0").isWildcard ()) << lastError.message ();
 }
