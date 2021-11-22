@@ -166,18 +166,13 @@ MacAddress Arp::request (const IpAddress& ip)
         }
 
         Packet *in = reinterpret_cast <Packet *> (buffer.get ());
-        if (in->eth.h_proto != htons (ETH_P_ARP)    ||
-            in->arp.ar_hrd  != htons (ARPHRD_ETHER) ||
-            in->arp.ar_pro  != htons (ETH_P_IP)     ||
-            in->arp.ar_hln  != ETH_ALEN             ||
-            in->arp.ar_pln  != 4                    ||
-            in->arp.ar_op   != htons (ARPOP_REPLY))
-        {
-            elapsed += std::chrono::duration_cast <std::chrono::milliseconds> (std::chrono::high_resolution_clock::now () - beg);
-            continue;
-        }
-
-        if (::memcmp (in->arp.ar_tha, out.arp.ar_sha, ETH_ALEN) != 0)
+        if (in->eth.h_proto != htons (ETH_P_ARP)                     ||
+            in->arp.ar_hrd  != htons (ARPHRD_ETHER)                  ||
+            in->arp.ar_pro  != htons (ETH_P_IP)                      ||
+            in->arp.ar_hln  != ETH_ALEN                              ||
+            in->arp.ar_pln  != 4                                     ||
+            in->arp.ar_op   != htons (ARPOP_REPLY)                   ||
+            ::memcmp (in->arp.ar_tha, out.arp.ar_sha, ETH_ALEN) != 0)
         {
             elapsed += std::chrono::duration_cast <std::chrono::milliseconds> (std::chrono::high_resolution_clock::now () - beg);
             continue;
