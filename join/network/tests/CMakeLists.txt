@@ -78,3 +78,6 @@ add_executable(tlsacceptor.gtest tlsacceptor_test.cpp)
 target_link_libraries(tlsacceptor.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(tlsacceptor.gtest)
 
+add_executable(arp.gtest arp_test.cpp)
+target_link_libraries(arp.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(arp.gtest)

@@ -225,6 +225,13 @@ namespace join
         const_iterator cend () const;
 
         /**
+         * @brief get the specified interface MAC address.
+         * @param interface interface name.
+         * @return the specified interface MAC address.
+         */
+        static MacAddress address (const std::string& interface);
+
+        /**
          * @brief assign the MacAddress instance by copy.
          * @param address MAC address to copy.
          * @return a reference of the current object.

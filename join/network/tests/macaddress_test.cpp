@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/error.hpp>
 #include <join/macaddress.hpp>
 
 // Libraries.
@@ -324,6 +325,15 @@ TEST (MacAddress, cend)
 
     auto cend = mac.cend ();
     ASSERT_EQ (*(--cend), 0xee);
+}
+
+/**
+ * @brief Test address method.
+ */
+TEST (MacAddress, address)
+{
+    ASSERT_TRUE  (MacAddress::address ("bar0").isWildcard ());
+    ASSERT_FALSE (MacAddress::address ("eth0").isWildcard ()) << join::lastError.message ();
 }
 
 /**

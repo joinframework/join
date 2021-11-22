@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/error.hpp>
 #include <join/ipaddress.hpp>
 
 // Libraries.
@@ -1666,6 +1667,15 @@ TEST (IpAddress, clear)
     ASSERT_FALSE (ip.isWildcard());
     ip.clear ();
     ASSERT_TRUE (ip.isWildcard());
+}
+
+/**
+ * @brief Test ipv4Address method.
+ */
+TEST (IpAddress, ipv4Address)
+{
+    ASSERT_TRUE  (IpAddress::ipv4Address ("bar0").isWildcard ());
+    ASSERT_FALSE (IpAddress::ipv4Address ("eth0").isWildcard ()) << join::lastError.message ();
 }
 
 /**
