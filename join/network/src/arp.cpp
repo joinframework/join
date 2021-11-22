@@ -159,13 +159,7 @@ MacAddress Arp::request (const IpAddress& ip)
         }
 
         int size = stream.read (reinterpret_cast <char *> (buffer.get ()), stream.canRead ());
-        if (size == -1)
-        {
-            lastError = std::make_error_code (static_cast <std::errc> (errno));
-            break;
-        }
-
-        if (size_t (size) != sizeof (Packet))
+        if (size_t (size) < sizeof (Packet))
         {
             elapsed += std::chrono::duration_cast <std::chrono::milliseconds> (std::chrono::high_resolution_clock::now () - beg);
             continue;
