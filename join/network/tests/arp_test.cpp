@@ -95,6 +95,8 @@ TEST_F (ArpTest, get)
     ASSERT_TRUE (Arp::get ("192.168.16.217", "br0").isWildcard ());
     ASSERT_EQ (lastError, std::errc::no_such_device_or_address) << lastError.message ();
 
+    ASSERT_EQ (Arp::get (IpAddress::ipv4Address ("eth0"), "eth0"), MacAddress::address ("eth0")) << lastError.message ();
+
     ASSERT_EQ (Arp::get ("192.168.16.200", "br0"), "4e:ed:ed:ee:59:db") << lastError.message ();
 }
 
