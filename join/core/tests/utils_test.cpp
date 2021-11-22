@@ -28,6 +28,11 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <thread>
+
+using namespace std::chrono_literals;
+
 /**
  * @brief test swap.
  */
@@ -70,6 +75,17 @@ TEST (Utils, swap)
 TEST (Utils, randomize)
 {
     ASSERT_GT (join::randomize <int> (), 0);
+}
+
+/**
+ * @brief Test benchmark.
+ */
+TEST (Utils, benchmark)
+{
+    auto elapsed = join::benchmark ([&] {
+        std::this_thread::sleep_for (10ms);
+    });
+    ASSERT_GT (elapsed.count (), 0);
 }
 
 /**

@@ -237,10 +237,8 @@ namespace join
                             {
                                 continue;
                             }
-
-                            _socket.close();
                         }
-
+                        _socket.close();
                         return traits_type::eof ();
                     }
 
@@ -303,27 +301,11 @@ namespace join
             }
 
             std::streamsize pending = this->pptr () - this->pbase ();
-            std::streamsize n = 0;
 
-            while (n < pending)
+            if (pending && _socket.writeExactly (this->pbase (), pending, _timeout) == -1)
             {
-                int nwrite = _socket.write (this->pbase () + n, pending - n);
-                if (nwrite == -1)
-                {
-                    if (lastError == Errc::TemporaryError)
-                    {
-                        if (_socket.waitReadyWrite (_timeout))
-                        {
-                            continue;
-                        }
-
-                        _socket.close();
-                    }
-
-                    return traits_type::eof ();
-                }
-
-                n += nwrite;
+                _socket.close ();
+                return traits_type::eof ();
             }
 
             this->setp (this->pbase (), this->pbase () + _psize);

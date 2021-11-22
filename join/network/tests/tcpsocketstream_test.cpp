@@ -33,7 +33,7 @@ using join::IpAddress;
 using join::Tcp;
 
 /**
- * @brief Class used to test the TCP socket io stream API.
+ * @brief Class used to test the TCP socket stream API.
  */
 class TcpSocketStream : public ::testing::Test, public Tcp::Acceptor::Observer
 {

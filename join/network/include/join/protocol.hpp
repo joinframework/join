@@ -185,8 +185,8 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint <Udp>;
-        using Resolver = BasicResolver <Udp>;
         using Socket   = BasicDatagramSocket <Udp>;
+        using Resolver = BasicResolver <Udp>;
 
         /**
          * @brief construct the udp protocol instance.
@@ -278,8 +278,8 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint <Icmp>;
-        using Resolver = BasicResolver <Icmp>;
         using Socket   = BasicDatagramSocket <Icmp>;
+        using Resolver = BasicResolver <Icmp>;
 
         /**
          * @brief create the icmp protocol instance.
@@ -376,10 +376,10 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint <Tcp>;
-        using Resolver = BasicResolver <Tcp>;
         using Socket   = BasicStreamSocket <Tcp>;
         using Stream   = BasicSocketStream <Tcp>;
         using Acceptor = BasicStreamAcceptor <Tcp>;
+        using Resolver = BasicResolver <Tcp>;
 
         /**
          * @brief create the tcp protocol  instance.
@@ -471,10 +471,10 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint <Tls>;
-        using Resolver = BasicResolver <Tls>;
         using Socket   = BasicTlsSocket <Tls>;
         using Stream   = BasicSocketStream <Tls>;
         using Acceptor = BasicTlsAcceptor <Tls>;
+        using Resolver = BasicResolver <Tls>;
 
         /**
          * @brief create the tcp protocol  instance.
