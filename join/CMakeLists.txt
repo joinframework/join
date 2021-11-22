@@ -33,6 +33,7 @@ set(PUBLIC_HEADERS
     network/include/join/observer.hpp
     network/include/join/socket.hpp
     network/include/join/acceptor.hpp
+    network/include/join/arp.hpp
     sax/include/join/diyfp.hpp
     sax/include/join/dtoa.hpp
     sax/include/join/value.hpp
@@ -47,6 +48,7 @@ set(SOURCES
     crypto/src/openssl.cpp
     network/src/macaddress.cpp
     network/src/ipaddress.cpp
+    network/src/arp.cpp
 )
 
 add_library(${PROJECT_NAME} ${SOURCES})

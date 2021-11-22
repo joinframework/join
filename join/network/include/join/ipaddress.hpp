@@ -306,6 +306,13 @@ namespace join
         void clear ();
 
         /**
+         * @brief get the specified interface IPv4 address.
+         * @param interface interface name.
+         * @return the specified interface IPv4 address.
+         */
+        static IpAddress ipv4Address (const std::string& interface);
+
+        /**
          * @brief perform NOT operation on IP address.
          * @return result of NOT operation on IpAddress.
          */

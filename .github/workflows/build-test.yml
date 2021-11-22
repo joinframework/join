@@ -9,7 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: joinframework/join-ci:latest
+    container:
+      image: joinframework/join-ci:latest
+      options: --privileged
 
     steps:
     - name: Fetch
