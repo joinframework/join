@@ -10,6 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container: joinframework/join-ci:latest
+    options: "--cap-add=NET_ADMIN"
 
     steps:
     - name: Fetch
