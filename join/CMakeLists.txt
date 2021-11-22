@@ -5,6 +5,7 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 
 set(PRIVATE_HEADER_DIRS
     core/src
+    thread/src
     crypto/src
     network/src
     sax/src
@@ -12,6 +13,7 @@ set(PRIVATE_HEADER_DIRS
 
 set(PUBLIC_HEADER_DIRS
     core/include
+    thread/include
     crypto/include
     network/include
     sax/include
@@ -23,6 +25,10 @@ set(PUBLIC_HEADERS
     core/include/join/traits.hpp
     core/include/join/variant.hpp
     core/include/join/view.hpp
+    thread/include/join/mutex.hpp
+    thread/include/join/condition.hpp
+    thread/include/join/thread.hpp
+    thread/include/join/threadpool.hpp
     crypto/include/join/base64.hpp
     crypto/include/join/openssl.hpp
     network/include/join/macaddress.hpp
@@ -44,6 +50,10 @@ set(PUBLIC_HEADERS
 
 set(SOURCES
     core/src/error.cpp
+    thread/src/mutex.cpp
+    thread/src/condition.cpp
+    thread/src/thread.cpp
+    thread/src/threadpool.cpp
     crypto/src/base64.cpp
     crypto/src/openssl.cpp
     network/src/macaddress.cpp
@@ -70,6 +80,7 @@ configure_file(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION lib/pkgconfig)
 
 add_subdirectory(core)
+add_subdirectory(thread)
 add_subdirectory(crypto)
 add_subdirectory(network)
 add_subdirectory(sax)
