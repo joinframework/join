@@ -54,65 +54,71 @@ namespace join
         Arp (const std::string& interface);
 
         /**
-         * @brief create the Arp instance by copy.
-         * @param other other object to copy.
-         */
-        Arp (const Arp& other);
-
-        /**
-         * @brief assign the Arp instance by copy.
-         * @param other other object to copy.
-         * @return a reference to the current object.
-         */
-        Arp& operator= (const Arp& other);
-
-        /**
-         * @brief create the Arp instance by move.
-         * @param other other object to move.
-         */
-        Arp (Arp&& other);
-
-        /**
-         * @brief assign the Arp instance by move.
-         * @param other other object to move.
-         * @return a reference to the current object.
-         */
-        Arp& operator= (Arp&& other);
-
-        /**
          * @brief destroy the Arp instance.
          */
         virtual ~Arp () = default;
 
         /**
-         * @brief discover the link layer address for the given ip address using arp cache.
-         * @param addr ip address.
+         * @brief get the MAC address for the given IP address using ARP cache or ARP request.
+         * @param ip IP address.
+         * @return the MAC address.
+         */
+        MacAddress get (const IpAddress& ip);
+
+        /**
+         * @brief discover the MAC address for the given internet layer address.
+         * @param ip IP address.
          * @param interface interface name.
-         * @return the discovered link layer address.
+         * @return the MAC address.
          */
-        MacAddress cache (const IpAddress& addr);
+        static MacAddress get (const IpAddress& ip, const std::string& interface);
 
         /**
-         * @brief discover the link layer address for the given ip address using arp request.
-         * @param addr ip address.
+         * @brief get the MAC address for the given IP address using ARP request.
+         * @param ip IP address.
+         * @return the MAC address.
+         */
+        MacAddress request (const IpAddress& ip);
+
+        /**
+         * @brief get the MAC address for the given IP address using ARP request.
+         * @param ip IP address.
          * @param interface interface name.
-         * @return the dicovered link layer address.
+         * @return the MAC address.
          */
-        MacAddress request (const IpAddress& addr);
+        static MacAddress request (const IpAddress& ip, const std::string& interface);
 
         /**
-         * @brief discover the link layer address for the given internet layer address.
-         * @param addr Iternet layer address.
-         * @return The dicovered link layer address.
+         * @brief add entry the MAC address of the given IP address to ARP cache.
+         * @param ip MAC address.
+         * @param ip IP address.
+         * @return 0 on success, -1 on failure.
          */
-        MacAddress mac (const IpAddress& addr);
+        int add (const MacAddress& mac, const IpAddress& ip);
 
         /**
-         * @brief discover the link layer address for the given internet layer address.
-         * @param addr Iternet layer address.
-         * @return The dicovered link layer address.
+         * @brief add entry the MAC address of the given IP address to ARP cache.
+         * @param ip MAC address.
+         * @param ip IP address.
+         * @param interface interface name.
+         * @return 0 on success, -1 on failure.
          */
-        static MacAddress mac (const IpAddress& addr, const std::string& interface);
+        static int add (const MacAddress& mac, const IpAddress& ip, const std::string& interface);
+
+        /**
+         * @brief get the MAC address for the given IP address using ARP cache.
+         * @param ip IP address.
+         * @return the MAC address.
+         */
+        MacAddress cache (const IpAddress& ip);
+
+        /**
+         * @brief get the MAC address for the given IP address using ARP cache.
+         * @param ip IP address.
+         * @param interface interface name.
+         * @return the MAC address.
+         */
+        static MacAddress cache (const IpAddress& ip, const std::string& interface);
 
     private:
         /**

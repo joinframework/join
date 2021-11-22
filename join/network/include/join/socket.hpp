@@ -253,7 +253,15 @@ namespace join
                 return -1;
             }
 
-            if ((endpoint.protocol ().family () == AF_INET6) || (endpoint.protocol ().family () == AF_INET))
+            if (endpoint.protocol ().family () == AF_PACKET)
+            {
+                if (reinterpret_cast <const struct sockaddr_ll*> (endpoint.addr ())->sll_ifindex == 0)
+                {
+                    lastError = std::make_error_code (std::errc::no_such_device);
+                    return -1;
+                }
+            }
+            else if ((endpoint.protocol ().family () == AF_INET6) || (endpoint.protocol ().family () == AF_INET))
             {
                 if (setOption (Option::ReuseAddr, 1) == -1)
                 {
