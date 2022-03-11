@@ -147,8 +147,8 @@ namespace join
          */
         template <class Function, class... Args>
         explicit Thread (Function&& func, Args&&... args)
+        : _invoker (new Invoker (std::forward <Function> (func), std::forward <Args> (args)...))
         {
-            _invoker = std::unique_ptr <Invoker> (new Invoker (std::forward <Function> (func), std::forward <Args> (args)...));
             if (_invoker == nullptr)
             {
                 throw std::system_error (ENOMEM, std::generic_category (), "can't create thread");

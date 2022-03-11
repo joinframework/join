@@ -88,8 +88,8 @@ bool Condition::timedWait (ScopedLock& lock, std::chrono::milliseconds timeout)
 {
     struct timespec ts;
     clock_gettime (CLOCK_MONOTONIC, &ts);
-    ts.tv_sec  += timeout.count () * 1000;
-    ts.tv_nsec += timeout.count () % 1000 * 1000000;
+    ts.tv_sec  +=  timeout.count () / 1000;
+    ts.tv_nsec += (timeout.count () % 1000) * 1000000;
     if (pthread_cond_timedwait (&_handle, &lock._mutex._handle, &ts) == 0)
     {
         return true;

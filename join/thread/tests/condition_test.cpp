@@ -76,6 +76,7 @@ TEST (Condition, timedWait)
     });
     ScopedLock lock (mutex);
     auto beg = std::chrono::high_resolution_clock::now ();
+    EXPECT_FALSE (condition.timedWait (lock, 5ms, [&ready](){return ready;}));
     EXPECT_TRUE (condition.timedWait (lock, 50ms, [&ready](){return ready;}));
     auto end = std::chrono::high_resolution_clock::now ();
     EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
