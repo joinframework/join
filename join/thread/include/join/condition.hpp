@@ -22,6 +22,9 @@
  * SOFTWARE.
  */
 
+#ifndef __JOIN_CONDITION_HPP__
+#define __JOIN_CONDITION_HPP__
+
 // libjoin.
 #include <join/mutex.hpp>
 
@@ -106,6 +109,7 @@ namespace join
          * @brief wait on a condition until timeout expire.
          * @param lock mutex previously locked by the calling thread.
          * @param timeout timeout in milliseconds.
+         * @return true on success, false on timeout.
          */
         bool timedWait (ScopedLock& lock, std::chrono::milliseconds timeout);
 
@@ -114,6 +118,7 @@ namespace join
          * @param lock mutex previously locked by the calling thread.
          * @param timeout timeout in milliseconds.
          * @param pred predicate.
+         * @return true on success, false on timeout.
          */
         template <class Predicate>
         bool timedWait (ScopedLock& lock, std::chrono::milliseconds timeout, Predicate pred)
@@ -136,3 +141,5 @@ namespace join
         pthread_cond_t _handle;
     };
 }
+
+#endif

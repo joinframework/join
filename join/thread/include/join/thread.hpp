@@ -22,6 +22,9 @@
  * SOFTWARE.
  */
 
+#ifndef __JOIN_THREAD_HPP__
+#define __JOIN_THREAD_HPP__
+
 // C++.
 #include <system_error>
 #include <functional>
@@ -223,3 +226,5 @@ namespace join
         std::unique_ptr <Invoker> _invoker;
     };
 }
+
+#endif

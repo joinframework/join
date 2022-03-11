@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/mutex.hpp>
+#include <join/condition.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -33,65 +33,52 @@
 
 using join::Mutex;
 using join::ScopedLock;
+using join::Condition;
 
 using namespace std::chrono_literals;
 
 /**
- * @brief test lock.
+ * @brief test wait.
  */
-TEST (Mutex, lock)
+TEST (Condition, wait)
 {
+    bool ready = false;
+    Condition condition;
     Mutex mutex;
-    auto task = std::async (std::launch::async, [&mutex] () {
-        mutex.lock ();
-        std::this_thread::sleep_for (15ms);
-        mutex.unlock ();
-    });
-    std::this_thread::sleep_for (5ms);
-    auto beg = std::chrono::high_resolution_clock::now ();
-    mutex.lock ();
-    auto end = std::chrono::high_resolution_clock::now ();
-    EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
-    mutex.unlock ();
-    task.wait ();
-}
-
-/**
- * @brief test tryLock.
- */
-TEST (Mutex, tryLock)
-{
-    Mutex mutex;
-    auto task = std::async (std::launch::async, [&mutex] () {
-        mutex.lock ();
-        std::this_thread::sleep_for (15ms);
-        mutex.unlock ();
-    });
-    std::this_thread::sleep_for (5ms);
-    EXPECT_FALSE (mutex.tryLock ());
-    std::this_thread::sleep_for (15ms);
-    EXPECT_TRUE (mutex.tryLock ());
-    mutex.unlock ();
-    task.wait ();
-}
-
-/**
- * @brief test scoped lock.
- */
-TEST (Mutex, scopedLock)
-{
-    Mutex mutex;
-    auto task = std::async (std::launch::async, [&mutex] () {
+    auto task = std::async (std::launch::async, [&] () {
+        std::this_thread::sleep_for (5ms);
         ScopedLock lock (mutex);
         std::this_thread::sleep_for (15ms);
+        ready = true;
+        condition.signal ();
     });
-    std::this_thread::sleep_for (5ms);
+    ScopedLock lock (mutex);
     auto beg = std::chrono::high_resolution_clock::now ();
-    mutex.lock ();
+    condition.wait (lock, [&ready](){return ready;});
     auto end = std::chrono::high_resolution_clock::now ();
     EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
-    mutex.unlock ();
-    task.wait ();
+}
+
+/**
+ * @brief test timedWait.
+ */
+TEST (Condition, timedWait)
+{
+    bool ready = false;
+    Condition condition;
+    Mutex mutex;
+    auto task = std::async (std::launch::async, [&] () {
+        std::this_thread::sleep_for (5ms);
+        ScopedLock lock (mutex);
+        std::this_thread::sleep_for (15ms);
+        ready = true;
+        condition.broadcast ();
+    });
+    ScopedLock lock (mutex);
+    auto beg = std::chrono::high_resolution_clock::now ();
+    EXPECT_TRUE (condition.timedWait (lock, 50ms, [&ready](){return ready;}));
+    auto end = std::chrono::high_resolution_clock::now ();
+    EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
 }
 
 /**
@@ -99,6 +86,6 @@ TEST (Mutex, scopedLock)
  */
 int main (int argc, char **argv)
 {
-    testing::InitGoogleTest (&argc, argv);
-    return RUN_ALL_TESTS ();
+   testing::InitGoogleTest (&argc, argv);
+   return RUN_ALL_TESTS ();
 }

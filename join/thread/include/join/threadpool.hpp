@@ -22,6 +22,9 @@
  * SOFTWARE.
  */
 
+#ifndef __JOIN_THREADPOOL_HPP__
+#define __JOIN_THREADPOOL_HPP__
+
 // libjoin.
 #include <join/condition.hpp>
 #include <join/thread.hpp>
@@ -134,3 +137,5 @@ namespace join
         }
     }
 }
+
+#endif

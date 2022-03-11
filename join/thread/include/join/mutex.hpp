@@ -22,6 +22,9 @@
  * SOFTWARE.
  */
 
+#ifndef __JOIN_MUTEX_HPP__
+#define __JOIN_MUTEX_HPP__
+
 // C.
 #include <pthread.h>
 
@@ -73,6 +76,12 @@ namespace join
          * @brief lock the mutex.
          */
         void lock ();
+
+        /**
+         * @brief lock the mutex or return immediatly if the mutex is already locked.
+         * @return true if locked, false otherwise.
+         */
+        bool tryLock ();
 
         /**
          * @brief unlock the mutex.
@@ -146,3 +155,5 @@ namespace join
         friend class Condition;
     };
 }
+
+#endif
