@@ -83,10 +83,7 @@ Thread::Thread (Thread&& other) noexcept
 // =========================================================================
 Thread& Thread::operator= (Thread&& other) noexcept
 {
-    if (!cancel ())
-    {
-        std::terminate ();
-    }
+    cancel ();
     _invoker = std::move (other._invoker);
     return *this;
 }
@@ -97,10 +94,7 @@ Thread& Thread::operator= (Thread&& other) noexcept
 // =========================================================================
 Thread::~Thread ()
 {
-    if (!cancel ())
-    {
-        std::terminate ();
-    }
+    cancel ();
 }
 
 // =========================================================================
@@ -152,21 +146,16 @@ bool Thread::tryJoin ()
 //   CLASS     : Thread
 //   METHOD    : cancel
 // =========================================================================
-bool Thread::cancel ()
+void Thread::cancel ()
 {
-    bool canceled = true;
-
     if (running ())
     {
-        canceled = (pthread_cancel (_invoker->handle ()) == 0);
+        pthread_cancel (_invoker->handle ());
     }
-
-    if (canceled)
+    if (joinable ())
     {
         join ();
     }
-
-    return canceled;
 }
 
 // =========================================================================

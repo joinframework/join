@@ -35,24 +35,13 @@ using join::Thread;
 
 using namespace std::chrono_literals;
 
-std::chrono::milliseconds delay = 100ms;
-
-/**
- * @brief task to execute.
- */
-void task ()
-{
-    std::this_thread::sleep_for (delay);
-}
-
 /**
  * @brief test default construction.
  */
 TEST (Thread, defaultConstruct)
 {
     Thread th;
-    ASSERT_FALSE (th.joinable ());
-    ASSERT_FALSE (th.running ());
+    EXPECT_FALSE (th.joinable ());
 }
 
 /**
@@ -61,25 +50,15 @@ TEST (Thread, defaultConstruct)
 TEST (Thread, moveConstruct)
 {
     Thread th1;
-    ASSERT_FALSE (th1.joinable ());
-    ASSERT_FALSE (th1.running ());
-
+    EXPECT_FALSE (th1.joinable ());
     Thread th2 (std::move (th1));
-    ASSERT_FALSE (th2.joinable ());
-    ASSERT_FALSE (th2.running ());
-
-    Thread th3 (task);
-    ASSERT_TRUE (th3.joinable ());
-    ASSERT_TRUE (th3.running ());
-
+    EXPECT_FALSE (th2.joinable ());
+    Thread th3 ([](){std::this_thread::sleep_for (10ms);});
+    EXPECT_TRUE (th3.joinable ());
     Thread th4 (std::move (th3));
-    ASSERT_TRUE (th4.joinable ());
-    ASSERT_TRUE (th4.running ());
-    ASSERT_FALSE (th3.joinable ());
-    ASSERT_FALSE (th3.running ());
-
-    ASSERT_TRUE (th4.cancel ());
-    ASSERT_FALSE (th4.joinable ());
+    EXPECT_FALSE (th3.joinable ());
+    EXPECT_TRUE (th4.joinable ());
+    th4.join ();
 }
 
 /**
@@ -88,25 +67,15 @@ TEST (Thread, moveConstruct)
 TEST (Thread, moveAssign)
 {
     Thread th1, th2, th3, th4;
-    ASSERT_FALSE (th1.joinable ());
-    ASSERT_FALSE (th1.running ());
-
+    EXPECT_FALSE (th1.joinable ());
     th2 = std::move (th1);
-    ASSERT_FALSE (th2.joinable ());
-    ASSERT_FALSE (th2.running ());
-
-    th3 = Thread (task);
-    ASSERT_TRUE (th3.joinable ());
-    ASSERT_TRUE (th3.running ());
-
+    EXPECT_FALSE (th2.joinable ());
+    th3 = Thread ([](){std::this_thread::sleep_for (10ms);});
+    EXPECT_TRUE (th3.joinable ());
     th4 = std::move (th3);
-    ASSERT_TRUE (th4.joinable ());
-    ASSERT_TRUE (th4.running ());
-    ASSERT_FALSE (th3.joinable ());
-    ASSERT_FALSE (th3.running ());
-
-    ASSERT_TRUE (th4.cancel ());
-    ASSERT_FALSE (th4.joinable ());
+    EXPECT_FALSE (th3.joinable ());
+    EXPECT_TRUE (th4.joinable ());
+    th4.join ();
 }
 
 /**
@@ -114,12 +83,10 @@ TEST (Thread, moveAssign)
  */
 TEST (Thread, joinable)
 {
-    Thread th (task);
-    ASSERT_TRUE (th.joinable ());
-    std::this_thread::sleep_for (2*delay);
-    ASSERT_TRUE (th.joinable ());
+    Thread th ([](){std::this_thread::sleep_for (10ms);});
+    EXPECT_TRUE (th.joinable ());
     th.join();
-    ASSERT_FALSE (th.joinable ());
+    EXPECT_FALSE (th.joinable ());
 }
 
 /**
@@ -127,24 +94,12 @@ TEST (Thread, joinable)
  */
 TEST (Thread, running)
 {
-    Thread th (task);
-    ASSERT_TRUE (th.running ());
-    std::this_thread::sleep_for (2*delay);
-    ASSERT_FALSE (th.running ());
+    Thread th ([](){std::this_thread::sleep_for (10ms);});
+    EXPECT_TRUE (th.running ());
+    std::this_thread::sleep_for (15ms);
+    EXPECT_FALSE (th.running ());
     th.join();
-    ASSERT_FALSE (th.running ());
-    ASSERT_FALSE (th.joinable ());
-}
-
-/**
- * @brief test join.
- */
-TEST (Thread, join)
-{
-    Thread th (task);
-    ASSERT_TRUE (th.joinable ());
-    th.join();
-    ASSERT_FALSE (th.joinable ());
+    EXPECT_FALSE (th.running ());
 }
 
 /**
@@ -152,13 +107,12 @@ TEST (Thread, join)
  */
 TEST (Thread, tryJoin)
 {
-    Thread th (task);
-    ASSERT_TRUE (th.joinable ());
-    ASSERT_FALSE (th.tryJoin ());
-    std::this_thread::sleep_for (2*delay);
-    ASSERT_TRUE (th.joinable ());
-    ASSERT_TRUE (th.tryJoin ());
-    ASSERT_FALSE (th.joinable ());
+    Thread th ([](){std::this_thread::sleep_for (10ms);});
+    EXPECT_FALSE (th.tryJoin ());
+    std::this_thread::sleep_for (15ms);
+    EXPECT_TRUE (th.tryJoin ());
+    th.join();
+    EXPECT_TRUE (th.tryJoin ());
 }
 
 /**
@@ -166,10 +120,10 @@ TEST (Thread, tryJoin)
  */
 TEST (Thread, cancel)
 {
-    Thread th (task);
-    ASSERT_TRUE (th.joinable ());
-    ASSERT_TRUE (th.cancel ());
-    ASSERT_FALSE (th.joinable ());
+    Thread th ([](){std::this_thread::sleep_for (100ms);});
+    EXPECT_TRUE (th.joinable ());
+    th.cancel ();
+    EXPECT_FALSE (th.joinable ());
 }
 
 /**
@@ -177,22 +131,13 @@ TEST (Thread, cancel)
  */
 TEST (Thread, swap)
 {
-    Thread th1;
-    ASSERT_FALSE (th1.joinable ());
-    ASSERT_FALSE (th1.running ());
-
-    Thread th2 (task);
-    ASSERT_TRUE (th2.joinable ());
-    ASSERT_TRUE (th2.running ());
-
+    Thread th1, th2 ([](){std::this_thread::sleep_for (10ms);});;
+    EXPECT_FALSE (th1.joinable ());
+    EXPECT_TRUE (th2.joinable ());
     th1.swap (th2);
-    ASSERT_TRUE (th1.joinable ());
-    ASSERT_TRUE (th1.running ());
-    ASSERT_FALSE (th2.joinable ());
-    ASSERT_FALSE (th2.running ());
-
-    ASSERT_TRUE (th1.cancel ());
-    ASSERT_FALSE (th1.joinable ());
+    EXPECT_TRUE (th1.joinable ());
+    EXPECT_FALSE (th2.joinable ());
+    th1.join ();
 }
 
 /**

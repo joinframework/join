@@ -34,7 +34,7 @@ using join::ThreadPool;
 // =========================================================================
 Worker::Worker (ThreadPool& pool)
 : _pool (pool),
-  _thread (std::bind (&Worker::work, this))
+  _thread ([this] () {work ();})
 {
 }
 
@@ -85,7 +85,7 @@ ThreadPool::ThreadPool (size_t workers)
         Worker* worker = new Worker (*this);
         if (worker == nullptr)
         {
-            throw std::system_error (ENOMEM, std::generic_category (), "can't create worker threads");
+            throw std::system_error (ENOMEM, std::generic_category (), "can't create workers");
         }
         _workers.emplace_back (worker);
     }

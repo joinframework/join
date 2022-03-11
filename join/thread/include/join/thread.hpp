@@ -210,10 +210,9 @@ namespace join
         bool tryJoin ();
 
         /**
-         * @brief cancel the running thread.
-         * @return true if canceled, false otherwise.
+         * @brief cancel the running thread if any.
          */
-        bool cancel ();
+        void cancel ();
 
         /**
          * @brief swap underlying handles of two thread objects.
