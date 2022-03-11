@@ -152,10 +152,7 @@ void Thread::cancel ()
     {
         pthread_cancel (_invoker->handle ());
     }
-    if (joinable ())
-    {
-        join ();
-    }
+    join ();
 }
 
 // =========================================================================
