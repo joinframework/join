@@ -57,11 +57,7 @@ namespace join
         : _func (std::bind (std::forward <Function> (func), std::forward <Args> (args)...))
         {
             pthread_attr_init (&_attr);
-            int res = pthread_create (&_handle, &_attr, _routine, this);
-            if (res != 0)
-            {
-                throw std::system_error (res, std::generic_category (), "can't invoke thread");
-            }
+            pthread_create (&_handle, &_attr, _routine, this);
         }
 
     public:
@@ -149,10 +145,6 @@ namespace join
         explicit Thread (Function&& func, Args&&... args)
         : _invoker (new Invoker (std::forward <Function> (func), std::forward <Args> (args)...))
         {
-            if (_invoker == nullptr)
-            {
-                throw std::system_error (ENOMEM, std::generic_category (), "can't create thread");
-            }
         }
 
         /**
