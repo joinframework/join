@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <random>
 #include <limits>
+#include <chrono>
 
 // C.
 #include <endian.h>
@@ -166,5 +167,20 @@ namespace join
         std::random_device rnd;
         std::uniform_int_distribution <Type> dist {};
         return dist (rnd);
+    }
+
+    /**
+     * @brief benchmark function call.
+     * @param function function to benchmark.
+     * @param arguments function arguments.
+     * @return time elapsed in milliseconds.
+     */
+    template <class Func, class... Args>
+    static std::chrono::milliseconds benchmark (Func&& func, Args&&... args)
+    {
+        auto beg = std::chrono::high_resolution_clock::now ();
+        func (std::forward <Args> (args)...);
+        auto end = std::chrono::high_resolution_clock::now ();
+        return std::chrono::duration_cast <std::chrono::milliseconds> (end - beg);
     }
 }
