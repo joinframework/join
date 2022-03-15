@@ -50,4 +50,3 @@ if(JOIN_ENABLE_COVERAGE)
 endif()
 
 add_subdirectory(join)
-

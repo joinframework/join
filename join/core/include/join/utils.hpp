@@ -27,6 +27,7 @@
 #include <chrono>
 #include <random>
 #include <limits>
+#include <chrono>
 
 // C.
 #include <endian.h>
@@ -176,10 +177,10 @@ namespace join
      * @return time elapsed in milliseconds.
      */
     template <class Func, class... Args>
-    static std::chrono::milliseconds benchmark (Func&& function, Args&&... arguments)
+    static std::chrono::milliseconds benchmark (Func&& func, Args&&... args)
     {
         auto beg = std::chrono::high_resolution_clock::now ();
-        function (std::forward <Args> (arguments)...);
+        func (std::forward <Args> (args)...);
         auto end = std::chrono::high_resolution_clock::now ();
         return std::chrono::duration_cast <std::chrono::milliseconds> (end - beg);
     }

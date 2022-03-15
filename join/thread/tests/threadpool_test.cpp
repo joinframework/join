@@ -23,70 +23,60 @@
  */
 
 // libjoin.
+#include <join/threadpool.hpp>
 #include <join/utils.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
-// C++.
-#include <thread>
+// C.
+#include <unistd.h>
 
 using namespace std::chrono_literals;
 
+using join::ThreadPool;
+
+size_t nthread = std::thread::hardware_concurrency () + 1;
+
 /**
- * @brief test swap.
+ * @brief test size.
  */
-TEST (Utils, swap)
+TEST (ThreadPool, size)
 {
-    int8_t int8Val = 12;
-    EXPECT_EQ (join::swap (int8Val), 12);
-
-    uint8_t uint8Val = 12;
-    EXPECT_EQ (join::swap (uint8Val), 12);
-
-    int16_t int16Val = 12;
-    EXPECT_EQ (join::swap (int16Val), 3072);
-
-    uint16_t uint16Val = 12;
-    EXPECT_EQ (join::swap (uint16Val), 3072);
-
-    int32_t int32Val = 12;
-    EXPECT_EQ (join::swap (int32Val), 201326592);
-
-    uint32_t uint32Val = 12;
-    EXPECT_EQ (join::swap (uint32Val), 201326592);
-
-    int64_t int64Val = 12;
-    EXPECT_EQ (join::swap (int64Val), 864691128455135232);
-
-    uint64_t uint64Val = 12;
-    EXPECT_EQ (join::swap (uint64Val), 864691128455135232);
-
-    float floatVal = 12.0;
-    EXPECT_FLOAT_EQ (join::swap (floatVal), 2.305e-41);
-
-    double doubleVal = 12.0;
-    EXPECT_DOUBLE_EQ (join::swap (doubleVal), 5.09085e-320);
+    ThreadPool pool (8);
+    ASSERT_EQ (pool.size (), 8);
 }
 
 /**
- * @brief Test randomize.
+ * @brief test push.
  */
-TEST (Utils, randomize)
-{
-    ASSERT_GT (join::randomize <int> (), 0);
-}
-
-/**
- * @brief Test benchmark.
- */
-TEST (Utils, benchmark)
+TEST (ThreadPool, push)
 {
     auto elapsed = join::benchmark ([]
     {
-        std::this_thread::sleep_for (10ms);
+        ThreadPool pool;
+        for (size_t i = 0; i < pool.size (); ++i)
+        {
+            pool.push (usleep, 20000);
+        }
     });
-    ASSERT_GE (elapsed, 10ms);
+    ASSERT_GE (elapsed, 20ms);
+}
+
+/**
+ * @brief test parallelForEach.
+ */
+TEST (ThreadPool, parallelForEach)
+{
+    std::vector <std::function <int (unsigned int)>> todo {usleep, usleep, usleep, usleep};
+    auto elapsed = join::benchmark ([&todo]
+    {
+        join::parallelForEach (todo.begin (), todo.end (), [&todo] (auto& func)
+        {
+            func (20000);
+        });
+    });
+    ASSERT_GE (elapsed, 20ms);
 }
 
 /**
