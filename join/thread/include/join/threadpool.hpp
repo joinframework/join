@@ -90,6 +90,11 @@ namespace join
         ~ThreadPool ();
 
         /**
+         * @brief return thread pool size.
+         */
+        size_t size ();
+
+        /**
          * @brief push a job to the work queue.
          */
         template <class Function, class... Args>

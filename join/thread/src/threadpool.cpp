@@ -44,10 +44,7 @@ Worker::Worker (ThreadPool& pool)
 // =========================================================================
 Worker::~Worker ()
 {
-    if (_thread.joinable ())
-    {
-        _thread.join ();
-    }
+    _thread.join ();
 }
 
 // =========================================================================
@@ -100,4 +97,14 @@ ThreadPool::~ThreadPool ()
     _stop = true;
     _condition.broadcast ();
     _workers.clear ();
+}
+
+// =========================================================================
+//   CLASS     : ThreadPool
+//   METHOD    : size
+// =========================================================================
+size_t ThreadPool::size ()
+{
+    ScopedLock lock (_mutex);
+    return _workers.size ();
 }

@@ -24,17 +24,43 @@
 
 // libjoin.
 #include <join/threadpool.hpp>
+#include <join/utils.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+// C.
+#include <unistd.h>
+
+using namespace std::chrono_literals;
+
 using join::ThreadPool;
+
+size_t nthread = std::thread::hardware_concurrency () + 1;
+
+/**
+ * @brief test size.
+ */
+TEST (ThreadPool, size)
+{
+    ThreadPool pool (8);
+    ASSERT_EQ (pool.size (), 8);
+}
 
 /**
  * @brief test push.
  */
 TEST (ThreadPool, push)
 {
+    auto elapsed = join::benchmark ([]
+    {
+        ThreadPool pool;
+        for (size_t i = 0; i < pool.size (); ++i)
+        {
+            pool.push (usleep, 20000);
+        }
+    });
+    ASSERT_GE (elapsed, 20ms);
 }
 
 /**
@@ -42,6 +68,15 @@ TEST (ThreadPool, push)
  */
 TEST (ThreadPool, parallelForEach)
 {
+    std::vector <std::function <int (unsigned int)>> todo {usleep, usleep, usleep, usleep};
+    auto elapsed = join::benchmark ([&todo]
+    {
+        join::parallelForEach (todo.begin (), todo.end (), [&todo] (auto& func)
+        {
+            func (20000);
+        });
+    });
+    ASSERT_GE (elapsed, 20ms);
 }
 
 /**
@@ -49,6 +84,6 @@ TEST (ThreadPool, parallelForEach)
  */
 int main (int argc, char **argv)
 {
-   testing::InitGoogleTest (&argc, argv);
-   return RUN_ALL_TESTS ();
+    testing::InitGoogleTest (&argc, argv);
+    return RUN_ALL_TESTS ();
 }
