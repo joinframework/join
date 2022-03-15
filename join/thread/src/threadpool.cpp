@@ -79,12 +79,7 @@ ThreadPool::ThreadPool (size_t workers)
 {
     for (size_t nworkers = 0; nworkers < workers; ++nworkers)
     {
-        Worker* worker = new Worker (*this);
-        if (worker == nullptr)
-        {
-            throw std::system_error (ENOMEM, std::generic_category (), "can't create workers");
-        }
-        _workers.emplace_back (worker);
+        _workers.emplace_back (new Worker (*this));
     }
 }
 
