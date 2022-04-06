@@ -28,6 +28,7 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::Errc;
 using join::UnixDgram;
 
 /**
@@ -41,7 +42,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (bind (serverpath_), 0) << join::lastError.message ();
+        ASSERT_EQ (bind (_serverpath), 0) << join::lastError.message ();
         ASSERT_EQ (start (), 0) << join::lastError.message ();
     }
 
@@ -51,7 +52,7 @@ protected:
     void TearDown ()
     {
         ASSERT_EQ (stop (), 0) << join::lastError.message ();
-        ASSERT_EQ (close (), 0) << join::lastError.message ();
+        close ();
     }
 
     /**
@@ -72,16 +73,16 @@ protected:
     }
 
     /// path.
-    static const std::string serverpath_;
-    static const std::string clientpath_;
+    static const std::string _serverpath;
+    static const std::string _clientpath;
 
     /// timeout.
-    static const int timeout_;
+    static const int _timeout;
 };
 
-const std::string UnixDgramSocket::serverpath_ = "/tmp/unixserver_test.sock";
-const std::string UnixDgramSocket::clientpath_ = "/tmp/unixclient_test.sock";
-const int         UnixDgramSocket::timeout_    = 1000;
+const std::string UnixDgramSocket::_serverpath = "/tmp/unixserver_test.sock";
+const std::string UnixDgramSocket::_clientpath = "/tmp/unixclient_test.sock";
+const int         UnixDgramSocket::_timeout = 1000;
 
 /**
  * @brief Test open method.
@@ -91,7 +92,9 @@ TEST_F (UnixDgramSocket, open)
     UnixDgram::Socket unixSocket;
 
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.open (), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+    unixSocket.close ();
 }
 
 /**
@@ -102,9 +105,9 @@ TEST_F (UnixDgramSocket, close)
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
     ASSERT_FALSE (unixSocket.opened ());
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.opened ());
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    unixSocket.close ();
     ASSERT_FALSE (unixSocket.opened ());
 }
 
@@ -115,8 +118,11 @@ TEST_F (UnixDgramSocket, bind)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.bind (clientpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
+
+    unixSocket.close ();
 }
 
 /**
@@ -126,8 +132,10 @@ TEST_F (UnixDgramSocket, connect)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+    unixSocket.close ();
 }
 
 /**
@@ -138,11 +146,11 @@ TEST_F (UnixDgramSocket, disconnect)
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
     ASSERT_FALSE (unixSocket.connected ());
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.connected ());
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (unixSocket.connected ());
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    unixSocket.close ();
     ASSERT_FALSE (unixSocket.connected());
 }
 
@@ -154,13 +162,15 @@ TEST_F (UnixDgramSocket, canRead)
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (unixSocket.bind (clientpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.canRead (), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyRead (timeout_)) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (unixSocket.canRead (), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    unixSocket.close ();
 }
 
 /**
@@ -171,12 +181,14 @@ TEST_F (UnixDgramSocket, waitReadyRead)
     UnixDgram::Socket unixSocket;
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (unixSocket.bind (clientpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
+    ASSERT_FALSE (unixSocket.waitReadyRead (_timeout));
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyRead (timeout_)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
+    unixSocket.close ();
 }
 
 /**
@@ -187,13 +199,15 @@ TEST_F (UnixDgramSocket, read)
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (unixSocket.bind (clientpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.read (data, sizeof (data)), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyRead (timeout_)) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.read (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    unixSocket.close ();
 }
 
 /**
@@ -205,14 +219,16 @@ TEST_F (UnixDgramSocket, readFrom)
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
     UnixDgram::Endpoint from;
 
-    ASSERT_EQ (unixSocket.bind (clientpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.readFrom (data, sizeof (data)), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyRead (timeout_)) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.readFrom (data, unixSocket.canRead (), &from), sizeof (data)) << join::lastError.message ();
-    ASSERT_EQ (from, UnixDgram::Endpoint (serverpath_));
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (from, UnixDgram::Endpoint (_serverpath));
+    unixSocket.close ();
 }
 
 /**
@@ -222,9 +238,11 @@ TEST_F (UnixDgramSocket, waitReadyWrite)
 {
     UnixDgram::Socket unixSocket;
 
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_FALSE (unixSocket.waitReadyWrite (_timeout));
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    unixSocket.close ();
 }
 
 /**
@@ -235,12 +253,14 @@ TEST_F (UnixDgramSocket, write)
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (unixSocket.bind (clientpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.write (data, sizeof (data)), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyRead (timeout_)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
+    unixSocket.close ();
 }
 
 /**
@@ -251,11 +271,11 @@ TEST_F (UnixDgramSocket, writeTo)
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (unixSocket.bind (clientpath_), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyWrite (timeout_)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.writeTo (data, sizeof (data), serverpath_), sizeof (data)) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.waitReadyRead (timeout_));
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.writeTo (data, sizeof (data), _serverpath), sizeof (data)) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyRead (_timeout));
+    unixSocket.close ();
 }
 
 /**
@@ -263,11 +283,12 @@ TEST_F (UnixDgramSocket, writeTo)
  */
 TEST_F (UnixDgramSocket, setMode)
 {
-    UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
+    UnixDgram::Socket unixSocket;
 
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setMode (UnixDgram::Socket::Blocking), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.setMode (UnixDgram::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    unixSocket.close ();
 }
 
 /**
@@ -275,12 +296,40 @@ TEST_F (UnixDgramSocket, setMode)
  */
 TEST_F (UnixDgramSocket, setOption)
 {
-    UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
+    UnixDgram::Socket unixSocket;
 
-    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::SndBuffer, 1500), -1);
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::RcvBuffer, 1500), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::NoDelay, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::KeepAlive, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::KeepIdle, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::KeepIntvl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::KeepCount, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::SndBuffer, 1500), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::TimeStamp, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::Broadcast, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::Ttl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::MulticastLoop, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::MulticastTtl, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::PathMtuDiscover, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::RcvError, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (unixSocket.setOption (UnixDgram::Socket::AuxData, 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::operation_not_supported);
+    unixSocket.close ();
 }
 
 /**
@@ -290,10 +339,10 @@ TEST_F (UnixDgramSocket, localEndpoint)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.bind (clientpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.localEndpoint (), UnixDgram::Endpoint (clientpath_)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.localEndpoint (), UnixDgram::Endpoint (_clientpath)) << join::lastError.message ();
+    unixSocket.close ();
 }
 
 /**
@@ -303,10 +352,10 @@ TEST_F (UnixDgramSocket, remoteEndpoint)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.bind (clientpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.remoteEndpoint (), UnixDgram::Endpoint (serverpath_)) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.remoteEndpoint (), UnixDgram::Endpoint (_serverpath)) << join::lastError.message ();
+    unixSocket.close ();
 }
 
 /**
@@ -319,9 +368,9 @@ TEST_F (UnixDgramSocket, opened)
     ASSERT_FALSE (unixSocket.opened ());
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.opened ());
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.opened ());
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    unixSocket.close ();
     ASSERT_FALSE (unixSocket.opened ());
 }
 
@@ -335,9 +384,9 @@ TEST_F (UnixDgramSocket, connected)
     ASSERT_FALSE (unixSocket.opened ());
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
     ASSERT_FALSE (unixSocket.connected ());
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.connected ());
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    unixSocket.close ();
     ASSERT_FALSE (unixSocket.connected ());
 }
 
@@ -351,9 +400,9 @@ TEST_F (UnixDgramSocket, encrypted)
     ASSERT_FALSE (unixSocket.opened ());
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
     ASSERT_FALSE (unixSocket.encrypted ());
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_FALSE (unixSocket.encrypted ());
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    unixSocket.close ();
     ASSERT_FALSE (unixSocket.encrypted ());
 }
 
@@ -397,7 +446,7 @@ TEST_F (UnixDgramSocket, handle)
     ASSERT_EQ (unixSocket.handle (), -1);
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
     ASSERT_GT (unixSocket.handle (), -1);
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    unixSocket.close ();
     ASSERT_EQ (unixSocket.handle (), -1);
 }
 
@@ -408,9 +457,11 @@ TEST_F (UnixDgramSocket, mtu)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.connect (serverpath_), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.mtu (), -1);
-    ASSERT_EQ (unixSocket.close (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.mtu (), -1);
+    unixSocket.close ();
+    ASSERT_EQ (unixSocket.mtu (), -1);
 }
 
 /**
@@ -430,8 +481,8 @@ TEST_F (UnixDgramSocket, lower)
     {
         ASSERT_TRUE (unixSocket2 < unixSocket1);
     }
-    ASSERT_EQ (unixSocket1.close (), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket2.close (), 0) << join::lastError.message ();
+    unixSocket1.close ();
+    unixSocket2.close ();
 }
 
 /**

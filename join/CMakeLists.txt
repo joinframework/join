@@ -38,6 +38,7 @@ set(PUBLIC_HEADERS
     network/include/join/resolver.hpp
     network/include/join/observer.hpp
     network/include/join/socket.hpp
+    network/include/join/socketstream.hpp
     network/include/join/acceptor.hpp
     network/include/join/arp.hpp
     sax/include/join/diyfp.hpp

@@ -68,7 +68,7 @@ TEST (UnixAcceptor, close)
     UnixStream::Acceptor server;
 
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -80,7 +80,7 @@ TEST (UnixAcceptor, bind)
 
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -94,7 +94,7 @@ TEST (UnixAcceptor, listen)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -113,9 +113,9 @@ TEST (UnixAcceptor, accept)
     UnixStream::Socket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
     ASSERT_EQ (serverSocket.localEndpoint ().device (), path);
-    ASSERT_EQ (clientSocket.close (), 0) << join::lastError.message ();
-    ASSERT_EQ (serverSocket.close (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    clientSocket.close ();
+    serverSocket.close ();
+    server.close ();
 }
 
 /**
@@ -129,7 +129,7 @@ TEST (UnixAcceptor, localEndpoint)
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().device (), path);
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -142,7 +142,7 @@ TEST (UnixAcceptor, opened)
     ASSERT_FALSE (server.opened ());
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_TRUE (server.opened ());
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
     ASSERT_FALSE (server.opened ());
 }
 
@@ -155,7 +155,7 @@ TEST (UnixAcceptor, family)
 
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.family (), AF_UNIX);
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -167,7 +167,7 @@ TEST (UnixAcceptor, type)
 
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.type (), SOCK_STREAM);
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -179,7 +179,7 @@ TEST (UnixAcceptor, protocol)
 
     ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.protocol (), 0);
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
 }
 
 /**
@@ -192,7 +192,7 @@ TEST (UnixAcceptor, handle)
     ASSERT_EQ (server.handle (), -1);
     ASSERT_EQ (server.open (), 0) << join::lastError.message ();
     ASSERT_GT (server.handle (), -1);
-    ASSERT_EQ (server.close (), 0) << join::lastError.message ();
+    server.close ();
     ASSERT_EQ (server.handle (), -1);
 }
 

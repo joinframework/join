@@ -24,6 +24,7 @@
 
 // C++.
 #include <stdexcept>
+#include <chrono>
 #include <random>
 #include <limits>
 #include <chrono>

@@ -26,7 +26,7 @@
 #define __JOIN_ACCEPTOR_HPP__
 
 // libjoin.
-#include <join/socket.hpp>
+#include <join/socketstream.hpp>
 
 namespace join
 {
@@ -38,8 +38,9 @@ namespace join
     {
     public:
         using Observer = BasicObserver <BasicAcceptor <Protocol>>;
-        using Socket   = BasicSocket <Protocol>;
         using Endpoint = typename Protocol::Endpoint;
+        using Socket   = typename Protocol::Socket;
+        using Stream   = typename Protocol::Stream;
 
         /**
          * @brief create the acceptor instance.
@@ -140,22 +141,14 @@ namespace join
 
         /**
          * @brief close acceptor.
-         * @return 0 on success, -1 on failure.
          */
-        virtual int close () noexcept
+        virtual void close () noexcept
         {
             if (this->_handle != -1)
             {
-                if (::close (this->_handle) == -1)
-                {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
-                    return -1;
-                }
-
+                ::close (this->_handle);
                 this->_handle = -1;
             }
-
-            return 0;
         }
 
         /**
@@ -298,8 +291,9 @@ namespace join
     {
     public:
         using Observer = BasicObserver <BasicStreamAcceptor <Protocol>>;
-        using Socket   = BasicStreamSocket <Protocol>;
         using Endpoint = typename Protocol::Endpoint;
+        using Socket   = typename Protocol::Socket;
+        using Stream   = typename Protocol::Stream;
 
         /**
          * @brief create the acceptor instance.
@@ -387,8 +381,9 @@ namespace join
     {
     public:
         using Observer = BasicObserver <BasicTlsAcceptor <Protocol>>;
-        using Socket   = BasicTlsSocket <Protocol>;
         using Endpoint = typename Protocol::Endpoint;
+        using Socket   = typename Protocol::Socket;
+        using Stream   = typename Protocol::Stream;
 
         /**
          * @brief create the acceptor instance.

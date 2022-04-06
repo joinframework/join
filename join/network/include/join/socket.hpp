@@ -130,7 +130,7 @@ namespace join
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
-         * @return assigned object.
+         * @return current object.
          */
         BasicSocket& operator= (const BasicSocket& other) = delete;
 
@@ -153,7 +153,7 @@ namespace join
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
-         * @return assigned object.
+         * @return current object.
          */
         BasicSocket& operator= (BasicSocket&& other)
         {
@@ -216,23 +216,15 @@ namespace join
 
         /**
          * @brief close the socket.
-         * @return 0 on success, -1 on failure.
          */
-        virtual int close () noexcept
+        virtual void close () noexcept
         {
             if (this->_state != State::Closed)
             {
-                if (::close (this->_handle) == -1)
-                {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
-                    return -1;
-                }
-
-                this->_handle = -1;
+                ::close (this->_handle);
                 this->_state = State::Closed;
+                this->_handle = -1;
             }
-
-            return 0;
         }
 
         /**
@@ -242,12 +234,6 @@ namespace join
          */
         virtual int bind (const Endpoint& endpoint) noexcept
         {
-            if (this->_state == State::Connected)
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
             if ((this->_state == State::Closed) && (this->open (endpoint.protocol ()) == -1))
             {
                 return -1;
@@ -473,7 +459,7 @@ namespace join
         {
             if (this->_state == State::Closed)
             {
-                lastError = make_error_code (Errc::ConnectionClosed);
+                lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
@@ -1059,7 +1045,7 @@ namespace join
         {
             if (this->_state == State::Closed)
             {
-                lastError = make_error_code (Errc::ConnectionClosed);
+                lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
@@ -1181,7 +1167,7 @@ namespace join
         {
             if (this->_state == State::Closed)
             {
-                lastError = make_error_code (Errc::ConnectionClosed);
+                lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
@@ -1266,11 +1252,6 @@ namespace join
         BasicStreamSocket (Mode mode)
         : BasicDatagramSocket <Protocol> (mode)
         {
-            readBuf_ = std::make_unique <char []> (bufSize_);
-            if (readBuf_ == nullptr)
-            {
-                throw std::bad_alloc ();
-            }
         }
 
         /**
@@ -1291,13 +1272,8 @@ namespace join
          * @param other other object to move.
          */
         BasicStreamSocket (BasicStreamSocket&& other)
-        : BasicDatagramSocket <Protocol> (std::move (other)),
-          readBuf_ (std::move (other.readBuf_)),
-          readCount_ (other.readCount_),
-          readPos_ (other.readPos_)
+        : BasicDatagramSocket <Protocol> (std::move (other))
         {
-            other.readCount_ = 0;
-            other.readPos_ = 0;
         }
 
         /**
@@ -1309,13 +1285,6 @@ namespace join
         {
             BasicDatagramSocket <Protocol>::operator= (std::move (other));
 
-            readBuf_ = std::move (other.readBuf_);
-            readCount_ = other.readCount_;
-            readPos_ = other.readPos_;
-
-            other.readCount_ = 0;
-            other.readPos_ = 0;
-
             return *this;
         }
 
@@ -1323,22 +1292,6 @@ namespace join
          * @brief destroy the instance.
          */
         virtual ~BasicStreamSocket () = default;
-
-        /**
-         * @brief close the socket handle.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int close () noexcept override
-        {
-            int result = BasicDatagramSocket <Protocol>::close ();
-            if (result == 0)
-            {
-                this->readCount_ = 0;
-                this->readPos_ = 0;
-            }
-
-            return result;
-        }
 
         /**
          * @brief block until connected.
@@ -1402,7 +1355,9 @@ namespace join
                 this->_state = State::Disconnected;
             }
 
-            return this->close ();
+            this->close ();
+
+            return 0;
         }
 
         /**
@@ -1448,82 +1403,13 @@ namespace join
         }
 
         /**
-         * @brief read one byte at a time (buffered read).
-         * @param data buffer where to store the data.
-         * @param timeout timeout in milliseconds.
-         * @return 0 on success, -1 on failure.
-         */
-        int readChar (char &data, int timeout = 0)
-        {
-            if (this->readCount_ == 0)
-            {
-                for (;;)
-                {
-                    int result = this->read (this->readBuf_.get (), this->bufSize_);
-                    if (result == -1)
-                    {
-                        if (lastError == Errc::TemporaryError)
-                        {
-                            if (this->waitReadyRead (timeout))
-                                continue;
-                        }
-
-                        return -1;
-                    }
-
-                    this->readCount_ = result;
-                    this->readPos_ = 0;
-                    break;
-                }
-            }
-
-            this->readCount_--;
-            data = this->readBuf_[this->readPos_++];
-
-            return 0;
-        }
-
-        /**
-         * @brief read data until '\n' is found, maxSize is reached or an error occurred.
-         * @param line string used to store the data received.
-         * @param maxSize maximum number of bytes to read.
-         * @param timeout timeout in milliseconds.
-         * @return 0 on success, -1 on failure.
-         */
-        int readLine (std::string &line, unsigned long maxSize, int timeout = 0)
-        {
-            char currentChar;
-            line.erase ();
-
-            while (maxSize--)
-            {
-                if (this->readChar (currentChar, timeout) == -1)
-                {
-                    return -1;
-                }
-
-                if (currentChar == '\r')
-                    continue;
-
-                if (currentChar == '\n')
-                    return 0;
-
-                line.push_back (currentChar);
-            }
-
-            lastError = make_error_code (Errc::OutOfMemory);
-
-            return -1;
-        }
-
-        /**
          * @brief read data until size is reached or an error occurred.
          * @param data buffer used to store the data received.
          * @param size number of bytes to read.
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int readData (char *data, unsigned long size, int timeout = 0)
+        int readExactly (char *data, unsigned long size, int timeout = 0)
         {
             unsigned long numRead = 0;
 
@@ -1554,7 +1440,7 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int writeData (const char *data, unsigned long size, int timeout = 0)
+        int writeExactly (const char *data, unsigned long size, int timeout = 0)
         {
             unsigned long numWrite = 0;
 
@@ -1588,7 +1474,7 @@ namespace join
         {
             if (this->_state == State::Closed)
             {
-                lastError = make_error_code (Errc::ConnectionClosed);
+                lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
@@ -1676,42 +1562,6 @@ namespace join
             return true;
         }
 
-    protected:
-        /**
-         * @brief flush buffered data in the given buffer
-         * @param data buffer where to flush the data.
-         * @param maxSize maximum bytes that can be flushed.
-         * @return number of bytes flushed.
-         */
-        int flush (char *data, unsigned long maxSize)
-        {
-            int flushSize = 0;
-
-            if (this->readCount_)
-            {
-                flushSize = std::min (this->readCount_, maxSize);
-
-                ::memcpy (data, &this->readBuf_[this->readPos_], flushSize);
-
-                this->readCount_ -= flushSize;
-                this->readPos_ += flushSize;
-            }
-
-            return flushSize;
-        }
-
-        /// internal buffer size.
-        static constexpr int bufSize_ = 1500;
-
-        /// internal read buffer.
-        std::unique_ptr <char []> readBuf_;
-
-        /// internal read buffer count.
-        unsigned long readCount_ = 0;
-
-        /// internal read buffer position.
-        unsigned long readPos_ = 0;
-
         /// friendship with basic stream acceptor
         friend class BasicStreamAcceptor <Protocol>;
     };
@@ -1749,7 +1599,7 @@ namespace join
          */
         virtual const char* name () const noexcept
         {
-            return "libjoin";
+            return "join";
         }
 
         /**
@@ -1766,7 +1616,7 @@ namespace join
                 case TlsErrc::TlsProtocolError:
                     return "TLS protocol error";
                 default:
-                    return "Success";
+                    return "success";
             }
         }
     };
@@ -1844,40 +1694,40 @@ namespace join
           _tlsContext (SSL_CTX_new (TLS_method ()), join::crypto::SslCtxDelete ())
         #endif
         {
-            if (_tlsContext == nullptr)
+            if (this->_tlsContext == nullptr)
             {
                 throw std::runtime_error ("OpenSSL libraries were not initialized at process start");
             }
 
             // enable the OpenSSL bug workaround options.
-            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_ALL);
+            SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_ALL);
 
         #if OPENSSL_VERSION_NUMBER >= 0x10100000L
             // disallow compression.
-            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_COMPRESSION);
+            SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_NO_COMPRESSION);
         #endif
 
             // disallow usage of SSLv2, SSLv3, TLSv1 and TLSv1.1 which are considered insecure.
-            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+            SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
 
             // setup write mode.
-            SSL_CTX_set_mode (_tlsContext.get (), SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+            SSL_CTX_set_mode (this->_tlsContext.get (), SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
             // automatically renegotiates.
-            SSL_CTX_set_mode (_tlsContext.get (), SSL_MODE_AUTO_RETRY);
+            SSL_CTX_set_mode (this->_tlsContext.get (), SSL_MODE_AUTO_RETRY);
 
             // set session cache mode to client by default.
-            SSL_CTX_set_session_cache_mode (_tlsContext.get (), SSL_SESS_CACHE_CLIENT);
+            SSL_CTX_set_session_cache_mode (this->_tlsContext.get (), SSL_SESS_CACHE_CLIENT);
 
             // no verification by default.
-            SSL_CTX_set_verify (_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
+            SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
 
             // set default TLSv1.2 and below cipher suites.
-            SSL_CTX_set_cipher_list (_tlsContext.get (), join::crypto::defaultCipher_.c_str ());
+            SSL_CTX_set_cipher_list (this->_tlsContext.get (), join::crypto::defaultCipher_.c_str ());
 
         #if OPENSSL_VERSION_NUMBER >= 0x10101000L
             //  set default TLSv1.3 cipher suites.
-            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::crypto::defaultCipher_1_3_.c_str ());
+            SSL_CTX_set_ciphersuites (this->_tlsContext.get (), join::crypto::defaultCipher_1_3_.c_str ());
         #endif
         }
 
@@ -1902,7 +1752,7 @@ namespace join
           _tlsContext (tlsContext),
           _tlsMode (tlsMode)
         {
-            if (_tlsContext == nullptr)
+            if (this->_tlsContext == nullptr)
             {
                 throw std::invalid_argument ("OpenSSL context is invalid");
             }
@@ -1932,7 +1782,10 @@ namespace join
           _tlsMode (other._tlsMode),
           _tlsState (other._tlsState)
         {
-            SSL_set_app_data (this->_tlsHandle.get (), this);
+            if (this->_tlsHandle)
+            {
+                SSL_set_app_data (this->_tlsHandle.get (), this);
+            }
 
             other._tlsMode = TlsMode::ClientMode;
             other._tlsState = TlsState::NonEncrypted;
@@ -1952,7 +1805,10 @@ namespace join
             this->_tlsMode = other._tlsMode;
             this->_tlsState = other._tlsState;
 
-            SSL_set_app_data (this->_tlsHandle.get (), this);
+            if (this->_tlsHandle)
+            {
+                SSL_set_app_data (this->_tlsHandle.get (), this);
+            }
 
             other._tlsMode = TlsMode::ClientMode;
             other._tlsState = TlsState::NonEncrypted;
@@ -2152,14 +2008,12 @@ namespace join
 
         /**
          * @brief close the socket handle.
-         * @return 0 on success, -1 on failure.
          */
-        virtual int close () noexcept override
+        virtual void close () noexcept override
         {
+            BasicStreamSocket <Protocol>::close ();
             this->_tlsState = TlsState::NonEncrypted;
             this->_tlsHandle.reset ();
-
-            return BasicStreamSocket <Protocol>::close ();
         }
 
         /**
@@ -2185,7 +2039,7 @@ namespace join
         {
             if (this->encrypted ())
             {
-                return SSL_pending (this->_tlsHandle.get ()) + this->readCount_;
+                return SSL_pending (this->_tlsHandle.get ());
             }
 
             return BasicStreamSocket <Protocol>::canRead ();
@@ -2201,19 +2055,8 @@ namespace join
         {
             if (this->encrypted ())
             {
-                // flush buffered data.
-                int offset = this->flush (data, maxSize);
-                if (offset)
-                {
-                    // no more space available in buffer or no more data pending.
-                    if ((offset == int (maxSize)) || (this->canRead () == 0))
-                    {
-                        return offset;
-                    }
-                }
-
                 // read data.
-                int result = SSL_read (this->_tlsHandle.get (), data + offset, int (maxSize) - offset);
+                int result = SSL_read (this->_tlsHandle.get (), data, int (maxSize));
                 if (result < 1)
                 {
                     switch (SSL_get_error (this->_tlsHandle.get (), result))
@@ -2261,7 +2104,7 @@ namespace join
                     return -1;
                 }
 
-                return result + offset;
+                return result;
             }
 
             return BasicStreamSocket <Protocol>::read (data, maxSize);

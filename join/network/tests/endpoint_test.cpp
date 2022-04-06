@@ -34,6 +34,7 @@ using join::Raw;
 using join::Udp;
 using join::Icmp;
 using join::Tcp;
+using join::Tls;
 
 /**
  * @brief test the addr method.
@@ -57,6 +58,9 @@ TEST (Endpoint, addr)
 
     Tcp::Endpoint tcpEndpoint;
     ASSERT_NE (tcpEndpoint.addr (), nullptr);
+
+    Tls::Endpoint tlsEndpoint;
+    ASSERT_NE (tlsEndpoint.addr (), nullptr);
 }
 
 /**
@@ -90,6 +94,12 @@ TEST (Endpoint, length)
 
     Tcp::Endpoint tcpEndpoint6 (Tcp::v6 ());
     ASSERT_EQ (tcpEndpoint6.length (), sizeof (struct sockaddr_in6));
+
+    Tls::Endpoint tlsEndpoint4 (Tls::v4 ());
+    ASSERT_EQ (tlsEndpoint4.length (), sizeof (struct sockaddr_in));
+
+    Tls::Endpoint tlsEndpoint6 (Tls::v6 ());
+    ASSERT_EQ (tlsEndpoint6.length (), sizeof (struct sockaddr_in6));
 }
 
 /**
@@ -120,6 +130,10 @@ TEST (Endpoint, device)
     Tcp::Endpoint tcpEndpoint (Tcp::v6 ());
     tcpEndpoint.device ("lo");
     ASSERT_EQ (tcpEndpoint.device (), "lo");
+
+    Tls::Endpoint tlsEndpoint (Tls::v6 ());
+    tlsEndpoint.device ("lo");
+    ASSERT_EQ (tlsEndpoint.device (), "lo");
 }
 
 /**
@@ -147,6 +161,13 @@ TEST (Endpoint, ip)
     ASSERT_EQ (tcpEndpoint.ip (), "::");
     tcpEndpoint.ip ("127.0.0.1");
     ASSERT_EQ (tcpEndpoint.ip (), "127.0.0.1");
+
+    Tls::Endpoint tlsEndpoint;
+
+    tlsEndpoint.ip ("::");
+    ASSERT_EQ (tlsEndpoint.ip (), "::");
+    tlsEndpoint.ip ("127.0.0.1");
+    ASSERT_EQ (tlsEndpoint.ip (), "127.0.0.1");
 }
 
 /**
@@ -163,6 +184,11 @@ TEST (Endpoint, port)
 
     tcpEndpoint.port (80);
     ASSERT_EQ (tcpEndpoint.port (), 80);
+
+    Tls::Endpoint tlsEndpoint;
+
+    tlsEndpoint.port (80);
+    ASSERT_EQ (tlsEndpoint.port (), 80);
 }
 
 /**
@@ -196,6 +222,15 @@ TEST (Endpoint, protocol)
     ASSERT_NE (Tcp::Endpoint ("127.0.0.1").protocol (), Tcp::v6 ());
     ASSERT_NE (Tcp::Endpoint ("::").protocol (), Tcp::v4 ());
     ASSERT_EQ (Tcp::Endpoint ("::").protocol (), Tcp::v6 ());
+
+    ASSERT_EQ (Tls::Endpoint ().protocol (), Tls::v4 ());
+    ASSERT_EQ (Tls::Endpoint (Tls::v4 ()).protocol (), Tls::v4 ());
+    ASSERT_NE (Tls::Endpoint (Tls::v4 ()).protocol (), Tls::v6 ());
+    ASSERT_EQ (Tls::Endpoint (Tls::v6 ()).protocol (), Tls::v6 ());
+    ASSERT_EQ (Tls::Endpoint ("127.0.0.1").protocol (), Tls::v4 ());
+    ASSERT_NE (Tls::Endpoint ("127.0.0.1").protocol (), Tls::v6 ());
+    ASSERT_NE (Tls::Endpoint ("::").protocol (), Tls::v4 ());
+    ASSERT_EQ (Tls::Endpoint ("::").protocol (), Tls::v6 ());
 }
 
 /**
@@ -227,6 +262,11 @@ TEST (Endpoint, equal)
     ASSERT_NE (Tcp::Endpoint ("127.0.0.1", 80), Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
     ASSERT_EQ (Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
     ASSERT_NE (Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tcp::Endpoint ("127.0.0.1", 80));
+
+    ASSERT_EQ (Tls::Endpoint ("127.0.0.1", 80), Tls::Endpoint ("127.0.0.1", 80));
+    ASSERT_NE (Tls::Endpoint ("127.0.0.1", 80), Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
+    ASSERT_EQ (Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
+    ASSERT_NE (Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tls::Endpoint ("127.0.0.1", 80));
 }
 
 /**
@@ -262,6 +302,11 @@ TEST (Endpoint, serialize)
     stream.str ("");
     Tcp::Endpoint tcpEndpoint ("127.0.0.1", 80);
     ASSERT_NO_THROW (stream << tcpEndpoint);
+    ASSERT_EQ (stream.str (), "127.0.0.1:80");
+
+    stream.str ("");
+    Tls::Endpoint tlsEndpoint ("127.0.0.1", 80);
+    ASSERT_NO_THROW (stream << tlsEndpoint);
     ASSERT_EQ (stream.str (), "127.0.0.1:80");
 }
 

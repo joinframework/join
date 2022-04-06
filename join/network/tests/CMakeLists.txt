@@ -26,13 +26,13 @@ add_executable(unixdgramsocket.gtest unixdgramsocket_test.cpp)
 target_link_libraries(unixdgramsocket.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(unixdgramsocket.gtest)
 
-add_executable(unixacceptor.gtest unixacceptor_test.cpp)
-target_link_libraries(unixacceptor.gtest ${PROJECT_NAME} gtest gtest_main pthread)
-gtest_discover_tests(unixacceptor.gtest)
-
 add_executable(unixstreamsocket.gtest unixstreamsocket_test.cpp)
 target_link_libraries(unixstreamsocket.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(unixstreamsocket.gtest)
+
+add_executable(unixstreamacceptor.gtest unixstreamacceptor_test.cpp)
+target_link_libraries(unixstreamacceptor.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(unixstreamacceptor.gtest)
 
 add_executable(resolver.gtest resolver_test.cpp)
 target_link_libraries(resolver.gtest ${PROJECT_NAME} gtest gtest_main pthread)
@@ -50,23 +50,34 @@ add_executable(icmpsocket.gtest icmpsocket_test.cpp)
 target_link_libraries(icmpsocket.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(icmpsocket.gtest)
 
-add_executable(tcpacceptor.gtest tcpacceptor_test.cpp)
-target_link_libraries(tcpacceptor.gtest ${PROJECT_NAME} gtest gtest_main pthread)
-gtest_discover_tests(tcpacceptor.gtest)
-
 add_executable(tcpsocket.gtest tcpsocket_test.cpp)
 target_link_libraries(tcpsocket.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(tcpsocket.gtest)
 
-add_executable(tlsacceptor.gtest tlsacceptor_test.cpp)
-target_link_libraries(tlsacceptor.gtest ${PROJECT_NAME} gtest gtest_main pthread)
-gtest_discover_tests(tlsacceptor.gtest)
+add_executable(tcpsocketstream.gtest tcpsocketstream_test.cpp)
+target_link_libraries(tcpsocketstream.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(tcpsocketstream.gtest)
+
+add_executable(tcpacceptor.gtest tcpacceptor_test.cpp)
+target_link_libraries(tcpacceptor.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(tcpacceptor.gtest)
+
+add_executable(tlserror.gtest tlserror_test.cpp)
+target_link_libraries(tlserror.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(tlserror.gtest)
 
 add_executable(tlssocket.gtest tlssocket_test.cpp)
 target_link_libraries(tlssocket.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(tlssocket.gtest)
 
+add_executable(tlssocketstream.gtest tlssocketstream_test.cpp)
+target_link_libraries(tlssocketstream.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(tlssocketstream.gtest)
+
+add_executable(tlsacceptor.gtest tlsacceptor_test.cpp)
+target_link_libraries(tlsacceptor.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(tlsacceptor.gtest)
+
 add_executable(arp.gtest arp_test.cpp)
 target_link_libraries(arp.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(arp.gtest)
-

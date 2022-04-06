@@ -33,15 +33,19 @@
 
 namespace join
 {
-    template <class Protocol> class BasicResolver;
-
     template <class Protocol> class BasicSocket;
     template <class Protocol> class BasicDatagramSocket;
     template <class Protocol> class BasicStreamSocket;
     template <class Protocol> class BasicTlsSocket;
 
+    template <class Protocol> class BasicSocketStreambuf;
+    template <class Protocol> class BasicSocketStream;
+    template <class Protocol> class BasicTlsStream;
+
     template <class Protocol> class BasicStreamAcceptor;
     template <class Protocol> class BasicTlsAcceptor;
+
+    template <class Protocol> class BasicResolver;
 
     /**
      * @brief unix datagram protocol class.
@@ -93,6 +97,7 @@ namespace join
     public:
         using Endpoint = BasicUnixEndpoint <UnixStream>;
         using Socket   = BasicStreamSocket <UnixStream>;
+        using Stream   = BasicSocketStream <UnixStream>;
         using Acceptor = BasicStreamAcceptor <UnixStream>;
 
         /**
@@ -181,8 +186,8 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint <Udp>;
-        using Resolver = BasicResolver <Udp>;
         using Socket   = BasicDatagramSocket <Udp>;
+        using Resolver = BasicResolver <Udp>;
 
         /**
          * @brief construct the udp protocol instance.
@@ -274,8 +279,8 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint <Icmp>;
-        using Resolver = BasicResolver <Icmp>;
         using Socket   = BasicDatagramSocket <Icmp>;
+        using Resolver = BasicResolver <Icmp>;
 
         /**
          * @brief create the icmp protocol instance.
@@ -371,12 +376,11 @@ namespace join
     class Tcp
     {
     public:
-        using Endpoint    = BasicInternetEndpoint <Tcp>;
-        using Resolver    = BasicResolver <Tcp>;
-        using Socket      = BasicStreamSocket <Tcp>;
-        using TlsSocket   = BasicTlsSocket <Tcp>;
-        using Acceptor    = BasicStreamAcceptor <Tcp>;
-        using TlsAcceptor = BasicTlsAcceptor <Tcp>;
+        using Endpoint = BasicInternetEndpoint <Tcp>;
+        using Socket   = BasicStreamSocket <Tcp>;
+        using Stream   = BasicSocketStream <Tcp>;
+        using Acceptor = BasicStreamAcceptor <Tcp>;
+        using Resolver = BasicResolver <Tcp>;
 
         /**
          * @brief create the tcp protocol  instance.
@@ -457,6 +461,101 @@ namespace join
      * @return true if not equals.
      */
     constexpr bool operator!= (const Tcp& a, const Tcp& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief Tls protocol class.
+     */
+    class Tls
+    {
+    public:
+        using Endpoint = BasicInternetEndpoint <Tls>;
+        using Socket   = BasicTlsSocket <Tls>;
+        using Stream   = BasicTlsStream <Tls>;
+        using Acceptor = BasicTlsAcceptor <Tls>;
+        using Resolver = BasicResolver <Tls>;
+
+        /**
+         * @brief create the tcp protocol  instance.
+         * @param family IP address family.
+         */
+        constexpr Tls (int family = AF_INET) noexcept
+        : _family (family)
+        {
+        }
+
+        /**
+         * @brief get protocol suitable for IPv4 address family.
+         * @return an IPv4 address family suitable protocol.
+         */
+        static inline Tls& v4 () noexcept
+        {
+            static Tls tlsv4 (AF_INET);
+            return tlsv4;
+        }
+
+        /**
+         * @brief get protocol suitable for IPv6 address family.
+         * @return an IPv6 address family suitable protocol.
+         */
+        static inline Tls& v6 () noexcept
+        {
+            static Tls tlsv6 (AF_INET6);
+            return tlsv6;
+        }
+
+        /**
+         * @brief get the protocol IP address family.
+         * @return the protocol IP address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return _family;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_STREAM;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return IPPROTO_TCP;
+        }
+
+    private:
+        /// IP address family.
+        int _family;
+    };
+
+    /**
+     * @brief Check if equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if equals.
+     */
+    constexpr bool operator== (const Tls& a, const Tls& b) noexcept
+    {
+        return a.family () == b.family ();
+    }
+
+    /**
+     * @brief Check if not equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if not equals.
+     */
+    constexpr bool operator!= (const Tls& a, const Tls& b) noexcept
     {
         return !(a == b);
     }

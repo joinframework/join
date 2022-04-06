@@ -56,7 +56,7 @@ TEST (Condition, wait)
     auto beg = std::chrono::high_resolution_clock::now ();
     condition.wait (lock, [&ready](){return ready;});
     auto end = std::chrono::high_resolution_clock::now ();
-    EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+    EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
 }
 
 /**
@@ -79,7 +79,7 @@ TEST (Condition, timedWait)
     EXPECT_FALSE (condition.timedWait (lock, 5ms, [&ready](){return ready;}));
     EXPECT_TRUE (condition.timedWait (lock, 50ms, [&ready](){return ready;}));
     auto end = std::chrono::high_resolution_clock::now ();
-    EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+    EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
 }
 
 /**

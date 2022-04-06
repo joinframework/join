@@ -28,8 +28,8 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-// C.
-#include <unistd.h>
+// C++.
+#include <thread>
 
 using namespace std::chrono_literals;
 
@@ -84,9 +84,9 @@ TEST (Utils, benchmark)
 {
     auto elapsed = join::benchmark ([]
     {
-        usleep (20000);
+        std::this_thread::sleep_for (10ms);
     });
-    ASSERT_GE (elapsed, 20ms);
+    ASSERT_GE (elapsed, 10ms);
 }
 
 /**
