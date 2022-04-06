@@ -610,7 +610,7 @@ namespace join
                 this->setstate (std::ios_base::failbit);
             }
             else
-            {            
+            {
                 startEncryption ();
             }
         }
@@ -628,7 +628,7 @@ namespace join
                     if (this->rdbuf ()->socket ().waitEncrypted (this->timeout ()))
                         return;
                 }
-                
+
                 this->setstate (std::ios_base::failbit);
             }
         }
