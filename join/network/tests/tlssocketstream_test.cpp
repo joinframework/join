@@ -227,10 +227,364 @@ TEST_F (TlsSocketStream, moveAssign)
 }
 
 /**
+ * @brief Test connect method.
+ */
+TEST_F (TlsSocketStream, connect)
+{
+    Tls::Stream tlsStream;
+    ASSERT_FALSE (tlsStream.socket ().connected ());
+    tlsStream.connect ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.socket ().connected ());
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test startEncryption method.
+ */
+TEST_F (TlsSocketStream, startEncryption)
+{
+    Tls::Stream tlsStream;
+    ASSERT_FALSE (tlsStream.socket ().connected ());
+    tlsStream.connect ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.socket ().connected ());
+    ASSERT_FALSE (tlsStream.socket ().encrypted ());
+    tlsStream.startEncryption ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.socket ().encrypted ());
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test connectEncrypted method.
+ */
+TEST_F (TlsSocketStream, connectEncrypted)
+{
+    Tls::Stream tlsStream;
+    ASSERT_FALSE (tlsStream.socket ().connected ());
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.socket ().connected ());
+    ASSERT_TRUE (tlsStream.socket ().encrypted ());
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test close method.
+ */
+TEST_F (TlsSocketStream, close)
+{
+    Tls::Stream tlsStream;
+    ASSERT_FALSE (tlsStream.socket ().connected ());
+    tlsStream.connect ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.socket ().connected ());
+    tlsStream.close ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_FALSE (tlsStream.socket ().connected ());
+}
+
+/**
+ * @brief Test timeout method.
+ */
+TEST_F (TlsSocketStream, timeout)
+{
+    Tls::Stream tlsStream;
+    ASSERT_NE (tlsStream.timeout (), _timeout);
+    tlsStream.timeout (_timeout);
+    ASSERT_EQ (tlsStream.timeout (), _timeout);
+}
+
+/**
+ * @brief Test socket method.
+ */
+TEST_F (TlsSocketStream, socket)
+{
+    Tls::Stream tlsStream;
+    ASSERT_EQ (tlsStream.socket ().handle (), -1);
+    tlsStream.connect ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_NE (tlsStream.socket ().handle (), -1);
+    tlsStream.close ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.socket ().handle (), -1);
+}
+
+/**
+ * @brief Test insert operator.
+ */
+TEST_F (TlsSocketStream, insert)
+{
+    Tls::Stream tlsStream;
+    tlsStream << "test" << std::endl;
+    ASSERT_TRUE (tlsStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    tlsStream.clear ();
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream << "test" << std::endl;
+    ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test put method.
+ */
+TEST_F (TlsSocketStream, put)
+{
+    Tls::Stream tlsStream;
+    tlsStream.put ('t');
+    ASSERT_TRUE (tlsStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    tlsStream.clear ();
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.put ('t');
+    tlsStream.put ('e');
+    tlsStream.put ('s');
+    tlsStream.put ('t');
+    ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test write method.
+ */
+TEST_F (TlsSocketStream, write)
+{
+    Tls::Stream tlsStream;
+    tlsStream.write ("test", 4);
+    ASSERT_TRUE (tlsStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    tlsStream.clear ();
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.write ("test", 4);
+    ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test flush method.
+ */
+TEST_F (TlsSocketStream, flush)
+{
+    Tls::Stream tlsStream;
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.put ('t');
+    tlsStream.flush ();
+    tlsStream.put ('e');
+    tlsStream.flush ();
+    tlsStream.put ('s');
+    tlsStream.flush ();
+    tlsStream.put ('t');
+    tlsStream.flush ();
+    ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test extract method.
+ */
+TEST_F (TlsSocketStream, extract)
+{
+    int test;
+    Tls::Stream tlsStream;
+    tlsStream >> test;
+    ASSERT_TRUE (tlsStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    tlsStream.clear ();
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream << int (123456789) << std::endl;
+    tlsStream.flush ();
+    tlsStream >> test;
+    ASSERT_EQ (test, 123456789);
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test get method.
+ */
+TEST_F (TlsSocketStream, get)
+{
+    Tls::Stream tlsStream;
+    tlsStream.get ();
+    ASSERT_TRUE (tlsStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    tlsStream.clear ();
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.write ("test", 4);
+    tlsStream.flush ();
+    ASSERT_EQ (tlsStream.get (), 't');
+    ASSERT_EQ (tlsStream.get (), 'e');
+    ASSERT_EQ (tlsStream.get (), 's');
+    ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test peek method.
+ */
+TEST_F (TlsSocketStream, peek)
+{
+    Tls::Stream tlsStream;
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.write ("test", 4);
+    tlsStream.flush ();
+    ASSERT_EQ (tlsStream.peek (), 't');
+    ASSERT_EQ (tlsStream.get (), 't');
+    ASSERT_EQ (tlsStream.peek (), 'e');
+    ASSERT_EQ (tlsStream.get (), 'e');
+    ASSERT_EQ (tlsStream.peek (), 's');
+    ASSERT_EQ (tlsStream.get (), 's');
+    ASSERT_EQ (tlsStream.peek (), 't');
+    ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test unget method.
+ */
+TEST_F (TlsSocketStream, unget)
+{
+    Tls::Stream tlsStream;
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    tlsStream.write ("test", 4);
+    tlsStream.flush ();
+    ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.unget ();
+    ASSERT_EQ (tlsStream.get (), 't');
+    ASSERT_EQ (tlsStream.get (), 'e');
+    tlsStream.unget ();
+    ASSERT_EQ (tlsStream.get (), 'e');
+    ASSERT_EQ (tlsStream.get (), 's');
+    tlsStream.unget ();
+    ASSERT_EQ (tlsStream.get (), 's');
+    ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.unget ();
+    ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test putback method.
+ */
+TEST_F (TlsSocketStream, putback)
+{
+    Tls::Stream tlsStream;
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    tlsStream.write ("test", 4);
+    tlsStream.flush ();
+    ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.putback ('s');
+    ASSERT_EQ (tlsStream.get (), 's');
+    ASSERT_EQ (tlsStream.get (), 'e');
+    tlsStream.putback ('t');
+    ASSERT_EQ (tlsStream.get (), 't');
+    ASSERT_EQ (tlsStream.get (), 's');
+    tlsStream.putback ('e');
+    ASSERT_EQ (tlsStream.get (), 'e');
+    ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test getline method.
+ */
+TEST_F (TlsSocketStream, getline)
+{
+    Tls::Stream tlsStream;
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    tlsStream.write ("test\n", 5);
+    tlsStream.flush ();
+    std::array <char, 32> test = {};
+    tlsStream.getline (test.data (), test.size (), '\n');
+    ASSERT_STREQ (test.data (), "test");
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test ignore method.
+ */
+TEST_F (TlsSocketStream, ignore)
+{
+    Tls::Stream tlsStream;
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    tlsStream.write ("test\n", 5);
+    tlsStream.flush ();
+    tlsStream.ignore (std::numeric_limits <std::streamsize>::max (), 'e');
+    ASSERT_EQ (tlsStream.get (), 's');
+    ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test read method.
+ */
+TEST_F (TlsSocketStream, read)
+{
+    Tls::Stream tlsStream;
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    tlsStream.write ("test", 4);
+    tlsStream.flush ();
+    std::array <char, 32> test = {};
+    tlsStream.read (test.data (), 4);
+    ASSERT_STREQ (test.data (), "test");
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test readsome method.
+ */
+/*TEST_F (TlsSocketStream, readsome)
+{
+    Tls::Stream tlsStream;
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    tlsStream.write ("test", 4);
+    tlsStream.flush ();
+    std::array <char, 32> test = {};
+    ASSERT_EQ (tlsStream.readsome (test.data (), test.size ()), 4);
+    ASSERT_STREQ (test.data (), "test");
+    tlsStream.close ();
+}*/
+
+/**
+ * @brief Test gcount method.
+ */
+TEST_F (TlsSocketStream, gcount)
+{
+    Tls::Stream tlsStream;
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    tlsStream.write ("test", 4);
+    tlsStream.flush ();
+    std::array <char, 32> test = {};
+    tlsStream.read (test.data (), 4);
+    ASSERT_EQ (tlsStream.gcount (), 4);
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test sync method.
+ */
+/*TEST_F (TlsSocketStream, sync)
+{
+}*/
+
+/**
  * @brief main function.
  */
 int main (int argc, char **argv)
 {
+    join::crypto::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }

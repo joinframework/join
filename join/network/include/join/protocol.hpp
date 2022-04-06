@@ -40,6 +40,7 @@ namespace join
 
     template <class Protocol> class BasicSocketStreambuf;
     template <class Protocol> class BasicSocketStream;
+    template <class Protocol> class BasicTlsStream;
 
     template <class Protocol> class BasicStreamAcceptor;
     template <class Protocol> class BasicTlsAcceptor;
@@ -472,7 +473,7 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint <Tls>;
         using Socket   = BasicTlsSocket <Tls>;
-        using Stream   = BasicSocketStream <Tls>;
+        using Stream   = BasicTlsStream <Tls>;
         using Acceptor = BasicTlsAcceptor <Tls>;
         using Resolver = BasicResolver <Tls>;
 

@@ -1694,40 +1694,40 @@ namespace join
           _tlsContext (SSL_CTX_new (TLS_method ()), join::crypto::SslCtxDelete ())
         #endif
         {
-            if (_tlsContext == nullptr)
+            if (this->_tlsContext == nullptr)
             {
                 throw std::runtime_error ("OpenSSL libraries were not initialized at process start");
             }
 
             // enable the OpenSSL bug workaround options.
-            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_ALL);
+            SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_ALL);
 
         #if OPENSSL_VERSION_NUMBER >= 0x10100000L
             // disallow compression.
-            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_COMPRESSION);
+            SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_NO_COMPRESSION);
         #endif
 
             // disallow usage of SSLv2, SSLv3, TLSv1 and TLSv1.1 which are considered insecure.
-            SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+            SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
 
             // setup write mode.
-            SSL_CTX_set_mode (_tlsContext.get (), SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+            SSL_CTX_set_mode (this->_tlsContext.get (), SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
             // automatically renegotiates.
-            SSL_CTX_set_mode (_tlsContext.get (), SSL_MODE_AUTO_RETRY);
+            SSL_CTX_set_mode (this->_tlsContext.get (), SSL_MODE_AUTO_RETRY);
 
             // set session cache mode to client by default.
-            SSL_CTX_set_session_cache_mode (_tlsContext.get (), SSL_SESS_CACHE_CLIENT);
+            SSL_CTX_set_session_cache_mode (this->_tlsContext.get (), SSL_SESS_CACHE_CLIENT);
 
             // no verification by default.
-            SSL_CTX_set_verify (_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
+            SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
 
             // set default TLSv1.2 and below cipher suites.
-            SSL_CTX_set_cipher_list (_tlsContext.get (), join::crypto::defaultCipher_.c_str ());
+            SSL_CTX_set_cipher_list (this->_tlsContext.get (), join::crypto::defaultCipher_.c_str ());
 
         #if OPENSSL_VERSION_NUMBER >= 0x10101000L
             //  set default TLSv1.3 cipher suites.
-            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::crypto::defaultCipher_1_3_.c_str ());
+            SSL_CTX_set_ciphersuites (this->_tlsContext.get (), join::crypto::defaultCipher_1_3_.c_str ());
         #endif
         }
 
@@ -1752,7 +1752,7 @@ namespace join
           _tlsContext (tlsContext),
           _tlsMode (tlsMode)
         {
-            if (_tlsContext == nullptr)
+            if (this->_tlsContext == nullptr)
             {
                 throw std::invalid_argument ("OpenSSL context is invalid");
             }
@@ -1782,7 +1782,10 @@ namespace join
           _tlsMode (other._tlsMode),
           _tlsState (other._tlsState)
         {
-            SSL_set_app_data (this->_tlsHandle.get (), this);
+            if (this->_tlsHandle)
+            {
+                SSL_set_app_data (this->_tlsHandle.get (), this);
+            }
 
             other._tlsMode = TlsMode::ClientMode;
             other._tlsState = TlsState::NonEncrypted;
@@ -1802,7 +1805,10 @@ namespace join
             this->_tlsMode = other._tlsMode;
             this->_tlsState = other._tlsState;
 
-            SSL_set_app_data (this->_tlsHandle.get (), this);
+            if (this->_tlsHandle)
+            {
+                SSL_set_app_data (this->_tlsHandle.get (), this);
+            }
 
             other._tlsMode = TlsMode::ClientMode;
             other._tlsState = TlsState::NonEncrypted;

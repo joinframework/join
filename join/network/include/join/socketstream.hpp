@@ -172,6 +172,14 @@ namespace join
                 result = nullptr;
             }
 
+            if (_socket.disconnect () == -1)
+            {
+                if (lastError == Errc::TemporaryError)
+                {
+                    _socket.waitDisconnected (_timeout);
+                }
+            }
+
             _socket.close ();
 
             this->freeBuffer ();
@@ -530,6 +538,100 @@ namespace join
     private:
         /// associated stream buffer.
         SocketStreambuf _streambuf;
+    };
+
+    /**
+     * @brief TLS stream class.
+     */
+    template <class Protocol>
+    class BasicTlsStream : public BasicSocketStream <Protocol>
+    {
+    public:
+        using SocketStreambuf = BasicSocketStreambuf <Protocol>;
+        using Endpoint        = typename Protocol::Endpoint;
+        using Socket          = typename Protocol::Socket;
+
+        /**
+         * @brief default constructor.
+         */
+        BasicTlsStream ()
+        : BasicSocketStream <Protocol> ()
+        {
+        }
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        BasicTlsStream (const BasicTlsStream& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to assign.
+         * @return current object.
+         */
+        BasicTlsStream& operator=(const BasicTlsStream& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        BasicTlsStream (BasicTlsStream&& other)
+        : BasicSocketStream <Protocol> (std::move (other))
+        {
+        }
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to assign.
+         * @return current object.
+         */
+        BasicTlsStream& operator=(BasicTlsStream&& other)
+        {
+            BasicSocketStream <Protocol>::operator= (std::move (other));
+
+            return *this;
+        }
+
+        /**
+         * @brief destroy the TLS stream instance.
+         */
+        virtual ~BasicTlsStream () = default;
+
+        /**
+         * @brief make an encrypted connection to the given endpoint.
+         * @param endpoint endpoint to connect to.
+         * @throw std::ios_base::failure.
+         */
+        void connectEncrypted (const Endpoint& endpoint)
+        {
+            if (this->rdbuf ()->connect (endpoint) == nullptr)
+            {
+                this->setstate (std::ios_base::failbit);
+            }
+            else
+            {            
+                startEncryption ();
+            }
+        }
+
+        /**
+         * @brief start socket encryption (perform TLS handshake).
+         * @return 0 on success, -1 on failure.
+         */
+        void startEncryption ()
+        {
+            if (this->rdbuf ()->socket ().startEncryption () == -1)
+            {
+                if (lastError == Errc::TemporaryError)
+                {
+                    if (this->rdbuf ()->socket ().waitEncrypted (this->timeout ()))
+                        return;
+                }
+                
+                this->setstate (std::ios_base::failbit);
+            }
+        }
     };
 }
 
