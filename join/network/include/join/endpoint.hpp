@@ -74,15 +74,6 @@ namespace join
         }
 
         /**
-         * @brief get socket address length.
-         * @return socket address length.
-         */
-        constexpr socklen_t length () const noexcept
-        {
-            return sizeof (struct sockaddr_storage);
-        }
-
-        /**
          * @brief get socket address.
          * @return socket address.
          */
@@ -98,6 +89,15 @@ namespace join
         constexpr Protocol protocol () const noexcept
         {
             return Protocol ();
+        }
+
+        /**
+         * @brief get socket address length.
+         * @return socket address length.
+         */
+        constexpr socklen_t length () const noexcept
+        {
+            return sizeof (struct sockaddr_storage);
         }
 
     protected:
@@ -436,16 +436,6 @@ namespace join
         }
 
         /**
-         * @brief get socket address length.
-         * @return socket address length.
-         */
-        constexpr socklen_t length () const noexcept
-        {
-            return (this->_addr.ss_family == AF_INET6) ? sizeof (struct sockaddr_in6) 
-                                                       : sizeof (struct sockaddr_in);
-        }
-
-        /**
          * @brief create the endpoint instance.
          * @param ip endpoint IP address.
          * @param port endpoint port number.
@@ -552,6 +542,16 @@ namespace join
             {
                 return ntohs (reinterpret_cast <const struct sockaddr_in*> (&this->_addr)->sin_port);
             }
+        }
+
+        /**
+         * @brief get socket address length.
+         * @return socket address length.
+         */
+        constexpr socklen_t length () const noexcept
+        {
+            return (this->_addr.ss_family == AF_INET6) ? sizeof (struct sockaddr_in6) 
+                                                       : sizeof (struct sockaddr_in);
         }
 
         /**

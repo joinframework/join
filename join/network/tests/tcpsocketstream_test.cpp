@@ -93,11 +93,13 @@ protected:
 
     /// port.
     static const uint16_t _port;
+    static const uint16_t _invalid_port;
 };
 
 const int         TcpSocketStream::_timeout = 1000;
 const std::string TcpSocketStream::_host = "localhost";
 const uint16_t    TcpSocketStream::_port = 5000;
+const uint16_t    TcpSocketStream::_invalid_port = 5032;
 
 /**
  * @brief Test default constructor.
@@ -138,6 +140,9 @@ TEST_F (TcpSocketStream, connect)
 {
     Tcp::Stream tcpStream;
     ASSERT_FALSE (tcpStream.socket ().connected ());
+    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _invalid_port});
+    ASSERT_TRUE (tcpStream.fail ());
+    tcpStream.clear ();
     tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     ASSERT_TRUE (tcpStream.socket ().connected ());

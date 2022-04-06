@@ -180,6 +180,7 @@ protected:
 
     /// port.
     static const uint16_t _port;
+    static const uint16_t _invalid_port;
 
     /// certificate.
     static const std::string _cert;
@@ -191,6 +192,7 @@ protected:
 const int         TlsSocketStream::_timeout = 1000;
 const std::string TlsSocketStream::_host = "localhost";
 const uint16_t    TlsSocketStream::_port = 5000;
+const uint16_t    TlsSocketStream::_invalid_port = 5032;
 const std::string TlsSocketStream::_cert = "/tmp/tlssocket_test.cert";
 const std::string TlsSocketStream::_key = "/tmp/tlssocket_test.key";
 
@@ -233,6 +235,9 @@ TEST_F (TlsSocketStream, connect)
 {
     Tls::Stream tlsStream;
     ASSERT_FALSE (tlsStream.socket ().connected ());
+    tlsStream.connect ({Tls::Resolver::resolveHost (_host), _invalid_port});
+    ASSERT_TRUE (tlsStream.fail ());
+    tlsStream.clear ();
     tlsStream.connect ({Tls::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     ASSERT_TRUE (tlsStream.socket ().connected ());
@@ -263,6 +268,9 @@ TEST_F (TlsSocketStream, connectEncrypted)
 {
     Tls::Stream tlsStream;
     ASSERT_FALSE (tlsStream.socket ().connected ());
+    tlsStream.connect ({Tls::Resolver::resolveHost (_host), _invalid_port});
+    ASSERT_TRUE (tlsStream.fail ());
+    tlsStream.clear ();
     tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     ASSERT_TRUE (tlsStream.socket ().connected ());
