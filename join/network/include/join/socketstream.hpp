@@ -74,16 +74,16 @@ namespace join
         BasicSocketStreambuf (BasicSocketStreambuf&& other)
         : std::streambuf (std::move (other)),
           _allocated (other._allocated),
+          _buf (other._buf),
           _gsize (other._gsize),
           _psize (other._psize),
-          _buf (other._buf),
           _timeout (other._timeout),
           _socket (std::move (other._socket))
         {
             other._allocated = false;
+            other._buf = nullptr;
             other._gsize = BUFSIZ / 2;
             other._psize = BUFSIZ / 2;
-            other._buf = nullptr;
             other._timeout = 30000;
         }
 
@@ -99,16 +99,16 @@ namespace join
             std::streambuf::operator= (std::move (other));
 
             _allocated = other._allocated;
+            _buf = other._buf;
             _gsize = other._gsize;
             _psize = other._psize;
-            _buf = other._buf;
             _timeout = other._timeout;
             _socket = std::move (other._socket);
 
             other._allocated = false;
+            other._buf = nullptr;
             other._gsize = BUFSIZ / 2;
             other._psize = BUFSIZ / 2;
-            other._buf = nullptr;
             other._timeout = 30000;
 
             return *this;
@@ -395,14 +395,14 @@ namespace join
         /// internal buffer status.
         bool _allocated = false;
 
+        /// internal buffer.
+        char* _buf = nullptr;
+
         /// internal buffer get area size.
         std::streamsize _gsize = BUFSIZ / 2;
 
         /// internal buffer put area size.
         std::streamsize _psize = BUFSIZ / 2;
-
-        /// internal buffer.
-        char* _buf = nullptr;
 
         /// timeout.
         int _timeout = 30000;
