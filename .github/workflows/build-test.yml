@@ -51,4 +51,3 @@ jobs:
       with:
         project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
         coverage-reports: /__w/join/join/lcov.info
-
