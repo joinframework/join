@@ -42,8 +42,11 @@ jobs:
       uses: codecov/codecov-action@v3.0.0
       with:
         token: ${{secrets.CODECOV_TOKEN}}
+        fail_ci_if_error: true
         file: /__w/join/join/lcov.info
         flags: unittests
+        gcov: true
+        verbose: true
 
     - name: Deploy coverage report to codacy
       uses: codacy/codacy-coverage-reporter-action@v1.3.0
