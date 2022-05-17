@@ -39,7 +39,7 @@ jobs:
         path-to-lcov: /__w/join/join/lcov.info
 
     - name: Deploy coverage report to codecove
-      uses: codecov/codecov-action@v3.0.0
+      uses: codecov/codecov-action@v3.1.0
       with:
         fail_ci_if_error: true
         token: ${{secrets.CODECOV_TOKEN}}
