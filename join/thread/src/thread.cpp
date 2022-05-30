@@ -65,6 +65,7 @@ void * Invoker::_routine (void * context)
 void * Invoker::routine (void)
 {
     _func ();
+    _done = true;
     return nullptr;
 }
 
@@ -112,7 +113,7 @@ bool Thread::joinable () const noexcept
 // =========================================================================
 bool Thread::running () const noexcept
 {
-    return (joinable () && (pthread_kill (_invoker->handle (), 0) == 0));
+    return (joinable () && !_invoker->_done);
 }
 
 // =========================================================================

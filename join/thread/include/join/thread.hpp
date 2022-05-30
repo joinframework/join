@@ -29,6 +29,7 @@
 #include <system_error>
 #include <functional>
 #include <memory>
+#include <atomic>
 
 // C.
 #include <pthread.h>
@@ -54,7 +55,8 @@ namespace join
          */
         template <class Function, class... Args>
         explicit Invoker (Function&& func, Args&&... args)
-        : _func (std::bind (std::forward <Function> (func), std::forward <Args> (args)...))
+        : _func (std::bind (std::forward <Function> (func), std::forward <Args> (args)...)),
+          _done (false)
         {
             pthread_attr_init (&_attr);
             pthread_create (&_handle, &_attr, _routine, this);
@@ -120,6 +122,9 @@ namespace join
 
         /// thread handle.
         pthread_t _handle;
+
+        /// completed flag.
+        std::atomic_bool _done;
 
         /// friendship with the thread class.
         friend class Thread;
