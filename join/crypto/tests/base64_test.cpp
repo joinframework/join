@@ -59,9 +59,9 @@ TEST (Base64, encode)
  */
 TEST (Base64, decode)
 {
-    EXPECT_EQ (BytesArray {}, Base64::decode (std::string {}));
     EXPECT_EQ (decodedArray1, Base64::decode (encodedString1));
     EXPECT_EQ (decodedArray2, Base64::decode (encodedString2));
+    EXPECT_EQ (BytesArray {}, Base64::decode (std::string {}));
 }
 
 /**
