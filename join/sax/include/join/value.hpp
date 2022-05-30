@@ -34,6 +34,7 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include <limits>
 
 // C.
 #include <cmath>
