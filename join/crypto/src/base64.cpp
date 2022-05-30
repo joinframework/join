@@ -85,7 +85,7 @@ std::string Base64::encode (const uint8_t* data, size_t size)
             out[k++] = _fillChar;
             out[k++] = _fillChar;
             break;
-        case 2:
+        default:
             b64.c[3] = data[i++];
             b64.c[2] = data[i++];
             out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask1 ) >> 26)];
@@ -142,7 +142,7 @@ BytesArray Base64::decode (const std::string& data)
             out[k++] = b64.c[3];
             out[k++] = b64.c[2];
             break;
-        case 2:
+        default:
             b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 26;
             b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 20;
             out[k++] = b64.c[3];
