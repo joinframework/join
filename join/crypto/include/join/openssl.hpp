@@ -37,6 +37,7 @@
 // C++.
 #include <memory>
 #include <vector>
+#include <string>
 
 namespace join
 {
@@ -162,6 +163,7 @@ namespace crypto
 
     using SslCtxPtr = std::shared_ptr <SSL_CTX>;
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     /**
      * @brief Custom functor for DH key deletion.
      */
@@ -191,6 +193,7 @@ namespace crypto
     };
 
     using EcdhKeyPtr = std::unique_ptr <EC_KEY, EcdhKeyDelete>;
+#endif
 
     /**
      * @brief initialize the OpenSSL libraries.
@@ -203,12 +206,16 @@ namespace crypto
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
     const std::string defaultCipher_ = "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:EECDH+ECDSA+CHACHA20:EECDH+aRSA+CHACHA20:EECDH+ECDSA+AESCCM:"
-                                      "EDH+DSS+AESGCM:EDH+aRSA+CHACHA20:EDH+aRSA+AESCCM:-AESCCM8:EECDH+ECDSA+AESCCM8:EDH+aRSA+AESCCM8";
+                                       "EDH+DSS+AESGCM:EDH+aRSA+CHACHA20:EDH+aRSA+AESCCM:-AESCCM8:EECDH+ECDSA+AESCCM8:EDH+aRSA+AESCCM8";
 
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
     const std::string defaultCipher_1_3_ = "TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:"
-                                          "TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256";
+                                           "TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256";
 #endif // OPENSSL_VERSION_NUMBER >= 0x1010101fL
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    const std::string defaultCurve_ = "prime256v1";
+#endif // OPENSSL_VERSION_NUMBER >= 0x30000000L
 }
 }
 #else // OPENSSL_VERSION_NUMBER >= 0x10100000L

@@ -439,6 +439,13 @@ namespace join
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_RENEGOTIATION);
         #endif
 
+        #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+            // use the default built-in Diffie-Hellman parameters.
+            SSL_CTX_set_dh_auto (_tlsContext.get (), 1);
+
+            // Set elliptic curve Diffie-Hellman key.
+            SSL_CTX_set1_groups_list (_tlsContext.get (), join::crypto::defaultCurve_.c_str ());
+        #else
             // Set Diffie-Hellman key.
             join::crypto::DhKeyPtr dh (getDh2236 ());
             if (dh)
@@ -452,6 +459,7 @@ namespace join
             {
                 SSL_CTX_set_tmp_ecdh (_tlsContext.get (), ecdh.get ());
             }
+        #endif
         }
 
         /**
@@ -684,6 +692,24 @@ namespace join
         }
     #endif
 
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        /**
+         * @brief set curve list.
+         * @param curves curve list.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCurve (const std::string &curves)
+        {
+            if (SSL_CTX_set1_groups_list (this->_tlsContext.get (), curves.c_str ()) == 0)
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            return 0;
+        }
+    #else
+
     protected:
         /**
          * @brief generate openssl Diffie-Hellman parameters.
@@ -745,7 +771,9 @@ namespace join
 
             return dh;
         }
+    #endif
 
+    protected:
         /// SSL/TLS context.
         join::crypto::SslCtxPtr _tlsContext;
 

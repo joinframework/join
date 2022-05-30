@@ -30,6 +30,7 @@
 
 // C++.
 #include <condition_variable>
+#include <thread>
 
 using join::Errc;
 using join::Tcp;

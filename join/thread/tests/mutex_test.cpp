@@ -30,6 +30,7 @@
 
 // C++.
 #include <future>
+#include <thread>
 
 using join::Mutex;
 using join::ScopedLock;
