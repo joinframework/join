@@ -31,18 +31,27 @@
 using join::Base64;
 using join::BytesArray;
 
-/// string to encode.
-const std::string decoded = "this is the string to encode";
+/// strings to encode.
+const std::string decodedString1 = "this is the string to encode";
+const std::string decodedString2 = "this is the string to encode !!!";
 
-/// string to decode.
-const std::string encoded = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZQ==";
+/// arrays to encode.
+const BytesArray decodedArray1 = BytesArray (decodedString1.begin (), decodedString1.end ());
+const BytesArray decodedArray2 = BytesArray (decodedString2.begin (), decodedString2.end ());
+
+/// strings to decode.
+const std::string encodedString1 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZQ==";
+const std::string encodedString2 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZSAhISE=";
 
 /**
  * @brief base64 encoding test.
  */
 TEST (Base64, encode)
 {
-    EXPECT_EQ (encoded, Base64::encode (decoded));
+    EXPECT_EQ (encodedString1, Base64::encode (decodedString1));
+    EXPECT_EQ (encodedString2, Base64::encode (decodedString2));
+    EXPECT_EQ (encodedString1, Base64::encode (decodedArray1));
+    EXPECT_EQ (encodedString2, Base64::encode (decodedArray2));
 }
 
 /**
@@ -50,7 +59,9 @@ TEST (Base64, encode)
  */
 TEST (Base64, decode)
 {
-    EXPECT_EQ (BytesArray (decoded.begin (), decoded.end ()), Base64::decode (encoded));
+    EXPECT_EQ (BytesArray {}, Base64::decode (std::string {}));
+    EXPECT_EQ (decodedArray1, Base64::decode (encodedString1));
+    EXPECT_EQ (decodedArray2, Base64::decode (encodedString2));
 }
 
 /**
