@@ -394,7 +394,7 @@ TEST_F (TlsAcceptor, setCipher_1_3)
 
     ASSERT_EQ (server.setCipher_1_3 ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (server.setCipher (join::crypto::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (server.setCipher_1_3 (join::crypto::defaultCipher_1_3_), 0) << join::lastError.message ();
 }
 #endif
 
@@ -408,7 +408,7 @@ TEST_F (TlsAcceptor, setCurve)
 
     ASSERT_EQ (server.setCurve ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (server.setCipher (join::crypto::defaultCurve_), 0) << join::lastError.message ();
+    ASSERT_EQ (server.setCurve (join::crypto::defaultCurve_), 0) << join::lastError.message ();
 }
 #endif
 
