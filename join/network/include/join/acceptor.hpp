@@ -444,7 +444,7 @@ namespace join
             SSL_CTX_set_dh_auto (_tlsContext.get (), 1);
 
             // Set elliptic curve Diffie-Hellman key.
-            SSL_CTX_set1_groups_list (_tlsContext.get (), defaultCurve_.c_str ());
+            SSL_CTX_set1_groups_list (_tlsContext.get (), join::crypto::defaultCurve_.c_str ());
         #else
             // Set Diffie-Hellman key.
             join::crypto::DhKeyPtr dh (getDh2236 ());
