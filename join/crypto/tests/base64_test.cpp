@@ -52,8 +52,6 @@ TEST (Base64, encode)
     EXPECT_EQ (encodedString2, Base64::encode (decodedString2));
     EXPECT_EQ (encodedString1, Base64::encode (decodedArray1));
     EXPECT_EQ (encodedString2, Base64::encode (decodedArray2));
-    EXPECT_EQ (encodedString1, Base64::encode (decodedArray1.data (), decodedArray1.size ()));
-    EXPECT_EQ (encodedString2, Base64::encode (decodedArray2.data (), decodedArray2.size ()));
 }
 
 /**

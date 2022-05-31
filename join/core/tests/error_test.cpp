@@ -104,8 +104,6 @@ TEST (ErrorCategory, equivalent)
     EXPECT_EQ (code, Errc::InvalidParam);
     code = std::make_error_code (std::errc::protocol_not_supported);
     EXPECT_EQ (code, Errc::InvalidParam);
-    code = std::make_error_code (std::errc::bad_file_descriptor);
-    EXPECT_EQ (code, Errc::InvalidParam);
     code = std::make_error_code (std::errc::not_a_socket);
     EXPECT_EQ (code, Errc::InvalidParam);
     code = std::make_error_code (std::errc::bad_address);
@@ -142,6 +140,8 @@ TEST (ErrorCategory, equivalent)
     EXPECT_EQ (code, Errc::OutOfMemory);
     code = std::make_error_code (std::errc::no_lock_available);
     EXPECT_EQ (code, Errc::OutOfMemory);
+    code = std::make_error_code (std::errc::bad_file_descriptor);
+    EXPECT_EQ (code, Errc::OperationFailed);
     code = std::make_error_code (std::errc::no_message);
     EXPECT_EQ (code, Errc::MessageUnknown);
     code = std::make_error_code (std::errc::bad_message);

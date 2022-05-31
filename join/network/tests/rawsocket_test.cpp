@@ -325,6 +325,8 @@ TEST_F (RawSocket, localEndpoint)
 {
     Raw::Socket rawSocket;
 
+    ASSERT_EQ (rawSocket.localEndpoint (), Raw::Endpoint {});
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.localEndpoint ().device (), _interface);
 }

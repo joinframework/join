@@ -96,7 +96,6 @@ bool ErrorCategory::equivalent (const std::error_code& code, int condition) cons
                    code == std::errc::address_family_not_supported ||
                    code == std::errc::invalid_argument ||
                    code == std::errc::protocol_not_supported ||
-                   code == std::errc::bad_file_descriptor ||
                    code == std::errc::not_a_socket ||
                    code == std::errc::bad_address ||
                    code == std::errc::no_protocol_option ||
@@ -120,6 +119,8 @@ bool ErrorCategory::equivalent (const std::error_code& code, int condition) cons
                    code == std::errc::no_buffer_space ||
                    code == std::errc::not_enough_memory ||
                    code == std::errc::no_lock_available;
+        case Errc::OperationFailed:
+            return code == std::errc::bad_file_descriptor;
         case Errc::MessageUnknown:
             return code == std::errc::no_message ||
                    code == std::errc::bad_message ||

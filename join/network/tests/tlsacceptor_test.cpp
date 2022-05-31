@@ -274,6 +274,7 @@ TEST_F (TlsAcceptor, localEndpoint)
     Tls::Acceptor server;
 
     ASSERT_EQ (server.localEndpoint (), Tls::Endpoint {});
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), _address);
     ASSERT_EQ (server.localEndpoint ().port (), _port);

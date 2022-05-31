@@ -128,6 +128,7 @@ TEST (TcpAcceptor, localEndpoint)
     Tcp::Acceptor server;
 
     ASSERT_EQ (server.localEndpoint (), Tcp::Endpoint {});
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), address);
     ASSERT_EQ (server.localEndpoint ().port (), port);
