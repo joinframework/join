@@ -105,21 +105,6 @@ TEST (Openssl, SslPtr)
     ASSERT_EQ (ctx, nullptr);
 }
 
-/**
- * @brief SslCtxPtr test.
- */
-TEST (Openssl, SslCtxPtr)
-{
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-    join::crypto::SslCtxPtr ctx (SSL_CTX_new (SSLv23_method ()), join::crypto::SslCtxDelete ());
-#else
-    join::crypto::SslCtxPtr ctx (SSL_CTX_new (TLS_method ()), join::crypto::SslCtxDelete ());
-#endif
-    ASSERT_NE (ctx, nullptr);
-    ctx.reset ();
-    ASSERT_EQ (ctx, nullptr);
-}
-
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
 /**
  * @brief DhKeyPtr test.
