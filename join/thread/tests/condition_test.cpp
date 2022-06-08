@@ -48,7 +48,7 @@ TEST (Condition, wait)
     Mutex mutex;
     auto task = std::async (std::launch::async, [&] () {
         std::this_thread::sleep_for (5ms);
-        ScopedLock lock (mutex);
+        ScopedLock lk (mutex);
         std::this_thread::sleep_for (15ms);
         ready = true;
         condition.signal ();
@@ -69,15 +69,15 @@ TEST (Condition, timedWait)
     Condition condition;
     Mutex mutex;
     auto task = std::async (std::launch::async, [&] () {
-        std::this_thread::sleep_for (5ms);
-        ScopedLock lock (mutex);
-        std::this_thread::sleep_for (15ms);
+        std::this_thread::sleep_for (10ms);
+        ScopedLock lk (mutex);
+        std::this_thread::sleep_for (10ms);
         ready = true;
         condition.broadcast ();
     });
     ScopedLock lock (mutex);
     auto beg = std::chrono::high_resolution_clock::now ();
-    EXPECT_FALSE (condition.timedWait (lock, 5ms, [&ready](){return ready;}));
+    EXPECT_FALSE (condition.timedWait (lock, 2ms, [&ready](){return ready;}));
     EXPECT_TRUE (condition.timedWait (lock, 50ms, [&ready](){return ready;}));
     auto end = std::chrono::high_resolution_clock::now ();
     EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);

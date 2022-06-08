@@ -154,7 +154,8 @@ namespace join
          */
         bool getIfNoCase (char expected) noexcept
         {
-            if (_len && (((_buf[_pos] ^ expected) == 0) || ((_buf[_pos] ^ expected) == 32)))
+            if (_len && (((_buf[_pos] ^ expected) == 0) ||
+                         ((_buf[_pos] ^ expected) == 32)))
             {
                 --_len;
                 ++_pos;
