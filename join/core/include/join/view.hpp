@@ -148,6 +148,22 @@ namespace join
         }
 
         /**
+         * @brief extracts expected character (case insensitive).
+         * @param expected expected character.
+         * @return true if extracted, false otherwise.
+         */
+        bool getIfNoCase (char expected) noexcept
+        {
+            if (_len && (((_buf[_pos] ^ expected) == 0) || ((_buf[_pos] ^ expected) == 32)))
+            {
+                --_len;
+                ++_pos;
+                return true;
+            }
+            return false;
+        }
+
+        /**
          * @brief .
          * @param buf .
          * @param count .
@@ -263,6 +279,22 @@ namespace join
         bool getIf (char expected) noexcept
         {
             if (!_in->eof () && (static_cast <char> (_in->peek ()) == expected))
+            {
+                _in->get ();
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * @brief extracts expected character (case insensitive).
+         * @param expected expected character.
+         * @return true if extracted, false otherwise.
+         */
+        bool getIfNoCase (char expected) noexcept
+        {
+            if (!_in->eof () && (((static_cast <char> (_in->peek ()) ^ expected) == 0) ||
+                                 ((static_cast <char> (_in->peek ()) ^ expected) == 32)))
             {
                 _in->get ();
                 return true;
