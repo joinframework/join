@@ -1306,6 +1306,10 @@ namespace join
         template <typename... Args>
         Value& emplaceBack (Args&&... args)
         {
+            if (index () == Null)
+            {
+                set <ArrayValue> ();
+            }
             return get <ArrayValue> ().emplace_back (std::forward <Args> (args)...);
         }
 
@@ -1317,6 +1321,10 @@ namespace join
          */
         Value& pushBack (const Value& value)
         {
+            if (index () == Null)
+            {
+                set <ArrayValue> ();
+            }
             get <ArrayValue> ().push_back (value);
             return get <ArrayValue> ().back ();
         }
@@ -1329,6 +1337,10 @@ namespace join
          */
         Value& pushBack (Value&& value)
         {
+            if (index () == Null)
+            {
+                set <ArrayValue> ();
+            }
             get <ArrayValue> ().emplace_back (std::move (value));
             return get <ArrayValue> ().back ();
         }
@@ -1442,6 +1454,86 @@ namespace join
             Writer writer (document);
             return writer.serialize (*this);
         }
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @param length the length of the json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (const char* document, size_t length);
+
+        /**
+         * @brief deserialize a json document.
+         * @param first the first character of the json document to deserialize.
+         * @param last the last character of the document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (const char* first, const char* last);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (const std::string& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::istream& document);
+
+        /**
+         * @brief serialize json data.
+         * @param document Document where to serialize json data.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonWrite (std::ostream& document, size_t indentation = 0);
+
+        /**
+         * @brief serialize canonicalized json data.
+         * @param document Document where to serialize canonicalized json data.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonCanonicalize (std::ostream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @param length the length of the msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (const char* document, size_t length);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param first the first character of the msgpack document to deserialize.
+         * @param last the last character of the document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (const char* first, const char* last);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (const std::string& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::istream& document);
+
+        /**
+         * @brief serialize msgpack data.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packWrite (std::ostream& document);
 
         // friendship with equal operator.
         friend constexpr bool operator== (const Value& lhs, const Value& rhs);
