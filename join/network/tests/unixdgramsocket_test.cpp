@@ -339,6 +339,8 @@ TEST_F (UnixDgramSocket, localEndpoint)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
+    ASSERT_EQ (unixSocket.localEndpoint (), UnixDgram::Endpoint {});
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.localEndpoint (), UnixDgram::Endpoint (_clientpath)) << join::lastError.message ();
@@ -352,6 +354,8 @@ TEST_F (UnixDgramSocket, remoteEndpoint)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
+    ASSERT_EQ (unixSocket.remoteEndpoint (), UnixDgram::Endpoint {});
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.remoteEndpoint (), UnixDgram::Endpoint (_serverpath)) << join::lastError.message ();

@@ -414,6 +414,8 @@ TEST_F (UnixStreamSocket, localEndpoint)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
+    ASSERT_EQ (unixSocket.localEndpoint (), UnixStream::Endpoint {});
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.localEndpoint (), UnixStream::Endpoint (_clientpath)) << join::lastError.message ();
@@ -427,6 +429,8 @@ TEST_F (UnixStreamSocket, remoteEndpoint)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
+    ASSERT_EQ (unixSocket.remoteEndpoint (), UnixStream::Endpoint {});
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.remoteEndpoint (), UnixStream::Endpoint (_serverpath)) << join::lastError.message ();

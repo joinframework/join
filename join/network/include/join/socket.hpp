@@ -45,6 +45,7 @@
 #include <fnmatch.h>
 #include <cassert>
 #include <fcntl.h>
+#include <poll.h>
 
 namespace join
 {
@@ -274,12 +275,6 @@ namespace join
          */
         virtual int canRead () const noexcept
         {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             int available = 0;
 
             // check if data can be read in the socket internal buffer.
@@ -299,12 +294,6 @@ namespace join
          */
         virtual bool waitReadyRead (int timeout = 0) const noexcept
         {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return false;
-            }
-
             return (this->wait (true, false, timeout) == 0);
         }
 
@@ -316,12 +305,6 @@ namespace join
          */
         virtual int read (char *data, unsigned long maxSize) noexcept
         {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             struct iovec iov;
             iov.iov_base = data;
             iov.iov_len = maxSize;
@@ -358,12 +341,6 @@ namespace join
          */
         virtual bool waitReadyWrite (int timeout = 0) const noexcept
         {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return false;
-            }
-
             return (this->wait (false, true, timeout) == 0);
         }
 
@@ -375,12 +352,6 @@ namespace join
          */
         virtual int write (const char *data, unsigned long maxSize) noexcept
         {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             struct iovec iov;
             iov.iov_base = const_cast <char *> (data);
             iov.iov_len = maxSize;
@@ -446,6 +417,7 @@ namespace join
                     return -1;
                 }
             }
+
             return 0;
         }
 
@@ -457,12 +429,6 @@ namespace join
          */
         virtual int setOption (Option option, int value) noexcept
         {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             int optlevel, optname;
 
             switch (option)
@@ -635,37 +601,27 @@ namespace join
          */
         int wait (bool wantRead, bool wantWrite, int timeout) const noexcept
         {
-            timeval time, *ptime = nullptr;
-
-            if (timeout > 0)
-            {
-                time.tv_sec = timeout / 1000;
-                time.tv_usec = (timeout % 1000) * 1000;
-                ptime = &time;
-            }
-
-            fd_set rfds, *prfds = nullptr;
-            fd_set wfds, *pwfds = nullptr;
+            struct pollfd handle { .fd = this->_handle, .events = 0, .revents = 0 };
 
             if (wantRead)
             {
-                FD_ZERO (&rfds);
-                FD_SET (this->_handle, &rfds);
-                prfds = &rfds;
+                handle.events |= POLLIN;
             }
 
             if (wantWrite)
             {
-                FD_ZERO (&wfds);
-                FD_SET (this->_handle, &wfds);
-                pwfds = &wfds;
+                handle.events |= POLLOUT;
             }
 
-            int nset = ::select (this->_handle + 1, prfds, pwfds, 0, ptime);
+            int nset = (handle.fd > -1) ? ::poll (&handle, 1, timeout) : -1;
             if (nset != 1)
             {
                 if (nset == -1)
                 {
+                    if (handle.fd == -1)
+                    {
+                        errno = EBADF;
+                    }
                     lastError = std::make_error_code (static_cast <std::errc> (errno));
                 }
                 else
@@ -961,12 +917,6 @@ namespace join
          */
         virtual int readFrom (char* data, unsigned long maxSize, Endpoint* endpoint = nullptr) noexcept
         {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             Endpoint from;
             socklen_t addrLen = from.length ();
 
@@ -1537,7 +1487,6 @@ namespace join
             }
             else if (this->_state != State::Connecting)
             {
-                lastError = make_error_code (Errc::OperationFailed);
                 return false;
             }
 
@@ -1545,15 +1494,8 @@ namespace join
             socklen_t optlen = sizeof (optval);
 
             int result = ::getsockopt (this->_handle, SOL_SOCKET, SO_ERROR, &optval, &optlen);
-            if (result == -1)
+            if ((result == -1) || (optval != 0))
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return false;
-            }
-
-            if (optval != 0)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (optval));
                 return false;
             }
 

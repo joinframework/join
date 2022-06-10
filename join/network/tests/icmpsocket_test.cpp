@@ -399,6 +399,8 @@ TEST_F (IcmpSocket, localEndpoint)
 {
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
+    ASSERT_EQ (icmpSocket.localEndpoint (), Icmp::Endpoint {});
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (icmpSocket.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.localEndpoint ().ip (), Icmp::Resolver::resolve (_host).ip ()) << join::lastError.message ();
