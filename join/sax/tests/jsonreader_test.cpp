@@ -227,6 +227,13 @@ TEST (JsonReader, pass)
     ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
 
     stream.clear ();
+    stream.str ("[{}]");
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isObject ());
+
+    stream.clear ();
     stream.str ("{}");
     ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
@@ -590,6 +597,10 @@ TEST (JsonReader, fail)
     ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
 
     stream.clear ();
+    stream.str ("[[[[[[[[[[[[[[[[[[[{\"Too deep\"}]]]]]]]]]]]]]]]]]]]");
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
+
+    stream.clear ();
     stream.str ("{\"Missing colon\" null}");
     ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
 
@@ -882,7 +893,6 @@ TEST (JsonReader, dbl)
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), -9223372036854775809.0);
 
-    /*
     stream.clear ();
     stream.str ("[0.9868011474609375]");
     ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
@@ -890,7 +900,6 @@ TEST (JsonReader, dbl)
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 0.9868011474609375);
-    */
 
     stream.clear ();
     stream.str ("[123e34]");

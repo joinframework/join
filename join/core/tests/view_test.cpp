@@ -111,9 +111,27 @@ TEST (StringView, getIf)
 {
     StringView view ("hello world");
 
+    ASSERT_FALSE (view.getIf ('X'));
     ASSERT_FALSE (view.getIf ('x'));
+    ASSERT_FALSE (view.getIf ('H'));
     ASSERT_TRUE  (view.getIf ('h'));
+    ASSERT_FALSE (view.getIf ('E'));
     ASSERT_TRUE  (view.getIf ('e'));
+}
+
+/**
+ * @brief getIfNoCase test.
+ */
+TEST (StringView, getIfNoCase)
+{
+    StringView view ("hello world");
+
+    ASSERT_FALSE (view.getIfNoCase ('x'));
+    ASSERT_FALSE (view.getIfNoCase ('X'));
+    ASSERT_TRUE  (view.getIfNoCase ('h'));
+    ASSERT_TRUE  (view.getIfNoCase ('E'));
+    ASSERT_TRUE  (view.getIfNoCase ('l'));
+    ASSERT_TRUE  (view.getIfNoCase ('L'));
 }
 
 /**
@@ -250,9 +268,28 @@ TEST (StreamView, getIf)
     std::stringstream msg ("hello world");
     StreamView view (msg);
 
+    ASSERT_FALSE (view.getIf ('X'));
     ASSERT_FALSE (view.getIf ('x'));
+    ASSERT_FALSE (view.getIf ('H'));
     ASSERT_TRUE  (view.getIf ('h'));
+    ASSERT_FALSE (view.getIf ('E'));
     ASSERT_TRUE  (view.getIf ('e'));
+}
+
+/**
+ * @brief getIfNoCase test.
+ */
+TEST (StreamView, getIfNoCase)
+{
+    std::stringstream msg ("hello world");
+    StreamView view (msg);
+
+    ASSERT_FALSE (view.getIfNoCase ('x'));
+    ASSERT_FALSE (view.getIfNoCase ('X'));
+    ASSERT_TRUE  (view.getIfNoCase ('h'));
+    ASSERT_TRUE  (view.getIfNoCase ('E'));
+    ASSERT_TRUE  (view.getIfNoCase ('l'));
+    ASSERT_TRUE  (view.getIfNoCase ('L'));
 }
 
 /**
