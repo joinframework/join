@@ -123,10 +123,8 @@ namespace join
          */
         virtual int setObject (const Object& object) override
         {
-            if (startObject (object.size ()) == -1)
-            {
-                return -1;
-            }
+            startObject (object.size ());
+
             std::vector <const Member *> members;
             std::transform (object.begin (), object.end (), std::back_inserter (members), [] (const Member &member) {return &member;});
             std::sort (members.begin (), members.end (), [] (const Member *a, const Member *b) { 
@@ -135,6 +133,7 @@ namespace join
                 std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.data ());
                 return wa < wb;
             });
+
             for (auto const& member : members)
             {
                 if ((setKey (member->first) == -1) || (serialize (member->second) == -1))
@@ -142,6 +141,7 @@ namespace join
                     return -1;
                 }
             }
+
             return stopObject ();
         }
 

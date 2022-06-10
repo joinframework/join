@@ -5369,11 +5369,51 @@ TEST (Value, swap)
 TEST (Value, packRead)
 {
     Value value;
-    std::stringstream in (std::string ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73',
-                                        '\x74', '\xcb', '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a',
-                                        '\x68', '\x5d'}));
 
-    ASSERT_NE (value.packRead (in), -1) << join::lastError.message ();
+    std::string str ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73',
+                      '\x74', '\xcb', '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a',
+                      '\x68', '\x5d'});
+    ASSERT_NE (value.packRead (str), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.packRead (str.c_str (), str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.packRead (str.data (), str.data () + str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringstream stream (str);
+    ASSERT_NE (value.packRead (stream), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);
@@ -5412,9 +5452,49 @@ TEST (Value, packWrite)
 TEST (Value, jsonRead)
 {
     Value value;
-    std::stringstream in ("[1,null,true,\"test\",1.23456789e-13]");
 
-    ASSERT_NE (value.jsonRead (in), -1) << join::lastError.message ();
+    std::string str = "[1,null,true,\"test\",1.23456789e-13]";
+    ASSERT_NE (value.jsonRead (str), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.jsonRead (str.c_str (), str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.jsonRead (str.data (), str.data () + str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringstream stream (str);
+    ASSERT_NE (value.jsonRead (stream), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);

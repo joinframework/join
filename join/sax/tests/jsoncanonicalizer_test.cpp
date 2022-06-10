@@ -71,11 +71,12 @@ TEST (JsonCanonicalizer, array)
     Value value;
     value.pushBack (56);
     value.pushBack (Object {{"d", true}, {"10", nullptr}, {"1", Array {}}});
+    value.pushBack (-53.0);
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
     ASSERT_NE (writer.serialize (value), -1) << join::lastError.message ();
-    EXPECT_EQ (out.str (), "[56,{\"1\":[],\"10\":null,\"d\":true}]");
+    EXPECT_EQ (out.str (), "[56,{\"1\":[],\"10\":null,\"d\":true},-53]");
 }
 
 /**

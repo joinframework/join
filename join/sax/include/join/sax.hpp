@@ -363,10 +363,8 @@ namespace join
          */
         virtual int setArray (const Array& array)
         {
-            if (startArray (array.size ()) == -1)
-            {
-                return -1;
-            }
+            startArray (array.size ());
+
             for (auto const& element : array)
             {
                 if (serialize (element) == -1)
@@ -374,6 +372,7 @@ namespace join
                     return -1;
                 }
             }
+
             return stopArray ();
         }
 
@@ -384,10 +383,8 @@ namespace join
          */
         virtual int setObject (const Object& object)
         {
-            if (startObject (object.size ()) == -1)
-            {
-                return -1;
-            }
+            startObject (object.size ());
+
             for (auto const& member : object)
             {
                 if ((setKey (member.first) == -1) || (serialize (member.second) == -1))
@@ -395,6 +392,7 @@ namespace join
                     return -1;
                 }
             }
+
             return stopObject ();
         }
 
