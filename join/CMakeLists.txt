@@ -45,8 +45,9 @@ set(PUBLIC_HEADERS
     sax/include/join/dtoa.hpp
     sax/include/join/value.hpp
     sax/include/join/sax.hpp
-    sax/include/join/json.hpp
     sax/include/join/pack.hpp
+    sax/include/join/json.hpp
+    sax/include/join/canonicaljson.hpp
 )
 
 set(SOURCES
@@ -60,6 +61,7 @@ set(SOURCES
     network/src/macaddress.cpp
     network/src/ipaddress.cpp
     network/src/arp.cpp
+    sax/src/value.cpp
 )
 
 add_library(${PROJECT_NAME} ${SOURCES})

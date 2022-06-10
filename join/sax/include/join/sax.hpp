@@ -310,10 +310,10 @@ namespace join
 
         /**
          * @brief Serialize data.
-         * @param value Value object to serialize.
+         * @param value Value to serialize.
          * @return 0 on success, -1 otherwise.
          */
-        int serialize (const Value& value)
+        virtual int serialize (const Value& value)
         {
             switch (value.index ())
             {
@@ -342,32 +342,10 @@ namespace join
                     return setString (value.get <Value::String> ());
 
                 case Value::ArrayValue:
-                    if (startArray (value.size ()) == -1)
-                    {
-                        return -1;
-                    }
-                    for (auto const& element : value.getArray ())
-                    {
-                        if (serialize (element) == -1)
-                        {
-                            return -1;
-                        }
-                    }
-                    return stopArray ();
+                    return setArray (value.get <Value::ArrayValue> ());
 
                 case Value::ObjectValue:
-                    if (startObject (value.size ()) == -1)
-                    {
-                        return -1;
-                    }
-                    for (auto const& element : value.getObject ())
-                    {
-                        if ((setKey (element.first) == -1) || (serialize (element.second) == -1))
-                        {
-                            return -1;
-                        }
-                    }
-                    return stopObject ();
+                    return setObject (value.get <Value::ObjectValue> ());
 
                 default:
                     join::lastError = make_error_code (SaxErrc::InvalidValue);
@@ -378,6 +356,48 @@ namespace join
         }
 
     protected:
+        /**
+         * @brief set array value.
+         * @param value array value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int setArray (const Array& array)
+        {
+            if (startArray (array.size ()) == -1)
+            {
+                return -1;
+            }
+            for (auto const& element : array)
+            {
+                if (serialize (element) == -1)
+                {
+                    return -1;
+                }
+            }
+            return stopArray ();
+        }
+
+        /**
+         * @brief set object value.
+         * @param value array value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int setObject (const Object& object)
+        {
+            if (startObject (object.size ()) == -1)
+            {
+                return -1;
+            }
+            for (auto const& member : object)
+            {
+                if ((setKey (member.first) == -1) || (serialize (member.second) == -1))
+                {
+                    return -1;
+                }
+            }
+            return stopObject ();
+        }
+
         /**
          * @brief append data to output stream and update data size.
          * @param data data to append to output stream.

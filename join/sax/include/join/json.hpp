@@ -404,12 +404,12 @@ namespace join
             return 0;
         }
 
-    private:
+    protected:
         /**
          * @brief write integer value.
          * @param value integer value to write.
          */
-        void writeInt (int32_t value)
+        virtual void writeInt (int32_t value)
         {
             if (value == std::numeric_limits <int32_t>::min ())
             {
@@ -431,7 +431,7 @@ namespace join
          * @brief write unsigned integer value.
          * @param value unsigned integer value to write.
          */
-        void writeUint (uint32_t value)
+        virtual void writeUint (uint32_t value)
         {
             writeUint64 (static_cast <uint64_t> (value));
         }
@@ -440,7 +440,7 @@ namespace join
          * @brief write 64 bits integer value.
          * @param value 64 bits integer value to write.
          */
-        void writeInt64 (int64_t value)
+        virtual void writeInt64 (int64_t value)
         {
             if (value == std::numeric_limits <int64_t>::min ())
             {
@@ -462,7 +462,7 @@ namespace join
          * @brief write 64 bits unsigned integer value.
          * @param value 64 bits unsigned integer value to write.
          */
-        void writeUint64 (uint64_t value)
+        virtual void writeUint64 (uint64_t value)
         {
             std::stack <char> stack;
             while (value)
@@ -485,7 +485,7 @@ namespace join
          * @brief write real value.
          * @param value real value to write.
          */
-        void writeDouble (double value)
+        virtual void writeDouble (double value)
         {
             char buf[25];
             char* end = join::dtoa (buf, value);
@@ -499,7 +499,7 @@ namespace join
          * @param codepoint calculated UTF8 codepoint.
          * @return 0 on success, -1 otherwise.
          */
-        int utf8Codepoint (std::string::const_iterator& cur, std::string::const_iterator& end, uint32_t& codepoint)
+        virtual int utf8Codepoint (std::string::const_iterator& cur, std::string::const_iterator& end, uint32_t& codepoint)
         {
             uint8_t u0 = static_cast <uint8_t> (*cur);
             if (u0 < 0x80)
@@ -568,7 +568,7 @@ namespace join
          * @param value string value to escape.
          * @return 0 on success, -1 otherwise.
          */
-        int writeEscaped (const std::string& value)
+        virtual int writeEscaped (const std::string& value)
         {
             auto cur = value.cbegin ();
             auto end = value.cend ();
@@ -715,7 +715,7 @@ namespace join
     };
 
     /**
-     * @brief JSON parsing mode.
+     * @brief JSON deserialization mode.
      */
     enum JsonReadMode
     {
