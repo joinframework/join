@@ -227,6 +227,13 @@ TEST (JsonReader, pass)
     ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
 
     stream.clear ();
+    stream.str ("[{}]");
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isObject ());
+
+    stream.clear ();
     stream.str ("{}");
     ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
@@ -587,6 +594,10 @@ TEST (JsonReader, fail)
 
     stream.clear ();
     stream.str ("[[[[[[[[[[[[[[[[[[[[\"Too deep\"]]]]]]]]]]]]]]]]]]]]");
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
+
+    stream.clear ();
+    stream.str ("[[[[[[[[[[[[[[[[[[[{\"Too deep\"}]]]]]]]]]]]]]]]]]]]");
     ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
 
     stream.clear ();

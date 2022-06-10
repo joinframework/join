@@ -607,14 +607,9 @@ namespace join
                     _stack.push (&parent->insert (Member (_curkey, std::move (array))));
                     _curkey.clear ();
                 }
-                else if (parent->is <Value::ArrayValue> ())
-                {
-                    _stack.push (&parent->pushBack (std::move (array)));
-                }
                 else
                 {
-                    join::lastError = make_error_code (SaxErrc::InvalidParent);
-                    return -1;
+                    _stack.push (&parent->pushBack (std::move (array)));
                 }
             }
 
@@ -666,14 +661,9 @@ namespace join
                     _stack.push (&parent->insert (Member (_curkey, std::move (object))));
                     _curkey.clear ();
                 }
-                else if (parent->is <Value::ArrayValue> ())
-                {
-                    _stack.push (&parent->pushBack (std::move (object)));
-                }
                 else
                 {
-                    join::lastError = make_error_code (SaxErrc::InvalidParent);
-                    return -1;
+                    _stack.push (&parent->pushBack (std::move (object)));
                 }
             }
 

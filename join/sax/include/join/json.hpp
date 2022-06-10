@@ -969,9 +969,9 @@ namespace join
 
         /**
          * @brief convert double using fast path.
-         * @param significand significand digitd.
+         * @param significand significand digits.
          * @param exponent exponent.
-         * @param digits number of digit.
+         * @param digits number of digits.
          * @param value converted value.
          * @return true on success, false otherwise.
          */
