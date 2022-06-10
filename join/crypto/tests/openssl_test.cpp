@@ -73,20 +73,6 @@ TEST (Openssl, EvpMdCtxPtr)
 }
 
 /**
- * @brief EvpMdCtxPtr test.
- */
-TEST (Openssl, StackOfX509NamePtr)
-{
-}
-
-/**
- * @brief StackOfGeneralNamePtr test.
- */
-TEST (Openssl, StackOfGeneralNamePtr)
-{
-}
-
-/**
  * @brief SslPtr test.
  */
 TEST (Openssl, SslPtr)
