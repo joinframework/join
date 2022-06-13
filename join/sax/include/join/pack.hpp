@@ -610,7 +610,7 @@ namespace join
             }
             else
             {
-                len = static_cast <uint8_t> (document.get ()) & ~0x90;
+                len = unpack <uint8_t> (document) & ~0x90;
             }
 
             if (JOIN_SAX_UNLIKELY (startArray (len) == -1))
@@ -651,7 +651,7 @@ namespace join
             }
             else
             {
-                len = static_cast <uint8_t> (document.get ()) & ~0x80;
+                len = unpack <uint8_t> (document) & ~0x80;
             }
 
             if (JOIN_SAX_UNLIKELY (startObject (len) == -1))
@@ -702,7 +702,7 @@ namespace join
             }
             else
             {
-                len = static_cast <uint8_t> (document.get ()) & ~0xa0;
+                len = unpack <uint8_t> (document) & ~0xa0;
             }
 
             std::string output;
