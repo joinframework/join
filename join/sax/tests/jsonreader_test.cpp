@@ -597,7 +597,7 @@ TEST (JsonReader, fail)
     ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
 
     stream.clear ();
-    stream.str ("[[[[[[[[[[[[[[[[[[[{\"Too deep\"}]]]]]]]]]]]]]]]]]]]");
+    stream.str ("[[[[[[[[[[[[[[[[[[[{\"Too deep\":0}]]]]]]]]]]]]]]]]]]]");
     ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
 
     stream.clear ();

@@ -543,6 +543,15 @@ TEST (PackReader, fail)
     ASSERT_NE (value.deserialize <PackReader> (stream), 0);
 
     stream.clear ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
+                              '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdf', '\x00', '\x00', '\x00', '\x01',
+                              '\xA8', '\x54', '\x6F', '\x6F', '\x20', '\x64', '\x65', '\x65', '\x70', '\x00'}));
+    ASSERT_NE (value.deserialize <PackReader> (stream), 0);
+
+    stream.clear ();
     stream.str (std::string ({'\xdc', '\x00', '\x01', '\xce', '\x49', '\x96', '\x02'}));
     ASSERT_NE (value.deserialize <PackReader> (stream), 0);
 
