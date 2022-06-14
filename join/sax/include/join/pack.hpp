@@ -739,11 +739,6 @@ namespace join
             {
                 len = unpack <uint8_t> (document);
             }
-            else
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
-                return -1;
-            }
 
             std::string output;
             output.resize (len);

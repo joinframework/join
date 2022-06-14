@@ -491,6 +491,18 @@ TEST (PackReader, fail)
                               '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01',
                               '\xa8', '\x54', '\x6f', '\x6f', '\x20', '\x64', '\x65', '\x65', '\x70'}));
     ASSERT_NE (value.deserialize <PackReader> (stream), 0);
+
+    stream.clear ();
+    stream.str (std::string ({'\xdc', '\x00', '\x01', '\xce', '\x49', '\x96', '\x02'}));
+    ASSERT_NE (value.deserialize <PackReader> (stream), 0);
+
+    stream.clear ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xda', '\x00', '\x05', '\x48', '\x65', '\x6c', '\x6c'}));
+    ASSERT_NE (value.deserialize <PackReader> (stream), 0);
+
+    stream.clear ();
+    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc5', '\x00', '\x05', '\x48', '\x65', '\x6c', '\x6c'}));
+    ASSERT_NE (value.deserialize <PackReader> (stream), 0);
 }
 
 /**
