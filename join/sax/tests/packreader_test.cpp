@@ -562,6 +562,18 @@ TEST (PackReader, fail)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc5', '\x00', '\x05', '\x48', '\x65', '\x6c', '\x6c'}));
     ASSERT_NE (value.deserialize <PackReader> (stream), 0);
+
+    stream.clear ();
+    stream.str (std::string ({'\x81', '\xa1'}));
+    ASSERT_NE (value.deserialize <PackReader> (stream), 0);
+
+    stream.clear ();
+    stream.str (std::string ({'\x81', '\xa1', '\x31', '\xcc'}));
+    ASSERT_NE (value.deserialize <PackReader> (stream), 0);
+
+    stream.clear ();
+    stream.str (std::string ({'\xd7'}));
+    ASSERT_NE (value.deserialize <PackReader> (stream), 0);
 }
 
 /**
