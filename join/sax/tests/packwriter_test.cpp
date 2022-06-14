@@ -374,9 +374,9 @@ TEST (PackWriter, setString)
 }
 
 /**
- * @brief Test startArray method.
+ * @brief Test startArray, stopArray methods.
  */
-TEST (PackWriter, startArray)
+TEST (PackWriter, setArray)
 {
     std::stringstream stream;
     PackWriter packWriter (stream);
@@ -403,9 +403,9 @@ TEST (PackWriter, startArray)
 }
 
 /**
- * @brief Test startObject method.
+ * @brief Test startObject, stopObject methods.
  */
-TEST (PackWriter, startObject)
+TEST (PackWriter, setObject)
 {
     std::stringstream stream;
     PackWriter packWriter (stream);

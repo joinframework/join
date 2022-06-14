@@ -503,39 +503,39 @@ namespace join
         template <typename ViewType>
         int readValue (ViewType& document)
         {
-            char head = document.peek ();
+            uint8_t head = static_cast <uint8_t> (document.peek ());
 
             try
             {
-                if (isArray (static_cast <uint8_t> (head)))
+                if (isArray (head))
                 {
                     return readArray (document);
                 }
-                else if (isObject (static_cast <uint8_t> (head)))
+                else if (isObject (head))
                 {
                     return readObject (document);
                 }
-                else if (isNull (static_cast <uint8_t> (head)))
+                else if (isNull (head))
                 {
                     return readNull (document);
                 }
-                else if (isFalse (static_cast <uint8_t> (head)))
+                else if (isFalse (head))
                 {
                     return readFalse (document);
                 }
-                else if (isTrue (static_cast <uint8_t> (head)))
+                else if (isTrue (head))
                 {
                     return readTrue (document);
                 }
-                else if (isString (static_cast <uint8_t> (head)))
+                else if (isString (head))
                 {
                     return readString (document);
                 }
-                else if (isBin (static_cast <uint8_t> (head)))
+                else if (isBin (head))
                 {
                     return readBin (document);
                 }
-                else if (isNumber (static_cast <uint8_t> (head)))
+                else if (isNumber (head))
                 {
                     return readNumber (document);
                 }
@@ -610,7 +610,7 @@ namespace join
             }
             else
             {
-                len = static_cast <uint8_t> (document.get ()) & ~0x90;
+                len = unpack <uint8_t> (document) & ~0x90;
             }
 
             if (JOIN_SAX_UNLIKELY (startArray (len) == -1))
@@ -651,7 +651,7 @@ namespace join
             }
             else
             {
-                len = static_cast <uint8_t> (document.get ()) & ~0x80;
+                len = unpack <uint8_t> (document) & ~0x80;
             }
 
             if (JOIN_SAX_UNLIKELY (startObject (len) == -1))
@@ -702,7 +702,7 @@ namespace join
             }
             else
             {
-                len = static_cast <uint8_t> (document.get ()) & ~0xa0;
+                len = unpack <uint8_t> (document) & ~0xa0;
             }
 
             std::string output;
@@ -738,11 +738,6 @@ namespace join
             else if (document.getIf (0xc4))
             {
                 len = unpack <uint8_t> (document);
-            }
-            else
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
-                return -1;
             }
 
             std::string output;

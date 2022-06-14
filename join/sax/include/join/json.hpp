@@ -987,12 +987,6 @@ namespace join
             {
                 value = static_cast <double> (significand);
 
-                if (JOIN_SAX_UNLIKELY (value == 0))
-                {
-                    value = 0.0;
-                    return true;
-                }
-
                 if ((exponent > 22) && (exponent < (22 + 16)))
                 {
                     value *= pow10[exponent - 22];
@@ -1010,6 +1004,11 @@ namespace join
                         value *= pow10[exponent];
                     }
 
+                    return true;
+                }
+
+                if (JOIN_SAX_UNLIKELY (value == 0.0))
+                {
                     return true;
                 }
             }
@@ -1061,8 +1060,7 @@ namespace join
                         break;
                     }
 
-                    u = (u * 10) + digit;
-                    document.get ();
+                    u = (u * 10) + (document.get () - '0');
                     ++digits;
                 }
             }
@@ -1095,7 +1093,7 @@ namespace join
                 }
             }
 
-            int64_t frac = 0;
+            int64_t exponent = 0;
 
             if (document.getIf ('.'))
             {
@@ -1108,14 +1106,13 @@ namespace join
                     {
                         ++digits;
                     }
-                    --frac;
+                    --exponent;
                 }
             }
 
-            int64_t exp = 0;
-
             if (document.getIf ('e') || document.getIf ('E'))
             {
+                int64_t exp = 0;
                 bool negExp = false;
                 isDouble = true;
 
@@ -1130,14 +1127,12 @@ namespace join
 
                     while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
                     {
-                        int digit = document.peek () - '0';
+                        int digit = document.get () - '0';
 
                         if (JOIN_SAX_LIKELY (exp <= ((std::numeric_limits <int>::max () - digit) / 10)))
                         {
                             exp = (exp * 10) + digit;
                         }
-
-                        document.get ();
                     }
                 }
                 else
@@ -1146,18 +1141,12 @@ namespace join
                     return -1;
                 }
 
-                if (negExp)
-                {
-                    exp = -exp;
-                }
+                exponent += negExp ? -exp : exp;
             }
-
-            int64_t exponent = exp + frac;
 
             if (isDouble)
             {
                 double d = 0.0;
-
                 if (strtodFast (u, exponent, digits, d))
                 {
                     return setDouble (negative ? -d : d);
