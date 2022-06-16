@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/canonicaljson.hpp>
+#include <join/json.hpp>
 
 // libraries.
 #include <gtest/gtest.h>

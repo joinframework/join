@@ -47,7 +47,6 @@ set(PUBLIC_HEADERS
     sax/include/join/sax.hpp
     sax/include/join/pack.hpp
     sax/include/join/json.hpp
-    sax/include/join/canonicaljson.hpp
 )
 
 set(SOURCES
@@ -73,7 +72,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${PRIVATE_HEADER_DIRS})
 
 target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES} pthread)
 
-install(TARGETS ${PROJECT_NAME} 
+install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     PUBLIC_HEADER DESTINATION include/join
@@ -87,4 +86,3 @@ add_subdirectory(thread)
 add_subdirectory(crypto)
 add_subdirectory(network)
 add_subdirectory(sax)
-
