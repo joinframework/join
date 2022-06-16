@@ -29,6 +29,10 @@
 #include <join/dtoa.hpp>
 #include <join/sax.hpp>
 
+// C++.
+#include <codecvt>
+#include <locale>
+
 namespace join
 {
     /**
@@ -715,6 +719,136 @@ namespace join
     };
 
     /**
+     * @brief JSON canonicalizer class.
+     */
+    class JsonCanonicalizer : public JsonWriter
+    {
+    public:
+        /**
+         * @brief create instance.
+         * @param document JSON document to create.
+         */
+        JsonCanonicalizer (std::ostream& document)
+        : JsonWriter (document, 0)
+        {
+        }
+
+        /**
+         * @brief copy constructor.
+         * @param other object to copy.
+         */
+        JsonCanonicalizer (const JsonCanonicalizer& other) = delete;
+
+        /**
+         * @brief copy assignment.
+         * @param other object to copy.
+         * @return a reference of the current object.
+         */
+        JsonCanonicalizer& operator= (const JsonCanonicalizer& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other object to move.
+         */
+        JsonCanonicalizer (JsonCanonicalizer&& other) = delete;
+
+        /**
+         * @brief move assignment.
+         * @param other object to move.
+         * @return a reference of the current object.
+         */
+        JsonCanonicalizer& operator= (JsonCanonicalizer&& other) = delete;
+
+        /**
+         * @brief destroy instance.
+         */
+        virtual ~JsonCanonicalizer () = default;
+
+        /**
+         * @brief set real value.
+         * @param value real value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int setDouble (double value) override
+        {
+            array ();
+            if (std::isfinite (value))
+            {
+                if ((std::trunc (value) == value) && 
+                    (value >= 0) &&
+                    (value < static_cast <double> (std::numeric_limits <uint64_t>::max ())))
+                {
+                    writeUint64 (static_cast <uint64_t> (value));
+                }
+                else if ((std::trunc (value) == value) &&
+                         (value >= static_cast <double> (std::numeric_limits <int64_t>::min ())) &&
+                         (value <  static_cast <double> (std::numeric_limits <int64_t>::max ())))
+                {
+                    writeInt64 (static_cast <int64_t> (value));
+                }
+                else
+                {
+                    writeDouble (value);
+                }
+            }
+            else
+            {
+                append ("null", 4);
+            }
+            _first = false;
+            return 0;
+        }
+
+    protected:
+        /**
+         * @brief set object value.
+         * @param value array value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int setObject (const Object& object) override
+        {
+            startObject (object.size ());
+
+            std::vector <const Member *> members;
+            std::transform (object.begin (), object.end (), std::back_inserter (members), [] (const Member &member) {return &member;});
+            std::sort (members.begin (), members.end (), [] (const Member *a, const Member *b) { 
+                std::wstring_convert <std::codecvt_utf8_utf16 <char16_t>, char16_t> cvt_utf8_utf16;
+                std::u16string wa = cvt_utf8_utf16.from_bytes (a->first.data ());
+                std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.data ());
+                return wa < wb;
+            });
+
+            for (auto const& member : members)
+            {
+                if ((setKey (member->first) == -1) || (serialize (member->second) == -1))
+                {
+                    return -1;
+                }
+            }
+
+            return stopObject ();
+        }
+
+        /**
+         * @brief write real value.
+         * @param value real value to write.
+         */
+        virtual void writeDouble (double value) override
+        {
+            char beg[25];
+            char* end = join::dtoa (beg, value);
+            for (char* pos = beg; pos < end; ++pos)
+            {
+                append (*pos);
+                if ((*pos == 'e') && (*(pos + 1) != '-'))
+                {
+                    append ('+');
+                }
+            }
+        }
+    };
+
+    /**
      * @brief JSON deserialization mode.
      */
     enum JsonReadMode
@@ -971,11 +1105,10 @@ namespace join
          * @brief convert double using fast path.
          * @param significand significand digits.
          * @param exponent exponent.
-         * @param digits number of digits.
          * @param value converted value.
          * @return true on success, false otherwise.
          */
-        bool strtodFast (uint64_t significand, int64_t exponent, uint64_t digits, double &value)
+        bool strtodFast (uint64_t significand, int64_t exponent, double &value)
         {
             static const double pow10[] = {
                 1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10,
@@ -983,37 +1116,54 @@ namespace join
                 1e22
             };
 
-            if (JOIN_SAX_LIKELY ((exponent >= -325) && (exponent <= 308) && (digits <= 19)))
+            value = static_cast <double> (significand);
+
+            if ((exponent > 22) && (exponent < (22 + 16)))
             {
-                value = static_cast <double> (significand);
+                value *= pow10[exponent - 22];
+                exponent = 22;
+            }
 
-                if ((exponent > 22) && (exponent < (22 + 16)))
+            if ((exponent >= -22) && (exponent <= 22) && (value <= 9007199254740991.0))
+            {
+                if (exponent < 0)
                 {
-                    value *= pow10[exponent - 22];
-                    exponent = 22;
+                    value /= pow10[-exponent];
+                }
+                else
+                {
+                    value *= pow10[exponent];
                 }
 
-                if ((exponent >= -22) && (exponent <= 22) && (value <= 9007199254740991.0))
-                {
-                    if (exponent < 0)
-                    {
-                        value /= pow10[-exponent];
-                    }
-                    else
-                    {
-                        value *= pow10[exponent];
-                    }
+                return true;
+            }
 
-                    return true;
-                }
-
-                if (JOIN_SAX_UNLIKELY (value == 0.0))
-                {
-                    return true;
-                }
+            if (JOIN_SAX_UNLIKELY (value == 0.0))
+            {
+                return true;
             }
 
             return false;
+        }
+
+        /**
+         * @brief convert double using strtod.
+         * @param num number to convert.
+         * @param value converted value.
+         * @return true on success, false otherwise.
+         */
+        bool strtodSlow (const std::string& num, double& d)
+        {
+            char* end = nullptr;
+            static locale_t locale = newlocale (LC_ALL_MASK, "C", nullptr);
+
+            d = strtod_l (num.c_str (), &end, locale);
+            if (end != &num[num.size ()])
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /**
@@ -1027,11 +1177,8 @@ namespace join
             size_t beg = document.tell ();
             bool negative = document.getIf ('-');
 
-            uint64_t max64 = std::numeric_limits <uint64_t>::max ();
-            if (negative)
-            {
-                max64 = static_cast <uint64_t> (std::numeric_limits <int64_t>::max ()) + 1;
-            }
+            uint64_t max64 = negative ? static_cast <uint64_t> (std::numeric_limits <int64_t>::max ()) + 1 
+                                      : std::numeric_limits <uint64_t>::max ();
 
             uint64_t digits = 0;
             bool isDouble = false;
@@ -1093,7 +1240,7 @@ namespace join
                 }
             }
 
-            int64_t exponent = 0;
+            int64_t frac = 0;
 
             if (document.getIf ('.'))
             {
@@ -1106,15 +1253,16 @@ namespace join
                     {
                         ++digits;
                     }
-                    --exponent;
+                    --frac;
                 }
             }
 
+            int64_t exponent = 0;
+
             if (document.getIf ('e') || document.getIf ('E'))
             {
-                int64_t exp = 0;
-                bool negExp = false;
                 isDouble = true;
+                bool negExp = false;
 
                 if (isSign (document.peek ()))
                 {
@@ -1123,15 +1271,15 @@ namespace join
 
                 if (JOIN_SAX_LIKELY (isDigit (document.peek ())))
                 {
-                    exp = (document.get () - '0');
+                    exponent = (document.get () - '0');
 
                     while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
                     {
                         int digit = document.get () - '0';
 
-                        if (JOIN_SAX_LIKELY (exp <= ((std::numeric_limits <int>::max () - digit) / 10)))
+                        if (JOIN_SAX_LIKELY (exponent <= ((std::numeric_limits <int>::max () - digit) / 10)))
                         {
-                            exp = (exp * 10) + digit;
+                            exponent = (exponent * 10) + digit;
                         }
                     }
                 }
@@ -1141,15 +1289,22 @@ namespace join
                     return -1;
                 }
 
-                exponent += negExp ? -exp : exp;
+                if (negExp)
+                {
+                    exponent = -exponent;
+                }
             }
 
             if (isDouble)
             {
                 double d = 0.0;
-                if (strtodFast (u, exponent, digits, d))
+
+                if (JOIN_SAX_LIKELY (digits < 20))
                 {
-                    return setDouble (negative ? -d : d);
+                    if (strtodFast (u, exponent + frac, d))
+                    {
+                        return setDouble (negative ? -d : d);
+                    }
                 }
 
                 size_t len = document.tell () - beg;
@@ -1157,18 +1312,15 @@ namespace join
 
                 number.resize (len);
                 document.rewind (len);
-                document.read (&number[0], len);
+                document.read (&number[0],len);
 
-                char* end = nullptr;
-                static locale_t locale = newlocale (LC_ALL_MASK, "C", nullptr);
-                d = strtod_l (number.data (), &end, locale);
-                if (end == number.data ())
+                if (strtodSlow (number, d))
                 {
-                    join::lastError = make_error_code (SaxErrc::InvalidValue);
-                    return -1;
+                    return setDouble (d);
                 }
 
-                return setDouble (d);
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
             }
 
             if (negative)
@@ -1652,7 +1804,7 @@ namespace join
         {
             for (;;)
             {
-                if (!isWhitespace (document.peek ()))
+                if (JOIN_SAX_LIKELY (!isWhitespace (document.peek ())))
                 {
                     break;
                 }
@@ -1670,9 +1822,9 @@ namespace join
         {
             skipWhitespaces (document);
 
-            if (_mode & JsonReadMode::ParseComments)
+            if (JOIN_SAX_UNLIKELY (_mode & JsonReadMode::ParseComments))
             {
-                while (JOIN_SAX_UNLIKELY (document.getIf ('/')))
+                while (document.getIf ('/'))
                 {
                     if (document.getIf ('*'))
                     {

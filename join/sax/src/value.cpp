@@ -24,7 +24,6 @@
 
 #include <join/value.hpp>
 #include <join/json.hpp>
-#include <join/canonicaljson.hpp>
 #include <join/pack.hpp>
 
 using join::Value;
