@@ -40,6 +40,7 @@ using join::Object;
 using join::Value;
 
 using join::SaxErrc;
+using join::JsonReadMode;
 using join::JsonReader;
 
 /**
@@ -1279,6 +1280,32 @@ TEST (JsonReader, str)
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "\xF0\x9D\x84\x9E");
+}
+
+/**
+ * @brief Test JSON comments.
+ */
+TEST (JsonReader, comments)
+{
+    std::stringstream stream;
+    Value value;
+    JsonReader reader (value);
+
+    stream.clear ();
+    stream.str ("{\n    // this is a comment\n    \"comment\":true\n}");
+    ASSERT_EQ (reader.deserialize <JsonReadMode::ParseComments> (stream), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isObject ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value["comment"].isBool ());
+    ASSERT_TRUE (value["comment"]);
+
+    stream.clear ();
+    stream.str ("{\n    /*this is another comment*/\n    \"comment\":false\n}");
+    ASSERT_EQ (reader.deserialize <JsonReadMode::ParseComments> (stream), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isObject ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value["comment"].isBool ());
+    ASSERT_FALSE (value["comment"]);
 }
 
 /**
