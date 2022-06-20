@@ -903,11 +903,9 @@ namespace join
         /**
          * @brief default constructor.
          * @param root Value to write.
-         * @param readMode JSON parsing mode.
          */
-        JsonReader (Value& root, JsonReadMode readMode = JsonReadMode::None)
-        : StreamReader (root),
-          _mode (readMode)
+        JsonReader (Value& root)
+        : StreamReader (root)
         {
         }
 
@@ -948,10 +946,35 @@ namespace join
          * @param length The length of the document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (const char* document, size_t length) override
+        template <JsonReadMode ReadMode = JsonReadMode::None>
+        int deserialize (const char* document, size_t length)
         {
             StringView in (document, length);
-            return read (in);
+            return read <ReadMode> (in);
+        }
+
+        /**
+         * @brief Deserialize a document.
+         * @param document document to parse.
+         * @param length The length of the document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (const char* document, size_t length) override
+        {
+            return deserialize <> (document, length);
+        }
+
+        /**
+         * @brief Deserialize a document.
+         * @param first The first character of the document to parse.
+         * @param last The last character of the document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode = JsonReadMode::None>
+        int deserialize (const char* first, const char* last)
+        {
+            StringView in (first, last);
+            return read <ReadMode> (in);
         }
 
         /**
@@ -962,8 +985,19 @@ namespace join
          */
         int deserialize (const char* first, const char* last) override
         {
-            StringView in (first, last);
-            return read (in);
+            return deserialize <> (first, last);
+        }
+
+        /**
+         * @brief Deserialize a document.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode = JsonReadMode::None>
+        int deserialize (const std::string& document)
+        {
+            StringView in (document.c_str (), document.size ());
+            return read <ReadMode> (in);
         }
 
         /**
@@ -973,8 +1007,19 @@ namespace join
          */
         int deserialize (const std::string& document) override
         {
-            StringView in (document.c_str (), document.size ());
-            return read (in);
+            return deserialize <> (document);
+        }
+
+        /**
+         * @brief Parse a document.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode = JsonReadMode::None>
+        int deserialize (std::istream& document)
+        {
+            StreamView in (document);
+            return read <ReadMode> (in);
         }
 
         /**
@@ -984,8 +1029,7 @@ namespace join
          */
         int deserialize (std::istream& document) override
         {
-            StreamView in (document);
-            return read (in);
+            return deserialize <> (document);
         }
 
     protected:
@@ -994,10 +1038,10 @@ namespace join
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
+        template <JsonReadMode ReadMode, typename ViewType>
         int read (ViewType& document)
         {
-            if (readValue (document) == 0)
+            if (readValue <ReadMode> (document) == 0)
             {
                 skipWhitespaces (document);
 
@@ -1017,19 +1061,19 @@ namespace join
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
+        template <JsonReadMode ReadMode, typename ViewType>
         int readValue (ViewType& document)
         {
-            if (skipComments (document) == 0)
+            if (skipComments <ReadMode> (document) == 0)
             {
                 switch (document.peek ())
                 {
                     case '[':
                         document.get ();
-                        return readArray (document);
+                        return readArray <ReadMode> (document);
                     case '{':
                         document.get ();
-                        return readObject (document);
+                        return readObject <ReadMode> (document);
                     case 'n':
                         document.get ();
                         return readNull (document);
@@ -1108,7 +1152,7 @@ namespace join
          * @param value converted value.
          * @return true on success, false otherwise.
          */
-        bool strtodFast (uint64_t significand, int64_t exponent, double &value)
+        inline bool strtodFast (uint64_t significand, int64_t exponent, double &value)
         {
             static const double pow10[] = {
                 1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10,
@@ -1138,7 +1182,7 @@ namespace join
                 return true;
             }
 
-            if (JOIN_SAX_UNLIKELY (value == 0.0))
+            if (value == 0.0)
             {
                 return true;
             }
@@ -1152,7 +1196,7 @@ namespace join
          * @param value converted value.
          * @return true on success, false otherwise.
          */
-        bool strtodSlow (const std::string& num, double& d)
+        inline bool strtodSlow (const std::string& num, double& d)
         {
             char* end = nullptr;
             static locale_t locale = newlocale (LC_ALL_MASK, "C", nullptr);
@@ -1177,8 +1221,11 @@ namespace join
             size_t beg = document.tell ();
             bool negative = document.getIf ('-');
 
-            uint64_t max64 = negative ? static_cast <uint64_t> (std::numeric_limits <int64_t>::max ()) + 1 
-                                      : std::numeric_limits <uint64_t>::max ();
+            uint64_t max64 = std::numeric_limits <uint64_t>::max ();
+            if (negative)
+            {
+                max64 = static_cast <uint64_t> (std::numeric_limits <int64_t>::max ()) + 1;
+            }
 
             uint64_t digits = 0;
             bool isDouble = false;
@@ -1299,7 +1346,7 @@ namespace join
             {
                 double d = 0.0;
 
-                if (JOIN_SAX_LIKELY (digits < 20))
+                if (JOIN_SAX_LIKELY (digits <= 19))
                 {
                     if (strtodFast (u, exponent + frac, d))
                     {
@@ -1308,11 +1355,12 @@ namespace join
                 }
 
                 size_t len = document.tell () - beg;
-                std::string number;
 
+                std::string number;
                 number.resize (len);
+
                 document.rewind (len);
-                document.read (&number[0],len);
+                document.read (&number[0], len);
 
                 if (strtodSlow (number, d))
                 {
@@ -1373,7 +1421,7 @@ namespace join
          * @param codepoint UTF8 codepoint.
          * @param output parse output string.
          */
-        void encodeUtf8 (uint32_t codepoint, std::string& output)
+        inline void encodeUtf8 (uint32_t codepoint, std::string& output)
         {
             if (codepoint < 0x80)
             {
@@ -1517,7 +1565,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         /*template <typename ViewType>
-        int readUtf8 (ViewType& document, std::string& output)
+        inline int readUtf8 (ViewType& document, std::string& output)
         {
             size_t count = 0;
 
@@ -1656,7 +1704,7 @@ namespace join
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
+        template <JsonReadMode ReadMode, typename ViewType>
         int readArray (ViewType& document)
         {
             if (JOIN_SAX_UNLIKELY (startArray () == -1))
@@ -1664,7 +1712,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
+            if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
             {
                 return -1;
             }
@@ -1676,19 +1724,19 @@ namespace join
 
             for (;;)
             {
-                if (JOIN_SAX_UNLIKELY (readValue (document) == -1))
+                if (JOIN_SAX_UNLIKELY (readValue <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
+                if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
                 if (document.getIf (','))
                 {
-                    if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
+                    if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
                     {
                         return -1;
                     }
@@ -1712,7 +1760,7 @@ namespace join
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
+        template <JsonReadMode ReadMode, typename ViewType>
         int readObject (ViewType& document)
         {
             if (JOIN_SAX_UNLIKELY (startObject () == -1))
@@ -1720,7 +1768,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
+            if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
             {
                 return -1;
             }
@@ -1743,7 +1791,7 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
+                if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
@@ -1754,19 +1802,19 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (readValue (document) == -1))
+                if (JOIN_SAX_UNLIKELY (readValue <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
+                if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
                 if (document.getIf (','))
                 {
-                    if (JOIN_SAX_UNLIKELY (skipComments (document) == -1))
+                    if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
                     {
                         return -1;
                     }
@@ -1802,12 +1850,8 @@ namespace join
         template <typename ViewType>
         constexpr void skipWhitespaces (ViewType& document)
         {
-            for (;;)
+            while (JOIN_SAX_UNLIKELY (isWhitespace (document.peek ())))
             {
-                if (JOIN_SAX_LIKELY (!isWhitespace (document.peek ())))
-                {
-                    break;
-                }
                 document.get ();
             }
         }
@@ -1817,14 +1861,14 @@ namespace join
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
+        template <JsonReadMode ReadMode, typename ViewType>
         constexpr int skipComments (ViewType& document)
         {
             skipWhitespaces (document);
 
-            if (JOIN_SAX_UNLIKELY (_mode & JsonReadMode::ParseComments))
+            if (ReadMode & JsonReadMode::ParseComments)
             {
-                while (document.getIf ('/'))
+                while (JOIN_SAX_UNLIKELY (document.getIf ('/')))
                 {
                     if (document.getIf ('*'))
                     {
@@ -1833,7 +1877,7 @@ namespace join
                             // ignore comment.
                         }
                     }
-                    else if (document.getIf ('/'))
+                    else if (JOIN_SAX_LIKELY (document.getIf ('/')))
                     {
                         while (document.get () != '\n')
                         {
@@ -1902,9 +1946,6 @@ namespace join
         {
             return (c == '+') || (c == '-');
         }
-
-        /// JSON parsing mode.
-        JsonReadMode _mode = JsonReadMode::None;
     };
 }
 
