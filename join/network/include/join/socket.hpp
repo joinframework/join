@@ -2481,7 +2481,7 @@ namespace join
          * @param certificate the server certificate.
          * @return true if an alternative name matched the server hostname.
          */
-        bool checkHostName (X509 *certificate) const
+        bool checkHostName ([[maybe_unused]]X509 *certificate) const
         {
             bool match = false;
 
@@ -2530,7 +2530,7 @@ namespace join
          * @param context pointer to the complete context used for the certificate chain verification.
          * @return when verified successfully, the callback should return 1, 0 otherwise.
          */
-        int verifyCrl (X509_STORE_CTX *context) const
+        int verifyCrl ([[maybe_unused]]X509_STORE_CTX *context) const
         {
             return 1;
         }
@@ -2540,7 +2540,7 @@ namespace join
          * @param context pointer to the complete context used for the certificate chain verification.
          * @return when verified successfully, the callback should return 1, 0 otherwise.
          */
-        int verifyOcsp (X509_STORE_CTX *context) const
+        int verifyOcsp ([[maybe_unused]]X509_STORE_CTX *context) const
         {
             return 1;
         }
