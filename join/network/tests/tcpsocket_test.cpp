@@ -178,6 +178,7 @@ TEST_F (TcpSocket, waitConnected)
 {
     Tcp::Socket tcpSocket;
 
+    ASSERT_FALSE (tcpSocket.waitConnected (_timeout));
     if (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -221,6 +222,7 @@ TEST_F (TcpSocket, waitDisconnected)
         ASSERT_TRUE (tcpSocket.connecting ());
     }
     ASSERT_TRUE (tcpSocket.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_FALSE (tcpSocket.waitDisconnected (_timeout));
     if (tcpSocket.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();

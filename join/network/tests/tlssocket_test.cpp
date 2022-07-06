@@ -298,6 +298,7 @@ TEST_F (TlsSocket, waitConnected)
 {
     Tls::Socket tlsSocket;
 
+    ASSERT_FALSE (tlsSocket.waitConnected (_timeout));
     if (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -405,6 +406,7 @@ TEST_F (TlsSocket, waitDisconnected)
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
     ASSERT_TRUE (tlsSocket.waitEncrypted (_timeout)) << join::lastError.message ();
+    ASSERT_FALSE (tlsSocket.waitDisconnected (_timeout));
     if (tlsSocket.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
