@@ -433,6 +433,7 @@ namespace join
         constexpr BasicInternetEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
         : BasicEndpoint <Protocol> (addr, len)
         {
+            this->_hostname = this->ip ().toString ();
         }
 
         /**
@@ -450,6 +451,7 @@ namespace join
                 sa->sin6_port           = htons (port);
                 memcpy (&sa->sin6_addr, ip.addr (), ip.length ());
                 sa->sin6_scope_id       = ip.scope ();
+                this->_hostname         = ip.toString ();
             }
             else
             {
@@ -457,6 +459,7 @@ namespace join
                 sa->sin_family          = AF_INET;
                 sa->sin_port            = htons (port);
                 memcpy (&sa->sin_addr, ip.addr (), ip.length ());
+                this->_hostname         = ip.toString ();
             }
         }
 
@@ -473,18 +476,38 @@ namespace join
                 struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->_addr);
                 sa->sin6_family         = AF_INET6;
                 sa->sin6_port           = htons (port);
+                this->_hostname         = "::";
             }
             else
             {
                 struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->_addr);
                 sa->sin_family          = AF_INET;
                 sa->sin_port            = htons (port);
+                this->_hostname         = "0.0.0.0";
             }
         }
 
         /**
+         * @brief set endpoint hostname.
+         * @param hostname hostname to set.
+         */
+        void hostname (const std::string& hostname) noexcept
+        {
+            _hostname = hostname;
+        }
+
+        /**
+         * @brief get the endpoint hostname.
+         * @return endpoint hostname.
+         */
+        const std::string& hostname () const noexcept
+        {
+            return _hostname;
+        }
+
+        /**
          * @brief set endpoint IP address.
-         * @param a ip address to set.
+         * @param ip ip address to set.
          */
         void ip (const IpAddress& ip) noexcept
         {
@@ -596,6 +619,10 @@ namespace join
             }
             return Protocol::v6 ();
         }
+
+    protected:
+        /// endpoint hostname.
+        std::string _hostname;
     };
 
     /**

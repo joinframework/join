@@ -448,7 +448,6 @@ TEST_F (TcpSocket, localEndpoint)
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
     ASSERT_EQ (tcpSocket.localEndpoint (), Tcp::Endpoint {});
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tcpSocket.bind ({Tcp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.localEndpoint (), Tcp::Endpoint (Tcp::Resolver::resolveHost (_host), uint16_t (_port + 1))) << join::lastError.message ();
@@ -463,7 +462,6 @@ TEST_F (TcpSocket, remoteEndpoint)
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
     ASSERT_EQ (tcpSocket.remoteEndpoint (), Tcp::Endpoint {});
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tcpSocket.bind ({Tcp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.remoteEndpoint (), Tcp::Endpoint (Tcp::Resolver::resolveHost (_host), _port)) << join::lastError.message ();
