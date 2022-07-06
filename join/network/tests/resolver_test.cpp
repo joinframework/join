@@ -58,7 +58,12 @@ TEST (Resolver, nameServers)
  */
 TEST (Resolver, resolve)
 {
-    Udp::Endpoint udpEndpoint = Udp::Resolver::resolve ("localhost");
+    Udp::Endpoint udpEndpoint = Udp::Resolver::resolve ("");
+    EXPECT_EQ (udpEndpoint.hostname (), "0.0.0.0");
+    EXPECT_TRUE (udpEndpoint.ip ().isWildcard ());
+    EXPECT_EQ (udpEndpoint.port (), 0);
+    
+    udpEndpoint = Udp::Resolver::resolve ("localhost");
     EXPECT_EQ (udpEndpoint.hostname (), "localhost");
     EXPECT_EQ (udpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (udpEndpoint.port (), 0);
@@ -78,7 +83,12 @@ TEST (Resolver, resolve)
     EXPECT_EQ (udpEndpoint.ip (), "192.168.0.1");
     EXPECT_EQ (udpEndpoint.port (), 5000);
 
-    Icmp::Endpoint icmpEndpoint = Icmp::Resolver::resolve ("localhost", AF_INET);
+    Icmp::Endpoint icmpEndpoint = Icmp::Resolver::resolve ("", AF_INET);
+    EXPECT_EQ (icmpEndpoint.hostname (), "0.0.0.0");
+    EXPECT_TRUE (icmpEndpoint.ip ().isWildcard ());
+    EXPECT_EQ (icmpEndpoint.port (), 0);
+
+    icmpEndpoint = Icmp::Resolver::resolve ("localhost", AF_INET);
     EXPECT_EQ (icmpEndpoint.hostname (), "localhost");
     EXPECT_EQ (icmpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (icmpEndpoint.port (), 0);
@@ -98,7 +108,12 @@ TEST (Resolver, resolve)
     EXPECT_EQ (icmpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (icmpEndpoint.port (), 5000);
 
-    Tcp::Endpoint tcpEndpoint = Tcp::Resolver::resolve ("localhost", AF_INET);
+    Tcp::Endpoint tcpEndpoint = Tcp::Resolver::resolve ("", AF_INET);
+    EXPECT_EQ (tcpEndpoint.hostname (), "0.0.0.0");
+    EXPECT_TRUE (tcpEndpoint.ip ().isWildcard ());
+    EXPECT_EQ (tcpEndpoint.port (), 0);
+
+    tcpEndpoint = Tcp::Resolver::resolve ("localhost", AF_INET);
     EXPECT_EQ (tcpEndpoint.hostname (), "localhost");
     EXPECT_EQ (tcpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (tcpEndpoint.port (), 0);
@@ -118,7 +133,12 @@ TEST (Resolver, resolve)
     EXPECT_EQ (tcpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (tcpEndpoint.port (), 5000);
 
-    Tls::Endpoint tlsEndpoint = Tls::Resolver::resolve ("localhost", AF_INET);
+    Tls::Endpoint tlsEndpoint = Tls::Resolver::resolve ("", AF_INET);
+    EXPECT_EQ (tlsEndpoint.hostname (), "0.0.0.0");
+    EXPECT_TRUE (tlsEndpoint.ip ().isWildcard ());
+    EXPECT_EQ (tlsEndpoint.port (), 0);
+
+    tlsEndpoint = Tls::Resolver::resolve ("localhost", AF_INET);
     EXPECT_EQ (tlsEndpoint.hostname (), "localhost");
     EXPECT_EQ (tlsEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (tlsEndpoint.port (), 0);
@@ -144,7 +164,10 @@ TEST (Resolver, resolve)
  */
 TEST (Resolver, resolveHost)
 {
-    IpAddress address = Udp::Resolver::resolveHost ("localhost");
+    IpAddress address = Udp::Resolver::resolveHost ("");
+    EXPECT_TRUE (address.isWildcard ());
+
+    address = Udp::Resolver::resolveHost ("localhost");
     EXPECT_TRUE (address.isLoopBack ());
 
     address = Udp::Resolver::resolveHost ("localhost", AF_INET6);
@@ -153,6 +176,9 @@ TEST (Resolver, resolveHost)
     address = Udp::Resolver::resolveHost ("localhost", AF_INET);
     EXPECT_TRUE (address.isIpv4Address ());
     EXPECT_TRUE (address.isLoopBack ());
+
+    address = Icmp::Resolver::resolveHost ("");
+    EXPECT_TRUE (address.isWildcard ());
 
     address = Icmp::Resolver::resolveHost ("localhost");
     EXPECT_TRUE (address.isLoopBack ());
@@ -164,6 +190,9 @@ TEST (Resolver, resolveHost)
     EXPECT_TRUE (address.isIpv4Address ());
     EXPECT_TRUE (address.isLoopBack ());
 
+    address = Tcp::Resolver::resolveHost ("");
+    EXPECT_TRUE (address.isWildcard ());
+
     address = Tcp::Resolver::resolveHost ("localhost");
     EXPECT_TRUE (address.isLoopBack ());
 
@@ -173,6 +202,9 @@ TEST (Resolver, resolveHost)
     address = Tcp::Resolver::resolveHost ("localhost", AF_INET);
     EXPECT_TRUE (address.isIpv4Address ());
     EXPECT_TRUE (address.isLoopBack ());
+
+    address = Tls::Resolver::resolveHost ("");
+    EXPECT_TRUE (address.isWildcard ());
 
     address = Tls::Resolver::resolveHost ("localhost");
     EXPECT_TRUE (address.isLoopBack ());
@@ -190,14 +222,26 @@ TEST (Resolver, resolveHost)
  */
 TEST (Resolver, resolveAllHost)
 {
-    IpAddressList addressList = Udp::Resolver::resolveAllHost ("localhost");
+    IpAddressList addressList = Udp::Resolver::resolveAllHost ("");
+    EXPECT_EQ (addressList.size (), 0);
+    
+    addressList = Udp::Resolver::resolveAllHost ("localhost");
     EXPECT_GT (addressList.size (), 0);
+
+    addressList = Icmp::Resolver::resolveAllHost ("");
+    EXPECT_EQ (addressList.size (), 0);
 
     addressList = Icmp::Resolver::resolveAllHost ("localhost");
     EXPECT_GT (addressList.size (), 0);
 
+    addressList = Tcp::Resolver::resolveAllHost ("");
+    EXPECT_EQ (addressList.size (), 0);
+
     addressList = Tcp::Resolver::resolveAllHost ("localhost");
     EXPECT_GT (addressList.size (), 0);
+
+    addressList = Tls::Resolver::resolveAllHost ("");
+    EXPECT_EQ (addressList.size (), 0);
 
     addressList = Tls::Resolver::resolveAllHost ("localhost");
     EXPECT_GT (addressList.size (), 0);
@@ -208,14 +252,26 @@ TEST (Resolver, resolveAllHost)
  */
 TEST (Resolver, resolveAddress)
 {
-    std::string name = Udp::Resolver::resolveAddress ("127.0.0.1");
+    std::string name = Udp::Resolver::resolveAddress ("192.168.24.32");
+    EXPECT_EQ (name, "192.168.24.32");
+
+    name = Udp::Resolver::resolveAddress ("127.0.0.1");
     EXPECT_EQ (name, "localhost");
+
+    name = Icmp::Resolver::resolveAddress ("192.168.24.32");
+    EXPECT_EQ (name, "192.168.24.32");
 
     name = Icmp::Resolver::resolveAddress ("127.0.0.1");
     EXPECT_EQ (name, "localhost");
 
+    name = Tcp::Resolver::resolveAddress ("192.168.24.32");
+    EXPECT_EQ (name, "192.168.24.32");
+
     name = Tcp::Resolver::resolveAddress ("127.0.0.1");
     EXPECT_EQ (name, "localhost");
+
+    name = Tls::Resolver::resolveAddress ("192.168.24.32");
+    EXPECT_EQ (name, "192.168.24.32");
 
     name = Tls::Resolver::resolveAddress ("127.0.0.1");
     EXPECT_EQ (name, "localhost");

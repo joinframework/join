@@ -424,6 +424,7 @@ namespace join
         constexpr BasicInternetEndpoint () noexcept
         : BasicEndpoint <Protocol> ()
         {
+            this->_hostname = this->ip ().toString ();
         }
 
         /**

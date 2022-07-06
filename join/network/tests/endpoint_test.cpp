@@ -108,30 +108,37 @@ TEST (Endpoint, length)
 TEST (Endpoint, device)
 {
     UnixDgram::Endpoint unixDgramEndpoint;
+    ASSERT_EQ (unixDgramEndpoint.device (), "");
     unixDgramEndpoint.device ("/path/to/file");
     ASSERT_EQ (unixDgramEndpoint.device (), "/path/to/file");
 
     UnixStream::Endpoint unixStreamEndpoint;
+    ASSERT_EQ (unixStreamEndpoint.device (), "");
     unixStreamEndpoint.device ("/path/to/other");
     ASSERT_EQ (unixStreamEndpoint.device (), "/path/to/other");
 
     Raw::Endpoint rawEndpoint;
+    ASSERT_EQ (rawEndpoint.device (), "");
     rawEndpoint.device ("lo");
     ASSERT_EQ (rawEndpoint.device (), "lo");
 
     Udp::Endpoint udpEndpoint (Udp::v6 ());
+    ASSERT_EQ (udpEndpoint.device (), "");
     udpEndpoint.device ("lo");
     ASSERT_EQ (udpEndpoint.device (), "lo");
 
     Icmp::Endpoint icmpEndpoint (Icmp::v6 ());
+    ASSERT_EQ (icmpEndpoint.device (), "");
     icmpEndpoint.device ("lo");
     ASSERT_EQ (icmpEndpoint.device (), "lo");
 
     Tcp::Endpoint tcpEndpoint (Tcp::v6 ());
+    ASSERT_EQ (tcpEndpoint.device (), "");
     tcpEndpoint.device ("lo");
     ASSERT_EQ (tcpEndpoint.device (), "lo");
 
     Tls::Endpoint tlsEndpoint (Tls::v6 ());
+    ASSERT_EQ (tlsEndpoint.device (), "");
     tlsEndpoint.device ("lo");
     ASSERT_EQ (tlsEndpoint.device (), "lo");
 }
@@ -175,20 +182,29 @@ TEST (Endpoint, ip)
  */
 TEST (Endpoint, port)
 {
-    Udp::Endpoint udpEndpoint;
+    Udp::Endpoint udpEndpoint4 (Udp::v4 ());
+    udpEndpoint4.port (80);
+    ASSERT_EQ (udpEndpoint4.port (), 80);
 
-    udpEndpoint.port (5000);
-    ASSERT_EQ (udpEndpoint.port (), 5000);
+    Udp::Endpoint udpEndpoint6 (Udp::v6 ());
+    udpEndpoint6.port (443);
+    ASSERT_EQ (udpEndpoint6.port (), 443);
 
-    Tcp::Endpoint tcpEndpoint;
+    Tcp::Endpoint tcpEndpoint4 (Tcp::v4 ());
+    tcpEndpoint4.port (80);
+    ASSERT_EQ (tcpEndpoint4.port (), 80);
 
-    tcpEndpoint.port (80);
-    ASSERT_EQ (tcpEndpoint.port (), 80);
+    Tcp::Endpoint tcpEndpoint6 (Tcp::v6 ());
+    tcpEndpoint6.port (443);
+    ASSERT_EQ (tcpEndpoint6.port (), 443);
 
-    Tls::Endpoint tlsEndpoint;
+    Tls::Endpoint tlsEndpoint4 (Tls::v4 ());
+    tlsEndpoint4.port (80);
+    ASSERT_EQ (tlsEndpoint4.port (), 80);
 
-    tlsEndpoint.port (80);
-    ASSERT_EQ (tlsEndpoint.port (), 80);
+    Tls::Endpoint tlsEndpoint6 (Tls::v6 ());
+    tlsEndpoint6.port (443);
+    ASSERT_EQ (tlsEndpoint6.port (), 443);
 }
 
 /**
@@ -295,9 +311,19 @@ TEST (Endpoint, serialize)
     ASSERT_EQ (stream.str (), "127.0.0.1:80");
 
     stream.str ("");
+    udpEndpoint.ip ("::");
+    ASSERT_NO_THROW (stream << udpEndpoint);
+    ASSERT_EQ (stream.str (), "[::]:80");
+
+    stream.str ("");
     Icmp::Endpoint icmpEndpoint ("127.0.0.1");
     ASSERT_NO_THROW (stream << icmpEndpoint);
     ASSERT_EQ (stream.str (), "127.0.0.1");
+
+    stream.str ("");
+    icmpEndpoint.ip ("::");
+    ASSERT_NO_THROW (stream << icmpEndpoint);
+    ASSERT_EQ (stream.str (), "[::]");
 
     stream.str ("");
     Tcp::Endpoint tcpEndpoint ("127.0.0.1", 80);
@@ -305,9 +331,19 @@ TEST (Endpoint, serialize)
     ASSERT_EQ (stream.str (), "127.0.0.1:80");
 
     stream.str ("");
+    tcpEndpoint.ip ("::");
+    ASSERT_NO_THROW (stream << tcpEndpoint);
+    ASSERT_EQ (stream.str (), "[::]:80");
+
+    stream.str ("");
     Tls::Endpoint tlsEndpoint ("127.0.0.1", 80);
     ASSERT_NO_THROW (stream << tlsEndpoint);
     ASSERT_EQ (stream.str (), "127.0.0.1:80");
+
+    stream.str ("");
+    tlsEndpoint.ip ("::");
+    ASSERT_NO_THROW (stream << tlsEndpoint);
+    ASSERT_EQ (stream.str (), "[::]:80");
 }
 
 /**
