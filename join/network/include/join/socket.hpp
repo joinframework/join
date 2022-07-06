@@ -2500,7 +2500,7 @@ namespace join
             bool match = false;
 
             // get alternative names.
-            join::crypto::StackOfGeneralNamePtr altnames (reinterpret_cast <STACK_OF(GENERAL_NAME)*> (X509_get_ext_d2i (certificate, NID_subject_alt_name, 0, 0)));
+            join::crypto::StackOfGeneralNamePtr altnames (reinterpret_cast <STACK_OF (GENERAL_NAME)*> (X509_get_ext_d2i (certificate, NID_subject_alt_name, 0, 0)));
             if (altnames)
             {
                 for (int i = 0; (i < sk_GENERAL_NAME_num (altnames.get ())) && !match; ++i)

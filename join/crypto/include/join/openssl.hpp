@@ -116,7 +116,7 @@ namespace crypto
         }
     };
 
-    using StackOfX509NamePtr = std::unique_ptr <STACK_OF(X509_NAME), StackOfX509NameDelete>;
+    using StackOfX509NamePtr = std::unique_ptr <STACK_OF (X509_NAME), StackOfX509NameDelete>;
 
     /**
      * @brief custom functor for STACK_OF(GENERAL_NAME) deletion.
