@@ -784,6 +784,16 @@ TEST_F (TlsSocket, mtu)
 }
 
 /**
+ * @brief Test checksum method.
+ */
+TEST_F (TlsSocket, checksum)
+{
+    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
+
+    ASSERT_EQ (Tls::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+}
+
+/**
  * @brief Test setCertificate method.
  */
 TEST_F (TlsSocket, setCertificate)

@@ -403,6 +403,16 @@ TEST_F (RawSocket, handle)
 }
 
 /**
+ * @brief Test checksum method.
+ */
+TEST_F (RawSocket, checksum)
+{
+    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
+
+    ASSERT_EQ (Raw::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+}
+
+/**
  * @brief Test lower method.
  */
 TEST_F (RawSocket, lower)

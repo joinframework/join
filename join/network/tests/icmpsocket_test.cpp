@@ -525,6 +525,16 @@ TEST_F (IcmpSocket, mtu)
 }
 
 /**
+ * @brief Test checksum method.
+ */
+TEST_F (IcmpSocket, checksum)
+{
+    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
+
+    ASSERT_EQ (Icmp::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+}
+
+/**
  * @brief Test is lower method.
  */
 TEST_F (IcmpSocket, lower)

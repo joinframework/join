@@ -380,7 +380,7 @@ TEST_F (UdpSocket, localEndpoint)
 }
 
 /**
- * @brief Test mtu method.
+ * @brief Test remoteEndpoint method.
  */
 TEST_F (UdpSocket, remoteEndpoint)
 {
@@ -505,6 +505,16 @@ TEST_F (UdpSocket, mtu)
     ASSERT_NE (udpSocket.mtu (), -1) << join::lastError.message ();
     udpSocket.close ();
     ASSERT_EQ (udpSocket.mtu (), -1);
+}
+
+/**
+ * @brief Test checksum method.
+ */
+TEST_F (UdpSocket, checksum)
+{
+    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
+
+    ASSERT_EQ (Udp::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**

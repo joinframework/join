@@ -554,6 +554,16 @@ TEST_F (UnixStreamSocket, mtu)
 }
 
 /**
+ * @brief Test checksum method.
+ */
+TEST_F (UnixStreamSocket, checksum)
+{
+    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
+
+    ASSERT_EQ (UnixStream::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+}
+
+/**
  * @brief Test lower method.
  */
 TEST_F (UnixStreamSocket, lower)
