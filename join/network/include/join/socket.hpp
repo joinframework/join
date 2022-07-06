@@ -578,10 +578,11 @@ namespace join
 
             if (len == 1)
             {
-                if (BYTE_ORDER == LITTLE_ENDIAN)
-                    sum += *reinterpret_cast <const uint8_t *> (data);
-                else
-                    sum += *reinterpret_cast <const uint8_t *> (data) << 8;
+            #if __BYTE_ORDER == __LITTLE_ENDIAN
+                sum += *reinterpret_cast <const uint8_t *> (data);
+            #else
+                sum += *reinterpret_cast <const uint8_t *> (data) << 8;
+            #endif
             }
 
             sum  = (sum >> 16) + (sum & 0xffff);
