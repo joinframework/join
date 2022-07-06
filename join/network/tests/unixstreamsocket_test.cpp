@@ -159,6 +159,7 @@ TEST_F (UnixStreamSocket, waitConnected)
 {
     UnixStream::Socket unixSocket;
 
+    ASSERT_FALSE (unixSocket.waitConnected (_timeout));
     if (unixSocket.connect (_serverpath) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -202,6 +203,7 @@ TEST_F (UnixStreamSocket, waitDisconnected)
         ASSERT_TRUE (unixSocket.connecting ());
     }
     ASSERT_TRUE (unixSocket.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_FALSE (unixSocket.waitDisconnected (_timeout));
     if (unixSocket.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -415,7 +417,6 @@ TEST_F (UnixStreamSocket, localEndpoint)
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.localEndpoint (), UnixStream::Endpoint {});
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.localEndpoint (), UnixStream::Endpoint (_clientpath)) << join::lastError.message ();
@@ -430,7 +431,6 @@ TEST_F (UnixStreamSocket, remoteEndpoint)
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
     ASSERT_EQ (unixSocket.remoteEndpoint (), UnixStream::Endpoint {});
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.remoteEndpoint (), UnixStream::Endpoint (_serverpath)) << join::lastError.message ();

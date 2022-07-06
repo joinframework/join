@@ -196,12 +196,6 @@ namespace join
          */
         virtual int listen (size_t max = SOMAXCONN) noexcept
         {
-            if (!this->opened ())
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             if (::listen (this->_handle, max) == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
@@ -338,12 +332,6 @@ namespace join
          */
         virtual Socket accept () const
         {
-            if (!this->opened ())
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return {};
-            }
-
             Endpoint endpoint;
             socklen_t addrLen = endpoint.length ();
             Socket client;
@@ -511,12 +499,6 @@ namespace join
          */
         virtual Socket accept () const
         {
-            if (!this->opened ())
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return {};
-            }
-
             Endpoint endpoint;
             socklen_t addrLen = endpoint.length ();
             Socket client (this->_tlsContext, Socket::ServerMode);
@@ -626,12 +608,7 @@ namespace join
                 return -1;
             }
 
-            if (SSL_CTX_load_verify_locations (this->_tlsContext.get (), caFile.c_str (), nullptr) == 0)
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-            }
-
+            SSL_CTX_load_verify_locations (this->_tlsContext.get (), caFile.c_str (), nullptr);
             SSL_CTX_set_client_CA_list (this->_tlsContext.get (), certNames.release ());
 
             return 0;

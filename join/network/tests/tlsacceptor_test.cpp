@@ -216,7 +216,6 @@ TEST_F (TlsAcceptor, close)
     Tls::Acceptor server;
 
     ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
-    server.close ();
 }
 
 /**
@@ -227,7 +226,8 @@ TEST_F (TlsAcceptor, bind)
     Tls::Acceptor server;
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
-    server.close ();
+    ASSERT_EQ (server.bind ({_address, _port}), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
 }
 
 /**
@@ -241,7 +241,6 @@ TEST_F (TlsAcceptor, listen)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
-    server.close ();
 }
 
 /**
@@ -261,9 +260,6 @@ TEST_F (TlsAcceptor, accept)
     ASSERT_TRUE (serverSocket.connected ());
     ASSERT_EQ (serverSocket.localEndpoint ().ip (), _address);
     ASSERT_EQ (serverSocket.localEndpoint ().port (), _port);
-    clientSocket.close ();
-    serverSocket.close ();
-    server.close ();
 }
 
 /**
@@ -278,7 +274,6 @@ TEST_F (TlsAcceptor, localEndpoint)
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), _address);
     ASSERT_EQ (server.localEndpoint ().port (), _port);
-    server.close ();
 }
 
 /**
@@ -304,7 +299,6 @@ TEST_F (TlsAcceptor, family)
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.family (), AF_INET);
-    server.close ();
 }
 
 /**
@@ -316,7 +310,6 @@ TEST_F (TlsAcceptor, type)
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.type (), SOCK_STREAM);
-    server.close ();
 }
 
 /**
@@ -328,7 +321,6 @@ TEST_F (TlsAcceptor, protocol)
 
     ASSERT_EQ (server.bind ({_address, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.protocol (), IPPROTO_TCP);
-    server.close ();
 }
 
 /**
@@ -354,11 +346,24 @@ TEST_F (TlsAcceptor, setCertificate)
 
     ASSERT_EQ (server.setCertificate ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (server.setCertificate (_cert), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (server.setCertificate (_cert, "foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (server.setCertificate (_cert, _invalidKey), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (server.setCertificate (_cert, _validKey), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test setVerify method.
+ */
+TEST_F (TlsAcceptor, setVerify)
+{
+    Tls::Acceptor server;
+
+    ASSERT_NO_THROW (server.setVerify (true));
+    ASSERT_NO_THROW (server.setVerify (false));
 }
 
 /**

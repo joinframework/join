@@ -59,66 +59,82 @@ TEST (Resolver, nameServers)
 TEST (Resolver, resolve)
 {
     Udp::Endpoint udpEndpoint = Udp::Resolver::resolve ("localhost");
+    EXPECT_EQ (udpEndpoint.hostname (), "localhost");
     EXPECT_EQ (udpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (udpEndpoint.port (), 0);
 
     udpEndpoint = Udp::Resolver::resolve ("https://localhost");
+    EXPECT_EQ (udpEndpoint.hostname (), "localhost");
     EXPECT_EQ (udpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (udpEndpoint.port (), 443);
 
     udpEndpoint = Udp::Resolver::resolve ("https://localhost:5000");
+    EXPECT_EQ (udpEndpoint.hostname (), "localhost");
     EXPECT_EQ (udpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (udpEndpoint.port (), 5000);
 
     udpEndpoint = Udp::Resolver::resolve ("https://192.168.0.1:5000");
+    EXPECT_EQ (udpEndpoint.hostname (), "192.168.0.1");
     EXPECT_EQ (udpEndpoint.ip (), "192.168.0.1");
     EXPECT_EQ (udpEndpoint.port (), 5000);
 
     Icmp::Endpoint icmpEndpoint = Icmp::Resolver::resolve ("localhost", AF_INET);
+    EXPECT_EQ (icmpEndpoint.hostname (), "localhost");
     EXPECT_EQ (icmpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (icmpEndpoint.port (), 0);
 
     icmpEndpoint = Icmp::Resolver::resolve ("http://localhost", AF_INET6);
+    EXPECT_EQ (icmpEndpoint.hostname (), "::");
     EXPECT_TRUE (icmpEndpoint.ip ().isWildcard ());
     EXPECT_EQ (icmpEndpoint.port (), 0);
 
     icmpEndpoint = Icmp::Resolver::resolve ("https://localhost", AF_INET);
+    EXPECT_EQ (icmpEndpoint.hostname (), "localhost");
     EXPECT_EQ (icmpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (icmpEndpoint.port (), 443);
 
     icmpEndpoint = Icmp::Resolver::resolve ("https://localhost:5000", AF_INET);
+    EXPECT_EQ (icmpEndpoint.hostname (), "localhost");
     EXPECT_EQ (icmpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (icmpEndpoint.port (), 5000);
 
     Tcp::Endpoint tcpEndpoint = Tcp::Resolver::resolve ("localhost", AF_INET);
+    EXPECT_EQ (tcpEndpoint.hostname (), "localhost");
     EXPECT_EQ (tcpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (tcpEndpoint.port (), 0);
 
     tcpEndpoint = Tcp::Resolver::resolve ("http://localhost", AF_INET6);
+    EXPECT_EQ (tcpEndpoint.hostname (), "::");
     EXPECT_TRUE (tcpEndpoint.ip ().isWildcard ());
     EXPECT_EQ (tcpEndpoint.port (), 0);
 
     tcpEndpoint = Tcp::Resolver::resolve ("https://localhost", AF_INET);
+    EXPECT_EQ (tcpEndpoint.hostname (), "localhost");
     EXPECT_EQ (tcpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (tcpEndpoint.port (), 443);
 
     tcpEndpoint = Tcp::Resolver::resolve ("https://localhost:5000", AF_INET);
+    EXPECT_EQ (tcpEndpoint.hostname (), "localhost");
     EXPECT_EQ (tcpEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (tcpEndpoint.port (), 5000);
 
     Tls::Endpoint tlsEndpoint = Tls::Resolver::resolve ("localhost", AF_INET);
+    EXPECT_EQ (tlsEndpoint.hostname (), "localhost");
     EXPECT_EQ (tlsEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (tlsEndpoint.port (), 0);
 
     tlsEndpoint = Tls::Resolver::resolve ("http://localhost", AF_INET6);
+    EXPECT_EQ (tlsEndpoint.hostname (), "::");
     EXPECT_TRUE (tlsEndpoint.ip ().isWildcard ());
     EXPECT_EQ (tlsEndpoint.port (), 0);
 
     tlsEndpoint = Tls::Resolver::resolve ("https://localhost", AF_INET);
+    EXPECT_EQ (tlsEndpoint.hostname (), "localhost");
     EXPECT_EQ (tlsEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (tlsEndpoint.port (), 443);
 
     tlsEndpoint = Tls::Resolver::resolve ("https://localhost:5000", AF_INET);
+    EXPECT_EQ (tlsEndpoint.hostname (), "localhost");
     EXPECT_EQ (tlsEndpoint.ip (), "127.0.0.1");
     EXPECT_EQ (tlsEndpoint.port (), 5000);
 }
@@ -200,7 +216,6 @@ TEST (Resolver, resolveAddress)
 
     name = Tcp::Resolver::resolveAddress ("127.0.0.1");
     EXPECT_EQ (name, "localhost");
-
 
     name = Tls::Resolver::resolveAddress ("127.0.0.1");
     EXPECT_EQ (name, "localhost");

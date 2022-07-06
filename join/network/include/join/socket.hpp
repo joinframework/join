@@ -499,7 +499,6 @@ namespace join
 
             if (::getsockname (this->_handle, endpoint.addr (), &addrLen) == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return {};
             }
 
@@ -688,7 +687,7 @@ namespace join
          */
         BasicDatagramSocket (Mode mode, int ttl = 60)
         : BasicSocket <Protocol> (mode),
-          ttl_ (ttl)
+         _ttl (ttl)
         {
         }
 
@@ -711,9 +710,10 @@ namespace join
          */
         BasicDatagramSocket (BasicDatagramSocket&& other)
         : BasicSocket <Protocol> (std::move (other)),
-          ttl_ (other.ttl_)
+         _remote (std::move (other._remote)),
+         _ttl (other._ttl)
         {
-            other.ttl_ = 60;
+            other._ttl = 60;
         }
 
         /**
@@ -725,9 +725,10 @@ namespace join
         {
             BasicSocket <Protocol>::operator= (std::move (other));
 
-            ttl_ = other.ttl_;
+           _remote = std::move (other._remote);
+           _ttl = other._ttl;
 
-            other.ttl_ = 60;
+            other._ttl = 60;
 
             return *this;
         }
@@ -771,13 +772,13 @@ namespace join
                     return -1;
                 }
 
-                if (setOption (Option::MulticastTtl, this->ttl_) == -1)
+                if (setOption (Option::MulticastTtl, this->_ttl) == -1)
                 {
                     this->close ();
                     return -1;
                 }
 
-                if (setOption (Option::Ttl, this->ttl_) == -1)
+                if (setOption (Option::Ttl, this->_ttl) == -1)
                 {
                     this->close ();
                     return -1;
@@ -845,7 +846,9 @@ namespace join
             }
 
             int result = ::connect (this->_handle, endpoint.addr (), endpoint.length ());
+
             this->_state = State::Connecting;
+            this->_remote = endpoint;
 
             if (result == -1)
             {
@@ -886,9 +889,19 @@ namespace join
                 }
 
                 this->_state = State::Disconnected;
+                this->_remote = {};
             }
 
             return 0;
+        }
+
+        /**
+         * @brief close the socket handle.
+         */
+        virtual void close () noexcept override
+        {
+            BasicSocket <Protocol>::close ();
+            this->_remote = {};
         }
 
         /**
@@ -1086,18 +1099,9 @@ namespace join
          * @brief determine the remote endpoint associated with this socket.
          * @return remote endpoint.
          */
-        Endpoint remoteEndpoint () const
+        const Endpoint& remoteEndpoint () const
         {
-            Endpoint endpoint;
-            socklen_t addrLen = endpoint.length ();
-
-            if (::getpeername (this->_handle, endpoint.addr (), &addrLen) == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return {};
-            }
-
-            return endpoint;
+            return this->_remote;
         }
 
         /**
@@ -1153,12 +1157,15 @@ namespace join
          */
         int ttl () const
         {
-            return this->ttl_;
+            return this->_ttl;
         }
 
     protected:
+        /// remote endpoint.
+        Endpoint _remote;
+
         /// packet time to live.
-        int ttl_ = 60;
+        int _ttl = 60;
     };
 
     /**
@@ -1775,7 +1782,13 @@ namespace join
                 return -1;
             }
 
-            return this->startEncryption ();
+            if (this->startEncryption () == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            return 0;
         }
 
         /**
@@ -2418,7 +2431,7 @@ namespace join
 
             if (!preverified)
             {
-                std::cout << "verification failed at depth=" << dpth << " err=" << X509_STORE_CTX_get_error (context) << std::endl;
+                std::cout << "verification failed at depth=" << dpth << " - " << X509_verify_cert_error_string (X509_STORE_CTX_get_error (context)) << std::endl;
                 return 0;
             }
 
@@ -2486,7 +2499,7 @@ namespace join
             bool match = false;
 
             // get alternative names.
-            /*join::crypto::StackOfGeneralNamePtr altnames (reinterpret_cast <STACK_OF(GENERAL_NAME)*> (X509_get_ext_d2i (certificate, NID_subject_alt_name, 0, 0)));
+            join::crypto::StackOfGeneralNamePtr altnames (reinterpret_cast <STACK_OF(GENERAL_NAME)*> (X509_get_ext_d2i (certificate, NID_subject_alt_name, 0, 0)));
             if (altnames)
             {
                 for (int i = 0; (i < sk_GENERAL_NAME_num (altnames.get ())) && !match; ++i)
@@ -2499,7 +2512,7 @@ namespace join
                         // get data and length.
                         const char *host = reinterpret_cast <const char *> (ASN1_STRING_get0_data (current_name->d.ia5));
                         size_t len = size_t (ASN1_STRING_length (current_name->d.ia5));
-                        std::string pattern (host, host + len), serverName (name);
+                        std::string pattern (host, host + len), serverName (this->_remote.hostname ());
 
                         // strip off trailing dots.
                         if (pattern.back () == '.')
@@ -2520,7 +2533,7 @@ namespace join
                         }
                     }
                 }
-            }*/
+            }
 
             return match;
         }
@@ -2530,7 +2543,7 @@ namespace join
          * @param context pointer to the complete context used for the certificate chain verification.
          * @return when verified successfully, the callback should return 1, 0 otherwise.
          */
-        int verifyCrl (X509_STORE_CTX *context) const
+        int verifyCrl ([[maybe_unused]]X509_STORE_CTX *context) const
         {
             return 1;
         }
@@ -2540,7 +2553,7 @@ namespace join
          * @param context pointer to the complete context used for the certificate chain verification.
          * @return when verified successfully, the callback should return 1, 0 otherwise.
          */
-        int verifyOcsp (X509_STORE_CTX *context) const
+        int verifyOcsp ([[maybe_unused]]X509_STORE_CTX *context) const
         {
             return 1;
         }

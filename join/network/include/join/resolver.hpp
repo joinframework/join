@@ -167,7 +167,6 @@ namespace join
             std::regex reg (R"(^(?:([^:/?#]+)://)?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\])(?::([0-9]+))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?)");
             std::cmatch match;
 
-            EndpointList endpoints;
             std::string host (url);
             uint16_t port = 0;
 
@@ -179,9 +178,11 @@ namespace join
                 port = (match[3].length ()) ? uint16_t (std::stoi (match[3])) : resolveService (match[1]);
             }
 
+            EndpointList endpoints;
+
             for (auto const& ip : resolveAllHost (host))
             {
-                endpoints.emplace_back (ip, port);
+                endpoints.emplace (endpoints.end (), ip, port)->hostname (host);
             }
 
             return endpoints;
