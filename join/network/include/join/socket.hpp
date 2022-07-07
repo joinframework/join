@@ -2424,7 +2424,7 @@ namespace join
             std::cout << "verification started at depth="<< dpth << std::endl;
 
             // catch a too long certificate chain.
-            if ((maxDepth > 0) && (dpth > maxDepth))
+            if ((maxDepth >= 0) && (dpth > maxDepth))
             {
                 preverified = 0;
                 X509_STORE_CTX_set_error (context, X509_V_ERR_CERT_CHAIN_TOO_LONG);
