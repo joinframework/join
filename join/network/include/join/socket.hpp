@@ -1806,40 +1806,37 @@ namespace join
 
             if (this->encrypted () == false)
             {
-                if (_tlsHandle == nullptr)
+                this->_tlsHandle.reset (SSL_new (this->_tlsContext.get ()));
+                if (this->_tlsHandle == nullptr)
                 {
-                    this->_tlsHandle.reset (SSL_new (this->_tlsContext.get ()));
-                    if (this->_tlsHandle == nullptr)
-                    {
-                        lastError = make_error_code (Errc::UnknownError);
-                        return -1;
-                    }
-
-                    if (SSL_set_fd (this->_tlsHandle.get (), this->_handle) != 1)
-                    {
-                        lastError = make_error_code (Errc::InvalidParam);
-                        this->_tlsHandle.reset ();
-                        return -1;
-                    }
-
-                    // prepare the object to work in client or server mode.
-                    if (this->_tlsMode == TlsMode::ClientMode)
-                    {
-                        SSL_set_connect_state (this->_tlsHandle.get ());
-                    }
-                    else
-                    {
-                        SSL_set_accept_state (this->_tlsHandle.get ());
-                    }
-
-                    // Save the internal context.
-                    SSL_set_app_data (this->_tlsHandle.get (), this);
-
-                #ifdef DEBUG
-                    // Set info callback.
-                    SSL_set_info_callback (this->_tlsHandle.get (), infoWrapper);
-                #endif
+                    lastError = make_error_code (Errc::OutOfMemory);
+                    return -1;
                 }
+
+                if (SSL_set_fd (this->_tlsHandle.get (), this->_handle) != 1)
+                {
+                    lastError = make_error_code (Errc::InvalidParam);
+                    this->_tlsHandle.reset ();
+                    return -1;
+                }
+
+                // prepare the object to work in client or server mode.
+                if (this->_tlsMode == TlsMode::ClientMode)
+                {
+                    SSL_set_connect_state (this->_tlsHandle.get ());
+                }
+                else
+                {
+                    SSL_set_accept_state (this->_tlsHandle.get ());
+                }
+
+                // Save the internal context.
+                SSL_set_app_data (this->_tlsHandle.get (), this);
+
+            #ifdef DEBUG
+                // Set info callback.
+                SSL_set_info_callback (this->_tlsHandle.get (), infoWrapper);
+            #endif
 
                 return startHandshake ();
             }
@@ -2215,27 +2212,12 @@ namespace join
         {
             if (verify == true)
             {
-                if (this->_tlsHandle)
-                {
-                    SSL_set_verify (this->_tlsHandle.get (), SSL_VERIFY_PEER, verifyWrapper);
-                    SSL_set_verify_depth (this->_tlsHandle.get (), depth);
-                }
-                else
-                {
-                    SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_PEER, verifyWrapper);
-                    SSL_CTX_set_verify_depth (this->_tlsContext.get (), depth);
-                }
+                SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_PEER, verifyWrapper);
+                SSL_CTX_set_verify_depth (this->_tlsContext.get (), depth);
             }
             else
             {
-                if (this->_tlsHandle)
-                {
-                    SSL_set_verify (this->_tlsHandle.get (), SSL_VERIFY_NONE, nullptr);
-                }
-                else
-                {
-                    SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
-                }
+                SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
             }
         }
 
