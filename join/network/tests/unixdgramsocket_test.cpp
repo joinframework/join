@@ -132,6 +132,8 @@ TEST_F (UnixDgramSocket, connect)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
+    ASSERT_EQ (unixSocket.connect ({}), -1);
+
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
@@ -273,6 +275,7 @@ TEST_F (UnixDgramSocket, writeTo)
 
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.writeTo (data, sizeof (data), {}), -1);
     ASSERT_EQ (unixSocket.writeTo (data, sizeof (data), _serverpath), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyRead (_timeout));
     unixSocket.close ();

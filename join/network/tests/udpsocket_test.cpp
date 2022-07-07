@@ -145,6 +145,8 @@ TEST_F (UdpSocket, connect)
 {
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
+    ASSERT_EQ (udpSocket.connect ({"255.255.255.255", _port}), -1);
+
     ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
@@ -286,6 +288,7 @@ TEST_F (UdpSocket, writeTo)
 
     ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.writeTo (data, sizeof (data), {"255.255.255.255", _port}), -1);
     ASSERT_EQ (udpSocket.writeTo (data, sizeof (data), {Udp::Resolver::resolveHost (_host), _port}), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout));
     udpSocket.close ();

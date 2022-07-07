@@ -127,6 +127,8 @@ TEST_F (IcmpSocket, connect)
 {
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
+    ASSERT_EQ (icmpSocket.connect ({"255.255.255.255"}), -1);
+
     ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.connect (Icmp::Resolver::resolve (_host)), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
@@ -309,6 +311,7 @@ TEST_F (IcmpSocket, writeTo)
     char response[1024];
 
     ASSERT_EQ (server.bind (Icmp::Resolver::resolve (_host)), 0) << join::lastError.message ();
+    ASSERT_EQ (client.writeTo (_data.get (), sizeof (struct icmphdr), {"255.255.255.255"}), -1);
     ASSERT_NE (client.writeTo (_data.get (), sizeof (struct icmphdr), Icmp::Resolver::resolve (_host)), -1) << join::lastError.message ();
     ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
@@ -522,6 +525,16 @@ TEST_F (IcmpSocket, mtu)
     ASSERT_NE (icmpSocket.mtu (), -1) << join::lastError.message ();
     icmpSocket.close ();
     ASSERT_EQ (icmpSocket.mtu (), -1);
+}
+
+/**
+ * @brief Test ttl method.
+ */
+TEST_F (IcmpSocket, ttl)
+{
+    Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
+
+    ASSERT_EQ (icmpSocket.ttl (), 60);
 }
 
 /**

@@ -1859,7 +1859,7 @@ namespace join
                 if ((this->_state != State::Connecting) && (this->_state != State::Connected))
                 {
                     lastError = make_error_code (Errc::OperationFailed);
-                    return -1;
+                    return false;
                 }
 
                 if (this->_state == State::Connecting)

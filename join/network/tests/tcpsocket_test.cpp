@@ -158,6 +158,8 @@ TEST_F (TcpSocket, connect)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
+    ASSERT_EQ (tcpSocket.connect ({"255.255.255.255", _port}), -1);
+
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({Tcp::Resolver::resolveHost (_host), _port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);

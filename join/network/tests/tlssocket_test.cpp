@@ -128,6 +128,39 @@ public:
             keyFile << "-----END RSA PRIVATE KEY-----" << std::endl;
             keyFile.close ();
         }
+
+        std::ofstream invalidKeyFile (_invalidKey);
+        if (invalidKeyFile.is_open ())
+        {
+            invalidKeyFile << "-----BEGIN RSA PRIVATE KEY-----" << std::endl;
+            invalidKeyFile << "MIIEowIBAAKCAQEA2Q0DOyG039uVMuxNnZ5fpfOcvXXOTguST1QR6eLVkdG7OKpM" << std::endl;
+            invalidKeyFile << "nc9K597jx1syT1q+SwFcykMtvWxCfD8BR7bcLILeO6z+HlRfvjOhUiHaX/KCaTN8" << std::endl;
+            invalidKeyFile << "l7OJOgmUlL0FhQ1SXxw7KCSGd+rgu1iHwjFDDkj/tG24ashdmNt+DYdeoJu2mzgw" << std::endl;
+            invalidKeyFile << "tEASfG9VjqBR7ni4Hg/sRpwXvEK5nI1JSLyZbcPCxGlBRdB8hMdny/VW+SBwKD2/" << std::endl;
+            invalidKeyFile << "ivpVJLulw2oniSIcCCcr9d+ERY4XrO71UsiACwPxfdEtbG0KrZfpK91k7vl64DHM" << std::endl;
+            invalidKeyFile << "CeTQPKRZm+LDKOUfv/eTF9F6GY4Dpw2LMwLM5QIDAQABAoIBABjV91etzK+Mxa61" << std::endl;
+            invalidKeyFile << "AVCWzaUEkhvPvhKKGmy/VulnTj7IO98JBYlNLeoIRBIMql4QKRQWDNMMCtDQ8W6c" << std::endl;
+            invalidKeyFile << "Gv5kux7QvrMfYViBGQ9/gucN/pnZ+vgkrw4AuiQM8pZuZpJJ6vH9HfvC6iwQkTR+" << std::endl;
+            invalidKeyFile << "tdIPpvecfL3djCuTz7ns66iKo9ZGpRE6emTBynr8og/oqD8Vw5bW+JJ+AJ3IqZf4" << std::endl;
+            invalidKeyFile << "NslNist7d5FZ5N/+nxWyBUcFglP7bZzb/raOVc/flrYIeDy72asnWOYbDTPzMyH1" << std::endl;
+            invalidKeyFile << "dfaox6QKZtA5NdO9x4aHHGgAz8BTgqs7LvxPwoH+XF1dDCsb3kIeQxHTfcc1opMw" << std::endl;
+            invalidKeyFile << "atxpgwECgYEA8Zq/7Z3tKcBlMz4XNKWWvaDxhBUIS62tGeLJ2spLRFvkL1ixnjcK" << std::endl;
+            invalidKeyFile << "72YWOwDpoINEWa8AhAhM6afE9VxrupSGg+C9uALaJ8HTWTP6u6/F8sbsYaoWHyA/" << std::endl;
+            invalidKeyFile << "k/8/nFEr43ciKUjBhMHB42vYidAgiOvDVXc+/k7HIMQfl/vyp32ecEECgYEA5fu9" << std::endl;
+            invalidKeyFile << "ePLh55TYbXe8SCL0hsZcC8Q/ioT/0GJ6uevGb0lw3XAa+HC6//upu90T7ZOIqysc" << std::endl;
+            invalidKeyFile << "aAqln7ZEeCfvXI/3YJyJ2RWatD+2itECbd0WV2/JflO/OAzDSSFvpxxmwIzccIeA" << std::endl;
+            invalidKeyFile << "UNuNcQGD8HDwFzU+sULvF82yuwMt1syPd/mns6UCgYAviqP5vfnNHW7MhotKcMsY" << std::endl;
+            invalidKeyFile << "xXLA6uKXAbXuQhI2W1g0O2DLcEiDOZGNSilVsvhF/Y6VlzoiwP9hewHmxijsrg1K" << std::endl;
+            invalidKeyFile << "Jg8vBmCnMhzEkNXl2NC61SnujemMdmwMU03RFKfuOqMePJLX7MiaV75kX/AHAV2O" << std::endl;
+            invalidKeyFile << "k8hxgk7sw6rz3UACdVWYAQKBgHUu5ScoksS+Cd0VQmF7Nh8qGSKBt2KsS/BxDVmI" << std::endl;
+            invalidKeyFile << "ck6oHBMomQV340CliaHIjuvh3aRhzhKRQjzz0UVsC8GdNY4LlQ2AvZgUUr2+q78x" << std::endl;
+            invalidKeyFile << "BL4+nmt43pj/n822dL6wcQaxf2zzDgWlKReojwLHeP5KSgxmL49wZx51CzlEd+HI" << std::endl;
+            invalidKeyFile << "2pNlAoGBAObdC7woN7jEfdfYz1BhUpmBsIRqW2yLA1DnlK9lfgs2i1w7spzAh2hV" << std::endl;
+            invalidKeyFile << "djPiKj5vZdcrbaa+SBAnZbFTHyXmAbKbO/iZpSromaZYyCK8NktJu/YxpWZmjnRF" << std::endl;
+            invalidKeyFile << "2xOadRGCav5fTGzCN/ADLgIo4gIAI2o/UnV/MdaSAdHyIeSrxBAb" << std::endl;
+            invalidKeyFile << "-----END RSA PRIVATE KEY-----" << std::endl;
+            invalidKeyFile.close ();
+        }
     }
 
     /**
@@ -138,6 +171,7 @@ public:
         unlink (_rootcert.c_str ());
         unlink (_cert.c_str ());
         unlink (_key.c_str ());
+        unlink (_invalidKey.c_str ());
     }
 
 protected:
@@ -210,6 +244,9 @@ protected:
 
     /// private key.
     static const std::string _key;
+
+    /// invalid private key.
+    static const std::string _invalidKey;
 };
 
 const std::string TlsSocket::_host = "localhost";
@@ -218,6 +255,15 @@ const int         TlsSocket::_timeout = 1000;
 const std::string TlsSocket::_rootcert = "/tmp/tlssocket_test_root.cert";
 const std::string TlsSocket::_cert = "/tmp/tlssocket_test.cert";
 const std::string TlsSocket::_key = "/tmp/tlssocket_test.key";
+const std::string TlsSocket::_invalidKey = "/tmp/tlssocket_test_invalid.key";
+
+/**
+ * @brief Test construct method.
+ */
+TEST_F (TlsSocket, construct)
+{
+    ASSERT_THROW (Tls::Socket (nullptr, Tls::Socket::ClientMode), std::invalid_argument);
+}
 
 /**
  * @brief Test open method.
@@ -278,6 +324,8 @@ TEST_F (TlsSocket, connect)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
+    ASSERT_EQ (tlsSocket.connect ({"255.255.255.255", _port}), -1);
+
     ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
@@ -320,6 +368,8 @@ TEST_F (TlsSocket, connectEncrypted)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
+    ASSERT_EQ (tlsSocket.connectEncrypted ({"255.255.255.255", _port}), -1);
+
     ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     tlsSocket.close ();
@@ -348,6 +398,8 @@ TEST_F (TlsSocket, waitEncrypted)
 {
     Tls::Socket tlsSocket (Tls::Socket::NonBlocking);
 
+    ASSERT_EQ (tlsSocket.open (), 0) << join::lastError.message ();
+    ASSERT_FALSE (tlsSocket.waitEncrypted (_timeout));
     if (tlsSocket.connect ({Tls::Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -800,6 +852,14 @@ TEST_F (TlsSocket, setCertificate)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
+    ASSERT_EQ (tlsSocket.setCertificate ("foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsSocket.setCertificate (_cert), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsSocket.setCertificate (_cert, "foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsSocket.setCertificate (_cert, _invalidKey), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (tlsSocket.setCertificate (_cert, _key), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setCertificate (_cert, _key), 0) << join::lastError.message ();
@@ -815,6 +875,8 @@ TEST_F (TlsSocket, setCaCertificate)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
+    ASSERT_EQ (tlsSocket.setCaCertificate ("foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (tlsSocket.setCaCertificate (_cert), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setCaCertificate (_cert), 0) << join::lastError.message ();
@@ -830,10 +892,13 @@ TEST_F (TlsSocket, setVerify)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    tlsSocket.setVerify (true, 10);
+    tlsSocket.setVerify (false);
+    ASSERT_EQ (tlsSocket.connectEncrypted (Tls::Resolver::resolve (_host + ":" + std::to_string ( _port))), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+    tlsSocket.setVerify (true);
     ASSERT_EQ (tlsSocket.connectEncrypted (Tls::Resolver::resolve (_host + ":" + std::to_string ( _port))), -1);
     ASSERT_EQ (tlsSocket.setCaCertificate (_rootcert), 0) << join::lastError.message ();
-    EXPECT_EQ (tlsSocket.connectEncrypted (Tls::Resolver::resolve (_host + ":" + std::to_string ( _port))), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted (Tls::Resolver::resolve (_host + ":" + std::to_string ( _port))), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     tlsSocket.close ();
 }
