@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classjoin_1_1BasicAcceptor.html" title="basic acceptor class." alt="" coords="5,39,139,80"/>
+<area shape="rect" id="node2" href="$classjoin_1_1BasicStreamAcceptor.html" title="basic stream acceptor class." alt="" coords="187,5,361,47"/>
+<area shape="rect" id="node3" href="$classjoin_1_1BasicTlsAcceptor.html" title="basic TLS acceptor class." alt="" coords="199,71,349,112"/>
+</map>

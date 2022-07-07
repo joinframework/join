@@ -1,0 +1,5 @@
+<map id="join::BasicAcceptor&lt; Protocol &gt;" name="join::BasicAcceptor&lt; Protocol &gt;">
+<area shape="rect" id="node1" title="basic acceptor class." alt="" coords="119,5,253,47"/>
+<area shape="rect" id="node2" href="$classjoin_1_1BasicStreamAcceptor.html" title="basic stream acceptor class." alt="" coords="5,95,180,136"/>
+<area shape="rect" id="node3" href="$classjoin_1_1BasicTlsAcceptor.html" title="basic TLS acceptor class." alt="" coords="204,95,355,136"/>
+</map>

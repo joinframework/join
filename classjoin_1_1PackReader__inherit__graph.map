@@ -1,0 +1,5 @@
+<map id="join::PackReader" name="join::PackReader">
+<area shape="rect" id="node1" title="message pack reader class." alt="" coords="11,155,130,181"/>
+<area shape="rect" id="node2" href="$classjoin_1_1StreamReader.html" title="stream deserializer abstract class." alt="" coords="5,80,136,107"/>
+<area shape="rect" id="node3" href="$classjoin_1_1SaxHandler.html" title="SAX API interface class." alt="" coords="13,5,128,32"/>
+</map>

@@ -1,0 +1,6 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classjoin_1_1BasicSocket.html" title="basic socket class." alt="" coords="5,5,136,47"/>
+<area shape="rect" id="node2" href="$classjoin_1_1BasicDatagramSocket.html" title="basic datagram socket class." alt="" coords="184,5,363,47"/>
+<area shape="rect" id="node3" href="$classjoin_1_1BasicStreamSocket.html" title="basic stream socket class." alt="" coords="411,5,575,47"/>
+<area shape="rect" id="node4" href="$classjoin_1_1BasicTlsSocket.html" title="basic TLS socket class." alt="" coords="623,5,763,47"/>
+</map>

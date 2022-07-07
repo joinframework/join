@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" title=" " alt="" coords="5,111,80,138"/>
+<area shape="rect" id="node2" href="$structstd_1_1is__error__condition__enum_3_01join_1_1Errc_01_4.html" title=" " alt="" coords="134,5,282,47"/>
+<area shape="rect" id="node3" href="$structstd_1_1is__error__condition__enum_3_01join_1_1JsonErrc_01_4.html" title="JSON error code specialization." alt="" coords="128,71,288,112"/>
+<area shape="rect" id="node4" href="$structstd_1_1is__error__condition__enum_3_01join_1_1SaxErrc_01_4.html" title="SAX API generic error code specialization." alt="" coords="131,136,285,177"/>
+<area shape="rect" id="node5" href="$structstd_1_1is__error__condition__enum_3_01join_1_1TlsErrc_01_4.html" title="TLS error code specialization." alt="" coords="133,201,283,243"/>
+</map>
