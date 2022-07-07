@@ -72,25 +72,25 @@ public:
         if (certFile.is_open ())
         {
             certFile << "-----BEGIN CERTIFICATE-----" << std::endl;
-            certFile << "MIIDfjCCAySgAwIBAgIUR3ZIuKMt0BdaOZQnPwhSMR9qzfcwCgYIKoZIzj0EAwIw" << std::endl;
+            certFile << "MIIDgDCCAyagAwIBAgIUR3ZIuKMt0BdaOZQnPwhSMR9qzfgwCgYIKoZIzj0EAwIw" << std::endl;
             certFile << "gcQxCzAJBgNVBAYTAkZSMRIwEAYDVQQIDAlPY2NpdGFuaWUxEDAOBgNVBAcMB0Nh" << std::endl;
             certFile << "c3RyZXMxFzAVBgNVBAoMDkpvaW4gRnJhbWV3b3JrMS0wKwYDVQQLDCRKb2luIEZy" << std::endl;
             certFile << "YW1ld29yayBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkxHTAbBgNVBAMMFGNhLmpvaW5m" << std::endl;
             certFile << "cmFtZXdvcmsubmV0MSgwJgYJKoZIhvcNAQkBFhlzdXBwb3J0QGpvaW5mcmFtZXdv" << std::endl;
-            certFile << "cmsubmV0MB4XDTIyMDcwNzExMTcxOVoXDTMyMDcwNDExMTcxOVowgacxCzAJBgNV" << std::endl;
+            certFile << "cmsubmV0MB4XDTIyMDcwNzEyMTIxMFoXDTMyMDcwNDEyMTIxMFowgagxCzAJBgNV" << std::endl;
             certFile << "BAYTAkZSMRIwEAYDVQQIDAlPY2NpdGFuaWUxEDAOBgNVBAcMB0Nhc3RyZXMxFzAV" << std::endl;
             certFile << "BgNVBAoMDkpvaW4gRnJhbWV3b3JrMRswGQYDVQQLDBJKb2luIEZyYW1ld29yayBE" << std::endl;
-            certFile << "ZXYxEjAQBgNVBAMMCWxvY2FsaG9zdDEoMCYGCSqGSIb3DQEJARYZc3VwcG9ydEBq" << std::endl;
-            certFile << "b2luZnJhbWV3b3JrLm5ldDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB" << std::endl;
-            certFile << "ALUPbMjTtlIlUnQ5uRlkp40SB/n+bE8inQmcBhz8t+LPzIcDPhtuERlaDMoZyTbY" << std::endl;
-            certFile << "25O9X2H1Z3MWxYpVYVcdZ7c4PFzRQyp+2NrabcK/OBbcalt0ehCsTC6qPujCP5a9" << std::endl;
-            certFile << "Ey89KkSVPHKggsY74Choc2+dd1cg4O8kR5Zpgan8P9OfvUQMlnMYWh9S80QQgYk6" << std::endl;
-            certFile << "qxBk1iQ/UXz147u/ykJg8/+T35CIZEzQozS3Ax/mRNcpZmyQZsAZZHwr6sd5Bcy5" << std::endl;
-            certFile << "JTTUD0qnEqhwhsDSS6FWsx8AbcI4k33O3tyBxOMhJjVh7T9wlUSpvIBxMldGZcLx" << std::endl;
-            certFile << "8LIlllbHKCVpNFxP8BRh678CAwEAAaNEMEIwCwYDVR0PBAQDAgXgMB0GA1UdJQQW" << std::endl;
-            certFile << "MBQGCCsGAQUFBwMBBggrBgEFBQcDAjAUBgNVHREEDTALgglsb2NhbGhvc3QwCgYI" << std::endl;
-            certFile << "KoZIzj0EAwIDSAAwRQIhAONSuYMLQJl7M2Y0nSx6JPn5/I4Kz2k/6qH7T9Ln7oSw" << std::endl;
-            certFile << "AiAUhSoORaOfISLsOJm6mcoKHyodjrh8lTncqtNau8UQiQ==" << std::endl;
+            certFile << "ZXYxEzARBgNVBAMMCmxvY2FsaG9zdC4xKDAmBgkqhkiG9w0BCQEWGXN1cHBvcnRA" << std::endl;
+            certFile << "am9pbmZyYW1ld29yay5uZXQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB" << std::endl;
+            certFile << "AQDSNtw5zEoJFPf6Rl0Y1n8BQfE0YTPCELvFAeioUfj8CAnUleHL9pwAEFg6kgoG" << std::endl;
+            certFile << "hvwto5/yWGPUqNNfe3xbFTJcHgMhgtjqy5H6sYDkTi3kYIIMBfTHr8NI7HWE8Nz1" << std::endl;
+            certFile << "qU1snjtERnkoLilIZf/2BojNVMtHC1H316WbMicXS0v7HQo3lv6PYSana9Q9ow9O" << std::endl;
+            certFile << "2/FiW5qq1eOhI1ZedRanX+bl0jHWCd3WsI87+5bTaQrfetdHTOmav6O17Iq9FiTh" << std::endl;
+            certFile << "Sg9fbM3s2Hw15kI+mws029dhcwXs5sYY+NgtrQwjR5qH+54BdUaPwQfl/KyulfEl" << std::endl;
+            certFile << "TJykJ+3w6MorxUr55F68uBNbAgMBAAGjRTBDMAsGA1UdDwQEAwIF4DAdBgNVHSUE" << std::endl;
+            certFile << "FjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwFQYDVR0RBA4wDIIKbG9jYWxob3N0LjAK" << std::endl;
+            certFile << "BggqhkjOPQQDAgNIADBFAiA120ufIbhcw7BJQ1L6WudDdW2mHrVXvdgeOzVGgz1d" << std::endl;
+            certFile << "iAIhAMm/sWI3yzb2IMPffxWKYusWEQE2hZvs24ESSC/ZZ0s+" << std::endl;
             certFile << "-----END CERTIFICATE-----" << std::endl;
             certFile.close ();
         }
@@ -99,31 +99,31 @@ public:
         if (keyFile.is_open ())
         {
             keyFile << "-----BEGIN RSA PRIVATE KEY-----" << std::endl;
-            keyFile << "MIIEogIBAAKCAQEAtQ9syNO2UiVSdDm5GWSnjRIH+f5sTyKdCZwGHPy34s/MhwM+" << std::endl;
-            keyFile << "G24RGVoMyhnJNtjbk71fYfVncxbFilVhVx1ntzg8XNFDKn7Y2tptwr84FtxqW3R6" << std::endl;
-            keyFile << "EKxMLqo+6MI/lr0TLz0qRJU8cqCCxjvgKGhzb513VyDg7yRHlmmBqfw/05+9RAyW" << std::endl;
-            keyFile << "cxhaH1LzRBCBiTqrEGTWJD9RfPXju7/KQmDz/5PfkIhkTNCjNLcDH+ZE1ylmbJBm" << std::endl;
-            keyFile << "wBlkfCvqx3kFzLklNNQPSqcSqHCGwNJLoVazHwBtwjiTfc7e3IHE4yEmNWHtP3CV" << std::endl;
-            keyFile << "RKm8gHEyV0ZlwvHwsiWWVscoJWk0XE/wFGHrvwIDAQABAoIBADsT9WLx8aOMGgNi" << std::endl;
-            keyFile << "ckse1KzrHT8tDRolKShhiH0c2MNhGlNTc4hvuZSUFWg8UbNbvwnN2LmV4VNkMsCY" << std::endl;
-            keyFile << "a1KJfbYC229NuKS9DvUaIIZS7nJHKUz+DHY0QgdX9X7tIuKEfyYCxy/pofek+AbG" << std::endl;
-            keyFile << "srV8n23j63S6faqKI/GoK27Tp9/cytlkFMdwJw184j4/fIdObjbfcpPl4RFLMyYi" << std::endl;
-            keyFile << "Nn2xmxdtdCe4ii1eQznkeveR2W3MG1qwVmYE9EtgqDJ4Shb7HqpOGn0U/rLE/4em" << std::endl;
-            keyFile << "Mb9LB0n/5cluDAVSfbOcNq7qDL97G3t4EItXClfFs54TS6jC1N6suyLcA/s169mM" << std::endl;
-            keyFile << "LvezZIECgYEA2n1ZxjUxoupfFTmqHzzRdzXN6IxcPuiE0TQf0RJg67vSViTwvxqi" << std::endl;
-            keyFile << "0fq47DH64Ddc7FYrXwtU7EShzMOvRvGvT1y0WkOcXZkHln430Q8D+eRL40OCO0sk" << std::endl;
-            keyFile << "XKFXJ0Qt0ZRheRRwnRwWXK+O0/YByE37Xo2OLh+ODFeQVfV+MxQ4YlkCgYEA1CUM" << std::endl;
-            keyFile << "GGmDtHUrOiLloefo/ihihe1oCot712wS8Ns9gkQ6dGJXjP2YNqXV/5uwYp4CMQcG" << std::endl;
-            keyFile << "32fSbLhj3HgM09aqkeBmI2pEsz5LUTjcpBI31BTJ/yFJxNwCfMt5BqVbxkrna/LV" << std::endl;
-            keyFile << "r4Wr63duooZYUs0wEBDX1yAOaG5vVrLEOmqJi9cCgYBJN7x/6Y+KstPOPxa9hRoE" << std::endl;
-            keyFile << "wukPxwmaozzvBnKrE2ebV8OyzopG4Fwz1btmm5Eg1iyznmTGYvvAeXdnMSRpt9Ax" << std::endl;
-            keyFile << "3jUqEoIx83hRfFakHk4Mze6IaDUaPaIf0IluRTC9jOXlN25Nl/3+bW6FpWkPgOJ9" << std::endl;
-            keyFile << "2x4MYtKtXCKoS65Q27PRcQKBgCeGJ3S8487RLZaNPd8mR+BiQcjV7FZaml4OQpEh" << std::endl;
-            keyFile << "J5qHf6SDVfBsptk3mGEg7oHREnNz7bHds/SRfflrXGhzTCAVgLIEcHw8lOezAliH" << std::endl;
-            keyFile << "FGOs491mpEnK+6OofQnh8PFGr0sLWQh0jQ03mSMqiHYUyGmV2cC4tjZ6rL+oWqrP" << std::endl;
-            keyFile << "goTNAoGAeKnJv2PlUpBMIR9avUAviQg3dfM7mGuJO9wNVgAJOF07CDSBg1SHmYYj" << std::endl;
-            keyFile << "/K84Uw/MQPwV17uJDU7HAkjf4fRSMRuUsxpwQp7arQpJVOz4+zYXr+6KZe2QcNsq" << std::endl;
-            keyFile << "eoL8FLs4H7DorbXuwOVruWXB61IYCuc/kK4rlPWFSXStEgbWvhY=" << std::endl;
+            keyFile << "MIIEowIBAAKCAQEA0jbcOcxKCRT3+kZdGNZ/AUHxNGEzwhC7xQHoqFH4/AgJ1JXh" << std::endl;
+            keyFile << "y/acABBYOpIKBob8LaOf8lhj1KjTX3t8WxUyXB4DIYLY6suR+rGA5E4t5GCCDAX0" << std::endl;
+            keyFile << "x6/DSOx1hPDc9alNbJ47REZ5KC4pSGX/9gaIzVTLRwtR99elmzInF0tL+x0KN5b+" << std::endl;
+            keyFile << "j2Emp2vUPaMPTtvxYluaqtXjoSNWXnUWp1/m5dIx1gnd1rCPO/uW02kK33rXR0zp" << std::endl;
+            keyFile << "mr+jteyKvRYk4UoPX2zN7Nh8NeZCPpsLNNvXYXMF7ObGGPjYLa0MI0eah/ueAXVG" << std::endl;
+            keyFile << "j8EH5fysrpXxJUycpCft8OjKK8VK+eRevLgTWwIDAQABAoIBAAzdlK7o5OMXaHHl" << std::endl;
+            keyFile << "2o7Jme5Oxd9pz4wiEAvnqQCcO7vZFhjvr2kXR8btOSkkhP6PRmHYsNJZPIroZj9i" << std::endl;
+            keyFile << "xGKisnlW0OQ9KN995ApO0M+oRUDD81GfD7Mk+7O73Rls0GksmnN6X7A3C/U8lgQ7" << std::endl;
+            keyFile << "UeYR0k+Wz/YiKDsd9KHB+QiA8D6HFQ9I8Y2P97KOcYnxXZfSwNm+ENNU3wShZOl2" << std::endl;
+            keyFile << "ZYJJ4DE+5m2SwZ6g8b5Zre4cDbOduwuz/jXzjy2tAZBlTS4DVpYlhd14z+ssUWiu" << std::endl;
+            keyFile << "AdS/nqSF7Obj0TRhoGNfrkisFzV4itavQ5DKGj/6hjueIJVLteUOzcCeg26YosNy" << std::endl;
+            keyFile << "QzZSjOECgYEA7y3InEoh93/4HZCZmdwN8KfZtqirX0t966FntgAT8RkIs+KvNS8B" << std::endl;
+            keyFile << "m3RfNLa/EuDt5zTmHRGx+oeN+17i9QQjKWcR0NnJ6aSZbvJByj3yKxLF9XVllzp/" << std::endl;
+            keyFile << "vHSSyB264RoKIrWmFN6cCO4u4h9ZPY75pASWBCDMdnGK8axAcqAnlqsCgYEA4P+Y" << std::endl;
+            keyFile << "FF9RW4rhrVU4dpXSfcr6vOwqfp9F9vhTVL0JS/SLOFoJNNpS9Rnq3pVLEuKyCphd" << std::endl;
+            keyFile << "3nk9VFfoRygmMaGBvwGaXZPPvosoaIUgOdTt7KIfSHPichBEVxRuWCrtTGGkG0ok" << std::endl;
+            keyFile << "s/RPHhvxZE267vsVj1PktK8Yr5Ba0AL2ycztNhECgYB5OAwHYe8LIBlg6otelk+e" << std::endl;
+            keyFile << "W4OU9rE8L+eWx4vniuyQce6eNNI1syguYHFsJv56E/OfDYlezDwWzCLidnmyUjF7" << std::endl;
+            keyFile << "51f5MJgLyTdWKoO7e1/EAtS/jYs6dRSOL8rAj4jKU0c1xjhxNU2BnS23vsmc0Fyn" << std::endl;
+            keyFile << "iwd4+iKGGQ+hYnqbXZ4S1wKBgD/3an0gPDkSWua0e8D7B0TMGEztt4cYMQPtxYMp" << std::endl;
+            keyFile << "2yLE+2+h6UwlZcBZBfUR7K4J1SQ9/THqtgzskRTpzTH/AKwVAJXqF/3MAkj00Byg" << std::endl;
+            keyFile << "9KN50/r9NzvGdCdtn5FhYuV8PPOlOJoQsw2UVCR4FNUsfQyqhTL5NMN0/tx0e0UU" << std::endl;
+            keyFile << "BbyBAoGBANu5ifByauVELH8UEl5rXRu1S9iAVV+Bc5jboXwc4VxJtEyomGJ7+YdL" << std::endl;
+            keyFile << "5c9LFV+STUp7CE12uSXQZTQM0tEjPinLntRinNzu9tIHR1vy7FZHEwMFIgB4VTY7" << std::endl;
+            keyFile << "ALRYv1/QpTuywpNUFRS15JkfGNf5JIkrUEWLgkX3OVCBsRGHUugy" << std::endl;
             keyFile << "-----END RSA PRIVATE KEY-----" << std::endl;
             keyFile.close ();
         }
@@ -197,7 +197,7 @@ protected:
 };
 
 const IpAddress   TlsAcceptor::_hostip     = "127.0.0.1";
-const std::string TlsAcceptor::_hostname   = "localhost";
+const std::string TlsAcceptor::_hostname   = "localhost.";
 const uint16_t    TlsAcceptor::_port       = 5000;
 const std::string TlsAcceptor::_root       = "/tmp/tlsserver_test_root.cert";
 const std::string TlsAcceptor::_cert       = "/tmp/tlsserver_test.cert";

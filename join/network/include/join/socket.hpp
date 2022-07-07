@@ -2426,18 +2426,18 @@ namespace join
             }
 
             // check the revocation list.
-            if (!verifyCrl (context))
+            /*if (!verifyCrl (context))
             {
                 std::cout << "rejected by CRL at depth=" << dpth << std::endl;
                 return 0;
-            }
+            }*/
 
             // check ocsp.
-            if (!verifyOcsp (context))
+            /*if (!verifyOcsp (context))
             {
                 std::cout << "rejected by OCSP at depth=" << dpth << std::endl;
                 return 0;
-            }
+            }*/
 
             std::cout << "certificate accepted at depth=" << dpth << std::endl;
 
@@ -2526,20 +2526,20 @@ namespace join
          * @param context pointer to the complete context used for the certificate chain verification.
          * @return when verified successfully, the callback should return 1, 0 otherwise.
          */
-        int verifyCrl ([[maybe_unused]]X509_STORE_CTX *context) const
+        /*int verifyCrl ([[maybe_unused]]X509_STORE_CTX *context) const
         {
             return 1;
-        }
+        }*/
 
         /**
          * @brief verify certificate revocation using OCSP.
          * @param context pointer to the complete context used for the certificate chain verification.
          * @return when verified successfully, the callback should return 1, 0 otherwise.
          */
-        int verifyOcsp ([[maybe_unused]]X509_STORE_CTX *context) const
+        /*int verifyOcsp ([[maybe_unused]]X509_STORE_CTX *context) const
         {
             return 1;
-        }
+        }*/
 
         /// TLS context.
         join::crypto::SslCtxPtr _tlsContext;
