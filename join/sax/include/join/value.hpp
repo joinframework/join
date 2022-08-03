@@ -1528,17 +1528,17 @@ namespace join
     {
         if (lhs.isNumber () && rhs.isNumber () && (lhs.index () != rhs.index ()))
         {
-            if (lhs.isDouble () || rhs.isDouble ())
-            {
-                return lhs.getDouble () == rhs.getDouble ();
-            }
-            else if (lhs.isInt64 () && rhs.isUint64 ())
+            if (lhs.isInt64 () && rhs.isUint64 ())
             {
                 return lhs.getInt64 () >= 0 && uint64_t (lhs.getInt64 ()) == rhs.getUint64 ();
             }
             else if (lhs.isUint64 () && rhs.isInt64 ())
             {
                 return rhs.getInt64 () >= 0 && uint64_t (rhs.getInt64 ()) == lhs.getUint64 () ;
+            }
+            else
+            {
+                return lhs.getDouble () == rhs.getDouble ();
             }
         }
 
@@ -1566,17 +1566,17 @@ namespace join
     {
         if (lhs.isNumber () && rhs.isNumber () && (lhs.index () != rhs.index ()))
         {
-            if (lhs.isDouble () || rhs.isDouble ())
-            {
-                return lhs.getDouble () < rhs.getDouble ();
-            }
-            else if (lhs.isInt64 () && rhs.isUint64 ())
+            if (lhs.isInt64 () && rhs.isUint64 ())
             {
                 return lhs.getInt64 () < 0 || uint64_t (lhs.getInt64 ()) < rhs.getUint64 ();
             }
             else if (lhs.isUint64 () && rhs.isInt64 ())
             {
                 return rhs.getInt64 () >= 0 && lhs.getUint64 () < uint64_t (rhs.getInt64 ());
+            }
+            else
+            {
+                return lhs.getDouble () < rhs.getDouble ();
             }
         }
 
