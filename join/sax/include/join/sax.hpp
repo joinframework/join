@@ -317,9 +317,6 @@ namespace join
         {
             switch (value.index ())
             {
-                case Value::Null:
-                    return setNull ();
-
                 case Value::Boolean:
                     return setBool (value.get <Value::Boolean> ());
 
@@ -348,11 +345,8 @@ namespace join
                     return setObject (value.get <Value::ObjectValue> ());
 
                 default:
-                    join::lastError = make_error_code (SaxErrc::InvalidValue);
-                    break;
+                    return setNull ();
             }
-
-            return -1;
         }
 
     protected:
@@ -364,16 +358,12 @@ namespace join
         virtual int setArray (const Array& array)
         {
             startArray (array.size ());
-
             for (auto const& element : array)
             {
-                if (serialize (element) == -1)
-                {
-                    return -1;
-                }
+                serialize (element);
             }
-
-            return stopArray ();
+            stopArray ();
+            return 0;
         }
 
         /**
@@ -384,16 +374,13 @@ namespace join
         virtual int setObject (const Object& object)
         {
             startObject (object.size ());
-
             for (auto const& member : object)
             {
-                if ((setKey (member.first) == -1) || (serialize (member.second) == -1))
-                {
-                    return -1;
-                }
+                setKey (member.first);
+                serialize (member.second);
             }
-
-            return stopObject ();
+            stopObject ();
+            return 0;
         }
 
         /**
@@ -715,14 +702,9 @@ namespace join
                 parent->insert (Member (_curkey, std::move (value)));
                 _curkey.clear ();
             }
-            else if (parent->is <Value::ArrayValue> ())
-            {
-                parent->pushBack (std::move (value));
-            }
             else
             {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                return -1;
+                parent->pushBack (std::move (value));
             }
 
             return 0;

@@ -32,6 +32,7 @@
 #include <sstream>
 
 using join::JsonWriter;
+using join::Value;
 
 /**
  * @brief Test setNull method.
@@ -256,6 +257,29 @@ TEST (JsonWriter, setKey)
     stream.str ("");
     EXPECT_EQ (jsonWriter.setKey ("\"\\\b\f\n\r\t\x19"), 0);
     EXPECT_EQ (stream.str (), "\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\":");
+}
+
+/**
+ * @brief Test serialize method.
+ */
+TEST (JsonWriter, serialize)
+{
+    Value value;
+    value.pushBack (nullptr);
+    value.pushBack (true);
+    value.pushBack (int32_t (1));
+    value.pushBack (uint32_t (2));
+    value.pushBack (int64_t (3));
+    value.pushBack (uint64_t (4));
+    value.pushBack (1.23456789e-13);
+    value.pushBack ("test");
+
+    std::stringstream stream;
+    JsonWriter jsonWriter (stream);
+
+    stream.str ("");
+    EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();
+    EXPECT_EQ (stream.str (), "[null,true,1,2,3,4,1.23456789e-13,\"test\"]");
 }
 
 /**
