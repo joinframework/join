@@ -292,11 +292,8 @@ namespace join
                     case Unsigned64:
                         return static_cast <int8_t> (get <Unsigned64> ());
 
-                    case Real:
-                        return static_cast <int8_t> (get <Real> ());
-
                     default:
-                        break;
+                        return static_cast <int8_t> (get <Real> ());
                 }
             }
 
@@ -370,11 +367,8 @@ namespace join
                     case Unsigned64:
                         return static_cast <uint8_t> (get <Unsigned64> ());
 
-                    case Real:
-                        return static_cast <uint8_t> (get <Real> ());
-
                     default:
-                        break;
+                        return static_cast <uint8_t> (get <Real> ());
                 }
             }
 
@@ -448,11 +442,8 @@ namespace join
                     case Unsigned64:
                         return static_cast <int16_t> (get <Unsigned64> ());
 
-                    case Real:
-                        return static_cast <int16_t> (get <Real> ());
-
                     default:
-                        break;
+                        return static_cast <int16_t> (get <Real> ());
                 }
             }
 
@@ -526,11 +517,8 @@ namespace join
                     case Unsigned64:
                         return static_cast <uint16_t> (get <Unsigned64> ());
 
-                    case Real:
-                        return static_cast <uint16_t> (get <Real> ());
-
                     default:
-                        break;
+                        return static_cast <uint16_t> (get <Real> ());
                 }
             }
 
@@ -603,11 +591,8 @@ namespace join
                     case Unsigned64:
                         return static_cast <int32_t> (get <Unsigned64> ());
 
-                    case Real:
-                        return static_cast <int32_t> (get <Real> ());
-
                     default:
-                        break;
+                        return static_cast <int32_t> (get <Real> ());
                 }
             }
 
@@ -680,11 +665,8 @@ namespace join
                     case Unsigned64:
                         return static_cast <uint32_t> (get <Unsigned64> ());
 
-                    case Real:
-                        return static_cast <uint32_t> (get <Real> ());
-
                     default:
-                        break;
+                        return static_cast <uint32_t> (get <Real> ());
                 }
             }
 
@@ -752,11 +734,8 @@ namespace join
                     case Unsigned64:
                         return static_cast <int64_t> (get <Unsigned64> ());
 
-                    case Real:
-                        return static_cast <int64_t> (get <Real> ());
-
                     default:
-                        break;
+                        return static_cast <int64_t> (get <Real> ());
                 }
             }
 
@@ -828,11 +807,8 @@ namespace join
                     case Unsigned64:
                         return get <Unsigned64> ();
 
-                    case Real:
-                        return static_cast <uint64_t> (get <Real> ());
-
                     default:
-                        break;
+                        return static_cast <uint64_t> (get <Real> ());
                 }
             }
 
