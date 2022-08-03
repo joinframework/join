@@ -32,6 +32,7 @@
 #include <sstream>
 
 using join::PackWriter;
+using join::Value;
 
 /**
  * @brief Test setNull method.
@@ -462,6 +463,31 @@ TEST (PackWriter, setKey)
     stream.str ("");
     EXPECT_EQ (packWriter.setKey (std::string (65536, 'x')), 0);
     EXPECT_EQ (stream.str ().compare (0, 6, std::string ({'\xDB', '\x00', '\x01', '\x00', '\x00', '\x78'})), 0);
+}
+
+/**
+ * @brief Test serialize method.
+ */
+TEST (PackWriter, serialize)
+{
+    Value value;
+    value.pushBack (nullptr);
+    value.pushBack (true);
+    value.pushBack (int32_t (1));
+    value.pushBack (uint32_t (2));
+    value.pushBack (int64_t (3));
+    value.pushBack (uint64_t (4));
+    value.pushBack (1.23456789e-13);
+    value.pushBack ("test");
+
+    std::stringstream stream;
+    PackWriter jsonWriter (stream);
+
+    stream.str ("");
+    EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();
+    EXPECT_EQ (stream.str (), std::string ({'\x98', '\xC0', '\xC3', '\x01', '\x02', '\x03', '\x04', '\xCB',
+                                            '\x3D', '\x41', '\x5F', '\xFF', '\xE5', '\x3A', '\x68', '\x5D',
+                                            '\xA4', '\x74', '\x65', '\x73', '\x74'}));
 }
 
 /**

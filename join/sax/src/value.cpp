@@ -41,8 +41,7 @@ using join::PackWriter;
 // =========================================================================
 int Value::jsonRead (const char* document, size_t length)
 {
-    JsonReader reader (*this);
-    return reader.deserialize (document, length);
+    return deserialize <JsonReader> (document, length);
 }
 
 // =========================================================================
@@ -51,8 +50,7 @@ int Value::jsonRead (const char* document, size_t length)
 // =========================================================================
 int Value::jsonRead (const char* first, const char* last)
 {
-    JsonReader reader (*this);
-    return reader.deserialize (first, last);
+    return deserialize <JsonReader> (first, last);
 }
 
 // =========================================================================
@@ -61,8 +59,7 @@ int Value::jsonRead (const char* first, const char* last)
 // =========================================================================
 int Value::jsonRead (const std::string& document)
 {
-    JsonReader reader (*this);
-    return reader.deserialize (document);
+    return deserialize <JsonReader> (document);
 }
 
 // =========================================================================
@@ -71,8 +68,7 @@ int Value::jsonRead (const std::string& document)
 // =========================================================================
 int Value::jsonRead (std::istream& document)
 {
-    JsonReader reader (*this);
-    return reader.deserialize (document);
+    return deserialize <JsonReader> (document);
 }
 
 // =========================================================================
@@ -91,8 +87,7 @@ int Value::jsonWrite (std::ostream& document, size_t indentation)
 // =========================================================================
 int Value::jsonCanonicalize (std::ostream& document)
 {
-    JsonCanonicalizer writer (document);
-    return writer.serialize (*this);
+    return serialize <JsonCanonicalizer> (document);
 }
 
 // =========================================================================
@@ -101,8 +96,7 @@ int Value::jsonCanonicalize (std::ostream& document)
 // =========================================================================
 int Value::packRead (const char* document, size_t length)
 {
-    PackReader reader (*this);
-    return reader.deserialize (document, length);
+    return deserialize <PackReader> (document, length);
 }
 
 // =========================================================================
@@ -111,8 +105,7 @@ int Value::packRead (const char* document, size_t length)
 // =========================================================================
 int Value::packRead (const char* first, const char* last)
 {
-    PackReader reader (*this);
-    return reader.deserialize (first, last);
+    return deserialize <PackReader> (first, last);
 }
 
 // =========================================================================
@@ -121,8 +114,7 @@ int Value::packRead (const char* first, const char* last)
 // =========================================================================
 int Value::packRead (const std::string& document)
 {
-    PackReader reader (*this);
-    return reader.deserialize (document);
+    return deserialize <PackReader> (document);
 }
 
 // =========================================================================
@@ -131,8 +123,7 @@ int Value::packRead (const std::string& document)
 // =========================================================================
 int Value::packRead (std::istream& document)
 {
-    PackReader reader (*this);
-    return reader.deserialize (document);
+    return deserialize <PackReader> (document);
 }
 
 // =========================================================================
@@ -141,6 +132,5 @@ int Value::packRead (std::istream& document)
 // =========================================================================
 int Value::packWrite (std::ostream& document)
 {
-    PackWriter writer (document);
-    return writer.serialize (*this);
+    return serialize <PackWriter> (document);
 }

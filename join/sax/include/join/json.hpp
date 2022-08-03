@@ -808,25 +808,21 @@ namespace join
         virtual int setObject (const Object& object) override
         {
             startObject (object.size ());
-
             std::vector <const Member *> members;
             std::transform (object.begin (), object.end (), std::back_inserter (members), [] (const Member &member) {return &member;});
-            std::sort (members.begin (), members.end (), [] (const Member *a, const Member *b) { 
+            std::sort (members.begin (), members.end (), [] (const Member *a, const Member *b) {
                 std::wstring_convert <std::codecvt_utf8_utf16 <char16_t>, char16_t> cvt_utf8_utf16;
                 std::u16string wa = cvt_utf8_utf16.from_bytes (a->first.data ());
                 std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.data ());
                 return wa < wb;
             });
-
             for (auto const& member : members)
             {
-                if ((setKey (member->first) == -1) || (serialize (member->second) == -1))
-                {
-                    return -1;
-                }
+                setKey (member->first);
+                serialize (member->second);
             }
-
-            return stopObject ();
+            stopObject ();
+            return 0;
         }
 
         /**
