@@ -62,75 +62,35 @@ namespace join
          * @brief get JSON error category name.
          * @return JSON error category name.
          */
-        virtual const char* name () const noexcept
-        {
-            return "join";
-        }
+        virtual const char* name () const noexcept;
 
         /**
          * @brief translate JSON error code to human readable error string.
          * @param code error code.
          * @return human readable error string.
          */
-        virtual std::string message (int code) const
-        {
-            switch (static_cast <JsonErrc> (code))
-            {
-                case JsonErrc::InvalidComment:
-                    return "comment is invalid";
-                case JsonErrc::InvalidEscaping:
-                    return "character escaping is invalid";
-                case JsonErrc::InvalidEncoding:
-                    return "character encoding is invalid";
-                case JsonErrc::IllegalCharacter:
-                    return "illegal character";
-                case JsonErrc::MissingCurlyBracket:
-                    return "missing curly bracket";
-                case JsonErrc::MissingSquareBracket:
-                    return "missing square bracket";
-                case JsonErrc::MissingQuote:
-                    return "missing quote";
-                case JsonErrc::MissingColon:
-                    return "missing colon";
-                case JsonErrc::MissingComma:
-                    return "missing comma";
-                case JsonErrc::EndOfFile:
-                    return "end of file";
-                default:
-                    return "success";
-            }
-        }
+        virtual std::string message (int code) const;
     };
 
     /**
      * @brief get error category.
      * @return the created std::error_category object.
      */
-    const std::error_category& jsonCategory ()
-    {
-        static JsonCategory instance;
-        return instance;
-    }
+    const std::error_category& jsonCategory ();
 
     /**
      * @brief create an std::error_code object.
      * @param code error code number.
      * @return the created std::error_code object.
      */
-    std::error_code make_error_code (JsonErrc code)
-    {
-        return std::error_code (static_cast <int> (code), jsonCategory ());
-    }
+    std::error_code make_error_code (JsonErrc code);
 
     /**
      * @brief create an std::error_condition object.
      * @param code error code number.
      * @return the created std::error_condition object.
      */
-    std::error_condition make_error_condition (JsonErrc code)
-    {
-        return std::error_condition (static_cast <int> (code), jsonCategory ());
-    }
+    std::error_condition make_error_condition (JsonErrc code);
 
     /**
      * @brief JSON writer class.
@@ -774,7 +734,7 @@ namespace join
             array ();
             if (std::isfinite (value))
             {
-                if ((std::trunc (value) == value) && 
+                if ((std::trunc (value) == value) &&
                     (value >= 0) &&
                     (value < static_cast <double> (std::numeric_limits <uint64_t>::max ())))
                 {
