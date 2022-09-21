@@ -500,6 +500,15 @@ namespace join
         }
 
         /**
+         * @brief check if the socket is connected.
+         * @return true if connected, false otherwise.
+         */
+        bool connected ()
+        {
+            return this->rdbuf ()->socket ().connected ();
+        }
+
+        /**
          * @brief get the associated stream buffer.
          * @return The associated stream buffer.
          */
@@ -631,6 +640,15 @@ namespace join
 
                 this->setstate (std::ios_base::failbit);
             }
+        }
+
+        /**
+         * @brief check if the socket is secure.
+         * @return true if the socket is secure, false otherwise.
+         */
+        bool encrypted () const
+        {
+            return this->rdbuf ()->socket ().encrypted ();
         }
     };
 }

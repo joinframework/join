@@ -1547,59 +1547,35 @@ namespace join
          * @brief get digest error category name.
          * @return digest error category name.
          */
-        virtual const char* name () const noexcept
-        {
-            return "join";
-        }
+        virtual const char* name () const noexcept;
 
         /**
          * @brief translate digest error code to human readable error string.
          * @param code error code.
          * @return human readable error string.
          */
-        virtual std::string message (int code) const
-        {
-            switch (static_cast <TlsErrc> (code))
-            {
-                case TlsErrc::TlsCloseNotifyAlert:
-                    return "TLS close notify alert received";
-                case TlsErrc::TlsProtocolError:
-                    return "TLS protocol error";
-                default:
-                    return "success";
-            }
-        }
+        virtual std::string message (int code) const;
     };
 
     /**
      * @brief get error category.
      * @return the created std::error_category object.
      */
-    const std::error_category& getTlsCategory ()
-    {
-        static TlsCategory instance;
-        return instance;
-    }
+    const std::error_category& getTlsCategory ();
 
     /**
      * @brief create an std::error_code object.
      * @param code error code number.
      * @return the created std::error_code object.
      */
-    std::error_code make_error_code (TlsErrc code)
-    {
-        return std::error_code (static_cast <int> (code), getTlsCategory ());
-    }
+    std::error_code make_error_code (TlsErrc code);
 
     /**
      * @brief create an std::error_condition object.
      * @param code error code number.
      * @return the created std::error_condition object.
      */
-    std::error_condition make_error_condition (TlsErrc code)
-    {
-        return std::error_condition (static_cast <int> (code), getTlsCategory ());
-    }
+    std::error_condition make_error_condition (TlsErrc code);
 
     /**
      * @brief basic TLS socket class.
