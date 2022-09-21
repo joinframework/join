@@ -20,6 +20,7 @@ set(PUBLIC_HEADER_DIRS
 )
 
 set(PUBLIC_HEADERS
+    core/include/join/version.hpp
     core/include/join/error.hpp
     core/include/join/utils.hpp
     core/include/join/traits.hpp
@@ -59,8 +60,11 @@ set(SOURCES
     crypto/src/openssl.cpp
     network/src/macaddress.cpp
     network/src/ipaddress.cpp
+    network/src/socket.cpp
     network/src/arp.cpp
     sax/src/value.cpp
+    sax/src/sax.cpp
+    sax/src/json.cpp
 )
 
 add_library(${PROJECT_NAME} ${SOURCES})
