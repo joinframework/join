@@ -360,7 +360,7 @@ std::string& HttpRequest::normalize (std::string& path)
 
     while ((pos = path.find ("//", pos)) != std::string::npos)
     {
-        path.replace (pos, strlen ("//"), "/");
+        path.replace (pos, 2, "/");
     }
 
     // rfc3986 (see https://tools.ietf.org/html/rfc3986#section-5.2.4).
@@ -414,19 +414,19 @@ std::string& HttpRequest::normalize (std::string& path)
 // =========================================================================
 void HttpRequest::storeParameters (const std::string &query)
 {
-    size_t startPos = 0, equalPos = std::string::npos, sepPos = std::string::npos;
+    size_t pos = 0;
 
     for (;;)
     {
-        equalPos = query.find ("=", startPos);
+        size_t equalPos = query.find ("=", pos);
         if (equalPos == std::string::npos)
             return;
 
-        sepPos = query.find ("&", equalPos + 1);
+        size_t sepPos = query.find ("&", equalPos + 1);
         if (sepPos == std::string::npos)
             sepPos = query.length ();
 
-        std::string name  = query.substr (startPos, equalPos - startPos);
+        std::string name  = query.substr (pos, equalPos - pos);
         decodeUrl (name);
 
         std::string value = query.substr (equalPos + 1, sepPos - equalPos - 1);
@@ -437,6 +437,6 @@ void HttpRequest::storeParameters (const std::string &query)
         if (sepPos == query.length ())
             return;
 
-        startPos = sepPos + 1;
+        pos = sepPos + 1;
     }
 }
