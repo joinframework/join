@@ -22,6 +22,9 @@
  * SOFTWARE.
  */
 
+#ifndef __JOIN_UTILS_HPP__
+#define __JOIN_UTILS_HPP__
+
 // C++.
 #include <stdexcept>
 #include <chrono>
@@ -33,6 +36,7 @@
 #include <endian.h>
 #include <cstdint>
 #include <cstddef>
+#include <cstring>
 
 namespace join
 {
@@ -143,6 +147,14 @@ namespace join
                 return _byteswap <Type, sizeof (Type)> ()(val);
             }
         };
+
+        struct lessNoCase
+        {
+            bool operator () (const std::string& a, const std::string& b) const noexcept
+            {
+                return ::strcasecmp (a.c_str (), b.c_str ()) < 0;
+            }
+        };
     }
 
     /**
@@ -155,6 +167,18 @@ namespace join
     {
         val = details::_swap <Type> ()(val);
         return val;
+    }
+
+    /**
+     * @brief case insensitive string comparison.
+     * @param a string to compare.
+     * @param b string to compare to.
+     * @return true if equals, false otharwise.
+     */
+    inline bool compareNoCase (const std::string& a, const std::string& b)
+    {
+        return ((a.size () == b.size ()) && 
+            std::equal (a.begin (), a.end (), b.begin (), [] (char c1, char c2) {return std::toupper (c1) == std::toupper (c2);}));
     }
 
     /**
@@ -185,3 +209,5 @@ namespace join
         return std::chrono::duration_cast <std::chrono::milliseconds> (end - beg);
     }
 }
+
+#endif

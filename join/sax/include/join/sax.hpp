@@ -68,63 +68,35 @@ namespace join
          * @brief get SAX API generic error category name.
          * @return deserializer generic error category name.
          */
-        virtual const char* name () const noexcept
-        {
-            return "join";
-        }
+        virtual const char* name () const noexcept;
 
         /**
          * @brief translate SAX API generic error code to human readable error string.
          * @param code error code.
          * @return human readable error string.
          */
-        virtual std::string message (int code) const
-        {
-            switch (static_cast <SaxErrc> (code))
-            {
-                case SaxErrc::StackOverflow:
-                    return "stack overflow";
-                case SaxErrc::InvalidParent:
-                    return "parent not an array nor an object";
-                case SaxErrc::InvalidValue:
-                    return "value is invalid";
-                case SaxErrc::ExtraData:
-                    return "extra data detected";
-                default:
-                    return "success";
-            }
-        }
+        virtual std::string message (int code) const;
     };
 
     /**
      * @brief get error category.
      * @return the created std::error_category object.
      */
-    const std::error_category& saxCategory ()
-    {
-        static SaxCategory instance;
-        return instance;
-    }
+    const std::error_category& saxCategory ();
 
     /**
      * @brief create an std::error_code object.
      * @param code error code number.
      * @return the created std::error_code object.
      */
-    std::error_code make_error_code (SaxErrc code)
-    {
-        return std::error_code (static_cast <int> (code), saxCategory ());
-    }
+    std::error_code make_error_code (SaxErrc code);
 
     /**
      * @brief create an std::error_condition object.
      * @param code error code number.
      * @return the created std::error_condition object.
      */
-    std::error_condition make_error_condition (SaxErrc code)
-    {
-        return std::error_condition (static_cast <int> (code), saxCategory ());
-    }
+    std::error_condition make_error_condition (SaxErrc code);
 
     /**
      * @brief SAX API interface class.

@@ -36,7 +36,7 @@ using join::JsonCategory;
  */
 TEST (JsonCategory, name)
 {
-    EXPECT_STREQ (JsonCategory ().name (), "join");
+    EXPECT_STREQ (JsonCategory ().name (), "libjoin");
 }
 
 /**

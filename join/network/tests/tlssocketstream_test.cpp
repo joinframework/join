@@ -256,13 +256,11 @@ TEST_F (TlsSocketStream, moveAssign)
 TEST_F (TlsSocketStream, connect)
 {
     Tls::Stream tlsStream;
-    ASSERT_FALSE (tlsStream.socket ().connected ());
     tlsStream.connect ({Tls::Resolver::resolveHost (_host), _invalid_port});
     ASSERT_TRUE (tlsStream.fail ());
     tlsStream.clear ();
     tlsStream.connect ({Tls::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.socket ().connected ());
     tlsStream.close ();
 }
 
@@ -272,14 +270,10 @@ TEST_F (TlsSocketStream, connect)
 TEST_F (TlsSocketStream, startEncryption)
 {
     Tls::Stream tlsStream;
-    ASSERT_FALSE (tlsStream.socket ().connected ());
     tlsStream.connect ({Tls::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.socket ().connected ());
-    ASSERT_FALSE (tlsStream.socket ().encrypted ());
     tlsStream.startEncryption ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.socket ().encrypted ());
     tlsStream.close ();
 }
 
@@ -289,14 +283,11 @@ TEST_F (TlsSocketStream, startEncryption)
 TEST_F (TlsSocketStream, connectEncrypted)
 {
     Tls::Stream tlsStream;
-    ASSERT_FALSE (tlsStream.socket ().connected ());
     tlsStream.connect ({Tls::Resolver::resolveHost (_host), _invalid_port});
     ASSERT_TRUE (tlsStream.fail ());
     tlsStream.clear ();
     tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.socket ().connected ());
-    ASSERT_TRUE (tlsStream.socket ().encrypted ());
     tlsStream.close ();
 }
 
@@ -306,13 +297,47 @@ TEST_F (TlsSocketStream, connectEncrypted)
 TEST_F (TlsSocketStream, close)
 {
     Tls::Stream tlsStream;
-    ASSERT_FALSE (tlsStream.socket ().connected ());
     tlsStream.connect ({Tls::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.socket ().connected ());
     tlsStream.close ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_FALSE (tlsStream.socket ().connected ());
+}
+
+/**
+ * @brief Test connected method.
+ */
+TEST_F (TlsSocketStream, connected)
+{
+    Tls::Stream tlsStream;
+    ASSERT_FALSE (tlsStream.connected ());
+    tlsStream.connect ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.connected ());
+    tlsStream.close ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_FALSE (tlsStream.connected ());
+}
+
+/**
+ * @brief Test encrypted method.
+ */
+TEST_F (TlsSocketStream, encrypted)
+{
+    Tls::Stream tlsStream;
+    ASSERT_FALSE (tlsStream.encrypted ());
+    tlsStream.connect ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_FALSE (tlsStream.encrypted ());
+    tlsStream.startEncryption ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.encrypted ());
+    tlsStream.close ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_FALSE (tlsStream.encrypted ());
+    tlsStream.connectEncrypted ({Tls::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.encrypted ());
+    tlsStream.close ();
 }
 
 /**

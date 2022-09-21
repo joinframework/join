@@ -70,6 +70,17 @@ TEST (Utils, swap)
 }
 
 /**
+ * @brief Test compareNoCase.
+ */
+TEST (Utils, compareNoCase)
+{
+    EXPECT_TRUE  (join::compareNoCase ("One", "ONE"));
+    EXPECT_TRUE  (join::compareNoCase ("TWO", "two"));
+    EXPECT_TRUE  (join::compareNoCase ("Three", "ThReE"));
+    EXPECT_FALSE (join::compareNoCase ("Four", "4"));
+}
+
+/**
  * @brief Test randomize.
  */
 TEST (Utils, randomize)

@@ -36,7 +36,7 @@ using join::TlsCategory;
  */
 TEST (TlsCategory, name)
 {
-    EXPECT_STREQ (TlsCategory ().name (), "join");
+    EXPECT_STREQ (TlsCategory ().name (), "libjoin");
 }
 
 /**

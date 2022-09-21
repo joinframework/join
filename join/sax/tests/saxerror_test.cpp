@@ -36,7 +36,7 @@ using join::SaxCategory;
  */
 TEST (SaxCategory, name)
 {
-    EXPECT_STREQ (SaxCategory ().name (), "join");
+    EXPECT_STREQ (SaxCategory ().name (), "libjoin");
 }
 
 /**

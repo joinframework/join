@@ -139,13 +139,11 @@ TEST_F (TcpSocketStream, moveAssign)
 TEST_F (TcpSocketStream, connect)
 {
     Tcp::Stream tcpStream;
-    ASSERT_FALSE (tcpStream.socket ().connected ());
     tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _invalid_port});
     ASSERT_TRUE (tcpStream.fail ());
     tcpStream.clear ();
     tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tcpStream.socket ().connected ());
     tcpStream.close ();
 }
 
@@ -155,13 +153,26 @@ TEST_F (TcpSocketStream, connect)
 TEST_F (TcpSocketStream, close)
 {
     Tcp::Stream tcpStream;
-    ASSERT_FALSE (tcpStream.socket ().connected ());
     tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tcpStream.socket ().connected ());
     tcpStream.close ();
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
-    ASSERT_FALSE (tcpStream.socket ().connected ());
+    tcpStream.close ();
+}
+
+/**
+ * @brief Test connected method.
+ */
+TEST_F (TcpSocketStream, connected)
+{
+    Tcp::Stream tcpStream;
+    ASSERT_FALSE (tcpStream.connected ());
+    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tcpStream.connected ());
+    tcpStream.close ();
+    ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
+    ASSERT_FALSE (tcpStream.connected ());
 }
 
 /**
