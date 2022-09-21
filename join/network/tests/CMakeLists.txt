@@ -81,3 +81,7 @@ gtest_discover_tests(tlsacceptor.gtest)
 add_executable(arp.gtest arp_test.cpp)
 target_link_libraries(arp.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(arp.gtest)
+
+add_executable(httpclient.gtest httpclient_test.cpp)
+target_link_libraries(httpclient.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(httpclient.gtest)
