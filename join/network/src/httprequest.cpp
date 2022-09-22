@@ -225,7 +225,7 @@ std::string HttpRequest::query () const
 // =========================================================================
 std::string HttpRequest::uri () const
 {
-    return _path + query ();
+    return path () + query ();
 }
 
 // =========================================================================

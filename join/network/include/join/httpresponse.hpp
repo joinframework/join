@@ -80,7 +80,7 @@ namespace join
          * @param status HTTP status.
          * @param reason HTTP reason.
          */
-        void response (const std::string& status, const std::string& reason);
+        void response (const std::string& status, const std::string& reason = {});
 
         /**
          * @brief get HTTP response status.
