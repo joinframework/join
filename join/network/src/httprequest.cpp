@@ -137,32 +137,6 @@ std::string HttpRequest::methodString () const
 
 // =========================================================================
 //   CLASS     : HttpRequest
-//   METHOD    : query
-// =========================================================================
-std::string HttpRequest::query () const
-{
-    std::string out;
-
-    for (auto next = _parameters.begin (); next != _parameters.end (); ++next)
-    {
-        out += next == _parameters.begin () ? "?" : "&";
-        out += next->first + "=" + next->second;
-    }
-
-    return out;
-}
-
-// =========================================================================
-//   CLASS     : HttpRequest
-//   METHOD    : uri
-// =========================================================================
-std::string HttpRequest::uri () const
-{
-    return _path + query ();
-}
-
-// =========================================================================
-//   CLASS     : HttpRequest
 //   METHOD    : parameter
 // =========================================================================
 void HttpRequest::parameter (const std::string &name, const std::string &var)
@@ -191,7 +165,33 @@ std::string HttpRequest::parameter (const std::string& name) const
 // =========================================================================
 bool HttpRequest::hasParameter (const std::string& name) const
 {
-    return _parameters.find (name) != _headers.end ();
+    return _parameters.find (name) != _parameters.end ();
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : query
+// =========================================================================
+std::string HttpRequest::query () const
+{
+    std::string out;
+
+    for (auto next = _parameters.begin (); next != _parameters.end (); ++next)
+    {
+        out += next == _parameters.begin () ? "?" : "&";
+        out += next->first + "=" + next->second;
+    }
+
+    return out;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : uri
+// =========================================================================
+std::string HttpRequest::uri () const
+{
+    return _path + query ();
 }
 
 // =========================================================================

@@ -174,18 +174,6 @@ namespace join
         std::string methodString () const;
 
         /**
-         * @brief get query.
-         * @return query.
-         */
-        std::string query () const;
-
-        /**
-         * @brief get URI.
-         * @return URI.
-         */
-        std::string uri () const;
-
-        /**
          * @brief add query parameters to the HTTP request.
          * @param name parameter name.
          * @param val parameter value.
@@ -206,6 +194,18 @@ namespace join
          * @return true of there is such a parameter, false otherwise.
          */
         bool hasParameter (const std::string& name) const;
+
+        /**
+         * @brief get query.
+         * @return query.
+         */
+        std::string query () const;
+
+        /**
+         * @brief get URI.
+         * @return URI.
+         */
+        std::string uri () const;
 
         /**
          * @brief send request to the given output stream.
