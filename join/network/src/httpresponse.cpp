@@ -110,8 +110,16 @@ const std::string& HttpResponse::reason () const
 //   CLASS     : HttpResponse
 //   METHOD    : send
 // =========================================================================
-void HttpResponse::send (std::ostream& /*out*/) const
+void HttpResponse::send (std::ostream& out) const
 {
+    out << version () << " " << status () << " " << reason () << "\r\n";
+
+    for (auto const& header : _headers)
+    {
+        out << header.first << ": " << header.second << "\r\n";
+    }
+
+    out << "\r\n";
 }
 
 // =========================================================================

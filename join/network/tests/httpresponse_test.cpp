@@ -123,8 +123,16 @@ TEST (HttpResponse, response)
 /**
  * @brief Test send.
  */
-TEST (HttpResponse, DISABLED_send)
+TEST (HttpResponse, send)
 {
+    HttpResponse response;
+    response.version ("HTTP/1.0");
+    response.response ("200", "OK");
+    response.header ("Connection", "keep-alive");
+
+    std::stringstream ss;
+    response.send (ss);
+    EXPECT_EQ (ss.str (), "HTTP/1.0 200 OK\r\nConnection: keep-alive\r\n\r\n");
 }
 
 /**
