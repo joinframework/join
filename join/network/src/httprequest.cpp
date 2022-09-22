@@ -120,8 +120,6 @@ std::string HttpRequest::methodString () const
 {
     switch (_method)
     {
-        case Head:
-            return "HEAD";
         case Get:
             return "GET";
         case Put:
@@ -131,7 +129,7 @@ std::string HttpRequest::methodString () const
         case Delete:
             return "DELETE";
         default:
-            return "UNKNOWN";
+            return "HEAD";
     }
 }
 
@@ -224,12 +222,14 @@ void HttpRequest::receive (std::istream& in)
             size_t pos1 = line.find (" ");
             if (pos1 == std::string::npos)
             {
+                in.setstate (std::ios_base::failbit);
                 return;
             }
 
             size_t pos2 = line.find (" ", pos1 + 1);
             if (pos2 == std::string::npos)
             {
+                in.setstate (std::ios_base::failbit);
                 return;
             }
 
@@ -293,6 +293,7 @@ void HttpRequest::receive (std::istream& in)
         size_t pos = line.find (": ");
         if (pos == std::string::npos)
         {
+            in.setstate (std::ios_base::failbit);
             return;
         }
 

@@ -40,6 +40,7 @@ using join::HttpRequest;
 TEST (HttpRequest, method)
 {
     HttpRequest request;
+    EXPECT_EQ (request.method (), HttpMethod::Get);
 
     request.method (HttpMethod::Head);
     EXPECT_EQ (request.method (), HttpMethod::Head);
@@ -47,11 +48,11 @@ TEST (HttpRequest, method)
     request.method (HttpMethod::Get);
     EXPECT_EQ (request.method (), HttpMethod::Get);
 
-    request.method (HttpMethod::Post);
-    EXPECT_EQ (request.method (), HttpMethod::Post);
-
     request.method (HttpMethod::Put);
     EXPECT_EQ (request.method (), HttpMethod::Put);
+
+    request.method (HttpMethod::Post);
+    EXPECT_EQ (request.method (), HttpMethod::Post);
 
     request.method (HttpMethod::Delete);
     EXPECT_EQ (request.method (), HttpMethod::Delete);
@@ -63,6 +64,7 @@ TEST (HttpRequest, method)
 TEST (HttpRequest, methodString)
 {
     HttpRequest request;
+    EXPECT_EQ (request.methodString (), "GET");
 
     request.method (HttpMethod::Head);
     EXPECT_EQ (request.methodString (), "HEAD");
@@ -70,11 +72,11 @@ TEST (HttpRequest, methodString)
     request.method (HttpMethod::Get);
     EXPECT_EQ (request.methodString (), "GET");
 
-    request.method (HttpMethod::Post);
-    EXPECT_EQ (request.methodString (), "POST");
-
     request.method (HttpMethod::Put);
     EXPECT_EQ (request.methodString (), "PUT");
+
+    request.method (HttpMethod::Post);
+    EXPECT_EQ (request.methodString (), "POST");
 
     request.method (HttpMethod::Delete);
     EXPECT_EQ (request.methodString (), "DELETE");
@@ -116,7 +118,6 @@ TEST (HttpRequest, version)
 TEST (HttpRequest, header)
 {
     HttpRequest request;
-
     EXPECT_EQ (request.header ("Connection"), "");
 
     request.header ("Connection", "keep-alive");
@@ -129,7 +130,6 @@ TEST (HttpRequest, header)
 TEST (HttpRequest, hasHeader)
 {
     HttpRequest request;
-
     EXPECT_FALSE (request.hasHeader ("Connection"));
 
     request.header ("Connection", "keep-alive");
@@ -142,7 +142,6 @@ TEST (HttpRequest, hasHeader)
 TEST (HttpRequest, parameter)
 {
     HttpRequest request;
-
     EXPECT_EQ (request.parameter ("val1"), "");
 
     request.parameter ("val1", "1");
@@ -155,7 +154,6 @@ TEST (HttpRequest, parameter)
 TEST (HttpRequest, hasParameter)
 {
     HttpRequest request;
-
     EXPECT_FALSE (request.hasParameter ("val1"));
 
     request.parameter ("val1", "1");
@@ -181,7 +179,6 @@ TEST (HttpRequest, query)
 TEST (HttpRequest, uri)
 {
     HttpRequest request;
-
     EXPECT_EQ (request.uri (), "/");
 
     request.path ("/path");
@@ -196,7 +193,7 @@ TEST (HttpRequest, uri)
 TEST (HttpRequest, send)
 {
     HttpRequest request;
-    request.method (HttpMethod::Get);
+    request.method (HttpMethod::Head);
     request.path ("/path");
     request.parameter ("val1", "1");
     request.parameter ("val2", "2");
@@ -205,7 +202,7 @@ TEST (HttpRequest, send)
 
     std::stringstream ss;
     request.send (ss);
-    EXPECT_EQ (ss.str (), "GET /path?val1=1&val2=2 HTTP/1.0\r\nConnection: keep-alive\r\n\r\n");
+    EXPECT_EQ (ss.str (), "HEAD /path?val1=1&val2=2 HTTP/1.0\r\nConnection: keep-alive\r\n\r\n");
 }
 
 /**
@@ -220,12 +217,151 @@ TEST (HttpRequest, receive)
 
     HttpRequest request;
     request.receive (ss);
+    EXPECT_TRUE (ss.good ());
     EXPECT_EQ (request.method (), HttpMethod::Get);
     EXPECT_EQ (request.path (), "/path");
     EXPECT_EQ (request.parameter ("val1"), "1");
     EXPECT_EQ (request.parameter ("val2"), "2");
     EXPECT_EQ (request.version (), "HTTP/1.0");
     EXPECT_EQ (request.header ("Connection"), "keep-alive");
+
+    ss.clear ();
+    ss << "HEAD / HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.method (), HttpMethod::Head);
+
+    ss.clear ();
+    ss << "PUT / HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.method (), HttpMethod::Put);
+
+    ss.clear ();
+    ss << "POST / HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.method (), HttpMethod::Post);
+
+    ss.clear ();
+    ss << "DELETE / HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.method (), HttpMethod::Delete);
+
+    ss.clear ();
+    ss << "GET\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.fail ());
+
+    ss.clear ();
+    ss << "GET /\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.fail ());
+
+    ss.clear ();
+    ss << "BLAH / HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.fail ());
+
+    ss << "GET / HTTP/1.1\r\n";
+    ss << "Connection keep-alive\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.fail ());
+}
+
+/**
+ * @brief Test decodeUrl.
+ */
+TEST (HttpRequest, decodeUrl)
+{
+    std::stringstream ss;
+    ss << "GET /foo%20bar?baz=3%20fuz HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    HttpRequest request;
+    request.receive (ss);
+    EXPECT_EQ (request.path (), "/foo bar");
+    EXPECT_EQ (request.parameter ("baz"), "3 fuz");
+}
+
+/**
+ * @brief Test normalize.
+ */
+TEST (HttpRequest, normalize)
+{
+    std::stringstream ss;
+    ss << "GET ../ HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    HttpRequest request;
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.path (), "");
+
+    ss.clear ();
+    ss << "GET ./ HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.path (), "");
+
+    ss.clear ();
+    ss << "GET /./ HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.path (), "/");
+
+    ss.clear ();
+    ss << "GET /. HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.path (), "/");
+
+    ss.clear ();
+    ss << "GET /../ HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.path (), "/");
+
+    ss.clear ();
+    ss << "GET /.. HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.path (), "/");
+
+    ss.clear ();
+    ss << "GET . HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.path (), "");
 }
 
 /**
