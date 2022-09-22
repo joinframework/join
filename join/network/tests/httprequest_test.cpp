@@ -31,6 +31,7 @@
 // C++.
 #include <sstream>
 
+using join::Errc;
 using join::HttpErrc;
 using join::HttpMethod;
 using join::HttpRequest;
@@ -296,6 +297,14 @@ TEST (HttpRequest, receive)
 
     ss.clear ();
     ss.str ("");
+    ss << "GET";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.fail ());
+    EXPECT_EQ (join::lastError, HttpErrc::InvalidRequest);
+
+    ss.clear ();
+    ss.str ("");
     ss << "GET\r\n";
     ss << "\r\n";
 
@@ -330,6 +339,13 @@ TEST (HttpRequest, receive)
     request.receive (ss);
     EXPECT_TRUE (ss.fail ());
     EXPECT_EQ (join::lastError, HttpErrc::InvalidHeader);
+
+    ss.clear ();
+    ss.str (std::string (8192, 'a'));
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.fail ());
+    EXPECT_EQ (join::lastError, Errc::MessageTooLong);
 }
 
 /**

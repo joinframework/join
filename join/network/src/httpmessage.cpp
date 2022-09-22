@@ -231,6 +231,7 @@ std::istream& HttpMessage::getline (std::istream& in, std::string& line, uint32_
         char ch = in.get ();
         if (in.eof ())
         {
+            join::lastError = make_error_code (HttpErrc::InvalidRequest);
             return in;
         }
 
