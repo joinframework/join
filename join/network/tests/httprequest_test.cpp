@@ -226,6 +226,7 @@ TEST (HttpRequest, receive)
     EXPECT_EQ (request.header ("Connection"), "keep-alive");
 
     ss.clear ();
+    ss.str ("");
     ss << "HEAD / HTTP/1.1\r\n";
     ss << "\r\n";
 
@@ -234,6 +235,7 @@ TEST (HttpRequest, receive)
     EXPECT_EQ (request.method (), HttpMethod::Head);
 
     ss.clear ();
+    ss.str ("");
     ss << "PUT / HTTP/1.1\r\n";
     ss << "\r\n";
 
@@ -242,6 +244,7 @@ TEST (HttpRequest, receive)
     EXPECT_EQ (request.method (), HttpMethod::Put);
 
     ss.clear ();
+    ss.str ("");
     ss << "POST / HTTP/1.1\r\n";
     ss << "\r\n";
 
@@ -250,6 +253,7 @@ TEST (HttpRequest, receive)
     EXPECT_EQ (request.method (), HttpMethod::Post);
 
     ss.clear ();
+    ss.str ("");
     ss << "DELETE / HTTP/1.1\r\n";
     ss << "\r\n";
 
@@ -258,6 +262,7 @@ TEST (HttpRequest, receive)
     EXPECT_EQ (request.method (), HttpMethod::Delete);
 
     ss.clear ();
+    ss.str ("");
     ss << "GET\r\n";
     ss << "\r\n";
 
@@ -265,6 +270,7 @@ TEST (HttpRequest, receive)
     EXPECT_TRUE (ss.fail ());
 
     ss.clear ();
+    ss.str ("");
     ss << "GET /\r\n";
     ss << "\r\n";
 
@@ -272,12 +278,15 @@ TEST (HttpRequest, receive)
     EXPECT_TRUE (ss.fail ());
 
     ss.clear ();
+    ss.str ("");
     ss << "BLAH / HTTP/1.1\r\n";
     ss << "\r\n";
 
     request.receive (ss);
     EXPECT_TRUE (ss.fail ());
 
+    ss.clear ();
+    ss.str ("");
     ss << "GET / HTTP/1.1\r\n";
     ss << "Connection keep-alive\r\n";
     ss << "\r\n";
@@ -307,15 +316,25 @@ TEST (HttpRequest, decodeUrl)
 TEST (HttpRequest, normalize)
 {
     std::stringstream ss;
-    ss << "GET ../ HTTP/1.1\r\n";
+    ss << "GET // HTTP/1.1\r\n";
     ss << "\r\n";
 
     HttpRequest request;
     request.receive (ss);
     EXPECT_TRUE (ss.good ());
+    EXPECT_EQ (request.path (), "/");
+
+    ss.clear ();
+    ss.str ("");
+    ss << "GET ../ HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ());
     EXPECT_EQ (request.path (), "");
 
     ss.clear ();
+    ss.str ("");
     ss << "GET ./ HTTP/1.1\r\n";
     ss << "\r\n";
 
@@ -324,6 +343,7 @@ TEST (HttpRequest, normalize)
     EXPECT_EQ (request.path (), "");
 
     ss.clear ();
+    ss.str ("");
     ss << "GET /./ HTTP/1.1\r\n";
     ss << "\r\n";
 
@@ -332,6 +352,7 @@ TEST (HttpRequest, normalize)
     EXPECT_EQ (request.path (), "/");
 
     ss.clear ();
+    ss.str ("");
     ss << "GET /. HTTP/1.1\r\n";
     ss << "\r\n";
 
@@ -340,6 +361,7 @@ TEST (HttpRequest, normalize)
     EXPECT_EQ (request.path (), "/");
 
     ss.clear ();
+    ss.str ("");
     ss << "GET /../ HTTP/1.1\r\n";
     ss << "\r\n";
 
@@ -348,6 +370,7 @@ TEST (HttpRequest, normalize)
     EXPECT_EQ (request.path (), "/");
 
     ss.clear ();
+    ss.str ("");
     ss << "GET /.. HTTP/1.1\r\n";
     ss << "\r\n";
 
@@ -356,6 +379,7 @@ TEST (HttpRequest, normalize)
     EXPECT_EQ (request.path (), "/");
 
     ss.clear ();
+    ss.str ("");
     ss << "GET . HTTP/1.1\r\n";
     ss << "\r\n";
 
