@@ -25,9 +25,66 @@
 // libjoin.
 #include <join/httpmessage.hpp>
 
-// C++.
-
+using join::Errc;
+using join::HttpErrc;
+using join::HttpCategory;
 using join::HttpMessage;
+
+// =========================================================================
+//   CLASS     : HttpCategory
+//   METHOD    : name
+// =========================================================================
+const char* HttpCategory::name () const noexcept
+{
+    return "libjoin";
+}
+
+// =========================================================================
+//   CLASS     : HttpCategory
+//   METHOD    : message
+// =========================================================================
+std::string HttpCategory::message (int code) const
+{
+    switch (static_cast <HttpErrc> (code))
+    {
+        case HttpErrc::InvalidRequest:
+            return "invalid HTTP request";
+        case HttpErrc::InvalidMethod:
+            return "invalid HTTP method";
+        case HttpErrc::InvalidHeader:
+            return "invalid HTTP header";
+        default:
+            return "success";
+    }
+}
+
+// =========================================================================
+//   CLASS     :
+//   METHOD    : httpCategory
+// =========================================================================
+const std::error_category& join::httpCategory ()
+{
+    static HttpCategory instance;
+    return instance;
+}
+
+// =========================================================================
+//   CLASS     :
+//   METHOD    : make_error_code
+// =========================================================================
+std::error_code join::make_error_code (HttpErrc code)
+{
+    return std::error_code (static_cast <int> (code), httpCategory ());
+}
+
+// =========================================================================
+//   CLASS     :
+//   METHOD    : make_error_condition
+// =========================================================================
+std::error_condition join::make_error_condition (HttpErrc code)
+{
+    return std::error_condition (static_cast <int> (code), httpCategory ());
+}
 
 // =========================================================================
 //   CLASS     : HttpMessage
@@ -191,5 +248,6 @@ std::istream& HttpMessage::getline (std::istream& in, std::string& line, uint32_
     }
 
     in.setstate (std::ios_base::failbit);
+    join::lastError = make_error_code (Errc::MessageTooLong);
     return in;
 }

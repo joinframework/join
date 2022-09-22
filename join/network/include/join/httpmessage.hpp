@@ -26,15 +26,67 @@
 #define __JOIN_HTTP_MESSAGE_HPP__
 
 // libjoin.
+#include <join/error.hpp>
 #include <join/utils.hpp>
 
 // C++.
+#include <system_error>
 #include <iostream>
 #include <string>
 #include <map>
 
 namespace join
 {
+    /**
+     * @brief HTTP API generic error codes.
+     */
+    enum class HttpErrc
+    {
+        InvalidRequest = 1,     /**< invalid HTTP request. */
+        InvalidMethod,          /**< invalid HTTP method. */
+        InvalidHeader           /**< invalid HTTP header. */
+    };
+
+    /**
+     * @brief HTTP API generic error category.
+     */
+    class HttpCategory : public std::error_category
+    {
+    public:
+        /**
+         * @brief get SAX API generic error category name.
+         * @return deserializer generic error category name.
+         */
+        virtual const char* name () const noexcept;
+
+        /**
+         * @brief translate SAX API generic error code to human readable error string.
+         * @param code error code.
+         * @return human readable error string.
+         */
+        virtual std::string message (int code) const;
+    };
+
+    /**
+     * @brief get error category.
+     * @return the created std::error_category object.
+     */
+    const std::error_category& httpCategory ();
+
+    /**
+     * @brief create an std::error_code object.
+     * @param code error code number.
+     * @return the created std::error_code object.
+     */
+    std::error_code make_error_code (HttpErrc code);
+
+    /**
+     * @brief create an std::error_condition object.
+     * @param code error code number.
+     * @return the created std::error_condition object.
+     */
+    std::error_condition make_error_condition (HttpErrc code);
+
     /**
      * @brief HTTP message.
      */
@@ -152,6 +204,12 @@ namespace join
         /// HTTP headers.
         std::map <std::string, std::string, details::lessNoCase> _headers;
     };
+}
+
+namespace std
+{
+    /// HTTP API generic error code specialization.
+    template <> struct is_error_condition_enum <join::HttpErrc> : public true_type {};
 }
 
 #endif

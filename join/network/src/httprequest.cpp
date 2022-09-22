@@ -26,8 +26,9 @@
 #include <join/httprequest.hpp>
 
 // C++.
-#include <regex>
+#include <sstream>
 
+using join::HttpErrc;
 using join::HttpMethod;
 using join::HttpRequest;
 
@@ -120,8 +121,8 @@ std::string HttpRequest::methodString () const
 {
     switch (_method)
     {
-        case Get:
-            return "GET";
+        case Head:
+            return "HEAD";
         case Put:
             return "PUT";
         case Post:
@@ -129,7 +130,7 @@ std::string HttpRequest::methodString () const
         case Delete:
             return "DELETE";
         default:
-            return "HEAD";
+            return "GET";
     }
 }
 
@@ -199,10 +200,12 @@ std::string HttpRequest::uri () const
 void HttpRequest::send (std::ostream& out) const
 {
     out << methodString () << " " << uri () << " " << version () << "\r\n";
+
     for (auto const& header : _headers)
     {
         out << header.first << ": " << header.second << "\r\n";
     }
+
     out << "\r\n";
 }
 
@@ -223,6 +226,7 @@ void HttpRequest::receive (std::istream& in)
             if (pos1 == std::string::npos)
             {
                 in.setstate (std::ios_base::failbit);
+                join::lastError = make_error_code (HttpErrc::InvalidRequest);
                 return;
             }
 
@@ -230,6 +234,7 @@ void HttpRequest::receive (std::istream& in)
             if (pos2 == std::string::npos)
             {
                 in.setstate (std::ios_base::failbit);
+                join::lastError = make_error_code (HttpErrc::InvalidRequest);
                 return;
             }
 
@@ -259,6 +264,7 @@ void HttpRequest::receive (std::istream& in)
             else
             {
                 in.setstate (std::ios_base::failbit);
+                join::lastError = make_error_code (HttpErrc::InvalidMethod);
                 return;
             }
 
@@ -294,6 +300,7 @@ void HttpRequest::receive (std::istream& in)
         if (pos == std::string::npos)
         {
             in.setstate (std::ios_base::failbit);
+            join::lastError = make_error_code (HttpErrc::InvalidHeader);
             return;
         }
 
@@ -404,6 +411,7 @@ std::string& HttpRequest::normalize (std::string& path)
             path.erase (0, pos);
         }
     }
+
     path.swap (output);
 
     return path;

@@ -31,8 +31,41 @@
 // C++.
 #include <sstream>
 
+using join::HttpErrc;
 using join::HttpMethod;
 using join::HttpRequest;
+
+/**
+ * @brief Test copy.
+ */
+TEST (HttpRequest, copy)
+{
+    HttpRequest request1, request2 (HttpMethod::Post);
+    EXPECT_EQ (request1.method (), HttpMethod::Get);
+    EXPECT_EQ (request2.method (), HttpMethod::Post);
+
+    request1 = request2;
+    EXPECT_EQ (request1.method (), HttpMethod::Post);
+
+    HttpRequest request3 (request1);
+    EXPECT_EQ (request3.method (), HttpMethod::Post);
+}
+
+/**
+ * @brief Test move.
+ */
+TEST (HttpRequest, move)
+{
+    HttpRequest request1, request2 (HttpMethod::Post);
+    EXPECT_EQ (request1.method (), HttpMethod::Get);
+    EXPECT_EQ (request2.method (), HttpMethod::Post);
+
+    request1 = std::move (request2);
+    EXPECT_EQ (request1.method (), HttpMethod::Post);
+
+    HttpRequest request3 (std::move (request1));
+    EXPECT_EQ (request3.method (), HttpMethod::Post);
+}
 
 /**
  * @brief Test method.
@@ -217,7 +250,7 @@ TEST (HttpRequest, receive)
 
     HttpRequest request;
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.method (), HttpMethod::Get);
     EXPECT_EQ (request.path (), "/path");
     EXPECT_EQ (request.parameter ("val1"), "1");
@@ -231,7 +264,7 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.method (), HttpMethod::Head);
 
     ss.clear ();
@@ -240,7 +273,7 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.method (), HttpMethod::Put);
 
     ss.clear ();
@@ -249,7 +282,7 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.method (), HttpMethod::Post);
 
     ss.clear ();
@@ -258,7 +291,7 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.method (), HttpMethod::Delete);
 
     ss.clear ();
@@ -268,6 +301,7 @@ TEST (HttpRequest, receive)
 
     request.receive (ss);
     EXPECT_TRUE (ss.fail ());
+    EXPECT_EQ (join::lastError, HttpErrc::InvalidRequest);
 
     ss.clear ();
     ss.str ("");
@@ -276,6 +310,7 @@ TEST (HttpRequest, receive)
 
     request.receive (ss);
     EXPECT_TRUE (ss.fail ());
+    EXPECT_EQ (join::lastError, HttpErrc::InvalidRequest);
 
     ss.clear ();
     ss.str ("");
@@ -284,6 +319,7 @@ TEST (HttpRequest, receive)
 
     request.receive (ss);
     EXPECT_TRUE (ss.fail ());
+    EXPECT_EQ (join::lastError, HttpErrc::InvalidMethod);
 
     ss.clear ();
     ss.str ("");
@@ -293,6 +329,7 @@ TEST (HttpRequest, receive)
 
     request.receive (ss);
     EXPECT_TRUE (ss.fail ());
+    EXPECT_EQ (join::lastError, HttpErrc::InvalidHeader);
 }
 
 /**
@@ -321,7 +358,7 @@ TEST (HttpRequest, normalize)
 
     HttpRequest request;
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -330,7 +367,7 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.path (), "");
 
     ss.clear ();
@@ -339,7 +376,7 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.path (), "");
 
     ss.clear ();
@@ -348,7 +385,7 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -357,7 +394,7 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -366,7 +403,16 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
+    EXPECT_EQ (request.path (), "/");
+
+    ss.clear ();
+    ss.str ("");
+    ss << "GET /path/../ HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -375,7 +421,16 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
+    EXPECT_EQ (request.path (), "/");
+
+    ss.clear ();
+    ss.str ("");
+    ss << "GET /path/.. HTTP/1.1\r\n";
+    ss << "\r\n";
+
+    request.receive (ss);
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -384,7 +439,7 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ());
+    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
     EXPECT_EQ (request.path (), "");
 }
 
