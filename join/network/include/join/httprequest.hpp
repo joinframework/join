@@ -116,7 +116,7 @@ namespace join
         /**
          * @brief create the HttpRequest instance by default.
          */
-        HttpRequest () = default;
+        HttpRequest ();
 
         /**
          * @brief create the HttpRequest instance by default.
@@ -172,6 +172,18 @@ namespace join
          * @return request method string.
          */
         std::string methodString () const;
+
+        /**
+         * @brief set path.
+         * @param p path.
+         */
+        void path (const std::string& p);
+
+        /**
+         * @brief get path.
+         * @return path.
+         */
+        const std::string& path () const;
 
         /**
          * @brief add query parameters to the HTTP request.
@@ -242,6 +254,9 @@ namespace join
 
         /// HTTP method.
         HttpMethod _method = Get;
+
+        /// HTTP path;
+        std::string _path;
 
         /// HTTP query parameters.
         std::map <std::string, std::string> _parameters;

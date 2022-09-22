@@ -25,6 +25,7 @@
 // libjoin.
 #include <join/httpresponse.hpp>
 
+using join::HttpErrc;
 using join::HttpResponse;
 
 // =========================================================================
@@ -129,12 +130,16 @@ void HttpResponse::receive (std::istream& in)
             size_t pos1 = line.find (" ");
             if (pos1 == std::string::npos)
             {
+                in.setstate (std::ios_base::failbit);
+                join::lastError = make_error_code (HttpErrc::InvalidResponse);
                 return;
             }
 
             size_t pos2 = line.find (" ", pos1 + 1);
             if (pos2 == std::string::npos)
             {
+                in.setstate (std::ios_base::failbit);
+                join::lastError = make_error_code (HttpErrc::InvalidResponse);
                 return;
             }
 
@@ -160,6 +165,8 @@ void HttpResponse::receive (std::istream& in)
         size_t pos = line.find (": ");
         if (pos == std::string::npos)
         {
+            in.setstate (std::ios_base::failbit);
+            join::lastError = make_error_code (HttpErrc::InvalidHeader);
             return;
         }
 

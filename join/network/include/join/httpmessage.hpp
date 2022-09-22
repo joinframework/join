@@ -43,6 +43,7 @@ namespace join
     enum class HttpErrc
     {
         InvalidRequest = 1,     /**< invalid HTTP request. */
+        InvalidResponse,        /**< invalid HTTP response. */
         InvalidMethod,          /**< invalid HTTP method. */
         InvalidHeader           /**< invalid HTTP header. */
     };
@@ -130,18 +131,6 @@ namespace join
         virtual ~HttpMessage () = default;
 
         /**
-         * @brief set path.
-         * @param p path.
-         */
-        void path (const std::string& p);
-
-        /**
-         * @brief get path.
-         * @return path.
-         */
-        const std::string& path () const;
-
-        /**
          * @brief set request version (default HTTP/1.1).
          * @param v HTTP version.
          */
@@ -194,9 +183,6 @@ namespace join
          * @return .
          */
         std::istream& getline (std::istream& in, std::string& line, uint32_t max);
-
-        /// HTTP path;
-        std::string _path;
 
         /// HTTP version.
         std::string _version;

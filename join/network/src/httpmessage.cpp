@@ -49,6 +49,8 @@ std::string HttpCategory::message (int code) const
     {
         case HttpErrc::InvalidRequest:
             return "invalid HTTP request";
+        case HttpErrc::InvalidResponse:
+            return "invalid HTTP response";
         case HttpErrc::InvalidMethod:
             return "invalid HTTP method";
         case HttpErrc::InvalidHeader:
@@ -91,8 +93,7 @@ std::error_condition join::make_error_condition (HttpErrc code)
 //   METHOD    : HttpMessage
 // =========================================================================
 HttpMessage::HttpMessage ()
-: _path ("/"),
-  _version ("HTTP/1.1")
+: _version ("HTTP/1.1")
 {
 }
 
@@ -101,8 +102,7 @@ HttpMessage::HttpMessage ()
 //   METHOD    : HttpMessage
 // =========================================================================
 HttpMessage::HttpMessage (const HttpMessage& other)
-: _path (other._path),
-  _version (other._version),
+: _version (other._version),
   _headers (other._headers)
 {
 }
@@ -113,7 +113,6 @@ HttpMessage::HttpMessage (const HttpMessage& other)
 // =========================================================================
 HttpMessage& HttpMessage::operator= (const HttpMessage& other)
 {
-    _path = other._path;
     _version = other._version;
     _headers = other._headers;
 
@@ -125,11 +124,9 @@ HttpMessage& HttpMessage::operator= (const HttpMessage& other)
 //   METHOD    : HttpMessage
 // =========================================================================
 HttpMessage::HttpMessage (HttpMessage&& other)
-: _path (std::move (other._path)),
-  _version (std::move (other._version)),
+: _version (std::move (other._version)),
   _headers (std::move (other._headers))
 {
-    other._path = "/";
     other._version = "HTTP/1.1";
 }
 
@@ -139,32 +136,12 @@ HttpMessage::HttpMessage (HttpMessage&& other)
 // =========================================================================
 HttpMessage& HttpMessage::operator= (HttpMessage&& other)
 {
-    _path = std::move (other._path);
     _version = std::move (other._version);
     _headers = std::move (other._headers);
 
-    other._path = "/";
     other._version = "HTTP/1.1";
 
     return *this;
-}
-
-// =========================================================================
-//   CLASS     : HttpMessage
-//   METHOD    : setPath
-// =========================================================================
-void HttpMessage::path (const std::string& p)
-{
-    _path = p;
-}
-
-// =========================================================================
-//   CLASS     : HttpMessage
-//   METHOD    : getPath
-// =========================================================================
-const std::string& HttpMessage::path () const
-{
-    return _path;
 }
 
 // =========================================================================
@@ -231,7 +208,7 @@ std::istream& HttpMessage::getline (std::istream& in, std::string& line, uint32_
         char ch = in.get ();
         if (in.eof ())
         {
-            join::lastError = make_error_code (HttpErrc::InvalidRequest);
+            join::lastError = make_error_code (Errc::OperationFailed);
             return in;
         }
 

@@ -301,7 +301,7 @@ TEST (HttpRequest, receive)
 
     request.receive (ss);
     EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, HttpErrc::InvalidRequest);
+    EXPECT_EQ (join::lastError, Errc::OperationFailed);
 
     ss.clear ();
     ss.str ("");
@@ -341,7 +341,7 @@ TEST (HttpRequest, receive)
     EXPECT_EQ (join::lastError, HttpErrc::InvalidHeader);
 
     ss.clear ();
-    ss.str (std::string (8192, 'a'));
+    ss.str (std::string (8192, 'X'));
 
     request.receive (ss);
     EXPECT_TRUE (ss.fail ());

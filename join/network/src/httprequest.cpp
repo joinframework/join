@@ -36,9 +36,20 @@ using join::HttpRequest;
 //   CLASS     : HttpRequest
 //   METHOD    : HttpRequest
 // =========================================================================
+HttpRequest::HttpRequest ()
+: HttpMessage (),
+  _path ("/")
+{
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : HttpRequest
+// =========================================================================
 HttpRequest::HttpRequest (HttpMethod method)
 : HttpMessage (),
-  _method (method)
+  _method (method),
+  _path ("/")
 {
 }
 
@@ -49,6 +60,7 @@ HttpRequest::HttpRequest (HttpMethod method)
 HttpRequest::HttpRequest (const HttpRequest& other)
 : HttpMessage (other),
   _method (other._method),
+  _path (other._path),
   _parameters (other._parameters)
 {
 }
@@ -62,6 +74,7 @@ HttpRequest& HttpRequest::operator= (const HttpRequest& other)
     HttpMessage::operator= (other);
 
     _method = other._method;
+    _path = other._path;
     _parameters = other._parameters;
 
     return *this;
@@ -74,9 +87,11 @@ HttpRequest& HttpRequest::operator= (const HttpRequest& other)
 HttpRequest::HttpRequest (HttpRequest&& other)
 : HttpMessage (std::move (other)),
   _method (other._method),
+  _path (std::move (other._path)),
   _parameters (std::move (other._parameters))
 {
     other._method = Get;
+    other._path = "/";
 }
 
 // =========================================================================
@@ -88,9 +103,11 @@ HttpRequest& HttpRequest::operator= (HttpRequest&& other)
     HttpMessage::operator= (std::move (other));
 
     _method = other._method;
+    _path = std::move (other._path);
     _parameters = std::move (other._parameters);
 
     other._method = Get;
+    other._path = "/";
 
     return *this;
 }
@@ -132,6 +149,24 @@ std::string HttpRequest::methodString () const
         default:
             return "GET";
     }
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : setPath
+// =========================================================================
+void HttpRequest::path (const std::string& p)
+{
+    _path = p;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : getPath
+// =========================================================================
+const std::string& HttpRequest::path () const
+{
+    return _path;
 }
 
 // =========================================================================
