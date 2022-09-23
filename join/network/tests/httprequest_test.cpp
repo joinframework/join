@@ -42,14 +42,14 @@ using join::HttpRequest;
 TEST (HttpRequest, copy)
 {
     HttpRequest request1, request2 (HttpMethod::Post);
-    EXPECT_EQ (request1.method (), HttpMethod::Get);
-    EXPECT_EQ (request2.method (), HttpMethod::Post);
+    ASSERT_EQ (request1.method (), HttpMethod::Get);
+    ASSERT_EQ (request2.method (), HttpMethod::Post);
 
     request1 = request2;
-    EXPECT_EQ (request1.method (), HttpMethod::Post);
+    ASSERT_EQ (request1.method (), HttpMethod::Post);
 
     HttpRequest request3 (request1);
-    EXPECT_EQ (request3.method (), HttpMethod::Post);
+    ASSERT_EQ (request3.method (), HttpMethod::Post);
 }
 
 /**
@@ -58,14 +58,14 @@ TEST (HttpRequest, copy)
 TEST (HttpRequest, move)
 {
     HttpRequest request1, request2 (HttpMethod::Post);
-    EXPECT_EQ (request1.method (), HttpMethod::Get);
-    EXPECT_EQ (request2.method (), HttpMethod::Post);
+    ASSERT_EQ (request1.method (), HttpMethod::Get);
+    ASSERT_EQ (request2.method (), HttpMethod::Post);
 
     request1 = std::move (request2);
-    EXPECT_EQ (request1.method (), HttpMethod::Post);
+    ASSERT_EQ (request1.method (), HttpMethod::Post);
 
     HttpRequest request3 (std::move (request1));
-    EXPECT_EQ (request3.method (), HttpMethod::Post);
+    ASSERT_EQ (request3.method (), HttpMethod::Post);
 }
 
 /**
@@ -74,22 +74,22 @@ TEST (HttpRequest, move)
 TEST (HttpRequest, method)
 {
     HttpRequest request;
-    EXPECT_EQ (request.method (), HttpMethod::Get);
+    ASSERT_EQ (request.method (), HttpMethod::Get);
 
     request.method (HttpMethod::Head);
-    EXPECT_EQ (request.method (), HttpMethod::Head);
+    ASSERT_EQ (request.method (), HttpMethod::Head);
 
     request.method (HttpMethod::Get);
-    EXPECT_EQ (request.method (), HttpMethod::Get);
+    ASSERT_EQ (request.method (), HttpMethod::Get);
 
     request.method (HttpMethod::Put);
-    EXPECT_EQ (request.method (), HttpMethod::Put);
+    ASSERT_EQ (request.method (), HttpMethod::Put);
 
     request.method (HttpMethod::Post);
-    EXPECT_EQ (request.method (), HttpMethod::Post);
+    ASSERT_EQ (request.method (), HttpMethod::Post);
 
     request.method (HttpMethod::Delete);
-    EXPECT_EQ (request.method (), HttpMethod::Delete);
+    ASSERT_EQ (request.method (), HttpMethod::Delete);
 }
 
 /**
@@ -98,22 +98,22 @@ TEST (HttpRequest, method)
 TEST (HttpRequest, methodString)
 {
     HttpRequest request;
-    EXPECT_EQ (request.methodString (), "GET");
+    ASSERT_EQ (request.methodString (), "GET");
 
     request.method (HttpMethod::Head);
-    EXPECT_EQ (request.methodString (), "HEAD");
+    ASSERT_EQ (request.methodString (), "HEAD");
 
     request.method (HttpMethod::Get);
-    EXPECT_EQ (request.methodString (), "GET");
+    ASSERT_EQ (request.methodString (), "GET");
 
     request.method (HttpMethod::Put);
-    EXPECT_EQ (request.methodString (), "PUT");
+    ASSERT_EQ (request.methodString (), "PUT");
 
     request.method (HttpMethod::Post);
-    EXPECT_EQ (request.methodString (), "POST");
+    ASSERT_EQ (request.methodString (), "POST");
 
     request.method (HttpMethod::Delete);
-    EXPECT_EQ (request.methodString (), "DELETE");
+    ASSERT_EQ (request.methodString (), "DELETE");
 }
 
 /**
@@ -122,13 +122,13 @@ TEST (HttpRequest, methodString)
 TEST (HttpRequest, path)
 {
     HttpRequest request;
-    EXPECT_EQ (request.path (), "/");
+    ASSERT_EQ (request.path (), "/");
 
     request.path ("/path");
-    EXPECT_EQ (request.path (), "/path");
+    ASSERT_EQ (request.path (), "/path");
 
     request.path ("/another/path");
-    EXPECT_EQ (request.path (), "/another/path");
+    ASSERT_EQ (request.path (), "/another/path");
 }
 
 /**
@@ -137,13 +137,13 @@ TEST (HttpRequest, path)
 TEST (HttpRequest, version)
 {
     HttpRequest request;
-    EXPECT_EQ (request.version (), "HTTP/1.1");
+    ASSERT_EQ (request.version (), "HTTP/1.1");
 
     request.version ("HTTP/1.0");
-    EXPECT_EQ (request.version (), "HTTP/1.0");
+    ASSERT_EQ (request.version (), "HTTP/1.0");
 
     request.version ("HTTP/2.0");
-    EXPECT_EQ (request.version (), "HTTP/2.0");
+    ASSERT_EQ (request.version (), "HTTP/2.0");
 }
 
 /**
@@ -152,10 +152,10 @@ TEST (HttpRequest, version)
 TEST (HttpRequest, header)
 {
     HttpRequest request;
-    EXPECT_EQ (request.header ("Connection"), "");
+    ASSERT_EQ (request.header ("Connection"), "");
 
     request.header ("Connection", "keep-alive");
-    EXPECT_EQ (request.header ("Connection"), "keep-alive");
+    ASSERT_EQ (request.header ("Connection"), "keep-alive");
 }
 
 /**
@@ -164,10 +164,10 @@ TEST (HttpRequest, header)
 TEST (HttpRequest, hasHeader)
 {
     HttpRequest request;
-    EXPECT_FALSE (request.hasHeader ("Connection"));
+    ASSERT_FALSE (request.hasHeader ("Connection"));
 
     request.header ("Connection", "keep-alive");
-    EXPECT_TRUE (request.hasHeader ("Connection"));
+    ASSERT_TRUE (request.hasHeader ("Connection"));
 }
 
 /**
@@ -176,10 +176,10 @@ TEST (HttpRequest, hasHeader)
 TEST (HttpRequest, parameter)
 {
     HttpRequest request;
-    EXPECT_EQ (request.parameter ("val1"), "");
+    ASSERT_EQ (request.parameter ("val1"), "");
 
     request.parameter ("val1", "1");
-    EXPECT_EQ (request.parameter ("val1"), "1");
+    ASSERT_EQ (request.parameter ("val1"), "1");
 }
 
 /**
@@ -188,10 +188,10 @@ TEST (HttpRequest, parameter)
 TEST (HttpRequest, hasParameter)
 {
     HttpRequest request;
-    EXPECT_FALSE (request.hasParameter ("val1"));
+    ASSERT_FALSE (request.hasParameter ("val1"));
 
     request.parameter ("val1", "1");
-    EXPECT_TRUE (request.hasParameter ("val1"));
+    ASSERT_TRUE (request.hasParameter ("val1"));
 }
 
 /**
@@ -200,11 +200,11 @@ TEST (HttpRequest, hasParameter)
 TEST (HttpRequest, query)
 {
     HttpRequest request;
-    EXPECT_EQ (request.query (), "");
+    ASSERT_EQ (request.query (), "");
 
     request.parameter ("val1", "1");
     request.parameter ("val2", "2");
-    EXPECT_EQ (request.query (), "?val1=1&val2=2");
+    ASSERT_EQ (request.query (), "?val1=1&val2=2");
 }
 
 /**
@@ -213,12 +213,12 @@ TEST (HttpRequest, query)
 TEST (HttpRequest, uri)
 {
     HttpRequest request;
-    EXPECT_EQ (request.uri (), "/");
+    ASSERT_EQ (request.uri (), "/");
 
     request.path ("/path");
     request.parameter ("val1", "1");
     request.parameter ("val2", "2");
-    EXPECT_EQ (request.uri (), "/path?val1=1&val2=2");
+    ASSERT_EQ (request.uri (), "/path?val1=1&val2=2");
 }
 
 /**
@@ -236,7 +236,7 @@ TEST (HttpRequest, send)
 
     std::stringstream ss;
     request.send (ss);
-    EXPECT_EQ (ss.str (), "HEAD /path?val1=1&val2=2 HTTP/1.0\r\nConnection: keep-alive\r\n\r\n");
+    ASSERT_EQ (ss.str (), "HEAD /path?val1=1&val2=2 HTTP/1.0\r\nConnection: keep-alive\r\n\r\n");
 }
 
 /**
@@ -251,13 +251,13 @@ TEST (HttpRequest, receive)
 
     HttpRequest request;
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.method (), HttpMethod::Get);
-    EXPECT_EQ (request.path (), "/path");
-    EXPECT_EQ (request.parameter ("val1"), "1");
-    EXPECT_EQ (request.parameter ("val2"), "2");
-    EXPECT_EQ (request.version (), "HTTP/1.0");
-    EXPECT_EQ (request.header ("Connection"), "keep-alive");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.method (), HttpMethod::Get);
+    ASSERT_EQ (request.path (), "/path");
+    ASSERT_EQ (request.parameter ("val1"), "1");
+    ASSERT_EQ (request.parameter ("val2"), "2");
+    ASSERT_EQ (request.version (), "HTTP/1.0");
+    ASSERT_EQ (request.header ("Connection"), "keep-alive");
 
     ss.clear ();
     ss.str ("");
@@ -265,8 +265,8 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.method (), HttpMethod::Head);
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.method (), HttpMethod::Head);
 
     ss.clear ();
     ss.str ("");
@@ -274,8 +274,8 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.method (), HttpMethod::Put);
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.method (), HttpMethod::Put);
 
     ss.clear ();
     ss.str ("");
@@ -283,8 +283,8 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.method (), HttpMethod::Post);
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.method (), HttpMethod::Post);
 
     ss.clear ();
     ss.str ("");
@@ -292,16 +292,16 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.method (), HttpMethod::Delete);
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.method (), HttpMethod::Delete);
 
     ss.clear ();
     ss.str ("");
     ss << "GET";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ss.clear ();
     ss.str ("");
@@ -309,8 +309,8 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, HttpErrc::InvalidRequest);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, HttpErrc::InvalidRequest);
 
     ss.clear ();
     ss.str ("");
@@ -318,8 +318,8 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, HttpErrc::InvalidRequest);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, HttpErrc::InvalidRequest);
 
     ss.clear ();
     ss.str ("");
@@ -327,8 +327,8 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, HttpErrc::InvalidMethod);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, HttpErrc::InvalidMethod);
 
     ss.clear ();
     ss.str ("");
@@ -337,15 +337,15 @@ TEST (HttpRequest, receive)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, HttpErrc::InvalidHeader);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, HttpErrc::InvalidHeader);
 
     ss.clear ();
     ss.str (std::string (8192, 'X'));
 
     request.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, Errc::MessageTooLong);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
 }
 
 /**
@@ -359,8 +359,8 @@ TEST (HttpRequest, decodeUrl)
 
     HttpRequest request;
     request.receive (ss);
-    EXPECT_EQ (request.path (), "/foo bar");
-    EXPECT_EQ (request.parameter ("baz"), "3 fuz");
+    ASSERT_EQ (request.path (), "/foo bar");
+    ASSERT_EQ (request.parameter ("baz"), "3 fuz");
 }
 
 /**
@@ -374,8 +374,8 @@ TEST (HttpRequest, normalize)
 
     HttpRequest request;
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.path (), "/");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
     ss.str ("");
@@ -383,8 +383,8 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.path (), "");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.path (), "");
 
     ss.clear ();
     ss.str ("");
@@ -392,8 +392,8 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.path (), "");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.path (), "");
 
     ss.clear ();
     ss.str ("");
@@ -401,8 +401,8 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.path (), "/");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
     ss.str ("");
@@ -410,8 +410,8 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.path (), "/");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
     ss.str ("");
@@ -419,8 +419,8 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.path (), "/");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
     ss.str ("");
@@ -428,8 +428,8 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.path (), "/");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
     ss.str ("");
@@ -437,8 +437,8 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.path (), "/");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
     ss.str ("");
@@ -446,8 +446,8 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.path (), "/");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
     ss.str ("");
@@ -455,8 +455,8 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     request.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (request.path (), "");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.path (), "");
 }
 
 /**

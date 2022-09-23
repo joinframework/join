@@ -43,13 +43,13 @@ TEST (HttpResponse, copy)
     HttpResponse response1, response2;
 
     response2.response ("404", "Not Found");
-    EXPECT_EQ (response2.status (), "404");
+    ASSERT_EQ (response2.status (), "404");
 
     response1 = response2;
-    EXPECT_EQ (response1.status (), "404");
+    ASSERT_EQ (response1.status (), "404");
 
     HttpResponse response3 (response1);
-    EXPECT_EQ (response3.status (), "404");
+    ASSERT_EQ (response3.status (), "404");
 }
 
 /**
@@ -60,13 +60,13 @@ TEST (HttpResponse, move)
     HttpResponse response1, response2;
 
     response2.response ("404", "Not Found");
-    EXPECT_EQ (response2.status (), "404");
+    ASSERT_EQ (response2.status (), "404");
 
     response1 = std::move (response2);
-    EXPECT_EQ (response1.status (), "404");
+    ASSERT_EQ (response1.status (), "404");
 
     HttpResponse response3 (std::move (response1));
-    EXPECT_EQ (response3.status (), "404");
+    ASSERT_EQ (response3.status (), "404");
 }
 
 /**
@@ -75,13 +75,13 @@ TEST (HttpResponse, move)
 TEST (HttpResponse, version)
 {
     HttpResponse response;
-    EXPECT_EQ (response.version (), "HTTP/1.1");
+    ASSERT_EQ (response.version (), "HTTP/1.1");
 
     response.version ("HTTP/1.0");
-    EXPECT_EQ (response.version (), "HTTP/1.0");
+    ASSERT_EQ (response.version (), "HTTP/1.0");
 
     response.version ("HTTP/2.0");
-    EXPECT_EQ (response.version (), "HTTP/2.0");
+    ASSERT_EQ (response.version (), "HTTP/2.0");
 }
 
 /**
@@ -90,10 +90,10 @@ TEST (HttpResponse, version)
 TEST (HttpResponse, header)
 {
     HttpResponse response;
-    EXPECT_EQ (response.header ("Connection"), "");
+    ASSERT_EQ (response.header ("Connection"), "");
 
     response.header ("Connection", "keep-alive");
-    EXPECT_EQ (response.header ("Connection"), "keep-alive");
+    ASSERT_EQ (response.header ("Connection"), "keep-alive");
 }
 
 /**
@@ -102,10 +102,10 @@ TEST (HttpResponse, header)
 TEST (HttpResponse, hasHeader)
 {
     HttpResponse response;
-    EXPECT_FALSE (response.hasHeader ("Connection"));
+    ASSERT_FALSE (response.hasHeader ("Connection"));
 
     response.header ("Connection", "keep-alive");
-    EXPECT_TRUE (response.hasHeader ("Connection"));
+    ASSERT_TRUE (response.hasHeader ("Connection"));
 }
 
 /**
@@ -116,8 +116,8 @@ TEST (HttpResponse, response)
     HttpResponse response;
 
     response.response ("404", "Not Found");
-    EXPECT_EQ (response.status (), "404");
-    EXPECT_EQ (response.reason (), "Not Found");
+    ASSERT_EQ (response.status (), "404");
+    ASSERT_EQ (response.reason (), "Not Found");
 }
 
 /**
@@ -132,7 +132,7 @@ TEST (HttpResponse, send)
 
     std::stringstream ss;
     response.send (ss);
-    EXPECT_EQ (ss.str (), "HTTP/1.0 200 OK\r\nConnection: keep-alive\r\n\r\n");
+    ASSERT_EQ (ss.str (), "HTTP/1.0 200 OK\r\nConnection: keep-alive\r\n\r\n");
 }
 
 /**
@@ -148,36 +148,36 @@ TEST (HttpResponse, receive)
 
     HttpResponse response;
     response.receive (ss);
-    EXPECT_TRUE (ss.good ()) << join::lastError.message ();
-    EXPECT_EQ (response.status (), "301");
-    EXPECT_EQ (response.reason (), "Redirect");
-    EXPECT_EQ (response.version (), "HTTP/1.0");
-    EXPECT_EQ (response.header ("Connection"), "keep-alive");
-    EXPECT_EQ (response.header ("Content-Type"), "text/html; charset=\"UTF-8\"");
+    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "301");
+    ASSERT_EQ (response.reason (), "Redirect");
+    ASSERT_EQ (response.version (), "HTTP/1.0");
+    ASSERT_EQ (response.header ("Connection"), "keep-alive");
+    ASSERT_EQ (response.header ("Content-Type"), "text/html; charset=\"UTF-8\"");
 
     ss.clear ();
     ss.str ("");
     ss << "HTTP/1.0";
 
     response.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ss.clear ();
     ss.str ("");
     ss << "HTTP/1.0\r\n";
 
     response.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, HttpErrc::InvalidResponse);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, HttpErrc::InvalidResponse);
 
     ss.clear ();
     ss.str ("");
     ss << "HTTP/1.0 200\r\n";
 
     response.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, HttpErrc::InvalidResponse);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, HttpErrc::InvalidResponse);
 
     ss.clear ();
     ss.str ("");
@@ -186,15 +186,15 @@ TEST (HttpResponse, receive)
     ss << "\r\n";
 
     response.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, HttpErrc::InvalidHeader);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, HttpErrc::InvalidHeader);
 
     ss.clear ();
     ss.str (std::string (8192, 'X'));
 
     response.receive (ss);
-    EXPECT_TRUE (ss.fail ());
-    EXPECT_EQ (join::lastError, Errc::MessageTooLong);
+    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
 }
 
 /**

@@ -210,7 +210,10 @@ std::string HttpRequest::query () const
 {
     std::string out;
 
-    for (auto next = _parameters.begin (); next != _parameters.end (); ++next)
+    auto beg = _parameters.begin ();
+    auto end = _parameters.end ();
+
+    for (auto next = beg; next != end; ++next)
     {
         out += (next == _parameters.begin ()) ? "?" : "&";
         out += next->first + "=" + next->second;

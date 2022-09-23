@@ -36,7 +36,7 @@ using join::HttpCategory;
  */
 TEST (HttpCategory, name)
 {
-    EXPECT_STREQ (HttpCategory ().name (), "libjoin");
+    ASSERT_STREQ (HttpCategory ().name (), "libjoin");
 }
 
 /**
@@ -44,11 +44,11 @@ TEST (HttpCategory, name)
  */
 TEST (HttpCategory, message)
 {
-    EXPECT_STREQ (HttpCategory ().message (0).c_str (), "success");
-    EXPECT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidRequest)).c_str (), "invalid HTTP request");
-    EXPECT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidResponse)).c_str (), "invalid HTTP response");
-    EXPECT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidMethod)).c_str (),  "invalid HTTP method");
-    EXPECT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidHeader)).c_str (),  "invalid HTTP header");
+    ASSERT_STREQ (HttpCategory ().message (0).c_str (), "success");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidRequest)).c_str (), "invalid HTTP request");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidResponse)).c_str (), "invalid HTTP response");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidMethod)).c_str (),  "invalid HTTP method");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidHeader)).c_str (),  "invalid HTTP header");
 }
 
 /**
@@ -56,11 +56,11 @@ TEST (HttpCategory, message)
  */
 TEST (HttpCategory, default_error_condition)
 {
-    EXPECT_EQ (HttpCategory ().default_error_condition (0).message(), "success");
-    EXPECT_EQ (HttpCategory ().default_error_condition (1).message(), "invalid HTTP request");
-    EXPECT_EQ (HttpCategory ().default_error_condition (2).message(), "invalid HTTP response");
-    EXPECT_EQ (HttpCategory ().default_error_condition (3).message(), "invalid HTTP method");
-    EXPECT_EQ (HttpCategory ().default_error_condition (4).message(), "invalid HTTP header");
+    ASSERT_EQ (HttpCategory ().default_error_condition (0).message(), "success");
+    ASSERT_EQ (HttpCategory ().default_error_condition (1).message(), "invalid HTTP request");
+    ASSERT_EQ (HttpCategory ().default_error_condition (2).message(), "invalid HTTP response");
+    ASSERT_EQ (HttpCategory ().default_error_condition (3).message(), "invalid HTTP method");
+    ASSERT_EQ (HttpCategory ().default_error_condition (4).message(), "invalid HTTP header");
 }
 
 /**
@@ -141,8 +141,8 @@ TEST (HttpCategory, different)
 TEST (HttpCategory, make_error_code)
 {
     auto code = make_error_code (HttpErrc::InvalidRequest);
-    EXPECT_EQ (code, HttpErrc::InvalidRequest);
-    EXPECT_STREQ (code.message ().c_str (), "invalid HTTP request");
+    ASSERT_EQ (code, HttpErrc::InvalidRequest);
+    ASSERT_STREQ (code.message ().c_str (), "invalid HTTP request");
 }
 
 /**
@@ -151,8 +151,8 @@ TEST (HttpCategory, make_error_code)
 TEST (HttpCategory, make_error_condition)
 {
     auto code = make_error_condition (HttpErrc::InvalidMethod);
-    EXPECT_EQ (code, HttpErrc::InvalidMethod);
-    EXPECT_STREQ (code.message ().c_str (), "invalid HTTP method");
+    ASSERT_EQ (code, HttpErrc::InvalidMethod);
+    ASSERT_STREQ (code.message ().c_str (), "invalid HTTP method");
 }
 
 /**
