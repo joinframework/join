@@ -28,9 +28,32 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::Tls;
+using join::Errc;
+using join::TlsErrc;
 using join::HttpRequest;
 using join::HttpResponse;
 using join::HttpClient;
+
+/**
+ * @brief Test move.
+ */
+TEST (HttpClient, move)
+{
+    HttpClient client1 (Tls::Endpoint {"127.0.0.1", 5000}), client2 ("127.0.0.2", 5001);
+    EXPECT_EQ (client1.host (), "127.0.0.1");
+    EXPECT_EQ (client1.port (), 5000);
+    EXPECT_EQ (client2.host (), "127.0.0.2");
+    EXPECT_EQ (client2.port (), 5001);
+
+    client1 = std::move (client2);
+    EXPECT_EQ (client1.host (), "127.0.0.2");
+    EXPECT_EQ (client1.port (), 5001);
+
+    HttpClient client3 (std::move (client1));
+    EXPECT_EQ (client3.host (), "127.0.0.2");
+    EXPECT_EQ (client3.port (), 5001);
+}
 
 /**
  * @brief Test scheme method
@@ -97,8 +120,20 @@ TEST (HttpClient, keepAlive)
  */
 TEST (HttpClient, send)
 {
-    HttpClient client ("joinframework.net", 443, true);
+    HttpClient client ("172.16.13.128", 80);
+    client.timeout (1000);
+    client << HttpRequest ();
+    ASSERT_TRUE (client.fail ());
+    EXPECT_EQ (join::lastError, Errc::TimedOut);
+    client.clear ();
 
+    client = HttpClient ("joinframework.net", 80, true);
+    client << HttpRequest ();
+    ASSERT_TRUE (client.fail ());
+    EXPECT_EQ (join::lastError, TlsErrc::TlsProtocolError);
+    client.clear ();
+
+    client = HttpClient ("joinframework.net", 443, true);
     client << HttpRequest ();
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
 
@@ -112,11 +147,10 @@ TEST (HttpClient, send)
 TEST (HttpClient, receive)
 {
     HttpClient client ("joinframework.net", 443, true);
-    HttpResponse response;
-    
     client << HttpRequest ();
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
 
+    HttpResponse response;
     client >> response;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
     ASSERT_EQ (response.status (), "200");
