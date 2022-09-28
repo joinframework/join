@@ -458,7 +458,7 @@ namespace join
          * @brief create the endpoint instance.
          * @param url endpoint URL.
          */
-        constexpr BasicInternetEndpoint (const char* url) noexcept
+        /*constexpr*/ BasicInternetEndpoint (const char* url) noexcept
         : BasicEndpoint <Protocol> ()
         {
             // regular expression inspired by rfc3986 (see https://www.ietf.org/rfc/rfc3986.txt)
@@ -485,11 +485,15 @@ namespace join
                 port = (match[3].length ()) ? uint16_t (std::stoi (match[3])) : Resolver::resolveService (match[1]);
             }
 
-            this->ip (Resolver::resolveHost (host));
-            this->port (port);
-
-            if (!IpAddress::isIpAddress (host))
+            try
             {
+                this->ip (host);
+                this->port (port);
+            }
+            catch (const std::exception& ex)
+            {
+                this->ip (Resolver::resolveHost (host));
+                this->port (port);
                 _hostname = host;
             }
         }
