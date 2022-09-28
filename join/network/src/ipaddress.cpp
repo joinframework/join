@@ -1382,6 +1382,24 @@ bool IpAddress::isIpv6Address () const
 
 // =========================================================================
 //   CLASS     : IpAddress
+//   METHOD    : isIpv6Address
+// =========================================================================
+bool IpAddress::isIpv6Address (const std::string& address)
+{
+    try
+    {
+        return IpAddress (address).isIpv6Address ();
+    }
+    catch (const std::exception& ex)
+    {
+    }
+
+    return false;
+}
+
+
+// =========================================================================
+//   CLASS     : IpAddress
 //   METHOD    : isIpv4Compat
 // =========================================================================
 bool IpAddress::isIpv4Compat () const
@@ -1405,6 +1423,23 @@ bool IpAddress::isIpv4Mapped () const
 bool IpAddress::isIpv4Address () const
 {
     return _ip->family () == AF_INET;
+}
+
+// =========================================================================
+//   CLASS     : IpAddress
+//   METHOD    : isIpv4Address
+// =========================================================================
+bool IpAddress::isIpv4Address (const std::string& address)
+{
+    try
+    {
+        return IpAddress (address).isIpv4Address ();
+    }
+    catch (const std::exception& ex)
+    {
+    }
+
+    return false;
 }
 
 // =========================================================================

@@ -40,7 +40,7 @@ using join::Tls;
  */
 TEST (HttpClient, move)
 {
-    HttpClient client1 (Tls::Endpoint {"127.0.0.1", 5000}), client2 ("127.0.0.2", 5001);
+    HttpClient client1 ("127.0.0.1", 5000), client2 ("127.0.0.2", 5001);
     ASSERT_EQ (client1.host (), "127.0.0.1");
     ASSERT_EQ (client1.port (), 5000);
     ASSERT_EQ (client2.host (), "127.0.0.2");
@@ -95,6 +95,60 @@ TEST (HttpClient, port)
 
     HttpClient client2 ("joinframework.net", 443, true);
     ASSERT_EQ (client2.port (), 443);
+}
+
+/**
+ * @brief Test authority method
+ */
+TEST (HttpClient, authority)
+{
+    ASSERT_EQ (HttpClient ("joinframework.net", 80, false).authority (), "joinframework.net");
+    ASSERT_EQ (HttpClient ("joinframework.net", 443, false).authority (), "joinframework.net:443");
+    ASSERT_EQ (HttpClient ("joinframework.net", 5000, false).authority (), "joinframework.net:5000");
+    ASSERT_EQ (HttpClient ("joinframework.net", 80, true).authority (), "joinframework.net:80");
+    ASSERT_EQ (HttpClient ("joinframework.net", 443, true).authority (), "joinframework.net");
+    ASSERT_EQ (HttpClient ("joinframework.net", 5001, true).authority (), "joinframework.net:5001");
+
+    ASSERT_EQ (HttpClient ("91.66.32.78", 80, false).authority (), "91.66.32.78");
+    ASSERT_EQ (HttpClient ("91.66.32.78", 443, false).authority (), "91.66.32.78:443");
+    ASSERT_EQ (HttpClient ("91.66.32.78", 5000, false).authority (), "91.66.32.78:5000");
+    ASSERT_EQ (HttpClient ("91.66.32.78", 80, true).authority (), "91.66.32.78:80");
+    ASSERT_EQ (HttpClient ("91.66.32.78", 443, true).authority (), "91.66.32.78");
+    ASSERT_EQ (HttpClient ("91.66.32.78", 5001, true).authority (), "91.66.32.78:5001");
+
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 80, false).authority (), "[2001:db8:1234:5678::1]");
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 443, false).authority (), "[2001:db8:1234:5678::1]:443");
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 5000, false).authority (), "[2001:db8:1234:5678::1]:5000");
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 80, true).authority (), "[2001:db8:1234:5678::1]:80");
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 443, true).authority (), "[2001:db8:1234:5678::1]");
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 5001, true).authority (), "[2001:db8:1234:5678::1]:5001");
+}
+
+/**
+ * @brief Test url method
+ */
+TEST (HttpClient, url)
+{
+    ASSERT_EQ (HttpClient ("joinframework.net", 80, false).url (), "http://joinframework.net/");
+    ASSERT_EQ (HttpClient ("joinframework.net", 443, false).url (), "http://joinframework.net:443/");
+    ASSERT_EQ (HttpClient ("joinframework.net", 5000, false).url (), "http://joinframework.net:5000/");
+    ASSERT_EQ (HttpClient ("joinframework.net", 80, true).url (), "https://joinframework.net:80/");
+    ASSERT_EQ (HttpClient ("joinframework.net", 443, true).url (), "https://joinframework.net/");
+    ASSERT_EQ (HttpClient ("joinframework.net", 5001, true).url (), "https://joinframework.net:5001/");
+
+    ASSERT_EQ (HttpClient ("91.66.32.78", 80, false).url (), "http://91.66.32.78/");
+    ASSERT_EQ (HttpClient ("91.66.32.78", 443, false).url (), "http://91.66.32.78:443/");
+    ASSERT_EQ (HttpClient ("91.66.32.78", 5000, false).url (), "http://91.66.32.78:5000/");
+    ASSERT_EQ (HttpClient ("91.66.32.78", 80, true).url (), "https://91.66.32.78:80/");
+    ASSERT_EQ (HttpClient ("91.66.32.78", 443, true).url (), "https://91.66.32.78/");
+    ASSERT_EQ (HttpClient ("91.66.32.78", 5001, true).url (), "https://91.66.32.78:5001/");
+
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 80, false).url (), "http://[2001:db8:1234:5678::1]/");
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 443, false).url (), "http://[2001:db8:1234:5678::1]:443/");
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 5000, false).url (), "http://[2001:db8:1234:5678::1]:5000/");
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 80, true).url (), "https://[2001:db8:1234:5678::1]:80/");
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 443, true).url (), "https://[2001:db8:1234:5678::1]/");
+    ASSERT_EQ (HttpClient ("2001:db8:1234:5678::1", 5001, true).url (), "https://[2001:db8:1234:5678::1]:5001/");
 }
 
 /**

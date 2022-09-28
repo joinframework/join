@@ -26,11 +26,12 @@
 #define __JOIN_ENDPOINT_HPP__
 
 // libjoin.
-#include <join/macaddress.hpp>
+#include <join/resolver.hpp>
 
 // C++.
 #include <ostream>
 #include <sstream>
+#include <regex>
 
 // C.
 #include <linux/if_packet.h>
@@ -134,11 +135,20 @@ namespace join
          * @brief create instance using device name.
          * @param dev device name to set.
          */
-        constexpr BasicUnixEndpoint (const std::string& dev) noexcept
+        constexpr BasicUnixEndpoint (const char* dev) noexcept
         : BasicUnixEndpoint ()
         {
             struct sockaddr_un* sa = reinterpret_cast <struct sockaddr_un*> (&this->_addr);
-            strncpy (sa->sun_path, dev.c_str (), sizeof (sa->sun_path) - 1);
+            strncpy (sa->sun_path, dev, sizeof (sa->sun_path) - 1);
+        }
+
+        /**
+         * @brief create instance using device name.
+         * @param dev device name to set.
+         */
+        constexpr BasicUnixEndpoint (const std::string& dev) noexcept
+        : BasicUnixEndpoint <Protocol> (dev.c_str ())
+        {
         }
 
         /**
@@ -286,10 +296,19 @@ namespace join
          * @brief create instance using device name.
          * @param dev device name to set.
          */
-        constexpr BasicLinkLayerEndpoint (const std::string& dev) noexcept
-        : BasicLinkLayerEndpoint ()
+        constexpr BasicLinkLayerEndpoint (const char* dev) noexcept
+        : BasicEndpoint <Protocol> ()
         {
-            reinterpret_cast <struct sockaddr_ll*> (&this->_addr)->sll_ifindex = if_nametoindex (dev.c_str ());
+            reinterpret_cast <struct sockaddr_ll*> (&this->_addr)->sll_ifindex = if_nametoindex (dev);
+        }
+
+        /**
+         * @brief create instance using device name.
+         * @param dev device name to set.
+         */
+        constexpr BasicLinkLayerEndpoint (const std::string& dev) noexcept
+        : BasicLinkLayerEndpoint <Protocol> (dev.c_str ())
+        {
         }
 
         /**
@@ -424,7 +443,6 @@ namespace join
         constexpr BasicInternetEndpoint () noexcept
         : BasicEndpoint <Protocol> ()
         {
-            this->_hostname = this->ip ().toString ();
         }
 
         /**
@@ -434,7 +452,55 @@ namespace join
         constexpr BasicInternetEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
         : BasicEndpoint <Protocol> (addr, len)
         {
-            this->_hostname = this->ip ().toString ();
+        }
+
+        /**
+         * @brief create the endpoint instance.
+         * @param url endpoint URL.
+         */
+        constexpr BasicInternetEndpoint (const char* url) noexcept
+        : BasicEndpoint <Protocol> ()
+        {
+            // regular expression inspired by rfc3986 (see https://www.ietf.org/rfc/rfc3986.txt)
+            // ex.
+            // 0: https://example.com:8080/foo/bar.html?val=1#frag  # URL
+            // 1: https                                             # Scheme
+            // 2: example.com                                       # Host
+            // 3: 8080                                              # Port
+            // 4: /foo/bar.html                                     # Path
+            // 5: val=1                                             # Query
+            // 6: frag                                              # Fragment
+            //                0    1              2                                    3         4            5            6
+            std::regex reg (R"(^(?:([^:/?#]+)://)?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\])(?::([0-9]+))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?)");
+            std::cmatch match;
+
+            std::string host (url);
+            uint16_t port = 0;
+
+            if (std::regex_match (url, match, reg))
+            {
+                host = match[2];
+                host.erase (0, host.find_first_not_of ("["));
+                host.erase (host.find_last_not_of ("]") + 1);
+                port = (match[3].length ()) ? uint16_t (std::stoi (match[3])) : Resolver::resolveService (match[1]);
+            }
+
+            this->ip (Resolver::resolveHost (host));
+            this->port (port);
+
+            if (!IpAddress::isIpAddress (host))
+            {
+                _hostname = host;
+            }
+        }
+
+        /**
+         * @brief create the endpoint instance.
+         * @param url endpoint URL.
+         */
+        constexpr BasicInternetEndpoint (const std::string& url) noexcept
+        : BasicInternetEndpoint <Protocol> (url.c_str ())
+        {
         }
 
         /**
@@ -452,7 +518,6 @@ namespace join
                 sa->sin6_port           = htons (port);
                 memcpy (&sa->sin6_addr, ip.addr (), ip.length ());
                 sa->sin6_scope_id       = ip.scope ();
-                this->_hostname         = ip.toString ();
             }
             else
             {
@@ -460,7 +525,6 @@ namespace join
                 sa->sin_family          = AF_INET;
                 sa->sin_port            = htons (port);
                 memcpy (&sa->sin_addr, ip.addr (), ip.length ());
-                this->_hostname         = ip.toString ();
             }
         }
 
@@ -477,14 +541,12 @@ namespace join
                 struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->_addr);
                 sa->sin6_family         = AF_INET6;
                 sa->sin6_port           = htons (port);
-                this->_hostname         = "::";
             }
             else
             {
                 struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->_addr);
                 sa->sin_family          = AF_INET;
                 sa->sin_port            = htons (port);
-                this->_hostname         = "0.0.0.0";
             }
         }
 

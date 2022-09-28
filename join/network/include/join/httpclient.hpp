@@ -40,11 +40,12 @@ namespace join
     public:
         /**
          * @brief create the HttpClient instance.
-         * @param endpoint endpoint.
+         * @param host host.
+         * @param port port.
          * @param encrypt use HTTTPS scheme.
          * @param keepAlive use a persistent connection.
          */
-        HttpClient (const Tls::Endpoint& endpoint, bool encrypt = true, bool keepAlive = false);
+        HttpClient (const char* host, uint16_t port, bool encrypt = true, bool keepAlive = false);
 
         /**
          * @brief create the HttpClient instance.
@@ -103,6 +104,18 @@ namespace join
          * @return port.
          */
         uint16_t port () const;
+
+        /**
+         * @brief get authority.
+         * @return authority.
+         */
+        std::string authority () const;
+
+        /**
+         * @brief get URL.
+         * @return URL.
+         */
+        std::string url () const;
 
         /**
          * @brief enable/disable HTTP keep alive support.

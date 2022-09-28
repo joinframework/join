@@ -64,6 +64,7 @@ set(SOURCES
     crypto/src/openssl.cpp
     network/src/macaddress.cpp
     network/src/ipaddress.cpp
+    network/src/resolver.cpp
     network/src/socket.cpp
     network/src/arp.cpp
     network/src/httpmessage.cpp

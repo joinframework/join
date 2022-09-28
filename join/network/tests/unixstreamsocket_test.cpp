@@ -145,7 +145,7 @@ TEST_F (UnixStreamSocket, connect)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.connect ({}), -1);
+    ASSERT_EQ (unixSocket.connect (""), -1);
 
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), -1);

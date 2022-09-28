@@ -224,9 +224,9 @@ std::string HttpRequest::query () const
 
 // =========================================================================
 //   CLASS     : HttpRequest
-//   METHOD    : uri
+//   METHOD    : urn
 // =========================================================================
-std::string HttpRequest::uri () const
+std::string HttpRequest::urn () const
 {
     return path () + query ();
 }
@@ -237,7 +237,7 @@ std::string HttpRequest::uri () const
 // =========================================================================
 void HttpRequest::send (std::ostream& out) const
 {
-    out << methodString () << " " << uri () << " " << version () << "\r\n";
+    out << methodString () << " " << urn () << " " << version () << "\r\n";
 
     for (auto const& header : _headers)
     {

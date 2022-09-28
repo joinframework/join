@@ -31,6 +31,7 @@
 using join::Errc;
 using join::MacAddress;
 using join::IpAddress;
+using join::Resolver;
 using join::Udp;
 
 /**
@@ -44,7 +45,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (bind ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (start (), 0) << join::lastError.message ();
     }
 
@@ -114,7 +115,7 @@ TEST_F (UdpSocket, close)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_FALSE (udpSocket.opened ());
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.opened ());
     udpSocket.close ();
     ASSERT_FALSE (udpSocket.opened ());
@@ -127,12 +128,12 @@ TEST_F (UdpSocket, bind)
 {
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.bind ({Udp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), -1);
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.bind ({Resolver::resolveHost (_host), uint16_t (_port + 1)}), -1);
     ASSERT_EQ (udpSocket.disconnect (), 0) << join::lastError.message ();
 
-    ASSERT_EQ (udpSocket.bind ({Udp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.bind ({Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (udpSocket.disconnect (), 0) << join::lastError.message ();
 
     udpSocket.close ();
@@ -147,13 +148,13 @@ TEST_F (UdpSocket, connect)
 
     ASSERT_EQ (udpSocket.connect ({"255.255.255.255", _port}), -1);
 
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), -1);
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
     udpSocket.close ();
 
-    ASSERT_EQ (udpSocket.connect (Udp::Resolver::resolve (_host + ":" + std::to_string (_port))), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.connect (Udp::Resolver::resolve (_host + ":" + std::to_string (_port))), -1);
+    ASSERT_EQ (udpSocket.connect (_host + ":" + std::to_string (_port)), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect (_host + ":" + std::to_string (_port)), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
     udpSocket.close ();
 }
@@ -166,7 +167,7 @@ TEST_F (UdpSocket, disconnect)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_FALSE (udpSocket.connected ());
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.connected ());
     ASSERT_EQ (udpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.connected ());
@@ -184,7 +185,7 @@ TEST_F (UdpSocket, canRead)
 
     ASSERT_EQ (udpSocket.canRead (), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -202,7 +203,7 @@ TEST_F (UdpSocket, waitReadyRead)
 
     ASSERT_FALSE (udpSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -219,7 +220,7 @@ TEST_F (UdpSocket, read)
 
     ASSERT_EQ (udpSocket.read (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -238,13 +239,13 @@ TEST_F (UdpSocket, readFrom)
 
     ASSERT_EQ (udpSocket.readFrom (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.readFrom (data, udpSocket.canRead (), &from), sizeof (data)) << join::lastError.message ();
     udpSocket.close ();
-    ASSERT_EQ (from, Udp::Endpoint (Udp::Resolver::resolveHost (_host), _port));
+    ASSERT_EQ (from, Udp::Endpoint (Resolver::resolveHost (_host), _port));
 }
 
 /**
@@ -256,7 +257,7 @@ TEST_F (UdpSocket, waitReadyWrite)
 
     ASSERT_FALSE (udpSocket.waitReadyWrite (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     udpSocket.close ();
 }
@@ -271,7 +272,7 @@ TEST_F (UdpSocket, write)
 
     ASSERT_EQ (udpSocket.write (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
@@ -289,7 +290,7 @@ TEST_F (UdpSocket, writeTo)
     ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.writeTo (data, sizeof (data), {"255.255.255.255", _port}), -1);
-    ASSERT_EQ (udpSocket.writeTo (data, sizeof (data), {Udp::Resolver::resolveHost (_host), _port}), sizeof (data)) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.writeTo (data, sizeof (data), {Resolver::resolveHost (_host), _port}), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout));
     udpSocket.close ();
 }
@@ -302,7 +303,7 @@ TEST_F (UdpSocket, setMode)
     Udp::Socket udpSocket;
 
     ASSERT_EQ (udpSocket.setMode (Udp::Socket::Blocking), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (udpSocket.setMode (Udp::Socket::NonBlocking), 0) << join::lastError.message ();
     udpSocket.close ();
 }
@@ -376,9 +377,9 @@ TEST_F (UdpSocket, localEndpoint)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_EQ (udpSocket.localEndpoint (), Udp::Endpoint {});
-    ASSERT_EQ (udpSocket.bind ({Udp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.localEndpoint (), Udp::Endpoint (Udp::Resolver::resolveHost (_host), uint16_t (_port + 1))) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.bind ({Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.localEndpoint (), Udp::Endpoint (Resolver::resolveHost (_host), uint16_t (_port + 1))) << join::lastError.message ();
     udpSocket.close ();
 }
 
@@ -390,9 +391,9 @@ TEST_F (UdpSocket, remoteEndpoint)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_EQ (udpSocket.remoteEndpoint (), Udp::Endpoint {});
-    ASSERT_EQ (udpSocket.bind ({Udp::Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.remoteEndpoint (), Udp::Endpoint (Udp::Resolver::resolveHost (_host), _port)) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.bind ({Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.remoteEndpoint (), Udp::Endpoint (Resolver::resolveHost (_host), _port)) << join::lastError.message ();
     udpSocket.close ();
 }
 
@@ -406,7 +407,7 @@ TEST_F (UdpSocket, opened)
     ASSERT_FALSE (udpSocket.opened ());
     ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.opened ());
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.opened ());
     udpSocket.close ();
     ASSERT_FALSE (udpSocket.opened ());
@@ -422,7 +423,7 @@ TEST_F (UdpSocket, connected)
     ASSERT_FALSE (udpSocket.opened ());
     ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.connected ());
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.connected ());
     udpSocket.close ();
     ASSERT_FALSE (udpSocket.connected ());
@@ -438,7 +439,7 @@ TEST_F (UdpSocket, encrypted)
     ASSERT_FALSE (udpSocket.opened ());
     ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.encrypted ());
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.encrypted ());
     udpSocket.close ();
     ASSERT_FALSE (udpSocket.encrypted ());
@@ -504,7 +505,7 @@ TEST_F (UdpSocket, mtu)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_EQ (udpSocket.mtu (), -1);
-    ASSERT_EQ (udpSocket.connect ({Udp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_NE (udpSocket.mtu (), -1) << join::lastError.message ();
     udpSocket.close ();
     ASSERT_EQ (udpSocket.mtu (), -1);

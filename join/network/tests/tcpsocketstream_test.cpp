@@ -30,6 +30,7 @@
 
 using join::Errc;
 using join::IpAddress;
+using join::Resolver;
 using join::Tcp;
 
 /**
@@ -43,7 +44,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (bind ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (listen (), 0) << join::lastError.message ();
         ASSERT_EQ (start (), 0) << join::lastError.message ();
     }
@@ -139,10 +140,10 @@ TEST_F (TcpSocketStream, moveAssign)
 TEST_F (TcpSocketStream, connect)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _invalid_port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _invalid_port});
     ASSERT_TRUE (tcpStream.fail ());
     tcpStream.clear ();
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.close ();
 }
@@ -153,7 +154,7 @@ TEST_F (TcpSocketStream, connect)
 TEST_F (TcpSocketStream, close)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.close ();
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
@@ -167,7 +168,7 @@ TEST_F (TcpSocketStream, connected)
 {
     Tcp::Stream tcpStream;
     ASSERT_FALSE (tcpStream.connected ());
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     ASSERT_TRUE (tcpStream.connected ());
     tcpStream.close ();
@@ -193,7 +194,7 @@ TEST_F (TcpSocketStream, socket)
 {
     Tcp::Stream tcpStream;
     ASSERT_EQ (tcpStream.socket ().handle (), -1);
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     ASSERT_NE (tcpStream.socket ().handle (), -1);
     tcpStream.close ();
@@ -211,7 +212,7 @@ TEST_F (TcpSocketStream, insert)
     ASSERT_TRUE (tcpStream.fail ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     tcpStream.clear ();
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream << "test" << std::endl;
     ASSERT_TRUE (tcpStream.socket ().waitReadyRead (_timeout));
@@ -229,7 +230,7 @@ TEST_F (TcpSocketStream, put)
     ASSERT_TRUE (tcpStream.fail ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     tcpStream.clear ();
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.put ('t');
     tcpStream.put ('e');
@@ -250,7 +251,7 @@ TEST_F (TcpSocketStream, write)
     ASSERT_TRUE (tcpStream.fail ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     tcpStream.clear ();
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.write ("test", 4);
     ASSERT_TRUE (tcpStream.socket ().waitReadyRead (_timeout));
@@ -264,7 +265,7 @@ TEST_F (TcpSocketStream, write)
 TEST_F (TcpSocketStream, flush)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.put ('t');
     tcpStream.flush ();
@@ -290,7 +291,7 @@ TEST_F (TcpSocketStream, extract)
     ASSERT_TRUE (tcpStream.fail ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     tcpStream.clear ();
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream << int (123456789) << std::endl;
     tcpStream.flush ();
@@ -309,7 +310,7 @@ TEST_F (TcpSocketStream, get)
     ASSERT_TRUE (tcpStream.fail ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     tcpStream.clear ();
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.write ("test", 4);
     tcpStream.flush ();
@@ -326,7 +327,7 @@ TEST_F (TcpSocketStream, get)
 TEST_F (TcpSocketStream, peek)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.write ("test", 4);
     tcpStream.flush ();
@@ -347,7 +348,7 @@ TEST_F (TcpSocketStream, peek)
 TEST_F (TcpSocketStream, unget)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     tcpStream.write ("test", 4);
     tcpStream.flush ();
     ASSERT_EQ (tcpStream.get (), 't');
@@ -371,7 +372,7 @@ TEST_F (TcpSocketStream, unget)
 TEST_F (TcpSocketStream, putback)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     tcpStream.write ("test", 4);
     tcpStream.flush ();
     ASSERT_EQ (tcpStream.get (), 't');
@@ -393,7 +394,7 @@ TEST_F (TcpSocketStream, putback)
 TEST_F (TcpSocketStream, getline)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     tcpStream.write ("test\n", 5);
     tcpStream.flush ();
     std::array <char, 32> test = {};
@@ -408,7 +409,7 @@ TEST_F (TcpSocketStream, getline)
 TEST_F (TcpSocketStream, ignore)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     tcpStream.write ("test\n", 5);
     tcpStream.flush ();
     tcpStream.ignore (std::numeric_limits <std::streamsize>::max (), 'e');
@@ -423,7 +424,7 @@ TEST_F (TcpSocketStream, ignore)
 TEST_F (TcpSocketStream, read)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     tcpStream.write ("test", 4);
     tcpStream.flush ();
     std::array <char, 32> test = {};
@@ -438,7 +439,7 @@ TEST_F (TcpSocketStream, read)
 /*TEST_F (TcpSocketStream, readsome)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     tcpStream.write ("test", 4);
     tcpStream.flush ();
     std::array <char, 32> test = {};
@@ -453,7 +454,7 @@ TEST_F (TcpSocketStream, read)
 TEST_F (TcpSocketStream, gcount)
 {
     Tcp::Stream tcpStream;
-    tcpStream.connect ({Tcp::Resolver::resolveHost (_host), _port});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
     tcpStream.write ("test", 4);
     tcpStream.flush ();
     std::array <char, 32> test = {};

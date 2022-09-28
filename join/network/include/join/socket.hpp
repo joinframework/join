@@ -26,6 +26,7 @@
 #define __JOIN_SOCKET_HPP__
 
 // libjoin.
+#include <join/endpoint.hpp>
 #include <join/resolver.hpp>
 #include <join/observer.hpp>
 #include <join/openssl.hpp>
@@ -42,6 +43,7 @@
 #include <netinet/tcp.h>
 #include <linux/icmp.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <fnmatch.h>
 #include <cassert>
 #include <fcntl.h>
@@ -711,8 +713,8 @@ namespace join
          */
         BasicDatagramSocket (BasicDatagramSocket&& other)
         : BasicSocket <Protocol> (std::move (other)),
-         _remote (std::move (other._remote)),
-         _ttl (other._ttl)
+          _remote (std::move (other._remote)),
+          _ttl (other._ttl)
         {
             other._ttl = 60;
         }
@@ -726,8 +728,8 @@ namespace join
         {
             BasicSocket <Protocol>::operator= (std::move (other));
 
-           _remote = std::move (other._remote);
-           _ttl = other._ttl;
+            _remote = std::move (other._remote);
+            _ttl = other._ttl;
 
             other._ttl = 60;
 
@@ -1153,7 +1155,7 @@ namespace join
         }
 
         /**
-         * @brief Returns the Time-To-Live value.
+         * @brief returns the Time-To-Live value.
          * @return The Time-To-Live value.
          */
         int ttl () const
@@ -1652,7 +1654,7 @@ namespace join
             SSL_CTX_set_cipher_list (this->_tlsContext.get (), join::crypto::defaultCipher_.c_str ());
 
         #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-            //  set default TLSv1.3 cipher suites.
+            // set default TLSv1.3 cipher suites.
             SSL_CTX_set_ciphersuites (this->_tlsContext.get (), join::crypto::defaultCipher_1_3_.c_str ());
         #endif
         }
@@ -1799,6 +1801,13 @@ namespace join
                 // prepare the object to work in client or server mode.
                 if (this->_tlsMode == TlsMode::ClientMode)
                 {
+                    if (!this->_remote.hostname ().empty () && (SSL_set_tlsext_host_name (this->_tlsHandle.get (), this->_remote.hostname ().c_str ()) != 1))
+                    {
+                        lastError = make_error_code (Errc::InvalidParam);
+                        this->_tlsHandle.reset ();
+                        return -1;
+                    }
+
                     SSL_set_connect_state (this->_tlsHandle.get ());
                 }
                 else
@@ -2164,13 +2173,33 @@ namespace join
         }
 
         /**
-         * @brief set the location of the trusted CA certificate.
+         * @brief set the location of the trusted CA certificates.
+         * @param caPath path of the trusted CA certificates.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCaPath (const std::string& caPath)
+        {
+            struct stat st;
+            stat (caPath.c_str (), &st);
+            if (!S_ISDIR (st.st_mode) || SSL_CTX_load_verify_locations (this->_tlsContext.get (), nullptr, caPath.c_str ()) == 0)
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief set the location of the trusted CA certificate file.
          * @param caFile path of the trusted CA certificate file.
          * @return 0 on success, -1 on failure.
          */
-        int setCaCertificate (const std::string& caFile)
+        int setCaFile (const std::string& caFile)
         {
-            if (SSL_CTX_load_verify_locations (this->_tlsContext.get (), caFile.c_str (), nullptr) == 0)
+            struct stat st;
+            stat (caFile.c_str (), &st);
+            if (!S_ISREG (st.st_mode) || SSL_CTX_load_verify_locations (this->_tlsContext.get (), caFile.c_str (), nullptr) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;

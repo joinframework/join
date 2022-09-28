@@ -208,17 +208,17 @@ TEST (HttpRequest, query)
 }
 
 /**
- * @brief Test uri.
+ * @brief Test urn.
  */
-TEST (HttpRequest, uri)
+TEST (HttpRequest, urn)
 {
     HttpRequest request;
-    ASSERT_EQ (request.uri (), "/");
+    ASSERT_EQ (request.urn (), "/");
 
     request.path ("/path");
     request.parameter ("val1", "1");
     request.parameter ("val2", "2");
-    ASSERT_EQ (request.uri (), "/path?val1=1&val2=2");
+    ASSERT_EQ (request.urn (), "/path?val1=1&val2=2");
 }
 
 /**

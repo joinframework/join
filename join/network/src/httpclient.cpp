@@ -35,8 +35,12 @@ using join::Tls;
 //   CLASS     : HttpClient
 //   METHOD    : HttpClient
 // =========================================================================
-HttpClient::HttpClient (const Tls::Endpoint& endpoint, bool encrypt, bool keepAlive)
-: HttpClient (endpoint.hostname (), endpoint.port (), encrypt, keepAlive)
+HttpClient::HttpClient (const char* host, uint16_t port, bool encrypt, bool keepAlive)
+: Tls::Stream (),
+  _host (host),
+  _port (port),
+  _encrypt (encrypt),
+  _keepAlive (keepAlive)
 {
 }
 
@@ -45,11 +49,7 @@ HttpClient::HttpClient (const Tls::Endpoint& endpoint, bool encrypt, bool keepAl
 //   METHOD    : HttpClient
 // =========================================================================
 HttpClient::HttpClient (const std::string& host, uint16_t port, bool encrypt, bool keepAlive)
-: Tls::Stream (),
-  _host (host),
-  _port (port),
-  _encrypt (encrypt),
-  _keepAlive (keepAlive)
+: HttpClient (host.c_str (), port, encrypt, keepAlive)
 {
 }
 
@@ -117,6 +117,31 @@ uint16_t HttpClient::port () const
 
 // =========================================================================
 //   CLASS     : HttpClient
+//   METHOD    : foo
+// =========================================================================
+std::string HttpClient::authority () const
+{
+    std::string out;
+    if (IpAddress::isIpv6Address (host ()))
+        out += "[" + host () + "]";
+    else
+        out += host ();
+    if (port () && (port () != Resolver::resolveService (scheme ())))
+        out += ":" + std::to_string (port ());
+    return out;
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
+//   METHOD    : url
+// =========================================================================
+std::string HttpClient::url () const
+{
+    return scheme () + "://" + authority () + "/";
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
 //   METHOD    : keepAlive
 // =========================================================================
 void HttpClient::keepAlive (bool k)
@@ -141,7 +166,7 @@ void HttpClient::send (const HttpRequest& request)
 {
     if (!connected ())
     {
-        connect ({Tls::Resolver::resolveHost (_host), _port});
+        connect (url ());
         if (fail ())
         {
             return;
@@ -169,13 +194,7 @@ void HttpClient::send (const HttpRequest& request)
     }
     if (!tmp.hasHeader ("Host"))
     {
-        std::string host;
-        if (IpAddress::isIpAddress (_host) && IpAddress (_host).isIpv6Address ())
-            host += "[" + _host + "]";
-        else
-            host += _host;
-        host += ":" + std::to_string (_port);
-        tmp.header ("Host", host);
+        tmp.header ("Host", authority ());
     }
     if (!tmp.hasHeader ("User-Agent"))
     {

@@ -214,10 +214,10 @@ namespace join
         std::string query () const;
 
         /**
-         * @brief get URI.
-         * @return URI.
+         * @brief get URN.
+         * @return URN.
          */
-        std::string uri () const;
+        std::string urn () const;
 
         /**
          * @brief send request to the given output stream.

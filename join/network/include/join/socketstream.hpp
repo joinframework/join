@@ -650,6 +650,36 @@ namespace join
         {
             return this->rdbuf ()->socket ().encrypted ();
         }
+
+        /**
+         * @brief set the location of the trusted CA certificates.
+         * @param caPath path of the trusted CA certificates.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCaPath (const std::string& caPath)
+        {
+            return this->rdbuf ()->socket ().setCaPath (caPath);
+        }
+
+        /**
+         * @brief set the location of the trusted CA certificate file.
+         * @param caFile path of the trusted CA certificate file.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCaFile (const std::string& caFile)
+        {
+            return this->rdbuf ()->socket ().setCaFile (caFile);
+        }
+
+        /**
+         * @brief Enable/Disable the verification of the peer certificate.
+         * @param verify Enable peer verification if set to true, false otherwise.
+         * @param depth The maximum certificate verification depth (default: no limit).
+         */
+        void setVerify (bool verify, int depth = -1)
+        {
+            return this->rdbuf ()->socket ().setVerify (verify, depth);
+        }
     };
 }
 
