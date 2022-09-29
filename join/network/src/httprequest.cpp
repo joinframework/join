@@ -208,10 +208,9 @@ bool HttpRequest::hasParameter (const std::string& name) const
 // =========================================================================
 std::string HttpRequest::query () const
 {
-    std::string out;
-
     auto beg = _parameters.begin ();
     auto end = _parameters.end ();
+    std::string out;
 
     for (auto next = beg; next != end; ++next)
     {
@@ -238,12 +237,7 @@ std::string HttpRequest::urn () const
 void HttpRequest::send (std::ostream& out) const
 {
     out << methodString () << " " << urn () << " " << version () << "\r\n";
-
-    for (auto const& header : _headers)
-    {
-        out << header.first << ": " << header.second << "\r\n";
-    }
-
+    out << headers ();
     out << "\r\n";
 }
 

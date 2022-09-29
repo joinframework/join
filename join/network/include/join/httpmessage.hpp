@@ -164,6 +164,12 @@ namespace join
         bool hasHeader (const std::string& name) const;
 
         /**
+         * @brief dump headers.
+         * @return headers.
+         */
+        std::string headers () const;
+
+        /**
          * @brief send to the given output stream.
          * @param out output stream.
          */

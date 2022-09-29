@@ -197,6 +197,22 @@ bool HttpMessage::hasHeader (const std::string& name) const
 
 // =========================================================================
 //   CLASS     : HttpMessage
+//   METHOD    : headers
+// =========================================================================
+std::string HttpMessage::headers () const
+{
+    std::string out;
+
+    for (auto const& head : _headers)
+    {
+        out += head.first + ": " + head.second + "\r\n";
+    }
+
+    return out;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
 //   METHOD    : getline
 // =========================================================================
 std::istream& HttpMessage::getline (std::istream& in, std::string& line, uint32_t max)

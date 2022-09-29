@@ -113,12 +113,7 @@ const std::string& HttpResponse::reason () const
 void HttpResponse::send (std::ostream& out) const
 {
     out << version () << " " << status () << " " << reason () << "\r\n";
-
-    for (auto const& header : _headers)
-    {
-        out << header.first << ": " << header.second << "\r\n";
-    }
-
+    out << headers ();
     out << "\r\n";
 }
 
