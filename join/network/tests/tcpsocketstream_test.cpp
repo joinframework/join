@@ -471,6 +471,46 @@ TEST_F (TcpSocketStream, gcount)
 }*/
 
 /**
+ * @brief Test tellg method.
+ */
+TEST_F (TcpSocketStream, tellg)
+{
+    Tcp::Stream tcpStream;
+    ASSERT_EQ (tcpStream.tellg (), -1);
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
+    tcpStream.write ("test", 4);
+    tcpStream.flush ();
+    ASSERT_EQ (tcpStream.tellg (), 0);
+    ASSERT_EQ (tcpStream.get (), 't');
+    ASSERT_EQ (tcpStream.tellg (), 1);
+    ASSERT_EQ (tcpStream.get (), 'e');
+    ASSERT_EQ (tcpStream.tellg (), 2);
+    ASSERT_EQ (tcpStream.get (), 's');
+    ASSERT_EQ (tcpStream.tellg (), 3);
+    ASSERT_EQ (tcpStream.get (), 't');
+    ASSERT_EQ (tcpStream.tellg (), 4);
+    tcpStream.close ();
+}
+
+/**
+ * @brief Test seekg method.
+ */
+TEST_F (TcpSocketStream, seekg)
+{
+    Tcp::Stream tcpStream;
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
+    tcpStream.write ("test", 4);
+    tcpStream.flush ();
+    ASSERT_EQ (tcpStream.peek (), 't');
+    ASSERT_TRUE (tcpStream.seekg (1));
+    ASSERT_EQ (tcpStream.peek (), 'e');
+    ASSERT_TRUE (tcpStream.seekg (2, std::ios_base::beg));
+    ASSERT_EQ (tcpStream.peek (), 's');
+    ASSERT_TRUE (tcpStream.seekg (-1, std::ios_base::end));
+    ASSERT_EQ (tcpStream.get (), 't');
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char **argv)

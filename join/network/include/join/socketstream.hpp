@@ -341,6 +341,57 @@ namespace join
         }
 
         /**
+         * @brief sets the position indicator of the input and/or output sequence relative to some other position.
+         * @param off relative position to set the position indicator to.
+         * @param dir defines base position to apply the relative offset to.
+         * @param which defines which of the input and/or output sequences to affect.
+         * @return .
+         */
+        virtual pos_type seekoff (off_type off, std::ios_base::seekdir way, std::ios_base::openmode mode = std::ios_base::in) override
+        {
+            if (!_socket.connected () || (mode == std::ios_base::out))
+            {
+                return pos_type (off_type (-1));
+            }
+
+            if (way == std::ios_base::beg)
+            {
+                if ((off < 0) || (off > (this->egptr() - this->eback ())))
+                    return pos_type (off_type (-1));
+
+                this->setg (this->eback (), this->eback () + off, this->egptr ());
+            }
+            else if (way == std::ios_base::end)
+            {
+                if ((off > 0) || (-off > (this->egptr () - this->eback ())))
+                    return pos_type (off_type (-1));
+
+                this->setg (this->eback (), this->egptr () + off, this->egptr ());
+            }
+            else
+            {
+                if (((off < 0) && (-off > (this->egptr () - this->eback ()))) ||
+                    ((off > 0) && ( off > (this->egptr () - this->eback ()))))
+                    return pos_type (off_type (-1));
+
+                this->gbump (off);
+            }
+
+            return this->gptr () - this->eback ();
+        }
+
+        /**
+         * @brief repositions stream if possible.
+         * @param pos stream position.
+         * @param which defines whether the input sequences, the output sequence, or both are affected.
+         * @return the resultant offset converted to pos_type on success or pos_type (off_type (-1)) on failure.
+         */
+        virtual pos_type seekpos (pos_type pos, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out) override
+        {
+            return this->seekoff (off_type (pos), std::ios_base::beg, mode);
+        }
+
+        /**
          * @brief replaces the buffer with user-defined array.
          * @param s pointer to the user-provided buffer.
          * @param n the number of elements in the user-provided buffer.
