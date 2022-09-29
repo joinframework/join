@@ -642,7 +642,7 @@ TEST_F (TlsSocketStream, tellg)
 {
     Tls::Stream tlsStream;
     ASSERT_EQ (tlsStream.tellg (), -1);
-    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     tlsStream.write ("test", 4);
     tlsStream.flush ();
     ASSERT_EQ (tlsStream.tellg (), 0);
@@ -663,7 +663,7 @@ TEST_F (TlsSocketStream, tellg)
 TEST_F (TlsSocketStream, seekg)
 {
     Tls::Stream tlsStream;
-    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     tlsStream.write ("test", 4);
     tlsStream.flush ();
     ASSERT_EQ (tlsStream.peek (), 't');
