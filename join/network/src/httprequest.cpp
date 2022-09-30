@@ -153,7 +153,7 @@ std::string HttpRequest::methodString () const
 
 // =========================================================================
 //   CLASS     : HttpRequest
-//   METHOD    : setPath
+//   METHOD    : path
 // =========================================================================
 void HttpRequest::path (const std::string& p)
 {
@@ -162,7 +162,7 @@ void HttpRequest::path (const std::string& p)
 
 // =========================================================================
 //   CLASS     : HttpRequest
-//   METHOD    : getPath
+//   METHOD    : path
 // =========================================================================
 const std::string& HttpRequest::path () const
 {
@@ -307,7 +307,7 @@ void HttpRequest::receive (std::istream& in)
             pos1 = _path.find ("?");
             if (pos1 != std::string::npos)
             {
-                storeParameters (_path.substr (pos1 + 1));
+                store (_path.substr (pos1 + 1));
                 _path = _path.substr (0, pos1);
             }
 
@@ -342,7 +342,7 @@ void HttpRequest::receive (std::istream& in)
 
 // =========================================================================
 //   CLASS     : HttpRequest
-//   METHOD    : receive
+//   METHOD    : decodeUrl
 // =========================================================================
 std::string& HttpRequest::decodeUrl (std::string &url)
 {
@@ -451,9 +451,9 @@ std::string& HttpRequest::normalize (std::string& path)
 
 // =========================================================================
 //   CLASS     : HttpRequest
-//   METHOD    : storeParameters
+//   METHOD    : store
 // =========================================================================
-void HttpRequest::storeParameters (const std::string &query)
+void HttpRequest::store (const std::string &query)
 {
     size_t pos = 0;
 

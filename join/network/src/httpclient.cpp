@@ -26,6 +26,8 @@
 #include <join/version.hpp>
 #include <join/httpclient.hpp>
 
+using namespace std::chrono;
+
 using join::HttpRequest;
 using join::HttpResponse;
 using join::HttpClient;
@@ -40,7 +42,8 @@ HttpClient::HttpClient (const char* host, uint16_t port, bool encrypt, bool keep
   _host (host),
   _port (port),
   _encrypt (encrypt),
-  _keepAlive (keepAlive)
+  _keep (keepAlive),
+  _keepTimeout (seconds::zero ())
 {
 }
 
@@ -62,11 +65,15 @@ HttpClient::HttpClient (HttpClient&& other)
   _host (std::move (other._host)),
   _port (other._port),
   _encrypt (other._encrypt),
-  _keepAlive (other._keepAlive)
+  _keep (other._keep),
+  _keepTimeout (other._keepTimeout),
+  _keepMax (other._keepMax)
 {
     other._port = 443;
     other._encrypt = true;
-    other._keepAlive = false;
+    other._keep = true;
+    other._keepTimeout = seconds::zero ();
+    other._keepMax = -1;
 }
 
 // =========================================================================
@@ -76,16 +83,32 @@ HttpClient::HttpClient (HttpClient&& other)
 HttpClient& HttpClient::operator= (HttpClient&& other)
 {
     Tls::Stream::operator= (std::move (other));
+
     _host = std::move (other._host);
     _port = other._port;
     _encrypt = other._encrypt;
-    _keepAlive = other._keepAlive;
+    _keep = other._keep;
+    _keepTimeout = other._keepTimeout;
+    _keepMax = other._keepMax;
 
     other._port = 443;
     other._encrypt = true;
-    other._keepAlive = false;
+    other._keep = true;
+    other._keepTimeout = seconds::zero ();
+    other._keepMax = -1;
 
     return *this;
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
+//   METHOD    : close
+// =========================================================================
+void HttpClient::close ()
+{
+    Tls::Stream::close ();
+    _keepTimeout = seconds::zero ();
+    _keepMax = -1;
 }
 
 // =========================================================================
@@ -117,7 +140,7 @@ uint16_t HttpClient::port () const
 
 // =========================================================================
 //   CLASS     : HttpClient
-//   METHOD    : foo
+//   METHOD    : authority
 // =========================================================================
 std::string HttpClient::authority () const
 {
@@ -144,9 +167,9 @@ std::string HttpClient::url () const
 //   CLASS     : HttpClient
 //   METHOD    : keepAlive
 // =========================================================================
-void HttpClient::keepAlive (bool k)
+void HttpClient::keepAlive (bool keep)
 {
-    _keepAlive = k;
+    _keep = keep;
 }
 
 // =========================================================================
@@ -155,7 +178,25 @@ void HttpClient::keepAlive (bool k)
 // =========================================================================
 bool HttpClient::keepAlive () const
 {
-    return _keepAlive;
+    return _keep;
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
+//   METHOD    : keepAliveTimeout
+// =========================================================================
+seconds HttpClient::keepAliveTimeout () const
+{
+    return _keepTimeout;
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
+//   METHOD    : keepAliveMax
+// =========================================================================
+int HttpClient::keepAliveMax () const
+{
+    return _keepMax;
 }
 
 // =========================================================================
@@ -164,16 +205,16 @@ bool HttpClient::keepAlive () const
 // =========================================================================
 void HttpClient::send (const HttpRequest& request)
 {
-    if (!connected ())
+    if (needReconnection ())
     {
-        connect (url ());
+        reconnect (url ());
         if (fail ())
         {
             return;
         }
     }
 
-    if (_encrypt && !encrypted ())
+    if (needEncryption ())
     {
         startEncryption ();
         if (fail ())
@@ -190,7 +231,7 @@ void HttpClient::send (const HttpRequest& request)
     }
     if (!tmp.hasHeader ("Connection"))
     {
-        tmp.header ("Connection", _keepAlive ? "keep-alive" : "close");
+        tmp.header ("Connection", _keep ? "keep-alive" : "close");
     }
     if (!tmp.hasHeader ("Host"))
     {
@@ -202,6 +243,7 @@ void HttpClient::send (const HttpRequest& request)
     }
 
     tmp.send (*this);
+
     flush ();
 }
 
@@ -212,11 +254,72 @@ void HttpClient::send (const HttpRequest& request)
 void HttpClient::receive (HttpResponse& response)
 {
     response.receive (*this);
-
-    if (compareNoCase (response.header ("Connection"), "close"))
+    if (fail ())
     {
-        close ();
+        return;
     }
+
+    std::string connection = response.header ("Connection");
+    std::string alive = response.header ("Keep-Alive");
+
+    if (compareNoCase (connection, "keep-alive"))
+    {
+        size_t pos = alive.find ("timeout=");
+        if (pos != std::string::npos)
+        {
+            _keepTimeout = seconds (::atoi (alive.substr (pos + 8, alive.find (",", pos + 8)).c_str ()));
+        }
+
+        pos = alive.find ("max=");
+        if (pos != std::string::npos)
+        {
+            _keepMax = ::atoi (alive.substr (pos + 4, alive.find (",", pos + 4)).c_str ());
+        }
+    }
+    else if (compareNoCase (connection, "close"))
+    {
+        _keepTimeout = seconds::zero ();
+        _keepMax = 0;
+    }
+
+    _timestamp = steady_clock::now ();
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
+//   METHOD    : expired
+// =========================================================================
+bool HttpClient::expired () const
+{
+    return (_keepTimeout < duration_cast <seconds> (steady_clock::now () - _timestamp)) || (_keepMax == 0);
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
+//   METHOD    : needReconnection
+// =========================================================================
+bool HttpClient::needReconnection ()
+{
+    return !connected () || expired ();
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
+//   METHOD    : reconnect
+// =========================================================================
+void HttpClient::reconnect (const Endpoint& endpoint)
+{
+    close ();
+    connect (endpoint);
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
+//   METHOD    : needEncryption
+// =========================================================================
+bool HttpClient::needEncryption () const
+{
+    return _encrypt && !encrypted ();
 }
 
 // =========================================================================

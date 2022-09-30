@@ -438,8 +438,10 @@ namespace join
             if (_allocated)
             {
                 delete [] _buf;
-                _allocated = false;
                 _buf = nullptr;
+                this->setg (nullptr, nullptr, nullptr);
+                this->setp (nullptr, nullptr);
+                _allocated = false;
             }
         }
 
@@ -530,7 +532,7 @@ namespace join
          * @param endpoint endpoint to connect to.
          * @throw std::ios_base::failure.
          */
-        void connect (const Endpoint& endpoint)
+        virtual void connect (const Endpoint& endpoint)
         {
             if (this->rdbuf ()->connect (endpoint) == nullptr)
             {
@@ -542,7 +544,7 @@ namespace join
          * @brief close the connection.
          * @throw std::ios_base::failure.
          */
-        void close ()
+        virtual void close ()
         {
             if (this->rdbuf ()->close () == nullptr)
             {

@@ -146,7 +146,7 @@ HttpMessage& HttpMessage::operator= (HttpMessage&& other)
 
 // =========================================================================
 //   CLASS     : HttpMessage
-//   METHOD    : setVersion
+//   METHOD    : version
 // =========================================================================
 void HttpMessage::version (const std::string& v)
 {
@@ -155,7 +155,7 @@ void HttpMessage::version (const std::string& v)
 
 // =========================================================================
 //   CLASS     : HttpMessage
-//   METHOD    : getVersion
+//   METHOD    : version
 // =========================================================================
 const std::string& HttpMessage::version () const
 {
@@ -173,7 +173,7 @@ void HttpMessage::header (const std::string& name, const std::string& val)
 
 // =========================================================================
 //   CLASS     : HttpMessage
-//   METHOD    : getHeader
+//   METHOD    : header
 // =========================================================================
 std::string HttpMessage::header (const std::string& name) const
 {

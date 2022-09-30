@@ -30,6 +30,9 @@
 #include <join/httprequest.hpp>
 #include <join/httpresponse.hpp>
 
+// C++.
+#include <chrono>
+
 namespace join
 {
     /**
@@ -45,7 +48,7 @@ namespace join
          * @param encrypt use HTTTPS scheme.
          * @param keepAlive use a persistent connection.
          */
-        HttpClient (const char* host, uint16_t port, bool encrypt = true, bool keepAlive = false);
+        HttpClient (const char* host, uint16_t port = 443, bool encrypt = true, bool keepAlive = true);
 
         /**
          * @brief create the HttpClient instance.
@@ -54,7 +57,7 @@ namespace join
          * @param encrypt use HTTTPS scheme.
          * @param keepAlive use a persistent connection.
          */
-        HttpClient (const std::string& host, uint16_t port, bool encrypt = true, bool keepAlive = false);
+        HttpClient (const std::string& host, uint16_t port = 443, bool encrypt = true, bool keepAlive = true);
 
         /**
          * @brief create the HttpClient instance by copy.
@@ -88,6 +91,12 @@ namespace join
         virtual ~HttpClient () = default;
 
         /**
+         * @brief close the connection.
+         * @throw std::ios_base::failure.
+         */
+        virtual void close () override;
+
+        /**
          * @brief get HTTP scheme.
          * @return htpp or https.
          */
@@ -119,15 +128,27 @@ namespace join
 
         /**
          * @brief enable/disable HTTP keep alive support.
-         * @param k true if supported, false otherwise.
+         * @param keep true if supported, false otherwise.
          */
-        void keepAlive (bool k);
+        void keepAlive (bool keep);
 
         /**
          * @brief checks if HTTP keep alive is supported.
          * @return true if supported, false otherwise.
          */
         bool keepAlive () const;
+
+        /**
+         * @brief get HTTP keep alive timeout.
+         * @return HTTP keep alive timeout.
+         */
+        std::chrono::seconds keepAliveTimeout () const;
+
+        /**
+         * @brief get HTTP keep alive max.
+         * @return HTTP keep alive max.
+         */
+        int keepAliveMax () const;
 
         /**
          * @brief send HTTP request.
@@ -142,6 +163,33 @@ namespace join
         void receive (HttpResponse& response);
 
     protected:
+        /**
+         * @brief check if HTTP keep alive is expired.
+         * @return true if HTTP keep alive is expired.
+         */
+        bool expired () const;
+
+        /**
+         * @brief check if client must reconnect.
+         * @return true if reconnection is required.
+         */
+        bool needReconnection ();
+
+        /**
+         * @brief perform reconnection to the given endpoint.
+         * @param endpoint endpoint to connect to.
+         */
+        void reconnect (const Endpoint& endpoint);
+
+        /**
+         * @brief check if client must use a secure connection.
+         * @return true if client must use a secure connection.
+         */
+        bool needEncryption () const;
+
+        /// HTTP timestamp.
+        std::chrono::time_point <std::chrono::steady_clock> _timestamp;
+
         /// HTTP host.
         std::string _host;
 
@@ -152,7 +200,13 @@ namespace join
         bool _encrypt = true;
 
         /// HTTP keep alive.
-        bool _keepAlive = false;
+        bool _keep = true;
+
+        /// HTTP keep alive timeout.
+        std::chrono::seconds _keepTimeout;
+
+        // HTTP keep alive max.
+        int _keepMax = -1;
     };
 
     /**

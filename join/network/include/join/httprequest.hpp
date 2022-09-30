@@ -250,7 +250,7 @@ namespace join
          * @brief store parameters received in request.
          * @param query parameters received in request.
          */
-        void storeParameters (const std::string &query);
+        void store (const std::string &query);
 
         /// HTTP method.
         HttpMethod _method = Get;

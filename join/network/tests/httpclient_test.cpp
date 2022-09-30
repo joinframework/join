@@ -28,8 +28,11 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using namespace std::chrono;
+
 using join::Errc;
 using join::TlsErrc;
+using join::HttpMethod;
 using join::HttpRequest;
 using join::HttpResponse;
 using join::HttpClient;
@@ -170,6 +173,74 @@ TEST (HttpClient, keepAlive)
 }
 
 /**
+ * @brief Test keepAliveTimeout method
+ */
+TEST (HttpClient, keepAliveTimeout)
+{
+    HttpClient client ("joinframework.net");
+    ASSERT_EQ (client.keepAliveTimeout (), seconds::zero ());
+
+    HttpRequest request;
+    request.method (HttpMethod::Head);
+    request.header ("Connection", "keep-alive");
+    client << request;
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    ASSERT_EQ (client.keepAliveTimeout (), seconds::zero ());
+
+    HttpResponse response;
+    client >> response;
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    ASSERT_EQ (client.keepAliveTimeout (), seconds (20));
+
+    request.header ("Connection", "close");
+    client << request;
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    ASSERT_EQ (client.keepAliveTimeout (), seconds (20));
+
+    client >> response;
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    ASSERT_EQ (client.keepAliveTimeout (), seconds::zero ());
+
+    client.close ();
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    ASSERT_EQ (client.keepAliveTimeout (), seconds::zero ());
+}
+
+/**
+ * @brief Test keepAliveMax method
+ */
+TEST (HttpClient, DISABLED_keepAliveMax)
+{
+    HttpClient client ("joinframework.net");
+    ASSERT_EQ (client.keepAliveMax (), -1);
+
+    HttpRequest request;
+    request.method (HttpMethod::Head);
+    request.header ("Connection", "keep-alive");
+    client << request;
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    ASSERT_EQ (client.keepAliveMax (), -1);
+
+    HttpResponse response;
+    client >> response;
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    ASSERT_EQ (client.keepAliveMax (), 100);
+
+    request.header ("Connection", "close");
+    client << request;
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    ASSERT_EQ (client.keepAliveMax (), 100);
+
+    client >> response;
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    ASSERT_EQ (client.keepAliveMax (), 0);
+
+    client.close ();
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    ASSERT_EQ (client.keepAliveMax (), -1);
+}
+
+/**
  * @brief Test send method
  */
 TEST (HttpClient, send)
@@ -201,10 +272,16 @@ TEST (HttpClient, send)
 TEST (HttpClient, receive)
 {
     HttpClient client ("joinframework.net", 443, true);
+
+    HttpResponse response;
+    client >> response;
+    ASSERT_TRUE (client.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    client.clear ();
     client << HttpRequest ();
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
 
-    HttpResponse response;
     client >> response;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
     ASSERT_EQ (response.status (), "200");
