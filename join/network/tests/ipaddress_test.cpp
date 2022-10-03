@@ -1214,53 +1214,56 @@ TEST (IpAddress, isGlobal)
  */
 TEST (IpAddress, isIpv4Address)
 {
-    IpAddress ip = "0.0.0.0";
-    ASSERT_TRUE (ip.isIpv4Address ());
+    ASSERT_FALSE (IpAddress::isIpv4Address ("localhost"));
+    ASSERT_THROW (IpAddress ("localhost").isIpv4Address (), std::invalid_argument);
 
-    ip = "127.0.0.1";
-    ASSERT_TRUE (ip.isIpv4Address ());
+    ASSERT_TRUE (IpAddress::isIpv4Address ("0.0.0.0"));
+    ASSERT_TRUE (IpAddress ("0.0.0.0").isIpv4Address ());
 
-    ip = "192.168.7.2";
-    ASSERT_TRUE (ip.isIpv4Address ());
+    ASSERT_TRUE (IpAddress::isIpv4Address ("127.0.0.1"));
+    ASSERT_TRUE (IpAddress ("127.0.0.1").isIpv4Address ());
 
-    ip = "10.41.51.18";
-    ASSERT_TRUE (ip.isIpv4Address ());
+    ASSERT_TRUE (IpAddress::isIpv4Address ("192.168.7.2"));
+    ASSERT_TRUE (IpAddress ("192.168.7.2").isIpv4Address ());
 
-    ip = "91.121.158.49";
-    ASSERT_TRUE (ip.isIpv4Address ());
+    ASSERT_TRUE (IpAddress::isIpv4Address ("10.41.51.18"));
+    ASSERT_TRUE (IpAddress ("10.41.51.18").isIpv4Address ());
 
-    ip = "224.125.3.12";
-    ASSERT_TRUE (ip.isIpv4Address ());
+    ASSERT_TRUE (IpAddress::isIpv4Address ("91.121.158.49"));
+    ASSERT_TRUE (IpAddress ("91.121.158.49").isIpv4Address ());
 
-    ip = "255.255.255.255";
-    ASSERT_TRUE (ip.isIpv4Address ());
+    ASSERT_TRUE (IpAddress::isIpv4Address ("224.125.3.12"));
+    ASSERT_TRUE (IpAddress ("224.125.3.12").isIpv4Address ());
 
-    ip = "::";
-    ASSERT_FALSE (ip.isIpv4Address ());
+    ASSERT_TRUE (IpAddress::isIpv4Address ("255.255.255.255"));
+    ASSERT_TRUE (IpAddress ("255.255.255.255").isIpv4Address ());
 
-    ip = "0:0:0:0:0:0:0:0";
-    ASSERT_FALSE (ip.isIpv4Address ());
+    ASSERT_FALSE (IpAddress::isIpv4Address ("::"));
+    ASSERT_FALSE (IpAddress ("::").isIpv4Address ());
 
-    ip = "0::0";
-    ASSERT_FALSE (ip.isIpv4Address ());
+    ASSERT_FALSE (IpAddress::isIpv4Address ("0:0:0:0:0:0:0:0"));
+    ASSERT_FALSE (IpAddress ("0:0:0:0:0:0:0:0").isIpv4Address ());
 
-    ip = "::1";
-    ASSERT_FALSE (ip.isIpv4Address ());
+    ASSERT_FALSE (IpAddress::isIpv4Address ("0::0"));
+    ASSERT_FALSE (IpAddress ("0::0").isIpv4Address ());
 
-    ip = "fec0::1234:5678:9ab";
-    ASSERT_FALSE (ip.isIpv4Address ());
+    ASSERT_FALSE (IpAddress::isIpv4Address ("::1"));
+    ASSERT_FALSE (IpAddress ("::1").isIpv4Address ());
 
-    ip = "fe80::57f3:baa4:fc3a:890a";
-    ASSERT_FALSE (ip.isIpv4Address ());
+    ASSERT_FALSE (IpAddress::isIpv4Address ("fec0::1234:5678:9ab"));
+    ASSERT_FALSE (IpAddress ("fec0::1234:5678:9ab").isIpv4Address ());
 
-    ip = "2001:db8:1234:5678::1";
-    ASSERT_FALSE (ip.isIpv4Address ());
+    ASSERT_FALSE (IpAddress::isIpv4Address ("fe80::57f3:baa4:fc3a:890ab"));
+    ASSERT_FALSE (IpAddress ("fe80::57f3:baa4:fc3a:890a").isIpv4Address ());
 
-    ip = "ff05::1";
-    ASSERT_FALSE (ip.isIpv4Address ());
+    ASSERT_FALSE (IpAddress::isIpv4Address ("2001:db8:1234:5678::1"));
+    ASSERT_FALSE (IpAddress ("2001:db8:1234:5678::1").isIpv4Address ());
 
-    ip = "::ffff:128.144.52.38";
-    ASSERT_FALSE (ip.isIpv4Address ());
+    ASSERT_FALSE (IpAddress::isIpv4Address ("ff05::1"));
+    ASSERT_FALSE (IpAddress ("ff05::1").isIpv4Address ());
+
+    ASSERT_FALSE (IpAddress::isIpv4Address ("::ffff:128.144.52.38"));
+    ASSERT_FALSE (IpAddress ("::ffff:128.144.52.38").isIpv4Address ());
 }
 
 /**
@@ -1268,53 +1271,56 @@ TEST (IpAddress, isIpv4Address)
  */
 TEST (IpAddress, isIpv6Address)
 {
-    IpAddress ip = "0.0.0.0";
-    ASSERT_FALSE (ip.isIpv6Address ());
+    ASSERT_FALSE (IpAddress::isIpv6Address ("localhost"));
+    ASSERT_THROW (IpAddress ("localhost").isIpv6Address (), std::invalid_argument);
 
-    ip = "127.0.0.1";
-    ASSERT_FALSE (ip.isIpv6Address ());
+    ASSERT_FALSE (IpAddress::isIpv6Address ("0.0.0.0"));
+    ASSERT_FALSE (IpAddress ("0.0.0.0").isIpv6Address ());
 
-    ip = "192.168.7.2";
-    ASSERT_FALSE (ip.isIpv6Address ());
+    ASSERT_FALSE (IpAddress::isIpv6Address ("127.0.0.1"));
+    ASSERT_FALSE (IpAddress ("127.0.0.1").isIpv6Address ());
 
-    ip = "10.41.51.18";
-    ASSERT_FALSE (ip.isIpv6Address ());
+    ASSERT_FALSE (IpAddress::isIpv6Address ("192.168.7.2"));
+    ASSERT_FALSE (IpAddress ("192.168.7.2").isIpv6Address ());
 
-    ip = "91.121.158.49";
-    ASSERT_FALSE (ip.isIpv6Address ());
+    ASSERT_FALSE (IpAddress::isIpv6Address ("10.41.51.18"));
+    ASSERT_FALSE (IpAddress ("10.41.51.18").isIpv6Address ());
 
-    ip = "224.125.3.12";
-    ASSERT_FALSE (ip.isIpv6Address ());
+    ASSERT_FALSE (IpAddress::isIpv6Address ("91.121.158.49"));
+    ASSERT_FALSE (IpAddress ("91.121.158.49").isIpv6Address ());
 
-    ip = "255.255.255.255";
-    ASSERT_FALSE (ip.isIpv6Address ());
+    ASSERT_FALSE (IpAddress::isIpv6Address ("224.125.3.12"));
+    ASSERT_FALSE (IpAddress ("224.125.3.12").isIpv6Address ());
 
-    ip = "::";
-    ASSERT_TRUE (ip.isIpv6Address ());
+    ASSERT_FALSE (IpAddress::isIpv6Address ("255.255.255.255"));
+    ASSERT_FALSE (IpAddress ("255.255.255.255").isIpv6Address ());
 
-    ip = "0:0:0:0:0:0:0:0";
-    ASSERT_TRUE (ip.isIpv6Address ());
+    ASSERT_TRUE (IpAddress::isIpv6Address ("::"));
+    ASSERT_TRUE (IpAddress ("::").isIpv6Address ());
 
-    ip = "0::0";
-    ASSERT_TRUE (ip.isIpv6Address ());
+    ASSERT_TRUE (IpAddress::isIpv6Address ("0:0:0:0:0:0:0:0"));
+    ASSERT_TRUE (IpAddress ("0:0:0:0:0:0:0:0").isIpv6Address ());
 
-    ip = "::1";
-    ASSERT_TRUE (ip.isIpv6Address ());
+    ASSERT_TRUE (IpAddress::isIpv6Address ("0::0"));
+    ASSERT_TRUE (IpAddress ("0::0").isIpv6Address ());
 
-    ip = "fec0::1234:5678:9ab";
-    ASSERT_TRUE (ip.isIpv6Address ());
+    ASSERT_TRUE (IpAddress::isIpv6Address ("::1"));
+    ASSERT_TRUE (IpAddress ("::1").isIpv6Address ());
 
-    ip = "fe80::57f3:baa4:fc3a:890a";
-    ASSERT_TRUE (ip.isIpv6Address ());
+    ASSERT_TRUE (IpAddress::isIpv6Address ("fec0::1234:5678:9ab"));
+    ASSERT_TRUE (IpAddress ("fec0::1234:5678:9ab").isIpv6Address ());
 
-    ip = "2001:db8:1234:5678::1";
-    ASSERT_TRUE (ip.isIpv6Address ());
+    ASSERT_TRUE (IpAddress::isIpv6Address ("fe80::57f3:baa4:fc3a:890a"));
+    ASSERT_TRUE (IpAddress ("fe80::57f3:baa4:fc3a:890a").isIpv6Address ());
 
-    ip = "ff05::1";
-    ASSERT_TRUE (ip.isIpv6Address ());
+    ASSERT_TRUE (IpAddress::isIpv6Address ("2001:db8:1234:5678::1"));
+    ASSERT_TRUE (IpAddress ("2001:db8:1234:5678::1").isIpv6Address ());
 
-    ip = "::ffff:128.144.52.38";
-    ASSERT_TRUE (ip.isIpv6Address ());
+    ASSERT_TRUE (IpAddress::isIpv6Address ("ff05::1"));
+    ASSERT_TRUE (IpAddress ("ff05::1").isIpv6Address ());
+
+    ASSERT_TRUE (IpAddress::isIpv6Address ("::ffff:128.144.52.38"));
+    ASSERT_TRUE (IpAddress ("::ffff:128.144.52.38").isIpv6Address ());
 }
 
 /**

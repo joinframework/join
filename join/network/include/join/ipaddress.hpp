@@ -259,6 +259,13 @@ namespace join
         bool isIpv6Address () const;
 
         /**
+         * @brief check if the specified string is an IPv6 address.
+         * @param address string that may contain an IPv6 address.
+         * @return true if the specified string is an IPv6 address, false otherwise.
+         */
+        static bool isIpv6Address (const std::string& address);
+
+        /**
          * @brief check if IP address is IPv4 compatible (deprecated).
          * @return if IPv4 compatible true is returned, false otherwise.
          */
@@ -275,6 +282,13 @@ namespace join
          * @return if IP address is an IPv4 address true is returned, false otherwise.
          */
         bool isIpv4Address () const;
+
+        /**
+         * @brief check if the specified string is an IPv4 address.
+         * @param address string that may contain an IPv4 address.
+         * @return true if the specified string is an IPv4 address, false otherwise.
+         */
+        static bool isIpv4Address (const std::string& address);
 
         /**
          * @brief convert IP address to an IPv6 address.

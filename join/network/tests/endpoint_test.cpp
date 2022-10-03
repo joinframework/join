@@ -144,6 +144,32 @@ TEST (Endpoint, device)
 }
 
 /**
+ * @brief hostname method.
+ */
+TEST (Endpoint, hostname)
+{
+    Udp::Endpoint udpEndpoint ("example.com");
+    ASSERT_EQ (udpEndpoint.hostname (), "example.com");
+    udpEndpoint.hostname ("joinframework.net");
+    ASSERT_EQ (udpEndpoint.hostname (), "joinframework.net");
+
+    Icmp::Endpoint icmpEndpoint ("example.com");
+    ASSERT_EQ (icmpEndpoint.hostname (), "example.com");
+    icmpEndpoint.hostname ("joinframework.net");
+    ASSERT_EQ (icmpEndpoint.hostname (), "joinframework.net");
+
+    Tcp::Endpoint tcpEndpoint ("example.com");
+    ASSERT_EQ (tcpEndpoint.hostname (), "example.com");
+    tcpEndpoint.hostname ("joinframework.net");
+    ASSERT_EQ (tcpEndpoint.hostname (), "joinframework.net");
+
+    Tls::Endpoint tlsEndpoint ("example.com");
+    ASSERT_EQ (tlsEndpoint.hostname (), "example.com");
+    tlsEndpoint.hostname ("joinframework.net");
+    ASSERT_EQ (tlsEndpoint.hostname (), "joinframework.net");
+}
+
+/**
  * @brief ip method.
  */
 TEST (Endpoint, ip)

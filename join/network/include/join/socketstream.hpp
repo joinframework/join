@@ -122,13 +122,7 @@ namespace join
             if (_buf)
             {
                 this->overflow (traits_type::eof ());
-
-                if (_allocated)
-                {
-                    delete [] _buf;
-                    _allocated = false;
-                    _buf = nullptr;
-                }
+                this->freeBuffer ();
             }
         }
 
@@ -341,6 +335,57 @@ namespace join
         }
 
         /**
+         * @brief sets the position indicator of the input and/or output sequence relative to some other position.
+         * @param off relative position to set the position indicator to.
+         * @param dir defines base position to apply the relative offset to.
+         * @param which defines which of the input and/or output sequences to affect.
+         * @return .
+         */
+        virtual pos_type seekoff (off_type off, std::ios_base::seekdir way, std::ios_base::openmode mode = std::ios_base::in) override
+        {
+            if (!_socket.connected () || (mode == std::ios_base::out))
+            {
+                return pos_type (off_type (-1));
+            }
+
+            if (way == std::ios_base::beg)
+            {
+                if ((off < 0) || (off > (this->egptr() - this->eback ())))
+                    return pos_type (off_type (-1));
+
+                this->setg (this->eback (), this->eback () + off, this->egptr ());
+            }
+            else if (way == std::ios_base::end)
+            {
+                if ((off > 0) || (-off > (this->egptr () - this->eback ())))
+                    return pos_type (off_type (-1));
+
+                this->setg (this->eback (), this->egptr () + off, this->egptr ());
+            }
+            else
+            {
+                if (((off < 0) && (-off > (this->egptr () - this->eback ()))) ||
+                    ((off > 0) && ( off > (this->egptr () - this->eback ()))))
+                    return pos_type (off_type (-1));
+
+                this->gbump (off);
+            }
+
+            return this->gptr () - this->eback ();
+        }
+
+        /**
+         * @brief repositions stream if possible.
+         * @param pos stream position.
+         * @param which defines whether the input sequences, the output sequence, or both are affected.
+         * @return the resultant offset converted to pos_type on success or pos_type (off_type (-1)) on failure.
+         */
+        virtual pos_type seekpos (pos_type pos, std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out) override
+        {
+            return this->seekoff (off_type (pos), std::ios_base::beg, mode);
+        }
+
+        /**
          * @brief replaces the buffer with user-defined array.
          * @param s pointer to the user-provided buffer.
          * @param n the number of elements in the user-provided buffer.
@@ -354,6 +399,7 @@ namespace join
                 {
                     _gsize = 1;
                     _psize = 1;
+                    _buf = s;
                 }
                 else
                 {
@@ -374,7 +420,7 @@ namespace join
         {
             if (!_buf)
             {
-                _buf = new char [BUFSIZ];
+                _buf = new char [_gsize + _psize];
                 _allocated = true;
             }
         }
@@ -389,6 +435,8 @@ namespace join
                 delete [] _buf;
                 _allocated = false;
                 _buf = nullptr;
+                this->setg (nullptr, nullptr, nullptr);
+                this->setp (nullptr, nullptr);
             }
         }
 
@@ -479,7 +527,7 @@ namespace join
          * @param endpoint endpoint to connect to.
          * @throw std::ios_base::failure.
          */
-        void connect (const Endpoint& endpoint)
+        virtual void connect (const Endpoint& endpoint)
         {
             if (this->rdbuf ()->connect (endpoint) == nullptr)
             {
@@ -491,7 +539,7 @@ namespace join
          * @brief close the connection.
          * @throw std::ios_base::failure.
          */
-        void close ()
+        virtual void close ()
         {
             if (this->rdbuf ()->close () == nullptr)
             {
@@ -649,6 +697,36 @@ namespace join
         bool encrypted () const
         {
             return this->rdbuf ()->socket ().encrypted ();
+        }
+
+        /**
+         * @brief set the location of the trusted CA certificates.
+         * @param caPath path of the trusted CA certificates.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCaPath (const std::string& caPath)
+        {
+            return this->rdbuf ()->socket ().setCaPath (caPath);
+        }
+
+        /**
+         * @brief set the location of the trusted CA certificate file.
+         * @param caFile path of the trusted CA certificate file.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCaFile (const std::string& caFile)
+        {
+            return this->rdbuf ()->socket ().setCaFile (caFile);
+        }
+
+        /**
+         * @brief Enable/Disable the verification of the peer certificate.
+         * @param verify Enable peer verification if set to true, false otherwise.
+         * @param depth The maximum certificate verification depth (default: no limit).
+         */
+        void setVerify (bool verify, int depth = -1)
+        {
+            return this->rdbuf ()->socket ().setVerify (verify, depth);
         }
     };
 }

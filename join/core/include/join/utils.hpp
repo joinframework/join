@@ -45,7 +45,7 @@ namespace join
         template <typename Type, size_t sz>
         struct _byteswap
         {
-            inline Type operator() (Type val)
+            __inline__ Type operator() (Type val)
             {
                 throw std::out_of_range ("data size");
             }
@@ -54,7 +54,7 @@ namespace join
         template <typename Type>
         struct _byteswap <Type, 1>
         {
-            inline Type operator() (Type val)
+            __inline__ Type operator() (Type val)
             {
                 return val;
             }
@@ -63,7 +63,7 @@ namespace join
         template <typename Type>
         struct _byteswap <Type, 2>
         {
-            inline Type operator() (Type val)
+            __inline__ Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -76,7 +76,7 @@ namespace join
         template <typename Type>
         struct _byteswap <Type, 4>
         {
-            inline Type operator() (Type val)
+            __inline__ Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -92,7 +92,7 @@ namespace join
         template <typename Type>
         struct _byteswap <Type, 8>
         {
-            inline Type operator() (Type val)
+            __inline__ Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -112,7 +112,7 @@ namespace join
         template <>
         struct _byteswap <float, 4>
         {
-            inline float operator() (float val)
+            __inline__ float operator() (float val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -127,7 +127,7 @@ namespace join
         template<>
         struct _byteswap <double, 8>
         {
-            inline double operator() (double val)
+            __inline__ double operator() (double val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -142,7 +142,7 @@ namespace join
         template <class Type>
         struct _swap
         {
-            inline Type operator() (Type val)
+            __inline__ Type operator() (Type val)
             {
                 return _byteswap <Type, sizeof (Type)> ()(val);
             }
@@ -163,7 +163,7 @@ namespace join
      * @return the swapped value.
      */
     template <class Type>
-    inline Type& swap (Type& val)
+    __inline__ Type& swap (Type& val)
     {
         val = details::_swap <Type> ()(val);
         return val;
@@ -175,7 +175,7 @@ namespace join
      * @param b string to compare to.
      * @return true if equals, false otharwise.
      */
-    inline bool compareNoCase (const std::string& a, const std::string& b)
+    __inline__ bool compareNoCase (const std::string& a, const std::string& b)
     {
         return ((a.size () == b.size ()) && 
             std::equal (a.begin (), a.end (), b.begin (), [] (char c1, char c2) {return std::toupper (c1) == std::toupper (c2);}));

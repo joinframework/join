@@ -37,7 +37,7 @@
 namespace join
 {
     /**
-     * @brief thread of execution invoker class.
+     * @brief thread invoker class.
      */
     class Invoker
     {
@@ -131,7 +131,7 @@ namespace join
     };
 
     /**
-     * @brief the class thread represents a single thread of execution.
+     * @brief thread class.
      */
     class Thread
     {

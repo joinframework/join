@@ -33,6 +33,7 @@
 #include <thread>
 
 using join::Errc;
+using join::Resolver;
 using join::Tcp;
 
 using namespace std::chrono_literals;
@@ -162,9 +163,9 @@ TEST_F (Observer, onReceive)
     Tcp::Acceptor server;
     Tcp::Socket socket;
 
-    ASSERT_EQ (server.bind ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
-    ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((socket = server.accept ()).connected ());
     ASSERT_EQ (start (), 0) << join::lastError.message ();
     ASSERT_EQ (socket.writeExactly ("onReceive", strlen ("onReceive"), _timeout), 0) << join::lastError.message ();
@@ -190,9 +191,9 @@ TEST_F (Observer, onError)
     sl.l_onoff = 1;
     sl.l_linger = 0;
 
-    ASSERT_EQ (server.bind ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
-    ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((socket = server.accept ()).connected ());
     ASSERT_EQ (start (), 0) << join::lastError.message ();
     ASSERT_EQ (setsockopt (socket.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
@@ -214,9 +215,9 @@ TEST_F (Observer, onClose)
     Tcp::Acceptor server;
     Tcp::Socket socket;
 
-    ASSERT_EQ (server.bind ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
-    ASSERT_EQ (connect ({Tcp::Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((socket = server.accept ()).connected ());
     ASSERT_EQ (start (), 0) << join::lastError.message ();
     socket.close ();

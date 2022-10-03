@@ -309,7 +309,7 @@ namespace join
     }
 
     /**
-     * @brief class representing a type-safe union.
+     * @brief variant class.
      */
     template <typename... Ts>
     class Variant

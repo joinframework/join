@@ -37,7 +37,7 @@
 namespace join
 {
     /**
-     * @brief arp protocol class.
+     * @brief ARP protocol class.
      */
     class Arp
     {

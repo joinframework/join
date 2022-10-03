@@ -37,7 +37,7 @@ namespace join
     using BytesArray = std::vector <uint8_t>;
 
     /**
-     * @brief class used to manage base64 encoding and decoding.
+     * @brief base64 encode, decode class.
      */
     class Base64
     {
