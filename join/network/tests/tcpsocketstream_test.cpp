@@ -504,17 +504,21 @@ TEST_F (TcpSocketStream, seekg)
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     tcpStream.write ("test", 4);
     tcpStream.flush ();
-    ASSERT_FALSE (tcpStream.seekg (1000));
+    ASSERT_FALSE (tcpStream.seekg (1000, std::ios_base::cur));
     tcpStream.clear ();
     ASSERT_EQ (tcpStream.peek (), 't');
     ASSERT_TRUE (tcpStream.seekg (1));
     ASSERT_EQ (tcpStream.peek (), 'e');
     ASSERT_FALSE (tcpStream.seekg (-2, std::ios_base::beg));
     tcpStream.clear ();
+    ASSERT_FALSE (tcpStream.seekg (1000, std::ios_base::beg));
+    tcpStream.clear ();
     ASSERT_TRUE (tcpStream.seekg (2, std::ios_base::beg));
     ASSERT_EQ (tcpStream.peek (), 's');
     ASSERT_TRUE (tcpStream.seekg (-1, std::ios_base::end));
     ASSERT_EQ (tcpStream.get (), 't');
+    ASSERT_FALSE (tcpStream.seekg (-1000, std::ios_base::beg));
+    tcpStream.clear ();
     ASSERT_FALSE (tcpStream.seekg (1, std::ios_base::end));
     tcpStream.clear ();
 }
