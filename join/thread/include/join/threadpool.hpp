@@ -43,7 +43,7 @@ namespace join
     class ThreadPool;
 
     /**
-     * @brief worker thread.
+     * @brief worker thread class.
      */
     class Worker
     {
@@ -73,7 +73,7 @@ namespace join
     };
 
     /**
-     * @brief thread pool.
+     * @brief thread pool class.
      */
     class ThreadPool
     {

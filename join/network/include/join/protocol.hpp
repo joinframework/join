@@ -463,7 +463,7 @@ namespace join
     }
 
     /**
-     * @brief Tls protocol class.
+     * @brief SSL/TLS protocol class.
      */
     class Tls
     {

@@ -122,13 +122,7 @@ namespace join
             if (_buf)
             {
                 this->overflow (traits_type::eof ());
-
-                if (_allocated)
-                {
-                    delete [] _buf;
-                    _allocated = false;
-                    _buf = nullptr;
-                }
+                this->freeBuffer ();
             }
         }
 
@@ -405,6 +399,7 @@ namespace join
                 {
                     _gsize = 1;
                     _psize = 1;
+                    _buf = s;
                 }
                 else
                 {
@@ -425,7 +420,7 @@ namespace join
         {
             if (!_buf)
             {
-                _buf = new char [BUFSIZ];
+                _buf = new char [_gsize + _psize];
                 _allocated = true;
             }
         }
@@ -438,10 +433,10 @@ namespace join
             if (_allocated)
             {
                 delete [] _buf;
+                _allocated = false;
                 _buf = nullptr;
                 this->setg (nullptr, nullptr, nullptr);
                 this->setp (nullptr, nullptr);
-                _allocated = false;
             }
         }
 

@@ -101,6 +101,20 @@ const uint16_t    TcpSocket::_port    = 5000;
 const int         TcpSocket::_timeout = 1000;
 
 /**
+ * @brief Test move.
+ */
+TEST_F (TcpSocket, move)
+{
+    Tcp::Socket tcpSocket1 (Tcp::Socket::Blocking), tcpSocket2;
+
+    ASSERT_EQ (tcpSocket1.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket1.connected());
+    tcpSocket2 = std::move (tcpSocket1);
+    ASSERT_TRUE (tcpSocket2.connected());
+    tcpSocket2.close ();
+}
+
+/**
  * @brief Test open method.
  */
 TEST_F (TcpSocket, open)

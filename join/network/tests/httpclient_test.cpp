@@ -38,6 +38,8 @@ using join::HttpResponse;
 using join::HttpClient;
 using join::Tls;
 
+const std::string host = "joinframework.net";
+
 /**
  * @brief Test move.
  */
@@ -63,16 +65,16 @@ TEST (HttpClient, move)
  */
 TEST (HttpClient, scheme)
 {
-    HttpClient client1 ("joinframework.net", 80, false);
+    HttpClient client1 (host, 80, false);
     ASSERT_EQ (client1.scheme (), "http");
 
-    HttpClient client2 ("joinframework.net", 80, true);
+    HttpClient client2 (host, 80, true);
     ASSERT_EQ (client2.scheme (), "https");
 
-    HttpClient client3 ("joinframework.net", 443, true);
+    HttpClient client3 (host, 443, true);
     ASSERT_EQ (client3.scheme (), "https");
 
-    HttpClient client4 ("joinframework.net", 443, false);
+    HttpClient client4 (host, 443, false);
     ASSERT_EQ (client4.scheme (), "http");
 }
 
@@ -81,8 +83,8 @@ TEST (HttpClient, scheme)
  */
 TEST (HttpClient, host)
 {
-    HttpClient client1 ("joinframework.net", 80, false);
-    ASSERT_EQ (client1.host (), "joinframework.net");
+    HttpClient client1 (host, 80, false);
+    ASSERT_EQ (client1.host (), host);
 
     HttpClient client2 ("91.66.32.78", 443, true);
     ASSERT_EQ (client2.host (), "91.66.32.78");
@@ -93,10 +95,10 @@ TEST (HttpClient, host)
  */
 TEST (HttpClient, port)
 {
-    HttpClient client1 ("joinframework.net", 80, false);
+    HttpClient client1 (host, 80, false);
     ASSERT_EQ (client1.port (), 80);
 
-    HttpClient client2 ("joinframework.net", 443, true);
+    HttpClient client2 (host, 443, true);
     ASSERT_EQ (client2.port (), 443);
 }
 
@@ -105,12 +107,12 @@ TEST (HttpClient, port)
  */
 TEST (HttpClient, authority)
 {
-    ASSERT_EQ (HttpClient ("joinframework.net", 80, false).authority (), "joinframework.net");
-    ASSERT_EQ (HttpClient ("joinframework.net", 443, false).authority (), "joinframework.net:443");
-    ASSERT_EQ (HttpClient ("joinframework.net", 5000, false).authority (), "joinframework.net:5000");
-    ASSERT_EQ (HttpClient ("joinframework.net", 80, true).authority (), "joinframework.net:80");
-    ASSERT_EQ (HttpClient ("joinframework.net", 443, true).authority (), "joinframework.net");
-    ASSERT_EQ (HttpClient ("joinframework.net", 5001, true).authority (), "joinframework.net:5001");
+    ASSERT_EQ (HttpClient (host, 80, false).authority (), host);
+    ASSERT_EQ (HttpClient (host, 443, false).authority (), host + ":443");
+    ASSERT_EQ (HttpClient (host, 5000, false).authority (), host + ":5000");
+    ASSERT_EQ (HttpClient (host, 80, true).authority (), host + ":80");
+    ASSERT_EQ (HttpClient (host, 443, true).authority (), host);
+    ASSERT_EQ (HttpClient (host, 5001, true).authority (), host + ":5001");
 
     ASSERT_EQ (HttpClient ("91.66.32.78", 80, false).authority (), "91.66.32.78");
     ASSERT_EQ (HttpClient ("91.66.32.78", 443, false).authority (), "91.66.32.78:443");
@@ -132,12 +134,12 @@ TEST (HttpClient, authority)
  */
 TEST (HttpClient, url)
 {
-    ASSERT_EQ (HttpClient ("joinframework.net", 80, false).url (), "http://joinframework.net/");
-    ASSERT_EQ (HttpClient ("joinframework.net", 443, false).url (), "http://joinframework.net:443/");
-    ASSERT_EQ (HttpClient ("joinframework.net", 5000, false).url (), "http://joinframework.net:5000/");
-    ASSERT_EQ (HttpClient ("joinframework.net", 80, true).url (), "https://joinframework.net:80/");
-    ASSERT_EQ (HttpClient ("joinframework.net", 443, true).url (), "https://joinframework.net/");
-    ASSERT_EQ (HttpClient ("joinframework.net", 5001, true).url (), "https://joinframework.net:5001/");
+    ASSERT_EQ (HttpClient (host, 80, false).url (), "http://" + host + "/");
+    ASSERT_EQ (HttpClient (host, 443, false).url (), "http://" + host + ":443/");
+    ASSERT_EQ (HttpClient (host, 5000, false).url (), "http://" + host + ":5000/");
+    ASSERT_EQ (HttpClient (host, 80, true).url (), "https://" + host + ":80/");
+    ASSERT_EQ (HttpClient (host, 443, true).url (), "https://" + host + "/");
+    ASSERT_EQ (HttpClient (host, 5001, true).url (), "https://" + host + ":5001/");
 
     ASSERT_EQ (HttpClient ("91.66.32.78", 80, false).url (), "http://91.66.32.78/");
     ASSERT_EQ (HttpClient ("91.66.32.78", 443, false).url (), "http://91.66.32.78:443/");
@@ -159,13 +161,13 @@ TEST (HttpClient, url)
  */
 TEST (HttpClient, keepAlive)
 {
-    HttpClient client1 ("joinframework.net", 80, false, true);
+    HttpClient client1 (host, 80, false, true);
     ASSERT_TRUE (client1.keepAlive ());
 
     client1.keepAlive (false);
     ASSERT_FALSE (client1.keepAlive ());
 
-    HttpClient client2 ("joinframework.net", 443, true, false);
+    HttpClient client2 (host, 443, true, false);
     ASSERT_FALSE (client2.keepAlive ());
 
     client2.keepAlive (true);
@@ -177,7 +179,7 @@ TEST (HttpClient, keepAlive)
  */
 TEST (HttpClient, keepAliveTimeout)
 {
-    HttpClient client ("joinframework.net");
+    HttpClient client (host);
     ASSERT_EQ (client.keepAliveTimeout (), seconds::zero ());
 
     HttpRequest request;
@@ -211,7 +213,7 @@ TEST (HttpClient, keepAliveTimeout)
  */
 TEST (HttpClient, DISABLED_keepAliveMax)
 {
-    HttpClient client ("joinframework.net");
+    HttpClient client (host);
     ASSERT_EQ (client.keepAliveMax (), -1);
 
     HttpRequest request;
@@ -252,13 +254,13 @@ TEST (HttpClient, send)
     ASSERT_EQ (join::lastError, Errc::TimedOut);
     client.clear ();
 
-    client = HttpClient ("joinframework.net", 80, true);
+    client = HttpClient (host, 80, true);
     client << HttpRequest ();
     ASSERT_TRUE (client.fail ());
     ASSERT_EQ (join::lastError, TlsErrc::TlsProtocolError);
     client.clear ();
 
-    client = HttpClient ("joinframework.net", 443, true);
+    client = HttpClient (host, 443, true);
     client << HttpRequest ();
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
 
@@ -271,7 +273,7 @@ TEST (HttpClient, send)
  */
 TEST (HttpClient, receive)
 {
-    HttpClient client ("joinframework.net", 443, true);
+    HttpClient client (host, 443, true);
 
     HttpResponse response;
     client >> response;

@@ -34,7 +34,7 @@
 namespace join
 {
     /**
-     * @brief class used to synchronize multiple threads at the same time, until another thread modifies a shared variable.
+     * @brief condition variable class.
      */
     class Condition
     {

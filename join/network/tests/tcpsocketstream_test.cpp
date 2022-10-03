@@ -140,6 +140,9 @@ TEST_F (TcpSocketStream, moveAssign)
 TEST_F (TcpSocketStream, connect)
 {
     Tcp::Stream tcpStream;
+    tcpStream.connect ({"255.255.255.255", _port});
+    ASSERT_TRUE (tcpStream.fail ());
+    tcpStream.clear ();
     tcpStream.connect ({Resolver::resolveHost (_host), _invalid_port});
     ASSERT_TRUE (tcpStream.fail ());
     tcpStream.clear ();
@@ -501,13 +504,42 @@ TEST_F (TcpSocketStream, seekg)
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     tcpStream.write ("test", 4);
     tcpStream.flush ();
+    ASSERT_FALSE (tcpStream.seekg (1000));
+    tcpStream.clear ();
     ASSERT_EQ (tcpStream.peek (), 't');
     ASSERT_TRUE (tcpStream.seekg (1));
     ASSERT_EQ (tcpStream.peek (), 'e');
+    ASSERT_FALSE (tcpStream.seekg (-2, std::ios_base::beg));
+    tcpStream.clear ();
     ASSERT_TRUE (tcpStream.seekg (2, std::ios_base::beg));
     ASSERT_EQ (tcpStream.peek (), 's');
     ASSERT_TRUE (tcpStream.seekg (-1, std::ios_base::end));
     ASSERT_EQ (tcpStream.get (), 't');
+    ASSERT_FALSE (tcpStream.seekg (1, std::ios_base::end));
+    tcpStream.clear ();
+}
+
+/**
+ * @brief Test pubsetbuf method.
+ */
+TEST_F (TcpSocketStream, pubsetbuf)
+{
+    std::array <char, 16> buf = {};
+    Tcp::Stream tcpStream;
+    tcpStream.rdbuf ()->pubsetbuf (buf.data (), buf.size ());
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
+    tcpStream.write ("test", 4);
+    tcpStream.flush ();
+    ASSERT_EQ (buf[8], 't');
+    ASSERT_EQ (buf[9], 'e');
+    ASSERT_EQ (buf[10], 's');
+    ASSERT_EQ (buf[11], 't');
+    tcpStream.close ();
+    tcpStream.rdbuf ()->pubsetbuf (nullptr, 0);
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
+    tcpStream.write ("test", 4);
+    ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
+    tcpStream.close ();
 }
 
 /**

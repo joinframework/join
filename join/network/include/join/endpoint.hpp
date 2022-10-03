@@ -431,7 +431,7 @@ namespace join
     }
 
     /**
-     * @brief internet endpoint class.
+     * @brief basic internet endpoint class.
      */
     template <class Protocol>
     class BasicInternetEndpoint : public BasicEndpoint <Protocol>

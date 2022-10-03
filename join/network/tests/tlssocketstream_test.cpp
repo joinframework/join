@@ -257,6 +257,9 @@ TEST_F (TlsSocketStream, moveAssign)
 TEST_F (TlsSocketStream, connect)
 {
     Tls::Stream tlsStream;
+    tlsStream.connect ({"255.255.255.255", _port});
+    ASSERT_TRUE (tlsStream.fail ());
+    tlsStream.clear ();
     tlsStream.connect ({Resolver::resolveHost (_host), _invalid_port});
     ASSERT_TRUE (tlsStream.fail ());
     tlsStream.clear ();
@@ -284,7 +287,10 @@ TEST_F (TlsSocketStream, startEncryption)
 TEST_F (TlsSocketStream, connectEncrypted)
 {
     Tls::Stream tlsStream;
-    tlsStream.connect ({Resolver::resolveHost (_host), _invalid_port});
+    tlsStream.connectEncrypted ({"255.255.255.255", _port});
+    ASSERT_TRUE (tlsStream.fail ());
+    tlsStream.clear ();
+    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _invalid_port});
     ASSERT_TRUE (tlsStream.fail ());
     tlsStream.clear ();
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
@@ -666,13 +672,42 @@ TEST_F (TlsSocketStream, seekg)
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     tlsStream.write ("test", 4);
     tlsStream.flush ();
+    ASSERT_FALSE (tlsStream.seekg (1000));
+    tlsStream.clear ();
     ASSERT_EQ (tlsStream.peek (), 't');
     ASSERT_TRUE (tlsStream.seekg (1));
     ASSERT_EQ (tlsStream.peek (), 'e');
+    ASSERT_FALSE (tlsStream.seekg (-2, std::ios_base::beg));
+    tlsStream.clear ();
     ASSERT_TRUE (tlsStream.seekg (2, std::ios_base::beg));
     ASSERT_EQ (tlsStream.peek (), 's');
     ASSERT_TRUE (tlsStream.seekg (-1, std::ios_base::end));
     ASSERT_EQ (tlsStream.get (), 't');
+    ASSERT_FALSE (tlsStream.seekg (1, std::ios_base::end));
+    tlsStream.clear ();
+}
+
+/**
+ * @brief Test pubsetbuf method.
+ */
+TEST_F (TlsSocketStream, pubsetbuf)
+{
+    std::array <char, 16> buf = {};
+    Tls::Stream tlsStream;
+    tlsStream.rdbuf ()->pubsetbuf (buf.data (), buf.size ());
+    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
+    tlsStream.write ("test", 4);
+    tlsStream.flush ();
+    ASSERT_EQ (buf[8], 't');
+    ASSERT_EQ (buf[9], 'e');
+    ASSERT_EQ (buf[10], 's');
+    ASSERT_EQ (buf[11], 't');
+    tlsStream.close ();
+    tlsStream.rdbuf ()->pubsetbuf (nullptr, 0);
+    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    tlsStream.write ("test", 4);
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.close ();
 }
 
 /**
