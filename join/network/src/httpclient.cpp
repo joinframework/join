@@ -144,14 +144,23 @@ uint16_t HttpClient::port () const
 // =========================================================================
 std::string HttpClient::authority () const
 {
-    std::string out;
+    std::string auth;
+
     if (IpAddress::isIpv6Address (host ()))
-        out += "[" + host () + "]";
+    {
+        auth += "[" + host () + "]";
+    }
     else
-        out += host ();
+    {
+        auth += host ();
+    }
+
     if (port () && (port () != Resolver::resolveService (scheme ())))
-        out += ":" + std::to_string (port ());
-    return out;
+    {
+        auth += ":" + std::to_string (port ());
+    }
+
+    return auth;
 }
 
 // =========================================================================

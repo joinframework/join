@@ -238,19 +238,19 @@ void HttpRequest::parameters (const ParameterMap& params)
 // =========================================================================
 std::string HttpRequest::dumpParameters () const
 {
-    std::string out;
+    std::string params;
 
     for (auto const& param : _parameters)
     {
-        out += param.first + "=" + param.second + "&";
+        params += param.first + "=" + param.second + "&";
     }
 
-    if (out.size ())
+    if (params.size ())
     {
-        out.pop_back ();
+        params.pop_back ();
     }
 
-    return out;
+    return params;
 }
 
 // =========================================================================
@@ -259,14 +259,14 @@ std::string HttpRequest::dumpParameters () const
 // =========================================================================
 std::string HttpRequest::query () const
 {
-    std::string out = dumpParameters ();
+    std::string params = dumpParameters ();
 
-    if (out.size ())
+    if (params.size ())
     {
-        out.insert (0, "?");
+        params.insert (0, "?");
     }
 
-    return out;
+    return params;
 }
 
 // =========================================================================
