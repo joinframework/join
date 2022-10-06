@@ -116,15 +116,6 @@ HttpRequest& HttpRequest::operator= (HttpRequest&& other)
 //   CLASS     : HttpRequest
 //   METHOD    : method
 // =========================================================================
-void HttpRequest::method (HttpMethod meth)
-{
-    _method = meth;
-}
-
-// =========================================================================
-//   CLASS     : HttpRequest
-//   METHOD    : method
-// =========================================================================
 HttpMethod HttpRequest::method () const
 {
     return _method;
@@ -153,11 +144,11 @@ std::string HttpRequest::methodString () const
 
 // =========================================================================
 //   CLASS     : HttpRequest
-//   METHOD    : path
+//   METHOD    : method
 // =========================================================================
-void HttpRequest::path (const std::string& p)
+void HttpRequest::method (HttpMethod meth)
 {
-    _path = p;
+    _method = meth;
 }
 
 // =========================================================================
@@ -171,11 +162,20 @@ const std::string& HttpRequest::path () const
 
 // =========================================================================
 //   CLASS     : HttpRequest
-//   METHOD    : parameter
+//   METHOD    : path
 // =========================================================================
-void HttpRequest::parameter (const std::string &name, const std::string &var)
+void HttpRequest::path (const std::string& p)
 {
-    _parameters[name] = var;
+    _path = p;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : hasParameter
+// =========================================================================
+bool HttpRequest::hasParameter (const std::string& name) const
+{
+    return _parameters.find (name) != _parameters.end ();
 }
 
 // =========================================================================
@@ -194,12 +194,63 @@ std::string HttpRequest::parameter (const std::string& name) const
 }
 
 // =========================================================================
-//   CLASS     : HttpMessage
-//   METHOD    : hasParameter
+//   CLASS     : HttpRequest
+//   METHOD    : parameter
 // =========================================================================
-bool HttpRequest::hasParameter (const std::string& name) const
+void HttpRequest::parameter (const std::string &name, const std::string &var)
 {
-    return _parameters.find (name) != _parameters.end ();
+    _parameters[name] = var;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : parameter
+// =========================================================================
+void HttpRequest::parameter (const ParameterMap::value_type& param)
+{
+    parameter (param.first, param.second);
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : parameters
+// =========================================================================
+const HttpRequest::ParameterMap& HttpRequest::parameters () const
+{
+    return _parameters;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : parameters
+// =========================================================================
+void HttpRequest::parameters (const ParameterMap& params)
+{
+    for (auto const& param : params)
+    {
+        parameter (param);
+    }
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : dumpParameters
+// =========================================================================
+std::string HttpRequest::dumpParameters () const
+{
+    std::string params;
+
+    for (auto const& param : _parameters)
+    {
+        params += param.first + "=" + param.second + "&";
+    }
+
+    if (params.size ())
+    {
+        params.pop_back ();
+    }
+
+    return params;
 }
 
 // =========================================================================
@@ -208,17 +259,14 @@ bool HttpRequest::hasParameter (const std::string& name) const
 // =========================================================================
 std::string HttpRequest::query () const
 {
-    auto beg = _parameters.begin ();
-    auto end = _parameters.end ();
-    std::string out;
+    std::string params = dumpParameters ();
 
-    for (auto next = beg; next != end; ++next)
+    if (params.size ())
     {
-        out += (next == _parameters.begin ()) ? "?" : "&";
-        out += next->first + "=" + next->second;
+        params.insert (0, "?");
     }
 
-    return out;
+    return params;
 }
 
 // =========================================================================
@@ -232,112 +280,89 @@ std::string HttpRequest::urn () const
 
 // =========================================================================
 //   CLASS     : HttpRequest
+//   METHOD    : clear
+// =========================================================================
+void HttpRequest::clear ()
+{
+    _method = Get;
+    _path = "/";
+    _parameters.clear ();
+    HttpMessage::clear ();
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
 //   METHOD    : send
 // =========================================================================
 void HttpRequest::send (std::ostream& out) const
 {
     out << methodString () << " " << urn () << " " << version () << "\r\n";
-    out << headers ();
-    out << "\r\n";
+    out << dumpHeaders ();
 }
 
 // =========================================================================
 //   CLASS     : HttpRequest
-//   METHOD    : receive
+//   METHOD    : parseFirstLine
 // =========================================================================
-void HttpRequest::receive (std::istream& in)
+int HttpRequest::parseFirstLine (const std::string& line)
 {
-    bool firstLine = true;
-    std::string line;
-
-    while (getline (in, line, 4096))
+    size_t pos1 = line.find (" ");
+    if (pos1 == std::string::npos)
     {
-        if (firstLine)
-        {
-            size_t pos1 = line.find (" ");
-            if (pos1 == std::string::npos)
-            {
-                in.setstate (std::ios_base::failbit);
-                join::lastError = make_error_code (HttpErrc::InvalidRequest);
-                return;
-            }
-
-            size_t pos2 = line.find (" ", pos1 + 1);
-            if (pos2 == std::string::npos)
-            {
-                in.setstate (std::ios_base::failbit);
-                join::lastError = make_error_code (HttpErrc::InvalidRequest);
-                return;
-            }
-
-            // get method.
-            std::string method = line.substr (0, pos1++);
-
-            if (method.compare ("HEAD") == 0)
-            {
-                _method = HttpMethod::Head;
-            }
-            else if (method.compare ("GET") == 0)
-            {
-                _method = HttpMethod::Get;
-            }
-            else if (method.compare ("PUT") == 0)
-            {
-                _method = HttpMethod::Put;
-            }
-            else if (method.compare ("POST") == 0)
-            {
-                _method = HttpMethod::Post;
-            }
-            else if (method.compare ("DELETE") == 0)
-            {
-                _method = HttpMethod::Delete;
-            }
-            else
-            {
-                in.setstate (std::ios_base::failbit);
-                join::lastError = make_error_code (HttpErrc::InvalidMethod);
-                return;
-            }
-
-            // get path.
-            _path = line.substr (pos1, pos2 - pos1);
-
-            // process query parameters.
-            pos1 = _path.find ("?");
-            if (pos1 != std::string::npos)
-            {
-                store (_path.substr (pos1 + 1));
-                _path = _path.substr (0, pos1);
-            }
-
-            // decode and normalize path.
-            decodeUrl (_path);
-            normalize (_path);
-
-            // get version.
-            _version = line.substr (++pos2);
-
-            firstLine = false;
-            continue;
-        }
-
-        if (line.empty ())
-        {
-            // end of headers.
-            break;
-        }
-
-        size_t pos = line.find (": ");
-        if (pos == std::string::npos)
-        {
-            in.setstate (std::ios_base::failbit);
-            join::lastError = make_error_code (HttpErrc::InvalidHeader);
-            return;
-        }
-
-        _headers[line.substr (0, pos)] = line.substr (pos + 2);
+        join::lastError = make_error_code (HttpErrc::InvalidRequest);
+        return -1;
     }
+
+    size_t pos2 = line.find (" ", pos1 + 1);
+    if (pos2 == std::string::npos)
+    {
+        join::lastError = make_error_code (HttpErrc::InvalidRequest);
+        return -1;
+    }
+
+    std::string method = line.substr (0, pos1++);
+
+    if (method.compare ("HEAD") == 0)
+    {
+        _method = HttpMethod::Head;
+    }
+    else if (method.compare ("GET") == 0)
+    {
+        _method = HttpMethod::Get;
+    }
+    else if (method.compare ("PUT") == 0)
+    {
+        _method = HttpMethod::Put;
+    }
+    else if (method.compare ("POST") == 0)
+    {
+        _method = HttpMethod::Post;
+    }
+    else if (method.compare ("DELETE") == 0)
+    {
+        _method = HttpMethod::Delete;
+    }
+    else
+    {
+        join::lastError = make_error_code (HttpErrc::InvalidMethod);
+        return -1;
+    }
+
+    _path = line.substr (pos1, pos2 - pos1);
+
+    pos1 = _path.find ("?");
+    if (pos1 != std::string::npos)
+    {
+        store (_path.substr (pos1 + 1));
+        _path = _path.substr (0, pos1);
+    }
+
+    decodeUrl (_path);
+    normalize (_path);
+
+    _version = line.substr (++pos2);
+
+    return 0;
 }
 
 // =========================================================================

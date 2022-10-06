@@ -94,6 +94,9 @@ namespace join
     class HttpMessage
     {
     public:
+        // headers map.
+        using HeaderMap = std::map <std::string, std::string, details::lessNoCase>;
+
         /**
          * @brief create the HttpMessage instance.
          */
@@ -131,30 +134,16 @@ namespace join
         virtual ~HttpMessage () = default;
 
         /**
-         * @brief set request version (default HTTP/1.1).
-         * @param v HTTP version.
-         */
-        void version (const std::string& v);
-
-        /**
-         * @brief get request method.
-         * @return request version.
+         * @brief get HTTP version.
+         * @return HTTP version.
          */
         const std::string& version () const;
 
         /**
-         * @brief add a header to the HTTP request.
-         * @param name header name.
-         * @param val header value.
+         * @brief set HTTP version (default "HTTP/1.1").
+         * @param v HTTP version.
          */
-        void header (const std::string& name, const std::string& val);
-
-        /**
-         * @brief get a header by name.
-         * @param name header name.
-         * @return header value.
-         */
-        std::string header (const std::string& name) const;
+        void version (const std::string& v);
 
         /**
          * @brief checks if there is a header with the specified name.
@@ -164,10 +153,47 @@ namespace join
         bool hasHeader (const std::string& name) const;
 
         /**
+         * @brief get header by name.
+         * @param name header name.
+         * @return header value.
+         */
+        std::string header (const std::string& name) const;
+
+        /**
+         * @brief add header to the HTTP request.
+         * @param name header name.
+         * @param val header value.
+         */
+        void header (const std::string& name, const std::string& val);
+
+        /**
+         * @brief add header to the HTTP request.
+         * @param h header.
+         */
+        void header (const HeaderMap::value_type& h);
+
+        /**
+         * @brief get headers map.
+         * @return headers map.
+         */
+        const HeaderMap& headers () const;
+
+        /**
+         * @brief add headers to the HTTP request.
+         * @param heads headers.
+         */
+        void headers (const HeaderMap& heads);
+
+        /**
          * @brief dump headers.
          * @return headers.
          */
-        std::string headers () const;
+        std::string dumpHeaders () const;
+
+        /**
+         * @brief clear HTTP message.
+         */
+        virtual void clear ();
 
         /**
          * @brief send to the given output stream.
@@ -179,9 +205,23 @@ namespace join
          * @brief receive from the given input stream.
          * @param in input stream.
          */
-        virtual void receive (std::istream& in) = 0;
+        virtual void receive (std::istream& in);
 
     protected:
+        /**
+         * @brief parse first line.
+         * @param line first line to parse.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int parseFirstLine (const std::string& line) = 0;
+
+        /**
+         * @brief parse HTTP header.
+         * @param head HTTP header to parse.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int parseHeader (const std::string& head);
+
         /**
          * @brief read HTTP line (delimiter "\r\n").
          * @param line line read.
@@ -194,7 +234,7 @@ namespace join
         std::string _version;
 
         /// HTTP headers.
-        std::map <std::string, std::string, details::lessNoCase> _headers;
+        HeaderMap _headers;
     };
 }
 

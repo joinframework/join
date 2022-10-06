@@ -80,16 +80,6 @@ HttpResponse& HttpResponse::operator= (HttpResponse&& other)
 
 // =========================================================================
 //   CLASS     : HttpResponse
-//   METHOD    : response
-// =========================================================================
-void HttpResponse::response (const std::string& status, const std::string& reason)
-{
-    _status = status;
-    _reason = reason;
-}
-
-// =========================================================================
-//   CLASS     : HttpResponse
 //   METHOD    : status
 // =========================================================================
 const std::string& HttpResponse::status () const
@@ -108,71 +98,60 @@ const std::string& HttpResponse::reason () const
 
 // =========================================================================
 //   CLASS     : HttpResponse
+//   METHOD    : response
+// =========================================================================
+void HttpResponse::response (const std::string& status, const std::string& reason)
+{
+    _status = status;
+    _reason = reason;
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : clear
+// =========================================================================
+void HttpResponse::clear ()
+{
+    _status.clear ();
+    _reason.clear ();
+    HttpMessage::clear ();
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
 //   METHOD    : send
 // =========================================================================
 void HttpResponse::send (std::ostream& out) const
 {
     out << version () << " " << status () << " " << reason () << "\r\n";
-    out << headers ();
-    out << "\r\n";
+    out << dumpHeaders ();
 }
 
 // =========================================================================
 //   CLASS     : HttpResponse
-//   METHOD    : receive
+//   METHOD    : parseFirstLine
 // =========================================================================
-void HttpResponse::receive (std::istream& in)
+int HttpResponse::parseFirstLine (const std::string& line)
 {
-    bool firstLine = true;
-    std::string line;
-
-    while (getline (in, line, 4096))
+    size_t pos1 = line.find (" ");
+    if (pos1 == std::string::npos)
     {
-        if (firstLine)
-        {
-            size_t pos1 = line.find (" ");
-            if (pos1 == std::string::npos)
-            {
-                in.setstate (std::ios_base::failbit);
-                join::lastError = make_error_code (HttpErrc::InvalidResponse);
-                return;
-            }
-
-            size_t pos2 = line.find (" ", pos1 + 1);
-            if (pos2 == std::string::npos)
-            {
-                in.setstate (std::ios_base::failbit);
-                join::lastError = make_error_code (HttpErrc::InvalidResponse);
-                return;
-            }
-
-            // get version.
-            _version = line.substr (0, pos1++);
-
-            // get status.
-            _status = line.substr (pos1, pos2 - pos1);
-
-            // get reason.
-            _reason = line.substr (++pos2);
-
-            firstLine = false;
-            continue;
-        }
-
-        if (line.empty ())
-        {
-            // end of headers.
-            break;
-        }
-
-        size_t pos = line.find (": ");
-        if (pos == std::string::npos)
-        {
-            in.setstate (std::ios_base::failbit);
-            join::lastError = make_error_code (HttpErrc::InvalidHeader);
-            return;
-        }
-
-        _headers[line.substr (0, pos)] = line.substr (pos + 2);
+        join::lastError = make_error_code (HttpErrc::InvalidResponse);
+        return -1;
     }
+
+    size_t pos2 = line.find (" ", pos1 + 1);
+    if (pos2 == std::string::npos)
+    {
+        join::lastError = make_error_code (HttpErrc::InvalidResponse);
+        return -1;
+    }
+
+    _version = line.substr (0, pos1++);
+
+    _status = line.substr (pos1, pos2 - pos1);
+
+    _reason = line.substr (++pos2);
+
+    return 0;
 }

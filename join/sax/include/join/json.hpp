@@ -809,9 +809,10 @@ namespace join
      */
     enum JsonReadMode
     {
-        None,                           /**< no read mode set. */
-        ParseComments       = 1L << 0,  /**< parse comments. */
-        ValidateEncoding    = 1L << 1,  /**< validate encoding. */
+        None,                          /**< no read mode set. */
+        ParseComments       = 1L << 0, /**< parse comments. */
+        ValidateEncoding    = 1L << 1, /**< validate encoding. */
+        StopParsingOnDone   = 1L << 2, /**< stop parsing on done. */
     };
 
     /**
@@ -999,14 +1000,18 @@ namespace join
         {
             if (readValue <ReadMode> (document) == 0)
             {
-                skipWhitespaces (document);
-
-                if (document.peek () == std::char_traits <char>::eof ())
+                if (!(ReadMode & JsonReadMode::StopParsingOnDone))
                 {
-                    return 0;
+                    skipWhitespaces (document);
+
+                    if (document.peek () != std::char_traits <char>::eof ())
+                    {
+                        join::lastError = make_error_code (SaxErrc::ExtraData);
+                        return -1;
+                    }
                 }
 
-                join::lastError = make_error_code (SaxErrc::ExtraData);
+                return 0;
             }
 
             return -1;

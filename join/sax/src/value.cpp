@@ -75,7 +75,7 @@ int Value::jsonRead (std::istream& document)
 //   CLASS     : Value
 //   METHOD    : jsonWrite
 // =========================================================================
-int Value::jsonWrite (std::ostream& document, size_t indentation)
+int Value::jsonWrite (std::ostream& document, size_t indentation) const
 {
     JsonWriter writer (document, indentation);
     return writer.serialize (*this);
@@ -130,7 +130,7 @@ int Value::packRead (std::istream& document)
 //   CLASS     : Value
 //   METHOD    : packWrite
 // =========================================================================
-int Value::packWrite (std::ostream& document)
+int Value::packWrite (std::ostream& document) const
 {
     return serialize <PackWriter> (document);
 }

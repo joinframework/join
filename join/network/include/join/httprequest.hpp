@@ -113,6 +113,9 @@ namespace join
     class HttpRequest : public HttpMessage
     {
     public:
+        // parameters map.
+        using ParameterMap = std::map <std::string, std::string>;
+
         /**
          * @brief create the HttpRequest instance by default.
          */
@@ -156,12 +159,6 @@ namespace join
         virtual ~HttpRequest () = default;
 
         /**
-         * @brief set request method (default GET).
-         * @param meth HTTP method.
-         */
-        void method (HttpMethod meth);
-
-        /**
          * @brief get request method.
          * @return request method.
          */
@@ -174,10 +171,10 @@ namespace join
         std::string methodString () const;
 
         /**
-         * @brief set path.
-         * @param p path.
+         * @brief set request method (default GET).
+         * @param meth HTTP method.
          */
-        void path (const std::string& p);
+        void method (HttpMethod meth);
 
         /**
          * @brief get path.
@@ -186,12 +183,17 @@ namespace join
         const std::string& path () const;
 
         /**
-         * @brief add query parameters to the HTTP request.
-         * @param name parameter name.
-         * @param val parameter value.
-         * @return true successfully added.
+         * @brief set path.
+         * @param p path.
          */
-        void parameter (const std::string& name, const std::string& val);
+        void path (const std::string& p);
+
+        /**
+         * @brief checks if there is a parameter with the specified name.
+         * @param name name of the parameter to search for.
+         * @return true of there is such a parameter, false otherwise.
+         */
+        bool hasParameter (const std::string& name) const;
 
         /**
          * @brief get a parameter by name.
@@ -201,11 +203,35 @@ namespace join
         std::string parameter (const std::string& name) const;
 
         /**
-         * @brief checks if there is a parameter with the specified name.
-         * @param name name of the parameter to search for.
-         * @return true of there is such a parameter, false otherwise.
+         * @brief add query parameter to the HTTP request.
+         * @param name parameter name.
+         * @param val parameter value.
          */
-        bool hasParameter (const std::string& name) const;
+        void parameter (const std::string& name, const std::string& val);
+
+        /**
+         * @brief add query parameter to the HTTP request.
+         * @param param parameter.
+         */
+        void parameter (const ParameterMap::value_type& param);
+
+        /**
+         * @brief get query parameters map.
+         * @return query parameters map.
+         */
+        const ParameterMap& parameters () const;
+
+        /**
+         * @brief add query parameters to the HTTP request.
+         * @param params parameters.
+         */
+        void parameters (const ParameterMap& params);
+
+        /**
+         * @brief dump parameters.
+         * @return parameters.
+         */
+        std::string dumpParameters () const;
 
         /**
          * @brief get query.
@@ -220,18 +246,24 @@ namespace join
         std::string urn () const;
 
         /**
+         * @brief clear HTTP message.
+         */
+        virtual void clear () override;
+
+        /**
          * @brief send request to the given output stream.
          * @param out output stream.
          */
         virtual void send (std::ostream& out) const override;
 
-        /**
-         * @brief receive request from the given input stream.
-         * @param in input stream.
-         */
-        virtual void receive (std::istream& in) override;
-
     protected:
+        /**
+         * @brief parse first line.
+         * @param line first line to parse.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int parseFirstLine (const std::string& line) override;
+
         /**
          * @brief decode url (ex. %20 ==> ' ').
          * @param url url to decode.
@@ -259,7 +291,7 @@ namespace join
         std::string _path;
 
         /// HTTP query parameters.
-        std::map <std::string, std::string> _parameters;
+        ParameterMap _parameters;
     };
 }
 

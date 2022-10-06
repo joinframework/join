@@ -127,16 +127,16 @@ namespace join
         std::string url () const;
 
         /**
-         * @brief enable/disable HTTP keep alive support.
-         * @param keep true if supported, false otherwise.
-         */
-        void keepAlive (bool keep);
-
-        /**
          * @brief checks if HTTP keep alive is supported.
          * @return true if supported, false otherwise.
          */
         bool keepAlive () const;
+
+        /**
+         * @brief enable/disable HTTP keep alive support.
+         * @param keep true if supported, false otherwise.
+         */
+        void keepAlive (bool keep);
 
         /**
          * @brief get HTTP keep alive timeout.

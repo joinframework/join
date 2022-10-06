@@ -1466,7 +1466,7 @@ namespace join
          * @param document Document where to serialize json data.
          * @return 0 on success, -1 otherwise.
          */
-        int jsonWrite (std::ostream& document, size_t indentation = 0);
+        int jsonWrite (std::ostream& document, size_t indentation = 0) const;
 
         /**
          * @brief serialize canonicalized json data.
@@ -1509,7 +1509,7 @@ namespace join
          * @brief serialize msgpack data.
          * @return 0 on success, -1 otherwise.
          */
-        int packWrite (std::ostream& document);
+        int packWrite (std::ostream& document) const;
 
         // friendship with equal operator.
         friend constexpr bool operator== (const Value& lhs, const Value& rhs);

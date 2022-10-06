@@ -148,15 +148,6 @@ HttpMessage& HttpMessage::operator= (HttpMessage&& other)
 //   CLASS     : HttpMessage
 //   METHOD    : version
 // =========================================================================
-void HttpMessage::version (const std::string& v)
-{
-    _version = v;
-}
-
-// =========================================================================
-//   CLASS     : HttpMessage
-//   METHOD    : version
-// =========================================================================
 const std::string& HttpMessage::version () const
 {
     return _version;
@@ -164,11 +155,20 @@ const std::string& HttpMessage::version () const
 
 // =========================================================================
 //   CLASS     : HttpMessage
-//   METHOD    : header
+//   METHOD    : version
 // =========================================================================
-void HttpMessage::header (const std::string& name, const std::string& val)
+void HttpMessage::version (const std::string& v)
 {
-    _headers[name] = val;
+    _version = v;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : hasHeader
+// =========================================================================
+bool HttpMessage::hasHeader (const std::string& name) const
+{
+    return _headers.find (name) != _headers.end ();
 }
 
 // =========================================================================
@@ -188,18 +188,48 @@ std::string HttpMessage::header (const std::string& name) const
 
 // =========================================================================
 //   CLASS     : HttpMessage
-//   METHOD    : hasHeader
+//   METHOD    : header
 // =========================================================================
-bool HttpMessage::hasHeader (const std::string& name) const
+void HttpMessage::header (const std::string& name, const std::string& val)
 {
-    return _headers.find (name) != _headers.end ();
+    _headers[name] = val;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : header
+// =========================================================================
+void HttpMessage::header (const HeaderMap::value_type& h)
+{
+    header (h.first, h.second);
 }
 
 // =========================================================================
 //   CLASS     : HttpMessage
 //   METHOD    : headers
 // =========================================================================
-std::string HttpMessage::headers () const
+const HttpMessage::HeaderMap& HttpMessage::headers () const
+{
+    return _headers;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : headers
+// =========================================================================
+void HttpMessage::headers (const HeaderMap& heads)
+{
+    for (auto const& head : heads)
+    {
+        header (head);
+    }
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : dumpHeaders
+// =========================================================================
+std::string HttpMessage::dumpHeaders () const
 {
     std::string out;
 
@@ -207,8 +237,72 @@ std::string HttpMessage::headers () const
     {
         out += head.first + ": " + head.second + "\r\n";
     }
+    out += "\r\n";
 
     return out;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : clear
+// =========================================================================
+void HttpMessage::clear ()
+{
+    _version = "HTTP/1.1";
+    _headers.clear ();
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : receive
+// =========================================================================
+void HttpMessage::receive (std::istream& in)
+{
+    bool firstLine = true;
+    std::string line;
+
+    while (getline (in, line, 4096))
+    {
+        if (firstLine)
+        {
+            if (parseFirstLine (line) == -1)
+            {
+                in.setstate (std::ios_base::failbit);
+                return;
+            }
+            firstLine = false;
+            continue;
+        }
+
+        if (line.empty ())
+        {
+            break;
+        }
+
+        if (parseHeader (line) == -1)
+        {
+            in.setstate (std::ios_base::failbit);
+            return;
+        }
+    }
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : parseHeader
+// =========================================================================
+int HttpMessage::parseHeader (const std::string& head)
+{
+    size_t pos = head.find (": ");
+    if (pos == std::string::npos)
+    {
+        join::lastError = make_error_code (HttpErrc::InvalidHeader);
+        return -1;
+    }
+
+    _headers[head.substr (0, pos)] = head.substr (pos + 2);
+
+    return 0;
 }
 
 // =========================================================================
