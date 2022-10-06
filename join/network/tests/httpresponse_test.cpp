@@ -85,15 +85,15 @@ TEST (HttpResponse, version)
 }
 
 /**
- * @brief Test header.
+ * @brief Test response.
  */
-TEST (HttpResponse, header)
+TEST (HttpResponse, response)
 {
     HttpResponse response;
-    ASSERT_EQ (response.header ("Connection"), "");
 
-    response.header ("Connection", "keep-alive");
-    ASSERT_EQ (response.header ("Connection"), "keep-alive");
+    response.response ("404", "Not Found");
+    ASSERT_EQ (response.status (), "404");
+    ASSERT_EQ (response.reason (), "Not Found");
 }
 
 /**
@@ -109,15 +109,59 @@ TEST (HttpResponse, hasHeader)
 }
 
 /**
- * @brief Test response.
+ * @brief Test header.
  */
-TEST (HttpResponse, response)
+TEST (HttpResponse, header)
+{
+    HttpResponse response;
+    ASSERT_EQ (response.header ("Connection"), "");
+
+    response.clear ();
+    response.header ("Connection", "keep-alive");
+    ASSERT_EQ (response.header ("Connection"), "keep-alive");
+
+    response.clear ();
+    response.header ({"Accept", "*/*"});
+    ASSERT_EQ (response.header ("Accept"), "*/*");
+
+    response.clear ();
+    response.headers ({{"Connection", "keep-alive"}, {"Accept", "*/*"}});
+    ASSERT_EQ (response.headers (), HttpResponse::HeaderMap ({{"Connection", "keep-alive"}, {"Accept", "*/*"}}));
+}
+
+/**
+ * @brief Test dumpHeaders.
+ */
+TEST (HttpResponse, dumpHeaders)
+{
+    HttpResponse response;
+    ASSERT_EQ (response.dumpHeaders (), "\r\n");
+
+    response.header ("Accept", "*/*");
+    response.header ("Connection", "keep-alive");
+    ASSERT_EQ (response.dumpHeaders (), "Accept: */*\r\nConnection: keep-alive\r\n\r\n");
+}
+
+/**
+ * @brief Test clear.
+ */
+TEST (HttpResponse, clear)
 {
     HttpResponse response;
 
-    response.response ("404", "Not Found");
-    ASSERT_EQ (response.status (), "404");
-    ASSERT_EQ (response.reason (), "Not Found");
+    response.response ("200", "OK");
+    response.version ("HTTP/2.0");
+    response.header ("Accept", "*/*");
+    ASSERT_EQ (response.status (), "200");
+    ASSERT_EQ (response.reason (), "OK");
+    ASSERT_EQ (response.version (), "HTTP/2.0");
+    ASSERT_EQ (response.header ("Accept"), "*/*");
+
+    response.clear ();
+    ASSERT_EQ (response.status (), "");
+    ASSERT_EQ (response.reason (), "");
+    ASSERT_EQ (response.version (), "HTTP/1.1");
+    ASSERT_EQ (response.header ("Accept"), "");
 }
 
 /**

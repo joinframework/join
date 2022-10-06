@@ -183,20 +183,20 @@ bool HttpClient::keepAlive () const
 
 // =========================================================================
 //   CLASS     : HttpClient
-//   METHOD    : keepAliveTimeout
-// =========================================================================
-seconds HttpClient::keepAliveTimeout () const
-{
-    return _keepTimeout;
-}
-
-// =========================================================================
-//   CLASS     : HttpClient
 //   METHOD    : keepAliveMax
 // =========================================================================
 int HttpClient::keepAliveMax () const
 {
     return _keepMax;
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
+//   METHOD    : keepAliveTimeout
+// =========================================================================
+seconds HttpClient::keepAliveTimeout () const
+{
+    return _keepTimeout;
 }
 
 // =========================================================================

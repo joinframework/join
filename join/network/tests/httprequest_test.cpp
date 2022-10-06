@@ -147,18 +147,6 @@ TEST (HttpRequest, version)
 }
 
 /**
- * @brief Test header.
- */
-TEST (HttpRequest, header)
-{
-    HttpRequest request;
-    ASSERT_EQ (request.header ("Connection"), "");
-
-    request.header ("Connection", "keep-alive");
-    ASSERT_EQ (request.header ("Connection"), "keep-alive");
-}
-
-/**
  * @brief Test hasHeader.
  */
 TEST (HttpRequest, hasHeader)
@@ -171,15 +159,37 @@ TEST (HttpRequest, hasHeader)
 }
 
 /**
- * @brief Test parameter.
+ * @brief Test header.
  */
-TEST (HttpRequest, parameter)
+TEST (HttpRequest, header)
 {
     HttpRequest request;
-    ASSERT_EQ (request.parameter ("val1"), "");
+    ASSERT_EQ (request.header ("Connection"), "");
 
-    request.parameter ("val1", "1");
-    ASSERT_EQ (request.parameter ("val1"), "1");
+    request.clear ();
+    request.header ("Connection", "keep-alive");
+    ASSERT_EQ (request.header ("Connection"), "keep-alive");
+
+    request.clear ();
+    request.header ({"Accept", "*/*"});
+    ASSERT_EQ (request.header ("Accept"), "*/*");
+
+    request.clear ();
+    request.headers ({{"Connection", "keep-alive"}, {"Accept", "*/*"}});
+    ASSERT_EQ (request.headers (), HttpRequest::HeaderMap ({{"Connection", "keep-alive"}, {"Accept", "*/*"}}));
+}
+
+/**
+ * @brief Test dumpHeaders.
+ */
+TEST (HttpRequest, dumpHeaders)
+{
+    HttpRequest request;
+    ASSERT_EQ (request.dumpHeaders (), "\r\n");
+
+    request.header ("Accept", "*/*");
+    request.header ("Connection", "keep-alive");
+    ASSERT_EQ (request.dumpHeaders (), "Accept: */*\r\nConnection: keep-alive\r\n\r\n");
 }
 
 /**
@@ -192,6 +202,40 @@ TEST (HttpRequest, hasParameter)
 
     request.parameter ("val1", "1");
     ASSERT_TRUE (request.hasParameter ("val1"));
+}
+
+/**
+ * @brief Test parameter.
+ */
+TEST (HttpRequest, parameter)
+{
+    HttpRequest request;
+    ASSERT_EQ (request.parameter ("val1"), "");
+
+    request.clear ();
+    request.parameter ("val1", "1");
+    ASSERT_EQ (request.parameter ("val1"), "1");
+
+    request.clear ();
+    request.parameter ({"val2", "2"});
+    ASSERT_EQ (request.parameter ("val2"), "2");
+
+    request.clear ();
+    request.parameters ({{"val3", "3"}, {"val4", "4"}});
+    ASSERT_EQ (request.parameters (), HttpRequest::ParameterMap ({{"val3", "3"}, {"val4", "4"}}));
+}
+
+/**
+ * @brief Test dumpParameters.
+ */
+TEST (HttpRequest, dumpParameters)
+{
+    HttpRequest request;
+    ASSERT_EQ (request.dumpParameters (), "");
+
+    request.parameter ("val1", "1");
+    request.parameter ("val2", "2");
+    ASSERT_EQ (request.dumpParameters (), "val1=1&val2=2");
 }
 
 /**
@@ -219,6 +263,32 @@ TEST (HttpRequest, urn)
     request.parameter ("val1", "1");
     request.parameter ("val2", "2");
     ASSERT_EQ (request.urn (), "/path?val1=1&val2=2");
+}
+
+/**
+ * @brief Test clear.
+ */
+TEST (HttpRequest, clear)
+{
+    HttpRequest request;
+
+    request.method (HttpMethod::Delete);
+    request.path ("/path");
+    request.version ("HTTP/2.0");
+    request.parameter ("val1", "1");
+    request.header ("Accept", "*/*");
+    ASSERT_EQ (request.method (), HttpMethod::Delete);
+    ASSERT_EQ (request.path (), "/path");
+    ASSERT_EQ (request.version (), "HTTP/2.0");
+    ASSERT_EQ (request.parameter ("val1"), "1");
+    ASSERT_EQ (request.header ("Accept"), "*/*");
+
+    request.clear ();
+    ASSERT_EQ (request.method (), HttpMethod::Get);
+    ASSERT_EQ (request.path (), "/");
+    ASSERT_EQ (request.version (), "HTTP/1.1");
+    ASSERT_EQ (request.parameter ("val1"), "");
+    ASSERT_EQ (request.header ("Accept"), "");
 }
 
 /**

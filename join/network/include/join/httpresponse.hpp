@@ -76,13 +76,6 @@ namespace join
         virtual ~HttpResponse () = default;
 
         /**
-         * @brief set HTTP response status.
-         * @param status HTTP status.
-         * @param reason HTTP reason.
-         */
-        void response (const std::string& status, const std::string& reason = {});
-
-        /**
          * @brief get HTTP response status.
          * @return HTTP response status.
          */
@@ -95,18 +88,31 @@ namespace join
         const std::string& reason () const;
 
         /**
+         * @brief set HTTP response status.
+         * @param status HTTP status.
+         * @param reason HTTP reason.
+         */
+        void response (const std::string& status, const std::string& reason = {});
+
+        /**
+         * @brief clear HTTP message.
+         */
+        virtual void clear () override;
+
+        /**
          * @brief send response to the given output stream.
          * @param out output stream.
          */
         virtual void send (std::ostream& out) const override;
 
-        /**
-         * @brief receive response from the given input stream.
-         * @param in input stream.
-         */
-        virtual void receive (std::istream& in) override;
-
     protected:
+        /**
+         * @brief parse first line.
+         * @param line first line to parse.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int parseFirstLine (const std::string& line) override;
+
         /// HTTP status.
         std::string _status;
 
