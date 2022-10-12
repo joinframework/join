@@ -1107,6 +1107,46 @@ namespace join
         }
 
         /**
+         * @brief parse an infinity value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int readInf (ViewType& document, bool negative)
+        {
+            if (JOIN_SAX_UNLIKELY (!(document.getIfNoCase ('n') && document.getIfNoCase ('f'))))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            if (JOIN_SAX_UNLIKELY (document.getIfNoCase ('i') && !(document.getIfNoCase ('n') && document.getIfNoCase ('i') && document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            return setDouble (negative ? -std::numeric_limits <double>::infinity () : std::numeric_limits <double>::infinity ());
+        }
+
+        /**
+         * @brief parse a nan value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int readNan (ViewType& document, bool negative)
+        {
+            if (JOIN_SAX_UNLIKELY (!(document.getIfNoCase ('a') && document.getIfNoCase ('n'))))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            return setDouble (negative ? -std::numeric_limits <double>::quiet_NaN () : std::numeric_limits <double>::quiet_NaN ());
+        }
+
+        /**
          * @brief convert double using fast path.
          * @param significand significand digits.
          * @param exponent exponent.
@@ -1179,8 +1219,15 @@ namespace join
         template <typename ViewType>
         int readNumber (ViewType& document)
         {
-            size_t beg = document.tell ();
-            bool negative = document.getIf ('-');
+            std::string number;
+            number.reserve (16);
+
+            bool negative = false;
+            if (document.peek () == '-')
+            {
+                number.push_back (document.get ());
+                negative = true;
+            }
 
             uint64_t max64 = std::numeric_limits <uint64_t>::max ();
             if (negative)
@@ -1192,8 +1239,10 @@ namespace join
             bool isDouble = false;
             uint64_t u = 0;
 
-            if (JOIN_SAX_UNLIKELY (document.getIf ('0')))
+            if (JOIN_SAX_UNLIKELY (document.peek () == '0'))
             {
+                number.push_back (document.get ());
+
                 if (JOIN_SAX_UNLIKELY (isDigit (document.peek ())))
                 {
                     join::lastError = make_error_code (SaxErrc::InvalidValue);
@@ -1202,7 +1251,8 @@ namespace join
             }
             else if (JOIN_SAX_LIKELY (isDigit (document.peek ())))
             {
-                u = document.get () - '0';
+                number.push_back (document.get ());
+                u = number.back () - '0';
                 ++digits;
 
                 while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
@@ -1215,23 +1265,18 @@ namespace join
                         break;
                     }
 
-                    u = (u * 10) + (document.get () - '0');
+                    number.push_back (document.get ());
+                    u = (u * 10) + (number.back () - '0');
                     ++digits;
                 }
             }
-            else if (JOIN_SAX_LIKELY (document.getIfNoCase ('i') && document.getIfNoCase ('n') && document.getIfNoCase ('f')))
+            else if (JOIN_SAX_LIKELY (document.getIfNoCase ('i')))
             {
-                if (JOIN_SAX_UNLIKELY (document.getIfNoCase ('i') && !(document.getIfNoCase ('n') && document.getIfNoCase ('i') && document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
-                {
-                    join::lastError = make_error_code (SaxErrc::InvalidValue);
-                    return -1;
-                }
-
-                return setDouble (negative ? -std::numeric_limits <double>::infinity () : std::numeric_limits <double>::infinity ());
+                return readInf (document, negative);
             }
-            else if (JOIN_SAX_LIKELY (document.getIfNoCase ('n') && document.getIfNoCase ('a') && document.getIfNoCase ('N')))
+            else if (JOIN_SAX_LIKELY (document.getIfNoCase ('n')))
             {
-                return setDouble (negative ? -std::numeric_limits <double>::quiet_NaN () : std::numeric_limits <double>::quiet_NaN ());
+                return readNan (document, negative);
             }
             else
             {
@@ -1243,20 +1288,22 @@ namespace join
             {
                 while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
                 {
-                    u = (u * 10) + (document.get () - '0');
+                    number.push_back (document.get ());
+                    u = (u * 10) + (number.back () - '0');
                     ++digits;
                 }
             }
 
             int64_t frac = 0;
-
-            if (document.getIf ('.'))
+            if (isDot (document.peek ()))
             {
+                number.push_back (document.get ());
                 isDouble = true;
 
                 while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
                 {
-                    u = (u * 10) + (document.get () - '0');
+                    number.push_back (document.get ());
+                    u = (u * 10) + (number.back () - '0');
                     if (JOIN_SAX_LIKELY (u || digits))
                     {
                         ++digits;
@@ -1266,24 +1313,27 @@ namespace join
             }
 
             int64_t exponent = 0;
-
-            if (document.getIf ('e') || document.getIf ('E'))
+            if (isExponent (document.peek ()))
             {
+                number.push_back (document.get ());
                 isDouble = true;
-                bool negExp = false;
 
+                bool negExp = false;
                 if (isSign (document.peek ()))
                 {
-                    negExp = (document.get () == '-');
+                    number.push_back (document.get ());
+                    negExp = (number.back () == '-');
                 }
 
                 if (JOIN_SAX_LIKELY (isDigit (document.peek ())))
                 {
-                    exponent = (document.get () - '0');
+                    number.push_back (document.get ());
+                    exponent = (number.back () - '0');
 
                     while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
                     {
-                        int digit = document.get () - '0';
+                        number.push_back (document.get ());
+                        int digit = number.back () - '0';
 
                         if (JOIN_SAX_LIKELY (exponent <= ((std::numeric_limits <int>::max () - digit) / 10)))
                         {
@@ -1314,14 +1364,6 @@ namespace join
                         return setDouble (negative ? -d : d);
                     }
                 }
-
-                size_t len = document.tell () - beg;
-
-                std::string number;
-                number.resize (len);
-
-                document.rewind (len);
-                document.read (&number[0], len);
 
                 if (strtodSlow (number, d))
                 {
@@ -1573,12 +1615,13 @@ namespace join
          * @brief parse a string value.
          * @param document document to parse.
          * @param isKey indicate whether the string to parse is a key or not.
-         * @param output parse output string.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        int readStringSlow (ViewType& document, bool isKey, std::string& output)
+        int readString (ViewType& document, bool isKey = false)
         {
+            std::string output;
+
             for (;;)
             {
                 if (JOIN_SAX_UNLIKELY (document.getIf ('"')))
@@ -1616,48 +1659,6 @@ namespace join
             }
 
             return isKey ? setKey (output) : setString (output);
-        }
-
-        /**
-         * @brief parse a string value.
-         * @param document document to parse.
-         * @param isKey indicate whether the string to parse is a key or not.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename ViewType>
-        int readString (ViewType& document, bool isKey = false)
-        {
-            size_t beg = document.tell ();
-
-            for (;;)
-            {
-                if (!isPlainText (static_cast <uint8_t> (document.peek ())))
-                {
-                    if (JOIN_SAX_UNLIKELY (document.peek () == std::char_traits <char>::eof ()))
-                    {
-                        break;
-                    }
-
-                    std::string output;
-                    size_t len = document.tell () - beg;
-
-                    output.resize (len);
-                    document.rewind (len);
-                    document.read (&output[0], len);
-
-                    if (JOIN_SAX_LIKELY (document.getIf ('"')))
-                    {
-                        return isKey ? setKey (output) : setString (output);
-                    }
-
-                    return readStringSlow (document, isKey, output);
-                }
-
-                document.get ();
-            }
-
-            join::lastError = make_error_code (JsonErrc::MissingQuote);
-            return false;
         }
 
         /**
@@ -1906,6 +1907,26 @@ namespace join
         constexpr bool isSign (char c)
         {
             return (c == '+') || (c == '-');
+        }
+
+        /**
+         * @brief check if exponent.
+         * @param c character to check.
+         * @return true if exponent, false otherwise.
+         */
+        constexpr bool isExponent (char c)
+        {
+            return (c == 'e') || (c == 'E');
+        }
+
+        /**
+         * @brief check if dot.
+         * @param c character to check.
+         * @return true if dot, false otherwise.
+         */
+        constexpr bool isDot (char c)
+        {
+            return (c == '.');
         }
     };
 }
