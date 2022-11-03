@@ -296,6 +296,11 @@ void HttpRequest::clear ()
 // =========================================================================
 void HttpRequest::send (std::ostream& out) const
 {
+#ifdef DEBUG
+    std::cout << methodString () << " " << urn () << " " << version () << "\r\n";
+    std::cout << dumpHeaders ();
+#endif
+
     out << methodString () << " " << urn () << " " << version () << "\r\n";
     out << dumpHeaders ();
 }

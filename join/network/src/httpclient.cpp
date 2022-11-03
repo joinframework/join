@@ -67,7 +67,8 @@ HttpClient::HttpClient (HttpClient&& other)
   _encrypt (other._encrypt),
   _keep (other._keep),
   _keepTimeout (other._keepTimeout),
-  _keepMax (other._keepMax)
+  _keepMax (other._keepMax),
+  _encoding (std::move (other._encoding))
 {
     other._port = 443;
     other._encrypt = true;
@@ -90,6 +91,7 @@ HttpClient& HttpClient::operator= (HttpClient&& other)
     _keep = other._keep;
     _keepTimeout = other._keepTimeout;
     _keepMax = other._keepMax;
+    _encoding = std::move (other._encoding);
 
     other._port = 443;
     other._encrypt = true;
@@ -210,6 +212,15 @@ seconds HttpClient::keepAliveTimeout () const
 
 // =========================================================================
 //   CLASS     : HttpClient
+//   METHOD    : encoding
+// =========================================================================
+const std::string& HttpClient::encoding () const
+{
+    return _encoding;
+}
+
+// =========================================================================
+//   CLASS     : HttpClient
 //   METHOD    : send
 // =========================================================================
 void HttpClient::send (const HttpRequest& request)
@@ -252,6 +263,10 @@ void HttpClient::send (const HttpRequest& request)
     }
 
     tmp.send (*this);
+    if (fail ())
+    {
+        return;
+    }
 
     flush ();
 }
@@ -291,6 +306,7 @@ void HttpClient::receive (HttpResponse& response)
         _keepMax = 0;
     }
 
+    _encoding = response.header ("Transfer-Encoding");
     _timestamp = steady_clock::now ();
 }
 

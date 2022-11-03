@@ -123,6 +123,11 @@ void HttpResponse::clear ()
 // =========================================================================
 void HttpResponse::send (std::ostream& out) const
 {
+#ifdef DEBUG
+    std::cout << version () << " " << status () << " " << reason () << "\r\n";
+    std::cout << dumpHeaders ();
+#endif
+
     out << version () << " " << status () << " " << reason () << "\r\n";
     out << dumpHeaders ();
 }

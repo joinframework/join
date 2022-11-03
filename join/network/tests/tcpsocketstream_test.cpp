@@ -286,7 +286,7 @@ TEST_F (TcpSocketStream, flush)
 /**
  * @brief Test extract method.
  */
-TEST_F (TcpSocketStream, extract)
+TEST_F (TcpSocketStream, DISABLED_extract)
 {
     int test;
     Tcp::Stream tcpStream;

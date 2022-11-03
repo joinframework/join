@@ -207,6 +207,14 @@ namespace join
          */
         virtual void receive (std::istream& in);
 
+        /**
+         * @brief read HTTP line (delimiter "\r\n").
+         * @param line line read.
+         * @param max max characters to read.
+         * @return input stream.
+         */
+        static std::istream& getline (std::istream& in, std::string& line, uint32_t max);
+
     protected:
         /**
          * @brief parse first line.
@@ -221,14 +229,6 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         virtual int parseHeader (const std::string& head);
-
-        /**
-         * @brief read HTTP line (delimiter "\r\n").
-         * @param line line read.
-         * @param max max characters to read.
-         * @return .
-         */
-        std::istream& getline (std::istream& in, std::string& line, uint32_t max);
 
         /// HTTP version.
         std::string _version;

@@ -263,6 +263,10 @@ void HttpMessage::receive (std::istream& in)
 
     while (getline (in, line, 4096))
     {
+    #ifdef DEBUG
+        std::cout << line << "\r\n";
+    #endif
+
         if (firstLine)
         {
             if (parseFirstLine (line) == -1)
@@ -285,24 +289,6 @@ void HttpMessage::receive (std::istream& in)
             return;
         }
     }
-}
-
-// =========================================================================
-//   CLASS     : HttpMessage
-//   METHOD    : parseHeader
-// =========================================================================
-int HttpMessage::parseHeader (const std::string& head)
-{
-    size_t pos = head.find (": ");
-    if (pos == std::string::npos)
-    {
-        join::lastError = make_error_code (HttpErrc::InvalidHeader);
-        return -1;
-    }
-
-    _headers[head.substr (0, pos)] = head.substr (pos + 2);
-
-    return 0;
 }
 
 // =========================================================================
@@ -335,7 +321,26 @@ std::istream& HttpMessage::getline (std::istream& in, std::string& line, uint32_
         line.push_back (ch);
     }
 
-    in.setstate (std::ios_base::failbit);
     join::lastError = make_error_code (Errc::MessageTooLong);
+    in.setstate (std::ios_base::failbit);
+
     return in;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : parseHeader
+// =========================================================================
+int HttpMessage::parseHeader (const std::string& head)
+{
+    size_t pos = head.find (": ");
+    if (pos == std::string::npos)
+    {
+        join::lastError = make_error_code (HttpErrc::InvalidHeader);
+        return -1;
+    }
+
+    _headers[head.substr (0, pos)] = head.substr (pos + 2);
+
+    return 0;
 }

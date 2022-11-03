@@ -27,6 +27,8 @@
 
 // C++.
 #include <stdexcept>
+#include <iostream>
+#include <iomanip>
 #include <chrono>
 #include <random>
 #include <limits>
@@ -182,12 +184,59 @@ namespace join
     }
 
     /**
+     * @brief dump data to standard output stream.
+     * @param data data to dump.
+     * @param size number of data bytes.
+     */
+    __inline__ void dump (const void* data, unsigned long size)
+    {
+        unsigned char *buf = (unsigned char *) data;
+
+        for (int i = 0; i < int (size); i += 16)
+        {
+            std::cout << std::hex << std::uppercase << std::setw (8);
+            std::cout << std::setfill ('0') << i << std::dec << ":";
+
+            for (int j = 0; j < 16; ++j)
+            {
+                if (j % 4 == 0)
+                    std::cout << std::dec << " ";
+
+                if (i + j < int (size))
+                {
+                    std::cout << std::hex << std::uppercase << std::setw (2);
+                    std::cout << std::setfill ('0') << static_cast <int> (buf[i + j]);
+                }
+                else
+                    std::cout << std::dec << "  ";
+            }
+
+            std::cout << std::dec << " ";
+
+            for (int j = 0; j < 16; ++j)
+            {
+                if (i + j < int (size))
+                {
+                    if (isprint (buf[i + j]))
+                        std::cout << buf[i + j];
+                    else
+                        std::cout << ".";
+                }
+            }
+
+            std::cout << std::endl;
+        }
+
+        std::cout << std::endl;
+    }
+
+    /**
      * @brief create a random number.
      * @return random number.
      */
     template <typename Type>
     std::enable_if_t <std::numeric_limits <Type>::is_integer, Type>
-    static randomize ()
+    randomize ()
     {
         std::random_device rnd;
         std::uniform_int_distribution <Type> dist {};
@@ -201,7 +250,7 @@ namespace join
      * @return time elapsed in milliseconds.
      */
     template <class Func, class... Args>
-    static std::chrono::milliseconds benchmark (Func&& func, Args&&... args)
+    std::chrono::milliseconds benchmark (Func&& func, Args&&... args)
     {
         auto beg = std::chrono::high_resolution_clock::now ();
         func (std::forward <Args> (args)...);

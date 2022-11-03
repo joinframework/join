@@ -989,6 +989,28 @@ namespace join
             return deserialize <> (document);
         }
 
+        /**
+         * @brief Parse a document.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode = JsonReadMode::None>
+        int deserialize (HttpClient& document)
+        {
+            HttpStreamView in (document);
+            return read <ReadMode> (in);
+        }
+
+        /**
+         * @brief Parse a document.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (HttpClient& document)
+        {
+            return deserialize <> (document);
+        }
+
     protected:
         /**
          * @brief parse a document.

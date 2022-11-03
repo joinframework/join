@@ -151,6 +151,12 @@ namespace join
         int keepAliveMax () const;
 
         /**
+         * @brief get encoding.
+         * @return encoding.
+         */
+        const std::string& encoding () const;
+
+        /**
          * @brief send HTTP request.
          * @param request HTTP request to send.
          */
@@ -205,8 +211,11 @@ namespace join
         /// HTTP keep alive timeout.
         std::chrono::seconds _keepTimeout;
 
-        // HTTP keep alive max.
+        /// HTTP keep alive max.
         int _keepMax = -1;
+
+        /// HTTP transfert encoding.
+        std::string _encoding;
     };
 
     /**
