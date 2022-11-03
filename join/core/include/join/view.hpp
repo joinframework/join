@@ -410,7 +410,7 @@ namespace join
                 chunksize = strtol (line.c_str (), &end, 16);
             }
 
-            return (*end == '\0');
+            return (end && (*end == '\0'));
         }
 
         /**
