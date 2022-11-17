@@ -1223,14 +1223,8 @@ namespace join
         {
             char* end = nullptr;
             static locale_t locale = newlocale (LC_ALL_MASK, "C", nullptr);
-
             d = strtod_l (num.c_str (), &end, locale);
-            if (end != &num[num.size ()])
-            {
-                return false;
-            }
-
-            return true;
+            return (end && (*end == '\0'));
         }
 
         /**
@@ -1783,6 +1777,11 @@ namespace join
                 if (JOIN_SAX_UNLIKELY (document.get () != ':'))
                 {
                     join::lastError = make_error_code (JsonErrc::MissingColon);
+                    return -1;
+                }
+
+                if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                {
                     return -1;
                 }
 
