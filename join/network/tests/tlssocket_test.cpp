@@ -96,7 +96,9 @@ public:
             certFile << "-----END CERTIFICATE-----" << std::endl;
             certFile.close ();
         }
-        std::system (std::string ("/usr/bin/c_rehash " + _certPath).c_str ());
+
+        [[maybe_unused]] int result;
+        result = std::system (std::string ("/usr/bin/c_rehash " + _certPath).c_str ());
 
         std::ofstream keyFile (_key);
         if (keyFile.is_open ())
