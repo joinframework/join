@@ -8,12 +8,9 @@ on:
   schedule:
     - cron: "51 9 * * 5"
 
-permissions:
-  contents: read
-
 jobs:
   codacy-security-scan:
-    name: Security Scan
+    name: Analyze
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -24,10 +21,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Run Codacy Analysis CLI
+      - name: Perform Codacy Analysis
         uses: codacy/codacy-analysis-cli-action@v4.2.0
         with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
           verbose: true
           output: results.sarif
           format: sarif
