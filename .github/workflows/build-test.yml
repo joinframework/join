@@ -17,7 +17,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3.0.2
 
-    - name: Configure CMake
+    - name: Configure
       run: cmake -G "Unix Makefiles" -B /__w/join/join/build -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
 
     - name: Build
