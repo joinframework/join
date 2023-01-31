@@ -809,7 +809,7 @@ namespace join
      */
     enum JsonReadMode
     {
-        None,                          /**< no read mode set. */
+        None                = 0,       /**< no read mode set. */
         ParseComments       = 1L << 0, /**< parse comments. */
         ValidateEncoding    = 1L << 1, /**< validate encoding. */
         StopParsingOnDone   = 1L << 2, /**< stop parsing on done. */

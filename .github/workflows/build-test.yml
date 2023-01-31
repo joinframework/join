@@ -14,10 +14,10 @@ jobs:
       options: --privileged
 
     steps:
-    - name: Fetch
+    - name: Checkout
       uses: actions/checkout@v3.0.2
 
-    - name: Configure CMake
+    - name: Configure
       run: cmake -G "Unix Makefiles" -B /__w/join/join/build -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
 
     - name: Build
@@ -38,7 +38,7 @@ jobs:
         github-token: ${{secrets.GITHUB_TOKEN}}
         path-to-lcov: /__w/join/join/lcov.info
 
-    - name: Deploy coverage report to codecove
+    - name: Deploy coverage report to codecov
       uses: codecov/codecov-action@v3.1.1
       with:
         fail_ci_if_error: true
