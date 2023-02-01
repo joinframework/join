@@ -27,7 +27,7 @@ jobs:
       run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C Debug
 
     - name: Generate coverage report
-      run: lcov --directory . --capture --output-file lcov.info
+      run: lcov --directory ${{github.workspace}} --capture --output-file lcov.info
 
     - name: Cleanup coverage report
       run: lcov --remove lcov.info '/usr/include/*' '${{github.workspace}}/build/*' '${{github.workspace}}/join/*/tests/*' --output-file lcov.info
