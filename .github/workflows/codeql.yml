@@ -40,8 +40,8 @@ jobs:
           export PATH=${DEPS_DIR}/cmake/bin:${PATH} && echo "PATH=$PATH" >> $GITHUB_ENV
           cd -
           cmake --version
-          mkdir -p $GITHUB_WORKSPACE/_lgtm_build_dir
-          cd $GITHUB_WORKSPACE/_lgtm_build_dir
+          mkdir -p ${GITHUB_WORKSPACE}/_lgtm_build_dir
+          cd ${GITHUB_WORKSPACE}/_lgtm_build_dir
           cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_TESTS=ON ..
           cmake --build . --config Debug
           cd -
@@ -49,7 +49,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
         with:
-          languages: ${{ matrix.language }}
+          languages: ${{matrix.language}}
           queries: +security-and-quality
 
       - name: Autobuild
