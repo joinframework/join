@@ -463,7 +463,7 @@ std::string& HttpRequest::normalize (std::string& path)
         }
         else
         {
-            size_t pos = path.find ("/", (path.front() == '/') ? 1 : 0);
+            pos = path.find ("/", (path.front() == '/') ? 1 : 0);
             output.append (path.substr (0, pos));
             path.erase (0, pos);
         }
