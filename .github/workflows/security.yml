@@ -14,7 +14,6 @@ jobs:
 
     container:
       image: joinframework/join-ci:latest
-      options: --privileged
 
     permissions:
       actions: read
@@ -51,14 +50,14 @@ jobs:
         languages: ${{matrix.language}}
         queries: +security-and-quality
 
-    #- name: Build
-    #  uses: github/codeql-action/autobuild@v2
-
     - name: Configure
       run: cmake -B build -G "Unix Makefiles" -DJOIN_ENABLE_TESTS=ON
 
     - name: Build
       run: cmake --build build --config Debug
+
+    #- name: Build
+    #  uses: github/codeql-action/autobuild@v2
 
     - name: Perform codeql analysis
       uses: github/codeql-action/analyze@v2
