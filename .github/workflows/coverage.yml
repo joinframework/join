@@ -1,4 +1,4 @@
-name: test
+name: coverage
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  coverage:
+  test:
     runs-on: ubuntu-22.04
     container:
       image: joinframework/join-ci:latest
