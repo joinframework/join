@@ -1,4 +1,4 @@
-name: scan
+name: security
 
 on:
   push:
@@ -9,8 +9,9 @@ on:
     - cron: "51 9 * * 5"
 
 jobs:
-  analyze:
+  scan:
     runs-on: ubuntu-22.04
+
     permissions:
       actions: read
       contents: read
