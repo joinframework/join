@@ -1,4 +1,4 @@
-name: build-test
+name: coverage
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-22.04
     container:
       image: joinframework/join-ci:latest
@@ -30,24 +30,24 @@ jobs:
       run: lcov --directory . --capture --output-file lcov.info
 
     - name: cleanup coverage report
-      run: lcov --remove lcov.info "*/build/*" "*/join/*/tests/*" "/usr/include/*" --output-file lcov_clean.info
+      run: lcov --remove lcov.info "*/build/*" "*/tests/*" "/usr/include/*" --output-file coverage.info
 
     - name: deploy coverage report to coveralls
       uses: coverallsapp/github-action@1.1.3
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
-        path-to-lcov: lcov_clean.info
+        path-to-lcov: coverage.info
 
     - name: deploy coverage report to codecov
       uses: codecov/codecov-action@v3.1.1
       with:
         fail_ci_if_error: true
         token: ${{secrets.CODECOV_TOKEN}}
-        file: lcov_clean.info
+        file: coverage.info
         flags: unittests
 
     - name: deploy coverage report to codacy
       uses: codacy/codacy-coverage-reporter-action@v1.3.0
       with:
         project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
-        coverage-reports: lcov_clean.info
+        coverage-reports: coverage.info
