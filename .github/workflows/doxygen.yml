@@ -1,0 +1,29 @@
+name: doxygen
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  documentation:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3.0.2
+
+    - name: Run doxygen
+      uses: mattnotmitt/doxygen-action@v1.9.5
+      with:
+        doxyfile-path: ./doxyfile
+        working-directory: .
+
+    - name: Upload documentation to github pages
+      uses: peaceiris/actions-gh-pages@v3.9.2
+      with:
+        github_token: ${{secrets.GITHUB_TOKEN}}
+        publish_dir: ./doc/html/
+        enable_jekyll: false
+        allow_empty_commit: false
+        force_orphan: true
+        publish_branch: gh-pages
