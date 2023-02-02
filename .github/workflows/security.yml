@@ -51,13 +51,10 @@ jobs:
         queries: +security-and-quality
 
     - name: Configure
-      run: cmake -B build -G "Unix Makefiles" -DJOIN_ENABLE_TESTS=ON
+      run: cmake -B _lgtm_build_dir -G "Unix Makefiles" -DJOIN_ENABLE_TESTS=ON
 
     - name: Build
-      run: cmake --build build --config Debug
-
-    #- name: Build
-    #  uses: github/codeql-action/autobuild@v2
+      run: cmake --build _lgtm_build_dir --config Debug
 
     - name: Perform codeql analysis
       uses: github/codeql-action/analyze@v2
