@@ -32,13 +32,13 @@ jobs:
     - name: cleanup coverage report
       run: lcov --remove lcov.info "*/build/*" "*/tests/*" "/usr/include/*" --output-file coverage.info
 
-    - name: deploy coverage report to coveralls
+    - name: upload coverage report to coveralls
       uses: coverallsapp/github-action@1.1.3
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         path-to-lcov: coverage.info
 
-    - name: deploy coverage report to codecov
+    - name: upload coverage report to codecov
       uses: codecov/codecov-action@v3.1.1
       with:
         fail_ci_if_error: true
@@ -46,7 +46,7 @@ jobs:
         file: coverage.info
         flags: unittests
 
-    - name: deploy coverage report to codacy
+    - name: upload coverage report to codacy
       uses: codacy/codacy-coverage-reporter-action@v1.3.0
       with:
         project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
