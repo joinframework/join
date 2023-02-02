@@ -17,11 +17,6 @@ jobs:
       contents: read
       security-events: write
 
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ cpp ]
-
     steps:
     - name: Checkout
       uses: actions/checkout@v3.0.2
@@ -43,9 +38,6 @@ jobs:
 
     - name: Initialize codeql
       uses: github/codeql-action/init@v2
-      with:
-        languages: ${{matrix.language}}
-        queries: +security-and-quality
 
     - name: Configure
       run: cmake -B _lgtm_build_dir -G "Unix Makefiles" -DJOIN_ENABLE_TESTS=ON
@@ -55,5 +47,3 @@ jobs:
 
     - name: Perform codeql analysis
       uses: github/codeql-action/analyze@v2
-      with:
-        category: "/language:${{ matrix.language }}"
