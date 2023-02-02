@@ -22,18 +22,15 @@ jobs:
         language: [ cpp ]
 
     steps:
-    - name: install third party packages
+    - name: Install third party packages
       run: |
         sudo apt-get update
-        sudo apt-get install --yes wget libssl-dev
+        sudo apt-get install --yes libssl-dev
 
-    - name: checkout
+    - name: Checkout
       uses: actions/checkout@v3.0.2
 
-    - name: configure
-      run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_TESTS=ON
-
-    - name: perform codacy analysis
+    - name: Perform codacy analysis
       uses: codacy/codacy-analysis-cli-action@v4.2.0
       with:
         project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
@@ -43,7 +40,21 @@ jobs:
         gh-code-scanning-compat: true
         max-allowed-issues: 2147483647
 
-    - name: upload codacy scan report to github
+    - name: Upload codacy scan report to github
       uses: github/codeql-action/upload-sarif@v2
       with:
         sarif_file: results.sarif
+
+    - name: Initialize codeql
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{matrix.language}}
+        queries: +security-and-quality
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+
+    - name: Perform codeql analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{ matrix.language }}"
