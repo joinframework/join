@@ -1,4 +1,4 @@
-name: documentation
+name: Doxygen
 
 on:
   push:
@@ -6,18 +6,19 @@ on:
 
 jobs:
   build-documentation:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v3.0.2
+    - name: Checkout
+      uses: actions/checkout@v3.0.2
 
-    - name: Doxygen action
+    - name: Run doxygen
       uses: mattnotmitt/doxygen-action@v1.9.5
       with:
         doxyfile-path: ./doxyfile
         working-directory: .
 
-    - name: Github pages deployment
+    - name: Upload documentation to github pages
       uses: peaceiris/actions-gh-pages@v3.9.2
       with:
         github_token: ${{secrets.GITHUB_TOKEN}}
