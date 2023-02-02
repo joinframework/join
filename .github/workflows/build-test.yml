@@ -20,40 +20,42 @@ jobs:
     - name: Configure
       run: |
         echo "${GITHUB_WORKSPACE}"
+        echo "${{env.GITHUB_WORKSPACE}}"
         echo "${{github.workspace}}"
         echo "${RUNNER_WORKSPACE}"
+        echo "${{env.RUNNER_WORKSPACE}}"
         echo "${{runner.workspace}}"
         pwd
-        cmake -G "Unix Makefiles" -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
+        cmake -G "Unix Makefiles" -B $GITHUB_WORKSPACE/build -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
 
     - name: Build
-      run: cmake --build ${{github.workspace}}/build --config Debug
+      run: cmake --build $GITHUB_WORKSPACE/build --config Debug
 
     - name: Test
-      run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C Debug
+      run: ctest --test-dir $GITHUB_WORKSPACE/build --output-on-failure -C Debug
 
     - name: Generate coverage report
-      run: lcov --directory ${{github.workspace}} --capture --output-file lcov.info
+      run: lcov --directory $GITHUB_WORKSPACE --capture --output-file lcov.info
 
     - name: Cleanup coverage report
-      run: lcov --remove lcov.info '/usr/include/*' '${{github.workspace}}/build/*' '${{github.workspace}}/join/*/tests/*' --output-file lcov.info
+      run: lcov --remove lcov.info '/usr/include/*' '$GITHUB_WORKSPACE/build/*' '$GITHUB_WORKSPACE/join/*/tests/*' --output-file lcov.info
 
     - name: Deploy coverage report to coveralls
       uses: coverallsapp/github-action@1.1.3
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
-        path-to-lcov: ${{github.workspace}}/lcov.info
+        path-to-lcov: $GITHUB_WORKSPACE/lcov.info
 
     - name: Deploy coverage report to codecov
       uses: codecov/codecov-action@v3.1.1
       with:
         fail_ci_if_error: true
         token: ${{secrets.CODECOV_TOKEN}}
-        file: ${{github.workspace}}/lcov.info
+        file: $GITHUB_WORKSPACE/lcov.info
         flags: unittests
 
     - name: Deploy coverage report to codacy
       uses: codacy/codacy-coverage-reporter-action@v1.3.0
       with:
         project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
-        coverage-reports: ${{github.workspace}}/lcov.info
+        coverage-reports: $GITHUB_WORKSPACE/lcov.info
