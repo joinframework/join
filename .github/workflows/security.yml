@@ -29,20 +29,20 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3.0.2
 
-    #- name: Perform codacy analysis
-    #  uses: codacy/codacy-analysis-cli-action@v4.2.0
-    #  with:
-    #    project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
-    #    verbose: true
-    #    output: results.sarif
-    #    format: sarif
-    #    gh-code-scanning-compat: true
-    #    max-allowed-issues: 2147483647
+    - name: Perform codacy analysis
+      uses: codacy/codacy-analysis-cli-action@v4.2.0
+      with:
+        project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
+        verbose: true
+        output: results.sarif
+        format: sarif
+        gh-code-scanning-compat: true
+        max-allowed-issues: 2147483647
 
-    #- name: Upload codacy scan report to github
-    #  uses: github/codeql-action/upload-sarif@v2
-    #  with:
-    #    sarif_file: results.sarif
+    - name: Upload codacy scan report to github
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: results.sarif
 
     - name: Initialize codeql
       uses: github/codeql-action/init@v2
