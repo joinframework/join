@@ -23,14 +23,14 @@ jobs:
     - name: Build
       run: cmake --build build --config Debug
 
-    - name: Test
+    - name: Run Tests
       run: ctest --test-dir build --output-on-failure -C Debug
 
     - name: Generate coverage report
       run: lcov --directory . --capture --output-file lcov.info
 
     - name: Cleanup coverage report
-      run: lcov --remove lcov.info 'build/*' 'join/*/tests/*' '/usr/include/*' --output-file lcov.info
+      run: lcov --remove lcov.info './build/*' './join/*/tests/*' '/usr/include/*' --output-file lcov.info
 
     - name: Deploy coverage report to coveralls
       uses: coverallsapp/github-action@1.1.3
