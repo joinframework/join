@@ -19,14 +19,8 @@ jobs:
 
     - name: Configure
       run: |
-        echo "${GITHUB_WORKSPACE}"
-        echo "${{env.GITHUB_WORKSPACE}}"
-        echo "${{github.workspace}}"
-        echo "${RUNNER_WORKSPACE}"
-        echo "${{env.RUNNER_WORKSPACE}}"
-        echo "${{runner.workspace}}"
-        pwd
-        cmake -G "Unix Makefiles" -B $GITHUB_WORKSPACE/build -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
+        cmake -G "Unix Makefiles" -B build -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
+        ls -l
 
     - name: Build
       run: cmake --build $GITHUB_WORKSPACE/build --config Debug
