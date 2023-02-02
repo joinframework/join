@@ -9,6 +9,7 @@ on:
 jobs:
   coverage:
     runs-on: ubuntu-22.04
+
     container:
       image: joinframework/join-ci:latest
       options: --privileged
