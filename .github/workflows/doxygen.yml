@@ -1,11 +1,11 @@
-name: Doxygen
+name: doxygen
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build-documentation:
+  documentation:
     runs-on: ubuntu-22.04
 
     steps:
