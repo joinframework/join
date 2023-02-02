@@ -1,4 +1,4 @@
-name: code
+name: Coverage
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  coverage:
+  scan:
     runs-on: ubuntu-22.04
 
     container:

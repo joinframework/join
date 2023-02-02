@@ -1,7 +1,7 @@
 # join
 
-[![Build Status](https://github.com/joinframework/join/workflows/code/badge.svg)](https://github.com/joinframework/join/actions?query=workflow%3Acode)
-[![CodeQL](https://github.com/joinframework/join/workflows/security/badge.svg)](https://github.com/joinframework/join/security/code-scanning)
+[![Build Status](https://github.com/joinframework/join/workflows/Coverage/badge.svg)](https://github.com/joinframework/join/actions?query=workflow%3ACoverage)
+[![CodeQL](https://github.com/joinframework/join/workflows/CodeQL/badge.svg)](https://github.com/joinframework/join/security/code-scanning)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/c2eda80c815e43748d10b9bde0be7087)](https://www.codacy.com/gh/joinframework/join/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=joinframework/join&amp;utm_campaign=Badge_Grade)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/c2eda80c815e43748d10b9bde0be7087)](https://www.codacy.com/gh/joinframework/join/dashboard?utm_source=github.com&utm_medium=referral&utm_content=joinframework/join&utm_campaign=Badge_Coverage)
 [![Coverage Status](https://coveralls.io/repos/github/joinframework/join/badge.svg?branch=main)](https://coveralls.io/github/joinframework/join?branch=main)
