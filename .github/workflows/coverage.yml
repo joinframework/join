@@ -43,8 +43,8 @@ jobs:
       with:
         fail_ci_if_error: true
         token: ${{secrets.CODECOV_TOKEN}}
-        file: lcov.info
         flags: unittests
+        file: lcov.info
 
     - name: Upload coverage report to codacy
       uses: codacy/codacy-coverage-reporter-action@v1.3.0
