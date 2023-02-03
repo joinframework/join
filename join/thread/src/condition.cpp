@@ -25,9 +25,6 @@
 // libjoin.
 #include <join/condition.hpp>
 
-// C.
-#include <ctime>
-
 using join::ScopedLock;
 using join::Condition;
 
