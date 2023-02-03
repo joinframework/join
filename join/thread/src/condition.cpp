@@ -23,11 +23,9 @@
  */
 
 // libjoin.
-#include <join/error.hpp>
 #include <join/condition.hpp>
 
 // C.
-#include <cerrno>
 #include <ctime>
 
 using join::ScopedLock;
@@ -79,28 +77,4 @@ void Condition::broadcast () noexcept
 void Condition::wait (ScopedLock& lock)
 {
     pthread_cond_wait (&_handle, &lock._mutex._handle);
-}
-
-// =========================================================================
-//   CLASS     : Condition
-//   METHOD    : timedWait
-// =========================================================================
-bool Condition::timedWait (ScopedLock& lock, std::chrono::milliseconds timeout)
-{
-    struct timespec ts;
-    clock_gettime (CLOCK_MONOTONIC, &ts);
-    ts.tv_sec  +=  timeout.count () / 1000;
-    ts.tv_nsec += (timeout.count () % 1000) * 1000000;
-    if (ts.tv_nsec >= 1000000000L)
-    {
-        ++ts.tv_sec;
-        ts.tv_nsec -= 1000000000L;
-    }
-    int err = pthread_cond_timedwait (&_handle, &lock._mutex._handle, &ts);
-    if (err != 0)
-    {
-        lastError = std::make_error_code (static_cast <std::errc> (err));
-        return false;
-    }
-    return true;
 }

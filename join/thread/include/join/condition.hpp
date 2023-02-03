@@ -26,6 +26,7 @@
 #define __JOIN_CONDITION_HPP__
 
 // libjoin.
+#include <join/error.hpp>
 #include <join/mutex.hpp>
 
 // C++.
@@ -108,24 +109,38 @@ namespace join
         /**
          * @brief wait on a condition until timeout expire.
          * @param lock mutex previously locked by the calling thread.
-         * @param timeout timeout in milliseconds.
+         * @param rt relative timeout.
          * @return true on success, false on timeout.
          */
-        bool timedWait (ScopedLock& lock, std::chrono::milliseconds timeout);
+        template <class Rep, class Period>
+        bool timedWait (ScopedLock& lock, std::chrono::duration <Rep, Period> rt)
+        {
+            auto tp = std::chrono::steady_clock::now () + rt;
+            auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);
+            auto ns = std::chrono::time_point_cast <std::chrono::nanoseconds> (tp) - std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
+            timespec ts = {secs.time_since_epoch ().count (), ns.count ()};
+            int err = pthread_cond_timedwait (&_handle, &lock._mutex._handle, &ts);
+            if (err != 0)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (err));
+                return false;
+            }
+            return true;
+        }
 
         /**
          * @brief wait on a condition with predicate until timeout expire.
          * @param lock mutex previously locked by the calling thread.
-         * @param timeout timeout in milliseconds.
+         * @param rt relative timeout.
          * @param pred predicate.
          * @return true on success, false on timeout.
          */
-        template <class Predicate>
-        bool timedWait (ScopedLock& lock, std::chrono::milliseconds timeout, Predicate pred)
+        template <class Rep, class Period, class Predicate>
+        bool timedWait (ScopedLock& lock, std::chrono::duration <Rep, Period> rt, Predicate pred)
         {
             while (!pred ())
             {
-                if (!timedWait (lock, timeout))
+                if (!timedWait (lock, rt))
                 {
                     return pred ();
                 }
