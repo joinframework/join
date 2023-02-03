@@ -118,7 +118,7 @@ namespace join
             auto tp = std::chrono::steady_clock::now () + rt;
             auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);
             auto ns = std::chrono::time_point_cast <std::chrono::nanoseconds> (tp) - std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
-            timespec ts = {secs.time_since_epoch ().count (), ns.count ()};
+            struct timespec ts = {secs.time_since_epoch ().count (), ns.count ()};
             int err = pthread_cond_timedwait (&_handle, &lock._mutex._handle, &ts);
             if (err != 0)
             {
