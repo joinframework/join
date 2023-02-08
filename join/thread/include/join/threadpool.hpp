@@ -66,7 +66,7 @@ namespace join
         void work ();
 
         /// thread pool.
-        ThreadPool& _pool;
+        ThreadPool* _pool = nullptr;
 
         /// thread.
         Thread _thread;

@@ -81,6 +81,15 @@ TEST (Utils, compareNoCase)
 }
 
 /**
+ * @brief Test replaceAll.
+ */
+TEST (Utils, replaceAll)
+{
+    std::string str ("replace all other by other");
+    EXPECT_EQ  (join::replaceAll (str, "other", "OTHER"), "replace all OTHER by OTHER");
+}
+
+/**
  * @brief Test randomize.
  */
 TEST (Utils, randomize)

@@ -38,6 +38,8 @@
 #include <cstddef>
 #include <cstring>
 
+#define OUT_ENUM(a) case a : return #a
+
 namespace join
 {
     namespace details
@@ -179,6 +181,26 @@ namespace join
     {
         return ((a.size () == b.size ()) && 
             std::equal (a.begin (), a.end (), b.begin (), [] (char c1, char c2) {return std::toupper (c1) == std::toupper (c2);}));
+    }
+
+    /**
+     * @brief replace all occurrences of a substring.
+     * @param str string to scan.
+     * @param toReplace string to replace.
+     * @param by string to put instead of the "toReplace" substring.
+     * @return a reference to the string.
+     */
+    __inline__ std::string& replaceAll (std::string& str, const std::string &toReplace, const std::string &by)
+    {
+        size_t pos = 0;
+
+        while ((pos = str.find (toReplace, pos)) != std::string::npos)
+        {
+            str.replace (pos, toReplace.length (), by);
+            pos += by.length ();
+        }
+
+        return str;
     }
 
     /**
