@@ -96,9 +96,10 @@ TEST (Utils, replaceAll)
 TEST (Utils, dump)
 {
     std::stringstream out;
-    std::string str ("this is a test");
+    std::string str ("☺this is a test☺");
     join::dump (str.c_str (), str.size (), out);
-    ASSERT_EQ (out.str (), "00000000: 74686973 20697320 61207465 7374     this is a test\n\n");
+    ASSERT_EQ (out.str (), "00000000: E298BA74 68697320 69732061 20746573 ...this is a tes\n"
+                           "00000010: 74E298BA                            t...\n\n");
 }
 
 /**
