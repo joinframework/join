@@ -77,24 +77,22 @@ std::string Base64::encode (const uint8_t* data, size_t size)
 
     b64.l = 0;
 
-    switch (trail)
+    if (trail == 1)
     {
-        case 1:
-            b64.c[3] = data[i++];
-            out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask1) >> 26)];
-            out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask2) >> 20)];
-            out[k++] = _fillChar;
-            out[k++] = _fillChar;
-            break;
-
-        default:
-            b64.c[3] = data[i++];
-            b64.c[2] = data[i++];
-            out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask1) >> 26)];
-            out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask2) >> 20)];
-            out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask3) >> 14)];
-            out[k++] = _fillChar;
-            break;
+        b64.c[3] = data[i++];
+        out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask1) >> 26)];
+        out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask2) >> 20)];
+        out[k++] = _fillChar;
+        out[k++] = _fillChar;
+    }
+    else
+    {
+        b64.c[3] = data[i++];
+        b64.c[2] = data[i++];
+        out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask1) >> 26)];
+        out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask2) >> 20)];
+        out[k++] = _base64Table[static_cast <int32_t> ((b64.l & _mask3) >> 14)];
+        out[k++] = _fillChar;
     }
 
     return out;
@@ -137,21 +135,19 @@ BytesArray Base64::decode (const std::string& data)
 
     b64.l = 0;
 
-    switch (trail)
+    if (trail == 1)
     {
-        case 1:
-            b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 26;
-            b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 20;
-            b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 14;
-            out[k++] = b64.c[3];
-            out[k++] = b64.c[2];
-            break;
-
-        default:
-            b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 26;
-            b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 20;
-            out[k++] = b64.c[3];
-            break;
+        b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 26;
+        b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 20;
+        b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 14;
+        out[k++] = b64.c[3];
+        out[k++] = b64.c[2];
+    }
+    else
+    {
+        b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 26;
+        b64.l += (static_cast <uint32_t> (_base64Table.find (data[i++], 0))) << 20;
+        out[k++] = b64.c[3];
     }
 
     return out;

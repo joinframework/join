@@ -377,26 +377,29 @@ int HttpRequest::parseFirstLine (const std::string& line)
 std::string& HttpRequest::decodeUrl (std::string &url)
 {
     std::ostringstream oss;
+    size_t pos = 0;
 
-    for (size_t pos = 0; pos < url.length (); ++pos)
+    while (pos < url.length ())
     {
         if (url[pos] == '%')
         {
             std::stringstream ss1, ss2;
-            ss1 << url[pos + 1];
-            ss2 << url[pos + 2];
+            ss1 << url[++pos];
+            ss2 << url[++pos];
             unsigned int dec, dec1, dec2;
             ss1 >> std::hex >> dec1;
             ss2 >> std::hex >> dec2;
             dec = (dec1 << 4) + dec2;
             oss << static_cast <char> (dec);
-            pos += 2;
+            ++pos;
         }
         else
-            oss << url[pos];
+        {
+            oss << url[pos++];
+        }
     }
-    url = oss.str ();
 
+    url = oss.str ();
     return url;
 }
 
@@ -468,7 +471,7 @@ std::string& HttpRequest::normalize (std::string& path)
         }
         else
         {
-            size_t pos = path.find ("/", (path.front() == '/') ? 1 : 0);
+            pos = path.find ("/", (path.front() == '/') ? 1 : 0);
             output.append (path.substr (0, pos));
             path.erase (0, pos);
         }

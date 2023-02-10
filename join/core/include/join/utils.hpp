@@ -40,6 +40,8 @@
 #include <cstddef>
 #include <cstring>
 
+#define OUT_ENUM(a) case a : return #a
+
 namespace join
 {
     namespace details
@@ -184,50 +186,70 @@ namespace join
     }
 
     /**
+     * @brief replace all occurrences of a substring.
+     * @param str string to scan.
+     * @param toReplace string to replace.
+     * @param by string to put instead of the "toReplace" substring.
+     * @return a reference to the string.
+     */
+    __inline__ std::string& replaceAll (std::string& str, const std::string &toReplace, const std::string &by)
+    {
+        size_t pos = 0;
+
+        while ((pos = str.find (toReplace, pos)) != std::string::npos)
+        {
+            str.replace (pos, toReplace.length (), by);
+            pos += by.length ();
+        }
+
+        return str;
+    }
+
+    /**
      * @brief dump data to standard output stream.
      * @param data data to dump.
      * @param size number of data bytes.
      */
-    __inline__ void dump (const void* data, unsigned long size)
+    __inline__ void dump (const void* data, unsigned long size, std::ostream& out = std::cout)
     {
         unsigned char *buf = (unsigned char *) data;
 
         for (int i = 0; i < int (size); i += 16)
         {
-            std::cout << std::hex << std::uppercase << std::setw (8);
-            std::cout << std::setfill ('0') << i << std::dec << ":";
+            out << std::hex << std::uppercase << std::setw (8);
+            out << std::setfill ('0') << i << std::dec << ":";
 
             for (int j = 0; j < 16; ++j)
             {
                 if (j % 4 == 0)
-                    std::cout << std::dec << " ";
+                    out << std::dec << " ";
 
                 if (i + j < int (size))
                 {
-                    std::cout << std::hex << std::uppercase << std::setw (2);
-                    std::cout << std::setfill ('0') << static_cast <int> (buf[i + j]);
+                    out << std::hex << std::uppercase << std::setw (2);
+                    out << std::setfill ('0') << static_cast <int> (buf[i + j]);
                 }
                 else
-                    std::cout << std::dec << "  ";
+                    out << std::dec << "  ";
             }
 
-            std::cout << std::dec << " ";
+            out << std::dec << " ";
 
             for (int j = 0; j < 16; ++j)
             {
                 if (i + j < int (size))
                 {
                     if (isprint (buf[i + j]))
-                        std::cout << buf[i + j];
+                        out << buf[i + j];
                     else
-                        std::cout << ".";
+                        out << ".";
                 }
             }
 
-            std::cout << std::endl;
+            out << std::endl;
         }
 
-        std::cout << std::endl;
+        out << std::endl;
     }
 
     /**
