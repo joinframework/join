@@ -1107,6 +1107,46 @@ namespace join
         }
 
         /**
+         * @brief parse an infinity value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int readInf (ViewType& document, bool negative)
+        {
+            if (JOIN_SAX_UNLIKELY (!(document.getIfNoCase ('n') && document.getIfNoCase ('f'))))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            if (JOIN_SAX_UNLIKELY (document.getIfNoCase ('i') && !(document.getIfNoCase ('n') && document.getIfNoCase ('i') && document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            return setDouble (negative ? -std::numeric_limits <double>::infinity () : std::numeric_limits <double>::infinity ());
+        }
+
+        /**
+         * @brief parse a nan value.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int readNan (ViewType& document, bool negative)
+        {
+            if (JOIN_SAX_UNLIKELY (!(document.getIfNoCase ('a') && document.getIfNoCase ('n'))))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            return setDouble (negative ? -std::numeric_limits <double>::quiet_NaN () : std::numeric_limits <double>::quiet_NaN ());
+        }
+
+        /**
          * @brief convert double using fast path.
          * @param significand significand digits.
          * @param exponent exponent.
@@ -1219,19 +1259,13 @@ namespace join
                     ++digits;
                 }
             }
-            else if (JOIN_SAX_LIKELY (document.getIfNoCase ('i') && document.getIfNoCase ('n') && document.getIfNoCase ('f')))
+            else if (JOIN_SAX_LIKELY (document.getIfNoCase ('i')))
             {
-                if (JOIN_SAX_UNLIKELY (document.getIfNoCase ('i') && !(document.getIfNoCase ('n') && document.getIfNoCase ('i') && document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
-                {
-                    join::lastError = make_error_code (SaxErrc::InvalidValue);
-                    return -1;
-                }
-
-                return setDouble (negative ? -std::numeric_limits <double>::infinity () : std::numeric_limits <double>::infinity ());
+                return readInf (document, negative);
             }
-            else if (JOIN_SAX_LIKELY (document.getIfNoCase ('n') && document.getIfNoCase ('a') && document.getIfNoCase ('N')))
+            else if (JOIN_SAX_LIKELY (document.getIfNoCase ('n')))
             {
-                return setDouble (negative ? -std::numeric_limits <double>::quiet_NaN () : std::numeric_limits <double>::quiet_NaN ());
+                return readNan (document, negative);
             }
             else
             {
@@ -1760,6 +1794,11 @@ namespace join
                 if (JOIN_SAX_UNLIKELY (document.get () != ':'))
                 {
                     join::lastError = make_error_code (JsonErrc::MissingColon);
+                    return -1;
+                }
+
+                if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                {
                     return -1;
                 }
 

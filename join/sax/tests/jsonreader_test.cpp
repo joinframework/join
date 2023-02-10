@@ -510,6 +510,14 @@ TEST (JsonReader, fail)
     ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
 
     stream.clear ();
+    stream.str ("[N]");
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
+
+    stream.clear ();
+    stream.str ("[In]");
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
+
+    stream.clear ();
     stream.str ("[Infinit]");
     ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
 
@@ -1289,11 +1297,46 @@ TEST (JsonReader, comments)
 {
     std::stringstream stream;
     Value value;
-    JsonReader reader (value);
+
+    stream.clear ();
+    stream.str ("    / this is an invalid comment\n");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
+
+    stream.clear ();
+    stream.str ("[    / this is an invalid comment\n    1,2\n]");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
+
+    stream.clear ();
+    stream.str ("[    1,    / this is an invalid comment\n2\n]");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
+
+    stream.clear ();
+    stream.str ("[    1,2\n    / this is an invalid comment\n]");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
+
+    stream.clear ();
+    stream.str ("{    / this is an invalid comment\n    \"a\":1,\"b\":2\n}");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
+
+    stream.clear ();
+    stream.str ("{    \"a\"    / this is an invalid comment\n:1,\"b\":2\n}");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
+
+    stream.clear ();
+    stream.str ("{    \"a\":    / this is an invalid comment\n1,\"b\":2\n}");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
+
+    stream.clear ();
+    stream.str ("{    \"a\":1    / this is an invalid comment,\"b\":2\n}");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
+
+    stream.clear ();
+    stream.str ("{    \"a\":1,    / this is an invalid comment\"b\":2\n}");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
 
     stream.clear ();
     stream.str ("{\n    // this is a comment\n    \"comment\":true\n}");
-    ASSERT_EQ (reader.deserialize <JsonReadMode::ParseComments> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["comment"].isBool ());
@@ -1301,7 +1344,7 @@ TEST (JsonReader, comments)
 
     stream.clear ();
     stream.str ("{\n    /*this is another comment*/\n    \"comment\":false\n}");
-    ASSERT_EQ (reader.deserialize <JsonReadMode::ParseComments> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["comment"].isBool ());

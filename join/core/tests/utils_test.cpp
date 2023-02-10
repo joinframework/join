@@ -29,6 +29,7 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <sstream>
 #include <thread>
 
 using namespace std::chrono_literals;
@@ -39,34 +40,34 @@ using namespace std::chrono_literals;
 TEST (Utils, swap)
 {
     int8_t int8Val = 12;
-    EXPECT_EQ (join::swap (int8Val), 12);
+    ASSERT_EQ (join::swap (int8Val), 12);
 
     uint8_t uint8Val = 12;
-    EXPECT_EQ (join::swap (uint8Val), 12);
+    ASSERT_EQ (join::swap (uint8Val), 12);
 
     int16_t int16Val = 12;
-    EXPECT_EQ (join::swap (int16Val), 3072);
+    ASSERT_EQ (join::swap (int16Val), 3072);
 
     uint16_t uint16Val = 12;
-    EXPECT_EQ (join::swap (uint16Val), 3072);
+    ASSERT_EQ (join::swap (uint16Val), 3072);
 
     int32_t int32Val = 12;
-    EXPECT_EQ (join::swap (int32Val), 201326592);
+    ASSERT_EQ (join::swap (int32Val), 201326592);
 
     uint32_t uint32Val = 12;
-    EXPECT_EQ (join::swap (uint32Val), 201326592);
+    ASSERT_EQ (join::swap (uint32Val), 201326592);
 
     int64_t int64Val = 12;
-    EXPECT_EQ (join::swap (int64Val), 864691128455135232);
+    ASSERT_EQ (join::swap (int64Val), 864691128455135232);
 
     uint64_t uint64Val = 12;
-    EXPECT_EQ (join::swap (uint64Val), 864691128455135232);
+    ASSERT_EQ (join::swap (uint64Val), 864691128455135232);
 
     float floatVal = 12.0;
-    EXPECT_FLOAT_EQ (join::swap (floatVal), 2.305e-41);
+    ASSERT_FLOAT_EQ (join::swap (floatVal), 2.305e-41);
 
     double doubleVal = 12.0;
-    EXPECT_DOUBLE_EQ (join::swap (doubleVal), 5.09085e-320);
+    ASSERT_DOUBLE_EQ (join::swap (doubleVal), 5.09085e-320);
 }
 
 /**
@@ -74,10 +75,31 @@ TEST (Utils, swap)
  */
 TEST (Utils, compareNoCase)
 {
-    EXPECT_TRUE  (join::compareNoCase ("One", "ONE"));
-    EXPECT_TRUE  (join::compareNoCase ("TWO", "two"));
-    EXPECT_TRUE  (join::compareNoCase ("Three", "ThReE"));
-    EXPECT_FALSE (join::compareNoCase ("Four", "4"));
+    ASSERT_TRUE  (join::compareNoCase ("One", "ONE"));
+    ASSERT_TRUE  (join::compareNoCase ("TWO", "two"));
+    ASSERT_TRUE  (join::compareNoCase ("Three", "ThReE"));
+    ASSERT_FALSE (join::compareNoCase ("Four", "4"));
+}
+
+/**
+ * @brief Test replaceAll.
+ */
+TEST (Utils, replaceAll)
+{
+    std::string str ("replace all other by other");
+    ASSERT_EQ (join::replaceAll (str, "other", "OTHER"), "replace all OTHER by OTHER");
+}
+
+/**
+ * @brief Test dump.
+ */
+TEST (Utils, dump)
+{
+    std::stringstream out;
+    std::string str ("☺this is a test☺");
+    join::dump (str.c_str (), str.size (), out);
+    ASSERT_EQ (out.str (), "00000000: E298BA74 68697320 69732061 20746573 ...this is a tes\n"
+                           "00000010: 74E298BA                            t...\n\n");
 }
 
 /**

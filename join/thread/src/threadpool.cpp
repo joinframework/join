@@ -33,7 +33,7 @@ using join::ThreadPool;
 //   METHOD    : Worker
 // =========================================================================
 Worker::Worker (ThreadPool& pool)
-: _pool (pool),
+: _pool (std::addressof (pool)),
   _thread ([this] () {work ();})
 {
 }
@@ -57,14 +57,14 @@ void Worker::work ()
     {
         std::function <void ()> func;
         {
-            ScopedLock lock (_pool._mutex);
-            _pool._condition.wait (lock, [&] () {return _pool._stop || !_pool._jobs.empty ();});
-            if (_pool._stop && _pool._jobs.empty ())
+            ScopedLock lock (_pool->_mutex);
+            _pool->_condition.wait (lock, [&] () {return _pool->_stop || !_pool->_jobs.empty ();});
+            if (_pool->_stop && _pool->_jobs.empty ())
             {
                 return;
             }
-            func = std::move (_pool._jobs.front ());
-            _pool._jobs.pop_front ();
+            func = std::move (_pool->_jobs.front ());
+            _pool->_jobs.pop_front ();
         }
         func ();
     }
