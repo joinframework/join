@@ -29,6 +29,9 @@ using join::Errc;
 using join::HttpErrc;
 using join::HttpCategory;
 using join::HttpMessage;
+using join::HttpMethod;
+using join::HttpRequest;
+using join::HttpResponse;
 
 // =========================================================================
 //   CLASS     : HttpCategory
@@ -47,14 +50,30 @@ std::string HttpCategory::message (int code) const
 {
     switch (static_cast <HttpErrc> (code))
     {
-        case HttpErrc::InvalidRequest:
-            return "invalid HTTP request";
-        case HttpErrc::InvalidResponse:
-            return "invalid HTTP response";
-        case HttpErrc::InvalidMethod:
-            return "invalid HTTP method";
-        case HttpErrc::InvalidHeader:
-            return "invalid HTTP header";
+        case HttpErrc::BadRequest:
+            return "bad request";
+        case HttpErrc::Unauthorized:
+            return "unauthorized";
+        case HttpErrc::Forbidden:
+            return "forbidden";
+        case HttpErrc::NotFound:
+            return "not found";
+        case HttpErrc::ForbiddenMethod:
+            return "method not allowed";
+        case HttpErrc::LengthRequired:
+            return "length required";
+        case HttpErrc::PayloadTooLarge:
+            return "payload too large";
+        case HttpErrc::UriTooLong:
+            return "URI too long";
+        case HttpErrc::HeaderTooLarge:
+            return "request header too large";
+        case HttpErrc::ServerError:
+            return "internal server error";
+        case HttpErrc::NotImplemented:
+            return "not implemented";
+        case HttpErrc::BadGateway:
+            return "bad gateway";
         default:
             return "success";
     }
@@ -254,14 +273,14 @@ void HttpMessage::clear ()
 
 // =========================================================================
 //   CLASS     : HttpMessage
-//   METHOD    : receive
+//   METHOD    : readHeaders
 // =========================================================================
-void HttpMessage::receive (std::istream& in)
+void HttpMessage::readHeaders (std::istream& in)
 {
     bool firstLine = true;
     std::string line;
 
-    while (getline (in, line, 4096))
+    while (getline (in, line, _maxHeaderLen))
     {
         if (firstLine)
         {
@@ -289,27 +308,9 @@ void HttpMessage::receive (std::istream& in)
 
 // =========================================================================
 //   CLASS     : HttpMessage
-//   METHOD    : parseHeader
-// =========================================================================
-int HttpMessage::parseHeader (const std::string& head)
-{
-    size_t pos = head.find (": ");
-    if (pos == std::string::npos)
-    {
-        join::lastError = make_error_code (HttpErrc::InvalidHeader);
-        return -1;
-    }
-
-    _headers[head.substr (0, pos)] = head.substr (pos + 2);
-
-    return 0;
-}
-
-// =========================================================================
-//   CLASS     : HttpMessage
 //   METHOD    : getline
 // =========================================================================
-std::istream& HttpMessage::getline (std::istream& in, std::string& line, uint32_t max)
+std::istream& HttpMessage::getline (std::istream& in, std::string& line, std::streamsize max)
 {
     line.clear ();
 
@@ -318,7 +319,7 @@ std::istream& HttpMessage::getline (std::istream& in, std::string& line, uint32_
         char ch = in.get ();
         if (in.eof ())
         {
-            join::lastError = make_error_code (Errc::OperationFailed);
+            join::lastError = make_error_code (Errc::ConnectionClosed);
             return in;
         }
 
@@ -335,7 +336,630 @@ std::istream& HttpMessage::getline (std::istream& in, std::string& line, uint32_
         line.push_back (ch);
     }
 
+    join::lastError = make_error_code (HttpErrc::HeaderTooLarge);
     in.setstate (std::ios_base::failbit);
-    join::lastError = make_error_code (Errc::MessageTooLong);
+
     return in;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : parseHeader
+// =========================================================================
+int HttpMessage::parseHeader (const std::string& head)
+{
+    size_t pos = head.find (": ");
+    if (pos == std::string::npos)
+    {
+        join::lastError = make_error_code (HttpErrc::BadRequest);
+        return -1;
+    }
+
+    _headers[head.substr (0, pos)] = head.substr (pos + 2);
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : HttpRequest
+// =========================================================================
+HttpRequest::HttpRequest ()
+: HttpMessage (),
+  _path ("/")
+{
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : HttpRequest
+// =========================================================================
+HttpRequest::HttpRequest (HttpMethod method)
+: HttpMessage (),
+  _method (method),
+  _path ("/")
+{
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : HttpRequest
+// =========================================================================
+HttpRequest::HttpRequest (const HttpRequest& other)
+: HttpMessage (other),
+  _method (other._method),
+  _path (other._path),
+  _parameters (other._parameters)
+{
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : operator=
+// =========================================================================
+HttpRequest& HttpRequest::operator= (const HttpRequest& other)
+{
+    HttpMessage::operator= (other);
+
+    _method = other._method;
+    _path = other._path;
+    _parameters = other._parameters;
+
+    return *this;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : HttpRequest
+// =========================================================================
+HttpRequest::HttpRequest (HttpRequest&& other)
+: HttpMessage (std::move (other)),
+  _method (other._method),
+  _path (std::move (other._path)),
+  _parameters (std::move (other._parameters))
+{
+    other._method = Get;
+    other._path = "/";
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : operator=
+// =========================================================================
+HttpRequest& HttpRequest::operator= (HttpRequest&& other)
+{
+    HttpMessage::operator= (std::move (other));
+
+    _method = other._method;
+    _path = std::move (other._path);
+    _parameters = std::move (other._parameters);
+
+    other._method = Get;
+    other._path = "/";
+
+    return *this;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : method
+// =========================================================================
+HttpMethod HttpRequest::method () const
+{
+    return _method;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : methodString
+// =========================================================================
+std::string HttpRequest::methodString () const
+{
+    switch (_method)
+    {
+        case Head:
+            return "HEAD";
+        case Put:
+            return "PUT";
+        case Post:
+            return "POST";
+        case Delete:
+            return "DELETE";
+        default:
+            return "GET";
+    }
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : method
+// =========================================================================
+void HttpRequest::method (HttpMethod meth)
+{
+    _method = meth;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : path
+// =========================================================================
+const std::string& HttpRequest::path () const
+{
+    return _path;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : path
+// =========================================================================
+void HttpRequest::path (const std::string& p)
+{
+    _path = p;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : hasParameter
+// =========================================================================
+bool HttpRequest::hasParameter (const std::string& name) const
+{
+    return _parameters.find (name) != _parameters.end ();
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : parameter
+// =========================================================================
+std::string HttpRequest::parameter (const std::string& name) const
+{
+    auto it = _parameters.find (name);
+    if (it != _parameters.end ())
+    {
+        return it->second;
+    }
+
+    return {};
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : parameter
+// =========================================================================
+void HttpRequest::parameter (const std::string &name, const std::string &var)
+{
+    _parameters[name] = var;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : parameter
+// =========================================================================
+void HttpRequest::parameter (const ParameterMap::value_type& param)
+{
+    parameter (param.first, param.second);
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : parameters
+// =========================================================================
+const HttpRequest::ParameterMap& HttpRequest::parameters () const
+{
+    return _parameters;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
+//   METHOD    : parameters
+// =========================================================================
+void HttpRequest::parameters (const ParameterMap& params)
+{
+    for (auto const& param : params)
+    {
+        parameter (param);
+    }
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : dumpParameters
+// =========================================================================
+std::string HttpRequest::dumpParameters () const
+{
+    std::string params;
+
+    for (auto const& param : _parameters)
+    {
+        params += param.first + "=" + param.second + "&";
+    }
+
+    if (params.size ())
+    {
+        params.pop_back ();
+    }
+
+    return params;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : query
+// =========================================================================
+std::string HttpRequest::query () const
+{
+    std::string params = dumpParameters ();
+
+    if (params.size ())
+    {
+        params.insert (0, "?");
+    }
+
+    return params;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : urn
+// =========================================================================
+std::string HttpRequest::urn () const
+{
+    return path () + query ();
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : clear
+// =========================================================================
+void HttpRequest::clear ()
+{
+    HttpMessage::clear ();
+    _method = Get;
+    _path = "/";
+    _parameters.clear ();
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : writeHeaders
+// =========================================================================
+void HttpRequest::writeHeaders (std::ostream& out) const
+{
+    out << methodString () << " " << urn () << " " << version () << "\r\n";
+    out << dumpHeaders ();
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : parseFirstLine
+// =========================================================================
+int HttpRequest::parseFirstLine (const std::string& line)
+{
+    size_t pos1 = line.find (" ");
+    if (pos1 == std::string::npos)
+    {
+        join::lastError = make_error_code (HttpErrc::BadRequest);
+        return -1;
+    }
+
+    size_t pos2 = line.find (" ", pos1 + 1);
+    if (pos2 == std::string::npos)
+    {
+        join::lastError = make_error_code (HttpErrc::BadRequest);
+        return -1;
+    }
+
+    std::string method = line.substr (0, pos1++);
+
+    if (method.compare ("HEAD") == 0)
+    {
+        _method = HttpMethod::Head;
+    }
+    else if (method.compare ("GET") == 0)
+    {
+        _method = HttpMethod::Get;
+    }
+    else if (method.compare ("PUT") == 0)
+    {
+        _method = HttpMethod::Put;
+    }
+    else if (method.compare ("POST") == 0)
+    {
+        _method = HttpMethod::Post;
+    }
+    else if (method.compare ("DELETE") == 0)
+    {
+        _method = HttpMethod::Delete;
+    }
+    else
+    {
+        join::lastError = make_error_code (HttpErrc::ForbiddenMethod);
+        return -1;
+    }
+
+    _path = line.substr (pos1, pos2 - pos1);
+
+    pos1 = _path.find ("?");
+    if (pos1 != std::string::npos)
+    {
+        store (_path.substr (pos1 + 1));
+        _path = _path.substr (0, pos1);
+    }
+
+    decodeUrl (_path);
+    normalize (_path);
+
+    _version = line.substr (++pos2);
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : decodeUrl
+// =========================================================================
+std::string& HttpRequest::decodeUrl (std::string &url)
+{
+    std::ostringstream oss;
+    size_t pos = 0;
+
+    while (pos < url.length ())
+    {
+        if (url[pos] == '%')
+        {
+            std::stringstream ss1, ss2;
+            ss1 << url[++pos];
+            ss2 << url[++pos];
+            unsigned int dec, dec1, dec2;
+            ss1 >> std::hex >> dec1;
+            ss2 >> std::hex >> dec2;
+            dec = (dec1 << 4) + dec2;
+            oss << static_cast <char> (dec);
+            ++pos;
+        }
+        else
+        {
+            oss << url[pos++];
+        }
+    }
+
+    url = oss.str ();
+    return url;
+}
+
+// =========================================================================
+//   CLASS     :
+//   METHOD    : removeLastSegment
+// =========================================================================
+std::string& removeLastSegment (std::string &path)
+{
+    while (!path.empty ())
+    {
+        if (path.back () == '/')
+        {
+            path.pop_back ();
+            break;
+        }
+        path.pop_back ();
+    }
+
+    return path;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : normalize
+// =========================================================================
+std::string& HttpRequest::normalize (std::string& path)
+{
+    std::string output;
+    std::size_t pos = 0;
+
+    while ((pos = path.find ("//", pos)) != std::string::npos)
+    {
+        path.replace (pos, 2, "/");
+    }
+
+    // rfc3986 (see https://tools.ietf.org/html/rfc3986#section-5.2.4).
+    while (!path.empty ())
+    {
+        if (path.compare (0, 3, "../", 0, 3) == 0)
+        {
+            path.erase (0, 3);
+        }
+        else if (path.compare (0, 2, "./", 0, 2) == 0)
+        {
+            path.erase (0, 2);
+        }
+        else if (path.compare (0, 3, "/./", 0, 3) == 0)
+        {
+            path.replace (0, 3, "/");
+        }
+        else if (path.compare ("/.") == 0)
+        {
+            path.replace (0, 2, "/");
+        }
+        else if (path.compare (0, 4, "/../", 0, 4) == 0)
+        {
+            path.replace (0, 4, "/");
+            removeLastSegment (output);
+        }
+        else if (path.compare ("/..") == 0)
+        {
+            path.replace (0, 3, "/");
+            removeLastSegment (output);
+        }
+        else if (path.find_first_not_of (".") == std::string::npos)
+        {
+            path.clear();
+        }
+        else
+        {
+            pos = path.find ("/", (path.front() == '/') ? 1 : 0);
+            output.append (path.substr (0, pos));
+            path.erase (0, pos);
+        }
+    }
+
+    path.swap (output);
+
+    return path;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : store
+// =========================================================================
+void HttpRequest::store (const std::string &query)
+{
+    size_t pos = 0;
+
+    for (;;)
+    {
+        size_t equalPos = query.find ("=", pos);
+        if (equalPos == std::string::npos)
+            return;
+
+        size_t sepPos = query.find ("&", equalPos + 1);
+        if (sepPos == std::string::npos)
+            sepPos = query.length ();
+
+        std::string name  = query.substr (pos, equalPos - pos);
+        decodeUrl (name);
+
+        std::string value = query.substr (equalPos + 1, sepPos - equalPos - 1);
+        decodeUrl (value);
+
+        parameter (name, value);
+
+        if (sepPos == query.length ())
+            return;
+
+        pos = sepPos + 1;
+    }
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : HttpResponse
+// =========================================================================
+HttpResponse::HttpResponse (const HttpResponse& other)
+: HttpMessage (other),
+  _status (other._status),
+  _reason (other._reason)
+{
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : operator=
+// =========================================================================
+HttpResponse& HttpResponse::operator= (const HttpResponse& other)
+{
+    HttpMessage::operator= (other);
+
+    _status = other._status;
+    _reason = other._reason;
+
+    return *this;
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : HttpResponse
+// =========================================================================
+HttpResponse::HttpResponse (HttpResponse&& other)
+: HttpMessage (std::move (other)),
+  _status (std::move (other._status)),
+  _reason (std::move (other._reason))
+{
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : operator=
+// =========================================================================
+HttpResponse& HttpResponse::operator= (HttpResponse&& other)
+{
+    HttpMessage::operator= (std::move (other));
+
+    _status = std::move (other._status);
+    _reason = std::move (other._reason);
+
+    return *this;
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : status
+// =========================================================================
+const std::string& HttpResponse::status () const
+{
+    return _status;
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : reason
+// =========================================================================
+const std::string& HttpResponse::reason () const
+{
+    return _reason;
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : response
+// =========================================================================
+void HttpResponse::response (const std::string& status, const std::string& reason)
+{
+    _status = status;
+    _reason = reason;
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : clear
+// =========================================================================
+void HttpResponse::clear ()
+{
+    HttpMessage::clear ();
+    _status.clear ();
+    _reason.clear ();
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : writeHeaders
+// =========================================================================
+void HttpResponse::writeHeaders (std::ostream& out) const
+{
+    out << version () << " " << status () << " " << reason () << "\r\n";
+    out << dumpHeaders ();
+}
+
+// =========================================================================
+//   CLASS     : HttpResponse
+//   METHOD    : parseFirstLine
+// =========================================================================
+int HttpResponse::parseFirstLine (const std::string& line)
+{
+    size_t pos1 = line.find (" ");
+    if (pos1 == std::string::npos)
+    {
+        join::lastError = make_error_code (HttpErrc::BadRequest);
+        return -1;
+    }
+
+    size_t pos2 = line.find (" ", pos1 + 1);
+    if (pos2 == std::string::npos)
+    {
+        join::lastError = make_error_code (HttpErrc::BadRequest);
+        return -1;
+    }
+
+    _version = line.substr (0, pos1++);
+    _status  = line.substr (pos1, pos2 - pos1);
+    _reason  = line.substr (++pos2);
+
+    return 0;
 }
