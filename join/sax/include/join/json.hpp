@@ -1797,6 +1797,11 @@ namespace join
                     return -1;
                 }
 
+                if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                {
+                    return -1;
+                }
+
                 if (JOIN_SAX_UNLIKELY (readValue <ReadMode> (document) == -1))
                 {
                     return -1;
