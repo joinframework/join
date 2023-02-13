@@ -278,7 +278,7 @@ TEST (HttpClient, receive)
     HttpResponse response;
     client >> response;
     ASSERT_TRUE (client.fail ());
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
 
     client.clear ();
     client << HttpRequest ();

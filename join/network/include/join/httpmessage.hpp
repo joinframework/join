@@ -32,6 +32,7 @@
 // C++.
 #include <system_error>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <map>
 
@@ -42,10 +43,18 @@ namespace join
      */
     enum class HttpErrc
     {
-        InvalidRequest = 1,     /**< invalid HTTP request. */
-        InvalidResponse,        /**< invalid HTTP response. */
-        InvalidMethod,          /**< invalid HTTP method. */
-        InvalidHeader           /**< invalid HTTP header. */
+        BadRequest      = 400,      /**< malformed request syntax. */
+        Unauthorized    = 401,      /**< authentication is required. */
+        Forbidden       = 403,      /**< missing required permissions. */
+        NotFound        = 404,      /**< resource could not be found. */
+        ForbiddenMethod = 405,      /**< method is not supported. */
+        LengthRequired  = 411,      /**< length was not specified. */
+        PayloadTooLarge = 413,      /**< request payload is too large. */
+        UriTooLong      = 414,      /**< request URI is too long. */
+        HeaderTooLarge  = 494,      /**< request header is too large. */
+        ServerError     = 500,      /**< generic error. */
+        NotImplemented  = 501,      /**< not implemented. */
+        BadGateway      = 502,      /**< invalid response from the upstream server. */
     };
 
     /**
@@ -87,6 +96,80 @@ namespace join
      * @return the created std::error_condition object.
      */
     std::error_condition make_error_condition (HttpErrc code);
+
+    /**
+     * @brief enumeration of HTTP methods.
+     */
+    enum HttpMethod
+    {
+        Head    = 1L << 0,  /**< retrieve informations identified by the Request-URI without message-body. */
+        Get     = 1L << 1,  /**< retrieve informations identified by the Request-URI. */
+        Put     = 1L << 2,  /**< request that the enclosed entity be stored under the supplied Request-URI. */
+        Post    = 1L << 3,  /**< request that the enclosed entity is accepted as a new subordinate of the resource identified by the Request-URI. */
+        Delete  = 1L << 4,  /**< request that the server delete the resource identified by the Request-URI. */
+    };
+
+    /**
+     * @brief perform binary AND on HttpMethod.
+     * @param __a bitset.
+     * @param __b other bitset.
+     * @return bitset result of binary AND on HttpMethod.
+     */
+    __inline__ HttpMethod operator& (HttpMethod __a, HttpMethod __b)
+    { return HttpMethod (static_cast <int> (__a) & static_cast <int> (__b)); }
+
+    /**
+     * @brief perform binary OR on HttpMethod.
+     * @param __a bitset.
+     * @param __b other bitset.
+     * @return bitset result of binary OR on HttpMethod.
+     */
+    __inline__ HttpMethod operator| (HttpMethod __a, HttpMethod __b)
+    { return HttpMethod (static_cast <int> (__a) | static_cast <int> (__b)); }
+
+    /**
+     * @brief perform binary XOR on HttpMethod.
+     * @param __a bitset.
+     * @param __b other bitset.
+     * @return bitset result of binary XOR on HttpMethod.
+     */
+    __inline__ HttpMethod operator^ (HttpMethod __a, HttpMethod __b)
+    { return HttpMethod (static_cast <int> (__a) ^ static_cast <int> (__b)); }
+
+    /**
+     * @brief perform binary NOT on HttpMethod.
+     * @param __a bitset.
+     * @return bitset result of binary NOT on HttpMethod.
+     */
+    __inline__ HttpMethod operator~ (HttpMethod __a)
+    { return HttpMethod (~static_cast <int> (__a)); }
+
+    /**
+     * @brief perform binary AND on HttpMethod.
+     * @param __a bitset.
+     * @param __b other bitset.
+     * @return bitset result of binary AND on HttpMethod.
+     */
+    __inline__ const HttpMethod& operator&= (HttpMethod& __a, HttpMethod __b)
+    { return __a = __a & __b; }
+
+    /**
+     * @brief perform binary OR on HttpMethod.
+     * @param __a bitset.
+     * @param __b other bitset.
+     * @return bitset result of binary OR.
+     */
+    __inline__ const HttpMethod& operator|= (HttpMethod& __a, HttpMethod __b)
+    { return __a = __a | __b; }
+
+    /**
+     * @brief perform binary XOR on HttpMethod.
+     * @param __a bitset.
+     * @param __b other bitset.
+     * @return bitset result of binary XOR on HttpMethod.
+     */
+    __inline__ const HttpMethod& operator^= (HttpMethod& __a, HttpMethod __b)
+    { return __a = __a ^ __b; }
 
     /**
      * @brief HTTP message.
@@ -196,26 +279,27 @@ namespace join
         virtual void clear ();
 
         /**
-         * @brief send to the given output stream.
-         * @param out output stream.
-         */
-        virtual void send (std::ostream& out) const = 0;
-
-        /**
-         * @brief receive from the given input stream.
+         * @brief read HTTP header from the given input stream.
          * @param in input stream.
          */
-        virtual void receive (std::istream& in);
+        virtual void readHeaders (std::istream& in);
 
         /**
+         * @brief write HTTP header to the given output stream.
+         * @param out output stream.
+         */
+        virtual void writeHeaders (std::ostream& out) const = 0;
+
+    protected:
+        /**
          * @brief read HTTP line (delimiter "\r\n").
+         * @param in input stream.
          * @param line line read.
          * @param max max characters to read.
          * @return input stream.
          */
-        static std::istream& getline (std::istream& in, std::string& line, uint32_t max);
+        static std::istream& getline (std::istream& in, std::string& line, std::streamsize max);
 
-    protected:
         /**
          * @brief parse first line.
          * @param line first line to parse.
@@ -230,11 +314,288 @@ namespace join
          */
         virtual int parseHeader (const std::string& head);
 
+        /// HTTP max header size.
+        static const std::streamsize _maxHeaderLen = 2048;
+
         /// HTTP version.
         std::string _version;
 
         /// HTTP headers.
         HeaderMap _headers;
+    };
+
+    /**
+     * @brief HTTP request.
+     */
+    class HttpRequest : public HttpMessage
+    {
+    public:
+        // parameters map.
+        using ParameterMap = std::map <std::string, std::string>;
+
+        /**
+         * @brief create the HttpRequest instance by default.
+         */
+        HttpRequest ();
+
+        /**
+         * @brief create the HttpRequest instance by default.
+         * @param method request method.
+         */
+        HttpRequest (HttpMethod method);
+
+        /**
+         * @brief create the HttpRequest instance by copy.
+         * @param other request to copy.
+         */
+        HttpRequest (const HttpRequest& other);
+
+        /**
+         * @brief assign the HttpRequest instance by copy.
+         * @param other request to copy.
+         * @return a reference of the current object.
+         */
+        HttpRequest& operator= (const HttpRequest& other);
+
+        /**
+         * @brief create the HttpRequest instance by move.
+         * @param other request to move.
+         */
+        HttpRequest (HttpRequest&& other);
+
+        /**
+         * @brief assign the HttpRequest instance by move.
+         * @param other request to move.
+         * @return a reference of the current object.
+         */
+        HttpRequest& operator= (HttpRequest&& other);
+
+        /**
+         * @brief destroy the HttpRequest instance.
+         */
+        virtual ~HttpRequest () = default;
+
+        /**
+         * @brief get request method.
+         * @return request method.
+         */
+        HttpMethod method () const;
+
+        /**
+         * @brief get request method string.
+         * @return request method string.
+         */
+        std::string methodString () const;
+
+        /**
+         * @brief set request method (default GET).
+         * @param meth HTTP method.
+         */
+        void method (HttpMethod meth);
+
+        /**
+         * @brief get path.
+         * @return path.
+         */
+        const std::string& path () const;
+
+        /**
+         * @brief set path.
+         * @param p path.
+         */
+        void path (const std::string& p);
+
+        /**
+         * @brief checks if there is a parameter with the specified name.
+         * @param name name of the parameter to search for.
+         * @return true of there is such a parameter, false otherwise.
+         */
+        bool hasParameter (const std::string& name) const;
+
+        /**
+         * @brief get a parameter by name.
+         * @param name parameter name.
+         * @return parameter value.
+         */
+        std::string parameter (const std::string& name) const;
+
+        /**
+         * @brief add query parameter to the HTTP request.
+         * @param name parameter name.
+         * @param val parameter value.
+         */
+        void parameter (const std::string& name, const std::string& val);
+
+        /**
+         * @brief add query parameter to the HTTP request.
+         * @param param parameter.
+         */
+        void parameter (const ParameterMap::value_type& param);
+
+        /**
+         * @brief get query parameters map.
+         * @return query parameters map.
+         */
+        const ParameterMap& parameters () const;
+
+        /**
+         * @brief add query parameters to the HTTP request.
+         * @param params parameters.
+         */
+        void parameters (const ParameterMap& params);
+
+        /**
+         * @brief dump parameters.
+         * @return parameters.
+         */
+        std::string dumpParameters () const;
+
+        /**
+         * @brief get query.
+         * @return query.
+         */
+        std::string query () const;
+
+        /**
+         * @brief get URN.
+         * @return URN.
+         */
+        std::string urn () const;
+
+        /**
+         * @brief clear HTTP message.
+         */
+        virtual void clear () override;
+
+        /**
+         * @brief write HTTP header to the given output stream.
+         * @param out output stream.
+         */
+        virtual void writeHeaders (std::ostream& out) const override;
+
+    protected:
+        /**
+         * @brief parse first line.
+         * @param line first line to parse.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int parseFirstLine (const std::string& line) override;
+
+        /**
+         * @brief decode url (ex. %20 ==> ' ').
+         * @param url url to decode.
+         * @return a reference to the url object.
+         */
+        std::string& decodeUrl (std::string &url);
+
+        /**
+         * @brief produce a normalized path (collapse duplicated separator and remove dot segment).
+         * @param path path to normalize.
+         * @return normalized path.
+         */
+        std::string& normalize (std::string& path);
+
+        /**
+         * @brief store parameters received in request.
+         * @param query parameters received in request.
+         */
+        void store (const std::string &query);
+
+        /// HTTP method.
+        HttpMethod _method = Get;
+
+        /// HTTP path;
+        std::string _path;
+
+        /// HTTP query parameters.
+        ParameterMap _parameters;
+    };
+
+    /**
+     * @brief HTTP response.
+     */
+    class HttpResponse : public HttpMessage
+    {
+    public:
+        /**
+         * @brief create the HttpResponse instance.
+         */
+        HttpResponse () = default;
+
+        /**
+         * @brief create the HttpResponse instance by copy.
+         * @param other request to copy.
+         */
+        HttpResponse (const HttpResponse& other);
+
+        /**
+         * @brief assign the HttpResponse instance by copy.
+         * @param other request to copy.
+         * @return a reference of the current object.
+         */
+        HttpResponse& operator= (const HttpResponse& other);
+
+        /**
+         * @brief create the HttpResponse instance by move.
+         * @param other request to move.
+         */
+        HttpResponse (HttpResponse&& other);
+
+        /**
+         * @brief assign the HttpResponse instance by move.
+         * @param other request to move.
+         * @return a reference of the current object.
+         */
+        HttpResponse& operator= (HttpResponse&& other);
+
+        /**
+         * @brief destroy the HttpResponse instance.
+         */
+        virtual ~HttpResponse () = default;
+
+        /**
+         * @brief get HTTP response status.
+         * @return HTTP response status.
+         */
+        const std::string& status () const;
+
+        /**
+         * @brief get HTTP response reason.
+         * @return HTTP response reason.
+         */
+        const std::string& reason () const;
+
+        /**
+         * @brief set HTTP response status.
+         * @param status HTTP status.
+         * @param reason HTTP reason.
+         */
+        void response (const std::string& status, const std::string& reason = {});
+
+        /**
+         * @brief clear HTTP message.
+         */
+        virtual void clear () override;
+
+        /**
+         * @brief write HTTP header to the given output stream.
+         * @param out output stream.
+         */
+        virtual void writeHeaders (std::ostream& out) const override;
+
+    protected:
+        /**
+         * @brief parse first line.
+         * @param line first line to parse.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int parseFirstLine (const std::string& line) override;
+
+        /// HTTP status.
+        std::string _status;
+
+        /// HTTP reason.
+        std::string _reason;
     };
 }
 

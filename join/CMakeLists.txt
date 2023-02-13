@@ -43,8 +43,6 @@ set(PUBLIC_HEADERS
     network/include/join/acceptor.hpp
     network/include/join/arp.hpp
     network/include/join/httpmessage.hpp
-    network/include/join/httprequest.hpp
-    network/include/join/httpresponse.hpp
     network/include/join/httpclient.hpp
     sax/include/join/diyfp.hpp
     sax/include/join/dtoa.hpp
@@ -68,8 +66,6 @@ set(SOURCES
     network/src/socket.cpp
     network/src/arp.cpp
     network/src/httpmessage.cpp
-    network/src/httprequest.cpp
-    network/src/httpresponse.cpp
     network/src/httpclient.cpp
     sax/src/value.cpp
     sax/src/sax.cpp

@@ -27,8 +27,7 @@
 
 // libjoin.
 #include <join/socketstream.hpp>
-#include <join/httprequest.hpp>
-#include <join/httpresponse.hpp>
+#include <join/httpmessage.hpp>
 
 // C++.
 #include <chrono>

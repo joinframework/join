@@ -45,10 +45,18 @@ TEST (HttpCategory, name)
 TEST (HttpCategory, message)
 {
     ASSERT_STREQ (HttpCategory ().message (0).c_str (), "success");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidRequest)).c_str (), "invalid HTTP request");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidResponse)).c_str (), "invalid HTTP response");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidMethod)).c_str (),  "invalid HTTP method");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::InvalidHeader)).c_str (),  "invalid HTTP header");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::BadRequest)).c_str (), "bad request");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::Unauthorized)).c_str (), "unauthorized");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::Forbidden)).c_str (),  "forbidden");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::NotFound)).c_str (),  "not found");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::ForbiddenMethod)).c_str (), "method not allowed");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::LengthRequired)).c_str (), "length required");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::PayloadTooLarge)).c_str (),  "payload too large");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::UriTooLong)).c_str (),  "URI too long");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::HeaderTooLarge)).c_str (), "request header too large");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::ServerError)).c_str (), "internal server error");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::NotImplemented)).c_str (),  "not implemented");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::BadGateway)).c_str (),  "bad gateway");
 }
 
 /**
@@ -57,10 +65,18 @@ TEST (HttpCategory, message)
 TEST (HttpCategory, default_error_condition)
 {
     ASSERT_EQ (HttpCategory ().default_error_condition (0).message(), "success");
-    ASSERT_EQ (HttpCategory ().default_error_condition (1).message(), "invalid HTTP request");
-    ASSERT_EQ (HttpCategory ().default_error_condition (2).message(), "invalid HTTP response");
-    ASSERT_EQ (HttpCategory ().default_error_condition (3).message(), "invalid HTTP method");
-    ASSERT_EQ (HttpCategory ().default_error_condition (4).message(), "invalid HTTP header");
+    ASSERT_EQ (HttpCategory ().default_error_condition (400).message(), "bad request");
+    ASSERT_EQ (HttpCategory ().default_error_condition (401).message(), "unauthorized");
+    ASSERT_EQ (HttpCategory ().default_error_condition (403).message(), "forbidden");
+    ASSERT_EQ (HttpCategory ().default_error_condition (404).message(), "not found");
+    ASSERT_EQ (HttpCategory ().default_error_condition (405).message(), "method not allowed");
+    ASSERT_EQ (HttpCategory ().default_error_condition (411).message(), "length required");
+    ASSERT_EQ (HttpCategory ().default_error_condition (413).message(), "payload too large");
+    ASSERT_EQ (HttpCategory ().default_error_condition (414).message(), "URI too long");
+    ASSERT_EQ (HttpCategory ().default_error_condition (494).message(), "request header too large");
+    ASSERT_EQ (HttpCategory ().default_error_condition (500).message(), "internal server error");
+    ASSERT_EQ (HttpCategory ().default_error_condition (501).message(), "not implemented");
+    ASSERT_EQ (HttpCategory ().default_error_condition (502).message(), "bad gateway");
 }
 
 /**
@@ -70,33 +86,33 @@ TEST (HttpCategory, equal)
 {
     std::error_code error1, error2;
 
-    error1 = make_error_code (HttpErrc::InvalidRequest);
-    error2 = make_error_code (HttpErrc::InvalidRequest);
+    error1 = make_error_code (HttpErrc::BadRequest);
+    error2 = make_error_code (HttpErrc::BadRequest);
     ASSERT_TRUE (error1 == error2);
 
-    error2 = make_error_code (HttpErrc::InvalidMethod);
+    error2 = make_error_code (HttpErrc::ForbiddenMethod);
     ASSERT_FALSE (error1 == error2);
 
-    error1 = make_error_code (HttpErrc::InvalidMethod);
+    error1 = make_error_code (HttpErrc::ForbiddenMethod);
     ASSERT_TRUE (error1 == error2);
 
-    error2 = make_error_code (HttpErrc::InvalidHeader);
+    error2 = make_error_code (HttpErrc::HeaderTooLarge);
     ASSERT_FALSE (error1 == error2);
 
-    error1 = make_error_code (HttpErrc::InvalidHeader);
+    error1 = make_error_code (HttpErrc::HeaderTooLarge);
     ASSERT_TRUE (error1 == error2);
 
-    error1 = make_error_code (HttpErrc::InvalidRequest);
-    ASSERT_TRUE (error1 == HttpErrc::InvalidRequest);
+    error1 = make_error_code (HttpErrc::BadRequest);
+    ASSERT_TRUE (error1 == HttpErrc::BadRequest);
 
-    error1 = make_error_code (HttpErrc::InvalidMethod);
-    ASSERT_FALSE (error1 == HttpErrc::InvalidRequest);
+    error1 = make_error_code (HttpErrc::ForbiddenMethod);
+    ASSERT_FALSE (error1 == HttpErrc::BadRequest);
 
-    error2 = make_error_code (HttpErrc::InvalidMethod);
-    ASSERT_TRUE (HttpErrc::InvalidMethod == error2);
+    error2 = make_error_code (HttpErrc::ForbiddenMethod);
+    ASSERT_TRUE (HttpErrc::ForbiddenMethod == error2);
 
-    error2 = make_error_code (HttpErrc::InvalidHeader);
-    ASSERT_FALSE (HttpErrc::InvalidMethod == error2);
+    error2 = make_error_code (HttpErrc::HeaderTooLarge);
+    ASSERT_FALSE (HttpErrc::ForbiddenMethod == error2);
 }
 
 /**
@@ -106,33 +122,33 @@ TEST (HttpCategory, different)
 {
     std::error_code error1, error2;
 
-    error1 = make_error_code (HttpErrc::InvalidRequest);
-    error2 = make_error_code (HttpErrc::InvalidRequest);
+    error1 = make_error_code (HttpErrc::BadRequest);
+    error2 = make_error_code (HttpErrc::BadRequest);
     ASSERT_FALSE (error1 != error2);
 
-    error2 = make_error_code (HttpErrc::InvalidMethod);
+    error2 = make_error_code (HttpErrc::ForbiddenMethod);
     ASSERT_TRUE (error1 != error2);
 
-    error1 = make_error_code (HttpErrc::InvalidMethod);
+    error1 = make_error_code (HttpErrc::ForbiddenMethod);
     ASSERT_FALSE (error1 != error2);
 
-    error2 = make_error_code (HttpErrc::InvalidHeader);
+    error2 = make_error_code (HttpErrc::HeaderTooLarge);
     ASSERT_TRUE (error1 != error2);
 
-    error1 = make_error_code (HttpErrc::InvalidHeader);
+    error1 = make_error_code (HttpErrc::HeaderTooLarge);
     ASSERT_FALSE (error1 != error2);
 
-    error1 = make_error_code (HttpErrc::InvalidRequest);
-    ASSERT_FALSE (error1 != HttpErrc::InvalidRequest);
+    error1 = make_error_code (HttpErrc::BadRequest);
+    ASSERT_FALSE (error1 != HttpErrc::BadRequest);
 
-    error1 = make_error_code (HttpErrc::InvalidMethod);
-    ASSERT_TRUE (error1 != HttpErrc::InvalidRequest);
+    error1 = make_error_code (HttpErrc::ForbiddenMethod);
+    ASSERT_TRUE (error1 != HttpErrc::BadRequest);
 
-    error2 = make_error_code (HttpErrc::InvalidMethod);
-    ASSERT_FALSE (HttpErrc::InvalidMethod != error2);
+    error2 = make_error_code (HttpErrc::ForbiddenMethod);
+    ASSERT_FALSE (HttpErrc::ForbiddenMethod != error2);
 
-    error2 = make_error_code (HttpErrc::InvalidHeader);
-    ASSERT_TRUE (HttpErrc::InvalidMethod != error2);
+    error2 = make_error_code (HttpErrc::HeaderTooLarge);
+    ASSERT_TRUE (HttpErrc::ForbiddenMethod != error2);
 }
 
 /**
@@ -140,9 +156,9 @@ TEST (HttpCategory, different)
  */
 TEST (HttpCategory, make_error_code)
 {
-    auto code = make_error_code (HttpErrc::InvalidRequest);
-    ASSERT_EQ (code, HttpErrc::InvalidRequest);
-    ASSERT_STREQ (code.message ().c_str (), "invalid HTTP request");
+    auto code = make_error_code (HttpErrc::BadRequest);
+    ASSERT_EQ (code, HttpErrc::BadRequest);
+    ASSERT_STREQ (code.message ().c_str (), "bad request");
 }
 
 /**
@@ -150,9 +166,9 @@ TEST (HttpCategory, make_error_code)
  */
 TEST (HttpCategory, make_error_condition)
 {
-    auto code = make_error_condition (HttpErrc::InvalidMethod);
-    ASSERT_EQ (code, HttpErrc::InvalidMethod);
-    ASSERT_STREQ (code.message ().c_str (), "invalid HTTP method");
+    auto code = make_error_condition (HttpErrc::ForbiddenMethod);
+    ASSERT_EQ (code, HttpErrc::ForbiddenMethod);
+    ASSERT_STREQ (code.message ().c_str (), "method not allowed");
 }
 
 /**

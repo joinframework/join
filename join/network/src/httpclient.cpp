@@ -262,7 +262,7 @@ void HttpClient::send (const HttpRequest& request)
         tmp.header ("User-Agent", "join/" JOIN_VERSION);
     }
 
-    tmp.send (*this);
+    tmp.writeHeaders (*this);
     if (fail ())
     {
         return;
@@ -277,7 +277,7 @@ void HttpClient::send (const HttpRequest& request)
 // =========================================================================
 void HttpClient::receive (HttpResponse& response)
 {
-    response.receive (*this);
+    response.readHeaders (*this);
     if (fail ())
     {
         return;
