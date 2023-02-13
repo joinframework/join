@@ -1201,14 +1201,8 @@ namespace join
         {
             char* end = nullptr;
             static locale_t locale = newlocale (LC_ALL_MASK, "C", nullptr);
-
             d = strtod_l (num.c_str (), &end, locale);
-            if (end != &num[num.size ()])
-            {
-                return false;
-            }
-
-            return true;
+            return (end && (*end == '\0'));
         }
 
         /**
