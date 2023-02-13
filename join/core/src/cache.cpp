@@ -67,7 +67,8 @@ void* Cache::get (const std::string &fileName, struct stat *sbuf)
     auto it = _entries.find (fileName);
     if (it != _entries.end ())
     {
-        if (it->second->modifTime == sb.st_ctime)
+        if (it->second->modifTime.tv_sec == sb.st_ctim.tv_sec &&
+            it->second->modifTime.tv_nsec == sb.st_ctim.tv_nsec)
         {
             return it->second->addr;
         }
@@ -87,7 +88,7 @@ void* Cache::get (const std::string &fileName, struct stat *sbuf)
     if (entry)
     {
         entry->size = sb.st_size;
-        entry->modifTime = sb.st_ctime;
+        entry->modifTime = sb.st_ctim;
         entry->addr = mmap (0, entry->size, PROT_READ, MAP_PRIVATE, fd, 0);
         if (entry->addr != MAP_FAILED)
         {

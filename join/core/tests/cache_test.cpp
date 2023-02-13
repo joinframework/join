@@ -156,7 +156,7 @@ TEST_F (CacheTest, get)
 
     ASSERT_TRUE (writeFile (path, otherContent));
     ASSERT_EQ (stat (path.c_str (), &sbuf), 0) << strerror (errno);
-    data = reinterpret_cast <char*> (cache.get (path));
+    data = reinterpret_cast <char*> (cache.get (path, &sbuf));
     ASSERT_NE (data, nullptr);
     ASSERT_EQ (std::string (data, sbuf.st_size), otherContent);
 }

@@ -110,9 +110,9 @@ namespace join
          */
         struct CacheEntry
         {
-            off_t  size;            /**< file size. */
-            time_t modifTime;       /**< file modification date. */
-            void   *addr;           /**< file content address. */
+            off_t size;                 /**< file size. */
+            struct timespec modifTime;  /**< file modification date. */
+            void *addr;                 /**< file content address. */
         };
 
         /// cached entries map.
