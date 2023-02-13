@@ -45,29 +45,6 @@ class CacheTest : public ::testing::Test
 {
 protected:
     /**
-     * @brief Create file.
-     * @param filepath path.
-     * @param content content to write.
-     * @return true on success, false otherwise.
-     */
-    bool writeFile (const std::string& filepath, const std::string& content)
-    {
-        int dst = ::open (filepath.c_str (), O_CREAT | O_TRUNC | O_WRONLY);
-        if (dst == -1)
-        {
-            return false;
-        }
-        if (::write (dst, content.c_str (), content.size ()) != ssize_t (content.size ()))
-        {
-            ::close (dst);
-            return false;
-        }
-        ::fsync (dst);
-        ::close (dst);
-        return true;
-    }
-
-    /**
      * @brief Set up test.
      */
     virtual void SetUp ()
@@ -86,6 +63,29 @@ protected:
         ASSERT_NO_THROW (cache.clear ());
         remove (otherFile.c_str ());
         remove (file.c_str ());
+    }
+
+    /**
+     * @brief Create file.
+     * @param filepath path.
+     * @param content content to write.
+     * @return true on success, false otherwise.
+     */
+    bool writeFile (const std::string& filepath, const std::string& content)
+    {
+        int dst = ::open (filepath.c_str (), O_CREAT | O_TRUNC | O_WRONLY, 0644);
+        if (dst == -1)
+        {
+            return false;
+        }
+        if (::write (dst, content.c_str (), content.size ()) != ssize_t (content.size ()))
+        {
+            ::close (dst);
+            return false;
+        }
+        ::fsync (dst);
+        ::close (dst);
+        return true;
     }
 
     /// server instance.
