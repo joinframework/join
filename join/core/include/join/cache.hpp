@@ -30,6 +30,7 @@
 
 // C++.
 #include <string>
+#include <memory>
 #include <map>
 
 // C.
@@ -115,7 +116,7 @@ namespace join
         };
 
         /// cached entries map.
-        std::map <std::string, CacheEntry *> _entries;
+        std::map <std::string, std::unique_ptr <CacheEntry>> _entries;
 
         /// protection mutex for the cache map.
         Mutex _mutex;

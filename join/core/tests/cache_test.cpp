@@ -49,10 +49,10 @@ protected:
      */
     virtual void SetUp ()
     {
-        ASSERT_TRUE (writeFile (file, fileContent)) << strerror (errno);
-        ASSERT_TRUE (writeFile (otherFile, otherFileContent)) << strerror (errno);
-        ASSERT_NE (nullptr, cache.get (file));
-        ASSERT_NE (nullptr, cache.get (otherFile));
+        ASSERT_TRUE (writeFile (path, content));
+        ASSERT_TRUE (writeFile (other, otherContent));
+        ASSERT_NE (nullptr, cache.get (path));
+        ASSERT_NE (nullptr, cache.get (other));
     }
 
     /**
@@ -61,8 +61,8 @@ protected:
     virtual void TearDown ()
     {
         ASSERT_NO_THROW (cache.clear ());
-        remove (otherFile.c_str ());
-        remove (file.c_str ());
+        remove (other.c_str ());
+        remove (path.c_str ());
     }
 
     /**
@@ -91,28 +91,44 @@ protected:
     /// server instance.
     static Cache cache;
 
+    /// file base.
+    static const std::string base;
+
+    /// file name without extension.
+    static const std::string stem;
+
+    /// file extension.
+    static const std::string ext;
+
     /// file name.
-    static const std::string file;
+    static const std::string name;
+
+    /// file path.
+    static const std::string path;
 
     /// file content.
-    static const std::string fileContent;
+    static const std::string content;
 
-    /// other file name.
-    static const std::string otherFile;
+    /// bad file path.
+    static const std::string bad;
+
+    /// other file path.
+    static const std::string other;
 
     /// other file content.
-    static const std::string otherFileContent;
-
-    /// bad file name.
-    static const std::string bad;
+    static const std::string otherContent;
 };
 
 Cache             CacheTest::cache;
-const std::string CacheTest::file             = "/tmp/cache_test";
-const std::string CacheTest::fileContent      = "test string";
-const std::string CacheTest::otherFile        = "/tmp/cache_other_test";
-const std::string CacheTest::otherFileContent = "other test string";
-const std::string CacheTest::bad              = "/tmp/cache_bad_test";
+const std::string CacheTest::base             = "/tmp/";
+const std::string CacheTest::stem             = "join_cache_test";
+const std::string CacheTest::ext              = "txt";
+const std::string CacheTest::name             = stem + "." + ext;
+const std::string CacheTest::path             = base + name;
+const std::string CacheTest::content          = "test string";
+const std::string CacheTest::bad              = base + stem + ".bad";
+const std::string CacheTest::other            = base + stem + ".other";
+const std::string CacheTest::otherContent     = "other test string";
 
 /**
  * @brief Test get method.
@@ -122,24 +138,27 @@ TEST_F (CacheTest, get)
     ASSERT_EQ (cache.get (bad), nullptr);
 
     struct stat sbuf;
-    ASSERT_EQ (stat (file.c_str (), &sbuf), 0) << strerror (errno);
+    ASSERT_EQ (stat (base.c_str (), &sbuf), 0) << strerror (errno);
     ASSERT_EQ (cache.get (bad, &sbuf), nullptr);
 
-    ASSERT_EQ (stat (file.c_str (), &sbuf), 0) << strerror (errno);
-    char* data = reinterpret_cast <char*> (cache.get (file, &sbuf));
-    ASSERT_NE (data, nullptr);
-    ASSERT_EQ (std::string (data, sbuf.st_size), fileContent);
+    ASSERT_EQ (stat (base.c_str (), &sbuf), 0) << strerror (errno);
+    ASSERT_EQ (cache.get (base, &sbuf), nullptr);
 
-    ASSERT_EQ (stat (otherFile.c_str (), &sbuf), 0) << strerror (errno);
-    data = reinterpret_cast <char*> (cache.get (otherFile));
+    ASSERT_EQ (stat (path.c_str (), &sbuf), 0) << strerror (errno);
+    char* data = reinterpret_cast <char*> (cache.get (path, &sbuf));
     ASSERT_NE (data, nullptr);
-    ASSERT_EQ (std::string (data, sbuf.st_size), otherFileContent);
+    ASSERT_EQ (std::string (data, sbuf.st_size), content);
 
-    ASSERT_TRUE (writeFile (file, otherFileContent)) << strerror (errno);
-    ASSERT_EQ (stat (file.c_str (), &sbuf), 0) << strerror (errno);
-    data = reinterpret_cast <char*> (cache.get (file));
+    ASSERT_EQ (stat (other.c_str (), &sbuf), 0) << strerror (errno);
+    data = reinterpret_cast <char*> (cache.get (other));
     ASSERT_NE (data, nullptr);
-    ASSERT_EQ (std::string (data, sbuf.st_size), otherFileContent);
+    ASSERT_EQ (std::string (data, sbuf.st_size), otherContent);
+
+    ASSERT_TRUE (writeFile (path, otherContent));
+    ASSERT_EQ (stat (path.c_str (), &sbuf), 0) << strerror (errno);
+    data = reinterpret_cast <char*> (cache.get (path));
+    ASSERT_NE (data, nullptr);
+    ASSERT_EQ (std::string (data, sbuf.st_size), otherContent);
 }
 
 /**
@@ -147,7 +166,7 @@ TEST_F (CacheTest, get)
  */
 TEST_F (CacheTest, remove)
 {
-    EXPECT_NO_THROW (cache.remove (file));
+    EXPECT_NO_THROW (cache.remove (path));
     EXPECT_EQ (1, cache.size ());
 }
 

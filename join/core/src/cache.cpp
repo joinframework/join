@@ -81,32 +81,23 @@ void* Cache::get (const std::string &fileName, struct stat *sbuf)
         return nullptr;
     }
 
-    CacheEntry *entry = new CacheEntry ();
-    if (entry == nullptr)
+    void* ptr = nullptr;
+
+    std::unique_ptr <CacheEntry> entry = std::make_unique <CacheEntry> ();
+    if (entry)
     {
-        close (fd);
-        return nullptr;
+        entry->size = sb.st_size;
+        entry->modifTime = sb.st_ctime;
+        entry->addr = mmap (0, entry->size, PROT_READ, MAP_PRIVATE, fd, 0);
+        if (entry->addr != MAP_FAILED)
+        {
+            ptr = _entries.emplace (fileName, std::move (entry)).first->second->addr;
+        }
     }
 
-    entry->size = sb.st_size;
-    entry->modifTime = sb.st_ctime;
-    entry->addr = mmap (0, entry->size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if ((entry->addr == MAP_FAILED) && (errno == ENOMEM))
-    {
-        clear ();
-        entry->addr = mmap (0, entry->size, PROT_READ, MAP_PRIVATE, fd, 0);
-    }
     close (fd);
 
-    if (entry->addr == MAP_FAILED)
-    {
-        delete entry;
-        return nullptr;
-    }
-
-    _entries.emplace (fileName, entry);
-
-    return entry->addr;
+    return ptr;
 }
 
 // =========================================================================
@@ -121,8 +112,6 @@ void Cache::remove (const std::string &fileName)
     if (it != _entries.end ())
     {
         munmap (it->second->addr, it->second->size);
-        delete it->second;
-
         _entries.erase (it);
     }
 }
@@ -135,10 +124,9 @@ void Cache::clear ()
 {
     ScopedLock lock (_mutex);
 
-    for (auto entry : _entries)
+    for (auto const& entry : _entries)
     {
         munmap (entry.second->addr, entry.second->size);
-        delete entry.second;
     }
 
     _entries.clear ();
