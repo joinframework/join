@@ -252,6 +252,10 @@ void HttpClient::send (const HttpRequest& request)
     }
 
     tmp.writeHeaders (*this);
+    if (fail ())
+    {
+        return;
+    }
 
     flush ();
 }
