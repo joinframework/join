@@ -115,8 +115,7 @@ int Reactor::delHandler (EventHandler* handler)
 // =========================================================================
 Reactor::Reactor ()
 : _event (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
-  _epoll (epoll_create1 (EPOLL_CLOEXEC)),
-  _ev (32)
+  _epoll (epoll_create1 (EPOLL_CLOEXEC))
 {
 }
 
@@ -147,6 +146,8 @@ void Reactor::dispatch ()
 {
     _mutex.lock ();
 
+    std::vector <struct epoll_event> ev (32);
+
     fd_set setfd;
     FD_ZERO (&setfd);
     FD_SET (_event, &setfd);
@@ -172,20 +173,20 @@ void Reactor::dispatch ()
 
             if (FD_ISSET (_epoll, &descset))
             {
-                nset = epoll_wait (_epoll, _ev.data (), _ev.size (), 0);
+                nset = epoll_wait (_epoll, ev.data (), ev.size (), 0);
                 for (int n = 0; n < nset; ++n)
                 {
-                    if (_ev[n].events & EPOLLERR)
+                    if (ev[n].events & EPOLLERR)
                     {
-                        reinterpret_cast <EventHandler*> (_ev[n].data.ptr)->onError ();
+                        reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onError ();
                     }
-                    else if ((_ev[n].events & EPOLLRDHUP) || (_ev[n].events & EPOLLHUP))
+                    else if ((ev[n].events & EPOLLRDHUP) || (ev[n].events & EPOLLHUP))
                     {
-                        reinterpret_cast <EventHandler*> (_ev[n].data.ptr)->onClose ();
+                        reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onClose ();
                     }
-                    else if (_ev[n].events & EPOLLIN)
+                    else if (ev[n].events & EPOLLIN)
                     {
-                        reinterpret_cast <EventHandler*> (_ev[n].data.ptr)->onReceive ();
+                        reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onReceive ();
                     }
                 }
             }

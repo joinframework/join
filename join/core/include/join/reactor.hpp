@@ -27,7 +27,6 @@
 
 // libjoin.
 #include <join/condition.hpp>
-#include <join/thread.hpp>
 
 // C++.
 #include <vector>
@@ -138,9 +137,6 @@ namespace join
 
         /// epoll file descriptor.
         int _epoll = -1;
-
-        /// epoll events.
-        std::vector <struct epoll_event> _ev;
 
         /// epoll protection mutex.
         Mutex _mutex;
