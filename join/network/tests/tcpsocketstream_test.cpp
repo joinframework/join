@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/reactor.hpp>
 #include <join/acceptor.hpp>
 
 // Libraries.
@@ -31,12 +32,13 @@
 using join::Errc;
 using join::IpAddress;
 using join::Resolver;
+using join::Reactor;
 using join::Tcp;
 
 /**
  * @brief Class used to test the TCP socket stream API.
  */
-class TcpSocketStream : public ::testing::Test, public Tcp::Acceptor::Observer
+class TcpSocketStream : public join::EventHandler, public ::testing::Test
 {
 protected:
     /**
@@ -44,9 +46,9 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (listen (), 0) << join::lastError.message ();
-        ASSERT_EQ (start (), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
+        ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
     /**
@@ -54,16 +56,16 @@ protected:
      */
     void TearDown ()
     {
-        ASSERT_EQ (stop (), 0) << join::lastError.message ();
-        close ();
+        ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+        _acceptor.close ();
     }
 
     /**
-     * @brief method called on receive.
+     * @brief method called when data are ready to be read on handle.
      */
     virtual void onReceive () override
     {
-        Tcp::Socket sock = accept ();
+        Tcp::Socket sock = _acceptor.accept ();
         if (sock.connected ())
         {
             char buf[1024];
@@ -86,6 +88,34 @@ protected:
         }
     }
 
+    /**
+     * @brief method called when handle is closed.
+     */
+    virtual void onClose () override
+    {
+        // do nothing.
+    }
+
+    /**
+     * @brief method called when an error occured on handle.
+     */
+    virtual void onError () override
+    {
+        // do nothing.
+    }
+
+    /**
+     * @brief get native handle.
+     * @return native handle.
+     */
+    virtual int handle () const override
+    {
+        return _acceptor.handle ();
+    }
+
+    /// server socket.
+    static Tcp::Acceptor _acceptor;
+
     /// timeout.
     static const int _timeout;
 
@@ -97,6 +127,7 @@ protected:
     static const uint16_t _invalid_port;
 };
 
+Tcp::Acceptor     TcpSocketStream::_acceptor;
 const int         TcpSocketStream::_timeout = 1000;
 const std::string TcpSocketStream::_host = "localhost";
 const uint16_t    TcpSocketStream::_port = 5000;

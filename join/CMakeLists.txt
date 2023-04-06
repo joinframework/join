@@ -27,6 +27,7 @@ set(PUBLIC_HEADERS
     core/include/join/variant.hpp
     core/include/join/view.hpp
     core/include/join/cache.hpp
+    core/include/join/reactor.hpp
     thread/include/join/mutex.hpp
     thread/include/join/condition.hpp
     thread/include/join/thread.hpp
@@ -38,7 +39,6 @@ set(PUBLIC_HEADERS
     network/include/join/endpoint.hpp
     network/include/join/protocol.hpp
     network/include/join/resolver.hpp
-    network/include/join/observer.hpp
     network/include/join/socket.hpp
     network/include/join/socketstream.hpp
     network/include/join/acceptor.hpp
@@ -56,6 +56,7 @@ set(PUBLIC_HEADERS
 set(SOURCES
     core/src/error.cpp
     core/src/cache.cpp
+    core/src/reactor.cpp
     thread/src/mutex.cpp
     thread/src/condition.cpp
     thread/src/thread.cpp

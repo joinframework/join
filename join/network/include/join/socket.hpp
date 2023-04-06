@@ -26,11 +26,11 @@
 #define __JOIN_SOCKET_HPP__
 
 // libjoin.
-#include <join/endpoint.hpp>
+#include <join/protocol.hpp>
 #include <join/resolver.hpp>
-#include <join/observer.hpp>
 #include <join/openssl.hpp>
 #include <join/utils.hpp>
+#include <join/error.hpp>
 
 // Libraries.
 #include <openssl/err.h>
@@ -58,7 +58,6 @@ namespace join
     class BasicSocket
     {
     public:
-        using Observer = BasicObserver <BasicSocket <Protocol>>;
         using Ptr      = std::unique_ptr <BasicSocket <Protocol>>;
         using Endpoint = typename Protocol::Endpoint;
 
@@ -669,7 +668,6 @@ namespace join
     class BasicDatagramSocket : public BasicSocket <Protocol>
     {
     public:
-        using Observer = BasicObserver <BasicDatagramSocket <Protocol>>;
         using Ptr      = std::unique_ptr <BasicDatagramSocket <Protocol>>;
         using Mode     = typename BasicSocket <Protocol>::Mode;
         using Option   = typename BasicSocket <Protocol>::Option;
@@ -1190,7 +1188,6 @@ namespace join
     class BasicStreamSocket : public BasicDatagramSocket <Protocol>
     {
     public:
-        using Observer = BasicObserver <BasicStreamSocket <Protocol>>;
         using Ptr      = std::unique_ptr <BasicStreamSocket <Protocol>>;
         using Mode     = typename BasicDatagramSocket <Protocol>::Mode;
         using Option   = typename BasicDatagramSocket <Protocol>::Option;
@@ -1394,6 +1391,19 @@ namespace join
         }
 
         /**
+         * @brief read data until size is reached or an error occurred.
+         * @param data buffer used to store the data received.
+         * @param size number of bytes to read.
+         * @param timeout timeout in milliseconds.
+         * @return 0 on success, -1 on failure.
+         */
+        int readExactly (std::string& data, unsigned long size, int timeout = 0)
+        {
+            data.resize (size);
+            return readExactly (&data[0], size, timeout);
+        }
+
+        /**
          * @brief write data until size is reached or an error occurred.
          * @param data data buffer to send.
          * @param size number of bytes to write.
@@ -1586,7 +1596,6 @@ namespace join
     class BasicTlsSocket : public BasicStreamSocket <Protocol>
     {
     public:
-        using Observer = BasicObserver <BasicTlsSocket <Protocol>>;
         using Ptr      = std::unique_ptr <BasicTlsSocket <Protocol>>;
         using Mode     = typename BasicStreamSocket <Protocol>::Mode;
         using Option   = typename BasicStreamSocket <Protocol>::Option;

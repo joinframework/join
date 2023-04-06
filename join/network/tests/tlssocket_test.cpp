@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/reactor.hpp>
 #include <join/acceptor.hpp>
 
 // Libraries.
@@ -34,12 +35,13 @@
 using join::Errc;
 using join::IpAddress;
 using join::Resolver;
+using join::Reactor;
 using join::Tls;
 
 /**
  * @brief Class used to test the TLS socket API.
  */
-class TlsSocket : public ::testing::Test, public Tls::Acceptor::Observer
+class TlsSocket : public join::EventHandler, public ::testing::Test
 {
 public:
     /**
@@ -185,14 +187,14 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.setCertificate (_certFile, _key), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
     #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-        ASSERT_EQ (setCipher_1_3 (join::crypto::defaultCipher_1_3_), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.setCipher_1_3 (join::crypto::defaultCipher_1_3_), 0) << join::lastError.message ();
     #endif
-        ASSERT_EQ (bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (listen (), 0) << join::lastError.message ();
-        ASSERT_EQ (start (), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
+        ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
     /**
@@ -200,16 +202,16 @@ protected:
      */
     void TearDown ()
     {
-        ASSERT_EQ (stop (), 0) << join::lastError.message ();
-        close ();
+        ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+        _acceptor.close ();
     }
 
-        /**
-     * @brief method called on receive.
+    /**
+     * @brief method called when data are ready to be read on handle.
      */
     virtual void onReceive () override
     {
-        Tls::Socket sock = accept ();
+        Tls::Socket sock = _acceptor.accept ();
         if (sock.connected ())
         {
             char buf[1024];
@@ -231,6 +233,34 @@ protected:
             sock.close ();
         }
     }
+
+    /**
+     * @brief method called when handle is closed.
+     */
+    virtual void onClose () override
+    {
+        // do nothing.
+    }
+
+    /**
+     * @brief method called when an error occured on handle.
+     */
+    virtual void onError () override
+    {
+        // do nothing.
+    }
+
+    /**
+     * @brief get native handle.
+     * @return native handle.
+     */
+    virtual int handle () const override
+    {
+        return _acceptor.handle ();
+    }
+
+    /// server socket.
+    static Tls::Acceptor _acceptor;
 
     /// host ip address.
     static const IpAddress _hostip;
@@ -260,6 +290,7 @@ protected:
     static const std::string _invalidKey;
 };
 
+Tls::Acceptor     TlsSocket::_acceptor;
 const IpAddress   TlsSocket::_hostip     = "127.0.0.1";
 const std::string TlsSocket::_host       = "localhost.";
 const uint16_t    TlsSocket::_port       = 5000;
@@ -640,14 +671,13 @@ TEST_F (TlsSocket, setMode)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::Blocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setMode (Tls::Socket::NonBlocking), 0) << join::lastError.message ();
-    if (tlsSocket.disconnect () == -1)
-    {
-        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-    }
-    ASSERT_TRUE (tlsSocket.waitDisconnected (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::Blocking), 0) << join::lastError.message ();
+
+    ASSERT_EQ (tlsSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::NonBlocking), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::Blocking), 0) << join::lastError.message ();
+
     tlsSocket.close ();
 }
 

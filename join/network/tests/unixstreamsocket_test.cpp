@@ -23,17 +23,19 @@
  */
 
 // libjoin.
+#include <join/reactor.hpp>
 #include <join/acceptor.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
 using join::Errc;
+using join::Reactor;
 using join::UnixStream;
 /**
  * @brief Class used to test the unix stream socket API.
  */
-class UnixStreamSocket : public ::testing::Test, public UnixStream::Acceptor::Observer
+class UnixStreamSocket : public join::EventHandler, public ::testing::Test
 {
 protected:
     /**
@@ -41,9 +43,9 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (bind (_serverpath), 0) << join::lastError.message ();
-        ASSERT_EQ (listen (), 0) << join::lastError.message ();
-        ASSERT_EQ (start (), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.bind (_serverpath), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
+        ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
     /**
@@ -51,16 +53,16 @@ protected:
      */
     void TearDown ()
     {
-        ASSERT_EQ (stop (), 0) << join::lastError.message ();
-        close ();
+        ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+        _acceptor.close ();
     }
 
-        /**
-     * @brief method called on receive.
+    /**
+     * @brief method called when data are ready to be read on handle.
      */
     virtual void onReceive () override
     {
-        UnixStream::Socket sock = accept ();
+        UnixStream::Socket sock = _acceptor.accept ();
         if (sock.connected ())
         {
             char buf[1024];
@@ -83,6 +85,34 @@ protected:
         }
     }
 
+    /**
+     * @brief method called when handle is closed.
+     */
+    virtual void onClose () override
+    {
+        // do nothing.
+    }
+
+    /**
+     * @brief method called when an error occured on handle.
+     */
+    virtual void onError () override
+    {
+        // do nothing.
+    }
+
+    /**
+     * @brief get native handle.
+     * @return native handle.
+     */
+    virtual int handle () const override
+    {
+        return _acceptor.handle ();
+    }
+
+    // server socket.
+    static UnixStream::Acceptor _acceptor;
+
     /// path.
     static const std::string _serverpath;
     static const std::string _clientpath;
@@ -91,9 +121,10 @@ protected:
     static const int _timeout;
 };
 
-const std::string UnixStreamSocket::_serverpath = "/tmp/unixserver_test.sock";
-const std::string UnixStreamSocket::_clientpath = "/tmp/unixclient_test.sock";
-const int         UnixStreamSocket::_timeout = 1000;
+UnixStream::Acceptor UnixStreamSocket::_acceptor;
+const std::string    UnixStreamSocket::_serverpath = "/tmp/unixserver_test.sock";
+const std::string    UnixStreamSocket::_clientpath = "/tmp/unixclient_test.sock";
+const int            UnixStreamSocket::_timeout = 1000;
 
 /**
  * @brief Test open method.
@@ -359,14 +390,13 @@ TEST_F (UnixStreamSocket, setMode)
 {
     UnixStream::Socket unixSocket;
 
+    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::NonBlocking), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::Blocking), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::NonBlocking), 0);
-    if (unixSocket.disconnect () == -1)
-    {
-        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-    }
-    ASSERT_TRUE (unixSocket.waitDisconnected (_timeout)) << join::lastError.message ();
+
+    ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::NonBlocking), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::Blocking), 0) << join::lastError.message ();
+
     unixSocket.close ();
 }
 
