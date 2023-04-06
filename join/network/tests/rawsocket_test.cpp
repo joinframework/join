@@ -303,9 +303,13 @@ TEST_F (RawSocket, setMode)
 {
     Raw::Socket rawSocket;
 
+    ASSERT_EQ (rawSocket.setMode (Raw::Socket::NonBlocking), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setMode (Raw::Socket::Blocking), 0) << join::lastError.message ();
+
     ASSERT_EQ (rawSocket.open (), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setMode (Raw::Socket::NonBlocking), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.setMode (Raw::Socket::Blocking), 0) << join::lastError.message ();
+
     rawSocket.close ();
 }
 

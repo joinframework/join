@@ -390,14 +390,13 @@ TEST_F (UnixStreamSocket, setMode)
 {
     UnixStream::Socket unixSocket;
 
+    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::NonBlocking), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::Blocking), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::NonBlocking), 0);
-    if (unixSocket.disconnect () == -1)
-    {
-        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-    }
-    ASSERT_TRUE (unixSocket.waitDisconnected (_timeout)) << join::lastError.message ();
+
+    ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::NonBlocking), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::Blocking), 0) << join::lastError.message ();
+
     unixSocket.close ();
 }
 

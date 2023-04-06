@@ -424,14 +424,13 @@ TEST_F (TcpSocket, setMode)
 {
     Tcp::Socket tcpSocket;
 
+    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::Blocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0);
-    if (tcpSocket.disconnect () == -1)
-    {
-        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-    }
-    ASSERT_TRUE (tcpSocket.waitDisconnected (_timeout)) << join::lastError.message ();
+
+    ASSERT_EQ (tcpSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::Blocking), 0) << join::lastError.message ();
+
     tcpSocket.close ();
 }
 
