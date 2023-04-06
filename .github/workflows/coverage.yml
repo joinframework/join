@@ -33,7 +33,7 @@ jobs:
         lcov --remove lcov.info "*/build/*" "*/tests/*" "/usr/include/*" --output-file lcov.info
 
     - name: Upload coverage report to coveralls
-      uses: coverallsapp/github-action@2.0.0
+      uses: coverallsapp/github-action@1.2.4
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         path-to-lcov: lcov.info
