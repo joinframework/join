@@ -53,63 +53,28 @@ Reactor* Reactor::instance ()
 // =========================================================================
 int Reactor::addHandler (EventHandler* handler)
 {
-    ScopedLock lk (_mutex);
+    ScopedLock lock (_mutex);
 
-    if (!handler)
+    if (handler == nullptr)
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 
-    if (_event == -1)
-    {
-        _event = eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC);
-        if (_event == -1)
-        {
-            lastError = std::make_error_code (static_cast <std::errc> (errno));
-            return -1;
-        }
-    }
-
-    if (_epoll == -1)
-    {
-        _epoll = epoll_create1 (EPOLL_CLOEXEC);
-        if (_epoll == -1)
-        {
-            lastError = std::make_error_code (static_cast <std::errc> (errno));
-            return -1;
-        }
-    }
-
-    auto status = _handlers.emplace (handler->handle (), handler);
-    if (status.second == false)
-    {
-        lastError = make_error_code (Errc::InUse);
-        return -1;
-    }
-
     struct epoll_event ev;
     ev.events = EPOLLIN | EPOLLRDHUP;
-    ev.data.fd = handler->handle ();
+    ev.data.ptr = handler;
 
-    if (epoll_ctl (_epoll, EPOLL_CTL_ADD, ev.data.fd, &ev) == -1)
+    if (epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev) == -1)
     {
         lastError = std::make_error_code (static_cast <std::errc> (errno));
         return -1;
     }
 
-    if (_running == false)
+    if (++_num == 1)
     {
-        try
-        {
-            std::thread (std::bind (&Reactor::dispatch, this)).detach ();
-            _running = true;
-        }
-        catch (const std::system_error& err)
-        {
-            lastError = err.code ();
-            return -1;
-        }
+        std::thread (std::bind (&Reactor::dispatch, this)).detach ();
+        _running = true;
     }
 
     return 0;
@@ -121,15 +86,9 @@ int Reactor::addHandler (EventHandler* handler)
 // =========================================================================
 int Reactor::delHandler (EventHandler* handler)
 {
-    ScopedLock lk (_mutex);
+    ScopedLock lock (_mutex);
 
-    if (!handler)
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    if (_handlers.erase (handler->handle ()) == 0)
+    if (handler == nullptr)
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
@@ -141,7 +100,7 @@ int Reactor::delHandler (EventHandler* handler)
         return -1;
     }
 
-    if (_handlers.empty ())
+    if (--_num == 0)
     {
         uint64_t value = 1;
         [[maybe_unused]] ssize_t bytes = ::write (_event, &value, sizeof (uint64_t));
@@ -155,7 +114,9 @@ int Reactor::delHandler (EventHandler* handler)
 //   METHOD    : Reactor
 // =========================================================================
 Reactor::Reactor ()
-: _ev (32)
+: _event (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
+  _epoll (epoll_create1 (EPOLL_CLOEXEC)),
+  _ev (32)
 {
 }
 
@@ -165,19 +126,14 @@ Reactor::Reactor ()
 // =========================================================================
 Reactor::~Reactor ()
 {
-    ScopedLock lk (_mutex);
+    ScopedLock lock (_mutex);
 
     if (_running)
     {
         uint64_t value = 1;
         [[maybe_unused]] ssize_t bytes = ::write (_event, &value, sizeof (uint64_t));
-
-        _end.wait (lk, [this] () {
-            return !_running;
-        });
+        _end.wait (lock, [this] () { return !_running; });
     }
-
-    _handlers.clear ();
 
     ::close (_event);
     ::close (_epoll);
@@ -195,14 +151,14 @@ void Reactor::dispatch ()
     FD_ZERO (&setfd);
     FD_SET (_event, &setfd);
     FD_SET (_epoll, &setfd);
-    int maxdesc = std::max (_event, _epoll);
+    int max = std::max (_event, _epoll);
 
     for (;;)
     {
         fd_set descset = setfd;
 
         _mutex.unlock ();
-        int nset = ::select (maxdesc + 1, &descset, nullptr, nullptr, nullptr);
+        int nset = ::select (max + 1, &descset, nullptr, nullptr, nullptr);
         _mutex.lock ();
 
         if (nset > 0)
@@ -219,21 +175,17 @@ void Reactor::dispatch ()
                 nset = epoll_wait (_epoll, _ev.data (), _ev.size (), 0);
                 for (int n = 0; n < nset; ++n)
                 {
-                    auto it = _handlers.find (_ev[n].data.fd);
-                    if (it != _handlers.end ())
+                    if (_ev[n].events & EPOLLERR)
                     {
-                        if (_ev[n].events & EPOLLERR)
-                        {
-                            it->second->onError ();
-                        }
-                        else if ((_ev[n].events & EPOLLRDHUP) || (_ev[n].events & EPOLLHUP))
-                        {
-                            it->second->onClose ();
-                        }
-                        else if (_ev[n].events & EPOLLIN)
-                        {
-                            it->second->onReceive ();
-                        }
+                        reinterpret_cast <EventHandler*> (_ev[n].data.ptr)->onError ();
+                    }
+                    else if ((_ev[n].events & EPOLLRDHUP) || (_ev[n].events & EPOLLHUP))
+                    {
+                        reinterpret_cast <EventHandler*> (_ev[n].data.ptr)->onClose ();
+                    }
+                    else if (_ev[n].events & EPOLLIN)
+                    {
+                        reinterpret_cast <EventHandler*> (_ev[n].data.ptr)->onReceive ();
                     }
                 }
             }

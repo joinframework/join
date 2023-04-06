@@ -51,8 +51,6 @@ protected:
     {
         ASSERT_EQ (_acceptor.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
-        ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
     }
 
     /**
@@ -75,7 +73,7 @@ protected:
             _server.readExactly (_event, _server.canRead ());
         }
 
-        _cond.broadcast ();
+        _cond.signal ();
     }
 
     /**
@@ -91,7 +89,7 @@ protected:
             _event = "onClose";
         }
 
-        _cond.broadcast ();
+        _cond.signal ();
     }
 
     /**
@@ -107,7 +105,7 @@ protected:
             _event = "onError";
         }
 
-        _cond.broadcast ();
+        _cond.signal ();
     }
 
     /**
@@ -158,15 +156,83 @@ Mutex         ReactorTest::_mut;
 std::string   ReactorTest::_event;
 
 /**
+ * @brief Test instance.
+ */
+TEST_F (ReactorTest, instance)
+{
+    ASSERT_NE (Reactor::instance (), nullptr);
+}
+
+/**
+ * @brief Test addHandler.
+ */
+TEST_F (ReactorTest, addHandler)
+{
+    // test invalid parameter.
+    ASSERT_EQ (Reactor::instance ()->addHandler (nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    // test invalid handle.
+    ASSERT_EQ (Reactor::instance ()->addHandler (this), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    // connect socket.
+    ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    // add handler.
+    ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+
+    // test already in use.
+    ASSERT_EQ (Reactor::instance ()->addHandler (this), -1);
+    ASSERT_EQ (join::lastError, std::errc::file_exists) << join::lastError.message ();
+
+    // delete handler
+    ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test delHandler.
+ */
+TEST_F (ReactorTest, delHandler)
+{
+    // test invalid parameter.
+    ASSERT_EQ (Reactor::instance ()->delHandler (nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    // test invalid handle.
+    ASSERT_EQ (Reactor::instance ()->delHandler (this), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    // connect socket.
+    ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    // add handler.
+    ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+
+    // delete handler
+    ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+
+    // test already deleted.
+    ASSERT_EQ (Reactor::instance ()->delHandler (this), -1);
+    ASSERT_EQ (join::lastError, std::errc::no_such_file_or_directory);
+}
+
+/**
  * @brief Test onReceive.
  */
 TEST_F (ReactorTest, onReceive)
 {
-    // write random data.
-    ASSERT_EQ (_client.writeExactly ("onReceive", strlen ("onReceive"), _timeout), 0) << join::lastError.message ();
+    // connect socket.
+    ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
     ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+
+    // write random data.
+    ASSERT_EQ (_client.writeExactly ("onReceive", strlen ("onReceive"), _timeout), 0) << join::lastError.message ();
 
     // wait for the onReceive notification.
     {
@@ -184,11 +250,15 @@ TEST_F (ReactorTest, onReceive)
  */
 TEST_F (ReactorTest, onClose)
 {
-    // close immediately.
-    _client.close ();
+    // connect socket.
+    ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
     ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+
+    // close immediately.
+    _client.close ();
 
     // wait for the onClose notification.
     {
@@ -203,13 +273,17 @@ TEST_F (ReactorTest, onClose)
  */
 TEST_F (ReactorTest, onError)
 {
+    // connect socket.
+    ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    // add handler.
+    ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+
     // reset connection.
     struct linger sl { .l_onoff = 1, .l_linger = 0 };
     ASSERT_EQ (setsockopt (_client.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof(sl)), 0) << strerror (errno);
     _client.close ();
-
-    // add handler.
-    ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
 
     // wait for the onError notification.
     {

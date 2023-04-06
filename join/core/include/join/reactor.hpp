@@ -31,7 +31,6 @@
 
 // C++.
 #include <vector>
-#include <map>
 
 // C.
 #include <sys/epoll.h>
@@ -152,8 +151,8 @@ namespace join
         /// status.
         bool _running = false;
 
-        /// event handlers.
-        std::map <int, EventHandler*> _handlers;
+        /// number of handlers.
+        int _num = 0;
     };
 }
 
