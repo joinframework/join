@@ -26,6 +26,7 @@ set(PUBLIC_HEADERS
     core/include/join/traits.hpp
     core/include/join/variant.hpp
     core/include/join/view.hpp
+    core/include/join/cache.hpp
     core/include/join/reactor.hpp
     thread/include/join/mutex.hpp
     thread/include/join/condition.hpp
@@ -54,6 +55,7 @@ set(PUBLIC_HEADERS
 
 set(SOURCES
     core/src/error.cpp
+    core/src/cache.cpp
     core/src/reactor.cpp
     thread/src/mutex.cpp
     thread/src/condition.cpp
