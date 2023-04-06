@@ -23,18 +23,20 @@
  */
 
 // libjoin.
+#include <join/reactor.hpp>
 #include <join/socket.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
 using join::Errc;
+using join::Reactor;
 using join::UnixDgram;
 
 /**
  * @brief Class used to test the unix datagram socket API.
  */
-class UnixDgramSocket : public ::testing::Test, public UnixDgram::Socket::Observer
+class UnixDgramSocket : public join::EventHandler, public ::testing::Test
 {
 protected:
     /**
@@ -42,8 +44,8 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (bind (_serverpath), 0) << join::lastError.message ();
-        ASSERT_EQ (start (), 0) << join::lastError.message ();
+        ASSERT_EQ (_socket.bind (_serverpath), 0) << join::lastError.message ();
+        ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
     /**
@@ -51,26 +53,38 @@ protected:
      */
     void TearDown ()
     {
-        ASSERT_EQ (stop (), 0) << join::lastError.message ();
-        close ();
+        ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+        _socket.close ();
     }
 
     /**
-     * @brief method called on receive.
+     * @brief method called when data are ready to be read on handle.
      */
     virtual void onReceive () override
     {
-        auto buffer = std::make_unique <char []> (canRead ());
+        auto buffer = std::make_unique <char []> (_socket.canRead ());
         if (buffer)
         {
             UnixDgram::Endpoint from;
-            int nread = readFrom (buffer.get (), canRead (), &from);
+            int nread = _socket.readFrom (buffer.get (), _socket.canRead (), &from);
             if (nread > 0)
             {
-                writeTo (buffer.get (), nread, from);
+                _socket.writeTo (buffer.get (), nread, from);
             }
         }
     }
+
+    /**
+     * @brief get native handle.
+     * @return native handle.
+     */
+    virtual int handle () const override
+    {
+        return _socket.handle ();
+    }
+
+    /// socket.
+    static UnixDgram::Socket _socket;
 
     /// path.
     static const std::string _serverpath;
@@ -80,6 +94,7 @@ protected:
     static const int _timeout;
 };
 
+UnixDgram::Socket UnixDgramSocket::_socket;
 const std::string UnixDgramSocket::_serverpath = "/tmp/unixserver_test.sock";
 const std::string UnixDgramSocket::_clientpath = "/tmp/unixclient_test.sock";
 const int         UnixDgramSocket::_timeout = 1000;

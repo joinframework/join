@@ -22,3 +22,7 @@ add_executable(view.gtest view_test.cpp)
 target_link_libraries(view.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(view.gtest)
 
+add_executable(reactor.gtest reactor_test.cpp)
+target_link_libraries(reactor.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(reactor.gtest)
+

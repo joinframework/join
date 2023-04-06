@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/reactor.hpp>
 #include <join/socket.hpp>
 
 // Libraries.
@@ -32,12 +33,13 @@ using join::Errc;
 using join::MacAddress;
 using join::IpAddress;
 using join::Resolver;
+using join::Reactor;
 using join::Udp;
 
 /**
  * @brief Class used to test the UDP socket API.
  */
-class UdpSocket : public ::testing::Test, public Udp::Socket::Observer
+class UdpSocket : public join::EventHandler, public ::testing::Test
 {
 protected:
     /**
@@ -45,8 +47,8 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (start (), 0) << join::lastError.message ();
+        ASSERT_EQ (_socket.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
     /**
@@ -54,26 +56,38 @@ protected:
      */
     void TearDown ()
     {
-        ASSERT_EQ (stop (), 0) << join::lastError.message ();
-        close ();
+        ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+        _socket.close ();
     }
 
     /**
-     * @brief method called on receive.
+     * @brief method called when data are ready to be read on handle.
      */
     virtual void onReceive () override
     {
-        auto buffer = std::make_unique <char []> (canRead ());
+        auto buffer = std::make_unique <char []> (_socket.canRead ());
         if (buffer)
         {
             Udp::Endpoint from;
-            int nread = readFrom (buffer.get (), canRead (), &from);
+            int nread = _socket.readFrom (buffer.get (), _socket.canRead (), &from);
             if (nread > 0)
             {
-                writeTo (buffer.get (), nread, from);
+                _socket.writeTo (buffer.get (), nread, from);
             }
         }
     }
+
+    /**
+     * @brief get native handle.
+     * @return native handle.
+     */
+    virtual int handle () const override
+    {
+        return _socket.handle ();
+    }
+
+    /// socket.
+    static Udp::Socket _socket;
 
     /// host.
     static const std::string _host;
@@ -85,6 +99,7 @@ protected:
     static const int _timeout;
 };
 
+Udp::Socket       UdpSocket::_socket;
 const std::string UdpSocket::_host = "localhost";
 const uint16_t    UdpSocket::_port = 5000;
 const int         UdpSocket::_timeout = 1000;
