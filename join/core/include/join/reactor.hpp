@@ -50,12 +50,12 @@ namespace join
         /**
          * @brief method called when handle is closed.
          */
-        virtual void onClose () { /*do nothing*/ }
+        virtual void onClose () = 0;
 
         /**
          * @brief method called when an error occured on handle.
          */
-        virtual void onError () { /*do nothing*/ }
+        virtual void onError () = 0;
 
         /**
          * @brief get native handle.
@@ -132,10 +132,10 @@ namespace join
          */
         void dispatch ();
 
-        /// event descriptor.
-        int _event = -1;
+        /// eventfd descriptor.
+        int _eventfd = -1;
 
-        /// epoll file descriptor.
+        /// epoll descriptor.
         int _epoll = -1;
 
         /// epoll protection mutex.

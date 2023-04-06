@@ -235,6 +235,22 @@ protected:
     }
 
     /**
+     * @brief method called when handle is closed.
+     */
+    virtual void onClose () override
+    {
+        // do nothing.
+    }
+
+    /**
+     * @brief method called when an error occured on handle.
+     */
+    virtual void onError () override
+    {
+        // do nothing.
+    }
+
+    /**
      * @brief get native handle.
      * @return native handle.
      */

@@ -103,7 +103,7 @@ int Reactor::delHandler (EventHandler* handler)
     if (--_num == 0)
     {
         uint64_t value = 1;
-        [[maybe_unused]] ssize_t bytes = ::write (_event, &value, sizeof (uint64_t));
+        [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
     }
 
     return 0;
@@ -114,7 +114,7 @@ int Reactor::delHandler (EventHandler* handler)
 //   METHOD    : Reactor
 // =========================================================================
 Reactor::Reactor ()
-: _event (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
+: _eventfd (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
   _epoll (epoll_create1 (EPOLL_CLOEXEC))
 {
 }
@@ -130,11 +130,11 @@ Reactor::~Reactor ()
     if (_running)
     {
         uint64_t value = 1;
-        [[maybe_unused]] ssize_t bytes = ::write (_event, &value, sizeof (uint64_t));
+        [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
         _end.wait (lock, [this] () { return !_running; });
     }
 
-    ::close (_event);
+    ::close (_eventfd);
     ::close (_epoll);
 }
 
@@ -150,9 +150,9 @@ void Reactor::dispatch ()
 
     fd_set setfd;
     FD_ZERO (&setfd);
-    FD_SET (_event, &setfd);
+    FD_SET (_eventfd, &setfd);
     FD_SET (_epoll, &setfd);
-    int max = std::max (_event, _epoll);
+    int max = std::max (_eventfd, _epoll);
 
     for (;;)
     {
@@ -164,10 +164,10 @@ void Reactor::dispatch ()
 
         if (nset > 0)
         {
-            if (FD_ISSET (_event, &descset))
+            if (FD_ISSET (_eventfd, &descset))
             {
                 uint64_t value;
-                [[maybe_unused]] ssize_t bytes = ::read (_event, &value, sizeof (uint64_t));
+                [[maybe_unused]] ssize_t bytes = ::read (_eventfd, &value, sizeof (uint64_t));
                 break;
             }
 
