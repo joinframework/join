@@ -157,56 +157,39 @@ BytesArray Signature::sign (const uint8_t* data, size_t size, const std::string&
         return {};
     }
 
-    // initialize digest sign.
+    // initialize.
     int result = EVP_DigestSignInit (mdctx.get (), nullptr, md, nullptr, pkey.get ());
-    if (1 != result)
+    if (result != 1)
     {
-        lastError = make_error_code (SigErrc::InvalidPrivateKey);
-        return {};
-    }
-
-    // update digest sign.
-    result = EVP_DigestSignUpdate (mdctx.get (), data, size);
-    if (1 != result)
-    {
-        lastError = make_error_code (Errc::InvalidParam);
+        lastError = make_error_code (SigErrc::InvalidAlgorithm);
         return {};
     }
 
     size_t siglen = 0;
 
     // how much space we need to reserve.
-    result = EVP_DigestSignFinal (mdctx.get (), nullptr, &siglen);
-    if (1 != result)
+    result = EVP_DigestSign (mdctx.get (), nullptr, &siglen, data, size);
+    if (result != 1)
     {
         lastError = make_error_code (Errc::OperationFailed);
         return {};
     }
 
-    // check buffer size.
-    if ((siglen == 0) || (siglen > static_cast <size_t> (std::numeric_limits <int>::max ())))
-    {
-        lastError = make_error_code (Errc::OperationFailed);
-        return {};
-    }
+    BytesArray signature;
+    signature.resize (siglen);
 
-    BytesArray sig;
-
-    // reserve buffer space.
-    sig.resize (siglen);
-
-    // finalize digest sign.
-    result = EVP_DigestSignFinal (mdctx.get (), sig.data (), &siglen);
-    if (1 != result)
+    // sign.
+    result = EVP_DigestSign (mdctx.get (), signature.data (), &siglen, data, size);
+    if (result != 1)
     {
         lastError = make_error_code (Errc::OperationFailed);
         return {};
     }
 
     // need to resize again to fit real used space.
-    sig.resize (siglen);
+    signature.resize (siglen);
 
-    return sig;
+    return signature;
 }
 
 // =========================================================================
@@ -267,25 +250,17 @@ bool Signature::verify (const uint8_t* data, size_t size, const BytesArray &sign
         return false;
     }
 
-    // initialize digest verify.
+    // initialize.
     int result = EVP_DigestVerifyInit (mdctx.get (), nullptr, md, nullptr, pkey.get ());
-    if (1 != result)
+    if (result != 1)
     {
-        lastError = make_error_code (SigErrc::InvalidPublicKey);
+        lastError = make_error_code (SigErrc::InvalidAlgorithm);
         return false;
     }
 
-    // update digest verify.
-    result = EVP_DigestVerifyUpdate (mdctx.get (), data, size);
-    if (1 != result)
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return false;
-    }
-
-    // finalize digest verify.
-    result = EVP_DigestVerifyFinal (mdctx.get (), signature.data (), signature.size ());
-    if (1 != result)
+    // verify.
+    result = EVP_DigestVerify (mdctx.get (), signature.data (), signature.size (), data, size);
+    if (result != 1)
     {
         lastError = make_error_code (SigErrc::InvalidSignature);
         return false;

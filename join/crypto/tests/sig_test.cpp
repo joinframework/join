@@ -32,8 +32,9 @@
 // C++.
 #include <fstream>
 
-using join::Base64;
+using join::Errc;
 using join::SigErrc;
+using join::Base64;
 using join::Signature;
 using join::BytesArray;
 
@@ -138,34 +139,34 @@ TEST_F (DigestTest, sign)
 {
     BytesArray signature;
 
-    ASSERT_TRUE  (Signature::sign (BytesArray (sample.begin (), sample.end ()), "/missing/priv/key", Signature::SHA224).empty ());
+    ASSERT_TRUE  (Signature::sign (sample, "/missing/priv/key", Signature::SHA224).empty ());
     ASSERT_EQ    (join::lastError, std::errc::no_such_file_or_directory);
 
-    ASSERT_TRUE  (Signature::sign (sample, ecPriKeyPath, Signature::Algorithm (100)).empty ());
+    ASSERT_TRUE  (Signature::sign (BytesArray (sample.begin (), sample.end ()), ecPriKeyPath, Signature::Algorithm (100)).empty ());
     ASSERT_EQ    (join::lastError, SigErrc::InvalidAlgorithm);
 
-    ASSERT_TRUE  (Signature::sign (BytesArray (sample.begin (), sample.end ()), ecPubKeyPath, Signature::Algorithm (100)).empty ());
+    ASSERT_TRUE  (Signature::sign (sample, ecPubKeyPath, Signature::SHA224).empty ());
     ASSERT_EQ    (join::lastError, SigErrc::InvalidPrivateKey);
 
-    ASSERT_FALSE ((signature = Signature::sign (sample, ecPriKeyPath, Signature::SHA224)).empty ()) << join::lastError.message ();
+    ASSERT_FALSE ((signature = Signature::sign (BytesArray (sample.begin (), sample.end ()), ecPriKeyPath, Signature::SHA224)).empty ()) << join::lastError.message ();
     ASSERT_TRUE  (Signature::verify (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Signature::SHA224)) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Signature::SHA256));
     ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Signature::SHA384));
     ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Signature::SHA512));
 
-    ASSERT_FALSE ((signature = Signature::sign (BytesArray (sample.begin (), sample.end ()), ecPriKeyPath, Signature::SHA256)).empty ()) << join::lastError.message ();
+    ASSERT_FALSE ((signature = Signature::sign (sample, ecPriKeyPath, Signature::SHA256)).empty ()) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (sample, signature, ecPubKeyPath, Signature::SHA224));
     ASSERT_TRUE  (Signature::verify (sample, signature, ecPubKeyPath, Signature::SHA256)) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (sample, signature, ecPubKeyPath, Signature::SHA384));
     ASSERT_FALSE (Signature::verify (sample, signature, ecPubKeyPath, Signature::SHA512));
 
-    ASSERT_FALSE ((signature = Signature::sign (sample, ecPriKeyPath, Signature::SHA384)).empty ()) << join::lastError.message ();
+    ASSERT_FALSE ((signature = Signature::sign (BytesArray (sample.begin (), sample.end ()), ecPriKeyPath, Signature::SHA384)).empty ()) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Signature::SHA224));
     ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Signature::SHA256));
     ASSERT_TRUE  (Signature::verify (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Signature::SHA384)) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Signature::SHA512));
 
-    ASSERT_FALSE ((signature = Signature::sign (BytesArray (sample.begin (), sample.end ()), ecPriKeyPath, Signature::SHA512)).empty ()) << join::lastError.message ();
+    ASSERT_FALSE ((signature = Signature::sign (sample, ecPriKeyPath, Signature::SHA512)).empty ()) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (sample, signature, ecPubKeyPath, Signature::SHA224));
     ASSERT_FALSE (Signature::verify (sample, signature, ecPubKeyPath, Signature::SHA256));
     ASSERT_FALSE (Signature::verify (sample, signature, ecPubKeyPath, Signature::SHA384));
@@ -177,13 +178,13 @@ TEST_F (DigestTest, sign)
  */
 TEST_F (DigestTest, verify)
 {
-    ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), "/missing/pub/key", Signature::SHA224));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (ec224sig), "/missing/pub/key", Signature::SHA224));
     ASSERT_EQ    (join::lastError, std::errc::no_such_file_or_directory);
 
-    ASSERT_FALSE (Signature::verify (sample, Base64::decode (ec224sig), ecPubKeyPath, Signature::Algorithm (100)));
+    ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), ecPubKeyPath, Signature::Algorithm (100)));
     ASSERT_EQ    (join::lastError, SigErrc::InvalidAlgorithm);
 
-    ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), ecPriKeyPath, Signature::SHA224));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (ec224sig), ecPriKeyPath, Signature::SHA224));
     ASSERT_EQ    (join::lastError, SigErrc::InvalidPublicKey);
 
     ASSERT_TRUE  (Signature::verify (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), ecPubKeyPath, Signature::SHA224)) << join::lastError.message ();

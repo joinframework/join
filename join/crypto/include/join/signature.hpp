@@ -99,7 +99,7 @@ namespace join
             SHA224,     /**< secure hash algorithm v2 with a 224 bits digest */
             SHA256,     /**< secure hash algorithm v2 with a 256 bits digest */
             SHA384,     /**< secure hash algorithm v2 with a 384 bits digest */
-            SHA512      /**< secure hash algorithm v2 with a 512 bits digest */
+            SHA512,     /**< secure hash algorithm v2 with a 512 bits digest */
         };
 
         /**
