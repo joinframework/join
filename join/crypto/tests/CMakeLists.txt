@@ -10,3 +10,6 @@ add_executable(base64.gtest base64_test.cpp)
 target_link_libraries(base64.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(base64.gtest)
 
+add_executable(digest.gtest digest_test.cpp)
+target_link_libraries(digest.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(digest.gtest)

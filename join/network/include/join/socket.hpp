@@ -1626,9 +1626,9 @@ namespace join
         BasicTlsSocket (Mode mode)
         : BasicStreamSocket <Protocol> (mode),
         #if OPENSSL_VERSION_NUMBER < 0x10100000L
-          _tlsContext (SSL_CTX_new (SSLv23_method ()), join::crypto::SslCtxDelete ())
+          _tlsContext (SSL_CTX_new (SSLv23_method ()), join::SslCtxDelete ())
         #else
-          _tlsContext (SSL_CTX_new (TLS_method ()), join::crypto::SslCtxDelete ())
+          _tlsContext (SSL_CTX_new (TLS_method ()), join::SslCtxDelete ())
         #endif
         {
             if (this->_tlsContext == nullptr)
@@ -1660,11 +1660,11 @@ namespace join
             SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
 
             // set default TLSv1.2 and below cipher suites.
-            SSL_CTX_set_cipher_list (this->_tlsContext.get (), join::crypto::defaultCipher_.c_str ());
+            SSL_CTX_set_cipher_list (this->_tlsContext.get (), join::defaultCipher_.c_str ());
 
         #if OPENSSL_VERSION_NUMBER >= 0x10101000L
             // set default TLSv1.3 cipher suites.
-            SSL_CTX_set_ciphersuites (this->_tlsContext.get (), join::crypto::defaultCipher_1_3_.c_str ());
+            SSL_CTX_set_ciphersuites (this->_tlsContext.get (), join::defaultCipher_1_3_.c_str ());
         #endif
         }
 
@@ -1673,7 +1673,7 @@ namespace join
          * @param tlsContext TLS context.
          * @param tlsMode TLS mode.
          */
-        BasicTlsSocket (const join::crypto::SslCtxPtr& tlsContext, TlsMode tlsMode)
+        BasicTlsSocket (const join::SslCtxPtr& tlsContext, TlsMode tlsMode)
         : BasicTlsSocket (Mode::NonBlocking, tlsContext, tlsMode)
         {
         }
@@ -1684,7 +1684,7 @@ namespace join
          * @param tlsContext TLS context.
          * @param tlsMode TLS mode.
          */
-        BasicTlsSocket (Mode mode, const join::crypto::SslCtxPtr& tlsContext, TlsMode tlsMode)
+        BasicTlsSocket (Mode mode, const join::SslCtxPtr& tlsContext, TlsMode tlsMode)
         : BasicStreamSocket <Protocol> (mode),
           _tlsContext (tlsContext),
           _tlsMode (tlsMode)
@@ -2496,7 +2496,7 @@ namespace join
             bool match = false;
 
             // get alternative names.
-            join::crypto::StackOfGeneralNamePtr altnames (reinterpret_cast <STACK_OF (GENERAL_NAME)*> (X509_get_ext_d2i (certificate, NID_subject_alt_name, 0, 0)));
+            join::StackOfGeneralNamePtr altnames (reinterpret_cast <STACK_OF (GENERAL_NAME)*> (X509_get_ext_d2i (certificate, NID_subject_alt_name, 0, 0)));
             if (altnames)
             {
                 for (int i = 0; (i < sk_GENERAL_NAME_num (altnames.get ())) && !match; ++i)
@@ -2556,10 +2556,10 @@ namespace join
         }*/
 
         /// TLS context.
-        join::crypto::SslCtxPtr _tlsContext;
+        join::SslCtxPtr _tlsContext;
 
         /// TLS handle.
-        join::crypto::SslPtr _tlsHandle;
+        join::SslPtr _tlsHandle;
 
         /// TLS mode
         TlsMode _tlsMode = TlsMode::ClientMode;

@@ -34,6 +34,7 @@ set(PUBLIC_HEADERS
     thread/include/join/threadpool.hpp
     crypto/include/join/base64.hpp
     crypto/include/join/openssl.hpp
+    crypto/include/join/digest.hpp
     network/include/join/macaddress.hpp
     network/include/join/ipaddress.hpp
     network/include/join/endpoint.hpp
@@ -63,6 +64,7 @@ set(SOURCES
     thread/src/threadpool.cpp
     crypto/src/base64.cpp
     crypto/src/openssl.cpp
+    crypto/src/digest.cpp
     network/src/macaddress.cpp
     network/src/ipaddress.cpp
     network/src/resolver.cpp

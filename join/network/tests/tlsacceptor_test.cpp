@@ -411,7 +411,7 @@ TEST_F (TlsAcceptor, setCipher)
 
     ASSERT_EQ (server.setCipher ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (server.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
+    ASSERT_EQ (server.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
 }
 
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
@@ -424,7 +424,7 @@ TEST_F (TlsAcceptor, setCipher_1_3)
 
     ASSERT_EQ (server.setCipher_1_3 ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (server.setCipher_1_3 (join::crypto::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (server.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
 }
 #endif
 
@@ -438,7 +438,7 @@ TEST_F (TlsAcceptor, setCurve)
 
     ASSERT_EQ (server.setCurve ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (server.setCurve (join::crypto::defaultCurve_), 0) << join::lastError.message ();
+    ASSERT_EQ (server.setCurve (join::defaultCurve_), 0) << join::lastError.message ();
 }
 #endif
 
@@ -447,7 +447,7 @@ TEST_F (TlsAcceptor, setCurve)
  */
 int main (int argc, char **argv)
 {
-    join::crypto::initializeOpenSSL ();
+    join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }
