@@ -141,19 +141,19 @@ BytesArray Signature::sign (const uint8_t* data, size_t size, const std::string&
         return {};
     }
 
-    // create EVP context.
-    EvpMdCtxPtr mdctx (EVP_MD_CTX_new ());
-    if (!mdctx)
-    {
-        lastError = make_error_code (Errc::OutOfMemory);
-        return {};
-    }
-
     // create digest.
     const EVP_MD *md = EVP_get_digestbyname (algorithmName (algorithm));
     if (!md)
     {
         lastError = make_error_code (SigErrc::InvalidAlgorithm);
+        return {};
+    }
+
+    // create EVP context.
+    EvpMdCtxPtr mdctx (EVP_MD_CTX_new ());
+    if (!mdctx)
+    {
+        lastError = make_error_code (Errc::OutOfMemory);
         return {};
     }
 
@@ -234,19 +234,19 @@ bool Signature::verify (const uint8_t* data, size_t size, const BytesArray &sign
         return false;
     }
 
-    // create EVP context.
-    EvpMdCtxPtr mdctx (EVP_MD_CTX_new ());
-    if (!mdctx)
-    {
-        lastError = make_error_code (Errc::OutOfMemory);
-        return false;
-    }
-
     // create digest.
     const EVP_MD *md = EVP_get_digestbyname (algorithmName (algorithm));
     if (!md)
     {
         lastError = make_error_code (SigErrc::InvalidAlgorithm);
+        return false;
+    }
+
+    // create EVP context.
+    EvpMdCtxPtr mdctx (EVP_MD_CTX_new ());
+    if (!mdctx)
+    {
+        lastError = make_error_code (Errc::OutOfMemory);
         return false;
     }
 
