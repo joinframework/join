@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_DIGEST_HPP__
-#define __JOIN_DIGEST_HPP__
+#ifndef __JOIN_SIGNATURE_HPP__
+#define __JOIN_SIGNATURE_HPP__
 
 // libjoin.
 #include <join/base64.hpp>
@@ -35,9 +35,9 @@
 namespace join
 {
     /**
-     * @brief digest error codes.
+     * @brief signature error codes.
      */
-    enum class DigestErrc
+    enum class SigErrc
     {
         InvalidAlgorithm = 1,   /**< invalid algorithm. */
         InvalidPrivateKey,      /**< invalid private key. */
@@ -46,19 +46,19 @@ namespace join
     };
 
     /**
-     * @brief digest error category.
+     * @brief signature error category.
      */
-    class DigestCategory : public std::error_category
+    class SigCategory : public std::error_category
     {
     public:
         /**
-         * @brief get digest error category name.
-         * @return digest error category name.
+         * @brief get signature error category name.
+         * @return signature error category name.
          */
         virtual const char* name () const noexcept;
 
         /**
-         * @brief translate digest error code to human readable error string.
+         * @brief translate signature error code to human readable error string.
          * @param code error code.
          * @return human readable error string.
          */
@@ -69,30 +69,30 @@ namespace join
      * @brief get error category.
      * @return the created std::error_category object.
      */
-    const std::error_category& getDigestCategory ();
+    const std::error_category& getSigCategory ();
 
     /**
      * @brief create an std::error_code object.
      * @param code error code number.
      * @return the created std::error_code object.
      */
-    std::error_code make_error_code (DigestErrc code);
+    std::error_code make_error_code (SigErrc code);
 
     /**
      * @brief create an std::error_condition object.
      * @param code error code number.
      * @return the created std::error_condition object.
      */
-    std::error_condition make_error_condition (DigestErrc code);
+    std::error_condition make_error_condition (SigErrc code);
 
     /**
-     * @brief class used to manage Digest signature and verification.
+     * @brief class used to manage signature.
      */
-    class Digest
+    class Signature
     {
     public:
         /**
-         * @brief digest algorithm.
+         * @brief algorithm.
          */
         enum Algorithm : uint16_t
         {
@@ -105,18 +105,18 @@ namespace join
         /**
          * @brief create instance.
          */
-        Digest () = delete;
+        Signature () = delete;
 
         /**
          * @brief destroy instance.
          */
-        ~Digest () = delete;
+        ~Signature () = delete;
 
         /**
          * @brief sign a data with given private key.
          * @param message message to sign.
          * @param privateKey path to private key.
-         * @param algorithm the digest algorithm used for the signature.
+         * @param algorithm the algorithm used for the signature.
          * @return the generated signature on success, an empty bytes array on failure.
          */
         static BytesArray sign (const std::string& message, const std::string& privateKey, Algorithm algorithm = SHA256);
@@ -125,7 +125,7 @@ namespace join
          * @brief sign a data with given private key.
          * @param data data to sign.
          * @param privateKey path to private key.
-         * @param algorithm the digest algorithm used for the signature.
+         * @param algorithm the algorithm used for the signature.
          * @return the generated signature on success, an empty bytes array on failure.
          */
         static BytesArray sign (const BytesArray& data, const std::string& privateKey, Algorithm algorithm = SHA256);
@@ -135,7 +135,7 @@ namespace join
          * @param data data buffer to sign.
          * @param size data buffer size.
          * @param privateKey path to private key.
-         * @param algorithm the digest algorithm used for the signature.
+         * @param algorithm the algorithm used for the signature.
          * @return the generated signature on success, an empty bytes array on failure.
          */
         static BytesArray sign (const uint8_t* data, size_t size, const std::string& privateKey, Algorithm algorithm = SHA256);
@@ -145,20 +145,20 @@ namespace join
          * @param message message to verify.
          * @param signature the message signature.
          * @param publicKey path to public key.
-         * @param algorithm the digest algorithm used for the signature.
+         * @param algorithm the algorithm used for the signature.
          * @return true on success, false otherwise.
          */
-        static bool verifySignature (const std::string& message, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm = SHA256);
+        static bool verify (const std::string& message, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm = SHA256);
 
         /**
          * @brief verify data signature.
          * @param data data to verify.
          * @param signature the message signature.
          * @param publicKey path to public key.
-         * @param algorithm the digest algorithm used for the signature.
+         * @param algorithm the algorithm used for the signature.
          * @return true on success, false otherwise.
          */
-        static bool verifySignature (const BytesArray& data, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm = SHA256);
+        static bool verify (const BytesArray& data, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm = SHA256);
 
         /**
          * @brief verify data signature.
@@ -166,10 +166,10 @@ namespace join
          * @param data data buffer size to verify.
          * @param signature the message signature.
          * @param publicKey path to public key.
-         * @param algorithm the digest algorithm used for the signature.
+         * @param algorithm the algorithm used for the signature.
          * @return true on success, false otherwise.
          */
-        static bool verifySignature (const uint8_t* data, size_t size, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm = SHA256);
+        static bool verify (const uint8_t* data, size_t size, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm = SHA256);
 
         /**
          * @brief convert a DER encoded ECDSA signature to a flat ECDSA signature.
@@ -187,7 +187,7 @@ namespace join
 
         /**
          * @brief get algorithm name.
-         * @param algorithm the digest algorithm.
+         * @param algorithm the signature algorithm.
          * @return algorithm name.
          */
         static const char* algorithmName (Algorithm algorithm);
@@ -204,8 +204,8 @@ namespace join
 
 namespace std
 {
-    /// Digest error code specialization.
-    template <> struct is_error_condition_enum <join::DigestErrc> : public true_type {};
+    /// signature error code specialization.
+    template <> struct is_error_condition_enum <join::SigErrc> : public true_type {};
 }
 
 #endif

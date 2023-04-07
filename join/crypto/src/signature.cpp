@@ -23,9 +23,9 @@
  */
 
 // libjoin.
-#include <join/utils.hpp>
+#include <join/signature.hpp>
 #include <join/error.hpp>
-#include <join/digest.hpp>
+#include <join/utils.hpp>
 
 // Libraries.
 #include <openssl/err.h>
@@ -37,34 +37,34 @@
 // C.
 #include <cstdio>
 
-using join::Digest;
-using join::DigestCategory;
+using join::Signature;
+using join::SigCategory;
 using join::BytesArray;
 
 // =========================================================================
-//   CLASS     : DigestCategory
+//   CLASS     : SigCategory
 //   METHOD    : name
 // =========================================================================
-const char* DigestCategory::name () const noexcept
+const char* SigCategory::name () const noexcept
 {
     return "libjoin";
 }
 
 // =========================================================================
-//   CLASS     : DigestCategory
+//   CLASS     : SigCategory
 //   METHOD    : message
 // =========================================================================
-std::string DigestCategory::message (int code) const
+std::string SigCategory::message (int code) const
 {
-    switch (static_cast <DigestErrc> (code))
+    switch (static_cast <SigErrc> (code))
     {
-        case DigestErrc::InvalidAlgorithm:
-            return "invalid digest algorithm";
-        case DigestErrc::InvalidPrivateKey:
+        case SigErrc::InvalidAlgorithm:
+            return "invalid algorithm";
+        case SigErrc::InvalidPrivateKey:
             return "invalid private key";
-        case DigestErrc::InvalidPublicKey:
+        case SigErrc::InvalidPublicKey:
             return "invalid public key";
-        case DigestErrc::InvalidSignature:
+        case SigErrc::InvalidSignature:
             return "invalid signature";
         default:
             return "success";
@@ -73,11 +73,11 @@ std::string DigestCategory::message (int code) const
 
 // =========================================================================
 //   CLASS     :
-//   METHOD    : getDigestCategory
+//   METHOD    : getSigCategory
 // =========================================================================
-const std::error_category& join::getDigestCategory ()
+const std::error_category& join::getSigCategory ()
 {
-    static DigestCategory instance;
+    static SigCategory instance;
     return instance;
 }
 
@@ -85,43 +85,43 @@ const std::error_category& join::getDigestCategory ()
 //   CLASS     :
 //   METHOD    : getAlgorithmName
 // =========================================================================
-std::error_code join::make_error_code (DigestErrc code)
+std::error_code join::make_error_code (SigErrc code)
 {
-    return std::error_code (static_cast <int> (code), getDigestCategory ());
+    return std::error_code (static_cast <int> (code), getSigCategory ());
 }
 
 // =========================================================================
 //   CLASS     :
 //   METHOD    : getAlgorithmName
 // =========================================================================
-std::error_condition join::make_error_condition (DigestErrc code)
+std::error_condition join::make_error_condition (SigErrc code)
 {
-    return std::error_condition (static_cast <int> (code), getDigestCategory ());
+    return std::error_condition (static_cast <int> (code), getSigCategory ());
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Signature
 //   METHOD    : sign
 // =========================================================================
-BytesArray Digest::sign (const std::string& message, const std::string& privateKey, Algorithm algorithm)
+BytesArray Signature::sign (const std::string& message, const std::string& privateKey, Algorithm algorithm)
 {
     return sign (reinterpret_cast <const uint8_t*> (message.data ()), message.size (), privateKey, algorithm);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Signature
 //   METHOD    : sign
 // =========================================================================
-BytesArray Digest::sign (const BytesArray& data, const std::string& privateKey, Algorithm algorithm)
+BytesArray Signature::sign (const BytesArray& data, const std::string& privateKey, Algorithm algorithm)
 {
     return sign (data.data (), data.size (), privateKey, algorithm);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Signature
 //   METHOD    : sign
 // =========================================================================
-BytesArray Digest::sign (const uint8_t* data, size_t size, const std::string& privateKey, Algorithm algorithm)
+BytesArray Signature::sign (const uint8_t* data, size_t size, const std::string& privateKey, Algorithm algorithm)
 {
     // open private key file.
     FILE *fkey = fopen (privateKey.c_str (), "r");
@@ -137,7 +137,7 @@ BytesArray Digest::sign (const uint8_t* data, size_t size, const std::string& pr
 
     if (!pkey)
     {
-        lastError = make_error_code (DigestErrc::InvalidPrivateKey);
+        lastError = make_error_code (SigErrc::InvalidPrivateKey);
         return {};
     }
 
@@ -153,7 +153,7 @@ BytesArray Digest::sign (const uint8_t* data, size_t size, const std::string& pr
     const EVP_MD *md = EVP_get_digestbyname (algorithmName (algorithm));
     if (!md)
     {
-        lastError = make_error_code (DigestErrc::InvalidAlgorithm);
+        lastError = make_error_code (SigErrc::InvalidAlgorithm);
         return {};
     }
 
@@ -161,7 +161,7 @@ BytesArray Digest::sign (const uint8_t* data, size_t size, const std::string& pr
     int result = EVP_DigestSignInit (mdctx.get (), nullptr, md, nullptr, pkey.get ());
     if (1 != result)
     {
-        lastError = make_error_code (DigestErrc::InvalidPrivateKey);
+        lastError = make_error_code (SigErrc::InvalidPrivateKey);
         return {};
     }
 
@@ -190,13 +190,13 @@ BytesArray Digest::sign (const uint8_t* data, size_t size, const std::string& pr
         return {};
     }
 
-    BytesArray signature;
+    BytesArray sig;
 
     // reserve buffer space.
-    signature.resize (siglen);
+    sig.resize (siglen);
 
     // finalize digest sign.
-    result = EVP_DigestSignFinal (mdctx.get (), signature.data (), &siglen);
+    result = EVP_DigestSignFinal (mdctx.get (), sig.data (), &siglen);
     if (1 != result)
     {
         lastError = make_error_code (Errc::OperationFailed);
@@ -204,34 +204,34 @@ BytesArray Digest::sign (const uint8_t* data, size_t size, const std::string& pr
     }
 
     // need to resize again to fit real used space.
-    signature.resize (siglen);
+    sig.resize (siglen);
 
-    return signature;
+    return sig;
 }
 
 // =========================================================================
-//   CLASS     : Digest
-//   METHOD    : verifySignature
+//   CLASS     : Signature
+//   METHOD    : verify
 // =========================================================================
-bool Digest::verifySignature (const std::string& message, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm)
+bool Signature::verify (const std::string& message, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm)
 {
-    return verifySignature (reinterpret_cast <const uint8_t*> (message.data ()), message.size (), signature, publicKey, algorithm);
+    return verify (reinterpret_cast <const uint8_t*> (message.data ()), message.size (), signature, publicKey, algorithm);
 }
 
 // =========================================================================
-//   CLASS     : Digest
-//   METHOD    : verifySignature
+//   CLASS     : Signature
+//   METHOD    : verify
 // =========================================================================
-bool Digest::verifySignature (const BytesArray& data, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm)
+bool Signature::verify (const BytesArray& data, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm)
 {
-    return verifySignature (data.data (), data.size (), signature, publicKey, algorithm);
+    return verify (data.data (), data.size (), signature, publicKey, algorithm);
 }
 
 // =========================================================================
-//   CLASS     : Digest
-//   METHOD    : verifySignature
+//   CLASS     : Signature
+//   METHOD    : verify
 // =========================================================================
-bool Digest::verifySignature (const uint8_t* data, size_t size, const BytesArray &signature, const std::string &publicKey, Algorithm algorithm)
+bool Signature::verify (const uint8_t* data, size_t size, const BytesArray &signature, const std::string &publicKey, Algorithm algorithm)
 {
     // open public key file.
     FILE *fkey = fopen (publicKey.c_str (), "r");
@@ -247,7 +247,7 @@ bool Digest::verifySignature (const uint8_t* data, size_t size, const BytesArray
 
     if (!pkey)
     {
-        lastError = make_error_code (DigestErrc::InvalidPublicKey);
+        lastError = make_error_code (SigErrc::InvalidPublicKey);
         return false;
     }
 
@@ -263,7 +263,7 @@ bool Digest::verifySignature (const uint8_t* data, size_t size, const BytesArray
     const EVP_MD *md = EVP_get_digestbyname (algorithmName (algorithm));
     if (!md)
     {
-        lastError = make_error_code (DigestErrc::InvalidAlgorithm);
+        lastError = make_error_code (SigErrc::InvalidAlgorithm);
         return false;
     }
 
@@ -271,7 +271,7 @@ bool Digest::verifySignature (const uint8_t* data, size_t size, const BytesArray
     int result = EVP_DigestVerifyInit (mdctx.get (), nullptr, md, nullptr, pkey.get ());
     if (1 != result)
     {
-        lastError = make_error_code (DigestErrc::InvalidPublicKey);
+        lastError = make_error_code (SigErrc::InvalidPublicKey);
         return false;
     }
 
@@ -287,7 +287,7 @@ bool Digest::verifySignature (const uint8_t* data, size_t size, const BytesArray
     result = EVP_DigestVerifyFinal (mdctx.get (), signature.data (), signature.size ());
     if (1 != result)
     {
-        lastError = make_error_code (DigestErrc::InvalidSignature);
+        lastError = make_error_code (SigErrc::InvalidSignature);
         return false;
     }
 
@@ -295,16 +295,16 @@ bool Digest::verifySignature (const uint8_t* data, size_t size, const BytesArray
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Signature
 //   METHOD    : toFlat
 // =========================================================================
-BytesArray Digest::toFlat (const BytesArray& der)
+BytesArray Signature::toFlat (const BytesArray& der)
 {
     const unsigned char* p = der.data ();
     EcdsaSigPtr sig (d2i_ECDSA_SIG (nullptr, &p, der.size ()));
     if (!sig)
     {
-        lastError = make_error_code (DigestErrc::InvalidSignature);
+        lastError = make_error_code (SigErrc::InvalidSignature);
         return {};
     }
 
@@ -318,7 +318,7 @@ BytesArray Digest::toFlat (const BytesArray& der)
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
     if (!r || !s)
     {
-        lastError = make_error_code (DigestErrc::InvalidSignature);
+        lastError = make_error_code (SigErrc::InvalidSignature);
         return {};
     }
 
@@ -326,7 +326,7 @@ BytesArray Digest::toFlat (const BytesArray& der)
     int size = std::max (fixedSize (BN_num_bytes (r)), fixedSize (BN_num_bytes (s)));
     if (size < 0)
     {
-        lastError = make_error_code (DigestErrc::InvalidSignature);
+        lastError = make_error_code (SigErrc::InvalidSignature);
         return {};
     }
 
@@ -345,10 +345,10 @@ BytesArray Digest::toFlat (const BytesArray& der)
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Signature
 //   METHOD    : toDer
 // =========================================================================
-BytesArray Digest::toDer (const BytesArray& flat)
+BytesArray Signature::toDer (const BytesArray& flat)
 {
     EcdsaSigPtr sig (ECDSA_SIG_new ());
     if (!sig)
@@ -379,7 +379,7 @@ BytesArray Digest::toDer (const BytesArray& flat)
     int siglen = i2d_ECDSA_SIG (sig.get (), nullptr);
     if (siglen < 0)
     {
-        lastError = make_error_code (DigestErrc::InvalidSignature);
+        lastError = make_error_code (SigErrc::InvalidSignature);
         return {};
     }
 
@@ -391,7 +391,7 @@ BytesArray Digest::toDer (const BytesArray& flat)
     siglen = i2d_ECDSA_SIG (sig.get (), &p);
     if (siglen < 0)
     {
-        lastError = make_error_code (DigestErrc::InvalidSignature);
+        lastError = make_error_code (SigErrc::InvalidSignature);
         return {};
     }
 
@@ -402,10 +402,10 @@ BytesArray Digest::toDer (const BytesArray& flat)
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Signature
 //   METHOD    : algorithmName
 // =========================================================================
-const char* Digest::algorithmName (Algorithm algorithm)
+const char* Signature::algorithmName (Algorithm algorithm)
 {
    switch (algorithm)
    {
@@ -419,10 +419,10 @@ const char* Digest::algorithmName (Algorithm algorithm)
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Signature
 //   METHOD    : getFixedSize
 // =========================================================================
-int Digest::fixedSize (int numBytes)
+int Signature::fixedSize (int numBytes)
 {
     // the fixed size for a flat signature integer depends on the chosen ECDSA curve.
     // curve order can be 112, 128, 160, 192, 224, 256, 384 or 521 bits.
