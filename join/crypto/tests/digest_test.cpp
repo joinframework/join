@@ -24,6 +24,7 @@
 
 // libjoin.
 #include <join/digest.hpp>
+#include <join/error.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -136,28 +137,32 @@ TEST_F (DigestTest, sign)
     BytesArray signature;
 
     signature = Digest::sign (sample, ecPriKeyPath, Digest::SHA224);
-    ASSERT_TRUE  (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA224));
-    ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA256));
-    ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA384));
-    ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA512));
+    ASSERT_TRUE  (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Digest::SHA224)) << join::lastError.message ();
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, "/missing/pub/key", Digest::SHA224));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Digest::SHA256));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Digest::SHA384));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Digest::SHA512));
 
-    signature = Digest::sign (sample, ecPriKeyPath, Digest::SHA256);
+    signature = Digest::sign (BytesArray (sample.begin (), sample.end ()), ecPriKeyPath, Digest::SHA256);
     ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA224));
-    ASSERT_TRUE  (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA256));
+    ASSERT_TRUE  (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA256)) << join::lastError.message ();
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, "/missing/pub/key", Digest::SHA256));
     ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA384));
     ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA512));
 
     signature = Digest::sign (sample, ecPriKeyPath, Digest::SHA384);
-    ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA224));
-    ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA256));
-    ASSERT_TRUE  (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA384));
-    ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA512));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Digest::SHA224));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Digest::SHA256));
+    ASSERT_TRUE  (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Digest::SHA384)) << join::lastError.message ();
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, "/missing/pub/key", Digest::SHA384));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Digest::SHA512));
 
-    signature = Digest::sign (sample, ecPriKeyPath, Digest::SHA512);
+    signature = Digest::sign (BytesArray (sample.begin (), sample.end ()), ecPriKeyPath, Digest::SHA512);
     ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA224));
     ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA256));
     ASSERT_FALSE (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA384));
-    ASSERT_TRUE  (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA512));
+    ASSERT_TRUE  (Digest::verifySignature (sample, signature, ecPubKeyPath, Digest::SHA512)) << join::lastError.message ();
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), signature, "/missing/pub/key", Digest::SHA512));
 }
 
 /**
@@ -165,25 +170,29 @@ TEST_F (DigestTest, sign)
  */
 TEST_F (DigestTest, verifySignature)
 {
-    ASSERT_TRUE  (Digest::verifySignature (sample, Base64::decode (ec224sig), ecPubKeyPath, Digest::SHA224));
-    ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec224sig), ecPubKeyPath, Digest::SHA256));
-    ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec224sig), ecPubKeyPath, Digest::SHA384));
-    ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec224sig), ecPubKeyPath, Digest::SHA512));
+    ASSERT_TRUE  (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), ecPubKeyPath, Digest::SHA224)) << join::lastError.message ();
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), "/missing/pub/key", Digest::SHA224));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), ecPubKeyPath, Digest::SHA256));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), ecPubKeyPath, Digest::SHA384));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), ecPubKeyPath, Digest::SHA512));
 
     ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec256sig), ecPubKeyPath, Digest::SHA224));
-    ASSERT_TRUE  (Digest::verifySignature (sample, Base64::decode (ec256sig), ecPubKeyPath, Digest::SHA256));
+    ASSERT_TRUE  (Digest::verifySignature (sample, Base64::decode (ec256sig), ecPubKeyPath, Digest::SHA256)) << join::lastError.message ();
+    ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec256sig), "/missing/pub/key", Digest::SHA256));
     ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec256sig), ecPubKeyPath, Digest::SHA384));
     ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec256sig), ecPubKeyPath, Digest::SHA512));
 
-    ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec384sig), ecPubKeyPath, Digest::SHA224));
-    ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec384sig), ecPubKeyPath, Digest::SHA256));
-    ASSERT_TRUE  (Digest::verifySignature (sample, Base64::decode (ec384sig), ecPubKeyPath, Digest::SHA384));
-    ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec384sig), ecPubKeyPath, Digest::SHA512));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec384sig), ecPubKeyPath, Digest::SHA224));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec384sig), ecPubKeyPath, Digest::SHA256));
+    ASSERT_TRUE  (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec384sig), ecPubKeyPath, Digest::SHA384)) << join::lastError.message ();
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec384sig), "/missing/pub/key", Digest::SHA384));
+    ASSERT_FALSE (Digest::verifySignature (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec384sig), ecPubKeyPath, Digest::SHA512));
 
     ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec512sig), ecPubKeyPath, Digest::SHA224));
     ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec512sig), ecPubKeyPath, Digest::SHA256));
     ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec512sig), ecPubKeyPath, Digest::SHA384));
-    ASSERT_TRUE  (Digest::verifySignature (sample, Base64::decode (ec512sig), ecPubKeyPath, Digest::SHA512));
+    ASSERT_TRUE  (Digest::verifySignature (sample, Base64::decode (ec512sig), ecPubKeyPath, Digest::SHA512)) << join::lastError.message ();
+    ASSERT_FALSE (Digest::verifySignature (sample, Base64::decode (ec512sig), "/missing/pub/key", Digest::SHA512));
 }
 
 /**
