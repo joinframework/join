@@ -140,8 +140,12 @@ TEST_F (DigestTest, sign)
 
     ASSERT_TRUE  (Signature::sign (BytesArray (sample.begin (), sample.end ()), "/missing/priv/key", Signature::SHA224).empty ());
     ASSERT_EQ    (join::lastError, std::errc::no_such_file_or_directory);
+
     ASSERT_TRUE  (Signature::sign (sample, ecPriKeyPath, Signature::Algorithm (100)).empty ());
     ASSERT_EQ    (join::lastError, SigErrc::InvalidAlgorithm);
+
+    ASSERT_TRUE  (Signature::sign (BytesArray (sample.begin (), sample.end ()), ecPubKeyPath, Signature::Algorithm (100)).empty ());
+    ASSERT_EQ    (join::lastError, SigErrc::InvalidPrivateKey);
 
     ASSERT_FALSE ((signature = Signature::sign (sample, ecPriKeyPath, Signature::SHA224)).empty ()) << join::lastError.message ();
     ASSERT_TRUE  (Signature::verify (BytesArray (sample.begin (), sample.end ()), signature, ecPubKeyPath, Signature::SHA224)) << join::lastError.message ();
@@ -175,8 +179,12 @@ TEST_F (DigestTest, verify)
 {
     ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), "/missing/pub/key", Signature::SHA224));
     ASSERT_EQ    (join::lastError, std::errc::no_such_file_or_directory);
+
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (ec224sig), ecPubKeyPath, Signature::Algorithm (100)));
     ASSERT_EQ    (join::lastError, SigErrc::InvalidAlgorithm);
+
+    ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), ecPriKeyPath, Signature::SHA224));
+    ASSERT_EQ    (join::lastError, SigErrc::InvalidPublicKey);
 
     ASSERT_TRUE  (Signature::verify (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), ecPubKeyPath, Signature::SHA224)) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (BytesArray (sample.begin (), sample.end ()), Base64::decode (ec224sig), ecPubKeyPath, Signature::SHA256));
@@ -205,6 +213,9 @@ TEST_F (DigestTest, verify)
 TEST_F (DigestTest, convertSignature)
 {
     BytesArray signature;
+
+    ASSERT_TRUE (Signature::toFlat (BytesArray {}).empty ());
+    ASSERT_EQ (join::lastError, SigErrc::InvalidSignature);
 
     signature = Signature::toFlat (Base64::decode (ec224sig));
     ASSERT_FALSE (signature.empty ());
