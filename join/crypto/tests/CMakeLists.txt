@@ -13,3 +13,7 @@ gtest_discover_tests(base64.gtest)
 add_executable(digest.gtest digest_test.cpp)
 target_link_libraries(digest.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(digest.gtest)
+
+add_executable(digesterror.gtest digesterror_test.cpp)
+target_link_libraries(digesterror.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(digesterror.gtest)
