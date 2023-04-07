@@ -37,7 +37,6 @@ namespace join
     class BasicAcceptor
     {
     public:
-        using Observer = BasicObserver <BasicAcceptor <Protocol>>;
         using Endpoint = typename Protocol::Endpoint;
         using Socket   = typename Protocol::Socket;
         using Stream   = typename Protocol::Stream;
@@ -284,7 +283,6 @@ namespace join
     class BasicStreamAcceptor : public BasicAcceptor <Protocol>
     {
     public:
-        using Observer = BasicObserver <BasicStreamAcceptor <Protocol>>;
         using Endpoint = typename Protocol::Endpoint;
         using Socket   = typename Protocol::Socket;
         using Stream   = typename Protocol::Stream;
@@ -368,7 +366,6 @@ namespace join
     class BasicTlsAcceptor : public BasicAcceptor <Protocol>
     {
     public:
-        using Observer = BasicObserver <BasicTlsAcceptor <Protocol>>;
         using Endpoint = typename Protocol::Endpoint;
         using Socket   = typename Protocol::Socket;
         using Stream   = typename Protocol::Stream;

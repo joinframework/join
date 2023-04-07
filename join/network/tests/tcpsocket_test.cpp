@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/reactor.hpp>
 #include <join/acceptor.hpp>
 
 // Libraries.
@@ -31,12 +32,13 @@
 using join::Errc;
 using join::IpAddress;
 using join::Resolver;
+using join::Reactor;
 using join::Tcp;
 
 /**
  * @brief Class used to test the TCP socket API.
  */
-class TcpSocket : public ::testing::Test, public Tcp::Acceptor::Observer
+class TcpSocket : public join::EventHandler, public ::testing::Test
 {
 protected:
     /**
@@ -44,9 +46,9 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (listen (), 0) << join::lastError.message ();
-        ASSERT_EQ (start (), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
+        ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
     /**
@@ -54,16 +56,16 @@ protected:
      */
     void TearDown ()
     {
-        ASSERT_EQ (stop (), 0) << join::lastError.message ();
-        close ();
+        ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+        _acceptor.close ();
     }
 
     /**
-     * @brief method called on receive.
+     * @brief method called when data are ready to be read on handle.
      */
     virtual void onReceive () override
     {
-        Tcp::Socket sock = accept ();
+        Tcp::Socket sock = _acceptor.accept ();
         if (sock.connected ())
         {
             char buf[1024];
@@ -86,6 +88,34 @@ protected:
         }
     }
 
+    /**
+     * @brief method called when handle is closed.
+     */
+    virtual void onClose () override
+    {
+        // do nothing.
+    }
+
+    /**
+     * @brief method called when an error occured on handle.
+     */
+    virtual void onError () override
+    {
+        // do nothing.
+    }
+
+    /**
+     * @brief get native handle.
+     * @return native handle.
+     */
+    virtual int handle () const override
+    {
+        return _acceptor.handle ();
+    }
+
+    /// server socket.
+    static Tcp::Acceptor _acceptor;
+
     /// host.
     static const std::string _host;
 
@@ -96,6 +126,7 @@ protected:
     static const int _timeout;
 };
 
+Tcp::Acceptor     TcpSocket::_acceptor;
 const std::string TcpSocket::_host    = "localhost";
 const uint16_t    TcpSocket::_port    = 5000;
 const int         TcpSocket::_timeout = 1000;
@@ -393,14 +424,13 @@ TEST_F (TcpSocket, setMode)
 {
     Tcp::Socket tcpSocket;
 
+    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::Blocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0);
-    if (tcpSocket.disconnect () == -1)
-    {
-        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-    }
-    ASSERT_TRUE (tcpSocket.waitDisconnected (_timeout)) << join::lastError.message ();
+
+    ASSERT_EQ (tcpSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::Blocking), 0) << join::lastError.message ();
+
     tcpSocket.close ();
 }
 
