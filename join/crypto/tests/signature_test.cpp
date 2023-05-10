@@ -209,41 +209,6 @@ TEST_F (DigestTest, verify)
 }
 
 /**
- * @brief signature conversion test.
- */
-TEST_F (DigestTest, convertSignature)
-{
-    BytesArray signature;
-
-    ASSERT_TRUE (Signature::toFlat (BytesArray {}).empty ());
-    ASSERT_EQ (join::lastError, SigErrc::InvalidSignature);
-
-    signature = Signature::toFlat (Base64::decode (ec224sig));
-    ASSERT_FALSE (signature.empty ());
-    signature = Signature::toDer (signature);
-    ASSERT_FALSE (signature.empty ());
-    ASSERT_EQ (Base64::encode (signature), ec224sig);
-
-    signature = Signature::toFlat (Base64::decode (ec256sig));
-    ASSERT_FALSE (signature.empty ());
-    signature = Signature::toDer (signature);
-    ASSERT_FALSE (signature.empty ());
-    ASSERT_EQ (Base64::encode (signature), ec256sig);
-
-    signature = Signature::toFlat (Base64::decode (ec384sig));
-    ASSERT_FALSE (signature.empty ());
-    signature = Signature::toDer (signature);
-    ASSERT_FALSE (signature.empty ());
-    ASSERT_EQ (Base64::encode (signature), ec384sig);
-
-    signature = Signature::toFlat (Base64::decode (ec512sig));
-    ASSERT_FALSE (signature.empty ());
-    signature = Signature::toDer (signature);
-    ASSERT_FALSE (signature.empty ());
-    ASSERT_EQ (Base64::encode (signature), ec512sig);
-}
-
-/**
  * @brief main function.
  */
 int main (int argc, char **argv)

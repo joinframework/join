@@ -172,33 +172,11 @@ namespace join
         static bool verify (const uint8_t* data, size_t size, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm = SHA256);
 
         /**
-         * @brief convert a DER encoded ECDSA signature to a flat ECDSA signature.
-         * @param der the DER encoded ECDSA signature to convert.
-         * @return the flat ECDSA signature on success, an empty bytes array on failure.
-         */
-        static BytesArray toFlat (const BytesArray& der);
-
-        /**
-         * @brief convert a flat ECDSA signature to a DER encoded ECDSA signature.
-         * @param flat the flat ECDSA signature to convert.
-         * @return the DER encoded ECDSA signature on success, an empty bytes array on failure.
-         */
-        static BytesArray toDer (const BytesArray& flat);
-
-        /**
          * @brief get algorithm name.
          * @param algorithm the signature algorithm.
          * @return algorithm name.
          */
         static const char* algorithmName (Algorithm algorithm);
-
-    private:
-        /**
-         * @brief get the fixed size for a flat signature integer.
-         * @param numBytes number of bytes set.
-         * @return the fixed size for a flat signature integer.
-         */
-        static int fixedSize (int numBytes);
     };
 }
 
