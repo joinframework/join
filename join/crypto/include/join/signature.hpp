@@ -96,12 +96,10 @@ namespace join
          */
         enum Algorithm : uint16_t
         {
-            SHA1,       /**< secure hash algorithm v1 */
             SHA224,     /**< secure hash algorithm v2 with a 224 bits digest */
             SHA256,     /**< secure hash algorithm v2 with a 256 bits digest */
             SHA384,     /**< secure hash algorithm v2 with a 384 bits digest */
             SHA512,     /**< secure hash algorithm v2 with a 512 bits digest */
-            SM3,        /**< shangmi 3 */
         };
 
         /**

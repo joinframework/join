@@ -214,13 +214,13 @@ bool Signature::verify (const uint8_t* data, size_t size, const BytesArray &sign
 
     EvpMdCtxPtr mdctx (EVP_MD_CTX_new ());
 
-    if (EVP_DigestVerifyInit (mdctx.get (), nullptr, md, nullptr, pkey.get ()) != 1)
+    if (!EVP_DigestVerifyInit (mdctx.get (), nullptr, md, nullptr, pkey.get ()))
     {
         lastError = make_error_code (Errc::OperationFailed);
         return false;
     }
 
-    if (EVP_DigestVerify (mdctx.get (), signature.data (), signature.size (), data, size) != 1)
+    if (!EVP_DigestVerify (mdctx.get (), signature.data (), signature.size (), data, size))
     {
         lastError = make_error_code (SigErrc::InvalidSignature);
         return false;
@@ -237,12 +237,10 @@ const char* Signature::algorithm (Algorithm algo)
 {
    switch (algo)
    {
-        OUT_ENUM (SHA1);
         OUT_ENUM (SHA224);
         OUT_ENUM (SHA256);
         OUT_ENUM (SHA384);
         OUT_ENUM (SHA512);
-        OUT_ENUM (SM3);
    }
 
    return "UNKNOWN";
