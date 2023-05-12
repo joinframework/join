@@ -83,7 +83,7 @@ const std::error_category& join::getSigCategory ()
 
 // =========================================================================
 //   CLASS     :
-//   METHOD    : getAlgorithmName
+//   METHOD    : make_error_code
 // =========================================================================
 std::error_code join::make_error_code (SigErrc code)
 {
@@ -92,7 +92,7 @@ std::error_code join::make_error_code (SigErrc code)
 
 // =========================================================================
 //   CLASS     :
-//   METHOD    : getAlgorithmName
+//   METHOD    : make_error_condition
 // =========================================================================
 std::error_condition join::make_error_condition (SigErrc code)
 {
@@ -103,35 +103,33 @@ std::error_condition join::make_error_condition (SigErrc code)
 //   CLASS     : Signature
 //   METHOD    : sign
 // =========================================================================
-BytesArray Signature::sign (const std::string& message, const std::string& privateKey, Algorithm algorithm)
+BytesArray Signature::sign (const std::string& message, const std::string& privKey, Algorithm algo)
 {
-    return sign (reinterpret_cast <const uint8_t*> (message.data ()), message.size (), privateKey, algorithm);
+    return sign (reinterpret_cast <const uint8_t*> (message.data ()), message.size (), privKey, algo);
 }
 
 // =========================================================================
 //   CLASS     : Signature
 //   METHOD    : sign
 // =========================================================================
-BytesArray Signature::sign (const BytesArray& data, const std::string& privateKey, Algorithm algorithm)
+BytesArray Signature::sign (const BytesArray& data, const std::string& privKey, Algorithm algo)
 {
-    return sign (data.data (), data.size (), privateKey, algorithm);
+    return sign (data.data (), data.size (), privKey, algo);
 }
 
 // =========================================================================
 //   CLASS     : Signature
 //   METHOD    : sign
 // =========================================================================
-BytesArray Signature::sign (const uint8_t* data, size_t size, const std::string& privateKey, Algorithm algorithm)
+BytesArray Signature::sign (const uint8_t* data, size_t size, const std::string& privKey, Algorithm algo)
 {
-    // open private key file.
-    FILE *fkey = fopen (privateKey.c_str (), "r");
+    FILE *fkey = fopen (privKey.c_str (), "r");
     if (!fkey)
     {
         lastError = std::make_error_code (static_cast <std::errc> (errno));
         return {};
     }
 
-    // read private key.
     EvpPkeyPtr pkey (PEM_read_PrivateKey (fkey, nullptr, 0, nullptr));
     fclose (fkey);
 
@@ -141,35 +139,18 @@ BytesArray Signature::sign (const uint8_t* data, size_t size, const std::string&
         return {};
     }
 
-    // create digest.
-    const EVP_MD *md = EVP_get_digestbyname (algorithmName (algorithm));
+    const EVP_MD *md = EVP_get_digestbyname (algorithm (algo));
     if (!md)
     {
         lastError = make_error_code (SigErrc::InvalidAlgorithm);
         return {};
     }
 
-    // create EVP context.
     EvpMdCtxPtr mdctx (EVP_MD_CTX_new ());
-    if (!mdctx)
-    {
-        lastError = make_error_code (Errc::OutOfMemory);
-        return {};
-    }
-
-    // initialize.
-    int result = EVP_DigestSignInit (mdctx.get (), nullptr, md, nullptr, pkey.get ());
-    if (result != 1)
-    {
-        lastError = make_error_code (SigErrc::InvalidAlgorithm);
-        return {};
-    }
-
     size_t siglen = 0;
 
-    // how much space we need to reserve.
-    result = EVP_DigestSign (mdctx.get (), nullptr, &siglen, data, size);
-    if (result != 1)
+    if (!EVP_DigestSignInit (mdctx.get (), nullptr, md, nullptr, pkey.get ()) ||
+        !EVP_DigestSign (mdctx.get (), nullptr, &siglen, data, size))
     {
         lastError = make_error_code (Errc::OperationFailed);
         return {};
@@ -178,15 +159,7 @@ BytesArray Signature::sign (const uint8_t* data, size_t size, const std::string&
     BytesArray signature;
     signature.resize (siglen);
 
-    // sign.
-    result = EVP_DigestSign (mdctx.get (), signature.data (), &siglen, data, size);
-    if (result != 1)
-    {
-        lastError = make_error_code (Errc::OperationFailed);
-        return {};
-    }
-
-    // need to resize again to fit real used space.
+    EVP_DigestSign (mdctx.get (), signature.data (), &siglen, data, size);
     signature.resize (siglen);
 
     return signature;
@@ -196,35 +169,33 @@ BytesArray Signature::sign (const uint8_t* data, size_t size, const std::string&
 //   CLASS     : Signature
 //   METHOD    : verify
 // =========================================================================
-bool Signature::verify (const std::string& message, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm)
+bool Signature::verify (const std::string& message, const BytesArray& signature, const std::string& pubKey, Algorithm algo)
 {
-    return verify (reinterpret_cast <const uint8_t*> (message.data ()), message.size (), signature, publicKey, algorithm);
+    return verify (reinterpret_cast <const uint8_t*> (message.data ()), message.size (), signature, pubKey, algo);
 }
 
 // =========================================================================
 //   CLASS     : Signature
 //   METHOD    : verify
 // =========================================================================
-bool Signature::verify (const BytesArray& data, const BytesArray& signature, const std::string& publicKey, Algorithm algorithm)
+bool Signature::verify (const BytesArray& data, const BytesArray& signature, const std::string& pubKey, Algorithm algo)
 {
-    return verify (data.data (), data.size (), signature, publicKey, algorithm);
+    return verify (data.data (), data.size (), signature, pubKey, algo);
 }
 
 // =========================================================================
 //   CLASS     : Signature
 //   METHOD    : verify
 // =========================================================================
-bool Signature::verify (const uint8_t* data, size_t size, const BytesArray &signature, const std::string &publicKey, Algorithm algorithm)
+bool Signature::verify (const uint8_t* data, size_t size, const BytesArray &signature, const std::string &pubKey, Algorithm algo)
 {
-    // open public key file.
-    FILE *fkey = fopen (publicKey.c_str (), "r");
+    FILE *fkey = fopen (pubKey.c_str (), "r");
     if (!fkey)
     {
         lastError = std::make_error_code (static_cast <std::errc> (errno));
         return false;
     }
 
-    // read public key.
     EvpPkeyPtr pkey (PEM_read_PUBKEY (fkey, nullptr, 0, nullptr));
     fclose (fkey);
 
@@ -234,33 +205,22 @@ bool Signature::verify (const uint8_t* data, size_t size, const BytesArray &sign
         return false;
     }
 
-    // create digest.
-    const EVP_MD *md = EVP_get_digestbyname (algorithmName (algorithm));
+    const EVP_MD *md = EVP_get_digestbyname (algorithm (algo));
     if (!md)
     {
         lastError = make_error_code (SigErrc::InvalidAlgorithm);
         return false;
     }
 
-    // create EVP context.
     EvpMdCtxPtr mdctx (EVP_MD_CTX_new ());
-    if (!mdctx)
+
+    if (EVP_DigestVerifyInit (mdctx.get (), nullptr, md, nullptr, pkey.get ()) != 1)
     {
-        lastError = make_error_code (Errc::OutOfMemory);
+        lastError = make_error_code (Errc::OperationFailed);
         return false;
     }
 
-    // initialize.
-    int result = EVP_DigestVerifyInit (mdctx.get (), nullptr, md, nullptr, pkey.get ());
-    if (result != 1)
-    {
-        lastError = make_error_code (SigErrc::InvalidAlgorithm);
-        return false;
-    }
-
-    // verify.
-    result = EVP_DigestVerify (mdctx.get (), signature.data (), signature.size (), data, size);
-    if (result != 1)
+    if (EVP_DigestVerify (mdctx.get (), signature.data (), signature.size (), data, size) != 1)
     {
         lastError = make_error_code (SigErrc::InvalidSignature);
         return false;
@@ -271,16 +231,18 @@ bool Signature::verify (const uint8_t* data, size_t size, const BytesArray &sign
 
 // =========================================================================
 //   CLASS     : Signature
-//   METHOD    : algorithmName
+//   METHOD    : algorithm
 // =========================================================================
-const char* Signature::algorithmName (Algorithm algorithm)
+const char* Signature::algorithm (Algorithm algo)
 {
-   switch (algorithm)
+   switch (algo)
    {
-      OUT_ENUM (SHA224);
-      OUT_ENUM (SHA256);
-      OUT_ENUM (SHA384);
-      OUT_ENUM (SHA512);
+        OUT_ENUM (SHA1);
+        OUT_ENUM (SHA224);
+        OUT_ENUM (SHA256);
+        OUT_ENUM (SHA384);
+        OUT_ENUM (SHA512);
+        OUT_ENUM (SM3);
    }
 
    return "UNKNOWN";
