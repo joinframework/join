@@ -214,13 +214,8 @@ bool Signature::verify (const uint8_t* data, size_t size, const BytesArray &sign
 
     EvpMdCtxPtr mdctx (EVP_MD_CTX_new ());
 
-    if (!EVP_DigestVerifyInit (mdctx.get (), nullptr, md, nullptr, pkey.get ()))
-    {
-        lastError = make_error_code (Errc::OperationFailed);
-        return false;
-    }
-
-    if (!EVP_DigestVerify (mdctx.get (), signature.data (), signature.size (), data, size))
+    if (!EVP_DigestVerifyInit (mdctx.get (), nullptr, md, nullptr, pkey.get ()) ||
+        !EVP_DigestVerify (mdctx.get (), signature.data (), signature.size (), data, size))
     {
         lastError = make_error_code (SigErrc::InvalidSignature);
         return false;
