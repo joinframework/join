@@ -148,14 +148,7 @@ BytesArray Digestbuf::get ()
 
     BytesArray digest;
     digest.resize (EVP_MD_size (_md));
-
-    if (!EVP_DigestFinal_ex (_mdctx.get (), &digest[0], nullptr))
-    {
-        lastError = make_error_code (Errc::OperationFailed);
-        _mdctx.reset ();
-        return {};
-    }
-
+    EVP_DigestFinal_ex (_mdctx.get (), &digest[0], nullptr);
     _mdctx.reset ();
 
     return digest;
@@ -176,11 +169,7 @@ Digestbuf::int_type Digestbuf::overflow (int_type c)
             return traits_type::eof ();
         }
 
-        if (!EVP_DigestInit_ex (_mdctx.get (), _md, nullptr))
-        {
-            lastError = make_error_code (Errc::OperationFailed);
-            return traits_type::eof ();
-        }
+        EVP_DigestInit_ex (_mdctx.get (), _md, nullptr);
     }
 
     if (this->pbase () == nullptr)
@@ -194,11 +183,9 @@ Digestbuf::int_type Digestbuf::overflow (int_type c)
     }
 
     std::streamsize pending = this->pptr () - this->pbase ();
-
-    if (pending && !EVP_DigestUpdate (_mdctx.get (), this->pbase (), pending))
+    if (pending)
     {
-        lastError = make_error_code (Errc::OperationFailed);
-        return traits_type::eof ();
+        EVP_DigestUpdate (_mdctx.get (), this->pbase (), pending);
     }
 
     this->setp (this->pbase (), this->pbase () + _bufsize);

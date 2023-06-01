@@ -63,14 +63,14 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        Signaturebuf (Signaturebuf&& other);
+        Signaturebuf (Signaturebuf&& other) = default;
 
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
          * @return current object.
          */
-        Signaturebuf& operator= (Signaturebuf&& other);
+        Signaturebuf& operator= (Signaturebuf&& other) = default;
 
         /**
          * @brief destroy the signature stream buffer instance.

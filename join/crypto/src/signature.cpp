@@ -56,25 +56,6 @@ Signaturebuf::Signaturebuf (const std::string& algo)
 
 // =========================================================================
 //   CLASS     : Signaturebuf
-//   METHOD    : Signaturebuf
-// =========================================================================
-Signaturebuf::Signaturebuf (Signaturebuf&& other)
-: Digestbuf (std::move (other))
-{
-}
-
-// =========================================================================
-//   CLASS     : Signaturebuf
-//   METHOD    : operator=
-// =========================================================================
-Signaturebuf& Signaturebuf::operator= (Signaturebuf&& other)
-{
-    Digestbuf::operator= (std::move (other));
-    return *this;
-}
-
-// =========================================================================
-//   CLASS     : Signaturebuf
 //   METHOD    : sign
 // =========================================================================
 BytesArray Signaturebuf::sign (const std::string& privKey)

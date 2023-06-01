@@ -96,7 +96,17 @@ const std::string TlsKeyTest::ecPubKey = "-----BEGIN PUBLIC KEY-----\n"
                                          "-----END PUBLIC KEY-----\n";
 
 /**
- * @brief Test sign.
+ * @brief Test bool operator.
+ */
+TEST_F (TlsKeyTest, bool)
+{
+    ASSERT_FALSE (TlsKey ());
+    ASSERT_TRUE (TlsKey (ecPriKeyPath, TlsKey::Private).length ());
+    ASSERT_TRUE (TlsKey (ecPubKeyPath, TlsKey::Public).length ());
+}
+
+/**
+ * @brief Test handle.
  */
 TEST_F (TlsKeyTest, handle)
 {
@@ -110,7 +120,7 @@ TEST_F (TlsKeyTest, handle)
 }
 
 /**
- * @brief Test sign.
+ * @brief Test length.
  */
 TEST_F (TlsKeyTest, length)
 {
@@ -120,7 +130,7 @@ TEST_F (TlsKeyTest, length)
 }
 
 /**
- * @brief Test sign.
+ * @brief Test swap.
  */
 TEST_F (TlsKeyTest, swap)
 {
@@ -136,7 +146,7 @@ TEST_F (TlsKeyTest, swap)
 }
 
 /**
- * @brief Test sign.
+ * @brief Test type.
  */
 TEST_F (TlsKeyTest, type)
 {
@@ -148,7 +158,7 @@ TEST_F (TlsKeyTest, type)
 }
 
 /**
- * @brief Test sign.
+ * @brief Test clear.
  */
 TEST_F (TlsKeyTest, clear)
 {
