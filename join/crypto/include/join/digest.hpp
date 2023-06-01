@@ -173,7 +173,6 @@ namespace join
             SHA256,     /**< secure hash algorithm v2 with a 256 bits digest */
             SHA384,     /**< secure hash algorithm v2 with a 384 bits digest */
             SHA512,     /**< secure hash algorithm v2 with a 512 bits digest */
-            SM3,        /**< ShangMi 3 */
         };
 
         /**
@@ -328,28 +327,6 @@ namespace join
          * @return SHA512 message digest.
          */
         static BytesArray sha512 (const std::string& data);
-
-        /**
-         * @brief get SM3 message digest.
-         * @param data data to hash.
-         * @param size data size.
-         * @return SM3 message digest.
-         */
-        static BytesArray sm3 (const char* data, std::streamsize size);
-
-        /**
-         * @brief get SM3 message digest.
-         * @param data data to hash.
-         * @return SM3 message digest.
-         */
-        static BytesArray sm3 (const BytesArray& data);
-
-        /**
-         * @brief get SM3 message digest.
-         * @param data data to hash.
-         * @return SM3 message digest.
-         */
-        static BytesArray sm3 (const std::string& data);
 
         /**
          * @brief convert bytes array to string.

@@ -138,7 +138,7 @@ TEST_F (SignatureTest, sign)
     ASSERT_TRUE  (Signature::sign (sample, ecPriKeyPath, Digest::Algorithm (100)).empty ());
     ASSERT_EQ    (join::lastError, DigestErrc::InvalidAlgorithm);
 
-    ASSERT_TRUE  (Signature::sign (nullptr, 0, ecPriKeyPath, Digest::Algorithm::SM3).empty ());
+    ASSERT_TRUE  (Signature::sign (nullptr, 0, ecPriKeyPath, Digest::Algorithm::SHA1).empty ());
     ASSERT_EQ    (join::lastError, Errc::OperationFailed);
 
     ASSERT_FALSE ((signature = Signature::sign (sample, ecPriKeyPath, Digest::Algorithm::SHA224)).empty ()) << join::lastError.message ();
@@ -180,7 +180,7 @@ TEST_F (SignatureTest, verify)
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (ec224sig), ecPubKeyPath, Digest::Algorithm (100)));
     ASSERT_EQ    (join::lastError, DigestErrc::InvalidAlgorithm);
 
-    ASSERT_FALSE (Signature::verify (sample, Base64::decode (ec224sig), ecPubKeyPath, Digest::Algorithm::SM3));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (ec224sig), ecPubKeyPath, Digest::Algorithm::SHA1));
     ASSERT_EQ    (join::lastError, Errc::OperationFailed);
 
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (ec224sig), ecPubKeyPath, Digest::Algorithm::SHA256));

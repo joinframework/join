@@ -44,7 +44,6 @@ const std::string sha224digest = "95d3938a52cba86a6c61b95ab975e16b0a989cc9be584c
 const std::string sha256digest = "56293a80e0394d252e995f2debccea8223e4b5b2b150bee212729b3b39ac4d46";
 const std::string sha384digest = "84d998482e9ec38a8877f1624a193cfa803611190e19cc6bca2791492265f0446544bdb285d89a8bfce2826077e11cd2";
 const std::string sha512digest = "0b7b28ca2bf28e253929c8a29ddb0ac2a39226f86702ad1b1e51703d5dcebd42aff774969bb7e23bf6c439bab4eae37cdfc86978a176c27e835cdef9c8aaf7de";
-const std::string sm3digest    = "0c3ac7cfbffb0593bc1f9d7778f38ba334ab9c2e46617de6d5e0455d668c6a65";
 
 /**
  * @brief Test get.
@@ -82,12 +81,6 @@ TEST (Digest, get)
     ASSERT_EQ (Digest::bin2hex (digest.get ()), sha512digest);
     digest.write (sample.data (), sample.size ());
     ASSERT_EQ (Digest::bin2hex (digest.get ()), sha512digest);
-
-    digest = std::move (Digest (Digest::Algorithm::SM3));
-    digest << sample;
-    ASSERT_EQ (Digest::bin2hex (digest.get ()), sm3digest);
-    digest.write (sample.data (), sample.size ());
-    ASSERT_EQ (Digest::bin2hex (digest.get ()), sm3digest);
 }
 
 /**
@@ -128,14 +121,6 @@ TEST (Digest, sha384)
 TEST (Digest, sha512)
 {
     ASSERT_EQ (Digest::bin2hex (Digest::sha512 (sample)), sha512digest);
-}
-
-/**
- * @brief Test sm3.
- */
-TEST (Digest, sm3)
-{
-    ASSERT_EQ (Digest::bin2hex (Digest::sm3 (sample)), sm3digest);
 }
 
 /**
