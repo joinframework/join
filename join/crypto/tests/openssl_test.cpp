@@ -185,6 +185,24 @@ TEST_F (Openssl, EvpPkeyPtr)
 }
 
 /**
+ * @brief EvpPkeyCtxPtr test.
+ */
+TEST_F (Openssl, EvpPkeyCtxPtr)
+{
+    FILE *fkey = fopen (_key.c_str (), "r");
+    ASSERT_NE (fkey, nullptr);
+    join::EvpPkeyPtr evp (PEM_read_PrivateKey (fkey, nullptr, 0, nullptr));
+    fclose (fkey);
+    ASSERT_NE (evp, nullptr);
+    join::EvpPkeyCtxPtr evpctx (EVP_PKEY_CTX_new (evp.get (), nullptr));
+    ASSERT_NE (evpctx, nullptr);
+    evpctx.reset ();
+    ASSERT_EQ (evpctx, nullptr);
+    evp.reset ();
+    ASSERT_EQ (evp, nullptr);
+}
+
+/**
  * @brief EvpMdCtxPtr test.
  */
 TEST_F (Openssl, EvpMdCtxPtr)

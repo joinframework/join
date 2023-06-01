@@ -32,8 +32,10 @@ set(PUBLIC_HEADERS
     thread/include/join/condition.hpp
     thread/include/join/thread.hpp
     thread/include/join/threadpool.hpp
-    crypto/include/join/base64.hpp
     crypto/include/join/openssl.hpp
+    crypto/include/join/base64.hpp
+    crypto/include/join/digest.hpp
+    crypto/include/join/tlskey.hpp
     crypto/include/join/signature.hpp
     network/include/join/macaddress.hpp
     network/include/join/ipaddress.hpp
@@ -62,8 +64,10 @@ set(SOURCES
     thread/src/condition.cpp
     thread/src/thread.cpp
     thread/src/threadpool.cpp
-    crypto/src/base64.cpp
     crypto/src/openssl.cpp
+    crypto/src/base64.cpp
+    crypto/src/digest.cpp
+    crypto/src/tlskey.cpp
     crypto/src/signature.cpp
     network/src/macaddress.cpp
     network/src/ipaddress.cpp

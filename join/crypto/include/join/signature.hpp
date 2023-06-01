@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2022 Mathieu Rabine
+ * Copyright (c) 2023 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@
 #define __JOIN_SIGNATURE_HPP__
 
 // libjoin.
-#include <join/base64.hpp>
+#include <join/digest.hpp>
 
 // C++.
 #include <system_error>
@@ -35,100 +35,113 @@
 namespace join
 {
     /**
-     * @brief signature error codes.
+     * @brief signature stream buffer.
      */
-    enum class SigErrc
-    {
-        InvalidAlgorithm = 1,   /**< invalid algorithm. */
-        InvalidPrivateKey,      /**< invalid private key. */
-        InvalidPublicKey,       /**< invalid public key. */
-        InvalidSignature        /**< invalid signature. */
-    };
-
-    /**
-     * @brief signature error category.
-     */
-    class SigCategory : public std::error_category
+    class Signaturebuf : public Digestbuf
     {
     public:
         /**
-         * @brief get signature error category name.
-         * @return signature error category name.
+         * @brief create the signature stream buffer instance.
+         * @param algo the message digest used.
          */
-        virtual const char* name () const noexcept;
+        Signaturebuf (const std::string& algo);
 
         /**
-         * @brief translate signature error code to human readable error string.
-         * @param code error code.
-         * @return human readable error string.
+         * @brief copy constructor.
+         * @param other other object to copy.
          */
-        virtual std::string message (int code) const;
+        Signaturebuf (const Signaturebuf& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to assign.
+         * @return current object.
+         */
+        Signaturebuf& operator= (const Signaturebuf& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        Signaturebuf (Signaturebuf&& other);
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to assign.
+         * @return current object.
+         */
+        Signaturebuf& operator= (Signaturebuf&& other);
+
+        /**
+         * @brief destroy the signature stream buffer instance.
+         */
+        virtual ~Signaturebuf () = default;
+
+        /**
+         * @brief sign with the given private key.
+         * @param privKey path to private key.
+         * @return the generated signature on success, an empty bytes array on failure.
+         */
+        BytesArray sign (const std::string& privKey);
+
+        /**
+         * @brief verify signature with the given public key.
+         * @param sig the message signature.
+         * @param pubKey path to public key.
+         * @return true on success, false otherwise.
+         */
+        bool verify (const BytesArray& sig, const std::string& pubKey);
     };
-
-    /**
-     * @brief get error category.
-     * @return the created std::error_category object.
-     */
-    const std::error_category& getSigCategory ();
-
-    /**
-     * @brief create an std::error_code object.
-     * @param code error code number.
-     * @return the created std::error_code object.
-     */
-    std::error_code make_error_code (SigErrc code);
-
-    /**
-     * @brief create an std::error_condition object.
-     * @param code error code number.
-     * @return the created std::error_condition object.
-     */
-    std::error_condition make_error_condition (SigErrc code);
 
     /**
      * @brief class used to manage signature.
      */
-    class Signature
+    class Signature : public std::ostream
     {
     public:
         /**
-         * @brief algorithm.
+         * @brief create instance.
+         * @param algo the message digest used.
          */
-        enum Algorithm : uint16_t
-        {
-            SHA224,     /**< secure hash algorithm v2 with a 224 bits digest */
-            SHA256,     /**< secure hash algorithm v2 with a 256 bits digest */
-            SHA384,     /**< secure hash algorithm v2 with a 384 bits digest */
-            SHA512,     /**< secure hash algorithm v2 with a 512 bits digest */
-        };
+        Signature (Digest::Algorithm algo);
 
         /**
-         * @brief create instance.
+         * @brief copy constructor.
+         * @param other other object to copy.
          */
-        Signature () = delete;
+        Signature (const Signature& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to assign.
+         * @return current object.
+         */
+        Signature& operator=(const Signature& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        Signature (Signature&& other);
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to assign.
+         * @return current object.
+         */
+        Signature& operator=(Signature&& other);
 
         /**
          * @brief destroy instance.
          */
-        ~Signature () = delete;
+        virtual ~Signature () = default;
 
         /**
-         * @brief sign a data with given private key.
-         * @param message message to sign.
+         * @brief sign with given private key.
          * @param privKey path to private key.
-         * @param algo the algorithm used for the signature.
          * @return the generated signature on success, an empty bytes array on failure.
          */
-        static BytesArray sign (const std::string& message, const std::string& privKey, Algorithm algo = SHA256);
-
-        /**
-         * @brief sign a data with given private key.
-         * @param data data to sign.
-         * @param privKey path to private key.
-         * @param algo the algorithm used for the signature.
-         * @return the generated signature on success, an empty bytes array on failure.
-         */
-        static BytesArray sign (const BytesArray& data, const std::string& privKey, Algorithm algo = SHA256);
+        BytesArray sign (const std::string& privKey);
 
         /**
          * @brief sign a data with given private key.
@@ -138,27 +151,33 @@ namespace join
          * @param algo the algorithm used for the signature.
          * @return the generated signature on success, an empty bytes array on failure.
          */
-        static BytesArray sign (const uint8_t* data, size_t size, const std::string& privKey, Algorithm algo = SHA256);
+        static BytesArray sign (const char* data, std::streamsize size, const std::string& privKey, Digest::Algorithm algo);
 
         /**
-         * @brief verify data signature.
-         * @param message message to verify.
-         * @param signature the message signature.
-         * @param pubKey path to public key.
+         * @brief sign a data with given private key.
+         * @param data data to sign.
+         * @param privKey path to private key.
          * @param algo the algorithm used for the signature.
-         * @return true on success, false otherwise.
+         * @return the generated signature on success, an empty bytes array on failure.
          */
-        static bool verify (const std::string& message, const BytesArray& signature, const std::string& pubKey, Algorithm algo = SHA256);
+        static BytesArray sign (const BytesArray& data, const std::string& privKey, Digest::Algorithm algo);
 
         /**
-         * @brief verify data signature.
-         * @param data data to verify.
+         * @brief sign a data with given private key.
+         * @param data data to sign.
+         * @param privKey path to private key.
+         * @param algo the algorithm used for the signature.
+         * @return the generated signature on success, an empty bytes array on failure.
+         */
+        static BytesArray sign (const std::string& data, const std::string& privKey, Digest::Algorithm algo);
+
+        /**
+         * @brief verify signature.
          * @param signature the message signature.
          * @param pubKey path to public key.
-         * @param algo the algorithm used for the signature.
          * @return true on success, false otherwise.
          */
-        static bool verify (const BytesArray& data, const BytesArray& signature, const std::string& pubKey, Algorithm algo = SHA256);
+        bool verify (const BytesArray& signature, const std::string& pubKey);
 
         /**
          * @brief verify data signature.
@@ -169,21 +188,32 @@ namespace join
          * @param algo the algorithm used for the signature.
          * @return true on success, false otherwise.
          */
-        static bool verify (const uint8_t* data, size_t size, const BytesArray& signature, const std::string& pubKey, Algorithm algo = SHA256);
+        static bool verify (const char* data, std::streamsize size, const BytesArray& signature, const std::string& pubKey, Digest::Algorithm algo);
 
         /**
-         * @brief get algorithm name.
-         * @param algo the signature algorithm.
-         * @return algorithm name.
+         * @brief verify data signature.
+         * @param data data to verify.
+         * @param signature the message signature.
+         * @param pubKey path to public key.
+         * @param algo the algorithm used for the signature.
+         * @return true on success, false otherwise.
          */
-        static const char* algorithm (Algorithm algo);
-    };
-}
+        static bool verify (const BytesArray& data, const BytesArray& signature, const std::string& pubKey, Digest::Algorithm algo);
 
-namespace std
-{
-    /// signature error code specialization.
-    template <> struct is_error_condition_enum <join::SigErrc> : public true_type {};
+        /**
+         * @brief verify data signature.
+         * @param data data to verify.
+         * @param signature the message signature.
+         * @param pubKey path to public key.
+         * @param algo the algorithm used for the signature.
+         * @return true on success, false otherwise.
+         */
+        static bool verify (const std::string& data, const BytesArray& signature, const std::string& pubKey, Digest::Algorithm algo);
+
+    private:
+        /// associated signature stream buffer.
+        Signaturebuf _sigbuf;
+    };
 }
 
 #endif

@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2022 Mathieu Rabine
+ * Copyright (c) 2023 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@
 
 // libjoin.
 #include <join/signature.hpp>
+#include <join/tlskey.hpp>
 #include <join/error.hpp>
 #include <join/utils.hpp>
 
@@ -31,212 +32,228 @@
 #include <openssl/err.h>
 
 // C++.
-#include <limits>
 #include <iostream>
+#include <limits>
 
 // C.
+#include <cstdint>
 #include <cstdio>
 
+using join::Digest;
+using join::TlsKey;
+using join::Signaturebuf;
 using join::Signature;
-using join::SigCategory;
 using join::BytesArray;
 
 // =========================================================================
-//   CLASS     : SigCategory
-//   METHOD    : name
+//   CLASS     : Signaturebuf
+//   METHOD    : Signaturebuf
 // =========================================================================
-const char* SigCategory::name () const noexcept
+Signaturebuf::Signaturebuf (const std::string& algo)
+: Digestbuf (algo)
 {
-    return "libjoin";
 }
 
 // =========================================================================
-//   CLASS     : SigCategory
-//   METHOD    : message
+//   CLASS     : Signaturebuf
+//   METHOD    : Signaturebuf
 // =========================================================================
-std::string SigCategory::message (int code) const
+Signaturebuf::Signaturebuf (Signaturebuf&& other)
+: Digestbuf (std::move (other))
 {
-    switch (static_cast <SigErrc> (code))
+}
+
+// =========================================================================
+//   CLASS     : Signaturebuf
+//   METHOD    : operator=
+// =========================================================================
+Signaturebuf& Signaturebuf::operator= (Signaturebuf&& other)
+{
+    Digestbuf::operator= (std::move (other));
+    return *this;
+}
+
+// =========================================================================
+//   CLASS     : Signaturebuf
+//   METHOD    : sign
+// =========================================================================
+BytesArray Signaturebuf::sign (const std::string& privKey)
+{
+    if (_buf && (this->overflow (traits_type::eof ()) == traits_type::eof ()))
     {
-        case SigErrc::InvalidAlgorithm:
-            return "invalid algorithm";
-        case SigErrc::InvalidPrivateKey:
-            return "invalid private key";
-        case SigErrc::InvalidPublicKey:
-            return "invalid public key";
-        case SigErrc::InvalidSignature:
-            return "invalid signature";
-        default:
-            return "success";
-    }
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : getSigCategory
-// =========================================================================
-const std::error_category& join::getSigCategory ()
-{
-    static SigCategory instance;
-    return instance;
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : make_error_code
-// =========================================================================
-std::error_code join::make_error_code (SigErrc code)
-{
-    return std::error_code (static_cast <int> (code), getSigCategory ());
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : make_error_condition
-// =========================================================================
-std::error_condition join::make_error_condition (SigErrc code)
-{
-    return std::error_condition (static_cast <int> (code), getSigCategory ());
-}
-
-// =========================================================================
-//   CLASS     : Signature
-//   METHOD    : sign
-// =========================================================================
-BytesArray Signature::sign (const std::string& message, const std::string& privKey, Algorithm algo)
-{
-    return sign (reinterpret_cast <const uint8_t*> (message.data ()), message.size (), privKey, algo);
-}
-
-// =========================================================================
-//   CLASS     : Signature
-//   METHOD    : sign
-// =========================================================================
-BytesArray Signature::sign (const BytesArray& data, const std::string& privKey, Algorithm algo)
-{
-    return sign (data.data (), data.size (), privKey, algo);
-}
-
-// =========================================================================
-//   CLASS     : Signature
-//   METHOD    : sign
-// =========================================================================
-BytesArray Signature::sign (const uint8_t* data, size_t size, const std::string& privKey, Algorithm algo)
-{
-    FILE *fkey = fopen (privKey.c_str (), "r");
-    if (!fkey)
-    {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        _mdctx.reset ();
         return {};
     }
 
-    EvpPkeyPtr pkey (PEM_read_PrivateKey (fkey, nullptr, 0, nullptr));
-    fclose (fkey);
+    TlsKey key (privKey, TlsKey::Private);
 
-    if (!pkey)
-    {
-        lastError = make_error_code (SigErrc::InvalidPrivateKey);
-        return {};
-    }
+    BytesArray sig;
+    sig.resize (EVP_PKEY_size (key.handle ()));
+    uint32_t siglen = 0;
 
-    const EVP_MD *md = EVP_get_digestbyname (algorithm (algo));
-    if (!md)
-    {
-        lastError = make_error_code (SigErrc::InvalidAlgorithm);
-        return {};
-    }
-
-    EvpMdCtxPtr mdctx (EVP_MD_CTX_new ());
-    size_t siglen = 0;
-
-    if (!EVP_DigestSignInit (mdctx.get (), nullptr, md, nullptr, pkey.get ()) ||
-        !EVP_DigestSign (mdctx.get (), nullptr, &siglen, data, size))
+    if (!EVP_SignFinal (_mdctx.get (), &sig[0], &siglen, key.handle ()))
     {
         lastError = make_error_code (Errc::OperationFailed);
+        _mdctx.reset ();
         return {};
     }
 
-    BytesArray signature;
-    signature.resize (siglen);
+    sig.resize (siglen);
+    _mdctx.reset ();
 
-    EVP_DigestSign (mdctx.get (), signature.data (), &siglen, data, size);
-    signature.resize (siglen);
-
-    return signature;
+    return sig;
 }
 
 // =========================================================================
-//   CLASS     : Signature
+//   CLASS     : Signaturebuf
 //   METHOD    : verify
 // =========================================================================
-bool Signature::verify (const std::string& message, const BytesArray& signature, const std::string& pubKey, Algorithm algo)
+bool Signaturebuf::verify (const BytesArray& sig, const std::string& pubKey)
 {
-    return verify (reinterpret_cast <const uint8_t*> (message.data ()), message.size (), signature, pubKey, algo);
-}
-
-// =========================================================================
-//   CLASS     : Signature
-//   METHOD    : verify
-// =========================================================================
-bool Signature::verify (const BytesArray& data, const BytesArray& signature, const std::string& pubKey, Algorithm algo)
-{
-    return verify (data.data (), data.size (), signature, pubKey, algo);
-}
-
-// =========================================================================
-//   CLASS     : Signature
-//   METHOD    : verify
-// =========================================================================
-bool Signature::verify (const uint8_t* data, size_t size, const BytesArray &signature, const std::string &pubKey, Algorithm algo)
-{
-    FILE *fkey = fopen (pubKey.c_str (), "r");
-    if (!fkey)
+    if (_buf && (this->overflow (traits_type::eof ()) == traits_type::eof ()))
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        _mdctx.reset ();
+        return {};
+    }
+
+    TlsKey key (pubKey, TlsKey::Public);
+
+    int ret = EVP_VerifyFinal (_mdctx.get (), sig.data (), sig.size (), key.handle ());
+    if (ret != 1)
+    {
+        if (ret == 0)
+            lastError = make_error_code (DigestErrc::InvalidSignature);
+        else
+            lastError = make_error_code (Errc::OperationFailed);
+        _mdctx.reset ();
         return false;
     }
 
-    EvpPkeyPtr pkey (PEM_read_PUBKEY (fkey, nullptr, 0, nullptr));
-    fclose (fkey);
-
-    if (!pkey)
-    {
-        lastError = make_error_code (SigErrc::InvalidPublicKey);
-        return false;
-    }
-
-    const EVP_MD *md = EVP_get_digestbyname (algorithm (algo));
-    if (!md)
-    {
-        lastError = make_error_code (SigErrc::InvalidAlgorithm);
-        return false;
-    }
-
-    EvpMdCtxPtr mdctx (EVP_MD_CTX_new ());
-
-    if (!EVP_DigestVerifyInit (mdctx.get (), nullptr, md, nullptr, pkey.get ()) ||
-        !EVP_DigestVerify (mdctx.get (), signature.data (), signature.size (), data, size))
-    {
-        lastError = make_error_code (SigErrc::InvalidSignature);
-        return false;
-    }
+    _mdctx.reset ();
 
     return true;
 }
 
 // =========================================================================
 //   CLASS     : Signature
-//   METHOD    : algorithm
+//   METHOD    : Signature
 // =========================================================================
-const char* Signature::algorithm (Algorithm algo)
+Signature::Signature (Digest::Algorithm algo)
+: _sigbuf (Digest::algorithm (algo))
 {
-   switch (algo)
-   {
-        OUT_ENUM (SHA224);
-        OUT_ENUM (SHA256);
-        OUT_ENUM (SHA384);
-        OUT_ENUM (SHA512);
-   }
+    this->init (&_sigbuf);
+}
 
-   return "UNKNOWN";
+// =========================================================================
+//   CLASS     : Signature
+//   METHOD    : Signature
+// =========================================================================
+Signature::Signature (Signature&& other)
+: std::ostream (std::move (other)),
+  _sigbuf (std::move (other._sigbuf))
+{
+    this->set_rdbuf (&_sigbuf);
+}
+
+// =========================================================================
+//   CLASS     : DigSignatureest
+//   METHOD    : Signature
+// =========================================================================
+Signature& Signature::operator=(Signature&& other)
+{
+    std::ostream::operator= (std::move (other));
+    _sigbuf = std::move (other._sigbuf);
+    return *this;
+}
+
+// =========================================================================
+//   CLASS     : Signature
+//   METHOD    : sign
+// =========================================================================
+BytesArray Signature::sign (const std::string& privKey)
+{
+    return _sigbuf.sign (privKey);
+}
+
+// =========================================================================
+//   CLASS     : Signature
+//   METHOD    : sign
+// =========================================================================
+BytesArray Signature::sign (const char* data, std::streamsize size, const std::string& privKey, Digest::Algorithm algo)
+{
+    try
+    {
+        Signature sig (algo);
+        sig.write (data, size);
+        return sig.sign (privKey);
+    }
+    catch (const std::system_error& ex)
+    {
+        lastError = ex.code ();
+        return {};
+    }
+}
+
+// =========================================================================
+//   CLASS     : Signature
+//   METHOD    : sign
+// =========================================================================
+BytesArray Signature::sign (const BytesArray& data, const std::string& privKey, Digest::Algorithm algo)
+{
+    return sign (reinterpret_cast <const char*> (data.data ()), data.size (), privKey, algo);
+}
+
+// =========================================================================
+//   CLASS     : Signature
+//   METHOD    : sign
+// =========================================================================
+BytesArray Signature::sign (const std::string& data, const std::string& privKey, Digest::Algorithm algo)
+{
+    return sign (BytesArray (data.begin (), data.end ()), privKey, algo);
+}
+
+// =========================================================================
+//   CLASS     : Signature
+//   METHOD    : verify
+// =========================================================================
+bool Signature::verify (const BytesArray& signature, const std::string& pubKey)
+{
+    return _sigbuf.verify (signature, pubKey);
+}
+
+// =========================================================================
+//   CLASS     : Signature
+//   METHOD    : verify
+// =========================================================================
+bool Signature::verify (const char* data, std::streamsize size, const BytesArray &signature, const std::string &pubKey, Digest::Algorithm algo)
+{
+    try
+    {
+        Signature sig (algo);
+        sig.write (data, size);
+        return sig.verify (signature, pubKey);
+    }
+    catch (const std::system_error& ex)
+    {
+        lastError = ex.code ();
+        return {};
+    }
+}
+
+// =========================================================================
+//   CLASS     : Signature
+//   METHOD    : verify
+// =========================================================================
+bool Signature::verify (const BytesArray& data, const BytesArray& signature, const std::string& pubKey, Digest::Algorithm algo)
+{
+    return verify (reinterpret_cast <const char*> (data.data ()), data.size (), signature, pubKey, algo);
+}
+
+// =========================================================================
+//   CLASS     : Signature
+//   METHOD    : verify
+// =========================================================================
+bool Signature::verify (const std::string& data, const BytesArray& signature, const std::string& pubKey, Digest::Algorithm algo)
+{
+    return verify (BytesArray (data.begin (), data.end ()), signature, pubKey, algo);
 }

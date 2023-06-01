@@ -10,9 +10,17 @@ add_executable(base64.gtest base64_test.cpp)
 target_link_libraries(base64.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(base64.gtest)
 
-add_executable(sigerror.gtest sigerror_test.cpp)
-target_link_libraries(sigerror.gtest ${PROJECT_NAME} gtest gtest_main pthread)
-gtest_discover_tests(sigerror.gtest)
+add_executable(digest.gtest digest_test.cpp)
+target_link_libraries(digest.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(digest.gtest)
+
+add_executable(digesterror.gtest digesterror_test.cpp)
+target_link_libraries(digesterror.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(digesterror.gtest)
+
+add_executable(tlskey.gtest tlskey_test.cpp)
+target_link_libraries(tlskey.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(tlskey.gtest)
 
 add_executable(signature.gtest signature_test.cpp)
 target_link_libraries(signature.gtest ${PROJECT_NAME} gtest gtest_main pthread)

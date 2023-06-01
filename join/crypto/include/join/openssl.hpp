@@ -87,6 +87,21 @@ namespace join
     using EvpPkeyPtr = std::unique_ptr <EVP_PKEY, EvpPkeyDelete>;
 
     /**
+     * @brief custom functor for EVP_PKEY_CTX deletion.
+     */
+    struct EvpPkeyCtxDelete
+    {
+        constexpr EvpPkeyCtxDelete () noexcept = default;
+
+        void operator ()(EVP_PKEY_CTX* evpPkeyCtx)
+        {
+            EVP_PKEY_CTX_free (evpPkeyCtx);
+        }
+    };
+
+    using EvpPkeyCtxPtr = std::unique_ptr <EVP_PKEY_CTX, EvpPkeyCtxDelete>;
+
+    /**
      * @brief custom functor for EVP_MD_CTX deletion.
      */
     struct EvpMdCtxDelete
