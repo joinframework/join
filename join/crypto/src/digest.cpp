@@ -404,6 +404,35 @@ BytesArray Digest::sha512 (const std::string& data)
 
 // =========================================================================
 //   CLASS     : Digest
+//   METHOD    : sm3
+// =========================================================================
+BytesArray Digest::sm3 (const char* data, std::streamsize size)
+{
+    Digest digest (SM3);
+    digest.write (data, size);
+    return digest.get ();
+}
+
+// =========================================================================
+//   CLASS     : Digest
+//   METHOD    : sm3
+// =========================================================================
+BytesArray Digest::sm3 (const BytesArray& data)
+{
+    return sm3 (reinterpret_cast <const char*> (data.data ()), data.size ());
+}
+
+// =========================================================================
+//   CLASS     : Digest
+//   METHOD    : sm3
+// =========================================================================
+BytesArray Digest::sm3 (const std::string& data)
+{
+    return sm3 (BytesArray (data.begin (), data.end ()));
+}
+
+// =========================================================================
+//   CLASS     : Digest
 //   METHOD    : bin2hex
 // =========================================================================
 std::string Digest::bin2hex (const BytesArray& digest)
@@ -429,6 +458,7 @@ const char* Digest::algorithm (Algorithm algo)
         OUT_ENUM (SHA256);
         OUT_ENUM (SHA384);
         OUT_ENUM (SHA512);
+        OUT_ENUM (SM3);
    }
 
    return "UNKNOWN";
