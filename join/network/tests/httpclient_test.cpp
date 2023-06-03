@@ -177,7 +177,7 @@ TEST (HttpClient, keepAlive)
 /**
  * @brief Test keepAliveTimeout method
  */
-TEST (HttpClient, DISABLED_keepAliveTimeout)
+TEST (HttpClient, keepAliveTimeout)
 {
     HttpClient client (host);
     ASSERT_EQ (client.keepAliveTimeout (), seconds::zero ());
@@ -245,7 +245,7 @@ TEST (HttpClient, DISABLED_keepAliveMax)
 /**
  * @brief Test send method
  */
-TEST (HttpClient, DISABLED_send)
+TEST (HttpClient, send)
 {
     HttpClient client ("172.16.13.128", 80);
     client.timeout (500);
@@ -271,7 +271,7 @@ TEST (HttpClient, DISABLED_send)
 /**
  * @brief Test receive method
  */
-TEST (HttpClient, DISABLED_receive)
+TEST (HttpClient, receive)
 {
     HttpClient client (host, 443, true);
 
