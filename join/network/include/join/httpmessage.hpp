@@ -290,7 +290,6 @@ namespace join
          */
         virtual void writeHeaders (std::ostream& out) const = 0;
 
-    protected:
         /**
          * @brief read HTTP line (delimiter "\r\n").
          * @param in input stream.
@@ -300,6 +299,7 @@ namespace join
          */
         static std::istream& getline (std::istream& in, std::string& line, std::streamsize max);
 
+    protected:
         /**
          * @brief parse first line.
          * @param line first line to parse.

@@ -156,7 +156,7 @@ const std::string Openssl::_key = "/tmp/tlssocket_test.key";
  */
 TEST_F (Openssl, BigNumPtr)
 {
-    join::crypto::BigNumPtr bn (BN_new ());
+    join::BigNumPtr bn (BN_new ());
     ASSERT_NE (bn, nullptr);
     bn.reset ();
     ASSERT_EQ (bn, nullptr);
@@ -167,7 +167,7 @@ TEST_F (Openssl, BigNumPtr)
  */
 TEST_F (Openssl, EcdsaSigPtr)
 {
-    join::crypto::EcdsaSigPtr sig (ECDSA_SIG_new ());
+    join::EcdsaSigPtr sig (ECDSA_SIG_new ());
     ASSERT_NE (sig, nullptr);
     sig.reset ();
     ASSERT_EQ (sig, nullptr);
@@ -178,8 +178,26 @@ TEST_F (Openssl, EcdsaSigPtr)
  */
 TEST_F (Openssl, EvpPkeyPtr)
 {
-    join::crypto::EvpPkeyPtr evp (EVP_PKEY_new ());
+    join::EvpPkeyPtr evp (EVP_PKEY_new ());
     ASSERT_NE (evp, nullptr);
+    evp.reset ();
+    ASSERT_EQ (evp, nullptr);
+}
+
+/**
+ * @brief EvpPkeyCtxPtr test.
+ */
+TEST_F (Openssl, EvpPkeyCtxPtr)
+{
+    FILE *fkey = fopen (_key.c_str (), "r");
+    ASSERT_NE (fkey, nullptr);
+    join::EvpPkeyPtr evp (PEM_read_PrivateKey (fkey, nullptr, 0, nullptr));
+    fclose (fkey);
+    ASSERT_NE (evp, nullptr);
+    join::EvpPkeyCtxPtr evpctx (EVP_PKEY_CTX_new (evp.get (), nullptr));
+    ASSERT_NE (evpctx, nullptr);
+    evpctx.reset ();
+    ASSERT_EQ (evpctx, nullptr);
     evp.reset ();
     ASSERT_EQ (evp, nullptr);
 }
@@ -189,7 +207,7 @@ TEST_F (Openssl, EvpPkeyPtr)
  */
 TEST_F (Openssl, EvpMdCtxPtr)
 {
-    join::crypto::EvpMdCtxPtr ctx (EVP_MD_CTX_new ());
+    join::EvpMdCtxPtr ctx (EVP_MD_CTX_new ());
     ASSERT_NE (ctx, nullptr);
     ctx.reset ();
     ASSERT_EQ (ctx, nullptr);
@@ -200,7 +218,7 @@ TEST_F (Openssl, EvpMdCtxPtr)
  */
 TEST_F (Openssl, StackOfX509NamePtr)
 {
-    join::crypto::StackOfX509NamePtr subject (SSL_load_client_CA_file (_rootcert.c_str ()));
+    join::StackOfX509NamePtr subject (SSL_load_client_CA_file (_rootcert.c_str ()));
     ASSERT_NE (subject, nullptr);
     subject.reset ();
     ASSERT_EQ (subject, nullptr);
@@ -216,7 +234,7 @@ TEST_F (Openssl, StackOfGeneralNamePtr)
     X509 *cert = PEM_read_X509 (file, nullptr, nullptr, nullptr);
     fclose (file);
     ASSERT_NE (cert, nullptr);
-    join::crypto::StackOfGeneralNamePtr altnames (reinterpret_cast <STACK_OF (GENERAL_NAME)*> (X509_get_ext_d2i (cert, NID_subject_alt_name, 0, 0)));
+    join::StackOfGeneralNamePtr altnames (reinterpret_cast <STACK_OF (GENERAL_NAME)*> (X509_get_ext_d2i (cert, NID_subject_alt_name, 0, 0)));
     X509_free (cert);
     ASSERT_NE (altnames, nullptr);
     altnames.reset ();
@@ -229,12 +247,12 @@ TEST_F (Openssl, StackOfGeneralNamePtr)
 TEST_F (Openssl, SslPtr)
 {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    join::crypto::SslCtxPtr ctx (SSL_CTX_new (SSLv23_method ()), join::crypto::SslCtxDelete ());
+    join::SslCtxPtr ctx (SSL_CTX_new (SSLv23_method ()), join::SslCtxDelete ());
 #else
-    join::crypto::SslCtxPtr ctx (SSL_CTX_new (TLS_method ()), join::crypto::SslCtxDelete ());
+    join::SslCtxPtr ctx (SSL_CTX_new (TLS_method ()), join::SslCtxDelete ());
 #endif
     ASSERT_NE (ctx, nullptr);
-    join::crypto::SslPtr ssl (SSL_new (ctx.get ()));
+    join::SslPtr ssl (SSL_new (ctx.get ()));
     ASSERT_NE (ssl, nullptr);
     ssl.reset ();
     ASSERT_EQ (ssl, nullptr);
@@ -248,7 +266,7 @@ TEST_F (Openssl, SslPtr)
  */
 TEST_F (Openssl, DhKeyPtr)
 {
-    join::crypto::DhKeyPtr dh (DH_new ());
+    join::DhKeyPtr dh (DH_new ());
     ASSERT_NE (dh, nullptr);
     dh.reset ();
     ASSERT_EQ (dh, nullptr);
@@ -259,7 +277,7 @@ TEST_F (Openssl, DhKeyPtr)
  */
 TEST_F (Openssl, EcdhKeyPtr)
 {
-    join::crypto::EcdhKeyPtr ecdh (EC_KEY_new_by_curve_name (NID_X9_62_prime256v1));
+    join::EcdhKeyPtr ecdh (EC_KEY_new_by_curve_name (NID_X9_62_prime256v1));
     ASSERT_NE (ecdh, nullptr);
     ecdh.reset ();
     ASSERT_EQ (ecdh, nullptr);
@@ -271,7 +289,7 @@ TEST_F (Openssl, EcdhKeyPtr)
  */
 int main (int argc, char **argv)
 {
-    join::crypto::initializeOpenSSL ();
+    join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }

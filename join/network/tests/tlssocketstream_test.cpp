@@ -150,7 +150,7 @@ protected:
     void SetUp ()
     {
         ASSERT_EQ (_acceptor.setCertificate (_cert, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (_acceptor.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
         ASSERT_EQ (_acceptor.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
@@ -750,7 +750,7 @@ TEST_F (TlsSocketStream, pubsetbuf)
  */
 int main (int argc, char **argv)
 {
-    join::crypto::initializeOpenSSL ();
+    join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }

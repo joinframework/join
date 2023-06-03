@@ -33,15 +33,22 @@ using join::BytesArray;
 
 /// strings to encode.
 const std::string decodedString1 = "this is the string to encode";
-const std::string decodedString2 = "this is the string to encode !!!";
+const std::string decodedString2 = "this is the string to encode !";
+const std::string decodedString3 = "this is the string to encode !!!";
 
 /// arrays to encode.
 const BytesArray decodedArray1 = BytesArray (decodedString1.begin (), decodedString1.end ());
 const BytesArray decodedArray2 = BytesArray (decodedString2.begin (), decodedString2.end ());
+const BytesArray decodedArray3 = BytesArray (decodedString3.begin (), decodedString3.end ());
 
 /// strings to decode.
 const std::string encodedString1 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZQ==";
-const std::string encodedString2 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZSAhISE=";
+const std::string encodedString2 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZSAh";
+const std::string encodedString3 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZSAhISE=";
+
+/// invalid strings to decode.
+const std::string invalidString1 = "";
+const std::string invalidString2 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZ";
 
 /**
  * @brief base64 encoding test.
@@ -50,8 +57,11 @@ TEST (Base64, encode)
 {
     EXPECT_EQ (encodedString1, Base64::encode (decodedString1));
     EXPECT_EQ (encodedString2, Base64::encode (decodedString2));
+    EXPECT_EQ (encodedString3, Base64::encode (decodedString3));
+
     EXPECT_EQ (encodedString1, Base64::encode (decodedArray1));
     EXPECT_EQ (encodedString2, Base64::encode (decodedArray2));
+    EXPECT_EQ (encodedString3, Base64::encode (decodedArray3));
 }
 
 /**
@@ -61,7 +71,10 @@ TEST (Base64, decode)
 {
     EXPECT_EQ (decodedArray1, Base64::decode (encodedString1));
     EXPECT_EQ (decodedArray2, Base64::decode (encodedString2));
-    EXPECT_EQ (BytesArray {}, Base64::decode (std::string {}));
+    EXPECT_EQ (decodedArray3, Base64::decode (encodedString3));
+
+    EXPECT_EQ (BytesArray {}, Base64::decode (invalidString1));
+    EXPECT_EQ (BytesArray {}, Base64::decode (invalidString2));
 }
 
 /**

@@ -115,7 +115,7 @@ int DH_set0_pqg (DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
 }
 #else /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 
-void join::crypto::initializeOpenSSL ()
+void join::initializeOpenSSL ()
 {
     // execute initialization only once.
     std::call_once (flag, [] () {

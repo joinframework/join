@@ -188,9 +188,9 @@ protected:
     void SetUp ()
     {
         ASSERT_EQ (_acceptor.setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (_acceptor.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
     #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-        ASSERT_EQ (_acceptor.setCipher_1_3 (join::crypto::defaultCipher_1_3_), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
     #endif
         ASSERT_EQ (_acceptor.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
@@ -993,11 +993,11 @@ TEST_F (TlsSocket, setCipher)
 
     ASSERT_EQ (tlsSocket.setCipher ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsSocket.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher (join::crypto::defaultCipher_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
     tlsSocket.close ();
 }
 
@@ -1011,11 +1011,11 @@ TEST_F (TlsSocket, setCipher_1_3)
 
     ASSERT_EQ (tlsSocket.setCipher_1_3 ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::crypto::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::crypto::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::crypto::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
     tlsSocket.close ();
 }
 #endif
@@ -1046,7 +1046,7 @@ TEST_F (TlsSocket, isLower)
  */
 int main (int argc, char **argv)
 {
-    join::crypto::initializeOpenSSL ();
+    join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }

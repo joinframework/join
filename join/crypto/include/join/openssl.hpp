@@ -41,8 +41,6 @@
 
 namespace join
 {
-namespace crypto
-{
     /**
      * @brief custom functor for BIGNUM deletion.
      */
@@ -87,6 +85,21 @@ namespace crypto
     };
 
     using EvpPkeyPtr = std::unique_ptr <EVP_PKEY, EvpPkeyDelete>;
+
+    /**
+     * @brief custom functor for EVP_PKEY_CTX deletion.
+     */
+    struct EvpPkeyCtxDelete
+    {
+        constexpr EvpPkeyCtxDelete () noexcept = default;
+
+        void operator ()(EVP_PKEY_CTX* evpPkeyCtx)
+        {
+            EVP_PKEY_CTX_free (evpPkeyCtx);
+        }
+    };
+
+    using EvpPkeyCtxPtr = std::unique_ptr <EVP_PKEY_CTX, EvpPkeyCtxDelete>;
 
     /**
      * @brief custom functor for EVP_MD_CTX deletion.
@@ -217,10 +230,8 @@ namespace crypto
     const std::string defaultCurve_ = "prime256v1";
 #endif // OPENSSL_VERSION_NUMBER >= 0x30000000L
 }
-}
 #else // OPENSSL_VERSION_NUMBER >= 0x10100000L
     const std::string defaultCipher = "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:EDH+DSS+AESGCM";
-}
 }
 
 #define ASN1_STRING_get0_data ASN1_STRING_data

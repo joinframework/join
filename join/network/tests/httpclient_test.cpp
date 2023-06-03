@@ -298,7 +298,7 @@ TEST (HttpClient, receive)
  */
 int main (int argc, char **argv)
 {
-    join::crypto::initializeOpenSSL ();
+    join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }
