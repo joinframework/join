@@ -74,7 +74,7 @@ BytesArray Signaturebuf::sign (const std::string& privKey)
 
     if (!EVP_SignFinal (_mdctx.get (), &sig[0], &siglen, key.handle ()))
     {
-        lastError = make_error_code (Errc::OperationFailed);
+        lastError = make_error_code (DigestErrc::InvalidAlgorithm);
         _mdctx.reset ();
         return {};
     }
@@ -105,7 +105,7 @@ bool Signaturebuf::verify (const BytesArray& sig, const std::string& pubKey)
         if (ret == 0)
             lastError = make_error_code (DigestErrc::InvalidSignature);
         else
-            lastError = make_error_code (Errc::OperationFailed);
+            lastError = make_error_code (DigestErrc::InvalidAlgorithm);
         _mdctx.reset ();
         return false;
     }
@@ -138,7 +138,7 @@ Signature::Signature (Signature&& other)
 
 // =========================================================================
 //   CLASS     : DigSignatureest
-//   METHOD    : Signature
+//   METHOD    : operator=
 // =========================================================================
 Signature& Signature::operator=(Signature&& other)
 {
