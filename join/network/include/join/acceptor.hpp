@@ -376,9 +376,9 @@ namespace join
         BasicTlsAcceptor ()
         : BasicAcceptor <Protocol> (),
         #if OPENSSL_VERSION_NUMBER < 0x10100000L
-          _tlsContext (SSL_CTX_new (SSLv23_method ()), join::crypto::SslCtxDelete ()),
+          _tlsContext (SSL_CTX_new (SSLv23_method ()), join::SslCtxDelete ()),
         #else
-          _tlsContext (SSL_CTX_new (TLS_method ()), join::crypto::SslCtxDelete ()),
+          _tlsContext (SSL_CTX_new (TLS_method ()), join::SslCtxDelete ()),
         #endif
           _sessionId (randomize <int> ())
         {
@@ -414,11 +414,11 @@ namespace join
             SSL_CTX_set_verify (_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
 
             // set default TLSv1.2 and below cipher suites.
-            SSL_CTX_set_cipher_list (_tlsContext.get (), join::crypto::defaultCipher_.c_str ());
+            SSL_CTX_set_cipher_list (_tlsContext.get (), join::defaultCipher_.c_str ());
 
         #if OPENSSL_VERSION_NUMBER >= 0x10101000L
             //  set default TLSv1.3 cipher suites.
-            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::crypto::defaultCipher_1_3_.c_str ());
+            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::defaultCipher_1_3_.c_str ());
 
             // disallow client-side renegotiation.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_RENEGOTIATION);
@@ -429,17 +429,17 @@ namespace join
             SSL_CTX_set_dh_auto (_tlsContext.get (), 1);
 
             // Set elliptic curve Diffie-Hellman key.
-            SSL_CTX_set1_groups_list (_tlsContext.get (), join::crypto::defaultCurve_.c_str ());
+            SSL_CTX_set1_groups_list (_tlsContext.get (), join::defaultCurve_.c_str ());
         #else
             // Set Diffie-Hellman key.
-            join::crypto::DhKeyPtr dh (getDh2236 ());
+            join::DhKeyPtr dh (getDh2236 ());
             if (dh)
             {
                 SSL_CTX_set_tmp_dh (_tlsContext.get (), dh.get ());
             }
 
             // Set elliptic curve Diffie-Hellman key.
-            join::crypto::EcdhKeyPtr ecdh (EC_KEY_new_by_curve_name (NID_X9_62_prime256v1));
+            join::EcdhKeyPtr ecdh (EC_KEY_new_by_curve_name (NID_X9_62_prime256v1));
             if (ecdh)
             {
                 SSL_CTX_set_tmp_ecdh (_tlsContext.get (), ecdh.get ());
@@ -598,7 +598,7 @@ namespace join
          */
         int setCaCertificate (const std::string& caFile)
         {
-            join::crypto::StackOfX509NamePtr certNames (SSL_load_client_CA_file (caFile.c_str ()));
+            join::StackOfX509NamePtr certNames (SSL_load_client_CA_file (caFile.c_str ()));
             if (certNames == nullptr)
             {
                 lastError = make_error_code (Errc::InvalidParam);
@@ -749,7 +749,7 @@ namespace join
 
     protected:
         /// SSL/TLS context.
-        join::crypto::SslCtxPtr _tlsContext;
+        join::SslCtxPtr _tlsContext;
 
         /// SSL session id.
         int _sessionId = 0;
