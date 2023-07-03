@@ -192,7 +192,7 @@ namespace join
      */
     __inline__ std::string& trimLeft (std::string& s)
     {
-        return s.erase (0, s.find_first_not_of ("\f\t\v\r\n"));
+        return s.erase (0, s.find_first_not_of ("\f\t\v\r\n "));
     }
 
     /**

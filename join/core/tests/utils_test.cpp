@@ -82,6 +82,33 @@ TEST (Utils, compareNoCase)
 }
 
 /**
+ * @brief Test trimLeft.
+ */
+TEST (Utils, trimLeft)
+{
+    std::string str ("\f\t\v\r\n trim \f\t\v\r\n");
+    ASSERT_EQ (join::trimLeft (str), "trim \f\t\v\r\n");
+}
+
+/**
+ * @brief Test trimRight.
+ */
+TEST (Utils, trimRight)
+{
+    std::string str ("\f\t\v\r\n trim \f\t\v\r\n");
+    ASSERT_EQ (join::trimRight (str), "\f\t\v\r\n trim");
+}
+
+/**
+ * @brief Test trim.
+ */
+TEST (Utils, trim)
+{
+    std::string str ("\f\t\v\r\n trim \f\t\v\r\n");
+    ASSERT_EQ (join::trim (str), "trim");
+}
+
+/**
  * @brief Test replaceAll.
  */
 TEST (Utils, replaceAll)
