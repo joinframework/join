@@ -28,8 +28,10 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::Base64;
 using join::BytesArray;
+using join::Encoder;
+using join::Decoder;
+using join::Base64;
 
 /// strings to encode.
 const std::string decodedString = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
@@ -56,12 +58,36 @@ const std::string encodedString = "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY
 const BytesArray decodedArray   = BytesArray (decodedString.begin (), decodedString.end ());
 
 /**
+ * @brief encoder get test.
+ */
+TEST (Encoder, get)
+{
+    Encoder encoder;
+    encoder << decodedString;
+    ASSERT_EQ (encodedString, encoder.get ());
+    encoder.write (decodedString.data (), decodedString.size ());
+    ASSERT_EQ (encodedString, encoder.get ());
+}
+
+/**
+ * @brief decoder get test.
+ */
+TEST (Decoder, get)
+{
+    Decoder decoder;
+    decoder << encodedString;
+    ASSERT_EQ (decodedArray, decoder.get ());
+    decoder.write (encodedString.data (), encodedString.size ());
+    ASSERT_EQ (decodedArray, decoder.get ());
+}
+
+/**
  * @brief base64 encoding test.
  */
 TEST (Base64, encode)
 {
-    EXPECT_EQ (encodedString, Base64::encode (decodedString));
-    EXPECT_EQ (encodedString, Base64::encode (decodedArray));
+    ASSERT_EQ (encodedString, Base64::encode (decodedString));
+    ASSERT_EQ (encodedString, Base64::encode (decodedArray));
 }
 
 /**
@@ -69,7 +95,7 @@ TEST (Base64, encode)
  */
 TEST (Base64, decode)
 {
-    EXPECT_EQ (decodedArray, Base64::decode (encodedString));
+    ASSERT_EQ (decodedArray, Base64::decode (encodedString));
 }
 
 /**

@@ -54,7 +54,8 @@ Encoderbuf::Encoderbuf ()
 Encoderbuf::Encoderbuf (Encoderbuf&& other)
 : std::streambuf (std::move (other)),
   _buf (std::move (other._buf)),
-  _encodectx (std::move (other._encodectx))
+  _encodectx (std::move (other._encodectx)),
+  _out (std::move (other._out))
 {
 }
 
@@ -67,6 +68,7 @@ Encoderbuf& Encoderbuf::operator= (Encoderbuf&& other)
     std::streambuf::operator= (std::move (other));
     _buf = std::move (other._buf);
     _encodectx = std::move (other._encodectx);
+    _out = std::move (other._out);
     return *this;
 }
 
@@ -211,7 +213,8 @@ Decoderbuf::Decoderbuf ()
 Decoderbuf::Decoderbuf (Decoderbuf&& other)
 : std::streambuf (std::move (other)),
   _buf (std::move (other._buf)),
-  _decodectx (std::move (other._decodectx))
+  _decodectx (std::move (other._decodectx)),
+  _out (std::move (other._out))
 {
 }
 
@@ -224,6 +227,7 @@ Decoderbuf& Decoderbuf::operator= (Decoderbuf&& other)
     std::streambuf::operator= (std::move (other));
     _buf = std::move (other._buf);
     _decodectx = std::move (other._decodectx);
+    _out = std::move (other._out);
     return *this;
 }
 
