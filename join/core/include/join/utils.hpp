@@ -186,6 +186,36 @@ namespace join
     }
 
     /**
+     * @brief trim left.
+     * @param s string to trim.
+     * @return trimed string.
+     */
+    __inline__ std::string& trimLeft (std::string& s)
+    {
+        return s.erase (0, s.find_first_not_of ("\f\t\v\r\n"));
+    }
+
+    /**
+     * @brief trim right.
+     * @param s string to trim.
+     * @return trimed string.
+     */
+    __inline__ std::string& trimRight (std::string& s)
+    {
+        return s.erase (s.find_last_not_of (" \f\t\v\r\n") + 1);
+    }
+
+    /**
+     * @brief trim.
+     * @param s string to trim.
+     * @return trimed string.
+     */
+    __inline__ std::string& trim (std::string& s)
+    {
+        return trimLeft (trimRight (s));
+    }
+
+    /**
      * @brief replace all occurrences of a substring.
      * @param str string to scan.
      * @param toReplace string to replace.
