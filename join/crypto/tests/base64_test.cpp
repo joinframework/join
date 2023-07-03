@@ -62,11 +62,13 @@ const BytesArray decodedArray   = BytesArray (decodedString.begin (), decodedStr
  */
 TEST (Encoder, get)
 {
-    Encoder encoder;
-    encoder << decodedString;
-    ASSERT_EQ (encodedString, encoder.get ());
-    encoder.write (decodedString.data (), decodedString.size ());
-    ASSERT_EQ (encodedString, encoder.get ());
+    Encoder encoder1 = Encoder ();
+    encoder1 << decodedString;
+    ASSERT_EQ (encodedString, encoder1.get ());
+
+    encoder1.write (decodedString.data (), decodedString.size ());
+    Encoder encoder2 = std::move (encoder1);
+    ASSERT_EQ (encodedString, encoder2.get ());
 }
 
 /**
@@ -74,11 +76,13 @@ TEST (Encoder, get)
  */
 TEST (Decoder, get)
 {
-    Decoder decoder;
-    decoder << encodedString;
-    ASSERT_EQ (decodedArray, decoder.get ());
-    decoder.write (encodedString.data (), encodedString.size ());
-    ASSERT_EQ (decodedArray, decoder.get ());
+    Decoder decoder1 = Decoder ();
+    decoder1 << encodedString;
+    ASSERT_EQ (decodedArray, decoder1.get ());
+
+    decoder1.write (encodedString.data (), encodedString.size ());
+    Decoder decoder2 = std::move (decoder1);
+    ASSERT_EQ (decodedArray, decoder2.get ());
 }
 
 /**
