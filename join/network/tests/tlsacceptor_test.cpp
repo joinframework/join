@@ -193,7 +193,7 @@ protected:
     static const std::string _invalidKey;
 };
 
-const IpAddress   TlsAcceptor::_hostip     = "::1";
+const IpAddress   TlsAcceptor::_hostip     = "127.0.0.1";
 const uint16_t    TlsAcceptor::_port       = 5000;
 const std::string TlsAcceptor::_root       = "/tmp/tlsserver_test_root.cert";
 const std::string TlsAcceptor::_cert       = "/tmp/tlsserver_test.cert";

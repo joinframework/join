@@ -32,7 +32,7 @@ using join::Errc;
 using join::IpAddress;
 using join::Tcp;
 
-IpAddress address = "::1";
+IpAddress address = "127.0.0.1";
 uint16_t  port    = 5000;
 
 /**
