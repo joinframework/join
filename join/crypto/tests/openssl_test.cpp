@@ -203,6 +203,17 @@ TEST_F (Openssl, EvpPkeyCtxPtr)
 }
 
 /**
+ * @brief EvpEncodeCtxPtr test.
+ */
+TEST_F (Openssl, EvpEncodeCtxPtr)
+{
+    join::EvpEncodeCtxPtr enc (EVP_ENCODE_CTX_new ());
+    ASSERT_NE (enc, nullptr);
+    enc.reset ();
+    ASSERT_EQ (enc, nullptr);
+}
+
+/**
  * @brief EvpMdCtxPtr test.
  */
 TEST_F (Openssl, EvpMdCtxPtr)
