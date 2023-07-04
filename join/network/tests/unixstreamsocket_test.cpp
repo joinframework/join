@@ -35,7 +35,7 @@ using join::UnixStream;
 /**
  * @brief Class used to test the unix stream socket API.
  */
-class UnixStreamSocket : public join::EventHandler, public ::testing::Test
+class UnixStreamSocket : public UnixStream::Acceptor, public ::testing::Test
 {
 protected:
     /**
@@ -43,8 +43,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (_acceptor.bind (_serverpath), 0) << join::lastError.message ();
-        ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create (_serverpath), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -54,7 +53,7 @@ protected:
     void TearDown ()
     {
         ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
-        _acceptor.close ();
+        this->close ();
     }
 
     /**
@@ -62,7 +61,7 @@ protected:
      */
     virtual void onReceive () override
     {
-        UnixStream::Socket sock = _acceptor.accept ();
+        UnixStream::Socket sock = this->accept ();
         if (sock.connected ())
         {
             char buf[1024];
@@ -85,34 +84,6 @@ protected:
         }
     }
 
-    /**
-     * @brief method called when handle is closed.
-     */
-    virtual void onClose () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief method called when an error occured on handle.
-     */
-    virtual void onError () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief get native handle.
-     * @return native handle.
-     */
-    virtual int handle () const override
-    {
-        return _acceptor.handle ();
-    }
-
-    // server socket.
-    static UnixStream::Acceptor _acceptor;
-
     /// path.
     static const std::string _serverpath;
     static const std::string _clientpath;
@@ -121,7 +92,6 @@ protected:
     static const int _timeout;
 };
 
-UnixStream::Acceptor UnixStreamSocket::_acceptor;
 const std::string    UnixStreamSocket::_serverpath = "/tmp/unixserver_test.sock";
 const std::string    UnixStreamSocket::_clientpath = "/tmp/unixclient_test.sock";
 const int            UnixStreamSocket::_timeout = 1000;

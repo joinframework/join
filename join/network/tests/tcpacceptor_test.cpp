@@ -42,7 +42,7 @@ TEST (TcpAcceptor, move)
 {
     Tcp::Acceptor server1, server2;
 
-    ASSERT_EQ (server1.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server1.create ({address, port}), 0) << join::lastError.message ();
 
     server2 = std::move (server1);
     ASSERT_TRUE (server2.opened ());
@@ -52,16 +52,17 @@ TEST (TcpAcceptor, move)
 }
 
 /**
- * @brief Test open method.
+ * @brief Test create method.
  */
-TEST (TcpAcceptor, open)
+TEST (TcpAcceptor, create)
 {
     Tcp::Acceptor server;
 
-    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
-    ASSERT_EQ (server.open (Tcp::v6 ()), -1);
+    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({address, port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 }
+
 /**
  * @brief Test close method.
  */
@@ -69,33 +70,10 @@ TEST (TcpAcceptor, close)
 {
     Tcp::Acceptor server;
 
-    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
+    ASSERT_TRUE (server.opened ());
     server.close ();
-}
-
-/**
- * @brief Test bind method.
- */
-TEST (TcpAcceptor, bind)
-{
-    Tcp::Acceptor server;
-
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
-    server.close ();
-}
-
-/**
- * @brief Test listen method.
- */
-TEST (TcpAcceptor, listen)
-{
-    Tcp::Acceptor server;
-
-    ASSERT_EQ (server.listen (20), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
-    server.close ();
+    ASSERT_FALSE (server.opened ());
 }
 
 /**
@@ -108,8 +86,7 @@ TEST (TcpAcceptor, accept)
 
     ASSERT_FALSE (server.accept ().connected ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect ({address, port}), 0) << join::lastError.message ();
     Tcp::Socket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
@@ -129,7 +106,7 @@ TEST (TcpAcceptor, localEndpoint)
 
     ASSERT_EQ (server.localEndpoint (), Tcp::Endpoint {});
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), address);
     ASSERT_EQ (server.localEndpoint ().port (), port);
     server.close ();
@@ -143,7 +120,7 @@ TEST (TcpAcceptor, opened)
     Tcp::Acceptor server;
 
     ASSERT_FALSE (server.opened ());
-    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
     ASSERT_TRUE (server.opened ());
     server.close ();
     ASSERT_FALSE (server.opened ());
@@ -156,7 +133,7 @@ TEST (TcpAcceptor, family)
 {
     Tcp::Acceptor server;
 
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.family (), AF_INET);
     server.close ();
 }
@@ -168,7 +145,7 @@ TEST (TcpAcceptor, type)
 {
     Tcp::Acceptor server;
 
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.type (), SOCK_STREAM);
     server.close ();
 }
@@ -180,7 +157,7 @@ TEST (TcpAcceptor, protocol)
 {
     Tcp::Acceptor server;
 
-    ASSERT_EQ (server.bind ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.protocol (), IPPROTO_TCP);
     server.close ();
 }
@@ -193,7 +170,7 @@ TEST (TcpAcceptor, handle)
     Tcp::Acceptor server;
 
     ASSERT_EQ (server.handle (), -1);
-    ASSERT_EQ (server.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
     ASSERT_GT (server.handle (), -1);
     server.close ();
     ASSERT_EQ (server.handle (), -1);

@@ -29,6 +29,7 @@
 #include <join/protocol.hpp>
 #include <join/resolver.hpp>
 #include <join/openssl.hpp>
+#include <join/reactor.hpp>
 #include <join/utils.hpp>
 #include <join/error.hpp>
 
@@ -55,7 +56,7 @@ namespace join
      * @brief basic socket class.
      */
     template <class Protocol>
-    class BasicSocket
+    class BasicSocket : public EventHandler
     {
     public:
         using Ptr      = std::unique_ptr <BasicSocket <Protocol>>;
@@ -555,7 +556,7 @@ namespace join
          * @brief get socket native handle.
          * @return socket native handle.
          */
-        int handle () const noexcept
+        int handle () const noexcept override
         {
             return this->_handle;
         }

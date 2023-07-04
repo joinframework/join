@@ -40,7 +40,7 @@ TEST (UnixAcceptor, move)
 {
     UnixStream::Acceptor server1, server2;
 
-    ASSERT_EQ (server1.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server1.create (path), 0) << join::lastError.message ();
 
     server2 = std::move (server1);
     ASSERT_TRUE (server2.opened ());
@@ -50,14 +50,14 @@ TEST (UnixAcceptor, move)
 }
 
 /**
- * @brief Test open method.
+ * @brief Test create method.
  */
-TEST (UnixAcceptor, open)
+TEST (UnixAcceptor, create)
 {
     UnixStream::Acceptor server;
 
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.open (), -1);
+    ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create (path), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 }
 /**
@@ -67,34 +67,10 @@ TEST (UnixAcceptor, close)
 {
     UnixStream::Acceptor server;
 
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
+    ASSERT_TRUE (server.opened ());
     server.close ();
-}
-
-/**
- * @brief Test bind method.
- */
-TEST (UnixAcceptor, bind)
-{
-    UnixStream::Acceptor server;
-
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
-    server.close ();
-}
-
-/**
- * @brief Test listen method.
- */
-TEST (UnixAcceptor, listen)
-{
-    UnixStream::Acceptor server;
-
-    ASSERT_EQ (server.listen (20), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
-    ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
-    server.close ();
+    ASSERT_FALSE (server.opened ());
 }
 
 /**
@@ -107,8 +83,7 @@ TEST (UnixAcceptor, accept)
 
     ASSERT_FALSE (server.accept ().connected ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
-    ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect (path), 0) << join::lastError.message ();
     UnixStream::Socket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
@@ -126,8 +101,7 @@ TEST (UnixAcceptor, localEndpoint)
     UnixStream::Acceptor server;
 
     ASSERT_EQ (server.localEndpoint (), UnixStream::Endpoint {});
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().device (), path);
     server.close ();
 }
@@ -140,7 +114,7 @@ TEST (UnixAcceptor, opened)
     UnixStream::Acceptor server;
 
     ASSERT_FALSE (server.opened ());
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
     ASSERT_TRUE (server.opened ());
     server.close ();
     ASSERT_FALSE (server.opened ());
@@ -153,7 +127,7 @@ TEST (UnixAcceptor, family)
 {
     UnixStream::Acceptor server;
 
-    ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.family (), AF_UNIX);
     server.close ();
 }
@@ -165,7 +139,7 @@ TEST (UnixAcceptor, type)
 {
     UnixStream::Acceptor server;
 
-    ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.type (), SOCK_STREAM);
     server.close ();
 }
@@ -177,7 +151,7 @@ TEST (UnixAcceptor, protocol)
 {
     UnixStream::Acceptor server;
 
-    ASSERT_EQ (server.bind (path), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.protocol (), 0);
     server.close ();
 }
@@ -190,7 +164,7 @@ TEST (UnixAcceptor, handle)
     UnixStream::Acceptor server;
 
     ASSERT_EQ (server.handle (), -1);
-    ASSERT_EQ (server.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
     ASSERT_GT (server.handle (), -1);
     server.close ();
     ASSERT_EQ (server.handle (), -1);

@@ -41,7 +41,7 @@ using join::Tcp;
 /**
  * @brief Class used to test Reactor.
  */
-class ReactorTest : public join::EventHandler, public ::testing::Test
+class ReactorTest : public Tcp::Acceptor, public ::testing::Test
 {
 protected:
     /**
@@ -49,8 +49,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (_acceptor.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     }
 
     /**
@@ -60,7 +59,7 @@ protected:
     {
         _server.close ();
         _client.close ();
-        _acceptor.close ();
+        this->close ();
     }
 
     /**
@@ -108,18 +107,6 @@ protected:
         _cond.signal ();
     }
 
-    /**
-     * @brief get native handle.
-     * @return native handle.
-     */
-    virtual int handle () const override
-    {
-        return _server.handle ();
-    }
-
-    /// server socket.
-    static Tcp::Acceptor _acceptor;
-
     /// client socket.
     static Tcp::Socket _client;
 
@@ -145,7 +132,6 @@ protected:
     static std::string _event;
 };
 
-Tcp::Acceptor ReactorTest::_acceptor;
 Tcp::Socket   ReactorTest::_client (Tcp::Socket::Blocking);
 Tcp::Socket   ReactorTest::_server;
 std::string   ReactorTest::_host = "localhost";
@@ -178,7 +164,7 @@ TEST_F (ReactorTest, addHandler)
 
     // connect socket.
     ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    ASSERT_TRUE ((_server = this->accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
     ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
@@ -206,7 +192,7 @@ TEST_F (ReactorTest, delHandler)
 
     // connect socket.
     ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    ASSERT_TRUE ((_server = this->accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
     ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
@@ -226,7 +212,7 @@ TEST_F (ReactorTest, onReceive)
 {
     // connect socket.
     ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    ASSERT_TRUE ((_server = this->accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
     ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
@@ -252,7 +238,7 @@ TEST_F (ReactorTest, onClose)
 {
     // connect socket.
     ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    ASSERT_TRUE ((_server = this->accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
     ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
@@ -275,7 +261,7 @@ TEST_F (ReactorTest, onError)
 {
     // connect socket.
     ASSERT_EQ (_client.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    ASSERT_TRUE ((_server = this->accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
     ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();

@@ -43,25 +43,48 @@ namespace join
     {
     public:
         /**
-         * @brief method called when data are ready to be read on handle.
+         * @brief create instance.
          */
-        virtual void onReceive () = 0;
+        EventHandler () = default;
 
         /**
-         * @brief method called when handle is closed.
+         * @brief destroy instance.
          */
-        virtual void onClose () = 0;
-
-        /**
-         * @brief method called when an error occured on handle.
-         */
-        virtual void onError () = 0;
+        virtual ~EventHandler () = default;
 
         /**
          * @brief get native handle.
          * @return native handle.
          */
-        virtual int handle () const = 0;
+        virtual int handle () const noexcept = 0;
+
+    protected:
+        /**
+         * @brief method called when data are ready to be read on handle.
+         */
+        virtual void onReceive ()
+        {
+            // do nothing.
+        }
+
+        /**
+         * @brief method called when handle is closed.
+         */
+        virtual void onClose ()
+        {
+            // do nothing.
+        }
+
+        /**
+         * @brief method called when an error occured on handle.
+         */
+        virtual void onError ()
+        {
+            // do nothing.
+        }
+
+        /// friendship with reactor.
+        friend class Reactor;
     };
 
     /**
