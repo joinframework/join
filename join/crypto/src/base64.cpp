@@ -293,7 +293,11 @@ Decoderbuf::int_type Decoderbuf::overflow (int_type c)
         int reqsz = oldsz + pending;
 
         _out.resize (reqsz);
-        EVP_DecodeUpdate (_decodectx.get (), &_out[oldsz], &reqsz, reinterpret_cast <uint8_t *> (this->pbase ()), pending);
+        if (EVP_DecodeUpdate (_decodectx.get (), &_out[oldsz], &reqsz, reinterpret_cast <uint8_t *> (this->pbase ()), pending) == -1)
+        {
+            lastError = make_error_code (Errc::InvalidParam);
+            return traits_type::eof ();
+        }
         _out.resize (oldsz + reqsz);
     }
 
