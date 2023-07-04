@@ -183,9 +183,6 @@ protected:
     /// port.
     static const uint16_t _port;
 
-    /// forbidden port.
-    static const uint16_t _forbidden;
-
     /// root certificate.
     static const std::string _root;
 
@@ -202,7 +199,6 @@ protected:
 const IpAddress   TlsAcceptor::_hostip     = "127.0.0.1";
 const std::string TlsAcceptor::_hostname   = "localhost.";
 const uint16_t    TlsAcceptor::_port       = 5000;
-const uint16_t    TlsAcceptor::_forbidden  = 80;
 const std::string TlsAcceptor::_root       = "/tmp/tlsserver_test_root.cert";
 const std::string TlsAcceptor::_cert       = "/tmp/tlsserver_test.cert";
 const std::string TlsAcceptor::_key        = "/tmp/tlsserver_test.key";
@@ -229,11 +225,14 @@ TEST_F (TlsAcceptor, move)
  */
 TEST_F (TlsAcceptor, create)
 {
-    Tls::Acceptor server;
+    Tls::Acceptor server1, server2;
 
-    ASSERT_EQ (server.create ({_hostip, _forbidden}), -1);
-    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.create ({_hostip, _port}), -1);
+    ASSERT_EQ (server1.create ({_hostip, _port}), 0) << join::lastError.message ();
+
+    ASSERT_EQ (server1.create ({_hostip, _port}), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (server2.create ({_hostip, _port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 }
 

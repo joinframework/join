@@ -34,7 +34,6 @@ using join::Tcp;
 
 IpAddress address   = "127.0.0.1";
 uint16_t  port      = 5000;
-uint16_t  forbidden = 80;
 
 /**
  * @brief Assign by move.
@@ -57,11 +56,13 @@ TEST (TcpAcceptor, move)
  */
 TEST (TcpAcceptor, create)
 {
-    Tcp::Acceptor server;
+    Tcp::Acceptor server1, server2;
 
-    ASSERT_EQ (server.create ({address, forbidden}), -1);
-    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.create ({address, port}), -1);
+    ASSERT_EQ (server1.create ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server1.create ({address, port}), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (server2.create ({address, port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 }
 
