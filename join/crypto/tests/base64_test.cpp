@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2021 Mathieu Rabine
+ * Copyright (c) 2023 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,40 +28,90 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::Base64;
 using join::BytesArray;
+using join::Encoder;
+using join::Decoder;
+using join::Base64;
 
 /// strings to encode.
-const std::string decodedString1 = "this is the string to encode";
-const std::string decodedString2 = "this is the string to encode !";
-const std::string decodedString3 = "this is the string to encode !!!";
+const std::string decodedString = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
+                                  "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut e"
+                                  "nim ad minim veniam, quis nostrud exercitation ullamco laboris n"
+                                  "isi ut aliquip ex ea commodo consequat. Duis aute irure dolor in"
+                                  " reprehenderit in voluptate velit esse cillum dolore eu fugiat n"
+                                  "ulla pariatur. Excepteur sint occaecat cupidatat non proident, s"
+                                  "unt in culpa qui officia deserunt mollit anim id est laborum.";
 
 /// arrays to encode.
-const BytesArray decodedArray1 = BytesArray (decodedString1.begin (), decodedString1.end ());
-const BytesArray decodedArray2 = BytesArray (decodedString2.begin (), decodedString2.end ());
-const BytesArray decodedArray3 = BytesArray (decodedString3.begin (), decodedString3.end ());
+const BytesArray decodedArray   = BytesArray (decodedString.begin (), decodedString.end ());
 
 /// strings to decode.
-const std::string encodedString1 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZQ==";
-const std::string encodedString2 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZSAh";
-const std::string encodedString3 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZSAhISE=";
+const std::string encodedString = "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np"
+                                  "bmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFi"
+                                  "b3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEuIFV0IGVuaW0gYWQgbWluaW0gdmVu"
+                                  "aWFtLCBxdWlzIG5vc3RydWQgZXhlcmNpdGF0aW9uIHVsbGFtY28gbGFib3JpcyBu"
+                                  "aXNpIHV0IGFsaXF1aXAgZXggZWEgY29tbW9kbyBjb25zZXF1YXQuIER1aXMgYXV0"
+                                  "ZSBpcnVyZSBkb2xvciBpbiByZXByZWhlbmRlcml0IGluIHZvbHVwdGF0ZSB2ZWxp"
+                                  "dCBlc3NlIGNpbGx1bSBkb2xvcmUgZXUgZnVnaWF0IG51bGxhIHBhcmlhdHVyLiBF"
+                                  "eGNlcHRldXIgc2ludCBvY2NhZWNhdCBjdXBpZGF0YXQgbm9uIHByb2lkZW50LCBz"
+                                  "dW50IGluIGN1bHBhIHF1aSBvZmZpY2lhIGRlc2VydW50IG1vbGxpdCBhbmltIGlk"
+                                  "IGVzdCBsYWJvcnVtLg==";
 
 /// invalid strings to decode.
-const std::string invalidString1 = "";
-const std::string invalidString2 = "dGhpcyBpcyB0aGUgc3RyaW5nIHRvIGVuY29kZ";
+const std::string invalidString = "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Np"
+                                  "bmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFi"
+                                  "b3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEuIFV0IGVuaW0gYWQgbWluaW0gdmVu"
+                                  "aWFtLCBxdWlzIG5vc3RydWQgZXhlcmNpdGF0aW9uIHVsbGFtY28gbGFib3JpcyBu"
+                                  "aXNpIHV0IGFsaXF1aXAgZXggZWEgY29tbW9kbyBjb25zZXF1YXQuIER1aXMgYXV0"
+                                  "ZSBpcnVyZSBkb2xvciBpbiByZXByZWhlbmRlcml0IGluIHZvbHVwdGF0ZSB2ZWxp"
+                                  "dCBlc3NlIGNpbGx1bSBkb2xvcmUgZXUgZnVnaWF0IG51bGxhIHBhcmlhdHVyLiBF"
+                                  "eGNlcHRldXIgc2ludCBvY2NhZWNhdCBjdXBpZGF0YXQgbm9uIHByb2lkZW50LCBz"
+                                  "dW50IGluIGN1bHBhIHF1aSBvZmZpY2lhIGRlc2VydW50IG1vbGxpdCBhbmltIGlk"
+                                  "=IGVzdCBsYWJvcnVtLg==";
+
+/**
+ * @brief encoder get test.
+ */
+TEST (Encoder, get)
+{
+    Encoder encoder1;
+    encoder1 << decodedString;
+    ASSERT_EQ (encodedString, encoder1.get ());
+
+    encoder1.write (decodedString.data (), decodedString.size ());
+    Encoder encoder2 = std::move (encoder1);
+    ASSERT_EQ (encodedString, encoder2.get ());
+
+    encoder2 << decodedString;
+    encoder1 = std::move (encoder2);
+    ASSERT_EQ (encodedString, encoder1.get ());
+}
+
+/**
+ * @brief decoder get test.
+ */
+TEST (Decoder, get)
+{
+    Decoder decoder1;
+    decoder1 << encodedString;
+    ASSERT_EQ (decodedArray, decoder1.get ());
+
+    decoder1.write (encodedString.data (), encodedString.size ());
+    Decoder decoder2 = std::move (decoder1);
+    ASSERT_EQ (decodedArray, decoder2.get ());
+
+    decoder2 << encodedString;
+    decoder1 = std::move (decoder2);
+    ASSERT_EQ (decodedArray, decoder1.get ());
+}
 
 /**
  * @brief base64 encoding test.
  */
 TEST (Base64, encode)
 {
-    EXPECT_EQ (encodedString1, Base64::encode (decodedString1));
-    EXPECT_EQ (encodedString2, Base64::encode (decodedString2));
-    EXPECT_EQ (encodedString3, Base64::encode (decodedString3));
-
-    EXPECT_EQ (encodedString1, Base64::encode (decodedArray1));
-    EXPECT_EQ (encodedString2, Base64::encode (decodedArray2));
-    EXPECT_EQ (encodedString3, Base64::encode (decodedArray3));
+    ASSERT_EQ (encodedString, Base64::encode (decodedString));
+    ASSERT_EQ (encodedString, Base64::encode (decodedArray));
 }
 
 /**
@@ -69,12 +119,8 @@ TEST (Base64, encode)
  */
 TEST (Base64, decode)
 {
-    EXPECT_EQ (decodedArray1, Base64::decode (encodedString1));
-    EXPECT_EQ (decodedArray2, Base64::decode (encodedString2));
-    EXPECT_EQ (decodedArray3, Base64::decode (encodedString3));
-
-    EXPECT_EQ (BytesArray {}, Base64::decode (invalidString1));
-    EXPECT_EQ (BytesArray {}, Base64::decode (invalidString2));
+    ASSERT_EQ (decodedArray,  Base64::decode (encodedString));
+    ASSERT_EQ (BytesArray {}, Base64::decode (invalidString));
 }
 
 /**

@@ -34,7 +34,7 @@ namespace join
      * @brief basic acceptor class.
      */
     template <class Protocol>
-    class BasicAcceptor
+    class BasicAcceptor : public EventHandler
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
@@ -94,18 +94,15 @@ namespace join
          */
         virtual ~BasicAcceptor ()
         {
-            if (this->_handle != -1)
-            {
-                ::close (this->_handle);
-            }
+            this->close ();
         }
 
         /**
-         * @brief open acceptor.
-         * @param protocol protocol to use.
+         * @brief create acceptor
+         * @param endpoint endpoint to assign to the acceptor.
          * @return 0 on success, -1 on failure.
          */
-        virtual int open (const Protocol& protocol = Protocol ()) noexcept
+        virtual int create (const Endpoint& endpoint) noexcept
         {
             if (this->opened ())
             {
@@ -113,7 +110,7 @@ namespace join
                 return -1;
             }
 
-            this->_handle = ::socket (protocol.family (), protocol.type () | SOCK_CLOEXEC, protocol.protocol ());
+            this->_handle = ::socket (endpoint.protocol ().family (), endpoint.protocol ().type () | SOCK_CLOEXEC, endpoint.protocol ().protocol ());
             if (this->_handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
@@ -121,7 +118,7 @@ namespace join
                 return -1;
             }
 
-            if (protocol.family () == AF_INET6)
+            if (endpoint.protocol ().family () == AF_INET6)
             {
                 int off = 0;
 
@@ -131,35 +128,6 @@ namespace join
                     this->close ();
                     return -1;
                 }
-            }
-
-            this->_protocol = protocol;
-
-            return 0;
-        }
-
-        /**
-         * @brief close acceptor.
-         */
-        virtual void close () noexcept
-        {
-            if (this->_handle != -1)
-            {
-                ::close (this->_handle);
-                this->_handle = -1;
-            }
-        }
-
-        /**
-         * @brief assigns the specified endpoint to the acceptor.
-         * @param endpoint endpoint to assign to the acceptor.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int bind (const Endpoint& endpoint) noexcept
-        {
-            if (!this->opened () && this->open (endpoint.protocol ()) == -1)
-            {
-                return -1;
             }
 
             if (endpoint.protocol ().family () == AF_UNIX)
@@ -178,31 +146,30 @@ namespace join
                 }
             }
 
-            if (::bind (this->_handle, endpoint.addr (), endpoint.length ()) == -1)
+            if ((::bind (this->_handle, endpoint.addr (), endpoint.length ()) == -1) || (::listen (this->_handle, SOMAXCONN) == -1))
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 this->close ();
                 return -1;
             }
+
+            this->_protocol = endpoint.protocol ();
 
             return 0;
         }
 
         /**
-         * @brief marks this acceptor as ready to accept connections.
-         * @param max max listen connections.
-         * @return 0 on success, -1 on failure.
+         * @brief close acceptor.
          */
-        virtual int listen (size_t max = SOMAXCONN) noexcept
+        virtual void close () noexcept
         {
-            if (::listen (this->_handle, max) == -1)
+            if (this->_handle != -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                this->close ();
-                return -1;
+                ::close (this->_handle);
+                this->_handle = -1;
             }
 
-            return 0;
+            this->_protocol = Protocol ();
         }
 
         /**
@@ -211,16 +178,16 @@ namespace join
          */
         Endpoint localEndpoint () const
         {
-            Endpoint endpoint;
-            socklen_t addrLen = endpoint.length ();
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            if (::getsockname (this->_handle, endpoint.addr (), &addrLen) == -1)
+            if (::getsockname (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len) == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return {};
             }
 
-            return endpoint;
+            return Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
         }
 
         /**
@@ -263,7 +230,7 @@ namespace join
          * @brief get socket native handle.
          * @return socket native handle.
          */
-        int handle () const noexcept
+        int handle () const noexcept override
         {
             return this->_handle;
         }
@@ -330,11 +297,11 @@ namespace join
          */
         virtual Socket accept () const
         {
-            Endpoint endpoint;
-            socklen_t addrLen = endpoint.length ();
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
             Socket client;
 
-            client._handle = ::accept (this->_handle, endpoint.addr (), &addrLen);
+            client._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
             if (client._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
@@ -356,6 +323,18 @@ namespace join
             }
 
             return client;
+        }
+
+        /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @note the client stream object is allocated and must be released.
+         * @return The client stream object on success, nullptr on failure.
+         */
+        virtual Stream acceptStream () const
+        {
+            Stream stream;
+            stream.socket () = this->accept ();
+            return stream;
         }
     };
 
@@ -496,12 +475,12 @@ namespace join
          */
         virtual Socket accept () const
         {
-            Endpoint endpoint;
-            socklen_t addrLen = endpoint.length ();
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
             Socket client (this->_tlsContext, Socket::ServerMode);
 
             // accept connection.
-            client._handle = ::accept (this->_handle, endpoint.addr (), &addrLen);
+            client._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
             if (client._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
@@ -555,6 +534,18 @@ namespace join
             client._tlsState = Socket::Encrypted;
 
             return client;
+        }
+
+        /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @note the client stream object is allocated and must be released.
+         * @return The client stream object on success, nullptr on failure.
+         */
+        virtual Stream acceptStream () const
+        {
+            Stream stream;
+            stream.socket () = this->accept ();
+            return stream;
         }
 
         /**

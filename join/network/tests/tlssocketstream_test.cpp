@@ -41,7 +41,7 @@ using join::Tls;
 /**
  * @brief Class used to test the TLS socket stream API.
  */
-class TlsSocketStream : public join::EventHandler, public ::testing::Test
+class TlsSocketStream : public Tls::Acceptor, public ::testing::Test
 {
 public:
     /**
@@ -149,10 +149,9 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (_acceptor.setCertificate (_cert, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (_acceptor.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
-        ASSERT_EQ (_acceptor.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCertificate (_cert, _key), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -162,7 +161,7 @@ protected:
     void TearDown ()
     {
         ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
-        _acceptor.close ();
+        this->close ();
     }
 
     /**
@@ -170,7 +169,7 @@ protected:
      */
     virtual void onReceive () override
     {
-        Tls::Socket sock = _acceptor.accept ();
+        Tls::Socket sock = this->accept ();
         if (sock.connected ())
         {
             char buf[1024];
@@ -193,34 +192,6 @@ protected:
         }
     }
 
-    /**
-     * @brief method called when handle is closed.
-     */
-    virtual void onClose () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief method called when an error occured on handle.
-     */
-    virtual void onError () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief get native handle.
-     * @return native handle.
-     */
-    virtual int handle () const override
-    {
-        return _acceptor.handle ();
-    }
-
-    /// server socket.
-    static Tls::Acceptor _acceptor;
-
     /// timeout.
     static const int _timeout;
 
@@ -241,7 +212,6 @@ protected:
     static const std::string _key;
 };
 
-Tls::Acceptor     TlsSocketStream::_acceptor;
 const int         TlsSocketStream::_timeout = 1000;
 const std::string TlsSocketStream::_host = "localhost";
 const uint16_t    TlsSocketStream::_port = 5000;

@@ -36,7 +36,7 @@ using join::UnixDgram;
 /**
  * @brief Class used to test the unix datagram socket API.
  */
-class UnixDgramSocket : public join::EventHandler, public ::testing::Test
+class UnixDgramSocket : public UnixDgram::Socket, public ::testing::Test
 {
 protected:
     /**
@@ -44,7 +44,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (_socket.bind (_serverpath), 0) << join::lastError.message ();
+        ASSERT_EQ (this->bind (_serverpath), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -54,7 +54,7 @@ protected:
     void TearDown ()
     {
         ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
-        _socket.close ();
+        this->close ();
     }
 
     /**
@@ -62,45 +62,17 @@ protected:
      */
     virtual void onReceive () override
     {
-        auto buffer = std::make_unique <char []> (_socket.canRead ());
+        auto buffer = std::make_unique <char []> (this->canRead ());
         if (buffer)
         {
             UnixDgram::Endpoint from;
-            int nread = _socket.readFrom (buffer.get (), _socket.canRead (), &from);
+            int nread = this->readFrom (buffer.get (), this->canRead (), &from);
             if (nread > 0)
             {
-                _socket.writeTo (buffer.get (), nread, from);
+                this->writeTo (buffer.get (), nread, from);
             }
         }
     }
-
-    /**
-     * @brief method called when handle is closed.
-     */
-    virtual void onClose () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief method called when an error occured on handle.
-     */
-    virtual void onError () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief get native handle.
-     * @return native handle.
-     */
-    virtual int handle () const override
-    {
-        return _socket.handle ();
-    }
-
-    /// socket.
-    static UnixDgram::Socket _socket;
 
     /// path.
     static const std::string _serverpath;
@@ -110,7 +82,6 @@ protected:
     static const int _timeout;
 };
 
-UnixDgram::Socket UnixDgramSocket::_socket;
 const std::string UnixDgramSocket::_serverpath = "/tmp/unixserver_test.sock";
 const std::string UnixDgramSocket::_clientpath = "/tmp/unixclient_test.sock";
 const int         UnixDgramSocket::_timeout = 1000;

@@ -511,9 +511,7 @@ namespace join
         BasicSocketStream& operator=(BasicSocketStream&& other)
         {
             std::iostream::operator= (std::move (other));
-
             _streambuf = std::move (other._streambuf);
-
             return *this;
         }
 
@@ -554,6 +552,15 @@ namespace join
         bool connected ()
         {
             return this->rdbuf ()->socket ().connected ();
+        }
+
+        /**
+         * @brief check if the socket is secure.
+         * @return true if the socket is secure, false otherwise.
+         */
+        bool encrypted () const
+        {
+            return this->rdbuf ()->socket ().encrypted ();
         }
 
         /**
@@ -688,15 +695,6 @@ namespace join
 
                 this->setstate (std::ios_base::failbit);
             }
-        }
-
-        /**
-         * @brief check if the socket is secure.
-         * @return true if the socket is secure, false otherwise.
-         */
-        bool encrypted () const
-        {
-            return this->rdbuf ()->socket ().encrypted ();
         }
 
         /**
