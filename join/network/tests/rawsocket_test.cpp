@@ -43,7 +43,7 @@ using join::Raw;
 /**
  * @brief Class used to test the raw socket API.
  */
-class RawSocket : public join::EventHandler, public ::testing::Test
+class RawSocket : public Raw::Socket, public ::testing::Test
 {
 public:
     /**
@@ -86,7 +86,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (_socket.bind (_interface), 0) << join::lastError.message ();
+        ASSERT_EQ (this->bind (_interface), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -96,7 +96,7 @@ protected:
     void TearDown ()
     {
         ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
-        _socket.close ();
+        this->close ();
     }
 
     /**
@@ -104,10 +104,10 @@ protected:
      */
     virtual void onReceive () override
     {
-        auto buffer = std::make_unique <char []> (_socket.canRead ());
+        auto buffer = std::make_unique <char []> (this->canRead ());
         if (buffer)
         {
-            int nread = _socket.read (buffer.get (), _socket.canRead ());
+            int nread = this->read (buffer.get (), this->canRead ());
             if (size_t (nread) < sizeof (Packet))
             {
                 return;
@@ -119,33 +119,8 @@ protected:
                 return;
             }
 
-            _socket.write (buffer.get (), nread);
+            this->write (buffer.get (), nread);
         }
-    }
-
-    /**
-     * @brief method called when handle is closed.
-     */
-    virtual void onClose () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief method called when an error occured on handle.
-     */
-    virtual void onError () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief get native handle.
-     * @return native handle.
-     */
-    virtual int handle () const override
-    {
-        return _socket.handle ();
     }
 
     /**
@@ -159,9 +134,6 @@ protected:
         char data[16] = {};
     };
 
-    /// socket
-    static Raw::Socket _socket;
-
     /// packet.
     static Packet _packet;
 
@@ -172,7 +144,6 @@ protected:
     static const int _timeout;
 };
 
-Raw::Socket       RawSocket::_socket;
 RawSocket::Packet RawSocket::_packet;
 const std::string RawSocket::_interface = "lo";
 const int         RawSocket::_timeout = 1000;

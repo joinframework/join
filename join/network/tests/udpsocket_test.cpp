@@ -39,7 +39,7 @@ using join::Udp;
 /**
  * @brief Class used to test the UDP socket API.
  */
-class UdpSocket : public join::EventHandler, public ::testing::Test
+class UdpSocket : public Udp::Socket, public ::testing::Test
 {
 protected:
     /**
@@ -47,7 +47,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (_socket.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -57,7 +57,7 @@ protected:
     void TearDown ()
     {
         ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
-        _socket.close ();
+        this->close ();
     }
 
     /**
@@ -65,44 +65,17 @@ protected:
      */
     virtual void onReceive () override
     {
-        auto buffer = std::make_unique <char []> (_socket.canRead ());
+        auto buffer = std::make_unique <char []> (this->canRead ());
         if (buffer)
         {
             Udp::Endpoint from;
-            int nread = _socket.readFrom (buffer.get (), _socket.canRead (), &from);
+            int nread = this->readFrom (buffer.get (), this->canRead (), &from);
             if (nread > 0)
             {
-                _socket.writeTo (buffer.get (), nread, from);
+                this->writeTo (buffer.get (), nread, from);
             }
         }
     }
-    /**
-     * @brief method called when handle is closed.
-     */
-    virtual void onClose () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief method called when an error occured on handle.
-     */
-    virtual void onError () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief get native handle.
-     * @return native handle.
-     */
-    virtual int handle () const override
-    {
-        return _socket.handle ();
-    }
-
-    /// socket.
-    static Udp::Socket _socket;
 
     /// host.
     static const std::string _host;
@@ -114,7 +87,6 @@ protected:
     static const int _timeout;
 };
 
-Udp::Socket       UdpSocket::_socket;
 const std::string UdpSocket::_host = "localhost";
 const uint16_t    UdpSocket::_port = 5000;
 const int         UdpSocket::_timeout = 1000;
