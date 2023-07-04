@@ -264,6 +264,24 @@ TEST_F (TlsAcceptor, accept)
 }
 
 /**
+ * @brief Test acceptStream method.
+ */
+TEST_F (TlsAcceptor, acceptStream)
+{
+    Tls::Socket clientSocket (Tls::Socket::Blocking);
+    Tls::Acceptor server;
+
+    ASSERT_FALSE (server.acceptStream ().connected ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (clientSocket.connect ({_hostip, _port}), 0) << join::lastError.message ();
+    Tls::Stream serverStream = server.acceptStream ();
+    ASSERT_TRUE (serverStream.connected ());
+    ASSERT_EQ (serverStream.socket ().localEndpoint ().ip (), _hostip);
+    ASSERT_EQ (serverStream.socket ().localEndpoint ().port (), _port);
+}
+
+/**
  * @brief Test localEndpoint method.
  */
 TEST_F (TlsAcceptor, localEndpoint)

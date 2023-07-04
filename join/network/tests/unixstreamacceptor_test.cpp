@@ -94,6 +94,26 @@ TEST (UnixAcceptor, accept)
 }
 
 /**
+ * @brief Test acceptStream method.
+ */
+TEST (UnixAcceptor, acceptStream)
+{
+    UnixStream::Socket clientSocket (UnixStream::Socket::Blocking);
+    UnixStream::Acceptor server;
+
+    ASSERT_FALSE (server.acceptStream ().connected ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
+    ASSERT_EQ (clientSocket.connect (path), 0) << join::lastError.message ();
+    UnixStream::Stream serverStream = server.acceptStream ();
+    ASSERT_TRUE (serverStream.connected ());
+    ASSERT_EQ (serverStream.socket ().localEndpoint ().device (), path);
+    clientSocket.close ();
+    serverStream.close ();
+    server.close ();
+}
+
+/**
  * @brief Test localEndpoint method.
  */
 TEST (UnixAcceptor, localEndpoint)

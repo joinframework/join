@@ -98,6 +98,27 @@ TEST (TcpAcceptor, accept)
 }
 
 /**
+ * @brief Test acceptStream method.
+ */
+TEST (TcpAcceptor, acceptStream)
+{
+    Tcp::Socket clientSocket (Tcp::Socket::Blocking);
+    Tcp::Acceptor server;
+
+    ASSERT_FALSE (server.acceptStream ().connected ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
+    ASSERT_EQ (clientSocket.connect ({address, port}), 0) << join::lastError.message ();
+    Tcp::Stream serverStream = server.acceptStream ();
+    ASSERT_TRUE (serverStream.connected ());
+    ASSERT_EQ (serverStream.socket ().localEndpoint ().ip (), address);
+    ASSERT_EQ (serverStream.socket ().localEndpoint ().port (), port);
+    clientSocket.close ();
+    serverStream.close ();
+    server.close ();
+}
+
+/**
  * @brief Test localEndpoint method.
  */
 TEST (TcpAcceptor, localEndpoint)
