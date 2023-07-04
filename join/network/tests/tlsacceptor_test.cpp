@@ -177,9 +177,6 @@ protected:
     /// host ip address.
     static const IpAddress _hostip;
 
-    /// host name.
-    static const std::string _hostname;
-
     /// port.
     static const uint16_t _port;
 
@@ -196,8 +193,7 @@ protected:
     static const std::string _invalidKey;
 };
 
-const IpAddress   TlsAcceptor::_hostip     = "127.0.0.1";
-const std::string TlsAcceptor::_hostname   = "localhost.";
+const IpAddress   TlsAcceptor::_hostip     = "::1";
 const uint16_t    TlsAcceptor::_port       = 5000;
 const std::string TlsAcceptor::_root       = "/tmp/tlsserver_test_root.cert";
 const std::string TlsAcceptor::_cert       = "/tmp/tlsserver_test.cert";
@@ -321,7 +317,7 @@ TEST_F (TlsAcceptor, family)
     Tls::Acceptor server;
 
     ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.family (), AF_INET);
+    ASSERT_EQ (server.family (), _hostip.family ());
 }
 
 /**

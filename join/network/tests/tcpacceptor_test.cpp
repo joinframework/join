@@ -32,8 +32,8 @@ using join::Errc;
 using join::IpAddress;
 using join::Tcp;
 
-IpAddress address   = "127.0.0.1";
-uint16_t  port      = 5000;
+IpAddress address = "::1";
+uint16_t  port    = 5000;
 
 /**
  * @brief Assign by move.
@@ -59,6 +59,7 @@ TEST (TcpAcceptor, create)
     Tcp::Acceptor server1, server2;
 
     ASSERT_EQ (server1.create ({address, port}), 0) << join::lastError.message ();
+
     ASSERT_EQ (server1.create ({address, port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
@@ -158,7 +159,7 @@ TEST (TcpAcceptor, family)
     Tcp::Acceptor server;
 
     ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.family (), AF_INET);
+    ASSERT_EQ (server.family (), address.family ());
     server.close ();
 }
 

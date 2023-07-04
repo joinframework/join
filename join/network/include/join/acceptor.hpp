@@ -185,16 +185,16 @@ namespace join
          */
         Endpoint localEndpoint () const
         {
-            Endpoint endpoint;
-            socklen_t addrLen = endpoint.length ();
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            if (::getsockname (this->_handle, endpoint.addr (), &addrLen) == -1)
+            if (::getsockname (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len) == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return {};
             }
 
-            return endpoint;
+            return Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
         }
 
         /**
@@ -304,11 +304,11 @@ namespace join
          */
         virtual Socket accept () const
         {
-            Endpoint endpoint;
-            socklen_t addrLen = endpoint.length ();
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
             Socket client;
 
-            client._handle = ::accept (this->_handle, endpoint.addr (), &addrLen);
+            client._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
             if (client._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
@@ -482,12 +482,12 @@ namespace join
          */
         virtual Socket accept () const
         {
-            Endpoint endpoint;
-            socklen_t addrLen = endpoint.length ();
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
             Socket client (this->_tlsContext, Socket::ServerMode);
 
             // accept connection.
-            client._handle = ::accept (this->_handle, endpoint.addr (), &addrLen);
+            client._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
             if (client._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));

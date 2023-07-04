@@ -496,15 +496,15 @@ namespace join
          */
         Endpoint localEndpoint () const
         {
-            Endpoint endpoint;
-            socklen_t addrLen = endpoint.length ();
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            if (::getsockname (this->_handle, endpoint.addr (), &addrLen) == -1)
+            if (::getsockname (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len) == -1)
             {
                 return {};
             }
 
-            return endpoint;
+            return Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
         }
 
         /**
