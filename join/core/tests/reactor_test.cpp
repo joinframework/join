@@ -70,6 +70,7 @@ protected:
         {
             ScopedLock lock (_mut);
             _server.readExactly (_event, _server.canRead ());
+            EventHandler::onReceive ();
         }
 
         _cond.signal ();
@@ -86,6 +87,7 @@ protected:
         {
             ScopedLock lock (_mut);
             _event = "onClose";
+            EventHandler::onClose ();
         }
 
         _cond.signal ();
@@ -102,6 +104,7 @@ protected:
         {
             ScopedLock lock (_mut);
             _event = "onError";
+            EventHandler::onError ();
         }
 
         _cond.signal ();
