@@ -41,10 +41,6 @@ using join::Decoder;
 Encoderbuf::Encoderbuf ()
 : _buf (std::make_unique <char []> (_bufsize))
 {
-    if (_buf == nullptr)
-    {
-        throw std::system_error (make_error_code (Errc::OutOfMemory));
-    }
 }
 
 // =========================================================================
@@ -104,16 +100,10 @@ Encoderbuf::int_type Encoderbuf::overflow (int_type c)
 {
     if (_encodectx == nullptr)
     {
-        _encodectx.reset (EVP_ENCODE_CTX_new ());
-        if (_encodectx == nullptr)
-        {
-            lastError = make_error_code (Errc::OutOfMemory);
-            return traits_type::eof ();
-        }
-
         _out.clear ();
         _out.shrink_to_fit ();
 
+        _encodectx.reset (EVP_ENCODE_CTX_new ());
         EVP_EncodeInit (_encodectx.get ());
     }
 
@@ -200,10 +190,6 @@ std::string Encoder::get ()
 Decoderbuf::Decoderbuf ()
 : _buf (std::make_unique <char []> (_bufsize))
 {
-    if (_buf == nullptr)
-    {
-        throw std::system_error (make_error_code (Errc::OutOfMemory));
-    }
 }
 
 // =========================================================================
@@ -263,16 +249,10 @@ Decoderbuf::int_type Decoderbuf::overflow (int_type c)
 {
     if (_decodectx == nullptr)
     {
-        _decodectx.reset (EVP_ENCODE_CTX_new ());
-        if (_decodectx == nullptr)
-        {
-            lastError = make_error_code (Errc::OutOfMemory);
-            return traits_type::eof ();
-        }
-
         _out.clear ();
         _out.shrink_to_fit ();
 
+        _decodectx.reset (EVP_ENCODE_CTX_new ());
         EVP_DecodeInit (_decodectx.get ());
     }
 
