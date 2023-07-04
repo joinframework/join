@@ -146,14 +146,7 @@ namespace join
                 }
             }
 
-            if (::bind (this->_handle, endpoint.addr (), endpoint.length ()) == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                this->close ();
-                return -1;
-            }
-
-            if (::listen (this->_handle, SOMAXCONN) == -1)
+            if ((::bind (this->_handle, endpoint.addr (), endpoint.length ()) == -1) || (::listen (this->_handle, SOMAXCONN) == -1))
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 this->close ();
