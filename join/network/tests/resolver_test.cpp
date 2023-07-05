@@ -52,8 +52,9 @@ TEST (Resolver, resolveHost)
     address = Resolver::resolveHost ("localhost");
     EXPECT_TRUE (address.isLoopBack ());
 
-    address = Resolver::resolveHost ("localhost", AF_INET6);
-    EXPECT_TRUE (address.isWildcard ());
+    address = Resolver::resolveHost ("ip6-localhost", AF_INET6);
+    EXPECT_TRUE (address.isIpv6Address ());
+    EXPECT_TRUE (address.isLoopBack ());
 
     address = Resolver::resolveHost ("localhost", AF_INET);
     EXPECT_TRUE (address.isIpv4Address ());
@@ -81,7 +82,10 @@ TEST (Resolver, resolveAddress)
     EXPECT_EQ (name, "192.168.24.32");
 
     name = Resolver::resolveAddress ("127.0.0.1");
-    EXPECT_EQ (name, "localhost");
+    EXPECT_NE (name.find ("localhost"), std::string::npos);
+
+    name = Resolver::resolveAddress ("::1");
+    EXPECT_NE (name.find ("localhost"), std::string::npos);
 }
 
 /**
