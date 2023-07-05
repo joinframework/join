@@ -289,7 +289,7 @@ TEST_F (UdpSocket, writeTo)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.open (Udp::v6 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.writeTo (data, sizeof (data), {"255.255.255.255", _port}), -1);
     ASSERT_EQ (udpSocket.writeTo (data, sizeof (data), {Resolver::resolveHost (_host), _port}), sizeof (data)) << join::lastError.message ();
@@ -411,7 +411,7 @@ TEST_F (UdpSocket, opened)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_FALSE (udpSocket.opened ());
-    ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.open (Udp::v6 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.opened ());
     ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.opened ());
@@ -427,7 +427,7 @@ TEST_F (UdpSocket, connected)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_FALSE (udpSocket.opened ());
-    ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.open (Udp::v6 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.connected ());
     ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.connected ());
@@ -443,7 +443,7 @@ TEST_F (UdpSocket, encrypted)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_FALSE (udpSocket.opened ());
-    ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.open (Udp::v6 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.encrypted ());
     ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.encrypted ());

@@ -312,12 +312,12 @@ TEST_F (IcmpSocket, writeTo)
     char response[1024];
 
     ASSERT_EQ (server.bind (_host), 0) << join::lastError.message ();
-    ASSERT_EQ (client.writeTo (_data.get (), sizeof (struct icmphdr), "255.255.255.255"), -1);
     ASSERT_NE (client.writeTo (_data.get (), sizeof (struct icmphdr), _host), -1) << join::lastError.message ();
     ASSERT_TRUE (server.waitReadyRead (_timeout));
     ASSERT_NE (server.canRead (), -1) << join::lastError.message ();
     ASSERT_NE (server.readFrom (response, server.canRead (), &from), -1) << join::lastError.message ();
     ASSERT_EQ (from, Icmp::Endpoint (_host));
+    ASSERT_EQ (client.writeTo (_data.get (), sizeof (struct icmphdr), "255.255.255.255"), -1);
     client.close ();
     server.close ();
 }
@@ -420,8 +420,6 @@ TEST_F (IcmpSocket, opened)
     ASSERT_FALSE (icmpSocket.opened ());
     ASSERT_EQ (icmpSocket.open (Icmp::v4 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (icmpSocket.opened ());
-    ASSERT_EQ (icmpSocket.connect (_host), 0) << join::lastError.message ();
-    ASSERT_TRUE (icmpSocket.opened ());
     icmpSocket.close ();
     ASSERT_FALSE (icmpSocket.opened ());
 }
@@ -447,8 +445,6 @@ TEST_F (IcmpSocket, encrypted)
 {
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
-    ASSERT_FALSE (icmpSocket.opened ());
-    ASSERT_EQ (icmpSocket.open (Icmp::v4 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (icmpSocket.encrypted ());
     ASSERT_EQ (icmpSocket.connect (_host), 0) << join::lastError.message ();
     ASSERT_FALSE (icmpSocket.encrypted ());

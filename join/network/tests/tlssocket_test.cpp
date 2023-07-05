@@ -426,7 +426,7 @@ TEST_F (TlsSocket, waitEncrypted)
 {
     Tls::Socket tlsSocket (Tls::Socket::NonBlocking);
 
-    ASSERT_EQ (tlsSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.open (Tls::v6 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (tlsSocket.waitEncrypted (_timeout));
     if (tlsSocket.connect ({Resolver::resolveHost (_host), _port}) == -1)
     {

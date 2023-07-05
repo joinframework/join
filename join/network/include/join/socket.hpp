@@ -932,10 +932,10 @@ namespace join
          */
         virtual int readFrom (char* data, unsigned long maxSize, Endpoint* endpoint = nullptr) noexcept
         {
-            Endpoint from;
-            socklen_t addrLen = from.length ();
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            int size = ::recvfrom (this->_handle, data, maxSize, 0, from.addr (), &addrLen);
+            int size = ::recvfrom (this->_handle, data, maxSize, 0, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
             if (size < 1)
             {
                 if (size == -1)
@@ -953,7 +953,7 @@ namespace join
 
             if (endpoint != nullptr)
             {
-                *endpoint = from;
+                *endpoint = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
             }
 
             return size;

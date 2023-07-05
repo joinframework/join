@@ -12,7 +12,7 @@ jobs:
 
     container:
       image: joinframework/join-ci:latest
-      options: --privileged
+      options: --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0
 
     steps:
     - name: Checkout
