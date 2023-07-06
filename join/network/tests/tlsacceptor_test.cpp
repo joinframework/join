@@ -177,9 +177,6 @@ protected:
     /// host ip address.
     static const IpAddress _hostip;
 
-    /// host name.
-    static const std::string _hostname;
-
     /// port.
     static const uint16_t _port;
 
@@ -196,8 +193,7 @@ protected:
     static const std::string _invalidKey;
 };
 
-const IpAddress   TlsAcceptor::_hostip     = "127.0.0.1";
-const std::string TlsAcceptor::_hostname   = "localhost.";
+const IpAddress   TlsAcceptor::_hostip     = "::1";
 const uint16_t    TlsAcceptor::_port       = 5000;
 const std::string TlsAcceptor::_root       = "/tmp/tlsserver_test_root.cert";
 const std::string TlsAcceptor::_cert       = "/tmp/tlsserver_test.cert";
@@ -211,7 +207,7 @@ TEST_F (TlsAcceptor, move)
 {
     Tls::Acceptor server1, server2;
 
-    ASSERT_EQ (server1.open (Tls::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server1.create ({_hostip, _port}), 0) << join::lastError.message ();
 
     server2 = std::move (server1);
     ASSERT_TRUE (server2.opened ());
@@ -221,14 +217,18 @@ TEST_F (TlsAcceptor, move)
 }
 
 /**
- * @brief Test open method.
+ * @brief Test create method.
  */
-TEST_F (TlsAcceptor, open)
+TEST_F (TlsAcceptor, create)
 {
-    Tls::Acceptor server;
+    Tls::Acceptor server1, server2;
 
-    ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
-    ASSERT_EQ (server.open (Tls::v6 ()), -1);
+    ASSERT_EQ (server1.create ({_hostip, _port}), 0) << join::lastError.message ();
+
+    ASSERT_EQ (server1.create ({_hostip, _port}), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (server2.create ({_hostip, _port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 }
 
@@ -239,32 +239,10 @@ TEST_F (TlsAcceptor, close)
 {
     Tls::Acceptor server;
 
-    ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test bind method.
- */
-TEST_F (TlsAcceptor, bind)
-{
-    Tls::Acceptor server;
-
-    ASSERT_EQ (server.bind ({_hostip, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.bind ({_hostip, _port}), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-}
-
-/**
- * @brief Test listen method.
- */
-TEST_F (TlsAcceptor, listen)
-{
-    Tls::Acceptor server;
-
-    ASSERT_EQ (server.listen (20), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (server.bind ({_hostip, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.listen (20), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE (server.opened ());
+    server.close ();
+    ASSERT_FALSE (server.opened ());
 }
 
 /**
@@ -277,13 +255,30 @@ TEST_F (TlsAcceptor, accept)
 
     ASSERT_FALSE (server.accept ().connected ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (server.bind ({_hostip, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.listen (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (clientSocket.connect({_hostip, _port}), 0) << join::lastError.message ();
     Tls::Socket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
     ASSERT_EQ (serverSocket.localEndpoint ().ip (), _hostip);
     ASSERT_EQ (serverSocket.localEndpoint ().port (), _port);
+}
+
+/**
+ * @brief Test acceptStream method.
+ */
+TEST_F (TlsAcceptor, acceptStream)
+{
+    Tls::Socket clientSocket (Tls::Socket::Blocking);
+    Tls::Acceptor server;
+
+    ASSERT_FALSE (server.acceptStream ().connected ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (clientSocket.connect ({_hostip, _port}), 0) << join::lastError.message ();
+    Tls::Stream serverStream = server.acceptStream ();
+    ASSERT_TRUE (serverStream.connected ());
+    ASSERT_EQ (serverStream.socket ().localEndpoint ().ip (), _hostip);
+    ASSERT_EQ (serverStream.socket ().localEndpoint ().port (), _port);
 }
 
 /**
@@ -295,7 +290,7 @@ TEST_F (TlsAcceptor, localEndpoint)
 
     ASSERT_EQ (server.localEndpoint (), Tls::Endpoint {});
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (server.bind ({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), _hostip);
     ASSERT_EQ (server.localEndpoint ().port (), _port);
 }
@@ -308,7 +303,7 @@ TEST_F (TlsAcceptor, opened)
     Tls::Acceptor server;
 
     ASSERT_FALSE (server.opened ());
-    ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (server.opened ());
     server.close ();
     ASSERT_FALSE (server.opened ());
@@ -321,8 +316,8 @@ TEST_F (TlsAcceptor, family)
 {
     Tls::Acceptor server;
 
-    ASSERT_EQ (server.bind ({_hostip, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.family (), AF_INET);
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.family (), _hostip.family ());
 }
 
 /**
@@ -332,7 +327,7 @@ TEST_F (TlsAcceptor, type)
 {
     Tls::Acceptor server;
 
-    ASSERT_EQ (server.bind ({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.type (), SOCK_STREAM);
 }
 
@@ -343,7 +338,7 @@ TEST_F (TlsAcceptor, protocol)
 {
     Tls::Acceptor server;
 
-    ASSERT_EQ (server.bind ({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.protocol (), IPPROTO_TCP);
 }
 
@@ -355,7 +350,7 @@ TEST_F (TlsAcceptor, handle)
     Tls::Acceptor server;
 
     ASSERT_EQ (server.handle (), -1);
-    ASSERT_EQ (server.open (Tls::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
     ASSERT_GT (server.handle (), -1);
     server.close ();
     ASSERT_EQ (server.handle (), -1);

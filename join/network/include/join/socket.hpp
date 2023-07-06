@@ -29,6 +29,7 @@
 #include <join/protocol.hpp>
 #include <join/resolver.hpp>
 #include <join/openssl.hpp>
+#include <join/reactor.hpp>
 #include <join/utils.hpp>
 #include <join/error.hpp>
 
@@ -55,7 +56,7 @@ namespace join
      * @brief basic socket class.
      */
     template <class Protocol>
-    class BasicSocket
+    class BasicSocket : public EventHandler
     {
     public:
         using Ptr      = std::unique_ptr <BasicSocket <Protocol>>;
@@ -495,15 +496,15 @@ namespace join
          */
         Endpoint localEndpoint () const
         {
-            Endpoint endpoint;
-            socklen_t addrLen = endpoint.length ();
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            if (::getsockname (this->_handle, endpoint.addr (), &addrLen) == -1)
+            if (::getsockname (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len) == -1)
             {
                 return {};
             }
 
-            return endpoint;
+            return Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
         }
 
         /**
@@ -555,7 +556,7 @@ namespace join
          * @brief get socket native handle.
          * @return socket native handle.
          */
-        int handle () const noexcept
+        int handle () const noexcept override
         {
             return this->_handle;
         }
@@ -931,10 +932,10 @@ namespace join
          */
         virtual int readFrom (char* data, unsigned long maxSize, Endpoint* endpoint = nullptr) noexcept
         {
-            Endpoint from;
-            socklen_t addrLen = from.length ();
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            int size = ::recvfrom (this->_handle, data, maxSize, 0, from.addr (), &addrLen);
+            int size = ::recvfrom (this->_handle, data, maxSize, 0, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
             if (size < 1)
             {
                 if (size == -1)
@@ -952,7 +953,7 @@ namespace join
 
             if (endpoint != nullptr)
             {
-                *endpoint = from;
+                *endpoint = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
             }
 
             return size;

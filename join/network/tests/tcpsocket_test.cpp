@@ -38,7 +38,7 @@ using join::Tcp;
 /**
  * @brief Class used to test the TCP socket API.
  */
-class TcpSocket : public join::EventHandler, public ::testing::Test
+class TcpSocket : public Tcp::Acceptor, public ::testing::Test
 {
 protected:
     /**
@@ -46,8 +46,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (_acceptor.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -57,7 +56,7 @@ protected:
     void TearDown ()
     {
         ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
-        _acceptor.close ();
+        this->close ();
     }
 
     /**
@@ -65,7 +64,7 @@ protected:
      */
     virtual void onReceive () override
     {
-        Tcp::Socket sock = _acceptor.accept ();
+        Tcp::Socket sock = this->accept ();
         if (sock.connected ())
         {
             char buf[1024];
@@ -88,34 +87,6 @@ protected:
         }
     }
 
-    /**
-     * @brief method called when handle is closed.
-     */
-    virtual void onClose () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief method called when an error occured on handle.
-     */
-    virtual void onError () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief get native handle.
-     * @return native handle.
-     */
-    virtual int handle () const override
-    {
-        return _acceptor.handle ();
-    }
-
-    /// server socket.
-    static Tcp::Acceptor _acceptor;
-
     /// host.
     static const std::string _host;
 
@@ -126,7 +97,6 @@ protected:
     static const int _timeout;
 };
 
-Tcp::Acceptor     TcpSocket::_acceptor;
 const std::string TcpSocket::_host    = "localhost";
 const uint16_t    TcpSocket::_port    = 5000;
 const int         TcpSocket::_timeout = 1000;

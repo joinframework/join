@@ -49,8 +49,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (_acceptor.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (_acceptor.listen (), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     }
 
     /**
@@ -71,6 +70,7 @@ protected:
         {
             ScopedLock lock (_mut);
             _server.readExactly (_event, _server.canRead ());
+            EventHandler::onReceive ();
         }
 
         _cond.signal ();
@@ -87,6 +87,7 @@ protected:
         {
             ScopedLock lock (_mut);
             _event = "onClose";
+            EventHandler::onClose ();
         }
 
         _cond.signal ();
@@ -103,6 +104,7 @@ protected:
         {
             ScopedLock lock (_mut);
             _event = "onError";
+            EventHandler::onError ();
         }
 
         _cond.signal ();
@@ -112,7 +114,7 @@ protected:
      * @brief get native handle.
      * @return native handle.
      */
-    virtual int handle () const override
+    virtual int handle () const noexcept override
     {
         return _server.handle ();
     }

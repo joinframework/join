@@ -32,6 +32,7 @@
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
+#include <openssl/evp.h>
 #include <openssl/ssl.h>
 
 // C++.
@@ -100,6 +101,21 @@ namespace join
     };
 
     using EvpPkeyCtxPtr = std::unique_ptr <EVP_PKEY_CTX, EvpPkeyCtxDelete>;
+
+    /**
+     * @brief custom functor for EVP_ENCODE_CTX deletion.
+     */
+    struct EvpEncodeCtxDelete
+    {
+        constexpr EvpEncodeCtxDelete () noexcept = default;
+
+        void operator ()(EVP_ENCODE_CTX* evpEncodeCtx)
+        {
+            EVP_ENCODE_CTX_free (evpEncodeCtx);
+        }
+    };
+
+    using EvpEncodeCtxPtr = std::unique_ptr <EVP_ENCODE_CTX, EvpEncodeCtxDelete>;
 
     /**
      * @brief custom functor for EVP_MD_CTX deletion.

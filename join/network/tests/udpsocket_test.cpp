@@ -39,7 +39,7 @@ using join::Udp;
 /**
  * @brief Class used to test the UDP socket API.
  */
-class UdpSocket : public join::EventHandler, public ::testing::Test
+class UdpSocket : public Udp::Socket, public ::testing::Test
 {
 protected:
     /**
@@ -47,7 +47,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (_socket.bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -57,7 +57,7 @@ protected:
     void TearDown ()
     {
         ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
-        _socket.close ();
+        this->close ();
     }
 
     /**
@@ -65,44 +65,17 @@ protected:
      */
     virtual void onReceive () override
     {
-        auto buffer = std::make_unique <char []> (_socket.canRead ());
+        auto buffer = std::make_unique <char []> (this->canRead ());
         if (buffer)
         {
             Udp::Endpoint from;
-            int nread = _socket.readFrom (buffer.get (), _socket.canRead (), &from);
+            int nread = this->readFrom (buffer.get (), this->canRead (), &from);
             if (nread > 0)
             {
-                _socket.writeTo (buffer.get (), nread, from);
+                this->writeTo (buffer.get (), nread, from);
             }
         }
     }
-    /**
-     * @brief method called when handle is closed.
-     */
-    virtual void onClose () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief method called when an error occured on handle.
-     */
-    virtual void onError () override
-    {
-        // do nothing.
-    }
-
-    /**
-     * @brief get native handle.
-     * @return native handle.
-     */
-    virtual int handle () const override
-    {
-        return _socket.handle ();
-    }
-
-    /// socket.
-    static Udp::Socket _socket;
 
     /// host.
     static const std::string _host;
@@ -114,7 +87,6 @@ protected:
     static const int _timeout;
 };
 
-Udp::Socket       UdpSocket::_socket;
 const std::string UdpSocket::_host = "localhost";
 const uint16_t    UdpSocket::_port = 5000;
 const int         UdpSocket::_timeout = 1000;
@@ -317,7 +289,7 @@ TEST_F (UdpSocket, writeTo)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
     char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
-    ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.open (Udp::v6 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.writeTo (data, sizeof (data), {"255.255.255.255", _port}), -1);
     ASSERT_EQ (udpSocket.writeTo (data, sizeof (data), {Resolver::resolveHost (_host), _port}), sizeof (data)) << join::lastError.message ();
@@ -439,7 +411,7 @@ TEST_F (UdpSocket, opened)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_FALSE (udpSocket.opened ());
-    ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.open (Udp::v6 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.opened ());
     ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.opened ());
@@ -455,7 +427,7 @@ TEST_F (UdpSocket, connected)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_FALSE (udpSocket.opened ());
-    ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.open (Udp::v6 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.connected ());
     ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.connected ());
@@ -471,7 +443,7 @@ TEST_F (UdpSocket, encrypted)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_FALSE (udpSocket.opened ());
-    ASSERT_EQ (udpSocket.open (Udp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.open (Udp::v6 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.encrypted ());
     ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.encrypted ());
