@@ -280,7 +280,7 @@ void HttpMessage::readHeaders (std::istream& in)
     bool firstLine = true;
     std::string line;
 
-    while (getline (in, line, _maxHeaderLen))
+    while (join::getline (in, line, _maxHeaderLen))
     {
         if (firstLine)
         {
@@ -304,42 +304,6 @@ void HttpMessage::readHeaders (std::istream& in)
             return;
         }
     }
-}
-
-// =========================================================================
-//   CLASS     : HttpMessage
-//   METHOD    : getline
-// =========================================================================
-std::istream& HttpMessage::getline (std::istream& in, std::string& line, std::streamsize max)
-{
-    line.clear ();
-
-    while (max--)
-    {
-        char ch = in.get ();
-        if (in.eof ())
-        {
-            join::lastError = make_error_code (Errc::ConnectionClosed);
-            return in;
-        }
-
-        if (ch == '\r')
-        {
-            continue;
-        }
-
-        if (ch == '\n')
-        {
-            return in;
-        }
-
-        line.push_back (ch);
-    }
-
-    join::lastError = make_error_code (HttpErrc::HeaderTooLarge);
-    in.setstate (std::ios_base::failbit);
-
-    return in;
 }
 
 // =========================================================================

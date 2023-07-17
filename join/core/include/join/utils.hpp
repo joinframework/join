@@ -25,6 +25,9 @@
 #ifndef __JOIN_UTILS_HPP__
 #define __JOIN_UTILS_HPP__
 
+// libjoin.
+#include <join/error.hpp>
+
 // C++.
 #include <stdexcept>
 #include <iostream>
@@ -233,6 +236,44 @@ namespace join
         }
 
         return str;
+    }
+
+    /**
+     * @brief read HTTP line (delimiter "\r\n").
+     * @param in input stream.
+     * @param line line read.
+     * @param max max characters to read.
+     * @return input stream.
+     */
+    __inline__ std::istream& getline (std::istream& in, std::string& line, std::streamsize max = 1024)
+    {
+        line.clear ();
+
+        while (max--)
+        {
+            char ch = in.get ();
+            if (in.fail ())
+            {
+                return in;
+            }
+
+            if (ch == '\r')
+            {
+                continue;
+            }
+
+            if (ch == '\n')
+            {
+                return in;
+            }
+
+            line.push_back (ch);
+        }
+
+        join::lastError = make_error_code (Errc::MessageTooLong);
+        in.setstate (std::ios_base::failbit);
+
+        return in;
     }
 
     /**

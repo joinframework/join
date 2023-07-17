@@ -198,6 +198,35 @@ TEST_F (TcpSocketStream, encrypted)
 }
 
 /**
+ * @brief Test localEndpoint method.
+ */
+TEST_F (TcpSocketStream, localEndpoint)
+{
+    Tcp::Stream tcpStream;
+    ASSERT_EQ (tcpStream.localEndpoint (), Tcp::Endpoint {});
+    ASSERT_EQ (tcpStream.socket ().bind ({Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tcpStream.connected ());
+    ASSERT_EQ (tcpStream.localEndpoint (), Tcp::Endpoint (Resolver::resolveHost (_host), uint16_t (_port + 1))) << join::lastError.message ();
+    tcpStream.close ();
+}
+
+/**
+ * @brief Test remoteEndpoint method.
+ */
+TEST_F (TcpSocketStream, remoteEndpoint)
+{
+    Tcp::Stream tcpStream;
+    ASSERT_EQ (tcpStream.remoteEndpoint (), Tcp::Endpoint {});
+    tcpStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tcpStream.connected ());
+    ASSERT_EQ (tcpStream.remoteEndpoint (), Tcp::Endpoint (Resolver::resolveHost (_host), _port)) << join::lastError.message ();
+    tcpStream.close ();
+}
+
+/**
  * @brief Test timeout method.
  */
 TEST_F (TcpSocketStream, timeout)
@@ -231,7 +260,7 @@ TEST_F (TcpSocketStream, insert)
     Tcp::Stream tcpStream;
     tcpStream << "test" << std::endl;
     ASSERT_TRUE (tcpStream.fail ());
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
     tcpStream.clear ();
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
@@ -249,7 +278,7 @@ TEST_F (TcpSocketStream, put)
     Tcp::Stream tcpStream;
     tcpStream.put ('t');
     ASSERT_TRUE (tcpStream.fail ());
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
     tcpStream.clear ();
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
@@ -270,7 +299,7 @@ TEST_F (TcpSocketStream, write)
     Tcp::Stream tcpStream;
     tcpStream.write ("test", 4);
     ASSERT_TRUE (tcpStream.fail ());
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
     tcpStream.clear ();
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
@@ -310,7 +339,7 @@ TEST_F (TcpSocketStream, extract)
     Tcp::Stream tcpStream;
     tcpStream >> test;
     ASSERT_TRUE (tcpStream.fail ());
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
     tcpStream.clear ();
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
@@ -329,7 +358,7 @@ TEST_F (TcpSocketStream, get)
     Tcp::Stream tcpStream;
     tcpStream.get ();
     ASSERT_TRUE (tcpStream.fail ());
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
     tcpStream.clear ();
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
