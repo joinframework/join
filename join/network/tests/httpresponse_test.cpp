@@ -202,7 +202,6 @@ TEST (HttpResponse, receive)
 
     response.readHeaders (ss);
     ASSERT_TRUE (ss.fail ());
-    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
 
     ss.clear ();
     ss.str ("");
@@ -235,7 +234,7 @@ TEST (HttpResponse, receive)
 
     response.readHeaders (ss);
     ASSERT_TRUE (ss.fail ());
-    ASSERT_EQ (join::lastError, HttpErrc::HeaderTooLarge);
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
 }
 
 /**

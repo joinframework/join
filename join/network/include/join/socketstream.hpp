@@ -133,8 +133,6 @@ namespace join
          */
         BasicSocketStreambuf* connect (const Endpoint& endpoint)
         {
-            _socket.close ();
-
             this->allocateBuffer ();
 
             if (_socket.connect (endpoint) == -1)
@@ -146,6 +144,7 @@ namespace join
 
                 if (!_socket.waitConnected (_timeout))
                 {
+                    _socket.close ();
                     return nullptr;
                 }
             }
@@ -217,7 +216,7 @@ namespace join
         {
             if (!_socket.connected ())
             {
-                lastError = make_error_code (Errc::OperationFailed);
+                lastError = make_error_code (Errc::ConnectionClosed);
                 return traits_type::eof ();
             }
 
@@ -288,7 +287,7 @@ namespace join
         {
             if (!_socket.connected ())
             {
-                lastError = make_error_code (Errc::OperationFailed);
+                lastError = make_error_code (Errc::ConnectionClosed);
                 return traits_type::eof ();
             }
 
