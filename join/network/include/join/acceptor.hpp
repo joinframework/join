@@ -308,6 +308,7 @@ namespace join
                 return {};
             }
 
+            client._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
             client._state = Socket::Connected;
 
             if (client.setMode (Socket::NonBlocking) == -1)
@@ -487,6 +488,7 @@ namespace join
                 return {};
             }
 
+            client._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
             client._state = Socket::Connected;
 
             // set client socket mode.

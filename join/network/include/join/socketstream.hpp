@@ -564,6 +564,24 @@ namespace join
         }
 
         /**
+         * @brief determine the local endpoint associated with this socket.
+         * @return local endpoint.
+         */
+        Endpoint localEndpoint () const
+        {
+            return this->rdbuf ()->socket ().localEndpoint ();
+        }
+
+        /**
+         * @brief determine the remote endpoint associated with this socket.
+         * @return remote endpoint.
+         */
+        const Endpoint& remoteEndpoint () const
+        {
+            return this->rdbuf ()->socket ().remoteEndpoint ();
+        }
+
+        /**
          * @brief get the associated stream buffer.
          * @return The associated stream buffer.
          */
