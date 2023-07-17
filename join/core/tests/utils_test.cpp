@@ -32,6 +32,8 @@
 #include <sstream>
 #include <thread>
 
+using join::Errc;
+
 using namespace std::chrono_literals;
 
 /**
@@ -115,6 +117,29 @@ TEST (Utils, replaceAll)
 {
     std::string str ("replace all other by other");
     ASSERT_EQ (join::replaceAll (str, "other", "OTHER"), "replace all OTHER by OTHER");
+}
+
+/**
+ * @brief Test getline.
+ */
+TEST (Utils, getline)
+{
+    std::stringstream stream;
+    std::string line;
+
+    stream.clear ();
+    stream.str ("no end line");
+    ASSERT_FALSE (join::getline (stream, line));
+
+    stream.clear ();
+    stream.str ("too long\r\n");
+    ASSERT_FALSE (join::getline (stream, line, 1));
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
+
+    stream.clear ();
+    stream.str ("ok\r\n");
+    ASSERT_TRUE (join::getline (stream, line));
+    ASSERT_EQ (line, "ok");
 }
 
 /**
