@@ -30,3 +30,7 @@ add_executable(reactor.gtest reactor_test.cpp)
 target_link_libraries(reactor.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(reactor.gtest)
 
+add_executable(zstream.gtest zstream_test.cpp)
+target_link_libraries(zstream.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(zstream.gtest)
+
