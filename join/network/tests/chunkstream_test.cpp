@@ -58,12 +58,20 @@ TEST (Chunkstream, encode)
     std::stringstream ss;
 
     // encode.
-    Chunkstream stream  = std::move (Chunkstream (ss, chuncksize));
+    Chunkstream stream = std::move (Chunkstream (ss, chuncksize));
     stream.write (decoded.c_str (), decoded.size ());
     stream.flush ();
-
-    // check encoding result.
+    ASSERT_TRUE (stream.good ());
     ASSERT_EQ (ss.str (), encoded);
+
+    // check invalid concrete stream.
+    ss.clear (std::ios::failbit);
+    ss.str ("");
+
+    stream = Chunkstream (ss, chuncksize);
+    stream.write ("18\r\nLorem ipsum dolor sit am\r\n0\r\n\r\n", 35);
+    stream.flush ();
+    ASSERT_TRUE (stream.fail ());
 }
 
 /**
@@ -73,14 +81,20 @@ TEST (Chunkstream, decode)
 {
     // concrete stream.
     std::stringstream ss (encoded);
+    char out[2048];
 
     // decode.
     Chunkstream stream (ss, chuncksize);
-    char out[2048];
     stream.read (out, sizeof (out));
-
-    // check decoding result.
     ASSERT_EQ (decoded, std::string (out, out + stream.gcount ()));
+
+    // check extension.
+    ss.clear (std::ios::goodbit);
+    ss.str ("18;ext\r\nLorem ipsum dolor sit am\r\n0\r\n\r\n");
+
+    stream = Chunkstream (ss, chuncksize);
+    stream.read (out, sizeof (out));
+    ASSERT_EQ ("Lorem ipsum dolor sit am", std::string (out, out + stream.gcount ()));
 
     // check empty chunk size.
     ss.clear (std::ios::goodbit);
@@ -88,7 +102,6 @@ TEST (Chunkstream, decode)
 
     stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
-    ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
@@ -107,7 +120,6 @@ TEST (Chunkstream, decode)
 
     stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
-    ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
     ASSERT_EQ (join::lastError, Errc::MessageTooLong);
 
@@ -117,7 +129,6 @@ TEST (Chunkstream, decode)
 
     stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
-    ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
@@ -127,7 +138,6 @@ TEST (Chunkstream, decode)
 
     stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
-    ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
 
     // check invalid data.
@@ -136,7 +146,6 @@ TEST (Chunkstream, decode)
 
     stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
-    ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
 
     // check invalid data.
@@ -145,7 +154,6 @@ TEST (Chunkstream, decode)
 
     stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
-    ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
 }
 
