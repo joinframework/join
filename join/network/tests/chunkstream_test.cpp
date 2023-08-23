@@ -58,7 +58,7 @@ TEST (Chunkstream, encode)
     std::stringstream ss;
 
     // encode.
-    Chunkstream stream (ss, chuncksize);
+    Chunkstream stream  = std::move (Chunkstream (ss, chuncksize));
     stream.write (decoded.c_str (), decoded.size ());
     stream.flush ();
 
@@ -83,67 +83,67 @@ TEST (Chunkstream, decode)
     ASSERT_EQ (decoded, std::string (out, out + stream.gcount ()));
 
     // check empty chunk size.
-    ss.clear ();
+    ss.clear (std::ios::goodbit);
     ss.str ("\r\nThis is an empty chunk size\r\n\r\n0\r\n\r\n");
-    stream.clear ();
 
+    stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
     ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     // check invalid chunk size.
-    ss.clear ();
+    ss.clear (std::ios::goodbit);
     ss.str ("XX\r\nThis is an invalid chunk size\r\n\r\n0\r\n\r\n");
-    stream.clear ();
 
+    stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
     ASSERT_TRUE (stream.fail ());
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     // check too big chunk size.
-    ss.clear ();
+    ss.clear (std::ios::goodbit);
     ss.str ("24\r\nThis is a too big chunk size\r\n\r\n0\r\n\r\n");
-    stream.clear ();
 
+    stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
     ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
     ASSERT_EQ (join::lastError, Errc::MessageTooLong);
 
     // check missing end line.
-    ss.clear ();
+    ss.clear (std::ios::goodbit);
     ss.str ("12\r\nMissing end line\r\n0\r\n\r\n");
-    stream.clear ();
 
+    stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
     ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    // check .
-    ss.clear ();
+    // check invalid data.
+    ss.clear (std::ios::goodbit);
     ss.str ("18\r\n\r\n0\r\n\r\n");
-    stream.clear ();
 
+    stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
     ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
 
-    // check .
-    ss.clear ();
+    // check invalid data.
+    ss.clear (std::ios::goodbit);
     ss.str ("0\r\n");
-    stream.clear ();
 
+    stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
     ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());
 
-    // check .
-    ss.clear ();
+    // check invalid data.
+    ss.clear (std::ios::goodbit);
     ss.str ("18");
-    stream.clear ();
 
+    stream = Chunkstream (ss, chuncksize);
     stream.read (out, sizeof (out));
     ASSERT_FALSE (stream.good ());
     ASSERT_TRUE (stream.fail ());

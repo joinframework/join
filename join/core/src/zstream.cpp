@@ -24,6 +24,7 @@
 
 // libjoin.
 #include <join/zstream.hpp>
+#include <join/error.hpp>
 
 using join::Zstreambuf;
 using join::Zstream;
@@ -76,7 +77,10 @@ Zstreambuf::~Zstreambuf ()
     }
     if (_deflate)
     {
-        overflow ();
+        if (_ostream)
+        {
+            overflow ();
+        }
         deflateEnd (_deflate.get ());
     }
 }
@@ -110,6 +114,7 @@ Zstreambuf::int_type Zstreambuf::underflow ()
         int res = ::inflate (_inflate.get (), Z_NO_FLUSH);
         if ((res != Z_OK) && (res != Z_STREAM_END))
         {
+            join::lastError = make_error_code (Errc::OperationFailed);
             return traits_type::eof ();
         }
 
@@ -148,6 +153,7 @@ Zstreambuf::int_type Zstreambuf::overflow (int_type c)
             int res = ::deflate (_deflate.get (), (c == traits_type::eof ()) ? Z_FINISH : Z_NO_FLUSH);
             if ((res != Z_OK) && (res != Z_STREAM_END))
             {
+                join::lastError = make_error_code (Errc::OperationFailed);
                 return traits_type::eof ();
             }
 

@@ -69,7 +69,10 @@ Chunkstreambuf& Chunkstreambuf::operator= (Chunkstreambuf&& other)
 // =========================================================================
 Chunkstreambuf::~Chunkstreambuf ()
 {
-    overflow ();
+    if (_ostream)
+    {
+        overflow ();
+    }
 }
 
 // =========================================================================
@@ -92,7 +95,11 @@ Chunkstreambuf::int_type Chunkstreambuf::underflow ()
             return traits_type::eof ();
         }
 
-        line = line.substr (0, line.find (";"));
+        auto pos = line.find (";");
+        if (pos != std::string::npos)
+        {
+            line.resize (pos);
+        }
 
         std::stringstream ss;
         ss << std::hex << line;
@@ -155,38 +162,36 @@ Chunkstreambuf::int_type Chunkstreambuf::overflow (int_type c)
         setp (_buf.get () + _chunksize, _buf.get () + (2 * _chunksize));
     }
 
-    if ((pptr () < epptr ()) && (c != traits_type::eof ()))
+    if ((pptr () == epptr ()) || (c == traits_type::eof ()))
     {
-        return sputc (traits_type::to_char_type (c));
-    }
-
-    std::streamsize pending = pptr () - pbase ();
-    if (pending)
-    {
-        *_ostream << std::hex << pending << std::dec << "\r\n";
-        _ostream->write (pbase (), pending);
-        *_ostream << "\r\n";
-
-        if (_ostream->fail ())
+        std::streamsize pending = pptr () - pbase ();
+        if (pending)
         {
-            return traits_type::eof ();
-        }
-    }
+            *_ostream << std::hex << pending << std::dec << "\r\n";
+            _ostream->write (pbase (), pending);
+            *_ostream << "\r\n";
 
-    if (c == traits_type::eof ())
-    {
-        *_ostream << std::hex << std::streamsize (0) << std::dec << "\r\n";
-        *_ostream << "\r\n";
-
-        if (_ostream->fail ())
-        {
-            return traits_type::eof ();
+            if (_ostream->fail ())
+            {
+                return traits_type::eof ();
+            }
         }
 
-        return traits_type::not_eof (c);
-    }
+        if (c == traits_type::eof ())
+        {
+            *_ostream << std::hex << std::streamsize (0) << std::dec << "\r\n";
+            *_ostream << "\r\n";
 
-    setp (pbase (), pbase () + _chunksize);
+            if (_ostream->fail ())
+            {
+                return traits_type::eof ();
+            }
+
+            return traits_type::not_eof (c);
+        }
+
+        setp (pbase (), pbase () + _chunksize);
+    }
 
     return sputc (traits_type::to_char_type (c));
 }

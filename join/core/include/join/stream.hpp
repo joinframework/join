@@ -70,6 +70,8 @@ namespace join
           _istream (other._istream),
           _ostream (other._ostream)
         {
+            other._istream = nullptr;
+            other._ostream = nullptr;
         }
 
         /**
@@ -83,6 +85,8 @@ namespace join
             _buf = std::move (other._buf);
             _istream = other._istream;
             _istream = other._istream;
+            other._istream = nullptr;
+            other._ostream = nullptr;
             return *this;
         }
 
