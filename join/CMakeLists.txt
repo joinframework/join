@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.14)
 find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
+find_package(ZLIB REQUIRED)
+include_directories(${ZLIB_INCLUDE_DIRS})
+
 set(PRIVATE_HEADER_DIRS
     core/src
     thread/src
@@ -28,6 +31,7 @@ set(PUBLIC_HEADERS
     core/include/join/view.hpp
     core/include/join/cache.hpp
     core/include/join/reactor.hpp
+    core/include/join/zstream.hpp
     thread/include/join/mutex.hpp
     thread/include/join/condition.hpp
     thread/include/join/thread.hpp
@@ -60,6 +64,7 @@ set(SOURCES
     core/src/error.cpp
     core/src/cache.cpp
     core/src/reactor.cpp
+    core/src/zstream.cpp
     thread/src/mutex.cpp
     thread/src/condition.cpp
     thread/src/thread.cpp
@@ -88,7 +93,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${PUBLIC_HEADERS
 target_include_directories(${PROJECT_NAME} PUBLIC  ${PUBLIC_HEADER_DIRS})
 target_include_directories(${PROJECT_NAME} PRIVATE ${PRIVATE_HEADER_DIRS})
 
-target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES} pthread)
+target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} pthread)
 
 install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION lib
