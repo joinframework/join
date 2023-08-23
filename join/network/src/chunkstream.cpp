@@ -23,73 +23,63 @@
  */
 
 // libjoin.
-#include <join/zstream.hpp>
-#include <join/error.hpp>
+#include <join/chunkstream.hpp>
+#include <join/utils.hpp>
 
-using join::Zstreambuf;
-using join::Zstream;
+// C++.
+#include <sstream>
+
+using join::Chunkstreambuf;
+using join::Chunkstream;
 
 // =========================================================================
-//   CLASS     : Zstreambuf
-//   METHOD    : Zstreambuf
+//   CLASS     : Chunkstreambuf
+//   METHOD    : Chunkstreambuf
 // =========================================================================
-Zstreambuf::Zstreambuf (std::istream& istream, std::ostream& ostream, int format)
-: StreambufDecorator (istream, ostream, 4 * _bufsize),
-  _inflate (std::make_unique <z_stream> ()),
-  _deflate (std::make_unique <z_stream> ())
+Chunkstreambuf::Chunkstreambuf (std::istream& istream, std::ostream& ostream, std::streamsize chunksize)
+: StreambufDecorator (istream, ostream, 2 * chunksize),
+  _chunksize (chunksize)
 {
-    inflateInit2 (_inflate.get (), format);
-    deflateInit2 (_deflate.get (), Z_DEFAULT_COMPRESSION, Z_DEFLATED, format, 8, Z_DEFAULT_STRATEGY);
 }
 
 // =========================================================================
-//   CLASS     : Zstreambuf
-//   METHOD    : Zstreambuf
+//   CLASS     : Chunkstreambuf
+//   METHOD    : Chunkstreambuf
 // =========================================================================
-Zstreambuf::Zstreambuf (Zstreambuf&& other)
+Chunkstreambuf::Chunkstreambuf (Chunkstreambuf&& other)
 : StreambufDecorator (std::move (other)),
-  _inflate (std::move (other._inflate)),
-  _deflate (std::move (other._deflate))
+  _chunksize (other._chunksize)
 {
 }
 
 // =========================================================================
-//   CLASS     : Zstreambuf
+//   CLASS     : Chunkstreambuf
 //   METHOD    : operator=
 // =========================================================================
-Zstreambuf& Zstreambuf::operator= (Zstreambuf&& other)
+Chunkstreambuf& Chunkstreambuf::operator= (Chunkstreambuf&& other)
 {
     StreambufDecorator::operator= (std::move (other));
-    _inflate = std::move (other._inflate);
-    _deflate = std::move (other._deflate);
+    _chunksize = other._chunksize;
     return *this;
 }
 
 // =========================================================================
-//   CLASS     : Zstreambuf
-//   METHOD    : ~Zstreambuf
+//   CLASS     : Chunkstreambuf
+//   METHOD    : ~Chunkstreambuf
 // =========================================================================
-Zstreambuf::~Zstreambuf ()
+Chunkstreambuf::~Chunkstreambuf ()
 {
-    if (_inflate)
+    if (_ostream)
     {
-        inflateEnd (_inflate.get ());
-    }
-    if (_deflate)
-    {
-        if (_ostream)
-        {
-            overflow ();
-        }
-        deflateEnd (_deflate.get ());
+        overflow ();
     }
 }
 
 // =========================================================================
-//   CLASS     : Zstreambuf
+//   CLASS     : Chunkstreambuf
 //   METHOD    : underflow
 // =========================================================================
-Zstreambuf::int_type Zstreambuf::underflow ()
+Chunkstreambuf::int_type Chunkstreambuf::underflow ()
 {
     if (eback () == nullptr)
     {
@@ -98,131 +88,160 @@ Zstreambuf::int_type Zstreambuf::underflow ()
 
     if (this->gptr () == this->egptr ())
     {
-        if (_inflate->avail_in == 0)
-        {
-            _inflate->next_in = reinterpret_cast <uint8_t*> (eback () + _bufsize);
-            _istream->read (eback () + _bufsize, _bufsize);
-            _inflate->avail_in = _istream->gcount ();
-            if (_inflate->avail_in == 0)
-            {
-                return traits_type::eof ();
-            }
-        }
+        std::string line;
 
-        _inflate->next_out = reinterpret_cast <uint8_t*> (eback ());
-        _inflate->avail_out = _bufsize;
-        int res = ::inflate (_inflate.get (), Z_NO_FLUSH);
-        if ((res != Z_OK) && (res != Z_STREAM_END))
+        if (!join::getline (*_istream, line))
         {
-            join::lastError = make_error_code (Errc::OperationFailed);
             return traits_type::eof ();
         }
 
-        if ((res == Z_STREAM_END) && (_inflate->avail_in > 0))
+        auto pos = line.find (";");
+        if (pos != std::string::npos)
         {
-            inflateReset (_inflate.get ());
+            line.resize (pos);
         }
 
-        setg (eback (), eback (), eback () + (_bufsize - _inflate->avail_out));
+        std::stringstream ss;
+        ss << std::hex << line;
+
+        std::streamsize chunksize = 0;
+        if (!(ss >> chunksize))
+        {
+            join::lastError = make_error_code (Errc::InvalidParam);
+            return traits_type::eof ();
+        }
+
+        if (chunksize > _chunksize)
+        {
+            join::lastError = make_error_code (Errc::MessageTooLong);
+            return traits_type::eof ();
+        }
+
+        std::streamsize nread = 0;
+
+        while (nread < chunksize)
+        {
+            _istream->read (eback () + nread, chunksize - nread);
+            if (_istream->fail ())
+            {
+                return traits_type::eof ();
+            }
+            nread += _istream->gcount ();
+        }
+
+        if (!join::getline (*_istream, line))
+        {
+            return traits_type::eof ();
+        }
+
+        if (!line.empty ())
+        {
+            join::lastError = make_error_code (Errc::InvalidParam);
+            return traits_type::eof ();
+        }
+
+        if (!chunksize)
+        {
+            return traits_type::eof ();
+        }
+
+        setg (eback (), eback (), eback () + chunksize);
     }
 
     return traits_type::to_int_type (*gptr ());
 }
 
 // =========================================================================
-//   CLASS     : Zstreambuf
+//   CLASS     : Chunkstreambuf
 //   METHOD    : overflow
 // =========================================================================
-Zstreambuf::int_type Zstreambuf::overflow (int_type c)
+Chunkstreambuf::int_type Chunkstreambuf::overflow (int_type c)
 {
     if (pbase () == nullptr)
     {
-        setp (_buf.get () + (2 * _bufsize), _buf.get () + (3 * _bufsize));
+        setp (_buf.get () + _chunksize, _buf.get () + (2 * _chunksize));
     }
 
     if ((pptr () == epptr ()) || (c == traits_type::eof ()))
     {
-        _deflate->next_in = reinterpret_cast <uint8_t*> (pbase ());
-        _deflate->avail_in = pptr () - pbase ();
-
-        while (_deflate->avail_in)
+        std::streamsize pending = pptr () - pbase ();
+        if (pending)
         {
-            _deflate->next_out = reinterpret_cast <uint8_t*> (pbase () + _bufsize);
-            _deflate->avail_out = _bufsize;
+            *_ostream << std::hex << pending << std::dec << "\r\n";
+            _ostream->write (pbase (), pending);
+            *_ostream << "\r\n";
 
-            int res = ::deflate (_deflate.get (), (c == traits_type::eof ()) ? Z_FINISH : Z_NO_FLUSH);
-            if ((res != Z_OK) && (res != Z_STREAM_END))
-            {
-                join::lastError = make_error_code (Errc::OperationFailed);
-                return traits_type::eof ();
-            }
-
-            _ostream->write (pbase () + _bufsize, _bufsize - _deflate->avail_out);
             if (_ostream->fail ())
             {
                 return traits_type::eof ();
             }
         }
 
-        setp (pbase (), pbase () + _bufsize);
-
         if (c == traits_type::eof ())
         {
+            *_ostream << std::hex << std::streamsize (0) << std::dec << "\r\n";
+            *_ostream << "\r\n";
+
+            if (_ostream->fail ())
+            {
+                return traits_type::eof ();
+            }
+
             return traits_type::not_eof (c);
         }
+
+        setp (pbase (), pbase () + _chunksize);
     }
 
     return sputc (traits_type::to_char_type (c));
 }
 
 // =========================================================================
-//   CLASS     : Zstreambuf
+//   CLASS     : Chunkstreambuf
 //   METHOD    : sync
 // =========================================================================
-Zstreambuf::int_type Zstreambuf::sync ()
+Chunkstreambuf::int_type Chunkstreambuf::sync ()
 {
-    int_type ret = overflow ();
-    deflateReset (_deflate.get ());
-    return ret;
+    return overflow ();
 }
 
 // =========================================================================
-//   CLASS     : Zstream
-//   METHOD    : Zstream
+//   CLASS     : Chunkstream
+//   METHOD    : Chunkstream
 // =========================================================================
-Zstream::Zstream (std::iostream& stream, Format format)
-: Zstream (stream, stream, format)
+Chunkstream::Chunkstream (std::iostream& stream, std::streamsize chunksize)
+: Chunkstream (stream, stream, chunksize)
 {
 }
 
 // =========================================================================
-//   CLASS     : Zstream
-//   METHOD    : Zstream
+//   CLASS     : Chunkstream
+//   METHOD    : Chunkstream
 // =========================================================================
-Zstream::Zstream (std::istream& istream, std::ostream& ostream, Format format)
-: _zbuf (istream, ostream, format)
+Chunkstream::Chunkstream (std::istream& istream, std::ostream& ostream, std::streamsize chunksize)
+: _chunkbuf (istream, ostream, chunksize)
 {
-    init (&_zbuf);
+    init (&_chunkbuf);
 }
 
 // =========================================================================
-//   CLASS     : Zstream
-//   METHOD    : Zstream
+//   CLASS     : Chunkstream
+//   METHOD    : Chunkstream
 // =========================================================================
-Zstream::Zstream (Zstream&& other)
+Chunkstream::Chunkstream (Chunkstream&& other)
 : std::iostream (std::move (other)),
-  _zbuf (std::move (other._zbuf))
+  _chunkbuf (std::move (other._chunkbuf))
 {
-    set_rdbuf (&_zbuf);
+    set_rdbuf (&_chunkbuf);
 }
 
 // =========================================================================
-//   CLASS     : Zstream
+//   CLASS     : Chunkstream
 //   METHOD    : operator=
 // =========================================================================
-Zstream& Zstream::operator=(Zstream&& other)
+Chunkstream& Chunkstream::operator=(Chunkstream&& other)
 {
     std::iostream::operator= (std::move (other));
-    _zbuf = std::move (other._zbuf);
+    _chunkbuf = std::move (other._chunkbuf);
     return *this;
 }

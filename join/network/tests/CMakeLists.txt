@@ -78,6 +78,10 @@ add_executable(arp.gtest arp_test.cpp)
 target_link_libraries(arp.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(arp.gtest)
 
+add_executable(chunkstream.gtest chunkstream_test.cpp)
+target_link_libraries(chunkstream.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(chunkstream.gtest)
+
 add_executable(httperror.gtest httperror_test.cpp)
 target_link_libraries(httperror.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(httperror.gtest)
