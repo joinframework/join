@@ -50,6 +50,7 @@ set(PUBLIC_HEADERS
     network/include/join/socketstream.hpp
     network/include/join/acceptor.hpp
     network/include/join/arp.hpp
+    network/include/join/chunkstream.hpp
     network/include/join/httpmessage.hpp
     network/include/join/httpclient.hpp
     sax/include/join/diyfp.hpp
@@ -79,6 +80,7 @@ set(SOURCES
     network/src/resolver.cpp
     network/src/socket.cpp
     network/src/arp.cpp
+    network/src/chunkstream.cpp
     network/src/httpmessage.cpp
     network/src/httpclient.cpp
     sax/src/value.cpp
