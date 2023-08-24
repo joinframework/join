@@ -283,7 +283,7 @@ namespace join
      */
     __inline__ void dump (const void* data, unsigned long size, std::ostream& out = std::cout)
     {
-        unsigned char *buf = (unsigned char *) data;
+        const uint8_t *buf = reinterpret_cast <const uint8_t *> (data);
 
         for (int i = 0; i < int (size); i += 16)
         {
