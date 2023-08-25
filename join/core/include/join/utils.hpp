@@ -285,7 +285,12 @@ namespace join
      */
     __inline__ bool getline (std::istream& in, std::string& line, std::streamsize max = 1024)
     {
-        return getline (*in.rdbuf (), line, max);
+        if (!getline (*in.rdbuf (), line, max))
+        {
+            in.setstate (std::ios_base::failbit);
+            return false;
+        }
+        return true;
     }
 
     /**
