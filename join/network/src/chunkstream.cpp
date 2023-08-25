@@ -36,8 +36,8 @@ using join::Chunkstream;
 //   CLASS     : Chunkstreambuf
 //   METHOD    : Chunkstreambuf
 // =========================================================================
-Chunkstreambuf::Chunkstreambuf (std::istream& istream, std::ostream& ostream, std::streamsize chunksize)
-: StreambufDecorator (istream, ostream, 2 * chunksize),
+Chunkstreambuf::Chunkstreambuf (std::streambuf& streambuf, std::streamsize chunksize)
+: Streambuf (streambuf, 2 * chunksize),
   _chunksize (chunksize)
 {
 }
@@ -47,7 +47,7 @@ Chunkstreambuf::Chunkstreambuf (std::istream& istream, std::ostream& ostream, st
 //   METHOD    : Chunkstreambuf
 // =========================================================================
 Chunkstreambuf::Chunkstreambuf (Chunkstreambuf&& other)
-: StreambufDecorator (std::move (other)),
+: Streambuf (std::move (other)),
   _chunksize (other._chunksize)
 {
 }
@@ -58,7 +58,7 @@ Chunkstreambuf::Chunkstreambuf (Chunkstreambuf&& other)
 // =========================================================================
 Chunkstreambuf& Chunkstreambuf::operator= (Chunkstreambuf&& other)
 {
-    StreambufDecorator::operator= (std::move (other));
+    Streambuf::operator= (std::move (other));
     _chunksize = other._chunksize;
     return *this;
 }
@@ -69,7 +69,7 @@ Chunkstreambuf& Chunkstreambuf::operator= (Chunkstreambuf&& other)
 // =========================================================================
 Chunkstreambuf::~Chunkstreambuf ()
 {
-    if (_ostream)
+    if (_streambuf != nullptr)
     {
         overflow ();
     }
@@ -90,7 +90,7 @@ Chunkstreambuf::int_type Chunkstreambuf::underflow ()
     {
         std::string line;
 
-        if (!join::getline (*_istream, line))
+        if (!join::getline (*_streambuf, line))
         {
             return traits_type::eof ();
         }
@@ -117,19 +117,13 @@ Chunkstreambuf::int_type Chunkstreambuf::underflow ()
             return traits_type::eof ();
         }
 
-        std::streamsize nread = 0;
-
-        while (nread < chunksize)
+        std::streamsize sz = _streambuf->sgetn (eback (), chunksize);
+        if (sz != chunksize)
         {
-            _istream->read (eback () + nread, chunksize - nread);
-            if (_istream->fail ())
-            {
-                return traits_type::eof ();
-            }
-            nread += _istream->gcount ();
+            return traits_type::eof ();
         }
 
-        if (!join::getline (*_istream, line))
+        if (!join::getline (*_streambuf, line))
         {
             return traits_type::eof ();
         }
@@ -167,11 +161,13 @@ Chunkstreambuf::int_type Chunkstreambuf::overflow (int_type c)
         std::streamsize pending = pptr () - pbase ();
         if (pending)
         {
-            *_ostream << std::hex << pending << std::dec << "\r\n";
-            _ostream->write (pbase (), pending);
-            *_ostream << "\r\n";
+            std::stringstream oss;
+            oss << std::hex << pending << std::dec << "\r\n";
+            oss.write (pbase (), pending);
+            oss << "\r\n";
 
-            if (_ostream->fail ())
+            std::streamsize sz = _streambuf->sputn (oss.str ().c_str (), oss.str ().size ());
+            if (sz != std::streamsize (oss.str ().size ()))
             {
                 return traits_type::eof ();
             }
@@ -179,10 +175,12 @@ Chunkstreambuf::int_type Chunkstreambuf::overflow (int_type c)
 
         if (c == traits_type::eof ())
         {
-            *_ostream << std::hex << std::streamsize (0) << std::dec << "\r\n";
-            *_ostream << "\r\n";
+            std::stringstream oss;
+            oss << std::hex << std::streamsize (0) << std::dec << "\r\n";
+            oss << "\r\n";
 
-            if (_ostream->fail ())
+            std::streamsize sz = _streambuf->sputn (oss.str ().c_str (), oss.str ().size ());
+            if (sz != std::streamsize (oss.str ().size ()))
             {
                 return traits_type::eof ();
             }
@@ -210,16 +208,7 @@ Chunkstreambuf::int_type Chunkstreambuf::sync ()
 //   METHOD    : Chunkstream
 // =========================================================================
 Chunkstream::Chunkstream (std::iostream& stream, std::streamsize chunksize)
-: Chunkstream (stream, stream, chunksize)
-{
-}
-
-// =========================================================================
-//   CLASS     : Chunkstream
-//   METHOD    : Chunkstream
-// =========================================================================
-Chunkstream::Chunkstream (std::istream& istream, std::ostream& ostream, std::streamsize chunksize)
-: _chunkbuf (istream, ostream, chunksize)
+: _chunkbuf (*stream.rdbuf (), chunksize)
 {
     init (&_chunkbuf);
 }

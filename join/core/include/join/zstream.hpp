@@ -26,7 +26,7 @@
 #define __JOIN_ZSTREAM_HPP__
 
 // libjoin.
-#include <join/stream.hpp>
+#include <join/streambuf.hpp>
 
 // Libraries.
 #include <zlib.h>
@@ -36,16 +36,15 @@ namespace join
     /**
      * @brief zlib stream buffer.
      */
-    class Zstreambuf : public StreambufDecorator
+    class Zstreambuf : public Streambuf
     {
     public:
         /**
          * @brief create the zlib stream buffer instance.
-         * @param istream concrete input stream.
-         * @param ostream concrete output stream.
+         * @param streambuf concrete stream buffer
          * @param format compressed data format.
          */
-        Zstreambuf (std::istream& istream, std::ostream& ostream, int format);
+        Zstreambuf (std::streambuf& streambuf, int format);
 
         /**
          * @brief copy constructor.
@@ -130,14 +129,6 @@ namespace join
          * @param format compressed data format.
          */
         Zstream (std::iostream& stream, Format format = Zlib);
-
-        /**
-         * @brief create the zlib stream instance.
-         * @param istream concrete input stream.
-         * @param ostream concrete output stream.
-         * @param format compressed data format.
-         */
-        Zstream (std::istream& istream, std::ostream& ostream, Format format = Zlib);
 
         /**
          * @brief copy constructor.

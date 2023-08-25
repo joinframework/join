@@ -55,23 +55,16 @@ const std::string encoded = "18\r\nLorem ipsum dolor sit am\r\n18\r\net, consect
 TEST (Chunkstream, encode)
 {
     // concrete stream.
-    std::stringstream ss;
+    std::stringstream stream;
 
     // encode.
-    Chunkstream stream = std::move (Chunkstream (ss, chuncksize));
-    stream.write (decoded.c_str (), decoded.size ());
-    stream.flush ();
-    ASSERT_TRUE (stream.good ());
-    ASSERT_EQ (ss.str (), encoded);
+    Chunkstream chunkstream = std::move (Chunkstream (stream, chuncksize));
+    chunkstream.write (decoded.c_str (), decoded.size ());
+    chunkstream.flush ();
+    ASSERT_TRUE (chunkstream.good ());
 
-    // check invalid concrete stream.
-    ss.clear (std::ios::failbit);
-    ss.str ("");
-
-    stream = Chunkstream (ss, chuncksize);
-    stream.write ("18\r\nLorem ipsum dolor sit am\r\n0\r\n\r\n", 35);
-    stream.flush ();
-    ASSERT_TRUE (stream.fail ());
+    // check result
+    ASSERT_EQ (stream.str (), encoded);
 }
 
 /**
@@ -80,81 +73,81 @@ TEST (Chunkstream, encode)
 TEST (Chunkstream, decode)
 {
     // concrete stream.
-    std::stringstream ss (encoded);
+    std::stringstream stream (encoded);
     char out[2048];
 
     // decode.
-    Chunkstream stream (ss, chuncksize);
-    stream.read (out, sizeof (out));
-    ASSERT_EQ (decoded, std::string (out, out + stream.gcount ()));
+    Chunkstream chunkstream (stream, chuncksize);
+    chunkstream.read (out, sizeof (out));
+    ASSERT_EQ (decoded, std::string (out, out + chunkstream.gcount ()));
 
     // check extension.
-    ss.clear (std::ios::goodbit);
-    ss.str ("18;ext\r\nLorem ipsum dolor sit am\r\n0\r\n\r\n");
+    stream.clear (std::ios::goodbit);
+    stream.str ("18;ext\r\nLorem ipsum dolor sit am\r\n0\r\n\r\n");
 
-    stream = Chunkstream (ss, chuncksize);
-    stream.read (out, sizeof (out));
-    ASSERT_EQ ("Lorem ipsum dolor sit am", std::string (out, out + stream.gcount ()));
+    chunkstream = Chunkstream (stream, chuncksize);
+    chunkstream.read (out, sizeof (out));
+    ASSERT_EQ ("Lorem ipsum dolor sit am", std::string (out, out + chunkstream.gcount ()));
 
     // check empty chunk size.
-    ss.clear (std::ios::goodbit);
-    ss.str ("\r\nThis is an empty chunk size\r\n\r\n0\r\n\r\n");
+    stream.clear (std::ios::goodbit);
+    stream.str ("\r\nThis is an empty chunk size\r\n\r\n0\r\n\r\n");
 
-    stream = Chunkstream (ss, chuncksize);
-    stream.read (out, sizeof (out));
-    ASSERT_TRUE (stream.fail ());
+    chunkstream = Chunkstream (stream, chuncksize);
+    chunkstream.read (out, sizeof (out));
+    ASSERT_TRUE (chunkstream.fail ());
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     // check invalid chunk size.
-    ss.clear (std::ios::goodbit);
-    ss.str ("XX\r\nThis is an invalid chunk size\r\n\r\n0\r\n\r\n");
+    stream.clear (std::ios::goodbit);
+    stream.str ("XX\r\nThis is an invalid chunk size\r\n\r\n0\r\n\r\n");
 
-    stream = Chunkstream (ss, chuncksize);
-    stream.read (out, sizeof (out));
-    ASSERT_TRUE (stream.fail ());
+    chunkstream = Chunkstream (stream, chuncksize);
+    chunkstream.read (out, sizeof (out));
+    ASSERT_TRUE (chunkstream.fail ());
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     // check too big chunk size.
-    ss.clear (std::ios::goodbit);
-    ss.str ("24\r\nThis is a too big chunk size\r\n\r\n0\r\n\r\n");
+    stream.clear (std::ios::goodbit);
+    stream.str ("24\r\nThis is a too big chunk size\r\n\r\n0\r\n\r\n");
 
-    stream = Chunkstream (ss, chuncksize);
-    stream.read (out, sizeof (out));
-    ASSERT_TRUE (stream.fail ());
+    chunkstream = Chunkstream (stream, chuncksize);
+    chunkstream.read (out, sizeof (out));
+    ASSERT_TRUE (chunkstream.fail ());
     ASSERT_EQ (join::lastError, Errc::MessageTooLong);
 
     // check missing end line.
-    ss.clear (std::ios::goodbit);
-    ss.str ("12\r\nMissing end line\r\n0\r\n\r\n");
+    stream.clear (std::ios::goodbit);
+    stream.str ("12\r\nMissing end line\r\n0\r\n\r\n");
 
-    stream = Chunkstream (ss, chuncksize);
-    stream.read (out, sizeof (out));
-    ASSERT_TRUE (stream.fail ());
+    chunkstream = Chunkstream (stream, chuncksize);
+    chunkstream.read (out, sizeof (out));
+    ASSERT_TRUE (chunkstream.fail ());
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     // check invalid data.
-    ss.clear (std::ios::goodbit);
-    ss.str ("18\r\n\r\n0\r\n\r\n");
+    stream.clear (std::ios::goodbit);
+    stream.str ("18\r\n\r\n0\r\n\r\n");
 
-    stream = Chunkstream (ss, chuncksize);
-    stream.read (out, sizeof (out));
-    ASSERT_TRUE (stream.fail ());
-
-    // check invalid data.
-    ss.clear (std::ios::goodbit);
-    ss.str ("0\r\n");
-
-    stream = Chunkstream (ss, chuncksize);
-    stream.read (out, sizeof (out));
-    ASSERT_TRUE (stream.fail ());
+    chunkstream = Chunkstream (stream, chuncksize);
+    chunkstream.read (out, sizeof (out));
+    ASSERT_TRUE (chunkstream.fail ());
 
     // check invalid data.
-    ss.clear (std::ios::goodbit);
-    ss.str ("18");
+    stream.clear (std::ios::goodbit);
+    stream.str ("0\r\n");
 
-    stream = Chunkstream (ss, chuncksize);
-    stream.read (out, sizeof (out));
-    ASSERT_TRUE (stream.fail ());
+    chunkstream = Chunkstream (stream, chuncksize);
+    chunkstream.read (out, sizeof (out));
+    ASSERT_TRUE (chunkstream.fail ());
+
+    // check invalid data.
+    stream.clear (std::ios::goodbit);
+    stream.str ("18");
+
+    chunkstream = Chunkstream (stream, chuncksize);
+    chunkstream.read (out, sizeof (out));
+    ASSERT_TRUE (chunkstream.fail ());
 }
 
 /**

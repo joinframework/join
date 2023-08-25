@@ -33,8 +33,8 @@ using join::Zstream;
 //   CLASS     : Zstreambuf
 //   METHOD    : Zstreambuf
 // =========================================================================
-Zstreambuf::Zstreambuf (std::istream& istream, std::ostream& ostream, int format)
-: StreambufDecorator (istream, ostream, 4 * _bufsize),
+Zstreambuf::Zstreambuf (std::streambuf& streambuf, int format)
+: Streambuf (streambuf, 4 * _bufsize),
   _inflate (std::make_unique <z_stream> ()),
   _deflate (std::make_unique <z_stream> ())
 {
@@ -47,7 +47,7 @@ Zstreambuf::Zstreambuf (std::istream& istream, std::ostream& ostream, int format
 //   METHOD    : Zstreambuf
 // =========================================================================
 Zstreambuf::Zstreambuf (Zstreambuf&& other)
-: StreambufDecorator (std::move (other)),
+: Streambuf (std::move (other)),
   _inflate (std::move (other._inflate)),
   _deflate (std::move (other._deflate))
 {
@@ -59,7 +59,7 @@ Zstreambuf::Zstreambuf (Zstreambuf&& other)
 // =========================================================================
 Zstreambuf& Zstreambuf::operator= (Zstreambuf&& other)
 {
-    StreambufDecorator::operator= (std::move (other));
+    Streambuf::operator= (std::move (other));
     _inflate = std::move (other._inflate);
     _deflate = std::move (other._deflate);
     return *this;
@@ -77,7 +77,7 @@ Zstreambuf::~Zstreambuf ()
     }
     if (_deflate)
     {
-        if (_ostream)
+        if (_streambuf)
         {
             overflow ();
         }
@@ -101,8 +101,7 @@ Zstreambuf::int_type Zstreambuf::underflow ()
         if (_inflate->avail_in == 0)
         {
             _inflate->next_in = reinterpret_cast <uint8_t*> (eback () + _bufsize);
-            _istream->read (eback () + _bufsize, _bufsize);
-            _inflate->avail_in = _istream->gcount ();
+            _inflate->avail_in = _streambuf->sgetn (eback () + _bufsize, _bufsize);
             if (_inflate->avail_in == 0)
             {
                 return traits_type::eof ();
@@ -157,8 +156,9 @@ Zstreambuf::int_type Zstreambuf::overflow (int_type c)
                 return traits_type::eof ();
             }
 
-            _ostream->write (pbase () + _bufsize, _bufsize - _deflate->avail_out);
-            if (_ostream->fail ())
+            std::streamsize deflated = _bufsize - _deflate->avail_out;
+            std::streamsize nwrite = _streambuf->sputn (pbase () + _bufsize, deflated);
+            if (nwrite != deflated)
             {
                 return traits_type::eof ();
             }
@@ -191,16 +191,7 @@ Zstreambuf::int_type Zstreambuf::sync ()
 //   METHOD    : Zstream
 // =========================================================================
 Zstream::Zstream (std::iostream& stream, Format format)
-: Zstream (stream, stream, format)
-{
-}
-
-// =========================================================================
-//   CLASS     : Zstream
-//   METHOD    : Zstream
-// =========================================================================
-Zstream::Zstream (std::istream& istream, std::ostream& ostream, Format format)
-: _zbuf (istream, ostream, format)
+: _zbuf (*stream.rdbuf (), format)
 {
     init (&_zbuf);
 }

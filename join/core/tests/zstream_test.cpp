@@ -60,16 +60,9 @@ TEST (Zstream, deflate)
     // concrete stream.
     std::stringstream stream;
 
-    // test concrete input stream failure.
-    stream.clear (std::ios::failbit);
-    Zstream zstream (stream, Zstream::Deflate);
-    zstream.write (sample.c_str (), sample.length ());
-    zstream.flush ();
-    ASSERT_TRUE (zstream.fail ());
-
     // compress using the deflate data format.
     stream.clear (std::ios::goodbit);
-    zstream = std::move (Zstream (stream, Zstream::Deflate));
+    Zstream zstream (stream, Zstream::Deflate);
     zstream.write (sample.c_str (), sample.length ());
     zstream.flush ();
     ASSERT_TRUE (zstream.good ());
@@ -119,16 +112,9 @@ TEST (Zstream, zlib)
     // concrete stream.
     std::stringstream stream;
 
-    // test concrete input stream failure.
-    stream.clear (std::ios::failbit);
-    Zstream zstream (stream, Zstream::Zlib);
-    zstream.write (sample.c_str (), sample.length ());
-    zstream.flush ();
-    ASSERT_TRUE (zstream.fail ());
-
     // compress using the zlib data format.
     stream.clear (std::ios::goodbit);
-    zstream = std::move (Zstream (stream, Zstream::Zlib));
+    Zstream zstream (stream, Zstream::Zlib);
     zstream.write (sample.c_str (), sample.length ());
     zstream.flush ();
     ASSERT_TRUE (zstream.good ());
@@ -178,16 +164,9 @@ TEST (Zstream, gzip)
     // concrete stream.
     std::stringstream stream;
 
-    // test concrete input stream failure.
-    stream.clear (std::ios::failbit);
-    Zstream zstream (stream, Zstream::Gzip);
-    zstream.write (sample.c_str (), sample.length ());
-    zstream.flush ();
-    ASSERT_TRUE (zstream.fail ());
-
     // compress using the gzip data format.
     stream.clear (std::ios::goodbit);
-    zstream = std::move (Zstream (stream, Zstream::Gzip));
+    Zstream zstream (stream, Zstream::Gzip);
     zstream.write (sample.c_str (), sample.length ());
     zstream.flush ();
     ASSERT_TRUE (zstream.good ());
