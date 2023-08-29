@@ -98,7 +98,7 @@ namespace join
              */
             inline static bool isEqual (std::size_t /*index*/, const void* /*data*/, const void* /*otherData*/)
             {
-                return 0 == 0;
+                return false;
             }
 
             /**
@@ -110,7 +110,7 @@ namespace join
              */
             inline static bool isLower (std::size_t /*index*/, const void* /*data*/, const void* /*otherData*/)
             {
-                return 0 < 0;
+                return false;
             }
         };
 

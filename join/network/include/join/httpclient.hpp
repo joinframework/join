@@ -204,7 +204,7 @@ namespace join
         /// HTTP keep alive timeout.
         std::chrono::seconds _keepTimeout;
 
-        // HTTP keep alive max.
+        /// HTTP keep alive max.
         int _keepMax = -1;
     };
 

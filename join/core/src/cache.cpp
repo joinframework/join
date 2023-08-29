@@ -85,7 +85,7 @@ void* Cache::get (const std::string &fileName, struct stat *sbuf)
     void* ptr = nullptr;
 
     std::unique_ptr <CacheEntry> entry = std::make_unique <CacheEntry> ();
-    if (entry)
+    if (entry != nullptr)
     {
         entry->size = sb.st_size;
         entry->modifTime = sb.st_ctim;

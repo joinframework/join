@@ -219,6 +219,26 @@ namespace join
     }
 
     /**
+     * @brief replace all occurrences of a substring.
+     * @param str string to scan.
+     * @param toReplace string to replace.
+     * @param by string to put instead of the "toReplace" substring.
+     * @return a reference to the string.
+     */
+    __inline__ std::string& replaceAll (std::string& str, const std::string &toReplace, const std::string &by)
+    {
+        size_t pos = 0;
+
+        while ((pos = str.find (toReplace, pos)) != std::string::npos)
+        {
+            str.replace (pos, toReplace.length (), by);
+            pos += by.length ();
+        }
+
+        return str;
+    }
+
+    /**
      * @brief split a string using a delimiter.
      * @param in string to split.
      * @param delim delimiter.
@@ -264,26 +284,6 @@ namespace join
             tokens.push_back (in.substr (0, end));
         }
         return tokens;
-    }
-
-    /**
-     * @brief replace all occurrences of a substring.
-     * @param str string to scan.
-     * @param toReplace string to replace.
-     * @param by string to put instead of the "toReplace" substring.
-     * @return a reference to the string.
-     */
-    __inline__ std::string& replaceAll (std::string& str, const std::string &toReplace, const std::string &by)
-    {
-        size_t pos = 0;
-
-        while ((pos = str.find (toReplace, pos)) != std::string::npos)
-        {
-            str.replace (pos, toReplace.length (), by);
-            pos += by.length ();
-        }
-
-        return str;
     }
 
     /**

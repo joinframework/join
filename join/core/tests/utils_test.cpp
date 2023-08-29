@@ -111,6 +111,15 @@ TEST (Utils, trim)
 }
 
 /**
+ * @brief Test replaceAll.
+ */
+TEST (Utils, replaceAll)
+{
+    std::string str ("replace all other by other");
+    ASSERT_EQ (join::replaceAll (str, "other", "OTHER"), "replace all OTHER by OTHER");
+}
+
+/**
  * @brief Test split.
  */
 TEST (Utils, split)
@@ -140,15 +149,6 @@ TEST (Utils, rsplit)
     ASSERT_EQ (tokens[3], "a");
     ASSERT_EQ (tokens[4], "is");
     ASSERT_EQ (tokens[5], "this");
-}
-
-/**
- * @brief Test replaceAll.
- */
-TEST (Utils, replaceAll)
-{
-    std::string str ("replace all other by other");
-    ASSERT_EQ (join::replaceAll (str, "other", "OTHER"), "replace all OTHER by OTHER");
 }
 
 /**
