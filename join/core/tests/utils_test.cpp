@@ -111,6 +111,38 @@ TEST (Utils, trim)
 }
 
 /**
+ * @brief Test split.
+ */
+TEST (Utils, split)
+{
+    std::string str ("this=>is=>a=>string=>with=>delimiters");
+    auto tokens = join::split (str, "=>");
+    ASSERT_EQ (tokens.size (), 6);
+    ASSERT_EQ (tokens[0], "this");
+    ASSERT_EQ (tokens[1], "is");
+    ASSERT_EQ (tokens[2], "a");
+    ASSERT_EQ (tokens[3], "string");
+    ASSERT_EQ (tokens[4], "with");
+    ASSERT_EQ (tokens[5], "delimiters");
+}
+
+/**
+ * @brief Test rsplit.
+ */
+TEST (Utils, rsplit)
+{
+    std::string str ("this=>is=>a=>string=>with=>delimiters");
+    auto tokens = join::rsplit (str, "=>");
+    ASSERT_EQ (tokens.size (), 6);
+    ASSERT_EQ (tokens[0], "delimiters");
+    ASSERT_EQ (tokens[1], "with");
+    ASSERT_EQ (tokens[2], "string");
+    ASSERT_EQ (tokens[3], "a");
+    ASSERT_EQ (tokens[4], "is");
+    ASSERT_EQ (tokens[5], "this");
+}
+
+/**
  * @brief Test replaceAll.
  */
 TEST (Utils, replaceAll)

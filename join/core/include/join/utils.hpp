@@ -219,6 +219,54 @@ namespace join
     }
 
     /**
+     * @brief split a string using a delimiter.
+     * @param in string to split.
+     * @param delim delimiter.
+     * @return list of tokens.
+     */
+    __inline__ std::vector <std::string> split (const std::string& in, const std::string& delim)
+    {
+        std::vector <std::string> tokens;
+        if (in.size ())
+        {
+            size_t beg = 0, end = in.find (delim);
+            size_t sz = delim.size();
+            while (end != std::string::npos)
+            {
+                tokens.push_back (in.substr (beg, end - beg));
+                beg = end + sz;
+                end = in.find (delim, beg);
+            }
+            tokens.push_back (in.substr (beg));
+        }
+        return tokens;
+    }
+
+    /**
+     * @brief split a string in reverse order using a delimiter.
+     * @param in string to split.
+     * @param delim delimiter.
+     * @return list of tokens.
+     */
+    __inline__ std::vector <std::string> rsplit (const std::string& in, const std::string& delim)
+    {
+        std::vector <std::string> tokens;
+        if (in.size ())
+        {
+            size_t beg = in.rfind (delim), end = std::string::npos;
+            size_t sz = delim.size();
+            while (beg != std::string::npos)
+            {
+                tokens.push_back (in.substr (beg + sz, end - beg - sz));
+                end = beg;
+                beg = in.rfind (delim, end - sz);
+            }
+            tokens.push_back (in.substr (0, end));
+        }
+        return tokens;
+    }
+
+    /**
      * @brief replace all occurrences of a substring.
      * @param str string to scan.
      * @param toReplace string to replace.
@@ -283,7 +331,7 @@ namespace join
      */
     __inline__ void dump (const void* data, unsigned long size, std::ostream& out = std::cout)
     {
-        unsigned char *buf = (unsigned char *) data;
+        const uint8_t *buf = reinterpret_cast <const uint8_t *> (data);
 
         for (int i = 0; i < int (size); i += 16)
         {
