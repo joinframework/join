@@ -216,7 +216,7 @@ TEST_F (SignatureTest, sign_failures)
     ASSERT_EQ    (join::lastError, DigestErrc::InvalidAlgorithm);
 
     ASSERT_TRUE  (Signature::sign (nullptr, 0, rsaPriKeyPath, Digest::Algorithm::SM3).empty ());
-    ASSERT_EQ    (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ    (join::lastError, DigestErrc::InvalidAlgorithm);
 }
 
 /**
@@ -322,7 +322,7 @@ TEST_F (SignatureTest, verify_failures)
     ASSERT_EQ    (join::lastError, DigestErrc::InvalidAlgorithm);
 
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa224sig), rsaPubKeyPath, Digest::Algorithm::SM3));
-    ASSERT_EQ    (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ    (join::lastError, DigestErrc::InvalidAlgorithm);
 
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa224sig), rsaPubKeyPath, Digest::Algorithm::SHA256));
     ASSERT_EQ    (join::lastError, DigestErrc::InvalidSignature);
