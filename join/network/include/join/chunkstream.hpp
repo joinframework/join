@@ -33,7 +33,7 @@ namespace join
     /**
      * @brief chunk stream buffer.
      */
-    class Chunkstreambuf : public Streambuf
+    class Chunkstreambuf : public StreambufDecorator
     {
     public:
         /**

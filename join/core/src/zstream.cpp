@@ -48,7 +48,7 @@ Zstreambuf::Zstreambuf (std::streambuf* streambuf, int format, bool own)
 //   METHOD    : Zstreambuf
 // =========================================================================
 Zstreambuf::Zstreambuf (Zstreambuf&& other)
-: Streambuf (std::move (other)),
+: StreambufDecorator (std::move (other)),
   _inflate (std::move (other._inflate)),
   _deflate (std::move (other._deflate)),
   _buf (std::move (other._buf))
@@ -61,7 +61,7 @@ Zstreambuf::Zstreambuf (Zstreambuf&& other)
 // =========================================================================
 Zstreambuf& Zstreambuf::operator= (Zstreambuf&& other)
 {
-    Streambuf::operator= (std::move (other));
+    StreambufDecorator::operator= (std::move (other));
     _inflate = std::move (other._inflate);
     _deflate = std::move (other._deflate);
     _buf = std::move (other._buf);

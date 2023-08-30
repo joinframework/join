@@ -31,7 +31,7 @@ namespace join
     /**
      * @brief stream buffer decorator.
      */
-    class Streambuf : public std::streambuf
+    class StreambufDecorator : public std::streambuf
     {
     public:
         /**
@@ -49,20 +49,20 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        Streambuf (const Streambuf& other) = delete;
+        StreambufDecorator (const StreambufDecorator& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return current object.
          */
-        Streambuf& operator= (const Streambuf& other) = delete;
+        StreambufDecorator& operator= (const StreambufDecorator& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        Streambuf (Streambuf&& other)
+        StreambufDecorator (StreambufDecorator&& other)
         : std::streambuf (std::move (other)),
           _innerbuf (other._innerbuf),
           _own (other._own)
@@ -76,7 +76,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Streambuf& operator= (Streambuf&& other)
+        StreambufDecorator& operator= (StreambufDecorator&& other)
         {
             std::streambuf::operator= (std::move (other));
             _innerbuf = other._innerbuf;

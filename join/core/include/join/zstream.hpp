@@ -36,7 +36,7 @@ namespace join
     /**
      * @brief zlib stream buffer.
      */
-    class Zstreambuf : public Streambuf
+    class Zstreambuf : public StreambufDecorator
     {
     public:
         /**

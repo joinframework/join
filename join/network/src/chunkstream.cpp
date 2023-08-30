@@ -60,7 +60,7 @@ Chunkstreambuf::Chunkstreambuf (Chunkstreambuf&& other)
 // =========================================================================
 Chunkstreambuf& Chunkstreambuf::operator= (Chunkstreambuf&& other)
 {
-    Streambuf::operator= (std::move (other));
+    StreambufDecorator::operator= (std::move (other));
     _chunksize = other._chunksize;
     _buf = std::move (other._buf);
     return *this;
