@@ -33,10 +33,11 @@ using join::Zstream;
 //   CLASS     : Zstreambuf
 //   METHOD    : Zstreambuf
 // =========================================================================
-Zstreambuf::Zstreambuf (std::streambuf& streambuf, int format)
-: Streambuf (streambuf, 4 * _bufsize),
+Zstreambuf::Zstreambuf (std::streambuf* streambuf, int format, bool own)
+: StreambufDecorator (streambuf, own),
   _inflate (std::make_unique <z_stream> ()),
-  _deflate (std::make_unique <z_stream> ())
+  _deflate (std::make_unique <z_stream> ()),
+  _buf (std::make_unique <char []> (4 * _bufsize))
 {
     inflateInit2 (_inflate.get (), format);
     deflateInit2 (_deflate.get (), Z_DEFAULT_COMPRESSION, Z_DEFLATED, format, 8, Z_DEFAULT_STRATEGY);
@@ -49,7 +50,8 @@ Zstreambuf::Zstreambuf (std::streambuf& streambuf, int format)
 Zstreambuf::Zstreambuf (Zstreambuf&& other)
 : Streambuf (std::move (other)),
   _inflate (std::move (other._inflate)),
-  _deflate (std::move (other._deflate))
+  _deflate (std::move (other._deflate)),
+  _buf (std::move (other._buf))
 {
 }
 
@@ -62,6 +64,7 @@ Zstreambuf& Zstreambuf::operator= (Zstreambuf&& other)
     Streambuf::operator= (std::move (other));
     _inflate = std::move (other._inflate);
     _deflate = std::move (other._deflate);
+    _buf = std::move (other._buf);
     return *this;
 }
 
@@ -77,7 +80,7 @@ Zstreambuf::~Zstreambuf ()
     }
     if (_deflate)
     {
-        if (_streambuf)
+        if (_innerbuf)
         {
             overflow ();
         }
@@ -101,7 +104,7 @@ Zstreambuf::int_type Zstreambuf::underflow ()
         if (_inflate->avail_in == 0)
         {
             _inflate->next_in = reinterpret_cast <uint8_t*> (eback () + _bufsize);
-            _inflate->avail_in = _streambuf->sgetn (eback () + _bufsize, _bufsize);
+            _inflate->avail_in = _innerbuf->sgetn (eback () + _bufsize, _bufsize);
             if (_inflate->avail_in == 0)
             {
                 return traits_type::eof ();
@@ -157,7 +160,7 @@ Zstreambuf::int_type Zstreambuf::overflow (int_type c)
             }
 
             std::streamsize deflated = _bufsize - _deflate->avail_out;
-            std::streamsize nwrite = _streambuf->sputn (pbase () + _bufsize, deflated);
+            std::streamsize nwrite = _innerbuf->sputn (pbase () + _bufsize, deflated);
             if (nwrite != deflated)
             {
                 return traits_type::eof ();
@@ -191,7 +194,7 @@ Zstreambuf::int_type Zstreambuf::sync ()
 //   METHOD    : Zstream
 // =========================================================================
 Zstream::Zstream (std::iostream& stream, Format format)
-: _zbuf (*stream.rdbuf (), format)
+: _zbuf (stream.rdbuf (), format)
 {
     init (&_zbuf);
 }

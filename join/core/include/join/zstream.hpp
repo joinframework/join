@@ -43,8 +43,9 @@ namespace join
          * @brief create the zlib stream buffer instance.
          * @param streambuf concrete stream buffer
          * @param format compressed data format.
+         * @param own is the decorator owning inner stream buffer.
          */
-        Zstreambuf (std::streambuf& streambuf, int format);
+        Zstreambuf (std::streambuf* streambuf, int format, bool own = false);
 
         /**
          * @brief copy constructor.
@@ -105,6 +106,9 @@ namespace join
 
         /// deflate context.
         std::unique_ptr <z_stream> _deflate;
+
+        /// internal buffer.
+        std::unique_ptr <char []> _buf;
     };
 
     /**

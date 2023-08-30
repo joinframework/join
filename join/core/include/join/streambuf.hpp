@@ -37,11 +37,11 @@ namespace join
         /**
          * @brief create the stream buffer decorator instance.
          * @param streambuf concrete stream buffer.
-         * @param bufsize internal buffer size.
+         * @param own is the decorator owning inner stream buffer.
          */
-        Streambuf (std::streambuf& streambuf, std::streamsize bufsize)
-        : _buf (std::make_unique <char []> (bufsize)),
-          _streambuf (std::addressof (streambuf))
+        StreambufDecorator (std::streambuf* streambuf, bool own = false)
+        : _innerbuf (streambuf),
+          _own (own)
         {
         }
 
@@ -64,10 +64,11 @@ namespace join
          */
         Streambuf (Streambuf&& other)
         : std::streambuf (std::move (other)),
-          _buf (std::move (other._buf)),
-          _streambuf (other._streambuf)
+          _innerbuf (other._innerbuf),
+          _own (other._own)
         {
-            other._streambuf = nullptr;
+            other._innerbuf = nullptr;
+            other._own = false;
         }
 
         /**
@@ -78,22 +79,29 @@ namespace join
         Streambuf& operator= (Streambuf&& other)
         {
             std::streambuf::operator= (std::move (other));
-            _buf = std::move (other._buf);
-            _streambuf = other._streambuf;
-            other._streambuf = nullptr;
+            _innerbuf = other._innerbuf;
+            _own = other._own;
+            other._innerbuf = nullptr;
+            other._own = false;
             return *this;
         }
 
         /**
          * @brief destroy the stream buffer decorator instance.
          */
-        virtual ~Streambuf () = default;
+        virtual ~StreambufDecorator ()
+        {
+            if (_own && _innerbuf)
+            {
+                delete (_innerbuf);
+            }
+        }
 
     protected:
-        /// internal buffer.
-        std::unique_ptr <char []> _buf;
-
         /// concrete stream buffer.
-        std::streambuf* _streambuf;
+        std::streambuf* _innerbuf;
+
+        /// own inner stream buffer.
+        bool _own = false;
     };
 }

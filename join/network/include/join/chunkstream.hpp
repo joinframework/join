@@ -40,8 +40,9 @@ namespace join
          * @brief create the chunk stream buffer instance.
          * @param streambuf concrete stream buffer.
          * @param chunksize chunk size.
+         * @param own is the decorator owning inner stream buffer.
          */
-        Chunkstreambuf (std::streambuf& streambuf, std::streamsize chunksize = 2048);
+        Chunkstreambuf (std::streambuf* streambuf, std::streamsize chunksize = 2048, bool own = false);
 
         /**
          * @brief copy constructor.
@@ -96,6 +97,9 @@ namespace join
 
         /// chunk size.
         std::streamsize _chunksize;
+
+        /// internal buffer.
+        std::unique_ptr <char []> _buf;
     };
 
     /**
