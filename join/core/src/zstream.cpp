@@ -33,8 +33,8 @@ using join::Zstream;
 //   CLASS     : Zstreambuf
 //   METHOD    : Zstreambuf
 // =========================================================================
-Zstreambuf::Zstreambuf (std::streambuf& streambuf, int format)
-: StreambufDecorator (streambuf),
+Zstreambuf::Zstreambuf (std::streambuf* streambuf, int format, bool own)
+: StreambufDecorator (streambuf, own),
   _inflate (std::make_unique <z_stream> ()),
   _deflate (std::make_unique <z_stream> ()),
   _buf (std::make_unique <char []> (4 * _bufsize))
@@ -194,7 +194,7 @@ Zstreambuf::int_type Zstreambuf::sync ()
 //   METHOD    : Zstream
 // =========================================================================
 Zstream::Zstream (std::iostream& stream, Format format)
-: _zbuf (*stream.rdbuf (), format)
+: _zbuf (stream.rdbuf (), format)
 {
     init (&_zbuf);
 }

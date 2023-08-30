@@ -37,9 +37,11 @@ namespace join
         /**
          * @brief create the stream buffer decorator instance.
          * @param streambuf concrete stream buffer.
+         * @param own is the decorator owning inner stream buffer.
          */
-        StreambufDecorator (std::streambuf& streambuf)
-        : _innerbuf (std::addressof (streambuf))
+        StreambufDecorator (std::streambuf* streambuf, bool own = false)
+        : _innerbuf (streambuf),
+          _own (own)
         {
         }
 
@@ -62,9 +64,11 @@ namespace join
          */
         StreambufDecorator (StreambufDecorator&& other)
         : std::streambuf (std::move (other)),
-          _innerbuf (other._innerbuf)
+          _innerbuf (other._innerbuf),
+          _own (other._own)
         {
             other._innerbuf = nullptr;
+            other._own = false;
         }
 
         /**
@@ -76,17 +80,28 @@ namespace join
         {
             std::streambuf::operator= (std::move (other));
             _innerbuf = other._innerbuf;
+            _own = other._own;
             other._innerbuf = nullptr;
+            other._own = false;
             return *this;
         }
 
         /**
          * @brief destroy the stream buffer decorator instance.
          */
-        virtual ~StreambufDecorator () = default;
+        virtual ~StreambufDecorator ()
+        {
+            if (_own && _innerbuf)
+            {
+                delete (_innerbuf);
+            }
+        }
 
     protected:
         /// concrete stream buffer.
         std::streambuf* _innerbuf;
+
+        /// own inner stream buffer.
+        bool _own = false;
     };
 }
