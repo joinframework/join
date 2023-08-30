@@ -26,7 +26,7 @@
 #define __JOIN_ZSTREAM_HPP__
 
 // libjoin.
-#include <join/stream.hpp>
+#include <join/streambuf.hpp>
 
 // Libraries.
 #include <zlib.h>
@@ -41,11 +41,11 @@ namespace join
     public:
         /**
          * @brief create the zlib stream buffer instance.
-         * @param istream concrete input stream.
-         * @param ostream concrete output stream.
+         * @param streambuf concrete stream buffer
          * @param format compressed data format.
+         * @param own is the decorator owning inner stream buffer.
          */
-        Zstreambuf (std::istream& istream, std::ostream& ostream, int format);
+        Zstreambuf (std::streambuf* streambuf, int format, bool own = false);
 
         /**
          * @brief copy constructor.
@@ -106,6 +106,9 @@ namespace join
 
         /// deflate context.
         std::unique_ptr <z_stream> _deflate;
+
+        /// internal buffer.
+        std::unique_ptr <char []> _buf;
     };
 
     /**
@@ -130,14 +133,6 @@ namespace join
          * @param format compressed data format.
          */
         Zstream (std::iostream& stream, Format format = Zlib);
-
-        /**
-         * @brief create the zlib stream instance.
-         * @param istream concrete input stream.
-         * @param ostream concrete output stream.
-         * @param format compressed data format.
-         */
-        Zstream (std::istream& istream, std::ostream& ostream, Format format = Zlib);
 
         /**
          * @brief copy constructor.
