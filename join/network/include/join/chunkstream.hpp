@@ -26,7 +26,7 @@
 #define __JOIN_CHUNKTREAM_HPP__
 
 // libjoin.
-#include <join/stream.hpp>
+#include <join/streambuf.hpp>
 
 namespace join
 {
@@ -38,11 +38,10 @@ namespace join
     public:
         /**
          * @brief create the chunk stream buffer instance.
-         * @param istream concrete input stream.
-         * @param ostream concrete output stream.
+         * @param streambuf concrete stream buffer.
          * @param chunksize chunk size.
          */
-        Chunkstreambuf (std::istream& istream, std::ostream& ostream, std::streamsize chunksize = 2048);
+        Chunkstreambuf (std::streambuf& streambuf, std::streamsize chunksize = 2048);
 
         /**
          * @brief copy constructor.
@@ -97,6 +96,9 @@ namespace join
 
         /// chunk size.
         std::streamsize _chunksize;
+
+        /// internal buffer.
+        std::unique_ptr <char []> _buf;
     };
 
     /**
@@ -111,14 +113,6 @@ namespace join
          * @param chunksize chunk size.
          */
         Chunkstream (std::iostream& stream, std::streamsize chunksize = 2048);
-
-        /**
-         * @brief create the chunk stream instance.
-         * @param istream concrete input stream.
-         * @param ostream concrete output stream.
-         * @param chunksize chunk size.
-         */
-        Chunkstream (std::istream& istream, std::ostream& ostream, std::streamsize chunksize = 2048);
 
         /**
          * @brief copy constructor.

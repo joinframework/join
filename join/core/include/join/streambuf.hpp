@@ -36,14 +36,10 @@ namespace join
     public:
         /**
          * @brief create the stream buffer decorator instance.
-         * @param istream concrete input stream.
-         * @param ostream concrete output stream.
-         * @param bufsize internal buffer size.
+         * @param streambuf concrete stream buffer.
          */
-        StreambufDecorator (std::istream& istream, std::ostream& ostream, std::streamsize bufsize)
-        : _buf (std::make_unique <char []> (bufsize)),
-          _istream (std::addressof (istream)),
-          _ostream (std::addressof (ostream))
+        StreambufDecorator (std::streambuf& streambuf)
+        : _innerbuf (std::addressof (streambuf))
         {
         }
 
@@ -66,12 +62,9 @@ namespace join
          */
         StreambufDecorator (StreambufDecorator&& other)
         : std::streambuf (std::move (other)),
-          _buf (std::move (other._buf)),
-          _istream (other._istream),
-          _ostream (other._ostream)
+          _innerbuf (other._innerbuf)
         {
-            other._istream = nullptr;
-            other._ostream = nullptr;
+            other._innerbuf = nullptr;
         }
 
         /**
@@ -82,11 +75,8 @@ namespace join
         StreambufDecorator& operator= (StreambufDecorator&& other)
         {
             std::streambuf::operator= (std::move (other));
-            _buf = std::move (other._buf);
-            _istream = other._istream;
-            _istream = other._istream;
-            other._istream = nullptr;
-            other._ostream = nullptr;
+            _innerbuf = other._innerbuf;
+            other._innerbuf = nullptr;
             return *this;
         }
 
@@ -96,13 +86,7 @@ namespace join
         virtual ~StreambufDecorator () = default;
 
     protected:
-        /// internal buffer.
-        std::unique_ptr <char []> _buf;
-
-        /// concrete input stream.
-        std::istream* _istream;
-
-        /// concrete output stream.
-        std::ostream* _ostream;
+        /// concrete stream buffer.
+        std::streambuf* _innerbuf;
     };
 }

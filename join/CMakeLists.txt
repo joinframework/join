@@ -31,6 +31,7 @@ set(PUBLIC_HEADERS
     core/include/join/view.hpp
     core/include/join/cache.hpp
     core/include/join/reactor.hpp
+    core/include/join/streambuf.hpp
     core/include/join/zstream.hpp
     thread/include/join/mutex.hpp
     thread/include/join/condition.hpp

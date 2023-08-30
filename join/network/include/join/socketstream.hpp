@@ -473,7 +473,7 @@ namespace join
          * @brief default constructor.
          */
         BasicSocketStream ()
-        : std::iostream (&_streambuf)
+        : std::iostream (&_socketbuf)
         {
             this->setf (std::ios_base::unitbuf);
         }
@@ -497,9 +497,9 @@ namespace join
          */
         BasicSocketStream (BasicSocketStream&& other)
         : std::iostream (std::move (other)),
-          _streambuf (std::move (other._streambuf))
+          _socketbuf (std::move (other._socketbuf))
         {
-            this->set_rdbuf (&_streambuf);
+            this->set_rdbuf (&_socketbuf);
         }
 
         /**
@@ -510,7 +510,7 @@ namespace join
         BasicSocketStream& operator=(BasicSocketStream&& other)
         {
             std::iostream::operator= (std::move (other));
-            _streambuf = std::move (other._streambuf);
+            _socketbuf = std::move (other._socketbuf);
             return *this;
         }
 
@@ -586,7 +586,7 @@ namespace join
          */
         SocketStreambuf* rdbuf () const
         {
-            return const_cast <SocketStreambuf*> (std::addressof (_streambuf));
+            return const_cast <SocketStreambuf*> (std::addressof (_socketbuf));
         }
 
         /**
@@ -618,7 +618,7 @@ namespace join
 
     private:
         /// associated stream buffer.
-        SocketStreambuf _streambuf;
+        SocketStreambuf _socketbuf;
     };
 
     /**
