@@ -473,7 +473,7 @@ namespace join
          * @brief default constructor.
          */
         BasicSocketStream ()
-        : std::iostream (&_socketbuf)
+        : std::iostream (&_sockbuf)
         {
             this->setf (std::ios_base::unitbuf);
         }
@@ -497,9 +497,9 @@ namespace join
          */
         BasicSocketStream (BasicSocketStream&& other)
         : std::iostream (std::move (other)),
-          _socketbuf (std::move (other._socketbuf))
+          _sockbuf (std::move (other._sockbuf))
         {
-            this->set_rdbuf (&_socketbuf);
+            this->set_rdbuf (&this->_sockbuf);
         }
 
         /**
@@ -510,7 +510,7 @@ namespace join
         BasicSocketStream& operator=(BasicSocketStream&& other)
         {
             std::iostream::operator= (std::move (other));
-            _socketbuf = std::move (other._socketbuf);
+            this->_sockbuf = std::move (other._sockbuf);
             return *this;
         }
 
@@ -526,7 +526,7 @@ namespace join
          */
         virtual void connect (const Endpoint& endpoint)
         {
-            if (this->rdbuf ()->connect (endpoint) == nullptr)
+            if (this->_sockbuf.connect (endpoint) == nullptr)
             {
                 this->setstate (std::ios_base::failbit);
             }
@@ -538,7 +538,7 @@ namespace join
          */
         virtual void close ()
         {
-            if (this->rdbuf ()->close () == nullptr)
+            if (this->_sockbuf.close () == nullptr)
             {
                 this->setstate (std::ios_base::failbit);
             }
@@ -550,43 +550,34 @@ namespace join
          */
         bool connected ()
         {
-            return this->rdbuf ()->socket ().connected ();
+            return this->_sockbuf.socket ().connected ();
         }
 
         /**
          * @brief check if the socket is secure.
          * @return true if the socket is secure, false otherwise.
          */
-        bool encrypted () const
+        bool encrypted ()
         {
-            return this->rdbuf ()->socket ().encrypted ();
+            return this->_sockbuf.socket ().encrypted ();
         }
 
         /**
          * @brief determine the local endpoint associated with this socket.
          * @return local endpoint.
          */
-        Endpoint localEndpoint () const
+        Endpoint localEndpoint ()
         {
-            return this->rdbuf ()->socket ().localEndpoint ();
+            return this->_sockbuf.socket ().localEndpoint ();
         }
 
         /**
          * @brief determine the remote endpoint associated with this socket.
          * @return remote endpoint.
          */
-        const Endpoint& remoteEndpoint () const
+        const Endpoint& remoteEndpoint ()
         {
-            return this->rdbuf ()->socket ().remoteEndpoint ();
-        }
-
-        /**
-         * @brief get the associated stream buffer.
-         * @return The associated stream buffer.
-         */
-        SocketStreambuf* rdbuf () const
-        {
-            return const_cast <SocketStreambuf*> (std::addressof (_socketbuf));
+            return this->_sockbuf.socket ().remoteEndpoint ();
         }
 
         /**
@@ -595,7 +586,7 @@ namespace join
          */
         void timeout (int ms)
         {
-            this->rdbuf ()->timeout (ms);
+            this->_sockbuf.timeout (ms);
         }
 
         /**
@@ -604,7 +595,7 @@ namespace join
          */
         int timeout () const
         {
-            return this->rdbuf ()->timeout ();
+            return this->_sockbuf.timeout ();
         }
 
         /**
@@ -613,12 +604,12 @@ namespace join
          */
         Socket& socket ()
         {
-            return this->rdbuf ()->socket ();
+            return this->_sockbuf.socket ();
         }
 
-    private:
+    protected:
         /// associated stream buffer.
-        SocketStreambuf _socketbuf;
+        SocketStreambuf _sockbuf;
     };
 
     /**
@@ -686,7 +677,7 @@ namespace join
          */
         void connectEncrypted (const Endpoint& endpoint)
         {
-            if (this->rdbuf ()->connect (endpoint) == nullptr)
+            if (this->_sockbuf.connect (endpoint) == nullptr)
             {
                 this->setstate (std::ios_base::failbit);
             }
@@ -702,11 +693,11 @@ namespace join
          */
         void startEncryption ()
         {
-            if (this->rdbuf ()->socket ().startEncryption () == -1)
+            if (this->_sockbuf.socket ().startEncryption () == -1)
             {
                 if (lastError == Errc::TemporaryError)
                 {
-                    if (this->rdbuf ()->socket ().waitEncrypted (this->timeout ()))
+                    if (this->_sockbuf.socket ().waitEncrypted (this->timeout ()))
                         return;
                 }
 
@@ -721,7 +712,7 @@ namespace join
          */
         int setCaPath (const std::string& caPath)
         {
-            return this->rdbuf ()->socket ().setCaPath (caPath);
+            return this->_sockbuf.socket ().setCaPath (caPath);
         }
 
         /**
@@ -731,7 +722,7 @@ namespace join
          */
         int setCaFile (const std::string& caFile)
         {
-            return this->rdbuf ()->socket ().setCaFile (caFile);
+            return this->_sockbuf.socket ().setCaFile (caFile);
         }
 
         /**
@@ -741,7 +732,7 @@ namespace join
          */
         void setVerify (bool verify, int depth = -1)
         {
-            return this->rdbuf ()->socket ().setVerify (verify, depth);
+            return this->_sockbuf.socket ().setVerify (verify, depth);
         }
     };
 }

@@ -42,7 +42,7 @@ namespace join
          * @param chunksize chunk size.
          * @param own is the decorator owning inner stream buffer.
          */
-        Chunkstreambuf (std::streambuf* streambuf, std::streamsize chunksize = 2048, bool own = false);
+        Chunkstreambuf (std::streambuf* streambuf, std::streamsize chunksize = 4096, bool own = false);
 
         /**
          * @brief copy constructor.
