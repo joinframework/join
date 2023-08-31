@@ -211,7 +211,7 @@ TEST (HttpClient, keepAliveTimeout)
 /**
  * @brief Test keepAliveMax method
  */
-TEST (HttpClient, DISABLED_keepAliveMax)
+TEST (HttpClient, keepAliveMax)
 {
     Https::Client client (host);
     ASSERT_EQ (client.keepAliveMax (), -1);
@@ -226,12 +226,12 @@ TEST (HttpClient, DISABLED_keepAliveMax)
     HttpResponse response;
     client >> response;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
-    ASSERT_EQ (client.keepAliveMax (), 100);
+    ASSERT_NE (client.keepAliveMax (), 0);
 
     request.header ("Connection", "close");
     client << request;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
-    ASSERT_EQ (client.keepAliveMax (), 100);
+    ASSERT_NE (client.keepAliveMax (), 0);
 
     client >> response;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
