@@ -45,6 +45,9 @@ namespace join
     template <class Protocol> class BasicStreamAcceptor;
     template <class Protocol> class BasicTlsAcceptor;
 
+    template <class Protocol> class BasicHttpClient;
+    template <class Protocol> class BasicHttpSecureClient;
+
     template <class Protocol> class BasicResolver;
 
     /**
@@ -552,6 +555,194 @@ namespace join
      * @return true if not equals.
      */
     constexpr bool operator!= (const Tls& a, const Tls& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief HTTP protocol class.
+     */
+    class Http
+    {
+    public:
+        using Endpoint = BasicInternetEndpoint <Http>;
+        using Socket   = BasicStreamSocket <Http>;
+        using Stream   = BasicSocketStream <Http>;
+        using Client   = BasicHttpClient <Http>;
+
+        /**
+         * @brief create the HTTP protocol  instance.
+         * @param family IP address family.
+         */
+        constexpr Http (int family = AF_INET) noexcept
+        : _family (family)
+        {
+        }
+
+        /**
+         * @brief get protocol suitable for IPv4 address family.
+         * @return an IPv4 address family suitable protocol.
+         */
+        static inline Http& v4 () noexcept
+        {
+            static Http httpv4 (AF_INET);
+            return httpv4;
+        }
+
+        /**
+         * @brief get protocol suitable for IPv6 address family.
+         * @return an IPv6 address family suitable protocol.
+         */
+        static inline Http& v6 () noexcept
+        {
+            static Http httpv6 (AF_INET6);
+            return httpv6;
+        }
+
+        /**
+         * @brief get the protocol IP address family.
+         * @return the protocol IP address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return _family;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_STREAM;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return IPPROTO_TCP;
+        }
+
+    private:
+        /// IP address family.
+        int _family;
+    };
+
+    /**
+     * @brief Check if equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if equals.
+     */
+    constexpr bool operator== (const Http& a, const Http& b) noexcept
+    {
+        return a.family () == b.family ();
+    }
+
+    /**
+     * @brief Check if not equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if not equals.
+     */
+    constexpr bool operator!= (const Http& a, const Http& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief HTTPS protocol class.
+     */
+    class Https
+    {
+    public:
+        using Endpoint = BasicInternetEndpoint <Https>;
+        using Socket   = BasicTlsSocket <Https>;
+        using Stream   = BasicTlsStream <Https>;
+        using Client   = BasicHttpSecureClient <Https>;
+
+        /**
+         * @brief create the HTTPS protocol  instance.
+         * @param family IP address family.
+         */
+        constexpr Https (int family = AF_INET) noexcept
+        : _family (family)
+        {
+        }
+
+        /**
+         * @brief get protocol suitable for IPv4 address family.
+         * @return an IPv4 address family suitable protocol.
+         */
+        static inline Https& v4 () noexcept
+        {
+            static Https httpsv4 (AF_INET);
+            return httpsv4;
+        }
+
+        /**
+         * @brief get protocol suitable for IPv6 address family.
+         * @return an IPv6 address family suitable protocol.
+         */
+        static inline Https& v6 () noexcept
+        {
+            static Https httpsv6 (AF_INET6);
+            return httpsv6;
+        }
+
+        /**
+         * @brief get the protocol IP address family.
+         * @return the protocol IP address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return _family;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_STREAM;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return IPPROTO_TCP;
+        }
+
+    private:
+        /// IP address family.
+        int _family;
+    };
+
+    /**
+     * @brief Check if equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if equals.
+     */
+    constexpr bool operator== (const Https& a, const Https& b) noexcept
+    {
+        return a.family () == b.family ();
+    }
+
+    /**
+     * @brief Check if not equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if not equals.
+     */
+    constexpr bool operator!= (const Https& a, const Https& b) noexcept
     {
         return !(a == b);
     }

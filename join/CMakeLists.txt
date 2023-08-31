@@ -83,7 +83,6 @@ set(SOURCES
     network/src/arp.cpp
     network/src/chunkstream.cpp
     network/src/httpmessage.cpp
-    network/src/httpclient.cpp
     sax/src/value.cpp
     sax/src/sax.cpp
     sax/src/json.cpp
