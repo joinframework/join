@@ -247,22 +247,34 @@ TEST (HttpClient, keepAliveMax)
  */
 TEST (HttpClient, send)
 {
-    Https::Client client1 ("172.16.13.128", 80);
+    Http::Client client1 ("172.16.13.128", 443);
     client1.timeout (500);
     client1 << HttpRequest ();
     ASSERT_TRUE (client1.fail ());
     ASSERT_EQ (join::lastError, Errc::TimedOut);
 
-    Https::Client client2 (host, 80);
+    Http::Client client2 (host, 80, true);
     client2 << HttpRequest ();
-    ASSERT_TRUE (client2.fail ());
-    ASSERT_EQ (join::lastError, TlsErrc::TlsProtocolError);
+    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
+    client2.close ();
+    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
 
-    Https::Client client3 (host, 443, true);
+    Https::Client client3 ("172.16.13.128", 80);
+    client3.timeout (500);
     client3 << HttpRequest ();
-    ASSERT_TRUE (client3.good ()) << join::lastError.message ();
-    client3.close ();
-    ASSERT_TRUE (client3.good ()) << join::lastError.message ();
+    ASSERT_TRUE (client3.fail ());
+    ASSERT_EQ (join::lastError, Errc::TimedOut);
+
+    Https::Client client4 (host, 443, true);
+    client4 << HttpRequest ();
+    ASSERT_TRUE (client4.good ()) << join::lastError.message ();
+    client4.close ();
+    ASSERT_TRUE (client4.good ()) << join::lastError.message ();
+
+    Https::Client client5 (host, 80);
+    client5 << HttpRequest ();
+    ASSERT_TRUE (client5.fail ());
+    ASSERT_EQ (join::lastError, TlsErrc::TlsProtocolError);
 }
 
 /**
@@ -270,24 +282,42 @@ TEST (HttpClient, send)
  */
 TEST (HttpClient, receive)
 {
-    Https::Client client (host, 443);
+    Http::Client client1 (host, 80);
 
     HttpResponse response;
-    client >> response;
-    ASSERT_TRUE (client.fail ());
+    client1 >> response;
+    ASSERT_TRUE (client1.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
 
-    client.clear ();
-    client << HttpRequest ();
-    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    client1.clear ();
+    client1 << HttpRequest ();
+    ASSERT_TRUE (client1.good ()) << join::lastError.message ();
 
-    client >> response;
-    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    client1 >> response;
+    ASSERT_TRUE (client1.good ()) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "302");
+    ASSERT_EQ (response.reason (), "Found");
+
+    client1.close ();
+    ASSERT_TRUE (client1.good ()) << join::lastError.message ();
+
+    Https::Client client2 (host, 443);
+
+    client2 >> response;
+    ASSERT_TRUE (client2.fail ());
+    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
+
+    client2.clear ();
+    client2 << HttpRequest ();
+    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
+
+    client2 >> response;
+    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
     ASSERT_EQ (response.status (), "200");
     ASSERT_EQ (response.reason (), "OK");
 
-    client.close ();
-    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    client2.close ();
+    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
 }
 
 /**
