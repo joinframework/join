@@ -22,6 +22,9 @@
  * SOFTWARE.
  */
 
+#ifndef __JOIN_STREAMBUF_HPP__
+#define __JOIN_STREAMBUF_HPP__
+
 // C++.
 #include <iostream>
 #include <memory>
@@ -105,3 +108,5 @@ namespace join
         bool _own = false;
     };
 }
+
+#endif
