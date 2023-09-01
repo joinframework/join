@@ -35,6 +35,8 @@ using join::Udp;
 using join::Icmp;
 using join::Tcp;
 using join::Tls;
+using join::Http;
+using join::Https;
 
 /**
  * @brief test the family method.
@@ -56,6 +58,12 @@ TEST (Protocol, family)
     ASSERT_EQ (Tls ().family (), AF_INET);
     ASSERT_EQ (Tls::v6 ().family (), AF_INET6);
     ASSERT_EQ (Tls::v4 ().family (), AF_INET);
+    ASSERT_EQ (Http ().family (), AF_INET);
+    ASSERT_EQ (Http::v6 ().family (), AF_INET6);
+    ASSERT_EQ (Http::v4 ().family (), AF_INET);
+    ASSERT_EQ (Https ().family (), AF_INET);
+    ASSERT_EQ (Https::v6 ().family (), AF_INET6);
+    ASSERT_EQ (Https::v4 ().family (), AF_INET);
 }
 
 /**
@@ -70,6 +78,8 @@ TEST (Protocol, type)
     ASSERT_EQ (Icmp ().type (), SOCK_RAW);
     ASSERT_EQ (Tcp ().type (), SOCK_STREAM);
     ASSERT_EQ (Tls ().type (), SOCK_STREAM);
+    ASSERT_EQ (Http ().type (), SOCK_STREAM);
+    ASSERT_EQ (Https ().type (), SOCK_STREAM);
 }
 
 /**
@@ -85,6 +95,8 @@ TEST (Protocol, protocol)
     ASSERT_EQ (Icmp::v4 ().protocol (), IPPROTO_ICMP);
     ASSERT_EQ (Tcp ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Tls ().protocol (), IPPROTO_TCP);
+    ASSERT_EQ (Http ().protocol (), IPPROTO_TCP);
+    ASSERT_EQ (Https ().protocol (), IPPROTO_TCP);
 }
 
 /**
@@ -111,6 +123,16 @@ TEST (Protocol, equal)
     ASSERT_NE (Tls::v4 (), Tls::v6 ());
     ASSERT_EQ (Tls::v6 (), Tls::v6 ());
     ASSERT_NE (Tls::v6 (), Tls::v4 ());
+
+    ASSERT_EQ (Http::v4 (), Http::v4 ());
+    ASSERT_NE (Http::v4 (), Http::v6 ());
+    ASSERT_EQ (Http::v6 (), Http::v6 ());
+    ASSERT_NE (Http::v6 (), Http::v4 ());
+
+    ASSERT_EQ (Https::v4 (), Https::v4 ());
+    ASSERT_NE (Https::v4 (), Https::v6 ());
+    ASSERT_EQ (Https::v6 (), Https::v6 ());
+    ASSERT_NE (Https::v6 (), Https::v4 ());
 }
 
 /**

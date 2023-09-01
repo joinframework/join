@@ -879,11 +879,11 @@ TEST_F (TlsSocket, setCertificate)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.setCertificate ("foo"), -1);
+    ASSERT_EQ (tlsSocket.setCertificate ("/invalid/cert/path"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (tlsSocket.setCertificate (_certFile), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsSocket.setCertificate (_certFile, "foo"), -1);
+    ASSERT_EQ (tlsSocket.setCertificate (_certFile, "/invalid/key/path"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (tlsSocket.setCertificate (_certFile, _invalidKey), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -902,7 +902,7 @@ TEST_F (TlsSocket, setCaPath)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.setCaPath ("foo"), -1);
+    ASSERT_EQ (tlsSocket.setCaPath ("/invalid/ca/path"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (tlsSocket.setCaPath (_certFile), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -921,7 +921,7 @@ TEST_F (TlsSocket, setCaFile)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.setCaFile ("foo"), -1);
+    ASSERT_EQ (tlsSocket.setCaFile ("/invalid/ca/file"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (tlsSocket.setCaFile (_certPath), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);

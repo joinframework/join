@@ -239,22 +239,71 @@ namespace join
     }
 
     /**
-     * @brief read HTTP line (delimiter "\r\n").
-     * @param in input stream.
+     * @brief split a string using a delimiter.
+     * @param in string to split.
+     * @param delim delimiter.
+     * @return list of tokens.
+     */
+    __inline__ std::vector <std::string> split (const std::string& in, const std::string& delim)
+    {
+        std::vector <std::string> tokens;
+        if (in.size ())
+        {
+            size_t beg = 0, end = in.find (delim);
+            size_t sz = delim.size();
+            while (end != std::string::npos)
+            {
+                tokens.push_back (in.substr (beg, end - beg));
+                beg = end + sz;
+                end = in.find (delim, beg);
+            }
+            tokens.push_back (in.substr (beg));
+        }
+        return tokens;
+    }
+
+    /**
+     * @brief split a string in reverse order using a delimiter.
+     * @param in string to split.
+     * @param delim delimiter.
+     * @return list of tokens.
+     */
+    __inline__ std::vector <std::string> rsplit (const std::string& in, const std::string& delim)
+    {
+        std::vector <std::string> tokens;
+        if (in.size ())
+        {
+            size_t beg = in.rfind (delim), end = std::string::npos;
+            size_t sz = delim.size();
+            while (beg != std::string::npos)
+            {
+                tokens.push_back (in.substr (beg + sz, end - beg - sz));
+                end = beg;
+                beg = in.rfind (delim, end - sz);
+            }
+            tokens.push_back (in.substr (0, end));
+        }
+        return tokens;
+    }
+
+    /**
+     * @brief read line (delimiter "\r\n").
+     * @param in input stream buffer.
      * @param line line read.
      * @param max max characters to read.
-     * @return input stream.
+     * @return true on success, false on error.
      */
-    __inline__ std::istream& getline (std::istream& in, std::string& line, std::streamsize max = 1024)
+    __inline__ bool getline (std::streambuf& in, std::string& line, std::streamsize max = 1024)
     {
         line.clear ();
 
         while (max--)
         {
-            char ch = in.get ();
-            if (in.fail ())
+            char ch = in.sbumpc ();
+
+            if (ch == std::char_traits <char>::eof ())
             {
-                return in;
+                return false;
             }
 
             if (ch == '\r')
@@ -264,16 +313,32 @@ namespace join
 
             if (ch == '\n')
             {
-                return in;
+                return true;
             }
 
             line.push_back (ch);
         }
 
         join::lastError = make_error_code (Errc::MessageTooLong);
-        in.setstate (std::ios_base::failbit);
 
-        return in;
+        return false;
+    }
+
+    /**
+     * @brief read line (delimiter "\r\n").
+     * @param in input stream.
+     * @param line line read.
+     * @param max max characters to read.
+     * @return true on success, false on error.
+     */
+    __inline__ bool getline (std::istream& in, std::string& line, std::streamsize max = 1024)
+    {
+        if (!getline (*in.rdbuf (), line, max))
+        {
+            in.setstate (std::ios_base::failbit);
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -283,7 +348,7 @@ namespace join
      */
     __inline__ void dump (const void* data, unsigned long size, std::ostream& out = std::cout)
     {
-        unsigned char *buf = (unsigned char *) data;
+        const uint8_t *buf = reinterpret_cast <const uint8_t *> (data);
 
         for (int i = 0; i < int (size); i += 16)
         {

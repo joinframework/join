@@ -22,6 +22,9 @@
  * SOFTWARE.
  */
 
+#ifndef __JOIN_STREAMBUF_HPP__
+#define __JOIN_STREAMBUF_HPP__
+
 // C++.
 #include <iostream>
 #include <memory>
@@ -36,14 +39,12 @@ namespace join
     public:
         /**
          * @brief create the stream buffer decorator instance.
-         * @param istream concrete input stream.
-         * @param ostream concrete output stream.
-         * @param bufsize internal buffer size.
+         * @param streambuf concrete stream buffer.
+         * @param own is the decorator owning inner stream buffer.
          */
-        StreambufDecorator (std::istream& istream, std::ostream& ostream, std::streamsize bufsize)
-        : _buf (std::make_unique <char []> (bufsize)),
-          _istream (std::addressof (istream)),
-          _ostream (std::addressof (ostream))
+        StreambufDecorator (std::streambuf* streambuf, bool own = false)
+        : _innerbuf (streambuf),
+          _own (own)
         {
         }
 
@@ -66,12 +67,11 @@ namespace join
          */
         StreambufDecorator (StreambufDecorator&& other)
         : std::streambuf (std::move (other)),
-          _buf (std::move (other._buf)),
-          _istream (other._istream),
-          _ostream (other._ostream)
+          _innerbuf (other._innerbuf),
+          _own (other._own)
         {
-            other._istream = nullptr;
-            other._ostream = nullptr;
+            other._innerbuf = nullptr;
+            other._own = false;
         }
 
         /**
@@ -82,27 +82,31 @@ namespace join
         StreambufDecorator& operator= (StreambufDecorator&& other)
         {
             std::streambuf::operator= (std::move (other));
-            _buf = std::move (other._buf);
-            _istream = other._istream;
-            _istream = other._istream;
-            other._istream = nullptr;
-            other._ostream = nullptr;
+            _innerbuf = other._innerbuf;
+            _own = other._own;
+            other._innerbuf = nullptr;
+            other._own = false;
             return *this;
         }
 
         /**
          * @brief destroy the stream buffer decorator instance.
          */
-        virtual ~StreambufDecorator () = default;
+        virtual ~StreambufDecorator ()
+        {
+            if (_own && _innerbuf)
+            {
+                delete (_innerbuf);
+            }
+        }
 
     protected:
-        /// internal buffer.
-        std::unique_ptr <char []> _buf;
+        /// concrete stream buffer.
+        std::streambuf* _innerbuf;
 
-        /// concrete input stream.
-        std::istream* _istream;
-
-        /// concrete output stream.
-        std::ostream* _ostream;
+        /// own inner stream buffer.
+        bool _own = false;
     };
 }
+
+#endif

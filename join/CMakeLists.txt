@@ -31,6 +31,7 @@ set(PUBLIC_HEADERS
     core/include/join/view.hpp
     core/include/join/cache.hpp
     core/include/join/reactor.hpp
+    core/include/join/streambuf.hpp
     core/include/join/zstream.hpp
     thread/include/join/mutex.hpp
     thread/include/join/condition.hpp
@@ -82,7 +83,6 @@ set(SOURCES
     network/src/arp.cpp
     network/src/chunkstream.cpp
     network/src/httpmessage.cpp
-    network/src/httpclient.cpp
     sax/src/value.cpp
     sax/src/sax.cpp
     sax/src/json.cpp
