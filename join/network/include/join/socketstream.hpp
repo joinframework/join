@@ -683,7 +683,11 @@ namespace join
             }
             else
             {
-                startEncryption ();
+                this->startEncryption ();
+                if (this->fail ())
+                {
+                    this->close ();
+                }
             }
         }
 

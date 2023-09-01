@@ -71,7 +71,7 @@ public:
             rootCertFile.close ();
         }
 
-        std::ofstream certFile (_cert);
+        std::ofstream certFile (_certFile);
         if (certFile.is_open ())
         {
             certFile << "-----BEGIN CERTIFICATE-----" << std::endl;
@@ -99,6 +99,10 @@ public:
             certFile.close ();
         }
 
+        [[maybe_unused]] int result;
+        result = std::system (std::string ("/usr/bin/c_rehash " + _certPath).c_str ());
+
+        mkdir (_certPath.c_str (), 0777);
         std::ofstream keyFile (_key);
         if (keyFile.is_open ())
         {
@@ -139,7 +143,8 @@ public:
     static void TearDownTestCase ()
     {
         unlink (_rootcert.c_str ());
-        unlink (_cert.c_str ());
+        unlink (_certFile.c_str ());
+        rmdir  (_certPath.c_str ());
         unlink (_key.c_str ());
     }
 
@@ -149,7 +154,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (this->setCertificate (_cert, _key), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher (join::defaultCipher_), 0) << join::lastError.message ();
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
@@ -192,34 +197,41 @@ protected:
         }
     }
 
-    /// timeout.
-    static const int _timeout;
-
     /// host.
+    static const IpAddress _hostip;
+
+    /// host name.
     static const std::string _host;
 
     /// port.
     static const uint16_t _port;
     static const uint16_t _invalid_port;
 
+    /// timeout.
+    static const int _timeout;
+
     /// root certificate.
     static const std::string _rootcert;
 
-    /// certificate.
-    static const std::string _cert;
+    /// certificate path.
+    static const std::string _certPath;
+
+    /// certificate file.
+    static const std::string _certFile;
 
     /// private key.
     static const std::string _key;
 };
 
-const int         TlsSocketStream::_timeout = 1000;
-const std::string TlsSocketStream::_host = "localhost";
-const uint16_t    TlsSocketStream::_port = 5000;
+const IpAddress   TlsSocketStream::_hostip       = "127.0.0.1";
+const std::string TlsSocketStream::_host         = "localhost.";
+const uint16_t    TlsSocketStream::_port         = 5000;
 const uint16_t    TlsSocketStream::_invalid_port = 5032;
-const std::string TlsSocketStream::_rootcert = "/tmp/tlssocket_test_root.cert";
-const std::string TlsSocketStream::_cert = "/tmp/tlssocket_test.cert";
-const std::string TlsSocketStream::_key = "/tmp/tlssocket_test.key";
-
+const int         TlsSocketStream::_timeout      = 1000;
+const std::string TlsSocketStream::_rootcert     = "/tmp/tlssocket_test_root.cert";
+const std::string TlsSocketStream::_certPath     = "/tmp/certs";
+const std::string TlsSocketStream::_certFile     = _certPath + "/tlssocket_test.cert";
+const std::string TlsSocketStream::_key          = "/tmp/tlssocket_test.key";
 /**
  * @brief Test default constructor.
  */
@@ -270,6 +282,21 @@ TEST_F (TlsSocketStream, connect)
 }
 
 /**
+ * @brief Test connected method.
+ */
+TEST_F (TlsSocketStream, connected)
+{
+    Tls::Stream tlsStream;
+    ASSERT_FALSE (tlsStream.connected ());
+    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.connected ());
+    tlsStream.close ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_FALSE (tlsStream.connected ());
+}
+
+/**
  * @brief Test startEncryption method.
  */
 TEST_F (TlsSocketStream, startEncryption)
@@ -300,33 +327,6 @@ TEST_F (TlsSocketStream, connectEncrypted)
 }
 
 /**
- * @brief Test close method.
- */
-TEST_F (TlsSocketStream, close)
-{
-    Tls::Stream tlsStream;
-    tlsStream.connect ({Resolver::resolveHost (_host), _port});
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    tlsStream.close ();
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-}
-
-/**
- * @brief Test connected method.
- */
-TEST_F (TlsSocketStream, connected)
-{
-    Tls::Stream tlsStream;
-    ASSERT_FALSE (tlsStream.connected ());
-    tlsStream.connect ({Resolver::resolveHost (_host), _port});
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.connected ());
-    tlsStream.close ();
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_FALSE (tlsStream.connected ());
-}
-
-/**
  * @brief Test encrypted method.
  */
 TEST_F (TlsSocketStream, encrypted)
@@ -346,6 +346,91 @@ TEST_F (TlsSocketStream, encrypted)
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     ASSERT_TRUE (tlsStream.encrypted ());
     tlsStream.close ();
+}
+
+/**
+ * @brief Test close method.
+ */
+TEST_F (TlsSocketStream, close)
+{
+    Tls::Stream tlsStream;
+    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.close ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+}
+
+/**
+ * @brief Test setCaPath method.
+ */
+TEST_F (TlsSocketStream, setCaPath)
+{
+    Tls::Stream tlsStream;
+
+    ASSERT_EQ (tlsStream.setCaPath ("/invalid/ca/path"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsStream.setCaPath (_certFile), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsStream.setCaPath (_certPath), 0) << join::lastError.message ();
+    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCaPath (_certPath), 0) << join::lastError.message ();
+    tlsStream.close ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCaPath (_certPath), 0) << join::lastError.message ();
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test setCaFile method.
+ */
+TEST_F (TlsSocketStream, setCaFile)
+{
+    Tls::Stream tlsStream;
+
+    ASSERT_EQ (tlsStream.setCaFile ("/invalid/ca/file"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsStream.setCaFile (_certPath), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsStream.setCaFile (_certFile), 0) << join::lastError.message ();
+    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCaFile (_certFile), 0) << join::lastError.message ();
+    tlsStream.close ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCaFile (_certFile), 0) << join::lastError.message ();
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test setVerify method.
+ */
+TEST_F (TlsSocketStream, setVerify)
+{
+    Tls::Stream tlsStream;
+
+    tlsStream.setVerify (false);
+    tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.close ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+
+    tlsStream.setVerify (true, 1);
+    tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
+    ASSERT_TRUE (tlsStream.fail ());
+    tlsStream.clear (std::ios::goodbit);
+
+    tlsStream.setVerify (true, 0);
+    ASSERT_EQ (tlsStream.setCaFile (_rootcert), 0) << join::lastError.message ();
+    tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
+    ASSERT_TRUE (tlsStream.fail ());
+    tlsStream.clear (std::ios::goodbit);
+    
+    tlsStream.setVerify (true, 1);
+    tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.close ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
 }
 
 /**
