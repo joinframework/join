@@ -75,6 +75,7 @@ TEST (Zstream, deflate)
     out.resize (sample.size ());
     zstream.read (&out[0], out.size ());
     ASSERT_TRUE (zstream.good ());
+    ASSERT_EQ (zstream.get (), std::char_traits <char>::eof ());
 
     // check uncompression result.
     ASSERT_EQ (out, sample);
@@ -127,6 +128,7 @@ TEST (Zstream, zlib)
     out.resize (sample.size ());
     zstream.read (&out[0], out.size ());
     ASSERT_TRUE (zstream.good ());
+    ASSERT_EQ (zstream.get (), std::char_traits <char>::eof ());
 
     // check uncompression result.
     ASSERT_EQ (out, sample);
@@ -179,6 +181,7 @@ TEST (Zstream, gzip)
     out.resize (sample.size ());
     zstream.read (&out[0], out.size ());
     ASSERT_TRUE (zstream.good ());
+    ASSERT_EQ (zstream.get (), std::char_traits <char>::eof ());
 
     // check uncompression result.
     ASSERT_EQ (out, sample);
