@@ -71,30 +71,30 @@ public:
             rootCertFile.close ();
         }
 
+        mkdir (_certPath.c_str (), 0777);
         std::ofstream certFile (_certFile);
         if (certFile.is_open ())
         {
             certFile << "-----BEGIN CERTIFICATE-----" << std::endl;
-            certFile << "MIIDljCCAzygAwIBAgIUR3ZIuKMt0BdaOZQnPwhSMR9qzfYwCgYIKoZIzj0EAwIw" << std::endl;
+            certFile << "MIIDgDCCAyagAwIBAgIUR3ZIuKMt0BdaOZQnPwhSMR9qzfgwCgYIKoZIzj0EAwIw" << std::endl;
             certFile << "gcQxCzAJBgNVBAYTAkZSMRIwEAYDVQQIDAlPY2NpdGFuaWUxEDAOBgNVBAcMB0Nh" << std::endl;
             certFile << "c3RyZXMxFzAVBgNVBAoMDkpvaW4gRnJhbWV3b3JrMS0wKwYDVQQLDCRKb2luIEZy" << std::endl;
             certFile << "YW1ld29yayBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkxHTAbBgNVBAMMFGNhLmpvaW5m" << std::endl;
             certFile << "cmFtZXdvcmsubmV0MSgwJgYJKoZIhvcNAQkBFhlzdXBwb3J0QGpvaW5mcmFtZXdv" << std::endl;
-            certFile << "cmsubmV0MB4XDTIyMDcwNjEzMzMwN1oXDTMyMDcwMzEzMzMwN1owgacxCzAJBgNV" << std::endl;
+            certFile << "cmsubmV0MB4XDTIyMDcwNzEyMTIxMFoXDTMyMDcwNDEyMTIxMFowgagxCzAJBgNV" << std::endl;
             certFile << "BAYTAkZSMRIwEAYDVQQIDAlPY2NpdGFuaWUxEDAOBgNVBAcMB0Nhc3RyZXMxFzAV" << std::endl;
             certFile << "BgNVBAoMDkpvaW4gRnJhbWV3b3JrMRswGQYDVQQLDBJKb2luIEZyYW1ld29yayBE" << std::endl;
-            certFile << "ZXYxEjAQBgNVBAMMCWxvY2FsaG9zdDEoMCYGCSqGSIb3DQEJARYZc3VwcG9ydEBq" << std::endl;
-            certFile << "b2luZnJhbWV3b3JrLm5ldDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB" << std::endl;
-            certFile << "AM4RD6B4SXS4ERBDNm3aDHYYN4CteBbsOAtDtI4Muw8e+Rs0BhIU+WwisSJhUuuw" << std::endl;
-            certFile << "YAM+KUEyk9vt74TgnYTNklZYVBxSJvKAmaHmB/irPlgzvA/BS3IJZ1kw9UM0Bhfs" << std::endl;
-            certFile << "FIy+8gKMAwscRHIyfB7hygSYnsbYP/P73K3ARpNKB6Izi4vKIfDdN3I3CKJafZ+o" << std::endl;
-            certFile << "AcOoE3rrIkoFVTDLzd0VKrE0r3Xxvn7O1UXK26ZAN2kL40uo/DR2PeyB0GI4sj1B" << std::endl;
-            certFile << "QYlWhji3Ss9UnpisEwxnk8bxQVrE/AnqpOUGIZ8ql0Hw9fZ0or1csBMOgq1AwBXQ" << std::endl;
-            certFile << "jAzUeBYE0m0ys7Zb9r3YOE8CAwEAAaNcMFowCwYDVR0PBAQDAgXgMB0GA1UdJQQW" << std::endl;
-            certFile << "MBQGCCsGAQUFBwMBBggrBgEFBQcDAjAsBgNVHREEJTAjgglsb2NhbGhvc3SHBH8A" << std::endl;
-            certFile << "AAGHEAAAAAAAAAAAAAAAAAAAAAAwCgYIKoZIzj0EAwIDSAAwRQIhAIu+0oI0enGS" << std::endl;
-            certFile << "zjEfoHwMzUtdtY7BYKQiftsxYFRcxenXAiB98gEYH4LO17ZxZSDYhsCQleshuJ0D" << std::endl;
-            certFile << "bQZplxED8CqeNQ==" << std::endl;
+            certFile << "ZXYxEzARBgNVBAMMCmxvY2FsaG9zdC4xKDAmBgkqhkiG9w0BCQEWGXN1cHBvcnRA" << std::endl;
+            certFile << "am9pbmZyYW1ld29yay5uZXQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB" << std::endl;
+            certFile << "AQDSNtw5zEoJFPf6Rl0Y1n8BQfE0YTPCELvFAeioUfj8CAnUleHL9pwAEFg6kgoG" << std::endl;
+            certFile << "hvwto5/yWGPUqNNfe3xbFTJcHgMhgtjqy5H6sYDkTi3kYIIMBfTHr8NI7HWE8Nz1" << std::endl;
+            certFile << "qU1snjtERnkoLilIZf/2BojNVMtHC1H316WbMicXS0v7HQo3lv6PYSana9Q9ow9O" << std::endl;
+            certFile << "2/FiW5qq1eOhI1ZedRanX+bl0jHWCd3WsI87+5bTaQrfetdHTOmav6O17Iq9FiTh" << std::endl;
+            certFile << "Sg9fbM3s2Hw15kI+mws029dhcwXs5sYY+NgtrQwjR5qH+54BdUaPwQfl/KyulfEl" << std::endl;
+            certFile << "TJykJ+3w6MorxUr55F68uBNbAgMBAAGjRTBDMAsGA1UdDwQEAwIF4DAdBgNVHSUE" << std::endl;
+            certFile << "FjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwFQYDVR0RBA4wDIIKbG9jYWxob3N0LjAK" << std::endl;
+            certFile << "BggqhkjOPQQDAgNIADBFAiA120ufIbhcw7BJQ1L6WudDdW2mHrVXvdgeOzVGgz1d" << std::endl;
+            certFile << "iAIhAMm/sWI3yzb2IMPffxWKYusWEQE2hZvs24ESSC/ZZ0s+" << std::endl;
             certFile << "-----END CERTIFICATE-----" << std::endl;
             certFile.close ();
         }
@@ -102,38 +102,70 @@ public:
         [[maybe_unused]] int result;
         result = std::system (std::string ("/usr/bin/c_rehash " + _certPath).c_str ());
 
-        mkdir (_certPath.c_str (), 0777);
         std::ofstream keyFile (_key);
         if (keyFile.is_open ())
         {
             keyFile << "-----BEGIN RSA PRIVATE KEY-----" << std::endl;
-            keyFile << "MIIEpAIBAAKCAQEAzhEPoHhJdLgREEM2bdoMdhg3gK14Fuw4C0O0jgy7Dx75GzQG" << std::endl;
-            keyFile << "EhT5bCKxImFS67BgAz4pQTKT2+3vhOCdhM2SVlhUHFIm8oCZoeYH+Ks+WDO8D8FL" << std::endl;
-            keyFile << "cglnWTD1QzQGF+wUjL7yAowDCxxEcjJ8HuHKBJiextg/8/vcrcBGk0oHojOLi8oh" << std::endl;
-            keyFile << "8N03cjcIolp9n6gBw6gTeusiSgVVMMvN3RUqsTSvdfG+fs7VRcrbpkA3aQvjS6j8" << std::endl;
-            keyFile << "NHY97IHQYjiyPUFBiVaGOLdKz1SemKwTDGeTxvFBWsT8Ceqk5QYhnyqXQfD19nSi" << std::endl;
-            keyFile << "vVywEw6CrUDAFdCMDNR4FgTSbTKztlv2vdg4TwIDAQABAoIBAQC0p5JqnWnQkNos" << std::endl;
-            keyFile << "xq/+CG5qTfrCrdGdTwQnI/kzm4eWzxGWvrofuhGcsqFWQbp/dAYIccObK+sioWsd" << std::endl;
-            keyFile << "tAmEdvC3EALVPVR1vzZxEAinAgHLM7fInC43UHUxZVFv1DkPWeH+LhxfDT5RzDtZ" << std::endl;
-            keyFile << "Xlcgf9QqyV5Rdx5CGOkzzmBRGlKs6CyzuN80vYpmciK2ool9M7EXQe2CFvOMsNDW" << std::endl;
-            keyFile << "2k36Ybg7PNarJOhGTkuOG/WjLuP4+k8cctF5JuZYorbtZP7lk0UiJ+MjShttk10f" << std::endl;
-            keyFile << "brH8Jc6DCxXebv5nehtecE6QvPPdvJm9rIb8AOfyisN7cvLecNPduz0Cxu6xk4hN" << std::endl;
-            keyFile << "BwscwPIZAoGBAP6EZPvmNBLKourDwoeMBvPjP1dWmmNDAjSbQINWdthgnQYo0fMH" << std::endl;
-            keyFile << "sYE7T1/sCohGNVafEsMDwuwSNnljHA7J2kDteZYzWae99xxO7Bcjr4cg0DmT2Knv" << std::endl;
-            keyFile << "Gm5gG/yjhgCbnyDO6XRdi39ZwVk6Hay0SIHZLYisSXjx11B0r6XeNoqVAoGBAM9E" << std::endl;
-            keyFile << "Z2dKxRfJZix0M0D7YW9acxhrI/tWG4Pkti6bqxfbUtXMzrjgFTuj03qyjpZU/oQy" << std::endl;
-            keyFile << "NTugq2ih0q628sWUH71l0x7V9yGdTh2wZ5vL9EF9QlCG2fEcn9/KsjiwrtsoJ9Ft" << std::endl;
-            keyFile << "pdmMrDsYOL3Tp1PEm9yZnEqyMcrSnHaUB67d26JTAoGAbVODaSymG5hNSNiT29OL" << std::endl;
-            keyFile << "PQHVOHfr0016SgySNphSbnl5maa5IFKiradDXimvEIBP8whbb8dS2EKugY/QAo40" << std::endl;
-            keyFile << "IQWg36LpFQOlfNRt1zat9DZlGwZl4ADj8pt4ChpXujUesmIOp7xy6l4sjl5HVuMN" << std::endl;
-            keyFile << "7jDSvU18NeZ0HYwx0ubTuM0CgYBBdm5eTlw/rgmKQs0pWfwlKmEttjEwIbshBiyQ" << std::endl;
-            keyFile << "PfRk3Y2lH0GvXH74Tj7uAtVMH94fLKhpg85/hpS/P+MfijAYJr/ufk/GmyNf9yZS" << std::endl;
-            keyFile << "K7GiuYgnXOAa6hqImUF+7Dbd2ynwWHxIYMjJBVZuhhnUOEWuAApAAVX+pFRsk0Z1" << std::endl;
-            keyFile << "8XZ8JwKBgQC2FHE/YXJb+xl9yHYs+skn8pBqMT+S/2f8vc6bfUdlGOR42FkbMoG2" << std::endl;
-            keyFile << "RQi4as4mW6bv34u/H9l4/M+ay+wV2C9JvB4pbwEMSCw2J3VDwFlXEDjpaxToT2X1" << std::endl;
-            keyFile << "bIishrH1ur2h7C3ZpNuv0zfl8+IiA/diTmqQC8/iIUG7DsQukJ8Uyg==" << std::endl;
+            keyFile << "MIIEowIBAAKCAQEA0jbcOcxKCRT3+kZdGNZ/AUHxNGEzwhC7xQHoqFH4/AgJ1JXh" << std::endl;
+            keyFile << "y/acABBYOpIKBob8LaOf8lhj1KjTX3t8WxUyXB4DIYLY6suR+rGA5E4t5GCCDAX0" << std::endl;
+            keyFile << "x6/DSOx1hPDc9alNbJ47REZ5KC4pSGX/9gaIzVTLRwtR99elmzInF0tL+x0KN5b+" << std::endl;
+            keyFile << "j2Emp2vUPaMPTtvxYluaqtXjoSNWXnUWp1/m5dIx1gnd1rCPO/uW02kK33rXR0zp" << std::endl;
+            keyFile << "mr+jteyKvRYk4UoPX2zN7Nh8NeZCPpsLNNvXYXMF7ObGGPjYLa0MI0eah/ueAXVG" << std::endl;
+            keyFile << "j8EH5fysrpXxJUycpCft8OjKK8VK+eRevLgTWwIDAQABAoIBAAzdlK7o5OMXaHHl" << std::endl;
+            keyFile << "2o7Jme5Oxd9pz4wiEAvnqQCcO7vZFhjvr2kXR8btOSkkhP6PRmHYsNJZPIroZj9i" << std::endl;
+            keyFile << "xGKisnlW0OQ9KN995ApO0M+oRUDD81GfD7Mk+7O73Rls0GksmnN6X7A3C/U8lgQ7" << std::endl;
+            keyFile << "UeYR0k+Wz/YiKDsd9KHB+QiA8D6HFQ9I8Y2P97KOcYnxXZfSwNm+ENNU3wShZOl2" << std::endl;
+            keyFile << "ZYJJ4DE+5m2SwZ6g8b5Zre4cDbOduwuz/jXzjy2tAZBlTS4DVpYlhd14z+ssUWiu" << std::endl;
+            keyFile << "AdS/nqSF7Obj0TRhoGNfrkisFzV4itavQ5DKGj/6hjueIJVLteUOzcCeg26YosNy" << std::endl;
+            keyFile << "QzZSjOECgYEA7y3InEoh93/4HZCZmdwN8KfZtqirX0t966FntgAT8RkIs+KvNS8B" << std::endl;
+            keyFile << "m3RfNLa/EuDt5zTmHRGx+oeN+17i9QQjKWcR0NnJ6aSZbvJByj3yKxLF9XVllzp/" << std::endl;
+            keyFile << "vHSSyB264RoKIrWmFN6cCO4u4h9ZPY75pASWBCDMdnGK8axAcqAnlqsCgYEA4P+Y" << std::endl;
+            keyFile << "FF9RW4rhrVU4dpXSfcr6vOwqfp9F9vhTVL0JS/SLOFoJNNpS9Rnq3pVLEuKyCphd" << std::endl;
+            keyFile << "3nk9VFfoRygmMaGBvwGaXZPPvosoaIUgOdTt7KIfSHPichBEVxRuWCrtTGGkG0ok" << std::endl;
+            keyFile << "s/RPHhvxZE267vsVj1PktK8Yr5Ba0AL2ycztNhECgYB5OAwHYe8LIBlg6otelk+e" << std::endl;
+            keyFile << "W4OU9rE8L+eWx4vniuyQce6eNNI1syguYHFsJv56E/OfDYlezDwWzCLidnmyUjF7" << std::endl;
+            keyFile << "51f5MJgLyTdWKoO7e1/EAtS/jYs6dRSOL8rAj4jKU0c1xjhxNU2BnS23vsmc0Fyn" << std::endl;
+            keyFile << "iwd4+iKGGQ+hYnqbXZ4S1wKBgD/3an0gPDkSWua0e8D7B0TMGEztt4cYMQPtxYMp" << std::endl;
+            keyFile << "2yLE+2+h6UwlZcBZBfUR7K4J1SQ9/THqtgzskRTpzTH/AKwVAJXqF/3MAkj00Byg" << std::endl;
+            keyFile << "9KN50/r9NzvGdCdtn5FhYuV8PPOlOJoQsw2UVCR4FNUsfQyqhTL5NMN0/tx0e0UU" << std::endl;
+            keyFile << "BbyBAoGBANu5ifByauVELH8UEl5rXRu1S9iAVV+Bc5jboXwc4VxJtEyomGJ7+YdL" << std::endl;
+            keyFile << "5c9LFV+STUp7CE12uSXQZTQM0tEjPinLntRinNzu9tIHR1vy7FZHEwMFIgB4VTY7" << std::endl;
+            keyFile << "ALRYv1/QpTuywpNUFRS15JkfGNf5JIkrUEWLgkX3OVCBsRGHUugy" << std::endl;
             keyFile << "-----END RSA PRIVATE KEY-----" << std::endl;
             keyFile.close ();
+        }
+
+        std::ofstream invalidKeyFile (_invalidKey);
+        if (invalidKeyFile.is_open ())
+        {
+            invalidKeyFile << "-----BEGIN RSA PRIVATE KEY-----" << std::endl;
+            invalidKeyFile << "MIIEowIBAAKCAQEA2Q0DOyG039uVMuxNnZ5fpfOcvXXOTguST1QR6eLVkdG7OKpM" << std::endl;
+            invalidKeyFile << "nc9K597jx1syT1q+SwFcykMtvWxCfD8BR7bcLILeO6z+HlRfvjOhUiHaX/KCaTN8" << std::endl;
+            invalidKeyFile << "l7OJOgmUlL0FhQ1SXxw7KCSGd+rgu1iHwjFDDkj/tG24ashdmNt+DYdeoJu2mzgw" << std::endl;
+            invalidKeyFile << "tEASfG9VjqBR7ni4Hg/sRpwXvEK5nI1JSLyZbcPCxGlBRdB8hMdny/VW+SBwKD2/" << std::endl;
+            invalidKeyFile << "ivpVJLulw2oniSIcCCcr9d+ERY4XrO71UsiACwPxfdEtbG0KrZfpK91k7vl64DHM" << std::endl;
+            invalidKeyFile << "CeTQPKRZm+LDKOUfv/eTF9F6GY4Dpw2LMwLM5QIDAQABAoIBABjV91etzK+Mxa61" << std::endl;
+            invalidKeyFile << "AVCWzaUEkhvPvhKKGmy/VulnTj7IO98JBYlNLeoIRBIMql4QKRQWDNMMCtDQ8W6c" << std::endl;
+            invalidKeyFile << "Gv5kux7QvrMfYViBGQ9/gucN/pnZ+vgkrw4AuiQM8pZuZpJJ6vH9HfvC6iwQkTR+" << std::endl;
+            invalidKeyFile << "tdIPpvecfL3djCuTz7ns66iKo9ZGpRE6emTBynr8og/oqD8Vw5bW+JJ+AJ3IqZf4" << std::endl;
+            invalidKeyFile << "NslNist7d5FZ5N/+nxWyBUcFglP7bZzb/raOVc/flrYIeDy72asnWOYbDTPzMyH1" << std::endl;
+            invalidKeyFile << "dfaox6QKZtA5NdO9x4aHHGgAz8BTgqs7LvxPwoH+XF1dDCsb3kIeQxHTfcc1opMw" << std::endl;
+            invalidKeyFile << "atxpgwECgYEA8Zq/7Z3tKcBlMz4XNKWWvaDxhBUIS62tGeLJ2spLRFvkL1ixnjcK" << std::endl;
+            invalidKeyFile << "72YWOwDpoINEWa8AhAhM6afE9VxrupSGg+C9uALaJ8HTWTP6u6/F8sbsYaoWHyA/" << std::endl;
+            invalidKeyFile << "k/8/nFEr43ciKUjBhMHB42vYidAgiOvDVXc+/k7HIMQfl/vyp32ecEECgYEA5fu9" << std::endl;
+            invalidKeyFile << "ePLh55TYbXe8SCL0hsZcC8Q/ioT/0GJ6uevGb0lw3XAa+HC6//upu90T7ZOIqysc" << std::endl;
+            invalidKeyFile << "aAqln7ZEeCfvXI/3YJyJ2RWatD+2itECbd0WV2/JflO/OAzDSSFvpxxmwIzccIeA" << std::endl;
+            invalidKeyFile << "UNuNcQGD8HDwFzU+sULvF82yuwMt1syPd/mns6UCgYAviqP5vfnNHW7MhotKcMsY" << std::endl;
+            invalidKeyFile << "xXLA6uKXAbXuQhI2W1g0O2DLcEiDOZGNSilVsvhF/Y6VlzoiwP9hewHmxijsrg1K" << std::endl;
+            invalidKeyFile << "Jg8vBmCnMhzEkNXl2NC61SnujemMdmwMU03RFKfuOqMePJLX7MiaV75kX/AHAV2O" << std::endl;
+            invalidKeyFile << "k8hxgk7sw6rz3UACdVWYAQKBgHUu5ScoksS+Cd0VQmF7Nh8qGSKBt2KsS/BxDVmI" << std::endl;
+            invalidKeyFile << "ck6oHBMomQV340CliaHIjuvh3aRhzhKRQjzz0UVsC8GdNY4LlQ2AvZgUUr2+q78x" << std::endl;
+            invalidKeyFile << "BL4+nmt43pj/n822dL6wcQaxf2zzDgWlKReojwLHeP5KSgxmL49wZx51CzlEd+HI" << std::endl;
+            invalidKeyFile << "2pNlAoGBAObdC7woN7jEfdfYz1BhUpmBsIRqW2yLA1DnlK9lfgs2i1w7spzAh2hV" << std::endl;
+            invalidKeyFile << "djPiKj5vZdcrbaa+SBAnZbFTHyXmAbKbO/iZpSromaZYyCK8NktJu/YxpWZmjnRF" << std::endl;
+            invalidKeyFile << "2xOadRGCav5fTGzCN/ADLgIo4gIAI2o/UnV/MdaSAdHyIeSrxBAb" << std::endl;
+            invalidKeyFile << "-----END RSA PRIVATE KEY-----" << std::endl;
+            invalidKeyFile.close ();
         }
     }
 
@@ -146,6 +178,7 @@ public:
         unlink (_certFile.c_str ());
         rmdir  (_certPath.c_str ());
         unlink (_key.c_str ());
+        unlink (_invalidKey.c_str ());
     }
 
 protected:
@@ -156,6 +189,9 @@ protected:
     {
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
+        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+    #endif
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
@@ -221,6 +257,9 @@ protected:
 
     /// private key.
     static const std::string _key;
+
+    /// invalid private key.
+    static const std::string _invalidKey;
 };
 
 const IpAddress   TlsSocketStream::_hostip       = "127.0.0.1";
@@ -232,6 +271,7 @@ const std::string TlsSocketStream::_rootcert     = "/tmp/tlssocket_test_root.cer
 const std::string TlsSocketStream::_certPath     = "/tmp/certs";
 const std::string TlsSocketStream::_certFile     = _certPath + "/tlssocket_test.cert";
 const std::string TlsSocketStream::_key          = "/tmp/tlssocket_test.key";
+const std::string TlsSocketStream::_invalidKey   = "/tmp/tlssocket_test_invalid.key";
 /**
  * @brief Test default constructor.
  */
@@ -265,46 +305,80 @@ TEST_F (TlsSocketStream, moveAssign)
 }
 
 /**
+ * @brief Test close method.
+ */
+TEST_F (TlsSocketStream, close)
+{
+    Tls::Stream tlsStream;
+
+    ASSERT_FALSE (tlsStream.opened ());
+    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.opened());
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_FALSE (tlsStream.opened());
+    tlsStream.close ();
+    ASSERT_FALSE (tlsStream.opened());
+}
+
+/**
+ * @brief Test bind method.
+ */
+TEST_F (TlsSocketStream, bind)
+{
+    Tls::Stream tlsStream;
+
+    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.bind (_host);
+    ASSERT_TRUE (tlsStream.fail ());
+    tlsStream.clear (std::ios::goodbit);
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+
+    tlsStream.bind (_host);
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+
+    tlsStream.close ();
+}
+
+/**
  * @brief Test connect method.
  */
 TEST_F (TlsSocketStream, connect)
 {
     Tls::Stream tlsStream;
+
     tlsStream.connect ({"255.255.255.255", _port});
     ASSERT_TRUE (tlsStream.fail ());
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
+
     tlsStream.connect ({Resolver::resolveHost (_host), _invalid_port});
     ASSERT_TRUE (tlsStream.fail ());
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
+
     tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::InUse);
+    tlsStream.clear (std::ios::goodbit);
+    tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
-}
 
-/**
- * @brief Test connected method.
- */
-TEST_F (TlsSocketStream, connected)
-{
-    Tls::Stream tlsStream;
-    ASSERT_FALSE (tlsStream.connected ());
-    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    tlsStream.connect (_host + ":" + std::to_string (_port));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.connected ());
-    tlsStream.close ();
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_FALSE (tlsStream.connected ());
-}
-
-/**
- * @brief Test startEncryption method.
- */
-TEST_F (TlsSocketStream, startEncryption)
-{
-    Tls::Stream tlsStream;
-    tlsStream.connect ({Resolver::resolveHost (_host), _port});
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    tlsStream.startEncryption ();
+    tlsStream.connect (_host + ":" + std::to_string (_port));
+    ASSERT_TRUE (tlsStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::InUse);
+    tlsStream.clear (std::ios::goodbit);
+    tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
@@ -315,15 +389,128 @@ TEST_F (TlsSocketStream, startEncryption)
 TEST_F (TlsSocketStream, connectEncrypted)
 {
     Tls::Stream tlsStream;
+
     tlsStream.connectEncrypted ({"255.255.255.255", _port});
     ASSERT_TRUE (tlsStream.fail ());
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
+
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _invalid_port});
     ASSERT_TRUE (tlsStream.fail ());
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
+
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
+}
+
+/**
+ * @brief Test startEncryption method.
+ */
+TEST_F (TlsSocketStream, startEncryption)
+{
+    Tls::Stream tlsStream;
+
+    tlsStream.startEncryption ();
+    ASSERT_TRUE (tlsStream.fail ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    tlsStream.clear (std::ios::goodbit);
+    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.startEncryption ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.startEncryption ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test disconnect method.
+ */
+TEST_F (TlsSocketStream, disconnect)
+{
+    Tls::Stream tlsStream;
+
+    ASSERT_FALSE (tlsStream.connected ());
+    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.connected ());
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_FALSE (tlsStream.connected ());
+    tlsStream.close ();
+    ASSERT_FALSE (tlsStream.connected ());
+}
+
+/**
+ * @brief Test localEndpoint method.
+ */
+TEST_F (TlsSocketStream, localEndpoint)
+{
+    Tls::Stream tlsStream;
+
+    ASSERT_EQ (tlsStream.localEndpoint (), Tls::Endpoint {});
+    tlsStream.bind ({Resolver::resolveHost (_host), uint16_t (_port + 1)});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.localEndpoint (), Tls::Endpoint (Resolver::resolveHost (_host), uint16_t (_port + 1))) << join::lastError.message ();
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test remoteEndpoint method.
+ */
+TEST_F (TlsSocketStream, remoteEndpoint)
+{
+    Tls::Stream tlsStream;
+
+    ASSERT_EQ (tlsStream.remoteEndpoint (), Tls::Endpoint {});
+    tlsStream.bind ({Resolver::resolveHost (_host), uint16_t (_port + 1)});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.remoteEndpoint (), Tls::Endpoint (Resolver::resolveHost (_host), _port)) << join::lastError.message ();
+    tlsStream.close ();
+}
+
+/**
+ * @brief Test opened method.
+ */
+TEST_F (TlsSocketStream, opened)
+{
+    Tls::Stream tlsStream;
+
+    ASSERT_FALSE (tlsStream.opened ());
+    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.opened ());
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_FALSE (tlsStream.opened ());
+    tlsStream.close ();
+    ASSERT_FALSE (tlsStream.opened ());
+}
+
+/**
+ * @brief Test connected method.
+ */
+TEST_F (TlsSocketStream, connected)
+{
+    Tls::Stream tlsStream;
+
+    ASSERT_FALSE (tlsStream.connected ());
+    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_TRUE (tlsStream.connected ());
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_FALSE (tlsStream.connected ());
+    tlsStream.close ();
+    ASSERT_FALSE (tlsStream.connected ());
 }
 
 /**
@@ -332,6 +519,7 @@ TEST_F (TlsSocketStream, connectEncrypted)
 TEST_F (TlsSocketStream, encrypted)
 {
     Tls::Stream tlsStream;
+
     ASSERT_FALSE (tlsStream.encrypted ());
     tlsStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
@@ -339,25 +527,35 @@ TEST_F (TlsSocketStream, encrypted)
     tlsStream.startEncryption ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     ASSERT_TRUE (tlsStream.encrypted ());
-    tlsStream.close ();
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.disconnect ();
     ASSERT_FALSE (tlsStream.encrypted ());
-    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.encrypted ());
     tlsStream.close ();
+    ASSERT_FALSE (tlsStream.encrypted ());
 }
 
 /**
- * @brief Test close method.
+ * @brief Test setCertificate method.
  */
-TEST_F (TlsSocketStream, close)
+TEST_F (TlsSocketStream, setCertificate)
 {
     Tls::Stream tlsStream;
-    tlsStream.connect ({Resolver::resolveHost (_host), _port});
+
+    ASSERT_EQ (tlsStream.setCertificate ("/invalid/cert/path"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsStream.setCertificate (_certFile), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsStream.setCertificate (_certFile, "/invalid/key/path"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsStream.setCertificate (_certFile, _invalidKey), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsStream.setCertificate (_certFile, _key), 0) << join::lastError.message ();
+    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCertificate (_certFile, _key), 0) << join::lastError.message ();
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCertificate (_certFile, _key), 0) << join::lastError.message ();
     tlsStream.close ();
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
 }
 
 /**
@@ -375,7 +573,7 @@ TEST_F (TlsSocketStream, setCaPath)
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     ASSERT_EQ (tlsStream.setCaPath (_certPath), 0) << join::lastError.message ();
-    tlsStream.close ();
+    tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     ASSERT_EQ (tlsStream.setCaPath (_certPath), 0) << join::lastError.message ();
     tlsStream.close ();
@@ -396,7 +594,7 @@ TEST_F (TlsSocketStream, setCaFile)
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     ASSERT_EQ (tlsStream.setCaFile (_certFile), 0) << join::lastError.message ();
-    tlsStream.close ();
+    tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     ASSERT_EQ (tlsStream.setCaFile (_certFile), 0) << join::lastError.message ();
     tlsStream.close ();
@@ -412,55 +610,66 @@ TEST_F (TlsSocketStream, setVerify)
     tlsStream.setVerify (false);
     tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    tlsStream.close ();
+    tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-
-    tlsStream.setVerify (true, 1);
+    tlsStream.setVerify (true, 0);
     tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
     ASSERT_TRUE (tlsStream.fail ());
     tlsStream.clear (std::ios::goodbit);
-
-    tlsStream.setVerify (true, 0);
     ASSERT_EQ (tlsStream.setCaFile (_rootcert), 0) << join::lastError.message ();
     tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
     ASSERT_TRUE (tlsStream.fail ());
     tlsStream.clear (std::ios::goodbit);
-    
     tlsStream.setVerify (true, 1);
     tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    tlsStream.close ();
+    tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-}
-
-/**
- * @brief Test localEndpoint method.
- */
-TEST_F (TlsSocketStream, localEndpoint)
-{
-    Tls::Stream tlsStream;
-    ASSERT_EQ (tlsStream.localEndpoint (), Tls::Endpoint {});
-    ASSERT_EQ (tlsStream.socket ().bind ({Resolver::resolveHost (_host), uint16_t (_port + 1)}), 0) << join::lastError.message ();
-    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.connected ());
-    ASSERT_EQ (tlsStream.localEndpoint (), Tls::Endpoint (Resolver::resolveHost (_host), uint16_t (_port + 1))) << join::lastError.message ();
+    tlsStream.connectEncrypted ({_hostip, _port});
+    ASSERT_TRUE (tlsStream.fail ());
+    tlsStream.clear (std::ios::goodbit);
     tlsStream.close ();
 }
 
 /**
- * @brief Test remoteEndpoint method.
+ * @brief Test setCipher method.
  */
-TEST_F (TlsSocketStream, remoteEndpoint)
+TEST_F (TlsSocketStream, setCipher)
 {
     Tls::Stream tlsStream;
-    ASSERT_EQ (tlsStream.remoteEndpoint (), Tls::Endpoint {});
-    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
+
+    ASSERT_EQ (tlsStream.setCipher ("foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsStream.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+    tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.connected ());
-    ASSERT_EQ (tlsStream.remoteEndpoint (), Tls::Endpoint (Resolver::resolveHost (_host), _port)) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
     tlsStream.close ();
 }
+
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+/**
+ * @brief Test setCipher_1_3 method.
+ */
+TEST_F (TlsSocketStream, setCipher_1_3)
+{
+    Tls::Stream tlsStream;
+
+    ASSERT_EQ (tlsStream.setCipher_1_3 ("foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsStream.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+    tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+    tlsStream.close ();
+}
+#endif
 
 /**
  * @brief Test timeout method.
@@ -497,11 +706,13 @@ TEST_F (TlsSocketStream, insert)
     tlsStream << "test" << std::endl;
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream << "test" << std::endl;
     ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
@@ -515,7 +726,7 @@ TEST_F (TlsSocketStream, put)
     tlsStream.put ('t');
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.put ('t');
@@ -523,6 +734,8 @@ TEST_F (TlsSocketStream, put)
     tlsStream.put ('s');
     tlsStream.put ('t');
     ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
@@ -536,11 +749,13 @@ TEST_F (TlsSocketStream, write)
     tlsStream.write ("test", 4);
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.write ("test", 4);
     ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
@@ -563,6 +778,8 @@ TEST_F (TlsSocketStream, flush)
     tlsStream.flush ();
     ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -576,13 +793,15 @@ TEST_F (TlsSocketStream, extract)
     tlsStream >> test;
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream << int (123456789) << std::endl;
     tlsStream.flush ();
     tlsStream >> test;
     ASSERT_EQ (test, 123456789);
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -595,7 +814,7 @@ TEST_F (TlsSocketStream, get)
     tlsStream.get ();
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.write ("test", 4);
@@ -604,6 +823,8 @@ TEST_F (TlsSocketStream, get)
     ASSERT_EQ (tlsStream.get (), 'e');
     ASSERT_EQ (tlsStream.get (), 's');
     ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -625,6 +846,8 @@ TEST_F (TlsSocketStream, peek)
     ASSERT_EQ (tlsStream.get (), 's');
     ASSERT_EQ (tlsStream.peek (), 't');
     ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -649,6 +872,8 @@ TEST_F (TlsSocketStream, unget)
     ASSERT_EQ (tlsStream.get (), 't');
     tlsStream.unget ();
     ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -671,6 +896,8 @@ TEST_F (TlsSocketStream, putback)
     tlsStream.putback ('e');
     ASSERT_EQ (tlsStream.get (), 'e');
     ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -686,6 +913,8 @@ TEST_F (TlsSocketStream, getline)
     std::array <char, 32> test = {};
     tlsStream.getline (test.data (), test.size (), '\n');
     ASSERT_STREQ (test.data (), "test");
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -701,6 +930,8 @@ TEST_F (TlsSocketStream, ignore)
     tlsStream.ignore (std::numeric_limits <std::streamsize>::max (), 'e');
     ASSERT_EQ (tlsStream.get (), 's');
     ASSERT_EQ (tlsStream.get (), 't');
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -716,6 +947,8 @@ TEST_F (TlsSocketStream, read)
     std::array <char, 32> test = {};
     tlsStream.read (test.data (), 4);
     ASSERT_STREQ (test.data (), "test");
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -731,6 +964,8 @@ TEST_F (TlsSocketStream, read)
     std::array <char, 32> test = {};
     ASSERT_EQ (tlsStream.readsome (test.data (), test.size ()), 4);
     ASSERT_STREQ (test.data (), "test");
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }*/
 
@@ -746,6 +981,8 @@ TEST_F (TlsSocketStream, gcount)
     std::array <char, 32> test = {};
     tlsStream.read (test.data (), 4);
     ASSERT_EQ (tlsStream.gcount (), 4);
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -775,6 +1012,8 @@ TEST_F (TlsSocketStream, gcount)
     ASSERT_EQ (tlsStream.tellg (), 3);
     ASSERT_EQ (tlsStream.get (), 't');
     ASSERT_EQ (tlsStream.tellg (), 4);
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }*/
 
@@ -788,22 +1027,25 @@ TEST_F (TlsSocketStream, seekg)
     tlsStream.write ("test", 4);
     tlsStream.flush ();
     ASSERT_FALSE (tlsStream.seekg (1000, std::ios_base::cur));
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
     ASSERT_EQ (tlsStream.peek (), 't');
     ASSERT_TRUE (tlsStream.seekg (1));
     ASSERT_EQ (tlsStream.peek (), 'e');
     ASSERT_FALSE (tlsStream.seekg (-2, std::ios_base::beg));
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
     ASSERT_FALSE (tlsStream.seekg (1000, std::ios_base::beg));
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
     ASSERT_TRUE (tlsStream.seekg (2, std::ios_base::beg));
     ASSERT_EQ (tlsStream.peek (), 's');
     ASSERT_TRUE (tlsStream.seekg (-1, std::ios_base::end));
     ASSERT_EQ (tlsStream.get (), 't');
     ASSERT_FALSE (tlsStream.seekg (-1000, std::ios_base::beg));
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
     ASSERT_FALSE (tlsStream.seekg (1, std::ios_base::end));
-    tlsStream.clear ();
+    tlsStream.clear (std::ios::goodbit);
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
+    tlsStream.close ();
 }
 
 /**
@@ -821,6 +1063,8 @@ TEST_F (TlsSocketStream, pubsetbuf)
     ASSERT_EQ (buf[9], 'e');
     ASSERT_EQ (buf[10], 's');
     ASSERT_EQ (buf[11], 't');
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
     tlsStream.rdbuf ()->pubsetbuf (nullptr, 0);
     tlsStream.connect ({Resolver::resolveHost (_host), _port});

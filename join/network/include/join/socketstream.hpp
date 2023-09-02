@@ -98,12 +98,12 @@ namespace join
 
             std::streambuf::operator= (std::move (other));
 
-            _allocated = other._allocated;
-            _buf = other._buf;
-            _gsize = other._gsize;
-            _psize = other._psize;
-            _timeout = other._timeout;
-            _socket = std::move (other._socket);
+            this->_allocated = other._allocated;
+            this->_buf = other._buf;
+            this->_gsize = other._gsize;
+            this->_psize = other._psize;
+            this->_timeout = other._timeout;
+            this->_socket = std::move (other._socket);
 
             other._allocated = false;
             other._buf = nullptr;
@@ -119,11 +119,26 @@ namespace join
          */
         virtual ~BasicSocketStreambuf ()
         {
-            if (_buf)
+            if (this->_buf)
             {
                 this->overflow (traits_type::eof ());
                 this->freeBuffer ();
             }
+        }
+
+        /**
+         * @brief assigns the specified endpoint to the socket.
+         * @param endpoint endpoint to assign to the socket.
+         * @return this on success, nullptr on failure.
+         */
+        BasicSocketStreambuf* bind (const Endpoint& endpoint)
+        {
+            if (this->_socket.bind (endpoint) == -1)
+            {
+                return nullptr;
+            }
+
+            return this;
         }
 
         /**
@@ -135,16 +150,16 @@ namespace join
         {
             this->allocateBuffer ();
 
-            if (_socket.connect (endpoint) == -1)
+            if (this->_socket.connect (endpoint) == -1)
             {
                 if (lastError != Errc::TemporaryError)
                 {
                     return nullptr;
                 }
 
-                if (!_socket.waitConnected (_timeout))
+                if (!this->_socket.waitConnected (this->_timeout))
                 {
-                    _socket.close ();
+                    this->_socket.close ();
                     return nullptr;
                 }
             }
@@ -153,31 +168,42 @@ namespace join
         }
 
         /**
-         * @brief close the connection.
+         * @brief shutdown the connection.
          * @return this on success, nullptr on failure.
          */
-        BasicSocketStreambuf* close ()
+        BasicSocketStreambuf* disconnect ()
         {
-            BasicSocketStreambuf* result = this;
-
-            if (_buf && (this->overflow (traits_type::eof ()) == traits_type::eof ()))
+            if (this->_buf && (this->overflow (traits_type::eof ()) == traits_type::eof ()))
             {
-                result = nullptr;
+                return nullptr;
             }
 
-            if (_socket.disconnect () == -1)
+            if (this->_socket.disconnect () == -1)
             {
-                if (lastError == Errc::TemporaryError)
+                if (lastError != Errc::TemporaryError)
                 {
-                    _socket.waitDisconnected (_timeout);
+                    return nullptr;
+                }
+
+                if (!this->_socket.waitDisconnected (this->_timeout))
+                {
+                    return nullptr;
                 }
             }
 
-            _socket.close ();
-
             this->freeBuffer ();
 
-            return result;
+            return this;
+        }
+
+        /**
+         * @brief close the connection.
+         * @return this on success, nullptr on failure.
+         */
+        void close ()
+        {
+            this->_socket.close ();
+            this->freeBuffer ();
         }
 
         /**
@@ -186,7 +212,7 @@ namespace join
          */
         void timeout (int ms)
         {
-            _timeout = ms;
+            this->_timeout = ms;
         }
 
         /**
@@ -195,7 +221,7 @@ namespace join
          */
         int timeout () const
         {
-            return _timeout;
+            return this->_timeout;
         }
 
         /**
@@ -204,7 +230,7 @@ namespace join
          */
         Socket& socket ()
         {
-            return _socket;
+            return this->_socket;
         }
 
     protected:
@@ -214,7 +240,7 @@ namespace join
          */
         virtual int_type underflow () override
         {
-            if (!_socket.connected ())
+            if (!this->_socket.connected ())
             {
                 lastError = make_error_code (Errc::ConnectionClosed);
                 return traits_type::eof ();
@@ -222,24 +248,24 @@ namespace join
 
             if (this->eback () == nullptr)
             {
-                this->setg (_buf, _buf, _buf);
+                this->setg (this->_buf, this->_buf, this->_buf);
             }
 
             if (this->gptr () == this->egptr ())
             {
                 for (;;)
                 {
-                    int nread = _socket.read (this->eback (), _gsize);
+                    int nread = this->_socket.read (this->eback (), this->_gsize);
                     if (nread == -1)
                     {
                         if (lastError == Errc::TemporaryError)
                         {
-                            if (_socket.waitReadyRead (_timeout))
+                            if (this->_socket.waitReadyRead (this->_timeout))
                             {
                                 continue;
                             }
                         }
-                        _socket.close();
+                        this->_socket.close();
                         return traits_type::eof ();
                     }
 
@@ -285,7 +311,7 @@ namespace join
          */
         virtual int_type overflow (int_type c = traits_type::eof ()) override
         {
-            if (!_socket.connected ())
+            if (!this->_socket.connected ())
             {
                 lastError = make_error_code (Errc::ConnectionClosed);
                 return traits_type::eof ();
@@ -293,7 +319,7 @@ namespace join
 
             if (this->pbase () == nullptr)
             {
-                this->setp (_buf + _gsize, _buf + _gsize + _psize);
+                this->setp (this->_buf + this->_gsize, this->_buf + this->_gsize + this->_psize);
             }
 
             if ((this->pptr () < this->epptr ()) && (c != traits_type::eof ()))
@@ -303,13 +329,13 @@ namespace join
 
             std::streamsize pending = this->pptr () - this->pbase ();
 
-            if (pending && _socket.writeExactly (this->pbase (), pending, _timeout) == -1)
+            if (pending && this->_socket.writeExactly (this->pbase (), pending, this->_timeout) == -1)
             {
-                _socket.close ();
+                this->_socket.close ();
                 return traits_type::eof ();
             }
 
-            this->setp (this->pbase (), this->pbase () + _psize);
+            this->setp (this->pbase (), this->pbase () + this->_psize);
 
             if (c == traits_type::eof ())
             {
@@ -325,7 +351,7 @@ namespace join
          */
         virtual int_type sync () override
         {
-            if (_buf)
+            if (this->_buf)
             {
                 return this->overflow (traits_type::eof ());
             }
@@ -342,7 +368,7 @@ namespace join
          */
         virtual pos_type seekoff (off_type off, std::ios_base::seekdir way, std::ios_base::openmode mode = std::ios_base::in) override
         {
-            if (!_socket.connected () || (mode == std::ios_base::out))
+            if (!this->_socket.connected () || (mode == std::ios_base::out))
             {
                 return pos_type (off_type (-1));
             }
@@ -392,20 +418,20 @@ namespace join
          */
         virtual std::streambuf* setbuf (char* s, std::streamsize n) override
         {
-            if (!_socket.connected ())
+            if (!this->_socket.connected ())
             {
                 if ((s == nullptr) && (n == 0))
                 {
-                    _gsize = 1;
-                    _psize = 1;
-                    _buf = s;
+                    this->_gsize = 1;
+                    this->_psize = 1;
+                    this->_buf = s;
                 }
                 else
                 {
                     auto d = std::ldiv (n, 2);
-                    _gsize = d.quot + d.rem;
-                    _psize = d.quot;
-                    _buf = s;
+                    this->_gsize = d.quot + d.rem;
+                    this->_psize = d.quot;
+                    this->_buf = s;
                 }
             }
 
@@ -417,10 +443,10 @@ namespace join
          */
         void allocateBuffer ()
         {
-            if (!_buf)
+            if (!this->_buf)
             {
-                _buf = new char [_gsize + _psize];
-                _allocated = true;
+                this->_buf = new char [this->_gsize + this->_psize];
+                this->_allocated = true;
             }
         }
 
@@ -429,11 +455,11 @@ namespace join
          */
         void freeBuffer ()
         {
-            if (_allocated)
+            if (this->_allocated)
             {
-                delete [] _buf;
-                _allocated = false;
-                _buf = nullptr;
+                delete [] this->_buf;
+                this->_allocated = false;
+                this->_buf = nullptr;
                 this->setg (nullptr, nullptr, nullptr);
                 this->setp (nullptr, nullptr);
             }
@@ -520,6 +546,19 @@ namespace join
         virtual ~BasicSocketStream () = default;
 
         /**
+         * @brief assigns the specified endpoint to the socket.
+         * @param endpoint endpoint to assign to the socket.
+         * @throw std::ios_base::failure.
+         */
+        virtual void bind (const Endpoint& endpoint)
+        {
+            if (this->_sockbuf.bind (endpoint) == nullptr)
+            {
+                this->setstate (std::ios_base::failbit);
+            }
+        }
+
+        /**
          * @brief make a connection to the given endpoint.
          * @param endpoint endpoint to connect to.
          * @throw std::ios_base::failure.
@@ -533,33 +572,24 @@ namespace join
         }
 
         /**
-         * @brief close the connection.
+         * @brief shutdown the connection.
          * @throw std::ios_base::failure.
          */
-        virtual void close ()
+        virtual void disconnect ()
         {
-            if (this->_sockbuf.close () == nullptr)
+            if (this->_sockbuf.disconnect () == nullptr)
             {
                 this->setstate (std::ios_base::failbit);
             }
         }
 
         /**
-         * @brief check if the socket is connected.
-         * @return true if connected, false otherwise.
+         * @brief close the connection.
+         * @throw std::ios_base::failure.
          */
-        bool connected ()
+        virtual void close ()
         {
-            return this->_sockbuf.socket ().connected ();
-        }
-
-        /**
-         * @brief check if the socket is secure.
-         * @return true if the socket is secure, false otherwise.
-         */
-        bool encrypted ()
-        {
-            return this->_sockbuf.socket ().encrypted ();
+            this->_sockbuf.close ();
         }
 
         /**
@@ -578,6 +608,33 @@ namespace join
         const Endpoint& remoteEndpoint ()
         {
             return this->_sockbuf.socket ().remoteEndpoint ();
+        }
+
+        /**
+         * @brief check if the socket is opened.
+         * @return true if opened, false otherwise.
+         */
+        bool opened ()
+        {
+            return this->_sockbuf.socket ().opened ();
+        }
+
+        /**
+         * @brief check if the socket is connected.
+         * @return true if connected, false otherwise.
+         */
+        bool connected ()
+        {
+            return this->_sockbuf.socket ().connected ();
+        }
+
+        /**
+         * @brief check if the socket is secure.
+         * @return true if the socket is secure, false otherwise.
+         */
+        bool encrypted ()
+        {
+            return this->_sockbuf.socket ().encrypted ();
         }
 
         /**
@@ -671,6 +728,24 @@ namespace join
         virtual ~BasicTlsStream () = default;
 
         /**
+         * @brief start socket encryption (perform TLS handshake).
+         * @return 0 on success, -1 on failure.
+         */
+        void startEncryption ()
+        {
+            if (this->_sockbuf.socket ().startEncryption () == -1)
+            {
+                if (lastError == Errc::TemporaryError)
+                {
+                    if (this->_sockbuf.socket ().waitEncrypted (this->timeout ()))
+                        return;
+                }
+
+                this->setstate (std::ios_base::failbit);
+            }
+        }
+
+        /**
          * @brief make an encrypted connection to the given endpoint.
          * @param endpoint endpoint to connect to.
          * @throw std::ios_base::failure.
@@ -692,21 +767,14 @@ namespace join
         }
 
         /**
-         * @brief start socket encryption (perform TLS handshake).
+         * @brief set the certificate and the private key.
+         * @param cert certificate path.
+         * @param key private key path.
          * @return 0 on success, -1 on failure.
          */
-        void startEncryption ()
+        int setCertificate (const std::string& cert, const std::string& key = "")
         {
-            if (this->_sockbuf.socket ().startEncryption () == -1)
-            {
-                if (lastError == Errc::TemporaryError)
-                {
-                    if (this->_sockbuf.socket ().waitEncrypted (this->timeout ()))
-                        return;
-                }
-
-                this->setstate (std::ios_base::failbit);
-            }
+            return this->_sockbuf.socket ().setCertificate (cert, key);
         }
 
         /**
@@ -738,6 +806,28 @@ namespace join
         {
             return this->_sockbuf.socket ().setVerify (verify, depth);
         }
+
+        /**
+         * @brief set the cipher list (TLSv1.2 and below).
+         * @param cipher the cipher list.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCipher (const std::string &cipher)
+        {
+            return this->_sockbuf.socket ().setCipher (cipher);
+        }
+
+    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
+        /**
+         * @brief set the cipher list (TLSv1.3).
+         * @param cipher the cipher list.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCipher_1_3 (const std::string &cipher)
+        {
+            return this->_sockbuf.socket ().setCipher_1_3 (cipher);
+        }
+    #endif
     };
 }
 

@@ -261,7 +261,7 @@ namespace join
             }
             if (!tmp.hasHeader ("Accept-Encoding"))
             {
-                tmp.header ("Accept-Encoding", "deflate, gzip");
+                tmp.header ("Accept-Encoding", "gzip");
             }
             if (!tmp.hasHeader ("Connection"))
             {
@@ -356,19 +356,14 @@ namespace join
         {
             for (auto const& encoding : encodings)
             {
-                if (encoding.find ("deflate") != std::string::npos)
-                {
-                    this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Zlib, this->_wrapped);
-                    this->_wrapped = true;
-                }
-                else if (encoding.find ("gzip") != std::string::npos)
+                if (encoding.find ("gzip") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Gzip, this->_wrapped);
                     this->_wrapped = true;
                 }
                 else if (encoding.find ("chunked") != std::string::npos)
                 {
-                    this->_streambuf = new Chunkstreambuf (this->_streambuf, 4096, this->_wrapped);
+                    this->_streambuf = new Chunkstreambuf (this->_streambuf, this->_wrapped);
                     this->_wrapped = true;
                 }
             }
@@ -418,6 +413,7 @@ namespace join
          */
         virtual void reconnect (const Endpoint& endpoint)
         {
+            this->disconnect ();
             this->close ();
             this->connect (endpoint);
         }
@@ -558,6 +554,7 @@ namespace join
          */
         void reconnect (const Endpoint& endpoint) override
         {
+            this->disconnect ();
             this->close ();
             this->connectEncrypted (endpoint);
         }
