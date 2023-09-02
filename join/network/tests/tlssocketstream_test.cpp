@@ -458,6 +458,8 @@ TEST_F (TlsSocketStream, localEndpoint)
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     ASSERT_EQ (tlsStream.localEndpoint (), Tls::Endpoint (Resolver::resolveHost (_host), uint16_t (_port + 1))) << join::lastError.message ();
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -474,6 +476,8 @@ TEST_F (TlsSocketStream, remoteEndpoint)
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     ASSERT_EQ (tlsStream.remoteEndpoint (), Tls::Endpoint (Resolver::resolveHost (_host), _port)) << join::lastError.message ();
+    tlsStream.disconnect ();
+    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.close ();
 }
 
