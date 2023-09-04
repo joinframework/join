@@ -77,7 +77,7 @@ TEST (Chunkstream, decode)
     char out[2048];
 
     // decode.
-    Chunkstream chunkstream (stream, chuncksize);
+    Chunkstream chunkstream (stream);
     chunkstream.read (out, sizeof (out));
     ASSERT_EQ (decoded, std::string (out, out + chunkstream.gcount ()));
 
@@ -85,7 +85,7 @@ TEST (Chunkstream, decode)
     stream.clear (std::ios::goodbit);
     stream.str ("18;ext\r\nLorem ipsum dolor sit am\r\n0\r\n\r\n");
 
-    chunkstream = Chunkstream (stream, chuncksize);
+    chunkstream = Chunkstream (stream);
     chunkstream.read (out, sizeof (out));
     ASSERT_EQ ("Lorem ipsum dolor sit am", std::string (out, out + chunkstream.gcount ()));
 

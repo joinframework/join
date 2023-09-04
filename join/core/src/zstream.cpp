@@ -103,6 +103,12 @@ Zstreambuf::int_type Zstreambuf::underflow ()
     {
         if (_inflate->avail_in == 0)
         {
+            if (_instate == Z_STREAM_END)
+            {
+                _instate = inflateReset (_inflate.get ());
+                return traits_type::eof ();
+            }
+
             _inflate->next_in = reinterpret_cast <uint8_t*> (eback () + _bufsize);
             _inflate->avail_in = _innerbuf->sgetn (eback () + _bufsize, _bufsize);
             if (_inflate->avail_in == 0)
@@ -113,16 +119,11 @@ Zstreambuf::int_type Zstreambuf::underflow ()
 
         _inflate->next_out = reinterpret_cast <uint8_t*> (eback ());
         _inflate->avail_out = _bufsize;
-        int res = ::inflate (_inflate.get (), Z_NO_FLUSH);
-        if ((res != Z_OK) && (res != Z_STREAM_END))
+        _instate = ::inflate (_inflate.get (), Z_NO_FLUSH);
+        if ((_instate != Z_OK) && (_instate != Z_STREAM_END))
         {
             join::lastError = make_error_code (Errc::OperationFailed);
             return traits_type::eof ();
-        }
-
-        if ((res == Z_STREAM_END) && (_inflate->avail_in > 0))
-        {
-            inflateReset (_inflate.get ());
         }
 
         setg (eback (), eback (), eback () + (_bufsize - _inflate->avail_out));
