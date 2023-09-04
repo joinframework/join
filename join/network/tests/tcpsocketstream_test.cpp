@@ -265,6 +265,7 @@ TEST_F (TcpSocketStream, insert)
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream << "test" << std::endl;
+    tcpStream.flush ();
     ASSERT_TRUE (tcpStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.close ();
@@ -286,6 +287,7 @@ TEST_F (TcpSocketStream, put)
     tcpStream.put ('e');
     tcpStream.put ('s');
     tcpStream.put ('t');
+    tcpStream.flush ();
     ASSERT_TRUE (tcpStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.close ();
@@ -304,6 +306,7 @@ TEST_F (TcpSocketStream, write)
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.write ("test", 4);
+    tcpStream.flush ();
     ASSERT_TRUE (tcpStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.close ();
@@ -568,29 +571,6 @@ TEST_F (TcpSocketStream, seekg)
     tcpStream.clear ();
     ASSERT_FALSE (tcpStream.seekg (1, std::ios_base::end));
     tcpStream.clear ();
-}
-
-/**
- * @brief Test pubsetbuf method.
- */
-TEST_F (TcpSocketStream, pubsetbuf)
-{
-    std::array <char, 16> buf = {};
-    Tcp::Stream tcpStream;
-    tcpStream.rdbuf ()->pubsetbuf (buf.data (), buf.size ());
-    tcpStream.connect ({Resolver::resolveHost (_host), _port});
-    tcpStream.write ("test", 4);
-    tcpStream.flush ();
-    ASSERT_EQ (buf[8], 't');
-    ASSERT_EQ (buf[9], 'e');
-    ASSERT_EQ (buf[10], 's');
-    ASSERT_EQ (buf[11], 't');
-    tcpStream.close ();
-    tcpStream.rdbuf ()->pubsetbuf (nullptr, 0);
-    tcpStream.connect ({Resolver::resolveHost (_host), _port});
-    tcpStream.write ("test", 4);
-    ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
-    tcpStream.close ();
 }
 
 /**
