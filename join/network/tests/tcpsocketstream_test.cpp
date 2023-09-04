@@ -265,6 +265,7 @@ TEST_F (TcpSocketStream, insert)
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream << "test" << std::endl;
+    tcpStream.flush ();
     ASSERT_TRUE (tcpStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.close ();
@@ -286,6 +287,7 @@ TEST_F (TcpSocketStream, put)
     tcpStream.put ('e');
     tcpStream.put ('s');
     tcpStream.put ('t');
+    tcpStream.flush ();
     ASSERT_TRUE (tcpStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.close ();
@@ -304,6 +306,7 @@ TEST_F (TcpSocketStream, write)
     tcpStream.connect ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.write ("test", 4);
+    tcpStream.flush ();
     ASSERT_TRUE (tcpStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.close ();

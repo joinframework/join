@@ -714,6 +714,7 @@ TEST_F (TlsSocketStream, insert)
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream << "test" << std::endl;
+    tlsStream.flush ();
     ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.disconnect ();
@@ -737,6 +738,7 @@ TEST_F (TlsSocketStream, put)
     tlsStream.put ('e');
     tlsStream.put ('s');
     tlsStream.put ('t');
+    tlsStream.flush ();
     ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.disconnect ();
@@ -757,6 +759,7 @@ TEST_F (TlsSocketStream, write)
     tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.write ("test", 4);
+    tlsStream.flush ();
     ASSERT_TRUE (tlsStream.socket ().waitReadyRead (_timeout));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.disconnect ();
