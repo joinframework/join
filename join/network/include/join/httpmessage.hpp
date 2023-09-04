@@ -64,13 +64,13 @@ namespace join
     {
     public:
         /**
-         * @brief get SAX API generic error category name.
+         * @brief get HTTP API generic error category name.
          * @return deserializer generic error category name.
          */
         virtual const char* name () const noexcept;
 
         /**
-         * @brief translate SAX API generic error code to human readable error string.
+         * @brief translate HTTP API generic error code to human readable error string.
          * @param code error code.
          * @return human readable error string.
          */

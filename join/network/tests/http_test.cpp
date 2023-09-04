@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2022 Mathieu Rabine
+ * Copyright (c) 2023 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,28 +24,117 @@
 
 // libjoin.
 #include <join/httpclient.hpp>
+#include <join/httpserver.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
+
+// C++.
+#include <fstream>
 
 using namespace std::chrono;
 
 using join::Errc;
 using join::TlsErrc;
+using join::Resolver;
 using join::HttpMethod;
 using join::HttpRequest;
 using join::HttpResponse;
 using join::Http;
-using join::Https;
 
-const std::string host = "joinframework.net";
+/**
+ * @brief Class used to test the HTTP API.
+ */
+class HttpTest : public Http::Server, public ::testing::Test
+{
+public:
+    /**
+     * @brief Set up test case.
+     */
+    static void SetUpTestCase ()
+    {
+        mkdir (_basePath.c_str (), 0777);
+        std::ofstream outFile (_sampleFile.c_str ());
+        if (outFile.is_open ())
+        {
+            outFile << _sample << std::endl;
+            outFile.close ();
+        }
+    }
+
+    /**
+     * @brief Tear down test case.
+     */
+    static void TearDownTestCase ()
+    {
+        unlink (_sampleFile.c_str ());
+        rmdir  (_basePath.c_str ());
+    }
+
+protected:
+    /**
+     * @brief Sets up the test fixture.
+     */
+    void SetUp ()
+    {
+        this->baseLocation (_basePath);
+        ASSERT_EQ (this->baseLocation (), _basePath);
+        this->keepAlive (seconds (_timeout), _max);
+        ASSERT_EQ (this->keepAliveTimeout (), seconds (_timeout));
+        ASSERT_EQ (this->keepAliveMax (), _max);
+        this->addAlias ("/", "", "$root/" + _sampleFileName);
+        this->addDocumentRoot ("/", "*");
+        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    }
+
+    /**
+     * @brief Tears down the test fixture.
+     */
+    void TearDown ()
+    {
+        this->close ();
+    }
+
+    /// base path.
+    static const std::string _basePath;
+
+    /// sample.
+    static const std::string _sample;
+
+    /// sample file name.
+    static const std::string _sampleFileName;
+
+    /// sample path.
+    static const std::string _sampleFile;
+
+    /// server hostname.
+    static const std::string _host;
+
+    /// server port.
+    static const uint16_t _port;
+
+    /// server keep alive timeout.
+    static const int _timeout;
+
+    /// server  keep alive max requests.
+    static const int _max;
+};
+
+const std::string HttpTest::_basePath       = "/tmp/www";
+const std::string HttpTest::_sample         = "<html><body><h1>It works!</h1></body></html>";
+const std::string HttpTest::_sampleFileName = "sample.html";
+const std::string HttpTest::_sampleFile     = _basePath + "/" + _sampleFileName;
+const std::string HttpTest::_host           = "localhost";
+const uint16_t    HttpTest::_port           = 5000;
+const int         HttpTest::_timeout        = 5;
+const int         HttpTest::_max            = 20;
 
 /**
  * @brief Test move.
  */
-TEST (HttpClient, move)
+TEST_F (HttpTest, move)
 {
-    Https::Client client1 ("127.0.0.1", 5000), client2 ("127.0.0.2", 5001);
+    Http::Client client1 ("127.0.0.1", 5000), client2 ("127.0.0.2", 5001);
     ASSERT_EQ (client1.host (), "127.0.0.1");
     ASSERT_EQ (client1.port (), 5000);
     ASSERT_EQ (client2.host (), "127.0.0.2");
@@ -55,7 +144,7 @@ TEST (HttpClient, move)
     ASSERT_EQ (client1.host (), "127.0.0.2");
     ASSERT_EQ (client1.port (), 5001);
 
-    Https::Client client3 (std::move (client1));
+    Http::Client client3 (std::move (client1));
     ASSERT_EQ (client3.host (), "127.0.0.2");
     ASSERT_EQ (client3.port (), 5001);
 }
@@ -63,111 +152,87 @@ TEST (HttpClient, move)
 /**
  * @brief Test scheme method
  */
-TEST (HttpClient, scheme)
+TEST_F (HttpTest, scheme)
 {
-    Http::Client client1 (host, 80);
+    Http::Client client1 ("localhost", 80);
     ASSERT_EQ (client1.scheme (), "http");
 
-    Https::Client client2 (host, 80);
-    ASSERT_EQ (client2.scheme (), "https");
-
-    Https::Client client3 (host, 443);
-    ASSERT_EQ (client3.scheme (), "https");
-
-    Http::Client client4 (host, 443);
-    ASSERT_EQ (client4.scheme (), "http");
+    Http::Client client2 ("localhost", 443);
+    ASSERT_EQ (client2.scheme (), "http");
 }
 
 /**
  * @brief Test host method
  */
-TEST (HttpClient, host)
+TEST_F (HttpTest, host)
 {
-    Http::Client client1 (host, 80);
-    ASSERT_EQ (client1.host (), host);
+    Http::Client client1 ("91.66.32.78", 80);
+    ASSERT_EQ (client1.host (), "91.66.32.78");
 
-    Https::Client client2 ("91.66.32.78", 443);
-    ASSERT_EQ (client2.host (), "91.66.32.78");
+    Http::Client client2 ("localhost", 80);
+    ASSERT_EQ (client2.host (), "localhost");
 }
 
 /**
  * @brief Test port method
  */
-TEST (HttpClient, port)
+TEST_F (HttpTest, port)
 {
-    Http::Client client1 (host, 80);
+    Http::Client client1 ("91.66.32.78", 80);
     ASSERT_EQ (client1.port (), 80);
 
-    Https::Client client2 (host, 443);
-    ASSERT_EQ (client2.port (), 443);
+    Http::Client client2 ("91.66.32.78", 5000);
+    ASSERT_EQ (client2.port (), 5000);
 }
 
 /**
  * @brief Test authority method
  */
-TEST (HttpClient, authority)
+TEST_F (HttpTest, authority)
 {
-    ASSERT_EQ (Http::Client (host, 80).authority (), host);
-    ASSERT_EQ (Http::Client (host, 443).authority (), host + ":443");
-    ASSERT_EQ (Http::Client (host, 5000).authority (), host + ":5000");
-    ASSERT_EQ (Https::Client (host, 80).authority (), host + ":80");
-    ASSERT_EQ (Https::Client (host, 443).authority (), host);
-    ASSERT_EQ (Https::Client (host, 5001).authority (), host + ":5001");
+    ASSERT_EQ (Http::Client ("localhost", 80).authority (), "localhost");
+    ASSERT_EQ (Http::Client ("localhost", 443).authority (), "localhost:443");
+    ASSERT_EQ (Http::Client ("localhost", 5000).authority (), "localhost:5000");
 
     ASSERT_EQ (Http::Client ("91.66.32.78", 80).authority (), "91.66.32.78");
     ASSERT_EQ (Http::Client ("91.66.32.78", 443).authority (), "91.66.32.78:443");
     ASSERT_EQ (Http::Client ("91.66.32.78", 5000).authority (), "91.66.32.78:5000");
-    ASSERT_EQ (Https::Client ("91.66.32.78", 80).authority (), "91.66.32.78:80");
-    ASSERT_EQ (Https::Client ("91.66.32.78", 443).authority (), "91.66.32.78");
-    ASSERT_EQ (Https::Client ("91.66.32.78", 5001).authority (), "91.66.32.78:5001");
 
     ASSERT_EQ (Http::Client ("2001:db8:1234:5678::1", 80).authority (), "[2001:db8:1234:5678::1]");
     ASSERT_EQ (Http::Client ("2001:db8:1234:5678::1", 443).authority (), "[2001:db8:1234:5678::1]:443");
     ASSERT_EQ (Http::Client ("2001:db8:1234:5678::1", 5000).authority (), "[2001:db8:1234:5678::1]:5000");
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 80).authority (), "[2001:db8:1234:5678::1]:80");
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 443).authority (), "[2001:db8:1234:5678::1]");
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 5001).authority (), "[2001:db8:1234:5678::1]:5001");
 }
 
 /**
  * @brief Test url method
  */
-TEST (HttpClient, url)
+TEST_F (HttpTest, url)
 {
-    ASSERT_EQ (Http::Client (host, 80).url (), "http://" + host + "/");
-    ASSERT_EQ (Http::Client (host, 443).url (), "http://" + host + ":443/");
-    ASSERT_EQ (Http::Client (host, 5000).url (), "http://" + host + ":5000/");
-    ASSERT_EQ (Https::Client (host, 80).url (), "https://" + host + ":80/");
-    ASSERT_EQ (Https::Client (host, 443).url (), "https://" + host + "/");
-    ASSERT_EQ (Https::Client (host, 5001).url (), "https://" + host + ":5001/");
+    ASSERT_EQ (Http::Client ("localhost", 80).url (), "http://localhost/");
+    ASSERT_EQ (Http::Client ("localhost", 443).url (), "http://localhost:443/");
+    ASSERT_EQ (Http::Client ("localhost", 5000).url (), "http://localhost:5000/");
 
     ASSERT_EQ (Http::Client ("91.66.32.78", 80).url (), "http://91.66.32.78/");
     ASSERT_EQ (Http::Client ("91.66.32.78", 443).url (), "http://91.66.32.78:443/");
     ASSERT_EQ (Http::Client ("91.66.32.78", 5000).url (), "http://91.66.32.78:5000/");
-    ASSERT_EQ (Https::Client ("91.66.32.78", 80).url (), "https://91.66.32.78:80/");
-    ASSERT_EQ (Https::Client ("91.66.32.78", 443).url (), "https://91.66.32.78/");
-    ASSERT_EQ (Https::Client ("91.66.32.78", 5001).url (), "https://91.66.32.78:5001/");
 
     ASSERT_EQ (Http::Client ("2001:db8:1234:5678::1", 80).url (), "http://[2001:db8:1234:5678::1]/");
     ASSERT_EQ (Http::Client ("2001:db8:1234:5678::1", 443).url (), "http://[2001:db8:1234:5678::1]:443/");
     ASSERT_EQ (Http::Client ("2001:db8:1234:5678::1", 5000).url (), "http://[2001:db8:1234:5678::1]:5000/");
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 80).url (), "https://[2001:db8:1234:5678::1]:80/");
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 443).url (), "https://[2001:db8:1234:5678::1]/");
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 5001).url (), "https://[2001:db8:1234:5678::1]:5001/");
 }
 
 /**
  * @brief Test keepAlive method
  */
-TEST (HttpClient, keepAlive)
+TEST_F (HttpTest, keepAlive)
 {
-    Http::Client client1 (host, 80, true);
+    Http::Client client1 ("localhost", 80, true);
     ASSERT_TRUE (client1.keepAlive ());
 
     client1.keepAlive (false);
     ASSERT_FALSE (client1.keepAlive ());
 
-    Https::Client client2 (host, 443, false);
+    Http::Client client2 ("localhost", 80, false);
     ASSERT_FALSE (client2.keepAlive ());
 
     client2.keepAlive (true);
@@ -177,9 +242,9 @@ TEST (HttpClient, keepAlive)
 /**
  * @brief Test keepAliveTimeout method
  */
-TEST (HttpClient, keepAliveTimeout)
+TEST_F (HttpTest, keepAliveTimeout)
 {
-    Https::Client client (host);
+    Http::Client client (_host, _port);
     ASSERT_EQ (client.keepAliveTimeout (), seconds::zero ());
 
     HttpRequest request;
@@ -192,12 +257,12 @@ TEST (HttpClient, keepAliveTimeout)
     HttpResponse response;
     client >> response;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
-    ASSERT_EQ (client.keepAliveTimeout (), seconds (20));
+    ASSERT_EQ (client.keepAliveTimeout (), seconds (_timeout));
 
     request.header ("Connection", "close");
     client << request;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
-    ASSERT_EQ (client.keepAliveTimeout (), seconds (20));
+    ASSERT_EQ (client.keepAliveTimeout (), seconds (_timeout));
 
     client >> response;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
@@ -211,9 +276,9 @@ TEST (HttpClient, keepAliveTimeout)
 /**
  * @brief Test keepAliveMax method
  */
-TEST (HttpClient, keepAliveMax)
+TEST_F (HttpTest, keepAliveMax)
 {
-    Https::Client client (host);
+    Http::Client client (_host, _port);
     ASSERT_EQ (client.keepAliveMax (), -1);
 
     HttpRequest request;
@@ -226,12 +291,12 @@ TEST (HttpClient, keepAliveMax)
     HttpResponse response;
     client >> response;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
-    ASSERT_NE (client.keepAliveMax (), 0);
+    ASSERT_EQ (client.keepAliveMax (), _max);
 
     request.header ("Connection", "close");
     client << request;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
-    ASSERT_NE (client.keepAliveMax (), 0);
+    ASSERT_EQ (client.keepAliveMax (), _max);
 
     client >> response;
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
@@ -245,7 +310,7 @@ TEST (HttpClient, keepAliveMax)
 /**
  * @brief Test send method
  */
-TEST (HttpClient, send)
+TEST_F (HttpTest, send)
 {
     Http::Client client1 ("172.16.13.128", 443);
     client1.timeout (500);
@@ -253,71 +318,36 @@ TEST (HttpClient, send)
     ASSERT_TRUE (client1.fail ());
     ASSERT_EQ (join::lastError, Errc::TimedOut);
 
-    Http::Client client2 (host, 80, true);
+    Http::Client client2 (_host, _port, true);
     client2 << HttpRequest ();
     ASSERT_TRUE (client2.good ()) << join::lastError.message ();
     client2.close ();
     ASSERT_TRUE (client2.good ()) << join::lastError.message ();
-
-    Https::Client client3 ("172.16.13.128", 80);
-    client3.timeout (500);
-    client3 << HttpRequest ();
-    ASSERT_TRUE (client3.fail ());
-    ASSERT_EQ (join::lastError, Errc::TimedOut);
-
-    Https::Client client4 (host, 443, true);
-    client4 << HttpRequest ();
-    ASSERT_TRUE (client4.good ()) << join::lastError.message ();
-    client4.close ();
-    ASSERT_TRUE (client4.good ()) << join::lastError.message ();
-
-    Https::Client client5 (host, 80);
-    client5 << HttpRequest ();
-    ASSERT_TRUE (client5.fail ());
-    ASSERT_EQ (join::lastError, TlsErrc::TlsProtocolError);
 }
 
 /**
  * @brief Test receive method
  */
-TEST (HttpClient, receive)
+TEST_F (HttpTest, receive)
 {
-    Http::Client client1 (host, 80);
+    Http::Client client (_host, _port);
 
     HttpResponse response;
-    client1 >> response;
-    ASSERT_TRUE (client1.fail ());
+    client >> response;
+    ASSERT_TRUE (client.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
 
-    client1.clear ();
-    client1 << HttpRequest ();
-    ASSERT_TRUE (client1.good ()) << join::lastError.message ();
+    client.clear ();
+    client << HttpRequest ();
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
 
-    client1 >> response;
-    ASSERT_TRUE (client1.good ()) << join::lastError.message ();
-    ASSERT_EQ (response.status (), "302");
-    ASSERT_EQ (response.reason (), "Found");
-
-    client1.close ();
-    ASSERT_TRUE (client1.good ()) << join::lastError.message ();
-
-    Https::Client client2 (host, 443);
-
-    client2 >> response;
-    ASSERT_TRUE (client2.fail ());
-    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
-
-    client2.clear ();
-    client2 << HttpRequest ();
-    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
-
-    client2 >> response;
-    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
+    client >> response;
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
     ASSERT_EQ (response.status (), "200");
-    ASSERT_EQ (response.reason (), "OK");
+    ASSERT_EQ (response.reason (), "ok");
 
-    client2.close ();
-    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
+    client.close ();
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
 }
 
 /**
@@ -325,7 +355,6 @@ TEST (HttpClient, receive)
  */
 int main (int argc, char **argv)
 {
-    join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }

@@ -54,6 +54,7 @@ set(PUBLIC_HEADERS
     network/include/join/chunkstream.hpp
     network/include/join/httpmessage.hpp
     network/include/join/httpclient.hpp
+    network/include/join/httpserver.hpp
     sax/include/join/diyfp.hpp
     sax/include/join/dtoa.hpp
     sax/include/join/value.hpp

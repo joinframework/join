@@ -94,7 +94,10 @@ add_executable(httpresponse.gtest httpresponse_test.cpp)
 target_link_libraries(httpresponse.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(httpresponse.gtest)
 
-add_executable(httpclient.gtest httpclient_test.cpp)
-target_link_libraries(httpclient.gtest ${PROJECT_NAME} gtest gtest_main pthread)
-gtest_discover_tests(httpclient.gtest)
+add_executable(http.gtest http_test.cpp)
+target_link_libraries(http.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(http.gtest)
 
+add_executable(https.gtest https_test.cpp)
+target_link_libraries(https.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(https.gtest)

@@ -282,6 +282,10 @@ void HttpMessage::readHeaders (std::istream& in)
 
     while (join::getline (in, line, _maxHeaderLen))
     {
+    #ifdef DEBUG
+        std::cout << line << std::endl;
+    #endif
+
         if (firstLine)
         {
             if (parseFirstLine (line) == -1)

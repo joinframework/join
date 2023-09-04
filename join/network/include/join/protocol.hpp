@@ -48,6 +48,10 @@ namespace join
     template <class Protocol> class BasicHttpClient;
     template <class Protocol> class BasicHttpSecureClient;
 
+    template <class Protocol> class BasicWorker;
+    template <class Protocol> class BasicHttpServer;
+    template <class Protocol> class BasicHttpSecureServer;
+
     template <class Protocol> class BasicResolver;
 
     /**
@@ -568,7 +572,10 @@ namespace join
         using Endpoint = BasicInternetEndpoint <Http>;
         using Socket   = BasicStreamSocket <Http>;
         using Stream   = BasicSocketStream <Http>;
+        using Acceptor = BasicStreamAcceptor <Http>;
         using Client   = BasicHttpClient <Http>;
+        using Worker   = BasicWorker <Http>;
+        using Server   = BasicHttpServer <Http>;
 
         /**
          * @brief create the HTTP protocol  instance.
@@ -662,7 +669,10 @@ namespace join
         using Endpoint = BasicInternetEndpoint <Https>;
         using Socket   = BasicTlsSocket <Https>;
         using Stream   = BasicTlsStream <Https>;
+        using Acceptor = BasicTlsAcceptor <Https>;
         using Client   = BasicHttpSecureClient <Https>;
+        using Worker   = BasicWorker <Https>;
+        using Server   = BasicHttpSecureServer <Https>;
 
         /**
          * @brief create the HTTPS protocol  instance.
