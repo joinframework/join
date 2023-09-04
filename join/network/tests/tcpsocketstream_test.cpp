@@ -571,29 +571,6 @@ TEST_F (TcpSocketStream, seekg)
 }
 
 /**
- * @brief Test pubsetbuf method.
- */
-TEST_F (TcpSocketStream, pubsetbuf)
-{
-    std::array <char, 16> buf = {};
-    Tcp::Stream tcpStream;
-    tcpStream.rdbuf ()->pubsetbuf (buf.data (), buf.size ());
-    tcpStream.connect ({Resolver::resolveHost (_host), _port});
-    tcpStream.write ("test", 4);
-    tcpStream.flush ();
-    ASSERT_EQ (buf[8], 't');
-    ASSERT_EQ (buf[9], 'e');
-    ASSERT_EQ (buf[10], 's');
-    ASSERT_EQ (buf[11], 't');
-    tcpStream.close ();
-    tcpStream.rdbuf ()->pubsetbuf (nullptr, 0);
-    tcpStream.connect ({Resolver::resolveHost (_host), _port});
-    tcpStream.write ("test", 4);
-    ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
-    tcpStream.close ();
-}
-
-/**
  * @brief main function.
  */
 int main (int argc, char **argv)

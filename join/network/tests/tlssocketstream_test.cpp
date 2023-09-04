@@ -1053,31 +1053,6 @@ TEST_F (TlsSocketStream, seekg)
 }
 
 /**
- * @brief Test pubsetbuf method.
- */
-TEST_F (TlsSocketStream, pubsetbuf)
-{
-    std::array <char, 16> buf = {};
-    Tls::Stream tlsStream;
-    tlsStream.rdbuf ()->pubsetbuf (buf.data (), buf.size ());
-    tlsStream.connectEncrypted ({Resolver::resolveHost (_host), _port});
-    tlsStream.write ("test", 4);
-    tlsStream.flush ();
-    ASSERT_EQ (buf[8], 't');
-    ASSERT_EQ (buf[9], 'e');
-    ASSERT_EQ (buf[10], 's');
-    ASSERT_EQ (buf[11], 't');
-    tlsStream.disconnect ();
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    tlsStream.close ();
-    tlsStream.rdbuf ()->pubsetbuf (nullptr, 0);
-    tlsStream.connect ({Resolver::resolveHost (_host), _port});
-    tlsStream.write ("test", 4);
-    ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    tlsStream.close ();
-}
-
-/**
  * @brief main function.
  */
 int main (int argc, char **argv)

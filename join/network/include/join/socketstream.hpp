@@ -50,7 +50,8 @@ namespace join
          * @brief default constructor.
          */
         BasicSocketStreambuf ()
-        : _socket (Socket::Mode::NonBlocking)
+        : _buf (std::make_unique <char []> (2 * _bufsize)),
+          _socket (Socket::Mode::NonBlocking)
         {
         }
 
@@ -73,18 +74,10 @@ namespace join
          */
         BasicSocketStreambuf (BasicSocketStreambuf&& other)
         : std::streambuf (std::move (other)),
-          _allocated (other._allocated),
-          _buf (other._buf),
-          _gsize (other._gsize),
-          _psize (other._psize),
+          _buf (std::move (other._buf)),
           _timeout (other._timeout),
           _socket (std::move (other._socket))
         {
-            other._allocated = false;
-            other._buf = nullptr;
-            other._gsize = BUFSIZ / 2;
-            other._psize = BUFSIZ / 2;
-            other._timeout = 30000;
         }
 
         /**
@@ -97,19 +90,9 @@ namespace join
             this->close ();
 
             std::streambuf::operator= (std::move (other));
-
-            this->_allocated = other._allocated;
-            this->_buf = other._buf;
-            this->_gsize = other._gsize;
-            this->_psize = other._psize;
+            this->_buf = std::move (other._buf);
             this->_timeout = other._timeout;
             this->_socket = std::move (other._socket);
-
-            other._allocated = false;
-            other._buf = nullptr;
-            other._gsize = BUFSIZ / 2;
-            other._psize = BUFSIZ / 2;
-            other._timeout = 30000;
 
             return *this;
         }
@@ -119,10 +102,9 @@ namespace join
          */
         virtual ~BasicSocketStreambuf ()
         {
-            if (this->_buf)
+            if (this->_socket.connected ())
             {
                 this->overflow (traits_type::eof ());
-                this->freeBuffer ();
             }
         }
 
@@ -148,8 +130,6 @@ namespace join
          */
         BasicSocketStreambuf* connect (const Endpoint& endpoint)
         {
-            this->allocateBuffer ();
-
             if (this->_socket.connect (endpoint) == -1)
             {
                 if (lastError != Errc::TemporaryError)
@@ -173,7 +153,7 @@ namespace join
          */
         BasicSocketStreambuf* disconnect ()
         {
-            if (this->_buf && (this->overflow (traits_type::eof ()) == traits_type::eof ()))
+            if (this->_socket.connected () && (this->overflow (traits_type::eof ()) == traits_type::eof ()))
             {
                 return nullptr;
             }
@@ -191,8 +171,6 @@ namespace join
                 }
             }
 
-            this->freeBuffer ();
-
             return this;
         }
 
@@ -203,7 +181,6 @@ namespace join
         void close ()
         {
             this->_socket.close ();
-            this->freeBuffer ();
         }
 
         /**
@@ -248,14 +225,14 @@ namespace join
 
             if (this->eback () == nullptr)
             {
-                this->setg (this->_buf, this->_buf, this->_buf);
+                this->setg (this->_buf.get (), this->_buf.get (), this->_buf.get ());
             }
 
             if (this->gptr () == this->egptr ())
             {
                 for (;;)
                 {
-                    int nread = this->_socket.read (this->eback (), this->_gsize);
+                    int nread = this->_socket.read (this->eback (), _bufsize);
                     if (nread == -1)
                     {
                         if (lastError == Errc::TemporaryError)
@@ -319,27 +296,25 @@ namespace join
 
             if (this->pbase () == nullptr)
             {
-                this->setp (this->_buf + this->_gsize, this->_buf + this->_gsize + this->_psize);
+                this->setp (this->_buf.get () + _bufsize, this->_buf.get () + (2 * _bufsize));
             }
 
-            if ((this->pptr () < this->epptr ()) && (c != traits_type::eof ()))
+            if ((this->pptr () == this->epptr ()) || (c == traits_type::eof ()))
             {
-                return this->sputc (traits_type::to_char_type (c));
-            }
+                std::streamsize pending = this->pptr () - this->pbase ();
 
-            std::streamsize pending = this->pptr () - this->pbase ();
+                if (pending && this->_socket.writeExactly (this->pbase (), pending, this->_timeout) == -1)
+                {
+                    this->_socket.close ();
+                    return traits_type::eof ();
+                }
 
-            if (pending && this->_socket.writeExactly (this->pbase (), pending, this->_timeout) == -1)
-            {
-                this->_socket.close ();
-                return traits_type::eof ();
-            }
+                this->setp (this->pbase (), this->pbase () + _bufsize);
 
-            this->setp (this->pbase (), this->pbase () + this->_psize);
-
-            if (c == traits_type::eof ())
-            {
-                return traits_type::not_eof (c);
+                if (c == traits_type::eof ())
+                {
+                    return traits_type::not_eof (c);
+                }
             }
 
             return this->sputc (traits_type::to_char_type (c));
@@ -351,7 +326,7 @@ namespace join
          */
         virtual int_type sync () override
         {
-            if (this->_buf)
+            if (this->_socket.connected ())
             {
                 return this->overflow (traits_type::eof ());
             }
@@ -410,72 +385,11 @@ namespace join
             return this->seekoff (off_type (pos), std::ios_base::beg, mode);
         }
 
-        /**
-         * @brief replaces the buffer with user-defined array.
-         * @param s pointer to the user-provided buffer.
-         * @param n the number of elements in the user-provided buffer.
-         * @return this on success, nullptr on failure..
-         */
-        virtual std::streambuf* setbuf (char* s, std::streamsize n) override
-        {
-            if (!this->_socket.connected ())
-            {
-                if ((s == nullptr) && (n == 0))
-                {
-                    this->_gsize = 1;
-                    this->_psize = 1;
-                    this->_buf = s;
-                }
-                else
-                {
-                    auto d = std::ldiv (n, 2);
-                    this->_gsize = d.quot + d.rem;
-                    this->_psize = d.quot;
-                    this->_buf = s;
-                }
-            }
-
-            return this;
-        }
-
-        /**
-         * @brief allocate internal buffer.
-         */
-        void allocateBuffer ()
-        {
-            if (!this->_buf)
-            {
-                this->_buf = new char [this->_gsize + this->_psize];
-                this->_allocated = true;
-            }
-        }
-
-        /**
-         * @brief free internal buffer.
-         */
-        void freeBuffer ()
-        {
-            if (this->_allocated)
-            {
-                delete [] this->_buf;
-                this->_allocated = false;
-                this->_buf = nullptr;
-                this->setg (nullptr, nullptr, nullptr);
-                this->setp (nullptr, nullptr);
-            }
-        }
-
-        /// internal buffer status.
-        bool _allocated = false;
+        /// internal buffer size.
+        static const std::streamsize _bufsize = 4096;
 
         /// internal buffer.
-        char* _buf = nullptr;
-
-        /// internal buffer get area size.
-        std::streamsize _gsize = BUFSIZ / 2;
-
-        /// internal buffer put area size.
-        std::streamsize _psize = BUFSIZ / 2;
+        std::unique_ptr <char []> _buf;
 
         /// timeout.
         int _timeout = 30000;
@@ -501,7 +415,6 @@ namespace join
         BasicSocketStream ()
         : std::iostream (&_sockbuf)
         {
-            this->setf (std::ios_base::unitbuf);
         }
 
         /**
