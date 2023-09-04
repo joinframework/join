@@ -607,7 +607,7 @@ namespace join
         }
 
         /// max requests.
-        size_t _max = 0;
+        int _max = 0;
 
         /// request.
         HttpRequest _request;
