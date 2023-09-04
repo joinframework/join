@@ -36,6 +36,16 @@ using join::Chunkstream;
 //   CLASS     : Chunkstreambuf
 //   METHOD    : Chunkstreambuf
 // =========================================================================
+Chunkstreambuf::Chunkstreambuf (std::streambuf* streambuf, bool own)
+: StreambufDecorator (streambuf, own),
+  _buf (std::make_unique <char []> (2 * _chunksize))
+{
+}
+
+// =========================================================================
+//   CLASS     : Chunkstreambuf
+//   METHOD    : Chunkstreambuf
+// =========================================================================
 Chunkstreambuf::Chunkstreambuf (std::streambuf* streambuf, std::streamsize chunksize, bool own)
 : StreambufDecorator (streambuf, own),
   _chunksize (chunksize),
@@ -204,6 +214,16 @@ Chunkstreambuf::int_type Chunkstreambuf::overflow (int_type c)
 Chunkstreambuf::int_type Chunkstreambuf::sync ()
 {
     return overflow ();
+}
+
+// =========================================================================
+//   CLASS     : Chunkstream
+//   METHOD    : Chunkstream
+// =========================================================================
+Chunkstream::Chunkstream (std::iostream& stream)
+: _chunkbuf (stream.rdbuf ())
+{
+    init (&_chunkbuf);
 }
 
 // =========================================================================

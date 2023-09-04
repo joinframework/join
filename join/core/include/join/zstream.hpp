@@ -104,6 +104,9 @@ namespace join
         /// inflate context.
         std::unique_ptr <z_stream> _inflate;
 
+        /// inflate state.
+        int _instate = Z_OK;
+
         /// deflate context.
         std::unique_ptr <z_stream> _deflate;
 

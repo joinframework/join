@@ -39,10 +39,17 @@ namespace join
         /**
          * @brief create the chunk stream buffer instance.
          * @param streambuf concrete stream buffer.
+         * @param own is the decorator owning inner stream buffer.
+         */
+        Chunkstreambuf (std::streambuf* streambuf, bool own = false);
+
+        /**
+         * @brief create the chunk stream buffer instance.
+         * @param streambuf concrete stream buffer.
          * @param chunksize chunk size.
          * @param own is the decorator owning inner stream buffer.
          */
-        Chunkstreambuf (std::streambuf* streambuf, std::streamsize chunksize = 2048, bool own = false);
+        Chunkstreambuf (std::streambuf* streambuf, std::streamsize chunksize, bool own = false);
 
         /**
          * @brief copy constructor.
@@ -96,7 +103,7 @@ namespace join
         virtual int_type sync () override;
 
         /// chunk size.
-        std::streamsize _chunksize;
+        std::streamsize _chunksize = 16384;
 
         /// internal buffer.
         std::unique_ptr <char []> _buf;
@@ -111,9 +118,15 @@ namespace join
         /**
          * @brief create the chunk stream instance.
          * @param stream concrete stream.
+         */
+        Chunkstream (std::iostream& stream);
+
+        /**
+         * @brief create the chunk stream instance.
+         * @param stream concrete stream.
          * @param chunksize chunk size.
          */
-        Chunkstream (std::iostream& stream, std::streamsize chunksize = 2048);
+        Chunkstream (std::iostream& stream, std::streamsize chunksize);
 
         /**
          * @brief copy constructor.

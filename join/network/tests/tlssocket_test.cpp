@@ -241,6 +241,7 @@ protected:
 
     /// port.
     static const uint16_t _port;
+    static const uint16_t _invalid_port;
 
     /// timeout.
     static const int _timeout;
@@ -261,15 +262,16 @@ protected:
     static const std::string _invalidKey;
 };
 
-const IpAddress   TlsSocket::_hostip     = "127.0.0.1";
-const std::string TlsSocket::_host       = "localhost.";
-const uint16_t    TlsSocket::_port       = 5000;
-const int         TlsSocket::_timeout    = 1000;
-const std::string TlsSocket::_rootcert   = "/tmp/tlssocket_test_root.cert";
-const std::string TlsSocket::_certPath   = "/tmp/certs";
-const std::string TlsSocket::_certFile   = _certPath + "/tlssocket_test.cert";
-const std::string TlsSocket::_key        = "/tmp/tlssocket_test.key";
-const std::string TlsSocket::_invalidKey = "/tmp/tlssocket_test_invalid.key";
+const IpAddress   TlsSocket::_hostip       = "127.0.0.1";
+const std::string TlsSocket::_host         = "localhost.";
+const uint16_t    TlsSocket::_port         = 5000;
+const uint16_t    TlsSocket::_invalid_port = 5032;
+const int         TlsSocket::_timeout      = 1000;
+const std::string TlsSocket::_rootcert     = "/tmp/tlssocket_test_root.cert";
+const std::string TlsSocket::_certPath     = "/tmp/certs";
+const std::string TlsSocket::_certFile     = _certPath + "/tlssocket_test.cert";
+const std::string TlsSocket::_key          = "/tmp/tlssocket_test.key";
+const std::string TlsSocket::_invalidKey   = "/tmp/tlssocket_test_invalid.key";
 
 /**
  * @brief Test construct method.
@@ -354,6 +356,8 @@ TEST_F (TlsSocket, connect)
 
     ASSERT_EQ (tlsSocket.connect ({"255.255.255.255", _port}), -1);
 
+    ASSERT_EQ (tlsSocket.connect ({Resolver::resolveHost (_host), _invalid_port}), -1);
+
     ASSERT_EQ (tlsSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connect ({Resolver::resolveHost (_host), _port}), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
@@ -397,6 +401,8 @@ TEST_F (TlsSocket, connectEncrypted)
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_EQ (tlsSocket.connectEncrypted ({"255.255.255.255", _port}), -1);
+
+    ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _invalid_port}), -1);
 
     ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
