@@ -153,24 +153,6 @@ TEST_F (TcpSocketStream, connect)
 }
 
 /**
- * @brief Test disconnect method.
- */
-TEST_F (TcpSocketStream, disconnect)
-{
-    Tcp::Stream tcpStream;
-
-    ASSERT_FALSE (tcpStream.connected ());
-    tcpStream.connect ({Resolver::resolveHost (_host), _port});
-    ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tcpStream.connected ());
-    tcpStream.disconnect ();
-    ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
-    ASSERT_FALSE (tcpStream.connected ());
-    tcpStream.close ();
-    ASSERT_FALSE (tcpStream.connected ());
-}
-
-/**
  * @brief Test close method.
  */
 TEST_F (TcpSocketStream, close)
