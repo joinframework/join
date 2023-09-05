@@ -178,25 +178,6 @@ namespace join
             return count;
         }
 
-        /**
-         * @brief get input position indicator.
-         * @return current position.
-         */
-        size_t tell ()
-        {
-            return _pos;
-        }
-
-        /**
-         * @brief rewind the view.
-         * @param n number of characters to rewind.
-         */
-        void rewind (size_t n)
-        {
-            _pos -= n;
-            _len += n;
-        }
-
     private:
         /// input buffer start pointer.
         const char * _buf = nullptr;
@@ -312,25 +293,6 @@ namespace join
         {
             _in->read (buf, count);
             return _in->gcount ();
-        }
-
-        /**
-         * @brief input position indicator.
-         * @return current position.
-         */
-        size_t tell ()
-        {
-            return _in->tellg ();
-        }
-
-        /**
-         * @brief rewind the view.
-         * @param n number of characters to rewind.
-         */
-        void rewind (size_t n)
-        {
-            _in->clear ();
-            _in->seekg (tell () - n);
         }
 
     private:
