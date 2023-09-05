@@ -171,23 +171,31 @@ namespace join
                     }
                 }
 
-                this->_max = this->_server->keepAliveMax ();
-
-                do
-                {
-                    if (this->readRequest () == -1)
-                    {
-                        this->cleanUp ();
-                        break;
-                    }
-
-                    this->processRequest ();
-                    this->cleanUp ();
-                }
-                while ((this->_max < 0) || (--this->_max != 0));
-
-                this->endRequest ();
+                this->processRequest ();
             }
+        }
+
+        /**
+         * @brief process the HTTP request.
+         */
+        void processRequest ()
+        {
+            this->_max = this->_server->keepAliveMax ();
+
+            do
+            {
+                if (this->readRequest () == -1)
+                {
+                    this->cleanUp ();
+                    break;
+                }
+
+                this->writeResponse ();
+                this->cleanUp ();
+            }
+            while ((this->_max < 0) || (--this->_max != 0));
+
+            this->endRequest ();
         }
 
         /**
@@ -215,9 +223,9 @@ namespace join
         }
 
         /**
-         * @brief process the HTTP request.
+         * @brief write the HTTP response.
          */
-        void processRequest ()
+        void writeResponse ()
         {
             Content* content = this->_server->findContent (this->_request.method (), this->_request.path ());
             if (content == nullptr)
@@ -326,8 +334,8 @@ namespace join
          */
         void cleanUp ()
         {
-            this->_request  = HttpRequest ();
-            this->_response = HttpResponse ();
+            this->_request.clear ();
+            this->_response.clear ();
         }
 
         /**
