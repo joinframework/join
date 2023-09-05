@@ -27,11 +27,16 @@
 
 // libjoin.
 #include <join/version.hpp>
+#include <join/zstream.hpp>
+#include <join/chunkstream.hpp>
 #include <join/httpmessage.hpp>
 #include <join/socketstream.hpp>
 
 // C++.
 #include <chrono>
+
+using join::Zstream;
+using join::Chunkstream;
 
 namespace join
 {
@@ -115,7 +120,10 @@ namespace join
         /**
          * @brief destroy the basic HTTP client instance.
          */
-        virtual ~BasicHttpClient () = default;
+        virtual ~BasicHttpClient ()
+        {
+            clearEncoding ();
+        }
 
         /**
          * @brief close the connection.
@@ -237,6 +245,10 @@ namespace join
          */
         void send (const HttpRequest& request)
         {
+            // restore concrete stream.
+            clearEncoding ();
+
+            // check if reconnection is required.
             if (this->needReconnection ())
             {
                 this->reconnect (this->url ());
@@ -246,11 +258,16 @@ namespace join
                 }
             }
 
+            // set missing request headers.
             HttpRequest tmp (request);
 
             if (!tmp.hasHeader ("Accept"))
             {
                 tmp.header ("Accept", "*/*");
+            }
+            if (!tmp.hasHeader ("Accept-Encoding"))
+            {
+                tmp.header ("Accept-Encoding", "gzip");
             }
             if (!tmp.hasHeader ("Connection"))
             {
@@ -265,6 +282,7 @@ namespace join
                 tmp.header ("User-Agent", "join/" JOIN_VERSION);
             }
 
+            // write request headers.
             tmp.writeHeaders (*this);
             if (this->fail ())
             {
@@ -272,6 +290,12 @@ namespace join
             }
 
             this->flush ();
+
+            // set encoding.
+            if (tmp.hasHeader ("Transfer-Encoding"))
+            {
+                setEncoding (join::rsplit (tmp.header ("Transfer-Encoding"), ","));
+            }
         }
 
         /**
@@ -280,15 +304,21 @@ namespace join
          */
         void receive (HttpResponse& response)
         {
+            // restore concrete stream.
+            clearEncoding ();
+
+            // read response headers.
             response.readHeaders (*this);
             if (this->fail ())
             {
                 return;
             }
 
+            // get connection.
             std::string connection = response.header ("Connection");
             std::string alive = response.header ("Keep-Alive");
 
+            // check connection.
             if (join::compareNoCase (connection, "keep-alive"))
             {
                 size_t pos = alive.find ("timeout=");
@@ -309,10 +339,61 @@ namespace join
                 this->_keepMax = 0;
             }
 
+            // set encoding.
+            if (response.hasHeader ("Transfer-Encoding"))
+            {
+                setEncoding (join::rsplit (response.header ("Transfer-Encoding"), ","));
+            }
+            if (response.hasHeader ("Content-Encoding"))
+            {
+                setEncoding (join::rsplit (response.header ("Content-Encoding"), ","));
+            }
+
+            // get timestamp.
             this->_timestamp = std::chrono::steady_clock::now ();
         }
 
     protected:
+        /**
+         * @brief set stream encoding.
+         * @param encodings encodings applied to the stream.
+         */
+        void setEncoding (const std::vector <std::string>& encodings)
+        {
+            for (auto const& encoding : encodings)
+            {
+                if (encoding.find ("gzip") != std::string::npos)
+                {
+                    this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Gzip, this->_wrapped);
+                    this->_wrapped = true;
+                }
+                else if (encoding.find ("chunked") != std::string::npos)
+                {
+                    this->_streambuf = new Chunkstreambuf (this->_streambuf, this->_wrapped);
+                    this->_wrapped = true;
+                }
+            }
+
+            this->set_rdbuf (this->_streambuf);
+        }
+
+        /**
+         * @brief clear stream encoding.
+         */
+        void clearEncoding ()
+        {
+            if (this->_wrapped && this->_streambuf)
+            {
+                delete this->_streambuf;
+                this->_streambuf = nullptr;
+            }
+
+            this->_streambuf = &this->_sockbuf;
+            this->_wrapped = false;
+
+            this->set_rdbuf (this->_streambuf);
+        }
+
         /**
          * @brief check if HTTP keep alive is expired.
          * @return true if HTTP keep alive is expired.
@@ -338,9 +419,16 @@ namespace join
          */
         virtual void reconnect (const Endpoint& endpoint)
         {
+            this->disconnect ();
             this->close ();
             this->connect (endpoint);
         }
+
+        /// HTTP stream buffer.
+        std::streambuf* _streambuf = nullptr;
+
+        /// HTTP stream status.
+        bool _wrapped = false;
 
         /// HTTP timestamp.
         std::chrono::time_point <std::chrono::steady_clock> _timestamp;
@@ -475,6 +563,7 @@ namespace join
          */
         void reconnect (const Endpoint& endpoint) override
         {
+            this->disconnect ();
             this->close ();
             this->connectEncrypted (endpoint);
         }
