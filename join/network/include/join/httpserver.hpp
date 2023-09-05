@@ -27,17 +27,16 @@
 
 // libjoin.
 #include <join/httpmessage.hpp>
-#include <join/condition.hpp>
 #include <join/acceptor.hpp>
 #include <join/version.hpp>
 #include <join/thread.hpp>
 #include <join/cache.hpp>
 
 // C++.
+#include <sys/eventfd.h>
 #include <thread>
 #include <memory>
 #include <vector>
-#include <queue>
 
 // C.
 #include <fnmatch.h>
@@ -141,19 +140,35 @@ namespace join
          */
         void work ()
         {
+            fd_set setfd;
+            FD_ZERO (&setfd);
+            int fdmax = -1;
+
+            FD_SET (this->_server->_event, &setfd);
+            fdmax = std::max (fdmax, this->_server->_event);
+            FD_SET (this->_server->_handle, &setfd);
+            fdmax = std::max (fdmax, this->_server->_handle);
+
             for (;;)
             {
                 {
                     ScopedLock lock (this->_server->_mutex);
 
-                    this->_server->_condition.wait (lock, [this] () { return !this->_server->_work || !this->_server->_streams.empty (); });
-                    if (!this->_server->_work && this->_server->_streams.empty ())
+                    fd_set fdset = setfd;
+                    int nset = ::select (fdmax + 1, &fdset, nullptr, nullptr, nullptr);
+                    if (nset > 0)
                     {
-                        return;
-                    }
+                        if (FD_ISSET (this->_server->_event, &fdset))
+                        {
+                            return;
+                        }
 
-                    this->_stream = std::move (this->_server->_streams.front ());
-                    this->_server->_streams.pop ();
+                        if (FD_ISSET (this->_server->_handle, &fdset))
+                        {
+                            this->_stream = this->_server->acceptStream ();
+                            this->_stream.timeout (this->_server->keepAliveTimeout ().count () * 1000);
+                        }
+                    }
                 }
 
                 this->_max = this->_server->keepAliveMax ();
@@ -352,7 +367,7 @@ namespace join
             }
             if (!this->_response.hasHeader ("Connection"))
             {
-                if (this->_server->_work && this->_max && compareNoCase (this->_request.header ("Connection"), "keep-alive"))
+                if (this->_max && compareNoCase (this->_request.header ("Connection"), "keep-alive"))
                 {
                     std::stringstream keepAlive;
                     keepAlive << "timeout=" << this->_server->_keepTimeout.count () << ", max=" << this->_server->_keepMax;
@@ -645,8 +660,7 @@ namespace join
          * @param workers number of worker threads.
          */
         BasicHttpServer (size_t workers = std::thread::hardware_concurrency () + 1)
-        : _work (false),
-          _nworkers (workers),
+        : _nworkers (workers),
           _baseLocation ("/var/www"),
           _uploadLocation ("/tmp/upload"),
           _keepTimeout (10)
@@ -696,23 +710,22 @@ namespace join
          */
         virtual int create (const Endpoint& endpoint) noexcept override
         {
-            this->_work = true;
+            if (Acceptor::create (endpoint) == -1)
+            {
+                return -1;
+            }
+
+            this->_event = eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC);
+            if (this->_event == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                this->close ();
+                return -1;
+            }
 
             for (size_t nworkers = 0; nworkers < this->_nworkers; ++nworkers)
             {
                 this->_workers.emplace_back (new Worker (this));
-            }
-
-            if (Acceptor::create (endpoint) == -1)
-            {
-                this->close ();
-                return -1;
-            }
-
-            if (Reactor::instance ()->addHandler (this) == -1)
-            {
-                this->close ();
-                return -1;
             }
 
             return 0;
@@ -723,11 +736,11 @@ namespace join
          */
         virtual void close () noexcept override
         {
-            Reactor::instance ()->delHandler (this);
-            Acceptor::close ();
-            this->_work = false;
-            this->_condition.broadcast ();
+            uint64_t val = 1;
+            [[maybe_unused]] ssize_t bytes = ::write (this->_event, &val, sizeof (uint64_t));
             this->_workers.clear ();
+            ::close (this->_event);
+            Acceptor::close ();
         }
 
         /**
@@ -971,26 +984,6 @@ namespace join
 
     protected:
         /**
-         * @brief method called when data are ready to be read on handle.
-         */
-        virtual void onReceive () override
-        {
-            Stream stream = this->acceptStream ();
-
-            if (stream.connected ())
-            {
-                stream.timeout (keepAliveTimeout ().count () * 1000);
-
-                {
-                    ScopedLock lock (this->_mutex);
-                    this->_streams.emplace (std::move (stream));
-                }
-
-                this->_condition.signal ();
-            }
-        }
-
-        /**
          * @brief find content.
          * @param method method.
          * @param path resource path.
@@ -1049,7 +1042,7 @@ namespace join
         }
 
         /// gracefully stop all workers.
-        std::atomic <bool> _work;
+        int _event = -1;
 
         /// number of workers.
         size_t _nworkers;
@@ -1057,14 +1050,8 @@ namespace join
         /// workers.
         std::vector <std::unique_ptr <Worker>> _workers;
 
-        /// condition shared with workers.
-        Condition _condition;
-
-        /// condition protection mutex.
+        /// accept protection mutex.
         Mutex _mutex;
-
-        /// pending connected streams.
-        std::queue <Stream> _streams;
 
         /// contents.
         std::vector <std::unique_ptr <Content>> _contents;
