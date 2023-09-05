@@ -25,9 +25,6 @@
 #ifndef __JOIN_VIEW_HPP__
 #define __JOIN_VIEW_HPP__
 
-// libjoin.
-#include <join/httpclient.hpp>
-
 // C++.
 #include <stdexcept>
 #include <istream>
@@ -111,7 +108,7 @@ namespace join
          * @brief get character without extracting it.
          * @return extracted character.
          */
-        int peek () noexcept
+        int peek () const noexcept
         {
             if (_len)
             {
@@ -181,7 +178,26 @@ namespace join
             return count;
         }
 
-    protected:
+        /**
+         * @brief get input position indicator.
+         * @return current position.
+         */
+        size_t tell ()
+        {
+            return _pos;
+        }
+
+        /**
+         * @brief rewind the view.
+         * @param n number of characters to rewind.
+         */
+        void rewind (size_t n)
+        {
+            _pos -= n;
+            _len += n;
+        }
+
+    private:
         /// input buffer start pointer.
         const char * _buf = nullptr;
 
@@ -242,7 +258,7 @@ namespace join
          * @brief get character without extracting it.
          * @return extracted character.
          */
-        virtual int peek () noexcept
+        int peek () const noexcept
         {
             return _in->peek ();
         }
@@ -251,7 +267,7 @@ namespace join
          * @brief extracts character.
          * @return extracted character.
          */
-        virtual int get () noexcept
+        int get () noexcept
         {
             return _in->get ();
         }
@@ -263,9 +279,9 @@ namespace join
          */
         bool getIf (char expected) noexcept
         {
-            if (!_in->eof () && (static_cast <char> (peek ()) == expected))
+            if (!_in->eof () && (static_cast <char> (_in->peek ()) == expected))
             {
-                get ();
+                _in->get ();
                 return true;
             }
             return false;
@@ -278,10 +294,10 @@ namespace join
          */
         bool getIfNoCase (char expected) noexcept
         {
-            if (!_in->eof () && (((static_cast <char> (peek ()) ^ expected) == 0) ||
-                                 ((static_cast <char> (peek ()) ^ expected) == 32)))
+            if (!_in->eof () && (((static_cast <char> (_in->peek ()) ^ expected) == 0) ||
+                                 ((static_cast <char> (_in->peek ()) ^ expected) == 32)))
             {
-                get ();
+                _in->get ();
                 return true;
             }
             return false;
@@ -292,192 +308,34 @@ namespace join
          * @param buf .
          * @param count .
          */
-        virtual size_t read (char* buf, size_t count)
+        size_t read (char* buf, size_t count)
         {
             _in->read (buf, count);
             return _in->gcount ();
         }
 
-    protected:
+        /**
+         * @brief input position indicator.
+         * @return current position.
+         */
+        size_t tell ()
+        {
+            return _in->tellg ();
+        }
+
+        /**
+         * @brief rewind the view.
+         * @param n number of characters to rewind.
+         */
+        void rewind (size_t n)
+        {
+            _in->clear ();
+            _in->seekg (tell () - n);
+        }
+
+    private:
         /// input stream.
         std::istream* _in;
-    };
-
-    /**
-     * @brief HTTP stream view.
-     */
-    class HttpStreamView : public StreamView
-    {
-    public:
-        /**
-         * @brief default constructor.
-         * @param in input stream.
-         */
-        HttpStreamView (HttpClient& in)
-        : StreamView (in)
-        {
-        }
-
-        /**
-         * @brief copy constructor.
-         * @param other object to copy.
-         */
-        HttpStreamView (const HttpStreamView& other) = delete;
-
-        /**
-         * @brief copy assignment.
-         * @param other object to copy.
-         * @return a reference of the current object.
-         */
-        HttpStreamView& operator= (const HttpStreamView& other) = delete;
-
-        /**
-         * @brief move constructor.
-         * @param other object to move.
-         */
-        HttpStreamView (HttpStreamView&& other) = delete;
-
-        /**
-         * @brief move assignment.
-         * @param other object to move.
-         * @return a reference of the current object.
-         */
-        HttpStreamView& operator=(HttpStreamView&& other) = delete;
-
-        /**
-         * @brief destroy instance.
-         */
-        virtual ~HttpStreamView () = default;
-
-        /**
-         * @brief get character without extracting it.
-         * @return extracted character.
-         */
-        virtual int peek () noexcept override
-        {
-            if (reinterpret_cast <HttpClient*> (_in)->encoding () == "chunked")
-            {
-                return peekchunked ();
-            }
-
-            return _in->peek ();
-        }
-
-        /**
-         * @brief extracts character.
-         * @return extracted character.
-         */
-        virtual int get () noexcept override
-        {
-            if (reinterpret_cast <HttpClient*> (_in)->encoding () == "chunked")
-            {
-                return getchunked ();
-            }
-
-            return _in->get ();
-        }
-
-        /**
-         * @brief reads count characters from the input sequence.
-         * @param buf pointer to a char array.
-         * @param count maximum number of characters to read.
-         * @return the number of characters successfully read.
-         */
-        virtual size_t read (char* buf, size_t count) override
-        {
-            if (reinterpret_cast <HttpClient*> (_in)->encoding () == "chunked")
-            {
-                return readchunked (buf, count);
-            }
-
-            _in->read (buf, count);
-            return _in->gcount ();
-        }
-
-    protected:
-        /**
-         * @brief read chunk size.
-         * @param chunksize chunk size. 
-         * @return true on success, false otherwise.
-         */
-        bool readchunksize (size_t& chunksize) const
-        {
-            char* end = nullptr;
-            std::string line;
-
-            if (HttpMessage::getline (*_in, line, 4096))
-            {
-                chunksize = strtol (line.c_str (), &end, 16);
-            }
-
-            return (end && (*end == '\0'));
-        }
-
-        /**
-         * @brief get character without extracting it.
-         * @return extracted character.
-         */
-        int peekchunked () noexcept
-        {
-            while (!_blocksize)
-            {
-                if (!readchunksize (_blocksize))
-                {
-                    return std::char_traits <char>::eof ();
-                }
-            }
-
-            return _in->peek ();
-        }
-
-        /**
-         * @brief extracts character.
-         * @return extracted character.
-         */
-        int getchunked () noexcept
-        {
-            char ch;
-            if (readchunked (&ch, 1) != 1)
-            {
-                return std::char_traits <char>::eof ();
-            }
-            return ch;
-        }
-
-        /**
-         * @brief reads count characters from the input sequence.
-         * @param buf pointer to a char array.
-         * @param count maximum number of characters to read.
-         * @return the number of characters successfully read. 
-         */
-        size_t readchunked (char* buf, size_t count)
-        {
-            size_t nread = 0;
-            std::string line;
-
-            while (nread < count)
-            {
-                if (!_blocksize && !readchunksize (_blocksize))
-                {
-                    break;
-                }
-
-                size_t remaining = count - nread;
-                _in->read (buf + nread, std::min (remaining, _blocksize));
-                if (_in->fail ())
-                {
-                    break;
-                }
-
-                nread      += _in->gcount ();
-                _blocksize -= _in->gcount ();
-            }
-
-            return nread;
-        }
-
-        /// block size.
-        size_t _blocksize = 0;
     };
 }
 
