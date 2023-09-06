@@ -274,50 +274,45 @@ namespace join
                 join::replaceAll (alias, "$urn", this->_request.urn ());
             }
 
-            switch (content->type)
+            if (content->type == HttpContentType::Root)
             {
-                case HttpContentType::Root:
-                    this->sendFile (this->_server->baseLocation () + this->_request.path ());
-                    break;
-
-                case HttpContentType::Alias:
-                    this->sendFile (alias);
-                    break;
-
-                case HttpContentType::Exec:
-                    if (content->contentHandler == nullptr)
-                    {
-                        this->sendError ("500", "internal server error");
-                        return;
-                    }
-                    content->contentHandler (this);
-                    break;
-
-                case HttpContentType::Redirect:
-                    if (this->_request.version () == "HTTP/1.1")
-                    {
-                        this->sendRedirect ("307", "Temporary Redirect", alias);
-                    }
-                    else
-                    {
-                        this->sendRedirect ("302", "Found", alias);
-                    }
-                    break;
-
-                case HttpContentType::Upload:
-                    if (content->contentHandler == nullptr)
-                    {
-                        this->sendError ("500", "internal server error");
-                        return;
-                    }
-                    //if (readMultipart ())
-                    //{
-                    //    content->contentHandler (this);
-                    //}
-                    break;
-
-                default:
-                    break;
+                this->sendFile (this->_server->baseLocation () + this->_request.path ());
+            }
+            else if (content->type == HttpContentType::Alias)
+            {
+                this->sendFile (alias);
+            }
+            else if (content->type == HttpContentType::Exec)
+            {
+                if (content->contentHandler == nullptr)
+                {
+                    this->sendError ("500", "internal server error");
+                    return;
+                }
+                content->contentHandler (this);
+            }
+            else if (content->type == HttpContentType::Redirect)
+            {
+                if (this->_request.version () == "HTTP/1.1")
+                {
+                    this->sendRedirect ("307", "Temporary Redirect", alias);
+                }
+                else
+                {
+                    this->sendRedirect ("302", "Found", alias);
+                }
+            }
+            else if (content->type == HttpContentType::Upload)
+            {
+                if (content->contentHandler == nullptr)
+                {
+                    this->sendError ("500", "internal server error");
+                    return;
+                }
+                //if (readMultipart ())
+                //{
+                //    content->contentHandler (this);
+                //}
             }
         }
 

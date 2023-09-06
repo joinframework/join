@@ -286,6 +286,9 @@ TEST (HttpRequest, host)
 
     request.header ("Host", "[::1]:5000");
     ASSERT_EQ (request.host (), "[::1]");
+
+    request.header ("Host", "[::1");
+    ASSERT_EQ (request.host (), "");
 }
 
 /**

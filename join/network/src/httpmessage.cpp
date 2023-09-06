@@ -610,13 +610,9 @@ std::string HttpRequest::host () const
         {
             return {};
         }
-        host = host.substr (0, ++end);
+        return host.substr (0, ++end);
     }
-    else
-    {
-        host = host.substr (0, host.find (":"));
-    }
-    return host;
+    return host.substr (0, host.find (":"));
 }
 
 // =========================================================================
