@@ -86,6 +86,8 @@ protected:
         this->addDocumentRoot ("/", "*");
         this->addDocumentRoot ("/no/", "file");
         this->addRedirect ("/redirect/", "file", "https://$host:$port/");
+        this->addExecute (HttpMethod::Get, "/exec/", "null", nullptr);
+        this->addUpload ("/upload/", "null", nullptr);
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     }
 
@@ -471,6 +473,33 @@ TEST_F (HttpTest, redirect)
     ASSERT_GT (len, 0);
     payload.resize (len);
     client.read (&payload[0], payload.size ());
+}
+
+/**
+ * @brief Test server error
+ */
+TEST_F (HttpTest, serverError)
+{
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.path ("/exec/null");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "500");
+    ASSERT_EQ (response.reason (), "Internal Server Error");
+
+    request.clear ();
+    request.method (HttpMethod::Post);
+    request.path ("/upload/null");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "500");
+    ASSERT_EQ (response.reason (), "Internal Server Error");
 }
 
 /**

@@ -286,7 +286,7 @@ namespace join
             {
                 if (content->contentHandler == nullptr)
                 {
-                    this->sendError ("500", "internal server error");
+                    this->sendError ("500", "Internal Server Error");
                     return;
                 }
                 content->contentHandler (this);
@@ -306,7 +306,7 @@ namespace join
             {
                 if (content->contentHandler == nullptr)
                 {
-                    this->sendError ("500", "internal server error");
+                    this->sendError ("500", "Internal Server Error");
                     return;
                 }
                 //if (readMultipart ())

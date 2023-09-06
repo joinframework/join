@@ -181,6 +181,8 @@ protected:
         this->addDocumentRoot ("/", "*");
         this->addDocumentRoot ("/no/", "file");
         this->addRedirect ("/redirect/", "file", "https://$host:$port/");
+        this->addExecute (HttpMethod::Get, "/exec/", "null", nullptr);
+        this->addUpload ("/upload/", "null", nullptr);
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     }
 
@@ -637,6 +639,39 @@ TEST_F (HttpsTest, redirect)
     ASSERT_GT (len, 0);
     payload.resize (len);
     client.read (&payload[0], payload.size ());
+}
+
+/**
+ * @brief Test server error
+ */
+TEST_F (HttpsTest, serverError)
+{
+    Https::Client client (_host, _port);
+    client.setVerify (true, 1);
+    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+#endif
+
+    HttpRequest request;
+    request.path ("/exec/null");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "500");
+    ASSERT_EQ (response.reason (), "Internal Server Error");
+
+    request.clear ();
+    request.method (HttpMethod::Post);
+    request.path ("/upload/null");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "500");
+    ASSERT_EQ (response.reason (), "Internal Server Error");
 }
 
 /**

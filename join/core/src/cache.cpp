@@ -70,27 +70,25 @@ void* Cache::get (const std::string &fileName, struct stat &sbuf)
         remove (fileName);
     }
 
-    int fd = open (fileName.c_str (), O_RDONLY);
-    if (fd < 0)
-    {
-        return nullptr;
-    }
-
     void* ptr = nullptr;
 
-    std::unique_ptr <CacheEntry> entry = std::make_unique <CacheEntry> ();
-    if (entry != nullptr)
+    int fd = open (fileName.c_str (), O_RDONLY);
+    if (fd >= 0)
     {
-        entry->size = sbuf.st_size;
-        entry->modifTime = sbuf.st_ctim;
-        entry->addr = mmap (0, entry->size, PROT_READ, MAP_PRIVATE, fd, 0);
-        if (entry->addr != MAP_FAILED)
+        std::unique_ptr <CacheEntry> entry = std::make_unique <CacheEntry> ();
+        if (entry != nullptr)
         {
-            ptr = _entries.emplace (fileName, std::move (entry)).first->second->addr;
+            entry->size = sbuf.st_size;
+            entry->modifTime = sbuf.st_ctim;
+            entry->addr = mmap (0, entry->size, PROT_READ, MAP_PRIVATE, fd, 0);
+            if (entry->addr != MAP_FAILED)
+            {
+                ptr = _entries.emplace (fileName, std::move (entry)).first->second->addr;
+            }
         }
-    }
 
-    close (fd);
+        close (fd);
+    }
 
     return ptr;
 }
