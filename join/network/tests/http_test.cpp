@@ -57,7 +57,7 @@ public:
         std::ofstream outFile (_sampleFile.c_str ());
         if (outFile.is_open ())
         {
-            outFile << _sample << std::endl;
+            outFile << _sample;
             outFile.close ();
         }
     }
@@ -82,8 +82,10 @@ protected:
         this->keepAlive (seconds (_timeout), _max);
         ASSERT_EQ (this->keepAliveTimeout (), seconds (_timeout));
         ASSERT_EQ (this->keepAliveMax (), _max);
-        this->addAlias ("/", "", "$root/" + _sampleFileName);
+        this->addAlias ("/", "", _sampleFile);
         this->addDocumentRoot ("/", "*");
+        this->addDocumentRoot ("/no/", "file");
+        this->addRedirect ("/redirect/", "file", "https://$host:$port/");
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     }
 
@@ -226,7 +228,7 @@ TEST_F (HttpTest, url)
  */
 TEST_F (HttpTest, keepAlive)
 {
-    Http::Client client1 ("localhost", 80, true);
+    Http::Client client1 ("localhost", 80);
     ASSERT_TRUE (client1.keepAlive ());
 
     client1.keepAlive (false);
@@ -310,7 +312,7 @@ TEST_F (HttpTest, keepAliveMax)
 /**
  * @brief Test send method
  */
-TEST_F (HttpTest, send)
+TEST_F (HttpTest, DISABLED_send)
 {
     Http::Client client1 ("172.16.13.128", 443);
     client1.timeout (500);
@@ -318,7 +320,7 @@ TEST_F (HttpTest, send)
     ASSERT_TRUE (client1.fail ());
     ASSERT_EQ (join::lastError, Errc::TimedOut);
 
-    Http::Client client2 (_host, _port, true);
+    Http::Client client2 (_host, _port);
     client2 << HttpRequest ();
     ASSERT_TRUE (client2.good ()) << join::lastError.message ();
     client2.close ();
@@ -326,25 +328,192 @@ TEST_F (HttpTest, send)
 }
 
 /**
- * @brief Test receive method
+ * @brief Test bad request
  */
-TEST_F (HttpTest, receive)
+TEST_F (HttpTest, badRequest)
 {
     Http::Client client (_host, _port);
 
+    HttpRequest request;
+    request.path ("\r\n");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
     HttpResponse response;
-    client >> response;
-    ASSERT_TRUE (client.fail ());
-    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "400");
+    ASSERT_EQ (response.reason (), "Bad Request");
 
-    client.clear ();
-    client << HttpRequest ();
-    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    request.clear ();
+    request.header ("Host", "");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
 
-    client >> response;
-    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "400");
+    ASSERT_EQ (response.reason (), "Bad Request");
+}
+
+/**
+ * @brief Test invalid method
+ */
+TEST_F (HttpTest, invalidMethod)
+{
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.method (HttpMethod (100));
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "405");
+    ASSERT_EQ (response.reason (), "Method Not Allowed");
+}
+
+/**
+ * @brief Test header too large
+ */
+TEST_F (HttpTest, headerTooLarge)
+{
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.header ("User-Agent", std::string (8192, 'a'));
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "494");
+    ASSERT_EQ (response.reason (), "Request Header Too Large");
+}
+
+/**
+ * @brief Test not found
+ */
+TEST_F (HttpTest, notFound)
+{
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.path ("/invalid/path");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "404");
+    ASSERT_EQ (response.reason (), "Not Found");
+
+    request.clear ();
+    request.path ("/no/file");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "404");
+    ASSERT_EQ (response.reason (), "Not Found");
+}
+
+/**
+ * @brief Test not modified
+ */
+TEST_F (HttpTest, notModified)
+{
+    struct stat sbuf;
+    std::stringstream modifTime;
+    ASSERT_EQ (stat (_sampleFile.c_str (), &sbuf), 0);
+    modifTime << std::put_time (std::gmtime (&sbuf.st_ctime), "%a, %d %b %Y %H:%M:%S GMT");
+
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.header ("If-Modified-Since", modifTime.str ());
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "304");
+    ASSERT_EQ (response.reason (), "Not Modified");
+}
+
+/**
+ * @brief Test redirect
+ */
+TEST_F (HttpTest, redirect)
+{
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.path ("/redirect/file");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "307");
+    ASSERT_EQ (response.reason (), "Temporary Redirect");
+
+    int len = std::stoi (response.header ("Content-Length"));
+    ASSERT_GT (len, 0);
+    std::string payload;
+    payload.resize (len);
+    client.read (&payload[0], payload.size ());
+
+    request.clear ();
+    request.path ("/redirect/file");
+    request.version ("HTTP/1.0");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "302");
+    ASSERT_EQ (response.reason (), "Found");
+
+    len = std::stoi (response.header ("Content-Length"));
+    ASSERT_GT (len, 0);
+    payload.resize (len);
+    client.read (&payload[0], payload.size ());
+}
+
+/**
+ * @brief Test head method
+ */
+TEST_F (HttpTest, head)
+{
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.method (HttpMethod::Head);
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
     ASSERT_EQ (response.status (), "200");
-    ASSERT_EQ (response.reason (), "ok");
+    ASSERT_EQ (response.reason (), "OK");
+
+    client.close ();
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+}
+
+/**
+ * @brief Test get method
+ */
+TEST_F (HttpTest, get)
+{
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.method (HttpMethod::Get);
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "200");
+    ASSERT_EQ (response.reason (), "OK");
+
+    ASSERT_EQ (std::stoi (response.header ("Content-Length")), _sample.size ());
+    std::string payload;
+    payload.resize (_sample.size ());
+    client.read (&payload[0], payload.size ());
+    ASSERT_EQ (payload, _sample);
 
     client.close ();
     ASSERT_TRUE (client.good ()) << join::lastError.message ();

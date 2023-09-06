@@ -300,7 +300,6 @@ namespace join
         while (max--)
         {
             char ch = in.sbumpc ();
-
             if (ch == std::char_traits <char>::eof ())
             {
                 return false;
@@ -333,12 +332,32 @@ namespace join
      */
     __inline__ bool getline (std::istream& in, std::string& line, std::streamsize max = 1024)
     {
-        if (!getline (*in.rdbuf (), line, max))
+        line.clear ();
+
+        while (max--)
         {
-            in.setstate (std::ios_base::failbit);
-            return false;
+            char ch = in.get ();
+            if (in.fail ())
+            {
+                return false;
+            }
+
+            if (ch == '\r')
+            {
+                continue;
+            }
+
+            if (ch == '\n')
+            {
+                return true;
+            }
+
+            line.push_back (ch);
         }
-        return true;
+
+        join::lastError = make_error_code (Errc::MessageTooLong);
+
+        return false;
     }
 
     /**

@@ -51,7 +51,6 @@ namespace join
         Root,           /**< Content appended to root directory. */
         Alias,          /**< Content replaced by alias. */
         Exec,           /**< Executable content. */
-        Proxy,          /**< Proxy pass. */
         Redirect,       /**< Redirection. */
         Upload,         /**< Upload content. */
     };
@@ -204,21 +203,34 @@ namespace join
          */
         int readRequest ()
         {
-            this->_response.response ("200", "ok");
-            this->_request.readHeaders (this->_stream);
-            if (this->_stream.fail ())
+            // prepare a standard response.
+            this->_response.response ("200", "OK");
+
+            // read request headers.
+            if (this->_request.readHeaders (this->_stream) == -1)
             {
-                if (!this->_stream.eof ())
+                if (join::lastError == HttpErrc::BadRequest)
                 {
-                    this->sendError (std::to_string (join::lastError.value ()), join::lastError.message ());
+                    this->sendError ("400", "Bad Request");
+                }
+                else if (join::lastError == HttpErrc::Unsupported)
+                {
+                    this->sendError ("405", "Method Not Allowed");
+                }
+                else if (join::lastError == HttpErrc::HeaderTooLarge)
+                {
+                    this->sendError ("494", "Request Header Too Large");
                 }
                 return -1;
             }
-            if (!this->_request.hasHeader ("Host"))
+
+            // host present.
+            if (this->_request.host ().empty ())
             {
-                this->sendError ("400", "bad request");
+                this->sendError ("400", "Bad Request");
                 return -1;
             }
+
             return 0;
         }
 
@@ -230,7 +242,7 @@ namespace join
             Content* content = this->_server->findContent (this->_request.method (), this->_request.path ());
             if (content == nullptr)
             {
-                this->sendError ("404", "not found");
+                this->sendError ("404", "Not Found");
                 return;
             }
 
@@ -238,7 +250,7 @@ namespace join
             {
                 if (!this->_request.hasHeader ("Authorization"))
                 {
-                    this->sendError ("401", "unauthorized");
+                    this->sendError ("401", "Unauthorized");
                     return;
                 }
 
@@ -250,6 +262,18 @@ namespace join
                 }
             }
 
+            std::string alias (content->alias);
+            if (!alias.empty ())
+            {
+                join::replaceAll (alias, "$root", this->_server->baseLocation ());
+                join::replaceAll (alias, "$scheme", this->_server->scheme ());
+                join::replaceAll (alias, "$host", this->_request.host ());
+                join::replaceAll (alias, "$port", std::to_string (this->_stream.localEndpoint ().port ()));
+                join::replaceAll (alias, "$path", this->_request.path ());
+                join::replaceAll (alias, "$query", this->_request.query ());
+                join::replaceAll (alias, "$urn", this->_request.urn ());
+            }
+
             switch (content->type)
             {
                 case HttpContentType::Root:
@@ -257,17 +281,7 @@ namespace join
                     break;
 
                 case HttpContentType::Alias:
-                    {
-                        std::string alias (content->alias);
-                        join::replaceAll (alias, "$root", this->_server->baseLocation ());
-                        join::replaceAll (alias, "$scheme", this->_server->scheme ());
-                        //join::replaceAll (alias, "$host", this->_request.header ("Host"));
-                        join::replaceAll (alias, "$port", std::to_string (this->_stream.remoteEndpoint ().port ()));
-                        join::replaceAll (alias, "$path", this->_request.path ());
-                        join::replaceAll (alias, "$query", this->_request.query ());
-                        join::replaceAll (alias, "$urn", this->_request.urn ());
-                        this->sendFile (alias);
-                    }
+                    this->sendFile (alias);
                     break;
 
                 case HttpContentType::Exec:
@@ -279,36 +293,14 @@ namespace join
                     content->contentHandler (this);
                     break;
 
-                case HttpContentType::Proxy:
-                    {
-                        std::string remote (content->alias);
-                        join::replaceAll (remote, "$scheme", this->_server->scheme ());
-                        //join::replaceAll (remote, "$host", this->_request.header ("Host"));
-                        join::replaceAll (remote, "$port", std::to_string (this->_stream.remoteEndpoint ().port ()));
-                        join::replaceAll (remote, "$path", this->_request.path ());
-                        join::replaceAll (remote, "$query", this->_request.query ());
-                        join::replaceAll (remote, "$urn", this->_request.urn ());
-                        //proxyPass (remote);
-                    }
-                    break;
-
                 case HttpContentType::Redirect:
+                    if (this->_request.version () == "HTTP/1.1")
                     {
-                        std::string location (content->alias);
-                        join::replaceAll (location, "$scheme", this->_server->scheme ());
-                        //join::replaceAll (location, "$host", this->_request.header ("Host"));
-                        join::replaceAll (location, "$port", std::to_string (this->_stream.remoteEndpoint ().port ()));
-                        join::replaceAll (location, "$path", this->_request.path ());
-                        join::replaceAll (location, "$query", this->_request.query ());
-                        join::replaceAll (location, "$urn", this->_request.urn ());
-                        if (this->_request.version () == "HTTP/1.1")
-                        {
-                            this->sendRedirect ("307", "temporary redirect", location);
-                        }
-                        else
-                        {
-                            this->sendRedirect ("302", "Found", location);
-                        }
+                        this->sendRedirect ("307", "Temporary Redirect", alias);
+                    }
+                    else
+                    {
+                        this->sendRedirect ("302", "Found", alias);
                     }
                     break;
 
@@ -349,9 +341,8 @@ namespace join
 
         /**
          * @brief send headers.
-         * @return 0 on success, -1 on failure.
          */
-        int sendHeaders ()
+        void sendHeaders ()
         {
             // set missing response headers.
             if (!this->_response.hasHeader ("Date"))
@@ -364,14 +355,6 @@ namespace join
             if (!this->_response.hasHeader ("Server"))
             {
                 this->_response.header ("Server", "join/" JOIN_VERSION);
-            }
-            if (!this->_response.hasHeader ("Content-Length"))
-            {
-                this->_response.header ("Transfer-Encoding", "chunked");
-            }
-            else if (!this->_response.hasHeader ("Cache-Control"))
-            {
-                this->_response.header ("Cache-Control", "no-cache");
             }
             if (!this->_response.hasHeader ("Connection"))
             {
@@ -411,48 +394,27 @@ namespace join
 
             // write response headers.
             this->_response.writeHeaders (this->_stream);
-            if (this->_stream.fail ())
-            {
-                return -1;
-            }
-            this->_stream.flush ();
-
-            //this->writeAccessLog ();
-
-            return 0;
         }
 
         /**
          * @brief send error message.
          * @param status status.
          * @param reason reason.
-         * @return 0 on success, -1 on failure.
          */
-        int sendError (const std::string& status, const std::string& reason, const std::string& payload = {})
+        void sendError (const std::string& status, const std::string& reason)
         {
+            // set error response.
             this->_response.response (status, reason);
 
-            if (!payload.empty ())
-            {
-                this->_response.header ("Content-Length", std::to_string (payload.size ()));
-            }
+            // stop keepalive.
+            this->_response.header ("Connection", "close");
+            this->_max = 0;
 
-            if (this->sendHeaders () == -1)
-            {
-                return -1;
-            }
+            // send headers.
+            this->sendHeaders ();
 
-            if (!payload.empty ())
-            {
-                this->_stream << payload;
-            }
-
-            if (this->_stream.fail ())
-            {
-                return -1;
-            }
-
-            return 0;
+            // flush data.
+            this->_stream.flush ();
         }
 
         /**
@@ -460,12 +422,15 @@ namespace join
          * @param status status.
          * @param reason reason.
          * @param location location to redirect to.
-         * @return 0 on success, -1 on failure.
          */
-        int sendRedirect (const std::string& status, const std::string& reason, const std::string& location = {})
+        void sendRedirect (const std::string& status, const std::string& reason, const std::string& location = {})
         {
             std::string payload;
 
+            // set redirect response.
+            this->_response.response (status, reason);
+
+            // set redirect message payload.
             if (!location.empty ())
             {
                 payload += "<html>";
@@ -478,57 +443,74 @@ namespace join
                 payload += "The document has moved <a href=\"" + location + "\">here</a>";
                 payload += "</body>";
                 payload += "</html>";
-
-                this->_response.header ("Content-Type", "text/html");
             }
 
-            return sendError (status, reason, payload);
+            // set content.
+            if (payload.size ())
+            {
+                this->_response.header ("Content-Length", std::to_string (payload.size ()));
+                this->_response.header ("Content-Type", "text/html");
+                this->_response.header ("Cache-Control", "no-cache");
+            }
+
+            // send headers.
+            this->sendHeaders ();
+
+            // send payload.
+            if (payload.size ())
+            {
+                this->_stream.write (payload.c_str (), payload.size ());
+            }
+
+            // flush data.
+            this->_stream.flush ();
         }
 
         /**
          * @brief send a file.
          * @param path path of the file.
          */
-        void sendFile (std::string path)
+        void sendFile (const std::string& path)
         {
             struct stat sbuf;
 
-            if ((stat (path.c_str (), &sbuf) < 0) || S_ISDIR (sbuf.st_mode))
+            // get file.
+            void* addr = this->_server->_cache.get (path, sbuf);
+            if (addr == nullptr || S_ISDIR (sbuf.st_mode))
             {
-                this->sendError ("404", "not found");
+                this->sendError ("404", "Not Found");
                 return;
             }
 
-            this->_response.header ("Content-Type", this->mime (path));
-            this->_response.header ("Content-Length", std::to_string (sbuf.st_size));
-
+            // check modif time.
             std::stringstream modifTime;
             modifTime << std::put_time (std::gmtime (&sbuf.st_ctime), "%a, %d %b %Y %H:%M:%S GMT");
             if (compareNoCase (this->_request.header ("If-Modified-Since"), modifTime.str ()))
             {
-                this->sendRedirect ("304", "not modified");
+                this->sendRedirect ("304", "Not Modified");
                 return;
             }
 
+            // set modif time.
             this->_response.header ("Last-Modified", modifTime.str ());
 
-            if (this->sendHeaders () == -1)
+            // set content.
+            this->_response.header ("Content-Length", std::to_string (sbuf.st_size));
+            this->_response.header ("Content-Type", this->mime (path));
+            this->_response.header ("Cache-Control", "no-cache");
+
+            // send headers.
+            this->sendHeaders ();
+
+            // check method.
+            if (this->_request.method () == HttpMethod::Get)
             {
-                return;
+                // send file.
+                this->_stream.write (static_cast <char *> (addr), sbuf.st_size);
             }
 
-            if (this->_request.method () == HttpMethod::Head)
-            {
-                return;
-            }
-
-            void * addr = this->_server->_cache.get (path, &sbuf);
-            if (addr == nullptr)
-            {
-                return;
-            }
-
-            this->_stream.write (static_cast <char *> (addr), sbuf.st_size);
+            // flush data.
+            this->_stream.flush ();
         }
 
         /**
@@ -906,32 +888,6 @@ namespace join
                 newEntry->directory      = dir;
                 newEntry->name           = name;
                 newEntry->contentHandler = contentHandler;
-                newEntry->accessHandler  = accessHandler;
-                this->_contents.emplace_back (newEntry);
-            }
-
-            return newEntry;
-        }
-
-        /**
-         * @brief map an URL to a remote server
-         * @param dir directory.
-         * @param name file name.
-         * @param remote remote server.
-         * @param accessHandler access handler.
-         * @return a pointer to the content on success, nullptr on failure.
-         */
-        Content* addProxyPass (const std::string& dir, const std::string& name, const std::string& remote, const AccessHandler& accessHandler = nullptr)
-        {
-            Content* newEntry = new Content;
-            if (newEntry != nullptr)
-            {
-                newEntry->methods        = Head | Get | Put | Post | Delete;
-                newEntry->type           = Proxy;
-                newEntry->directory      = dir;
-                newEntry->name           = name;
-                newEntry->alias          = remote;
-                newEntry->contentHandler = nullptr;
                 newEntry->accessHandler  = accessHandler;
                 this->_contents.emplace_back (newEntry);
             }

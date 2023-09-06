@@ -236,8 +236,9 @@ namespace join
         /**
          * @brief send HTTP request.
          * @param request HTTP request to send.
+         * @return 0 on success, -1 on failure.
          */
-        void send (const HttpRequest& request)
+        int send (const HttpRequest& request)
         {
             // restore concrete stream.
             clearEncoding ();
@@ -248,7 +249,7 @@ namespace join
                 this->reconnect (this->url ());
                 if (this->fail ())
                 {
-                    return;
+                    return -1;
                 }
             }
 
@@ -277,12 +278,12 @@ namespace join
             }
 
             // write request headers.
-            tmp.writeHeaders (*this);
-            if (this->fail ())
+            if (tmp.writeHeaders (*this) == -1)
             {
-                return;
+                return -1;
             }
 
+            // flush request headers.
             this->flush ();
 
             // set encoding.
@@ -290,22 +291,24 @@ namespace join
             {
                 setEncoding (join::rsplit (tmp.header ("Transfer-Encoding"), ","));
             }
+
+            return 0;
         }
 
         /**
          * @brief receive HTTP response.
          * @param response HTTP response received.
+         * @return 0 on success, -1 on failure.
          */
-        void receive (HttpResponse& response)
+        int receive (HttpResponse& response)
         {
             // restore concrete stream.
             clearEncoding ();
 
             // read response headers.
-            response.readHeaders (*this);
-            if (this->fail ())
+            if (response.readHeaders (*this) == -1)
             {
-                return;
+                return -1;
             }
 
             // get connection.
@@ -345,6 +348,8 @@ namespace join
 
             // get timestamp.
             this->_timestamp = std::chrono::steady_clock::now ();
+
+            return 0;
         }
 
     protected:

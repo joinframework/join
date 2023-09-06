@@ -172,7 +172,7 @@ TEST (HttpResponse, send)
     response.header ("Connection", "keep-alive");
 
     std::stringstream ss;
-    response.writeHeaders (ss);
+    ASSERT_EQ (response.writeHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (ss.str (), "HTTP/1.0 200 OK\r\nConnection: keep-alive\r\n\r\n");
 }
 
@@ -188,8 +188,7 @@ TEST (HttpResponse, receive)
     ss << "\r\n";
 
     HttpResponse response;
-    response.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (response.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (response.status (), "301");
     ASSERT_EQ (response.reason (), "Redirect");
     ASSERT_EQ (response.version (), "HTTP/1.0");
@@ -200,23 +199,20 @@ TEST (HttpResponse, receive)
     ss.str ("");
     ss << "HTTP/1.0";
 
-    response.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (response.readHeaders (ss), -1);
 
     ss.clear ();
     ss.str ("");
     ss << "HTTP/1.0\r\n";
 
-    response.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (response.readHeaders (ss), -1);
     ASSERT_EQ (join::lastError, HttpErrc::BadRequest);
 
     ss.clear ();
     ss.str ("");
     ss << "HTTP/1.0 200\r\n";
 
-    response.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (response.readHeaders (ss), -1);
     ASSERT_EQ (join::lastError, HttpErrc::BadRequest);
 
     ss.clear ();
@@ -225,15 +221,13 @@ TEST (HttpResponse, receive)
     ss << "Connection keep-alive\r\n";
     ss << "\r\n";
 
-    response.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (response.readHeaders (ss), -1);
     ASSERT_EQ (join::lastError, HttpErrc::BadRequest);
 
     ss.clear ();
     ss.str (std::string (8192, 'X'));
 
-    response.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (response.readHeaders (ss), -1);
     ASSERT_EQ (join::lastError, Errc::MessageTooLong);
 }
 

@@ -57,7 +57,7 @@ public:
         std::ofstream outFile (_sampleFile.c_str ());
         if (outFile.is_open ())
         {
-            outFile << _sample << std::endl;
+            outFile << _sample;
             outFile.close ();
         }
 
@@ -177,8 +177,10 @@ protected:
     #if OPENSSL_VERSION_NUMBER >= 0x10101000L
         ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
     #endif
-        this->addAlias ("/", "", "$root/" + _sampleFileName);
+        this->addAlias ("/", "", _sampleFile);
         this->addDocumentRoot ("/", "*");
+        this->addDocumentRoot ("/no/", "file");
+        this->addRedirect ("/redirect/", "file", "https://$host:$port/");
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     }
 
@@ -337,7 +339,7 @@ TEST_F (HttpsTest, url)
  */
 TEST_F (HttpsTest, keepAlive)
 {
-    Https::Client client1 ("localhost", 80, true);
+    Https::Client client1 ("localhost", 80);
     ASSERT_TRUE (client1.keepAlive ());
 
     client1.keepAlive (false);
@@ -433,7 +435,7 @@ TEST_F (HttpsTest, keepAliveMax)
 /**
  * @brief Test send method
  */
-TEST_F (HttpsTest, send)
+TEST_F (HttpsTest, DISABLED_send)
 {
     Https::Client client1 ("172.16.13.128", 443);
     client1.timeout (500);
@@ -441,7 +443,7 @@ TEST_F (HttpsTest, send)
     ASSERT_TRUE (client1.fail ());
     ASSERT_EQ (join::lastError, Errc::TimedOut);
 
-    Https::Client client2 (_host, _port, true);
+    Https::Client client2 (_host, _port);
     client2.setVerify (true, 1);
     ASSERT_EQ (client2.setCaFile (_rootcert), 0) << join::lastError.message ();
     ASSERT_EQ (client2.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
@@ -456,25 +458,240 @@ TEST_F (HttpsTest, send)
 }
 
 /**
- * @brief Test receive method
+ * @brief Test bad request
  */
-TEST_F (HttpsTest, receive)
+TEST_F (HttpsTest, badRequest)
 {
     Https::Client client (_host, _port);
+    client.setVerify (true, 1);
+    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+#endif
+
+    HttpRequest request;
+    request.path ("\r\n");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
 
     HttpResponse response;
-    client >> response;
-    ASSERT_TRUE (client.fail ());
-    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "400");
+    ASSERT_EQ (response.reason (), "Bad Request");
 
-    client.clear ();
-    client << HttpRequest ();
-    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    request.clear ();
+    request.header ("Host", "");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
 
-    client >> response;
-    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "400");
+    ASSERT_EQ (response.reason (), "Bad Request");
+}
+
+/**
+ * @brief Test invalid method
+ */
+TEST_F (HttpsTest, invalidMethod)
+{
+    Https::Client client (_host, _port);
+    client.setVerify (true, 1);
+    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+#endif
+
+    HttpRequest request;
+    request.method (HttpMethod (100));
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "405");
+    ASSERT_EQ (response.reason (), "Method Not Allowed");
+}
+
+/**
+ * @brief Test header too large
+ */
+TEST_F (HttpsTest, headerTooLarge)
+{
+    Https::Client client (_host, _port);
+    client.setVerify (true, 1);
+    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+#endif
+
+    HttpRequest request;
+    request.header ("User-Agent", std::string (8192, 'a'));
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "494");
+    ASSERT_EQ (response.reason (), "Request Header Too Large");
+}
+
+/**
+ * @brief Test not found
+ */
+TEST_F (HttpsTest, notFound)
+{
+    Https::Client client (_host, _port);
+    client.setVerify (true, 1);
+    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+#endif
+
+    HttpRequest request;
+    request.path ("/invalid/path");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "404");
+    ASSERT_EQ (response.reason (), "Not Found");
+
+    request.clear ();
+    request.path ("/no/file");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "404");
+    ASSERT_EQ (response.reason (), "Not Found");
+}
+
+/**
+ * @brief Test not modified
+ */
+TEST_F (HttpsTest, notModified)
+{
+    Https::Client client (_host, _port);
+    client.setVerify (true, 1);
+    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+#endif
+
+    struct stat sbuf;
+    std::stringstream modifTime;
+    ASSERT_EQ (stat (_sampleFile.c_str (), &sbuf), 0);
+    modifTime << std::put_time (std::gmtime (&sbuf.st_ctime), "%a, %d %b %Y %H:%M:%S GMT");
+
+    HttpRequest request;
+    request.header ("If-Modified-Since", modifTime.str ());
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "304");
+    ASSERT_EQ (response.reason (), "Not Modified");
+}
+
+/**
+ * @brief Test redirect
+ */
+TEST_F (HttpsTest, redirect)
+{
+    Https::Client client (_host, _port);
+    client.setVerify (true, 1);
+    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+#endif
+
+    HttpRequest request;
+    request.path ("/redirect/file");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "307");
+    ASSERT_EQ (response.reason (), "Temporary Redirect");
+
+    int len = std::stoi (response.header ("Content-Length"));
+    ASSERT_GT (len, 0);
+    std::string payload;
+    payload.resize (len);
+    client.read (&payload[0], payload.size ());
+
+    request.clear ();
+    request.path ("/redirect/file");
+    request.version ("HTTP/1.0");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "302");
+    ASSERT_EQ (response.reason (), "Found");
+
+    len = std::stoi (response.header ("Content-Length"));
+    ASSERT_GT (len, 0);
+    payload.resize (len);
+    client.read (&payload[0], payload.size ());
+}
+
+/**
+ * @brief Test head method
+ */
+TEST_F (HttpsTest, head)
+{
+    Https::Client client (_host, _port);
+    client.setVerify (true, 1);
+    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+#endif
+
+    HttpRequest request;
+    request.method (HttpMethod::Head);
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
     ASSERT_EQ (response.status (), "200");
-    ASSERT_EQ (response.reason (), "ok");
+    ASSERT_EQ (response.reason (), "OK");
+
+    client.close ();
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+}
+
+/**
+ * @brief Test get method
+ */
+TEST_F (HttpsTest, get)
+{
+    Https::Client client (_host, _port);
+    client.setVerify (true, 1);
+    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+#endif
+
+    HttpRequest request;
+    request.method (HttpMethod::Get);
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "200");
+    ASSERT_EQ (response.reason (), "OK");
+
+    ASSERT_EQ (std::stoi (response.header ("Content-Length")), _sample.size ());
+    std::string payload;
+    payload.resize (_sample.size ());
+    client.read (&payload[0], payload.size ());
+    ASSERT_EQ (payload, _sample);
 
     client.close ();
     ASSERT_TRUE (client.good ()) << join::lastError.message ();

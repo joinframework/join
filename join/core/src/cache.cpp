@@ -49,15 +49,9 @@ Cache::~Cache ()
 //   CLASS     : Cache
 //   METHOD    : get
 // =========================================================================
-void* Cache::get (const std::string &fileName, struct stat *sbuf)
+void* Cache::get (const std::string &fileName, struct stat &sbuf)
 {
-    struct stat sb;
-
-    if (sbuf != nullptr)
-    {
-        sb = *sbuf;
-    }
-    else if (stat (fileName.c_str (), &sb) != 0)
+    if ((stat (fileName.c_str (), &sbuf) < 0) || S_ISDIR (sbuf.st_mode))
     {
         return nullptr;
     }
@@ -67,8 +61,8 @@ void* Cache::get (const std::string &fileName, struct stat *sbuf)
     auto it = _entries.find (fileName);
     if (it != _entries.end ())
     {
-        if (it->second->modifTime.tv_sec == sb.st_ctim.tv_sec &&
-            it->second->modifTime.tv_nsec == sb.st_ctim.tv_nsec)
+        if (it->second->modifTime.tv_sec  == sbuf.st_ctim.tv_sec &&
+            it->second->modifTime.tv_nsec == sbuf.st_ctim.tv_nsec)
         {
             return it->second->addr;
         }
@@ -87,8 +81,8 @@ void* Cache::get (const std::string &fileName, struct stat *sbuf)
     std::unique_ptr <CacheEntry> entry = std::make_unique <CacheEntry> ();
     if (entry != nullptr)
     {
-        entry->size = sb.st_size;
-        entry->modifTime = sb.st_ctim;
+        entry->size = sbuf.st_size;
+        entry->modifTime = sbuf.st_ctim;
         entry->addr = mmap (0, entry->size, PROT_READ, MAP_PRIVATE, fd, 0);
         if (entry->addr != MAP_FAILED)
         {

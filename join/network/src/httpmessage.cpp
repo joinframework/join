@@ -58,7 +58,7 @@ std::string HttpCategory::message (int code) const
             return "forbidden";
         case HttpErrc::NotFound:
             return "not found";
-        case HttpErrc::ForbiddenMethod:
+        case HttpErrc::Unsupported:
             return "method not allowed";
         case HttpErrc::LengthRequired:
             return "length required";
@@ -76,6 +76,21 @@ std::string HttpCategory::message (int code) const
             return "bad gateway";
         default:
             return "success";
+    }
+}
+
+// =========================================================================
+//   CLASS     : HttpCategory
+//   METHOD    : equivalent
+// =========================================================================
+bool HttpCategory::equivalent (const std::error_code& code, int condition) const noexcept
+{
+    switch (static_cast <HttpErrc> (condition))
+    {
+        case HttpErrc::HeaderTooLarge:
+            return code == join::Errc::MessageTooLong;
+        default:
+            return false;
     }
 }
 
@@ -275,13 +290,18 @@ void HttpMessage::clear ()
 //   CLASS     : HttpMessage
 //   METHOD    : readHeaders
 // =========================================================================
-void HttpMessage::readHeaders (std::istream& in)
+int HttpMessage::readHeaders (std::istream& in)
 {
     bool firstLine = true;
     std::string line;
 
-    while (join::getline (in, line, _maxHeaderLen))
+    for (;;)
     {
+        if (!join::getline (in, line, _maxHeaderLen))
+        {
+            return -1;
+        }
+
     #ifdef DEBUG
         std::cout << line << std::endl;
     #endif
@@ -290,8 +310,7 @@ void HttpMessage::readHeaders (std::istream& in)
         {
             if (parseFirstLine (line) == -1)
             {
-                in.setstate (std::ios_base::failbit);
-                return;
+                return -1;
             }
             firstLine = false;
             continue;
@@ -304,10 +323,11 @@ void HttpMessage::readHeaders (std::istream& in)
 
         if (parseHeader (line) == -1)
         {
-            in.setstate (std::ios_base::failbit);
-            return;
+            return -1;
         }
     }
+
+    return 0;
 }
 
 // =========================================================================
@@ -427,6 +447,8 @@ std::string HttpRequest::methodString () const
     {
         case Head:
             return "HEAD";
+        case Get:
+            return "GET";
         case Put:
             return "PUT";
         case Post:
@@ -434,7 +456,7 @@ std::string HttpRequest::methodString () const
         case Delete:
             return "DELETE";
         default:
-            return "GET";
+            return "UNKNOWN";
     }
 }
 
@@ -576,6 +598,29 @@ std::string HttpRequest::urn () const
 
 // =========================================================================
 //   CLASS     : HttpRequest
+//   METHOD    : host
+// =========================================================================
+std::string HttpRequest::host () const
+{
+    std::string host = header ("Host");
+    if (host.front () == '[')
+    {
+        auto end = host.find ("]");
+        if (end == std::string::npos)
+        {
+            return {};
+        }
+        host = host.substr (0, ++end);
+    }
+    else
+    {
+        host = host.substr (0, host.find (":"));
+    }
+    return host;
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
 //   METHOD    : clear
 // =========================================================================
 void HttpRequest::clear ()
@@ -590,10 +635,15 @@ void HttpRequest::clear ()
 //   CLASS     : HttpRequest
 //   METHOD    : writeHeaders
 // =========================================================================
-void HttpRequest::writeHeaders (std::ostream& out) const
+int HttpRequest::writeHeaders (std::ostream& out) const
 {
     out << methodString () << " " << urn () << " " << version () << "\r\n";
     out << dumpHeaders ();
+    if (out.fail ())
+    {
+        return -1;
+    }
+    return 0;
 }
 
 // =========================================================================
@@ -640,7 +690,7 @@ int HttpRequest::parseFirstLine (const std::string& line)
     }
     else
     {
-        join::lastError = make_error_code (HttpErrc::ForbiddenMethod);
+        join::lastError = make_error_code (HttpErrc::Unsupported);
         return -1;
     }
 
@@ -899,10 +949,15 @@ void HttpResponse::clear ()
 //   CLASS     : HttpResponse
 //   METHOD    : writeHeaders
 // =========================================================================
-void HttpResponse::writeHeaders (std::ostream& out) const
+int HttpResponse::writeHeaders (std::ostream& out) const
 {
     out << version () << " " << status () << " " << reason () << "\r\n";
     out << dumpHeaders ();
+    if (out.fail ())
+    {
+        return -1;
+    }
+    return 0;
 }
 
 // =========================================================================
