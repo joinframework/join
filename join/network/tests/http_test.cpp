@@ -40,6 +40,7 @@ using join::Resolver;
 using join::HttpMethod;
 using join::HttpRequest;
 using join::HttpResponse;
+using join::HttpErrc;
 using join::Http;
 
 /**
@@ -83,6 +84,7 @@ protected:
         ASSERT_EQ (this->keepAliveTimeout (), seconds (_timeout));
         ASSERT_EQ (this->keepAliveMax (), _max);
         this->addAlias ("/", "", _sampleFile);
+        this->addAlias ("/authorized/", "file", _sampleFile, accessHandler);
         this->addDocumentRoot ("/", "*");
         this->addDocumentRoot ("/no/", "file");
         this->addRedirect ("/redirect/", "file", "https://$host:$port/");
@@ -103,17 +105,41 @@ protected:
     }
 
     /**
+     * @brief handle authentication.
+     * @param worker worker thread context.
+     * @param errc error code.
+     * @return true on success, false otherwise.
+     */
+    static bool accessHandler (Http::Worker* worker, std::error_code& errc)
+    {
+        std::string authorisation = worker->header ("Authorization");
+        std::string authType      = authorisation.substr (0, authorisation.find (' '));
+        std::string token         = authorisation.substr (authorisation.find (' ') + 1);
+        if (authType != "Bearer")
+        {
+            errc = make_error_code (HttpErrc::Unauthorized);
+            return false;
+        }
+        if (token != _token)
+        {
+            errc = make_error_code (HttpErrc::Forbidden);
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * @brief handle dynamic content.
-     * @param worker Worker thread context.
+     * @param worker worker thread context.
      */
     static void contentHandler (Http::Worker* worker)
     {
-        worker->header ("Transfer-Encoding", "chunked");
         worker->header ("Content-Type", "text/html");
         if (worker->hasHeader ("Accept-Encoding") && (worker->header ("Accept-Encoding") == "gzip"))
         {
             worker->header ("Content-Encoding", "gzip");
         }
+        worker->header ("Transfer-Encoding", "chunked");
         worker->sendHeaders ();
         worker->write (_sample.c_str (), _sample.size ());
         worker->flush ();
@@ -130,6 +156,9 @@ protected:
 
     /// sample path.
     static const std::string _sampleFile;
+
+    /// session token.
+    static const std::string _token;
 
     /// server hostname.
     static const std::string _host;
@@ -148,6 +177,7 @@ const std::string HttpTest::_basePath       = "/tmp/www";
 const std::string HttpTest::_sample         = "<html><body><h1>It works!</h1></body></html>";
 const std::string HttpTest::_sampleFileName = "sample.html";
 const std::string HttpTest::_sampleFile     = _basePath + "/" + _sampleFileName;
+const std::string HttpTest::_token          = "adlSaJkmBLpgnRRCjkCgQ4uaCagKHsIN";
 const std::string HttpTest::_host           = "localhost";
 const uint16_t    HttpTest::_port           = 5000;
 const int         HttpTest::_timeout        = 5;
@@ -508,6 +538,57 @@ TEST_F (HttpTest, serverError)
 }
 
 /**
+ * @brief Test unauthorized
+ */
+TEST_F (HttpTest, unauthorized)
+{
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.path ("/authorized/file");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "401");
+    ASSERT_EQ (response.reason (), "Unauthorized");
+
+    request.clear ();
+    request.path ("/authorized/file");
+    request.header ("Authorization", "Basic YWxhZGRpbjpvcGVuc2VzYW1l");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "401");
+    ASSERT_EQ (response.reason (), "Unauthorized");
+
+    client.close ();
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+}
+
+/**
+ * @brief Test forbidden
+ */
+TEST_F (HttpTest, forbidden)
+{
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.path ("/authorized/file");
+    request.header ("Authorization", "Bearer YWxhZGRpbjpzZXNhbWVPdXZyZVRvaQ");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "403");
+    ASSERT_EQ (response.reason (), "Forbidden");
+
+    client.close ();
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+}
+
+/**
  * @brief Test head method
  */
 TEST_F (HttpTest, head)
@@ -519,6 +600,17 @@ TEST_F (HttpTest, head)
     ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
 
     HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "200");
+    ASSERT_EQ (response.reason (), "OK");
+
+    request.clear ();
+    request.method (HttpMethod::Head);
+    request.path ("/authorized/file");
+    request.header ("Authorization", "Bearer adlSaJkmBLpgnRRCjkCgQ4uaCagKHsIN");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    response.clear ();
     ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
     ASSERT_EQ (response.status (), "200");
     ASSERT_EQ (response.reason (), "OK");

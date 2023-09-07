@@ -485,7 +485,14 @@ namespace join
                 std::error_code error;
                 if (!content->accessHandler (this, error))
                 {
-                    this->sendError (std::to_string (error.value ()), error.message ());
+                    if (error == HttpErrc::Unauthorized)
+                    {
+                        this->sendError ("401", "Unauthorized");
+                    }
+                    else if (error == HttpErrc::Forbidden)
+                    {
+                        this->sendError ("403", "Forbidden");
+                    }
                     return;
                 }
             }
