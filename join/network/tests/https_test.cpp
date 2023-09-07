@@ -205,7 +205,10 @@ protected:
     {
         worker->header ("Transfer-Encoding", "chunked");
         worker->header ("Content-Type", "text/html");
-        worker->header ("Content-Encoding", "gzip");
+        if (worker->hasHeader ("Accept-Encoding") && (worker->header ("Accept-Encoding") == "gzip"))
+        {
+            worker->header ("Content-Encoding", "gzip");
+        }
         worker->sendHeaders ();
         worker->write (_sample.c_str (), _sample.size ());
         worker->flush ();
@@ -449,31 +452,6 @@ TEST_F (HttpsTest, keepAliveMax)
     client.close ();
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
     ASSERT_EQ (client.keepAliveMax (), -1);
-}
-
-/**
- * @brief Test send method
- */
-TEST_F (HttpsTest, DISABLED_send)
-{
-    Https::Client client1 ("172.16.13.128", 443);
-    client1.timeout (500);
-    client1 << HttpRequest ();
-    ASSERT_TRUE (client1.fail ());
-    ASSERT_EQ (join::lastError, Errc::TimedOut);
-
-    Https::Client client2 (_host, _port);
-    client2.setVerify (true, 1);
-    ASSERT_EQ (client2.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client2.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
-    ASSERT_EQ (client2.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
-#endif
-    client2 << HttpRequest ();
-    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
-    client2.disconnect ();
-    client2.close ();
-    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
 }
 
 /**

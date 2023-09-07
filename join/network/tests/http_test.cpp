@@ -110,7 +110,10 @@ protected:
     {
         worker->header ("Transfer-Encoding", "chunked");
         worker->header ("Content-Type", "text/html");
-        worker->header ("Content-Encoding", "gzip");
+        if (worker->hasHeader ("Accept-Encoding") && (worker->header ("Accept-Encoding") == "gzip"))
+        {
+            worker->header ("Content-Encoding", "gzip");
+        }
         worker->sendHeaders ();
         worker->write (_sample.c_str (), _sample.size ());
         worker->flush ();
@@ -326,24 +329,6 @@ TEST_F (HttpTest, keepAliveMax)
     client.close ();
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
     ASSERT_EQ (client.keepAliveMax (), -1);
-}
-
-/**
- * @brief Test send method
- */
-TEST_F (HttpTest, DISABLED_send)
-{
-    Http::Client client1 ("172.16.13.128", 443);
-    client1.timeout (500);
-    client1 << HttpRequest ();
-    ASSERT_TRUE (client1.fail ());
-    ASSERT_EQ (join::lastError, Errc::TimedOut);
-
-    Http::Client client2 (_host, _port);
-    client2 << HttpRequest ();
-    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
-    client2.close ();
-    ASSERT_TRUE (client2.good ()) << join::lastError.message ();
 }
 
 /**
