@@ -90,6 +90,8 @@ protected:
         this->addExecute (HttpMethod::Get, "/exec/", "file", contentHandler);
         this->addUpload ("/upload/", "null", nullptr);
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), -1);
+        ASSERT_EQ (join::lastError, Errc::InUse);
     }
 
     /**
@@ -106,8 +108,9 @@ protected:
      */
     static void contentHandler (Http::Worker* worker)
     {
-        worker->header ("Transfer-Encoding", "gzip, chunked");
+        worker->header ("Transfer-Encoding", "chunked");
         worker->header ("Content-Type", "text/html");
+        worker->header ("Content-Encoding", "gzip");
         worker->sendHeaders ();
         worker->write (_sample.c_str (), _sample.size ());
         worker->flush ();
