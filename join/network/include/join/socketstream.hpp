@@ -299,12 +299,11 @@ namespace join
          */
         virtual int_type sync () override
         {
-            if (this->_socket.connected ())
+            if (!this->_socket.connected () || (this->overflow () == traits_type::eof ()))
             {
-                return this->overflow (traits_type::eof ());
+                return -1;
             }
-
-            return traits_type::not_eof (traits_type::eof ());
+            return 0;
         }
 
         /// internal buffer size.

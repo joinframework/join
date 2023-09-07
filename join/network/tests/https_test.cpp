@@ -182,6 +182,7 @@ protected:
         this->addDocumentRoot ("/no/", "file");
         this->addRedirect ("/redirect/", "file", "https://$host:$port/");
         this->addExecute (HttpMethod::Get, "/exec/", "null", nullptr);
+        this->addExecute (HttpMethod::Get, "/exec/", "file", contentHandler);
         this->addUpload ("/upload/", "null", nullptr);
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     }
@@ -192,6 +193,19 @@ protected:
     void TearDown ()
     {
         this->close ();
+    }
+
+    /**
+     * @brief handle dynamic content.
+     * @param worker Worker thread context.
+     */
+    static void contentHandler (Https::Worker* worker)
+    {
+        worker->header ("Transfer-Encoding", "gzip, chunked");
+        worker->header ("Content-Type", "text/html");
+        worker->sendHeaders ();
+        worker->write (_sample.c_str (), _sample.size ());
+        worker->flush ();
     }
 
     /// base path.
@@ -574,6 +588,11 @@ TEST_F (HttpsTest, notFound)
  */
 TEST_F (HttpsTest, notModified)
 {
+    struct stat sbuf;
+    std::stringstream modifTime;
+    ASSERT_EQ (stat (_sampleFile.c_str (), &sbuf), 0);
+    modifTime << std::put_time (std::gmtime (&sbuf.st_ctime), "%a, %d %b %Y %H:%M:%S GMT");
+
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
@@ -581,11 +600,6 @@ TEST_F (HttpsTest, notModified)
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
     ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
 #endif
-
-    struct stat sbuf;
-    std::stringstream modifTime;
-    ASSERT_EQ (stat (_sampleFile.c_str (), &sbuf), 0);
-    modifTime << std::put_time (std::gmtime (&sbuf.st_ctime), "%a, %d %b %Y %H:%M:%S GMT");
 
     HttpRequest request;
     request.header ("If-Modified-Since", modifTime.str ());
@@ -672,6 +686,9 @@ TEST_F (HttpsTest, serverError)
     ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
     ASSERT_EQ (response.status (), "500");
     ASSERT_EQ (response.reason (), "Internal Server Error");
+
+    client.close ();
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
 }
 
 /**
@@ -724,6 +741,21 @@ TEST_F (HttpsTest, get)
 
     ASSERT_EQ (std::stoi (response.header ("Content-Length")), _sample.size ());
     std::string payload;
+    payload.resize (_sample.size ());
+    client.read (&payload[0], payload.size ());
+    ASSERT_EQ (payload, _sample);
+
+    request.clear ();
+    request.method (HttpMethod::Get);
+    request.path ("/exec/file");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "200");
+    ASSERT_EQ (response.reason (), "OK");
+
+    payload.clear ();
     payload.resize (_sample.size ());
     client.read (&payload[0], payload.size ());
     ASSERT_EQ (payload, _sample);

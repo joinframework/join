@@ -43,6 +43,12 @@
 
 namespace join
 {
+    template <class Protocol>
+    using BasicContentHandler = std::function <void (BasicWorker <Protocol>*)>;
+
+    template <class Protocol>
+    using BasicAccessHandler  = std::function <bool (BasicWorker <Protocol>*, std::error_code&)>;
+
     /**
      * @brief HTTP content Type.
      */
@@ -54,12 +60,6 @@ namespace join
         Redirect,       /**< Redirection. */
         Upload,         /**< Upload content. */
     };
-
-    template <class Protocol>
-    using BasicAccessHandler  = std::function <bool (BasicWorker <Protocol>*, std::error_code&)>;
-
-    template <class Protocol>
-    using BasicContentHandler = std::function <void (BasicWorker <Protocol>*)>;
 
     /**
      * @brief HTTP content.
@@ -83,12 +83,11 @@ namespace join
      * @brief HTTP worker thread.
      */
     template <class Protocol>
-    class BasicWorker
+    class BasicWorker : public Protocol::Stream
     {
     public:
         using Content = BasicContent <Protocol>;
         using Server  = BasicHttpServer <Protocol>;
-        using Stream  = typename Protocol::Stream;
 
         /**
          * @brief Create the worker instance.
@@ -97,7 +96,8 @@ namespace join
         BasicWorker (Server* server)
         : _server (server),
           _thread ([this] () {work ();})
-        {}
+        {
+        }
 
         /**
          * @brief create instance by copy.
@@ -133,6 +133,223 @@ namespace join
             this->_thread.join ();
         }
 
+        /**
+         * @brief send headers.
+         */
+        void sendHeaders ()
+        {
+            // restore concrete stream.
+            this->clearEncoding ();
+
+            // set missing response headers.
+            if (!this->_response.hasHeader ("Date"))
+            {
+                std::stringstream gmt;
+                std::time_t ti = std::time (nullptr);
+                gmt << std::put_time (std::gmtime (&ti), "%a, %d %b %Y %H:%M:%S GMT");
+                this->_response.header ("Date", gmt.str ());
+            }
+            if (!this->_response.hasHeader ("Server"))
+            {
+                this->_response.header ("Server", "join/" JOIN_VERSION);
+            }
+            if (!this->_response.hasHeader ("Connection"))
+            {
+                if (this->_max && compareNoCase (this->_request.header ("Connection"), "keep-alive"))
+                {
+                    std::stringstream keepAlive;
+                    keepAlive << "timeout=" << this->_server->_keepTimeout.count () << ", max=" << this->_server->_keepMax;
+                    this->_response.header ("Keep-Alive", keepAlive.str ());
+                    this->_response.header ("Connection", "Keep-Alive");
+                }
+                else
+                {
+                    this->_response.header ("Connection", "close");
+                    this->_max = 0;
+                }
+            }
+            if (this->encrypted () && !this->_response.hasHeader ("Strict-Transport-Security"))
+            {
+                this->_response.header ("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+            }
+            if (!this->_response.hasHeader ("Content-Security-Policy"))
+            {
+                this->_response.header ("Content-Security-Policy", "default-src 'self'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'");
+            }
+            if (!this->_response.hasHeader ("X-XSS-Protection"))
+            {
+                this->_response.header ("X-XSS-Protection", "1; mode=block");
+            }
+            if (!this->_response.hasHeader ("X-Content-Type-Options"))
+            {
+                this->_response.header ("X-Content-Type-Options", "nosniff");
+            }
+            if (!this->_response.hasHeader ("X-Frame-Options"))
+            {
+                this->_response.header ("X-Frame-Options", "SAMEORIGIN");
+            }
+
+            // write response headers.
+            this->_response.writeHeaders (*this);
+
+            // set encoding.
+            if (this->_response.hasHeader ("Transfer-Encoding"))
+            {
+                this->setEncoding (join::rsplit (this->_response.header ("Transfer-Encoding"), ","));
+            }
+            if (this->_response.hasHeader ("Content-Encoding"))
+            {
+                this->setEncoding (join::rsplit (this->_response.header ("Content-Encoding"), ","));
+            }
+        }
+
+        /**
+         * @brief send error message.
+         * @param status status.
+         * @param reason reason.
+         */
+        void sendError (const std::string& status, const std::string& reason)
+        {
+            // set error response.
+            this->_response.response (status, reason);
+
+            // stop keepalive.
+            this->_response.header ("Connection", "close");
+            this->_max = 0;
+
+            // send headers.
+            this->sendHeaders ();
+
+            // flush data.
+            this->flush ();
+        }
+
+        /**
+         * @brief send redirect message.
+         * @param status status.
+         * @param reason reason.
+         * @param location location to redirect to.
+         */
+        void sendRedirect (const std::string& status, const std::string& reason, const std::string& location = {})
+        {
+            std::string payload;
+
+            // set redirect response.
+            this->_response.response (status, reason);
+
+            // set redirect message payload.
+            if (!location.empty ())
+            {
+                payload += "<html>";
+                payload += "<head>";
+                payload += "<meta http-equiv=\"content-type\" content=\"text/html;charset=utf-8\">";
+                payload += "<title>" + status + " " + reason + "</title>";
+                payload += "</head>";
+                payload += "<body>";
+                payload += "<h1>" + status + " " + reason + "</h1>";
+                payload += "The document has moved <a href=\"" + location + "\">here</a>";
+                payload += "</body>";
+                payload += "</html>";
+            }
+
+            // set content.
+            if (payload.size ())
+            {
+                this->_response.header ("Content-Length", std::to_string (payload.size ()));
+                this->_response.header ("Content-Type", "text/html");
+                this->_response.header ("Cache-Control", "no-cache");
+            }
+
+            // send headers.
+            this->sendHeaders ();
+
+            // send payload.
+            if (payload.size ())
+            {
+                this->write (payload.c_str (), payload.size ());
+            }
+
+            // flush data.
+            this->flush ();
+        }
+
+        /**
+         * @brief send a file.
+         * @param path path of the file.
+         */
+        void sendFile (const std::string& path)
+        {
+            struct stat sbuf;
+
+            // get file.
+            void* addr = this->_server->_cache.get (path, sbuf);
+            if (addr == nullptr || S_ISDIR (sbuf.st_mode))
+            {
+                this->sendError ("404", "Not Found");
+                return;
+            }
+
+            // check modif time.
+            std::stringstream modifTime;
+            modifTime << std::put_time (std::gmtime (&sbuf.st_ctime), "%a, %d %b %Y %H:%M:%S GMT");
+            if (compareNoCase (this->_request.header ("If-Modified-Since"), modifTime.str ()))
+            {
+                this->sendRedirect ("304", "Not Modified");
+                return;
+            }
+
+            // set modif time.
+            this->_response.header ("Last-Modified", modifTime.str ());
+
+            // set content.
+            this->_response.header ("Content-Length", std::to_string (sbuf.st_size));
+            this->_response.header ("Content-Type", this->mime (path));
+            this->_response.header ("Cache-Control", "no-cache");
+
+            // send headers.
+            this->sendHeaders ();
+
+            // check method.
+            if (this->_request.method () == HttpMethod::Get)
+            {
+                // send file.
+                this->write (static_cast <char *> (addr), sbuf.st_size);
+            }
+
+            // flush data.
+            this->flush ();
+        }
+
+        /**
+         * @brief checks if there is a HTTP request header with the specified name.
+         * @param name name of the HTTP request header to search for.
+         * @return true of there is such a HTTP request header, false otherwise.
+         */
+        bool hasHeader (const std::string& name) const
+        {
+            return this->_request.hasHeader (name);
+        }
+
+        /**
+         * @brief get HTTP request header by name.
+         * @param name header name.
+         * @return header value.
+         */
+        std::string header (const std::string& name) const
+        {
+            return this->_request.header (name);
+        }
+
+        /**
+         * @brief add header to the HTTP response.
+         * @param name header name.
+         * @param val header value.
+         */
+        void header (const std::string& name, const std::string& val)
+        {
+            return this->_response.header (name, val);
+        }
+
     protected:
         /**
          * @brief worker thread routine.
@@ -159,13 +376,15 @@ namespace join
                     {
                         if (FD_ISSET (this->_server->_event, &fdset))
                         {
+                            uint64_t val = 0;
+                            [[maybe_unused]] ssize_t bytes = ::read (this->_server->_event, &val, sizeof (uint64_t));
                             return;
                         }
 
                         if (FD_ISSET (this->_server->_handle, &fdset))
                         {
-                            this->_stream = this->_server->acceptStream ();
-                            this->_stream.timeout (this->_server->keepAliveTimeout ().count () * 1000);
+                            this->_sockbuf.socket () = this->_server->accept ();
+                            this->_sockbuf.timeout (this->_server->keepAliveTimeout ().count () * 1000);
                         }
                     }
                 }
@@ -203,11 +422,14 @@ namespace join
          */
         int readRequest ()
         {
+            // restore concrete stream.
+            this->clearEncoding ();
+
             // prepare a standard response.
             this->_response.response ("200", "OK");
 
             // read request headers.
-            if (this->_request.readHeaders (this->_stream) == -1)
+            if (this->_request.readHeaders (*this) == -1)
             {
                 if (join::lastError == HttpErrc::BadRequest)
                 {
@@ -224,11 +446,17 @@ namespace join
                 return -1;
             }
 
-            // host present.
+            // check host.
             if (this->_request.host ().empty ())
             {
                 this->sendError ("400", "Bad Request");
                 return -1;
+            }
+
+            // set encoding.
+            if (this->_request.hasHeader ("Transfer-Encoding"))
+            {
+                this->setEncoding (join::rsplit (this->_request.header ("Transfer-Encoding"), ","));
             }
 
             return 0;
@@ -268,7 +496,7 @@ namespace join
                 join::replaceAll (alias, "$root", this->_server->baseLocation ());
                 join::replaceAll (alias, "$scheme", this->_server->scheme ());
                 join::replaceAll (alias, "$host", this->_request.host ());
-                join::replaceAll (alias, "$port", std::to_string (this->_stream.localEndpoint ().port ()));
+                join::replaceAll (alias, "$port", std::to_string (this->localEndpoint ().port ()));
                 join::replaceAll (alias, "$path", this->_request.path ());
                 join::replaceAll (alias, "$query", this->_request.query ());
                 join::replaceAll (alias, "$urn", this->_request.urn ());
@@ -330,182 +558,48 @@ namespace join
          */
         void endRequest ()
         {
-            this->_stream.disconnect ();
-            this->_stream.close ();
+            this->disconnect ();
+            this->close ();
         }
 
         /**
-         * @brief send headers.
+         * @brief set stream encoding.
+         * @param encodings encodings applied to the stream.
          */
-        void sendHeaders ()
+        void setEncoding (const std::vector <std::string>& encodings)
         {
-            // set missing response headers.
-            if (!this->_response.hasHeader ("Date"))
+            for (auto const& encoding : encodings)
             {
-                std::stringstream gmt;
-                std::time_t ti = std::time (nullptr);
-                gmt << std::put_time (std::gmtime (&ti), "%a, %d %b %Y %H:%M:%S GMT");
-                this->_response.header ("Date", gmt.str ());
-            }
-            if (!this->_response.hasHeader ("Server"))
-            {
-                this->_response.header ("Server", "join/" JOIN_VERSION);
-            }
-            if (!this->_response.hasHeader ("Connection"))
-            {
-                if (this->_max && compareNoCase (this->_request.header ("Connection"), "keep-alive"))
+                if (encoding.find ("gzip") != std::string::npos)
                 {
-                    std::stringstream keepAlive;
-                    keepAlive << "timeout=" << this->_server->_keepTimeout.count () << ", max=" << this->_server->_keepMax;
-                    this->_response.header ("Keep-Alive", keepAlive.str ());
-                    this->_response.header ("Connection", "Keep-Alive");
+                    this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Gzip, this->_wrapped);
+                    this->_wrapped = true;
                 }
-                else
+                else if (encoding.find ("chunked") != std::string::npos)
                 {
-                    this->_response.header ("Connection", "close");
-                    this->_max = 0;
+                    this->_streambuf = new Chunkstreambuf (this->_streambuf, this->_wrapped);
+                    this->_wrapped = true;
                 }
             }
-            if (this->_stream.encrypted () && !this->_response.hasHeader ("Strict-Transport-Security"))
-            {
-                this->_response.header ("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
-            }
-            if (!this->_response.hasHeader ("Content-Security-Policy"))
-            {
-                this->_response.header ("Content-Security-Policy", "default-src 'self'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'");
-            }
-            if (!this->_response.hasHeader ("X-XSS-Protection"))
-            {
-                this->_response.header ("X-XSS-Protection", "1; mode=block");
-            }
-            if (!this->_response.hasHeader ("X-Content-Type-Options"))
-            {
-                this->_response.header ("X-Content-Type-Options", "nosniff");
-            }
-            if (!this->_response.hasHeader ("X-Frame-Options"))
-            {
-                this->_response.header ("X-Frame-Options", "SAMEORIGIN");
-            }
 
-            // write response headers.
-            this->_response.writeHeaders (this->_stream);
+            this->set_rdbuf (this->_streambuf);
         }
 
         /**
-         * @brief send error message.
-         * @param status status.
-         * @param reason reason.
+         * @brief clear stream encoding.
          */
-        void sendError (const std::string& status, const std::string& reason)
+        void clearEncoding ()
         {
-            // set error response.
-            this->_response.response (status, reason);
-
-            // stop keepalive.
-            this->_response.header ("Connection", "close");
-            this->_max = 0;
-
-            // send headers.
-            this->sendHeaders ();
-
-            // flush data.
-            this->_stream.flush ();
-        }
-
-        /**
-         * @brief send redirect message.
-         * @param status status.
-         * @param reason reason.
-         * @param location location to redirect to.
-         */
-        void sendRedirect (const std::string& status, const std::string& reason, const std::string& location = {})
-        {
-            std::string payload;
-
-            // set redirect response.
-            this->_response.response (status, reason);
-
-            // set redirect message payload.
-            if (!location.empty ())
+            if (this->_wrapped && this->_streambuf)
             {
-                payload += "<html>";
-                payload += "<head>";
-                payload += "<meta http-equiv=\"content-type\" content=\"text/html;charset=utf-8\">";
-                payload += "<title>" + status + " " + reason + "</title>";
-                payload += "</head>";
-                payload += "<body>";
-                payload += "<h1>" + status + " " + reason + "</h1>";
-                payload += "The document has moved <a href=\"" + location + "\">here</a>";
-                payload += "</body>";
-                payload += "</html>";
+                delete this->_streambuf;
+                this->_streambuf = nullptr;
             }
 
-            // set content.
-            if (payload.size ())
-            {
-                this->_response.header ("Content-Length", std::to_string (payload.size ()));
-                this->_response.header ("Content-Type", "text/html");
-                this->_response.header ("Cache-Control", "no-cache");
-            }
+            this->_streambuf = &this->_sockbuf;
+            this->_wrapped = false;
 
-            // send headers.
-            this->sendHeaders ();
-
-            // send payload.
-            if (payload.size ())
-            {
-                this->_stream.write (payload.c_str (), payload.size ());
-            }
-
-            // flush data.
-            this->_stream.flush ();
-        }
-
-        /**
-         * @brief send a file.
-         * @param path path of the file.
-         */
-        void sendFile (const std::string& path)
-        {
-            struct stat sbuf;
-
-            // get file.
-            void* addr = this->_server->_cache.get (path, sbuf);
-            if (addr == nullptr || S_ISDIR (sbuf.st_mode))
-            {
-                this->sendError ("404", "Not Found");
-                return;
-            }
-
-            // check modif time.
-            std::stringstream modifTime;
-            modifTime << std::put_time (std::gmtime (&sbuf.st_ctime), "%a, %d %b %Y %H:%M:%S GMT");
-            if (compareNoCase (this->_request.header ("If-Modified-Since"), modifTime.str ()))
-            {
-                this->sendRedirect ("304", "Not Modified");
-                return;
-            }
-
-            // set modif time.
-            this->_response.header ("Last-Modified", modifTime.str ());
-
-            // set content.
-            this->_response.header ("Content-Length", std::to_string (sbuf.st_size));
-            this->_response.header ("Content-Type", this->mime (path));
-            this->_response.header ("Cache-Control", "no-cache");
-
-            // send headers.
-            this->sendHeaders ();
-
-            // check method.
-            if (this->_request.method () == HttpMethod::Get)
-            {
-                // send file.
-                this->_stream.write (static_cast <char *> (addr), sbuf.st_size);
-            }
-
-            // flush data.
-            this->_stream.flush ();
+            this->set_rdbuf (this->_streambuf);
         }
 
         /**
@@ -609,16 +703,19 @@ namespace join
         /// max requests.
         int _max = 0;
 
-        /// request.
+        /// HTTP request.
         HttpRequest _request;
 
-        /// response.
+        /// HTTP response.
         HttpResponse _response;
 
-        /// stream;
-        Stream _stream;
+        /// HTTP stream buffer.
+        std::streambuf* _streambuf = nullptr;
 
-        /// server.
+        /// HTTP stream status.
+        bool _wrapped = false;
+
+        /// HTTP server.
         Server* _server;
 
         /// thread.
@@ -700,7 +797,7 @@ namespace join
                 return -1;
             }
 
-            this->_event = eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC);
+            this->_event = eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE);
             if (this->_event == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
@@ -721,7 +818,7 @@ namespace join
          */
         virtual void close () noexcept override
         {
-            uint64_t val = 1;
+            uint64_t val = this->_nworkers;
             [[maybe_unused]] ssize_t bytes = ::write (this->_event, &val, sizeof (uint64_t));
             this->_workers.clear ();
             ::close (this->_event);

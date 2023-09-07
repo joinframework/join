@@ -213,7 +213,11 @@ Chunkstreambuf::int_type Chunkstreambuf::overflow (int_type c)
 // =========================================================================
 Chunkstreambuf::int_type Chunkstreambuf::sync ()
 {
-    return overflow ();
+    if (overflow () == traits_type::eof ())
+    {
+        return -1;
+    }
+    return _innerbuf->pubsync ();
 }
 
 // =========================================================================

@@ -289,7 +289,7 @@ namespace join
             // set encoding.
             if (tmp.hasHeader ("Transfer-Encoding"))
             {
-                setEncoding (join::rsplit (tmp.header ("Transfer-Encoding"), ","));
+                this->setEncoding (join::rsplit (tmp.header ("Transfer-Encoding"), ","));
             }
 
             return 0;
@@ -303,7 +303,7 @@ namespace join
         int receive (HttpResponse& response)
         {
             // restore concrete stream.
-            clearEncoding ();
+            this->clearEncoding ();
 
             // read response headers.
             if (response.readHeaders (*this) == -1)
@@ -339,11 +339,11 @@ namespace join
             // set encoding.
             if (response.hasHeader ("Transfer-Encoding"))
             {
-                setEncoding (join::rsplit (response.header ("Transfer-Encoding"), ","));
+                this->setEncoding (join::rsplit (response.header ("Transfer-Encoding"), ","));
             }
             if (response.hasHeader ("Content-Encoding"))
             {
-                setEncoding (join::rsplit (response.header ("Content-Encoding"), ","));
+                this->setEncoding (join::rsplit (response.header ("Content-Encoding"), ","));
             }
 
             // get timestamp.
