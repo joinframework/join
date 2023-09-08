@@ -108,6 +108,7 @@ TEST (Filesystem, mime)
     ASSERT_EQ (join::mime ("foo.tpl"), "application/vnd.groove-tool-template");
     ASSERT_EQ (join::mime ("foo.woff"), "application/font-woff");
     ASSERT_EQ (join::mime ("foo.woff2"), "application/font-woff2");
+    ASSERT_EQ (join::mime ("foo.foo"), "application/octet-stream");
 }
 
 /**
