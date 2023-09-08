@@ -26,6 +26,7 @@ set(PUBLIC_HEADERS
     core/include/join/version.hpp
     core/include/join/error.hpp
     core/include/join/utils.hpp
+    core/include/join/filesystem.hpp
     core/include/join/traits.hpp
     core/include/join/variant.hpp
     core/include/join/view.hpp

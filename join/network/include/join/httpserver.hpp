@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/httpmessage.hpp>
+#include <join/filesystem.hpp>
 #include <join/acceptor.hpp>
 #include <join/version.hpp>
 #include <join/thread.hpp>
@@ -303,7 +304,7 @@ namespace join
 
             // set content.
             this->_response.header ("Content-Length", std::to_string (sbuf.st_size));
-            this->_response.header ("Content-Type", this->mime (path));
+            this->_response.header ("Content-Type", join::mime (path));
             this->_response.header ("Cache-Control", "no-cache");
 
             // send headers.
@@ -616,104 +617,6 @@ namespace join
             this->_wrapped = false;
 
             this->set_rdbuf (this->_streambuf);
-        }
-
-        /**
-         * @brief returns the extension of the specified file.
-         * @param filepath path of the file to parse.
-         * @return the extension of the file specified.
-         */
-        std::string ext (const std::string& filepath) const
-        {
-            size_t pos = filepath.rfind (".");
-
-            if (pos == std::string::npos)
-                return {};
-            else
-                return filepath.substr (pos + 1);
-        }
-
-        /**
-         * @brief returns the mime type of the file specified.
-         * @param filepath Path of the file to examine.
-         * @return The mime type of the file specified.
-         */
-        std::string mime (const std::string& filepath) const
-        {
-            std::string mime, suffix (this->ext (filepath)) ;
-
-            if (suffix == "htm")
-                mime = "text/html";
-            else if (suffix == "html")
-                mime = "text/html";
-            else if (suffix == "css")
-                mime = "text/css";
-            else if (suffix == "less")
-                mime = "text/css";
-            else if (suffix == "js")
-                mime = "application/javascript";
-            else if (suffix == "xml")
-                mime = "text/xml";
-            else if (suffix == "json")
-                mime = "application/json";
-            else if (suffix == "txt")
-                mime = "text/plain";
-            else if (suffix == "properties")
-                mime = "text/x-java-properties";
-            else if (suffix == "jpg")
-                mime = "image/jpeg";
-            else if (suffix == "jpeg")
-                mime = "image/jpeg";
-            else if (suffix == "png")
-                mime = "image/png";
-            else if (suffix == "bmp")
-                mime = "image/bmp";
-            else if (suffix == "gif")
-                mime = "image/gif";
-            else if (suffix == "jpe")
-                mime = "image/jpg";
-            else if (suffix == "xbm")
-                mime = "image/xbm";
-            else if (suffix == "tiff")
-                mime = "image/tiff";
-            else if (suffix == "tif")
-                mime = "image/tiff";
-            else if (suffix == "ico")
-                mime = "image/x-icon";
-            else if (suffix == "svg")
-                mime = "image/svg+xml";
-            else if (suffix == "pdf")
-                mime = "application/pdf";
-            else if (suffix == "mp3")
-                mime = "audio/mpeg";
-            else if (suffix == "mp4")
-                mime = "audio/mp4";
-            else if (suffix == "zip")
-                mime = "application/zip";
-            else if (suffix == "bz2")
-                mime = "application/x-bzip";
-            else if (suffix == "tbz2")
-                mime = "application/x-bzip";
-            else if (suffix == "tb2")
-                mime = "application/x-bzip";
-            else if (suffix == "gz")
-                mime = "application/x-gzip";
-            else if (suffix == "gzip")
-                mime = "application/x-gzip";
-            else if (suffix == "tar")
-                mime = "application/x-tar";
-            else if (suffix == "rar")
-                mime = "application/x-rar-compressed";
-            else if (suffix == "tpl")
-                mime = "application/vnd.groove-tool-template";
-            else if (suffix == "woff")
-                mime = "application/font-woff";
-            else if (suffix == "woff2")
-                mime = "application/font-woff2";
-            else
-                mime = "application/octet-stream";
-
-            return mime;
         }
 
         /// max requests.
@@ -1063,8 +966,8 @@ namespace join
          */
         Content* findContent (HttpMethod method, const std::string& path) const
         {
-            std::string directory = this->base (path);
-            std::string name      = this->name (path);
+            std::string directory = join::base (path);
+            std::string name      = join::filename (path);
 
             for (auto const& content : this->_contents)
             {
@@ -1081,36 +984,6 @@ namespace join
             }
 
             return nullptr;
-        }
-
-        /**
-         * @brief returns the base path of the specified file.
-         * @param filepath path of the file to parse.
-         * @return the base path of the file specified.
-         */
-        std::string base (const std::string& filepath) const
-        {
-            size_t pos = filepath.rfind ("/");
-
-            if (pos == std::string::npos)
-                return {};
-            else
-                return filepath.substr (0, pos + 1);
-        }
-
-        /**
-         * @brief returns the file name of the specified file.
-         * @param filepath path of the file to parse.
-         * @return the file name of the file specified.
-         */
-        std::string name (const std::string& filepath) const
-        {
-            size_t pos = filepath.rfind ("/");
-
-            if (pos == std::string::npos)
-                return filepath;
-            else
-                return filepath.substr (pos + 1);
         }
 
         /// gracefully stop all workers.
