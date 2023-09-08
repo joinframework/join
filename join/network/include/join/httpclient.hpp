@@ -291,6 +291,10 @@ namespace join
             {
                 this->setEncoding (join::rsplit (tmp.header ("Transfer-Encoding"), ","));
             }
+            if (tmp.hasHeader ("Content-Encoding"))
+            {
+                this->setEncoding (join::rsplit (tmp.header ("Content-Encoding"), ","));
+            }
 
             return 0;
         }

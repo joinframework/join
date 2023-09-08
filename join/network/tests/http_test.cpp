@@ -78,8 +78,10 @@ protected:
      */
     void SetUp ()
     {
-        this->baseLocation (_basePath);
+        this->baseLocation (_basePath + "/");
         ASSERT_EQ (this->baseLocation (), _basePath);
+        this->uploadLocation (_uploadPath + "/");
+        ASSERT_EQ (this->uploadLocation (), _uploadPath);
         this->keepAlive (seconds (_timeout), _max);
         ASSERT_EQ (this->keepAliveTimeout (), seconds (_timeout));
         ASSERT_EQ (this->keepAliveMax (), _max);
@@ -89,7 +91,8 @@ protected:
         this->addDocumentRoot ("/no/", "file");
         this->addRedirect ("/redirect/", "file", "https://$host:$port/");
         this->addExecute (HttpMethod::Get, "/exec/", "null", nullptr);
-        this->addExecute (HttpMethod::Get, "/exec/", "file", contentHandler);
+        this->addExecute (HttpMethod::Get, "/exec/", "get", getHandler);
+        this->addExecute (HttpMethod::Post, "/exec/", "post", postHandler);
         this->addUpload ("/upload/", "null", nullptr);
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), -1);
@@ -129,10 +132,10 @@ protected:
     }
 
     /**
-     * @brief handle dynamic content.
+     * @brief handle dynamic get content.
      * @param worker worker thread context.
      */
-    static void contentHandler (Http::Worker* worker)
+    static void getHandler (Http::Worker* worker)
     {
         worker->header ("Content-Type", "text/html");
         if (worker->hasHeader ("Accept-Encoding"))
@@ -152,8 +155,31 @@ protected:
         worker->flush ();
     }
 
+    /**
+     * @brief handle dynamic post content.
+     * @param worker worker thread context.
+     */
+    static void postHandler (Http::Worker* worker)
+    {
+        std::string data;
+        data.resize (4);
+        worker->read (&data[0], data.size ());
+        if (data == "test")
+        {
+            worker->sendHeaders ();
+        }
+        else
+        {
+            worker->sendError ("400", "Bad Request");
+        }
+        worker->flush ();
+    }
+
     /// base path.
     static const std::string _basePath;
+
+    /// upload path.
+    static const std::string _uploadPath;
 
     /// sample.
     static const std::string _sample;
@@ -181,6 +207,7 @@ protected:
 };
 
 const std::string HttpTest::_basePath       = "/tmp/www";
+const std::string HttpTest::_uploadPath     = "/tmp/upload";
 const std::string HttpTest::_sample         = "<html><body><h1>It works!</h1></body></html>";
 const std::string HttpTest::_sampleFileName = "sample.html";
 const std::string HttpTest::_sampleFile     = _basePath + "/" + _sampleFileName;
@@ -596,7 +623,7 @@ TEST_F (HttpTest, forbidden)
 }
 
 /**
- * @brief Test head method
+ * @brief Test head
  */
 TEST_F (HttpTest, head)
 {
@@ -627,7 +654,7 @@ TEST_F (HttpTest, head)
 }
 
 /**
- * @brief Test get method
+ * @brief Test get
  */
 TEST_F (HttpTest, get)
 {
@@ -650,7 +677,7 @@ TEST_F (HttpTest, get)
 
     request.clear ();
     request.method (HttpMethod::Get);
-    request.path ("/exec/file");
+    request.path ("/exec/get");
     request.header ("Accept-Encoding", "gzip");
     ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
 
@@ -666,7 +693,7 @@ TEST_F (HttpTest, get)
 
     request.clear ();
     request.method (HttpMethod::Get);
-    request.path ("/exec/file");
+    request.path ("/exec/get");
     request.header ("Accept-Encoding", "deflate");
     ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
 
@@ -679,6 +706,59 @@ TEST_F (HttpTest, get)
     payload.resize (_sample.size ());
     client.read (&payload[0], payload.size ());
     ASSERT_EQ (payload, _sample);
+
+    client.close ();
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+}
+
+/**
+ * @brief Test post
+ */
+TEST_F (HttpTest, post)
+{
+    Http::Client client (_host, _port);
+
+    HttpRequest request;
+    request.method (HttpMethod::Post);
+    request.path ("/exec/post");
+    request.header ("Content-Length", "4");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.write ("test", 4)) << join::lastError.message ();
+    client.flush ();
+
+    HttpResponse response;
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "200");
+    ASSERT_EQ (response.reason (), "OK");
+
+    request.clear ();
+    request.method (HttpMethod::Post);
+    request.path ("/exec/post");
+    request.header ("Transfer-Encoding", "chunked");
+    request.header ("Content-Encoding", "gzip");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.write ("test", 4)) << join::lastError.message ();
+    client.flush ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "200");
+    ASSERT_EQ (response.reason (), "OK");
+    ASSERT_TRUE (client.good ()) << join::lastError.message ();
+
+    request.clear ();
+    request.method (HttpMethod::Post);
+    request.path ("/exec/post");
+    request.header ("Transfer-Encoding", "chunked");
+    request.header ("Content-Encoding", "deflate");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.write ("test", 4)) << join::lastError.message ();
+    client.flush ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "200");
+    ASSERT_EQ (response.reason (), "OK");
 
     client.close ();
     ASSERT_TRUE (client.good ()) << join::lastError.message ();
