@@ -661,7 +661,8 @@ namespace join
          * @param workers number of worker threads.
          */
         BasicHttpServer (size_t workers = std::thread::hardware_concurrency () + 1)
-        : _nworkers (workers),
+        : _event (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE)),
+          _nworkers (workers),
           _baseLocation ("/var/www"),
           _uploadLocation ("/tmp/upload"),
           _keepTimeout (10)
@@ -702,6 +703,7 @@ namespace join
         {
             this->close ();
             this->_contents.clear ();
+            ::close (this->_event);
         }
 
         /**
@@ -713,14 +715,6 @@ namespace join
         {
             if (Acceptor::create (endpoint) == -1)
             {
-                return -1;
-            }
-
-            this->_event = eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE);
-            if (this->_event == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                this->close ();
                 return -1;
             }
 
@@ -740,7 +734,6 @@ namespace join
             uint64_t val = this->_nworkers;
             [[maybe_unused]] ssize_t bytes = ::write (this->_event, &val, sizeof (uint64_t));
             this->_workers.clear ();
-            ::close (this->_event);
             Acceptor::close ();
         }
 

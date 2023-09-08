@@ -33,6 +33,7 @@
  */
 TEST (Filesystem, base)
 {
+    ASSERT_EQ (join::base ("foo"), "");
     ASSERT_EQ (join::base ("foo/bar"), "foo/");
     ASSERT_EQ (join::base ("foo/bar/"), "foo/bar/");
     ASSERT_EQ (join::base ("foo/bar/somefile.txt"), "foo/bar/");
@@ -46,6 +47,7 @@ TEST (Filesystem, base)
  */
 TEST (Filesystem, filename)
 {
+    ASSERT_EQ (join::filename ("bar"), "bar");
     ASSERT_EQ (join::filename ("foo/bar"), "bar");
     ASSERT_EQ (join::filename ("foo/bar/"), "");
     ASSERT_EQ (join::filename ("foo/bar/somefile.txt"), "somefile.txt");
