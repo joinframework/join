@@ -230,9 +230,16 @@ protected:
     static void contentHandler (Https::Worker* worker)
     {
         worker->header ("Content-Type", "text/html");
-        if (worker->hasHeader ("Accept-Encoding") && (worker->header ("Accept-Encoding") == "gzip"))
+        if (worker->hasHeader ("Accept-Encoding"))
         {
-            worker->header ("Content-Encoding", "gzip");
+            if (worker->header ("Accept-Encoding").find ("gzip") != std::string::npos)
+            {
+                worker->header ("Content-Encoding", "gzip");
+            }
+            else if (worker->header ("Accept-Encoding").find ("deflate") != std::string::npos)
+            {
+                worker->header ("Content-Encoding", "deflate");
+            }
         }
         worker->header ("Transfer-Encoding", "chunked");
         worker->sendHeaders ();
@@ -827,6 +834,23 @@ TEST_F (HttpsTest, get)
     request.clear ();
     request.method (HttpMethod::Get);
     request.path ("/exec/file");
+    request.header ("Accept-Encoding", "gzip");
+    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
+
+    response.clear ();
+    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
+    ASSERT_EQ (response.status (), "200");
+    ASSERT_EQ (response.reason (), "OK");
+
+    payload.clear ();
+    payload.resize (_sample.size ());
+    client.read (&payload[0], payload.size ());
+    ASSERT_EQ (payload, _sample);
+
+    request.clear ();
+    request.method (HttpMethod::Get);
+    request.path ("/exec/file");
+    request.header ("Accept-Encoding", "deflate");
     ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
 
     response.clear ();

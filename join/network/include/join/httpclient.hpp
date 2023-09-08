@@ -262,7 +262,7 @@ namespace join
             }
             if (!tmp.hasHeader ("Accept-Encoding"))
             {
-                tmp.header ("Accept-Encoding", "gzip");
+                tmp.header ("Accept-Encoding", "gzip, deflate");
             }
             if (!tmp.hasHeader ("Connection"))
             {
@@ -364,6 +364,11 @@ namespace join
                 if (encoding.find ("gzip") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Gzip, this->_wrapped);
+                    this->_wrapped = true;
+                }
+                else if (encoding.find ("deflate") != std::string::npos)
+                {
+                    this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Deflate, this->_wrapped);
                     this->_wrapped = true;
                 }
                 else if (encoding.find ("chunked") != std::string::npos)

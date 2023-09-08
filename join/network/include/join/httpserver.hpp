@@ -582,6 +582,11 @@ namespace join
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Gzip, this->_wrapped);
                     this->_wrapped = true;
                 }
+                else if (encoding.find ("deflate") != std::string::npos)
+                {
+                    this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Deflate, this->_wrapped);
+                    this->_wrapped = true;
+                }
                 else if (encoding.find ("chunked") != std::string::npos)
                 {
                     this->_streambuf = new Chunkstreambuf (this->_streambuf, this->_wrapped);
