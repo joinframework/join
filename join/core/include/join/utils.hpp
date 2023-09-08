@@ -288,43 +288,6 @@ namespace join
 
     /**
      * @brief read line (delimiter "\r\n").
-     * @param in input stream buffer.
-     * @param line line read.
-     * @param max max characters to read.
-     * @return true on success, false on error.
-     */
-    __inline__ bool getline (std::streambuf& in, std::string& line, std::streamsize max = 1024)
-    {
-        line.clear ();
-
-        while (max--)
-        {
-            char ch = in.sbumpc ();
-            if (ch == std::char_traits <char>::eof ())
-            {
-                return false;
-            }
-
-            if (ch == '\r')
-            {
-                continue;
-            }
-
-            if (ch == '\n')
-            {
-                return true;
-            }
-
-            line.push_back (ch);
-        }
-
-        join::lastError = make_error_code (Errc::MessageTooLong);
-
-        return false;
-    }
-
-    /**
-     * @brief read line (delimiter "\r\n").
      * @param in input stream.
      * @param line line read.
      * @param max max characters to read.
@@ -358,6 +321,19 @@ namespace join
         join::lastError = make_error_code (Errc::MessageTooLong);
 
         return false;
+    }
+
+    /**
+     * @brief read line (delimiter "\r\n").
+     * @param in input stream buffer.
+     * @param line line read.
+     * @param max max characters to read.
+     * @return true on success, false on error.
+     */
+    __inline__ bool getline (std::streambuf& in, std::string& line, std::streamsize max = 1024)
+    {
+        std::istream istream (&in);
+        return getline (istream, line, max);
     }
 
     /**
