@@ -140,6 +140,23 @@ TEST (HttpResponse, dumpHeaders)
 }
 
 /**
+ * @brief Test contentLength.
+ */
+TEST (HttpResponse, contentLength)
+{
+    HttpResponse response;
+
+    response.header ("Content-Length", "12");
+    ASSERT_EQ (response.contentLength (), 12);
+
+    response.header ("Content-Length", "12foo");
+    ASSERT_EQ (response.contentLength (), 0);
+
+    response.header ("Content-Length", "foo");
+    ASSERT_EQ (response.contentLength (), 0);
+}
+
+/**
  * @brief Test clear.
  */
 TEST (HttpResponse, clear)

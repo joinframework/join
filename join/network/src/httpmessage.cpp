@@ -278,6 +278,17 @@ std::string HttpMessage::dumpHeaders () const
 
 // =========================================================================
 //   CLASS     : HttpMessage
+//   METHOD    : contentLength
+// =========================================================================
+size_t HttpMessage::contentLength () const
+{
+    size_t length = 0;
+    std::istringstream conv (header ("Content-Length"));
+    return (conv >> length && conv.eof ()) ? length : 0;
+}
+
+// =========================================================================
+//   CLASS     : HttpMessage
 //   METHOD    : clear
 // =========================================================================
 void HttpMessage::clear ()
@@ -613,6 +624,31 @@ std::string HttpRequest::host () const
         return host.substr (0, ++end);
     }
     return host.substr (0, host.find (":"));
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : auth
+// =========================================================================
+std::string HttpRequest::auth () const
+{
+    std::string authorization = header ("Authorization");
+    return authorization.substr (0, authorization.find (" "));
+}
+
+// =========================================================================
+//   CLASS     : HttpRequest
+//   METHOD    : credentials
+// =========================================================================
+std::string HttpRequest::credentials () const
+{
+    std::string authorization = header ("Authorization");
+    auto beg = authorization.find (" ");
+    if (beg == std::string::npos)
+    {
+        return {};
+    }
+    return authorization.substr (++beg);
 }
 
 // =========================================================================

@@ -292,6 +292,54 @@ TEST (HttpRequest, host)
 }
 
 /**
+ * @brief Test contentLength.
+ */
+TEST (HttpRequest, contentLength)
+{
+    HttpRequest request;
+
+    request.header ("Content-Length", "12");
+    ASSERT_EQ (request.contentLength (), 12);
+
+    request.header ("Content-Length", "12foo");
+    ASSERT_EQ (request.contentLength (), 0);
+
+    request.header ("Content-Length", "foo");
+    ASSERT_EQ (request.contentLength (), 0);
+}
+
+/**
+ * @brief Test auth.
+ */
+TEST (HttpRequest, auth)
+{
+    HttpRequest request;
+
+    request.header ("Authorization", "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==");
+    ASSERT_EQ (request.auth (), "Basic");
+
+    request.header ("Authorization", "Bearer YWxhZGRpbjpzZXNhbWVPdXZyZVRvaQ");
+    ASSERT_EQ (request.auth (), "Bearer");
+}
+
+/**
+ * @brief Test credentials.
+ */
+TEST (HttpRequest, credentials)
+{
+    HttpRequest request;
+
+    request.header ("Authorization", "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==");
+    ASSERT_EQ (request.credentials (), "QWxhZGRpbjpvcGVuIHNlc2FtZQ==");
+
+    request.header ("Authorization", "Bearer YWxhZGRpbjpzZXNhbWVPdXZyZVRvaQ");
+    ASSERT_EQ (request.credentials (), "YWxhZGRpbjpzZXNhbWVPdXZyZVRvaQ");
+
+    request.header ("Authorization", "Basic");
+    ASSERT_EQ (request.credentials (), "");
+}
+
+/**
  * @brief Test clear.
  */
 TEST (HttpRequest, clear)

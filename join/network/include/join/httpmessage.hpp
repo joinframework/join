@@ -282,6 +282,12 @@ namespace join
         std::string dumpHeaders () const;
 
         /**
+         * @brief get content length.
+         * @return content length.
+         */
+        size_t contentLength () const;
+
+        /**
          * @brief clear HTTP message.
          */
         virtual void clear ();
@@ -468,6 +474,18 @@ namespace join
          * @return host.
          */
         std::string host () const;
+
+        /**
+         * @brief get autorization type.
+         * @return autorization type.
+         */
+        std::string auth () const;
+
+        /**
+         * @brief get credentials.
+         * @return credentials.
+         */
+        std::string credentials () const;
 
         /**
          * @brief clear HTTP message.

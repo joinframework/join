@@ -44,11 +44,10 @@
 
 namespace join
 {
-    template <class Protocol>
-    using BasicContentHandler = std::function <void (BasicWorker <Protocol>*)>;
+    using AccessHandler       = std::function <bool (const std::string&, const std::string&, std::error_code&)>;
 
     template <class Protocol>
-    using BasicAccessHandler  = std::function <bool (BasicWorker <Protocol>*, std::error_code&)>;
+    using BasicContentHandler = std::function <void (BasicWorker <Protocol>*)>;
 
     /**
      * @brief HTTP content Type.
@@ -69,15 +68,14 @@ namespace join
     struct BasicContent
     {
         using ContentHandler = BasicContentHandler <Protocol>;
-        using AccessHandler  = BasicAccessHandler  <Protocol>;
 
         HttpMethod      methods;            /**< allowed methods. */
         HttpContentType type;               /**< content type (root, alias etc...). */
         std::string     directory;          /**< requested resource directory. */
         std::string     name;               /**< requested resource file name. */
         std::string     alias;              /**< mapped file system path. */
-        ContentHandler  contentHandler;     /**< mapped content handler. */
         AccessHandler   accessHandler;      /**< access handler. */
+        ContentHandler  contentHandler;     /**< mapped content handler. */
     };
 
     /**
@@ -342,6 +340,15 @@ namespace join
         }
 
         /**
+         * @brief get content length.
+         * @return content length.
+         */
+        size_t contentLength () const
+        {
+            return this->_request.contentLength ();
+        }
+
+        /**
          * @brief add header to the HTTP response.
          * @param name header name.
          * @param val header value.
@@ -487,14 +494,14 @@ namespace join
                     return;
                 }
 
-                std::error_code error;
-                if (!content->accessHandler (this, error))
+                std::error_code err;
+                if (!content->accessHandler (this->_request.auth (), this->_request.credentials (), err))
                 {
-                    if (error == HttpErrc::Unauthorized)
+                    if (err == HttpErrc::Unauthorized)
                     {
                         this->sendError ("401", "Unauthorized");
                     }
-                    else if (error == HttpErrc::Forbidden)
+                    else if (err == HttpErrc::Forbidden)
                     {
                         this->sendError ("403", "Forbidden");
                     }
@@ -650,7 +657,6 @@ namespace join
     public:
         using Content        = BasicContent <Protocol>;
         using ContentHandler = BasicContentHandler <Protocol>;
-        using AccessHandler  = BasicAccessHandler <Protocol>;
         using Worker         = BasicWorker <Protocol>;
         using Endpoint       = typename Protocol::Endpoint;
         using Stream         = typename Protocol::Stream;
@@ -1022,7 +1028,6 @@ namespace join
     public:
         using Content        = BasicContent <Protocol>;
         using ContentHandler = BasicContentHandler <Protocol>;
-        using AccessHandler  = BasicAccessHandler <Protocol>;
         using Worker         = BasicWorker <Protocol>;
         using Endpoint       = typename Protocol::Endpoint;
         using Stream         = typename Protocol::Stream;

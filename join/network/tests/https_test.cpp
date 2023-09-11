@@ -204,16 +204,14 @@ protected:
 
     /**
      * @brief handle authentication.
-     * @param worker worker thread context.
+     * @param type authorization type.
+     * @param token session token.
      * @param errc error code.
      * @return true on success, false otherwise.
      */
-    static bool accessHandler (Https::Worker* worker, std::error_code& errc)
+    static bool accessHandler (const std::string& type, const std::string& token, std::error_code& errc)
     {
-        std::string authorisation = worker->header ("Authorization");
-        std::string authType      = authorisation.substr (0, authorisation.find (' '));
-        std::string token         = authorisation.substr (authorisation.find (' ') + 1);
-        if (authType != "Bearer")
+        if (type != "Bearer")
         {
             errc = make_error_code (HttpErrc::Unauthorized);
             return false;
@@ -678,10 +676,9 @@ TEST_F (HttpsTest, redirect)
     ASSERT_EQ (response.status (), "307");
     ASSERT_EQ (response.reason (), "Temporary Redirect");
 
-    int len = std::stoi (response.header ("Content-Length"));
-    ASSERT_GT (len, 0);
+    ASSERT_GT (response.contentLength (), 0);
     std::string payload;
-    payload.resize (len);
+    payload.resize (response.contentLength ());
     client.read (&payload[0], payload.size ());
 
     request.clear ();
@@ -694,9 +691,8 @@ TEST_F (HttpsTest, redirect)
     ASSERT_EQ (response.status (), "302");
     ASSERT_EQ (response.reason (), "Found");
 
-    len = std::stoi (response.header ("Content-Length"));
-    ASSERT_GT (len, 0);
-    payload.resize (len);
+    ASSERT_GT (response.contentLength (), 0);
+    payload.resize (response.contentLength ());
     client.read (&payload[0], payload.size ());
 }
 
@@ -852,7 +848,7 @@ TEST_F (HttpsTest, get)
     ASSERT_EQ (response.status (), "200");
     ASSERT_EQ (response.reason (), "OK");
 
-    ASSERT_EQ (std::stoi (response.header ("Content-Length")), _sample.size ());
+    ASSERT_EQ (response.contentLength (), _sample.size ());
     std::string payload;
     payload.resize (_sample.size ());
     client.read (&payload[0], payload.size ());
