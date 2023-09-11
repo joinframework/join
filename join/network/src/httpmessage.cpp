@@ -313,10 +313,6 @@ int HttpMessage::readHeaders (std::istream& in)
             return -1;
         }
 
-    #ifdef DEBUG
-        std::cout << line << std::endl;
-    #endif
-
         if (firstLine)
         {
             if (parseFirstLine (line) == -1)
@@ -671,11 +667,7 @@ int HttpRequest::writeHeaders (std::ostream& out) const
 {
     out << methodString () << " " << urn () << " " << version () << "\r\n";
     out << dumpHeaders ();
-    if (out.fail ())
-    {
-        return -1;
-    }
-    return 0;
+    return out.fail () ? -1 : 0;
 }
 
 // =========================================================================
@@ -985,11 +977,7 @@ int HttpResponse::writeHeaders (std::ostream& out) const
 {
     out << version () << " " << status () << " " << reason () << "\r\n";
     out << dumpHeaders ();
-    if (out.fail ())
-    {
-        return -1;
-    }
-    return 0;
+    return out.fail () ? -1 : 0;
 }
 
 // =========================================================================

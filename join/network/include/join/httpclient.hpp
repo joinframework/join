@@ -238,7 +238,7 @@ namespace join
          * @param request HTTP request to send.
          * @return 0 on success, -1 on failure.
          */
-        int send (const HttpRequest& request)
+        int send (HttpRequest& request)
         {
             // restore concrete stream.
             clearEncoding ();
@@ -254,31 +254,25 @@ namespace join
             }
 
             // set missing request headers.
-            HttpRequest tmp (request);
-
-            if (!tmp.hasHeader ("Accept"))
+            if (!request.hasHeader ("Accept"))
             {
-                tmp.header ("Accept", "*/*");
+                request.header ("Accept", "*/*");
             }
-            if (!tmp.hasHeader ("Accept-Encoding"))
+            if (!request.hasHeader ("Connection"))
             {
-                tmp.header ("Accept-Encoding", "gzip, deflate");
+                request.header ("Connection", this->_keep ? "keep-alive" : "close");
             }
-            if (!tmp.hasHeader ("Connection"))
+            if (!request.hasHeader ("Host"))
             {
-                tmp.header ("Connection", this->_keep ? "keep-alive" : "close");
+                request.header ("Host", this->authority ());
             }
-            if (!tmp.hasHeader ("Host"))
+            if (!request.hasHeader ("User-Agent"))
             {
-                tmp.header ("Host", this->authority ());
-            }
-            if (!tmp.hasHeader ("User-Agent"))
-            {
-                tmp.header ("User-Agent", "join/" JOIN_VERSION);
+                request.header ("User-Agent", "join/" JOIN_VERSION);
             }
 
             // write request headers.
-            if (tmp.writeHeaders (*this) == -1)
+            if (request.writeHeaders (*this) == -1)
             {
                 return -1;
             }
@@ -287,13 +281,13 @@ namespace join
             this->flush ();
 
             // set encoding.
-            if (tmp.hasHeader ("Transfer-Encoding"))
+            if (request.hasHeader ("Transfer-Encoding"))
             {
-                this->setEncoding (join::rsplit (tmp.header ("Transfer-Encoding"), ","));
+                this->setEncoding (join::rsplit (request.header ("Transfer-Encoding"), ","));
             }
-            if (tmp.hasHeader ("Content-Encoding"))
+            if (request.hasHeader ("Content-Encoding"))
             {
-                this->setEncoding (join::rsplit (tmp.header ("Content-Encoding"), ","));
+                this->setEncoding (join::rsplit (request.header ("Content-Encoding"), ","));
             }
 
             return 0;
@@ -464,7 +458,7 @@ namespace join
      * @return a reference to the HTTP output stream.
      */
     template <class Protocol>
-    constexpr BasicHttpClient <Protocol>& operator<< (BasicHttpClient <Protocol>& out, const HttpRequest& request)
+    constexpr BasicHttpClient <Protocol>& operator<< (BasicHttpClient <Protocol>& out, HttpRequest& request)
     {
         out.send (request);
         return out;
@@ -581,7 +575,7 @@ namespace join
      * @return a reference to the HTTPS output stream.
      */
     template <class Protocol>
-    constexpr BasicHttpSecureClient <Protocol>& operator<< (BasicHttpSecureClient <Protocol>& out, const HttpRequest& request)
+    constexpr BasicHttpSecureClient <Protocol>& operator<< (BasicHttpSecureClient <Protocol>& out, HttpRequest& request)
     {
         out.send (request);
         return out;
