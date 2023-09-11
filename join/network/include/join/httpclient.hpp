@@ -236,8 +236,9 @@ namespace join
         /**
          * @brief send HTTP request.
          * @param request HTTP request to send.
+         * @return 0 on success, -1 on failure.
          */
-        void send (const HttpRequest& request)
+        int send (const HttpRequest& request)
         {
             // restore concrete stream.
             clearEncoding ();
@@ -248,7 +249,7 @@ namespace join
                 this->reconnect (this->url ());
                 if (this->fail ())
                 {
-                    return;
+                    return -1;
                 }
             }
 
@@ -261,7 +262,7 @@ namespace join
             }
             if (!tmp.hasHeader ("Accept-Encoding"))
             {
-                tmp.header ("Accept-Encoding", "gzip");
+                tmp.header ("Accept-Encoding", "gzip, deflate");
             }
             if (!tmp.hasHeader ("Connection"))
             {
@@ -277,35 +278,41 @@ namespace join
             }
 
             // write request headers.
-            tmp.writeHeaders (*this);
-            if (this->fail ())
+            if (tmp.writeHeaders (*this) == -1)
             {
-                return;
+                return -1;
             }
 
+            // flush request headers.
             this->flush ();
 
             // set encoding.
             if (tmp.hasHeader ("Transfer-Encoding"))
             {
-                setEncoding (join::rsplit (tmp.header ("Transfer-Encoding"), ","));
+                this->setEncoding (join::rsplit (tmp.header ("Transfer-Encoding"), ","));
             }
+            if (tmp.hasHeader ("Content-Encoding"))
+            {
+                this->setEncoding (join::rsplit (tmp.header ("Content-Encoding"), ","));
+            }
+
+            return 0;
         }
 
         /**
          * @brief receive HTTP response.
          * @param response HTTP response received.
+         * @return 0 on success, -1 on failure.
          */
-        void receive (HttpResponse& response)
+        int receive (HttpResponse& response)
         {
             // restore concrete stream.
-            clearEncoding ();
+            this->clearEncoding ();
 
             // read response headers.
-            response.readHeaders (*this);
-            if (this->fail ())
+            if (response.readHeaders (*this) == -1)
             {
-                return;
+                return -1;
             }
 
             // get connection.
@@ -336,15 +343,17 @@ namespace join
             // set encoding.
             if (response.hasHeader ("Transfer-Encoding"))
             {
-                setEncoding (join::rsplit (response.header ("Transfer-Encoding"), ","));
+                this->setEncoding (join::rsplit (response.header ("Transfer-Encoding"), ","));
             }
             if (response.hasHeader ("Content-Encoding"))
             {
-                setEncoding (join::rsplit (response.header ("Content-Encoding"), ","));
+                this->setEncoding (join::rsplit (response.header ("Content-Encoding"), ","));
             }
 
             // get timestamp.
             this->_timestamp = std::chrono::steady_clock::now ();
+
+            return 0;
         }
 
     protected:
@@ -359,6 +368,11 @@ namespace join
                 if (encoding.find ("gzip") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Gzip, this->_wrapped);
+                    this->_wrapped = true;
+                }
+                else if (encoding.find ("deflate") != std::string::npos)
+                {
+                    this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Deflate, this->_wrapped);
                     this->_wrapped = true;
                 }
                 else if (encoding.find ("chunked") != std::string::npos)

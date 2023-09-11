@@ -83,10 +83,10 @@ namespace join
         /**
          * @brief get or create the cache entry for the given file.
          * @param fileName path of the file that we want to get cache.
-         * @param sbuf buffer returned by a previous call to stat ().
+         * @param sbuf file stat.
          * @return a pointer to the buffer where the cached file is saved.
          */
-        void* get (const std::string &fileName, struct stat *sbuf = nullptr);
+        void* get (const std::string &fileName, struct stat &sbuf);
 
         /**
          * @brief remove a cached entry identified by the given file name.

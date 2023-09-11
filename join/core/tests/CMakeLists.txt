@@ -10,6 +10,10 @@ add_executable(utils.gtest utils_test.cpp)
 target_link_libraries(utils.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(utils.gtest)
 
+add_executable(filesystem.gtest filesystem_test.cpp)
+target_link_libraries(filesystem.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(filesystem.gtest)
+
 add_executable(traits.gtest traits_test.cpp)
 target_link_libraries(traits.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(traits.gtest)

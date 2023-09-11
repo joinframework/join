@@ -49,7 +49,7 @@ TEST (HttpCategory, message)
     ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::Unauthorized)).c_str (), "unauthorized");
     ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::Forbidden)).c_str (),  "forbidden");
     ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::NotFound)).c_str (),  "not found");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::ForbiddenMethod)).c_str (), "method not allowed");
+    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::Unsupported)).c_str (), "method not allowed");
     ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::LengthRequired)).c_str (), "length required");
     ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::PayloadTooLarge)).c_str (),  "payload too large");
     ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::UriTooLong)).c_str (),  "URI too long");
@@ -65,18 +65,18 @@ TEST (HttpCategory, message)
 TEST (HttpCategory, default_error_condition)
 {
     ASSERT_EQ (HttpCategory ().default_error_condition (0).message(), "success");
-    ASSERT_EQ (HttpCategory ().default_error_condition (400).message(), "bad request");
-    ASSERT_EQ (HttpCategory ().default_error_condition (401).message(), "unauthorized");
-    ASSERT_EQ (HttpCategory ().default_error_condition (403).message(), "forbidden");
-    ASSERT_EQ (HttpCategory ().default_error_condition (404).message(), "not found");
-    ASSERT_EQ (HttpCategory ().default_error_condition (405).message(), "method not allowed");
-    ASSERT_EQ (HttpCategory ().default_error_condition (411).message(), "length required");
-    ASSERT_EQ (HttpCategory ().default_error_condition (413).message(), "payload too large");
-    ASSERT_EQ (HttpCategory ().default_error_condition (414).message(), "URI too long");
-    ASSERT_EQ (HttpCategory ().default_error_condition (494).message(), "request header too large");
-    ASSERT_EQ (HttpCategory ().default_error_condition (500).message(), "internal server error");
-    ASSERT_EQ (HttpCategory ().default_error_condition (501).message(), "not implemented");
-    ASSERT_EQ (HttpCategory ().default_error_condition (502).message(), "bad gateway");
+    ASSERT_EQ (HttpCategory ().default_error_condition (1).message(), "bad request");
+    ASSERT_EQ (HttpCategory ().default_error_condition (2).message(), "unauthorized");
+    ASSERT_EQ (HttpCategory ().default_error_condition (3).message(), "forbidden");
+    ASSERT_EQ (HttpCategory ().default_error_condition (4).message(), "not found");
+    ASSERT_EQ (HttpCategory ().default_error_condition (5).message(), "method not allowed");
+    ASSERT_EQ (HttpCategory ().default_error_condition (6).message(), "length required");
+    ASSERT_EQ (HttpCategory ().default_error_condition (7).message(), "payload too large");
+    ASSERT_EQ (HttpCategory ().default_error_condition (8).message(), "URI too long");
+    ASSERT_EQ (HttpCategory ().default_error_condition (9).message(), "request header too large");
+    ASSERT_EQ (HttpCategory ().default_error_condition (10).message(), "internal server error");
+    ASSERT_EQ (HttpCategory ().default_error_condition (11).message(), "not implemented");
+    ASSERT_EQ (HttpCategory ().default_error_condition (12).message(), "bad gateway");
 }
 
 /**
@@ -90,10 +90,10 @@ TEST (HttpCategory, equal)
     error2 = make_error_code (HttpErrc::BadRequest);
     ASSERT_TRUE (error1 == error2);
 
-    error2 = make_error_code (HttpErrc::ForbiddenMethod);
+    error2 = make_error_code (HttpErrc::Unsupported);
     ASSERT_FALSE (error1 == error2);
 
-    error1 = make_error_code (HttpErrc::ForbiddenMethod);
+    error1 = make_error_code (HttpErrc::Unsupported);
     ASSERT_TRUE (error1 == error2);
 
     error2 = make_error_code (HttpErrc::HeaderTooLarge);
@@ -105,14 +105,14 @@ TEST (HttpCategory, equal)
     error1 = make_error_code (HttpErrc::BadRequest);
     ASSERT_TRUE (error1 == HttpErrc::BadRequest);
 
-    error1 = make_error_code (HttpErrc::ForbiddenMethod);
+    error1 = make_error_code (HttpErrc::Unsupported);
     ASSERT_FALSE (error1 == HttpErrc::BadRequest);
 
-    error2 = make_error_code (HttpErrc::ForbiddenMethod);
-    ASSERT_TRUE (HttpErrc::ForbiddenMethod == error2);
+    error2 = make_error_code (HttpErrc::Unsupported);
+    ASSERT_TRUE (HttpErrc::Unsupported == error2);
 
     error2 = make_error_code (HttpErrc::HeaderTooLarge);
-    ASSERT_FALSE (HttpErrc::ForbiddenMethod == error2);
+    ASSERT_FALSE (HttpErrc::Unsupported == error2);
 }
 
 /**
@@ -126,10 +126,10 @@ TEST (HttpCategory, different)
     error2 = make_error_code (HttpErrc::BadRequest);
     ASSERT_FALSE (error1 != error2);
 
-    error2 = make_error_code (HttpErrc::ForbiddenMethod);
+    error2 = make_error_code (HttpErrc::Unsupported);
     ASSERT_TRUE (error1 != error2);
 
-    error1 = make_error_code (HttpErrc::ForbiddenMethod);
+    error1 = make_error_code (HttpErrc::Unsupported);
     ASSERT_FALSE (error1 != error2);
 
     error2 = make_error_code (HttpErrc::HeaderTooLarge);
@@ -141,14 +141,14 @@ TEST (HttpCategory, different)
     error1 = make_error_code (HttpErrc::BadRequest);
     ASSERT_FALSE (error1 != HttpErrc::BadRequest);
 
-    error1 = make_error_code (HttpErrc::ForbiddenMethod);
+    error1 = make_error_code (HttpErrc::Unsupported);
     ASSERT_TRUE (error1 != HttpErrc::BadRequest);
 
-    error2 = make_error_code (HttpErrc::ForbiddenMethod);
-    ASSERT_FALSE (HttpErrc::ForbiddenMethod != error2);
+    error2 = make_error_code (HttpErrc::Unsupported);
+    ASSERT_FALSE (HttpErrc::Unsupported != error2);
 
     error2 = make_error_code (HttpErrc::HeaderTooLarge);
-    ASSERT_TRUE (HttpErrc::ForbiddenMethod != error2);
+    ASSERT_TRUE (HttpErrc::Unsupported != error2);
 }
 
 /**
@@ -166,8 +166,8 @@ TEST (HttpCategory, make_error_code)
  */
 TEST (HttpCategory, make_error_condition)
 {
-    auto code = make_error_condition (HttpErrc::ForbiddenMethod);
-    ASSERT_EQ (code, HttpErrc::ForbiddenMethod);
+    auto code = make_error_condition (HttpErrc::Unsupported);
+    ASSERT_EQ (code, HttpErrc::Unsupported);
     ASSERT_STREQ (code.message ().c_str (), "method not allowed");
 }
 

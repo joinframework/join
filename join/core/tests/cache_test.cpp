@@ -51,8 +51,10 @@ protected:
     {
         ASSERT_TRUE (writeFile (path, content));
         ASSERT_TRUE (writeFile (other, otherContent));
-        ASSERT_NE (nullptr, cache.get (path));
-        ASSERT_NE (nullptr, cache.get (other));
+
+        struct stat sbuf;
+        ASSERT_NE (nullptr, cache.get (path, sbuf));
+        ASSERT_NE (nullptr, cache.get (other, sbuf));
     }
 
     /**
@@ -135,28 +137,28 @@ const std::string CacheTest::otherContent     = "other test string";
  */
 TEST_F (CacheTest, get)
 {
-    ASSERT_EQ (cache.get (bad), nullptr);
-
     struct stat sbuf;
-    ASSERT_EQ (stat (base.c_str (), &sbuf), 0) << strerror (errno);
-    ASSERT_EQ (cache.get (bad, &sbuf), nullptr);
+    ASSERT_EQ (cache.get (bad, sbuf), nullptr);
 
     ASSERT_EQ (stat (base.c_str (), &sbuf), 0) << strerror (errno);
-    ASSERT_EQ (cache.get (base, &sbuf), nullptr);
+    ASSERT_EQ (cache.get (bad, sbuf), nullptr);
+
+    ASSERT_EQ (stat (base.c_str (), &sbuf), 0) << strerror (errno);
+    ASSERT_EQ (cache.get (base, sbuf), nullptr);
 
     ASSERT_EQ (stat (path.c_str (), &sbuf), 0) << strerror (errno);
-    char* data = reinterpret_cast <char*> (cache.get (path, &sbuf));
+    char* data = reinterpret_cast <char*> (cache.get (path, sbuf));
     ASSERT_NE (data, nullptr);
     ASSERT_EQ (std::string (data, sbuf.st_size), content);
 
     ASSERT_EQ (stat (other.c_str (), &sbuf), 0) << strerror (errno);
-    data = reinterpret_cast <char*> (cache.get (other));
+    data = reinterpret_cast <char*> (cache.get (other, sbuf));
     ASSERT_NE (data, nullptr);
     ASSERT_EQ (std::string (data, sbuf.st_size), otherContent);
 
     ASSERT_TRUE (writeFile (path, otherContent));
     ASSERT_EQ (stat (path.c_str (), &sbuf), 0) << strerror (errno);
-    data = reinterpret_cast <char*> (cache.get (path, &sbuf));
+    data = reinterpret_cast <char*> (cache.get (path, sbuf));
     ASSERT_NE (data, nullptr);
     ASSERT_EQ (std::string (data, sbuf.st_size), otherContent);
 }

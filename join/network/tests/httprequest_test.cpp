@@ -263,6 +263,83 @@ TEST (HttpRequest, urn)
 }
 
 /**
+ * @brief Test host.
+ */
+TEST (HttpRequest, host)
+{
+    HttpRequest request;
+
+    request.header ("Host", "localhost");
+    ASSERT_EQ (request.host (), "localhost");
+
+    request.header ("Host", "localhost:5000");
+    ASSERT_EQ (request.host (), "localhost");
+
+    request.header ("Host", "127.0.0.1");
+    ASSERT_EQ (request.host (), "127.0.0.1");
+
+    request.header ("Host", "127.0.0.1:5000");
+    ASSERT_EQ (request.host (), "127.0.0.1");
+
+    request.header ("Host", "[::1]");
+    ASSERT_EQ (request.host (), "[::1]");
+
+    request.header ("Host", "[::1]:5000");
+    ASSERT_EQ (request.host (), "[::1]");
+
+    request.header ("Host", "[::1");
+    ASSERT_EQ (request.host (), "");
+}
+
+/**
+ * @brief Test contentLength.
+ */
+TEST (HttpRequest, contentLength)
+{
+    HttpRequest request;
+
+    request.header ("Content-Length", "12");
+    ASSERT_EQ (request.contentLength (), 12);
+
+    request.header ("Content-Length", "12foo");
+    ASSERT_EQ (request.contentLength (), 0);
+
+    request.header ("Content-Length", "foo");
+    ASSERT_EQ (request.contentLength (), 0);
+}
+
+/**
+ * @brief Test auth.
+ */
+TEST (HttpRequest, auth)
+{
+    HttpRequest request;
+
+    request.header ("Authorization", "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==");
+    ASSERT_EQ (request.auth (), "Basic");
+
+    request.header ("Authorization", "Bearer YWxhZGRpbjpzZXNhbWVPdXZyZVRvaQ");
+    ASSERT_EQ (request.auth (), "Bearer");
+}
+
+/**
+ * @brief Test credentials.
+ */
+TEST (HttpRequest, credentials)
+{
+    HttpRequest request;
+
+    request.header ("Authorization", "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==");
+    ASSERT_EQ (request.credentials (), "QWxhZGRpbjpvcGVuIHNlc2FtZQ==");
+
+    request.header ("Authorization", "Bearer YWxhZGRpbjpzZXNhbWVPdXZyZVRvaQ");
+    ASSERT_EQ (request.credentials (), "YWxhZGRpbjpzZXNhbWVPdXZyZVRvaQ");
+
+    request.header ("Authorization", "Basic");
+    ASSERT_EQ (request.credentials (), "");
+}
+
+/**
  * @brief Test clear.
  */
 TEST (HttpRequest, clear)
@@ -302,7 +379,7 @@ TEST (HttpRequest, writeHeaders)
     request.header ("Connection", "keep-alive");
 
     std::stringstream ss;
-    request.writeHeaders (ss);
+    ASSERT_EQ (request.writeHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (ss.str (), "HEAD /path?val1=1&val2=2 HTTP/1.0\r\nConnection: keep-alive\r\n\r\n");
 }
 
@@ -317,8 +394,7 @@ TEST (HttpRequest, readHeaders)
     ss << "\r\n";
 
     HttpRequest request;
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.method (), HttpMethod::Get);
     ASSERT_EQ (request.path (), "/path");
     ASSERT_EQ (request.parameter ("val1"), "1");
@@ -331,8 +407,7 @@ TEST (HttpRequest, readHeaders)
     ss << "HEAD / HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.method (), HttpMethod::Head);
 
     ss.clear ();
@@ -340,8 +415,7 @@ TEST (HttpRequest, readHeaders)
     ss << "PUT / HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.method (), HttpMethod::Put);
 
     ss.clear ();
@@ -349,8 +423,7 @@ TEST (HttpRequest, readHeaders)
     ss << "POST / HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.method (), HttpMethod::Post);
 
     ss.clear ();
@@ -358,24 +431,21 @@ TEST (HttpRequest, readHeaders)
     ss << "DELETE / HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.method (), HttpMethod::Delete);
 
     ss.clear ();
     ss.str ("");
     ss << "GET";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (request.readHeaders (ss), -1);
 
     ss.clear ();
     ss.str ("");
     ss << "GET\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (request.readHeaders (ss), -1);
     ASSERT_EQ (join::lastError, HttpErrc::BadRequest);
 
     ss.clear ();
@@ -383,8 +453,7 @@ TEST (HttpRequest, readHeaders)
     ss << "GET /\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (request.readHeaders (ss), -1);
     ASSERT_EQ (join::lastError, HttpErrc::BadRequest);
 
     ss.clear ();
@@ -392,9 +461,8 @@ TEST (HttpRequest, readHeaders)
     ss << "BLAH / HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
-    ASSERT_EQ (join::lastError, HttpErrc::ForbiddenMethod);
+    ASSERT_EQ (request.readHeaders (ss), -1);
+    ASSERT_EQ (join::lastError, HttpErrc::Unsupported);
 
     ss.clear ();
     ss.str ("");
@@ -402,15 +470,13 @@ TEST (HttpRequest, readHeaders)
     ss << "Connection keep-alive\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (request.readHeaders (ss), -1);
     ASSERT_EQ (join::lastError, HttpErrc::BadRequest);
 
     ss.clear ();
     ss.str (std::string (8192, 'X'));
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.fail ());
+    ASSERT_EQ (request.readHeaders (ss), -1);
     ASSERT_EQ (join::lastError, Errc::MessageTooLong);
 }
 
@@ -424,7 +490,7 @@ TEST (HttpRequest, decodeUrl)
     ss << "\r\n";
 
     HttpRequest request;
-    request.readHeaders (ss);
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "/foo bar");
     ASSERT_EQ (request.parameter ("baz"), "3 fuz");
 }
@@ -439,8 +505,7 @@ TEST (HttpRequest, normalize)
     ss << "\r\n";
 
     HttpRequest request;
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -448,8 +513,7 @@ TEST (HttpRequest, normalize)
     ss << "GET ../ HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "");
 
     ss.clear ();
@@ -457,8 +521,7 @@ TEST (HttpRequest, normalize)
     ss << "GET ./ HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "");
 
     ss.clear ();
@@ -466,8 +529,7 @@ TEST (HttpRequest, normalize)
     ss << "GET /./ HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -475,8 +537,7 @@ TEST (HttpRequest, normalize)
     ss << "GET /. HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -484,8 +545,7 @@ TEST (HttpRequest, normalize)
     ss << "GET /../ HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -493,8 +553,7 @@ TEST (HttpRequest, normalize)
     ss << "GET /path/../ HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -502,8 +561,7 @@ TEST (HttpRequest, normalize)
     ss << "GET /.. HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -511,8 +569,7 @@ TEST (HttpRequest, normalize)
     ss << "GET /path/.. HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "/");
 
     ss.clear ();
@@ -520,8 +577,7 @@ TEST (HttpRequest, normalize)
     ss << "GET . HTTP/1.1\r\n";
     ss << "\r\n";
 
-    request.readHeaders (ss);
-    ASSERT_TRUE (ss.good ()) << join::lastError.message ();
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.path (), "");
 }
 

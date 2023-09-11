@@ -43,18 +43,18 @@ namespace join
      */
     enum class HttpErrc
     {
-        BadRequest      = 400,      /**< malformed request syntax. */
-        Unauthorized    = 401,      /**< authentication is required. */
-        Forbidden       = 403,      /**< missing required permissions. */
-        NotFound        = 404,      /**< resource could not be found. */
-        ForbiddenMethod = 405,      /**< method is not supported. */
-        LengthRequired  = 411,      /**< length was not specified. */
-        PayloadTooLarge = 413,      /**< request payload is too large. */
-        UriTooLong      = 414,      /**< request URI is too long. */
-        HeaderTooLarge  = 494,      /**< request header is too large. */
-        ServerError     = 500,      /**< generic error. */
-        NotImplemented  = 501,      /**< not implemented. */
-        BadGateway      = 502,      /**< invalid response from the upstream server. */
+        BadRequest = 1,     /**< malformed request syntax. */
+        Unauthorized,       /**< authentication is required. */
+        Forbidden,          /**< missing required permissions. */
+        NotFound,           /**< resource could not be found. */
+        Unsupported,        /**< method is not supported. */
+        LengthRequired,     /**< length was not specified. */
+        PayloadTooLarge,    /**< request payload is too large. */
+        UriTooLong,         /**< request URI is too long. */
+        HeaderTooLarge,     /**< request header is too large. */
+        ServerError,        /**< generic error. */
+        NotImplemented,     /**< not implemented. */
+        BadGateway,         /**< invalid response from the upstream server. */
     };
 
     /**
@@ -64,17 +64,25 @@ namespace join
     {
     public:
         /**
-         * @brief get SAX API generic error category name.
+         * @brief get HTTP API generic error category name.
          * @return deserializer generic error category name.
          */
         virtual const char* name () const noexcept;
 
         /**
-         * @brief translate SAX API generic error code to human readable error string.
+         * @brief translate HTTP API generic error code to human readable error string.
          * @param code error code.
          * @return human readable error string.
          */
         virtual std::string message (int code) const;
+
+        /**
+         * @brief find equivalent from Errc to system error code.
+         * @param code System error code.
+         * @param condition Errc.
+         * @return true if equivalent, false otherwise.
+         */
+        virtual bool equivalent (const std::error_code& code, int condition) const noexcept;
     };
 
     /**
@@ -274,6 +282,12 @@ namespace join
         std::string dumpHeaders () const;
 
         /**
+         * @brief get content length.
+         * @return content length.
+         */
+        size_t contentLength () const;
+
+        /**
          * @brief clear HTTP message.
          */
         virtual void clear ();
@@ -281,14 +295,16 @@ namespace join
         /**
          * @brief read HTTP header from the given input stream.
          * @param in input stream.
+         * @return 0 on success, -1 on failure.
          */
-        virtual void readHeaders (std::istream& in);
+        virtual int readHeaders (std::istream& in);
 
         /**
          * @brief write HTTP header to the given output stream.
          * @param out output stream.
+         * @return 0 on success, -1 on failure.
          */
-        virtual void writeHeaders (std::ostream& out) const = 0;
+        virtual int writeHeaders (std::ostream& out) const = 0;
 
     protected:
         /**
@@ -454,6 +470,24 @@ namespace join
         std::string urn () const;
 
         /**
+         * @brief get host.
+         * @return host.
+         */
+        std::string host () const;
+
+        /**
+         * @brief get autorization type.
+         * @return autorization type.
+         */
+        std::string auth () const;
+
+        /**
+         * @brief get credentials.
+         * @return credentials.
+         */
+        std::string credentials () const;
+
+        /**
          * @brief clear HTTP message.
          */
         virtual void clear () override;
@@ -461,8 +495,9 @@ namespace join
         /**
          * @brief write HTTP header to the given output stream.
          * @param out output stream.
+         * @return 0 on success, -1 on failure.
          */
-        virtual void writeHeaders (std::ostream& out) const override;
+        virtual int writeHeaders (std::ostream& out) const override;
 
     protected:
         /**
@@ -571,8 +606,9 @@ namespace join
         /**
          * @brief write HTTP header to the given output stream.
          * @param out output stream.
+         * @return 0 on success, -1 on failure.
          */
-        virtual void writeHeaders (std::ostream& out) const override;
+        virtual int writeHeaders (std::ostream& out) const override;
 
     protected:
         /**

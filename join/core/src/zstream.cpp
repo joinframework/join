@@ -185,9 +185,12 @@ Zstreambuf::int_type Zstreambuf::overflow (int_type c)
 // =========================================================================
 Zstreambuf::int_type Zstreambuf::sync ()
 {
-    int_type ret = overflow ();
+    if (overflow () == traits_type::eof ())
+    {
+        return -1;
+    }
     deflateReset (_deflate.get ());
-    return ret;
+    return _innerbuf->pubsync ();
 }
 
 // =========================================================================

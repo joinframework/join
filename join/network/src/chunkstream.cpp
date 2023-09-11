@@ -82,7 +82,7 @@ Chunkstreambuf& Chunkstreambuf::operator= (Chunkstreambuf&& other)
 // =========================================================================
 Chunkstreambuf::~Chunkstreambuf ()
 {
-    if (_innerbuf != nullptr)
+    if ((pptr () - pbase ()) && (_innerbuf != nullptr))
     {
         overflow ();
     }
@@ -136,6 +136,8 @@ Chunkstreambuf::int_type Chunkstreambuf::underflow ()
             return traits_type::eof ();
         }
 
+        setg (eback (), eback (), eback () + chunksize);
+
         if (!join::getline (*_innerbuf, line))
         {
             return traits_type::eof ();
@@ -151,8 +153,6 @@ Chunkstreambuf::int_type Chunkstreambuf::underflow ()
         {
             return traits_type::eof ();
         }
-
-        setg (eback (), eback (), eback () + chunksize);
     }
 
     return traits_type::to_int_type (*gptr ());
@@ -176,32 +176,27 @@ Chunkstreambuf::int_type Chunkstreambuf::overflow (int_type c)
         {
             std::stringstream oss;
             oss << std::hex << pending << std::dec << "\r\n";
-            oss.write (pbase (), pending);
-            oss << "\r\n";
-
-            std::streamsize sz = _innerbuf->sputn (oss.str ().c_str (), oss.str ().size ());
-            if (sz != std::streamsize (oss.str ().size ()))
+            int res  = (_innerbuf->sputn (oss.str ().c_str (), oss.str ().size ()) == std::streamsize (oss.str ().size ()));
+            res     &= (_innerbuf->sputn (pbase (), pending) == pending);
+            res     &= (_innerbuf->sputn ("\r\n", 2) == 2);
+            if (!res)
             {
                 return traits_type::eof ();
             }
+
+            setp (pbase (), pbase () + _chunksize);
         }
 
         if (c == traits_type::eof ())
         {
-            std::stringstream oss;
-            oss << std::hex << std::streamsize (0) << std::dec << "\r\n";
-            oss << "\r\n";
-
-            std::streamsize sz = _innerbuf->sputn (oss.str ().c_str (), oss.str ().size ());
-            if (sz != std::streamsize (oss.str ().size ()))
+            std::streamsize sz = _innerbuf->sputn ("0\r\n\r\n", 5);
+            if (sz != 5)
             {
                 return traits_type::eof ();
             }
 
             return traits_type::not_eof (c);
         }
-
-        setp (pbase (), pbase () + _chunksize);
     }
 
     return sputc (traits_type::to_char_type (c));
@@ -213,7 +208,11 @@ Chunkstreambuf::int_type Chunkstreambuf::overflow (int_type c)
 // =========================================================================
 Chunkstreambuf::int_type Chunkstreambuf::sync ()
 {
-    return overflow ();
+    if (overflow () == traits_type::eof ())
+    {
+        return -1;
+    }
+    return _innerbuf->pubsync ();
 }
 
 // =========================================================================

@@ -275,11 +275,13 @@ namespace join
             if ((this->pptr () == this->epptr ()) || (c == traits_type::eof ()))
             {
                 std::streamsize pending = this->pptr () - this->pbase ();
-
-                if (pending && this->_socket.writeExactly (this->pbase (), pending, this->_timeout) == -1)
+                if (pending)
                 {
-                    this->_socket.close ();
-                    return traits_type::eof ();
+                    if (this->_socket.writeExactly (this->pbase (), pending, this->_timeout) == -1)
+                    {
+                        this->_socket.close ();
+                        return traits_type::eof ();
+                    }
                 }
 
                 this->setp (this->pbase (), this->pbase () + _bufsize);
@@ -299,12 +301,11 @@ namespace join
          */
         virtual int_type sync () override
         {
-            if (this->_socket.connected ())
+            if (!this->_socket.connected () || (this->overflow () == traits_type::eof ()))
             {
-                return this->overflow (traits_type::eof ());
+                return -1;
             }
-
-            return traits_type::not_eof (traits_type::eof ());
+            return 0;
         }
 
         /// internal buffer size.

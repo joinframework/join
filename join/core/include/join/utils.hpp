@@ -288,20 +288,19 @@ namespace join
 
     /**
      * @brief read line (delimiter "\r\n").
-     * @param in input stream buffer.
+     * @param in input stream.
      * @param line line read.
      * @param max max characters to read.
      * @return true on success, false on error.
      */
-    __inline__ bool getline (std::streambuf& in, std::string& line, std::streamsize max = 1024)
+    __inline__ bool getline (std::istream& in, std::string& line, std::streamsize max = 1024)
     {
         line.clear ();
 
         while (max--)
         {
-            char ch = in.sbumpc ();
-
-            if (ch == std::char_traits <char>::eof ())
+            char ch = in.get ();
+            if (in.fail ())
             {
                 return false;
             }
@@ -326,19 +325,15 @@ namespace join
 
     /**
      * @brief read line (delimiter "\r\n").
-     * @param in input stream.
+     * @param in input stream buffer.
      * @param line line read.
      * @param max max characters to read.
      * @return true on success, false on error.
      */
-    __inline__ bool getline (std::istream& in, std::string& line, std::streamsize max = 1024)
+    __inline__ bool getline (std::streambuf& in, std::string& line, std::streamsize max = 1024)
     {
-        if (!getline (*in.rdbuf (), line, max))
-        {
-            in.setstate (std::ios_base::failbit);
-            return false;
-        }
-        return true;
+        std::istream istream (&in);
+        return getline (istream, line, max);
     }
 
     /**
