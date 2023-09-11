@@ -313,10 +313,6 @@ int HttpMessage::readHeaders (std::istream& in)
             return -1;
         }
 
-    #ifdef DEBUG
-        std::cout << line << std::endl;
-    #endif
-
         if (firstLine)
         {
             if (parseFirstLine (line) == -1)

@@ -7,6 +7,5 @@ Name: join
 Description: join
 Version: @JOIN_VERSION@
 Libs: -L${libdir} -ljoin
-Libs.private: -lssl -lcrypto -lpthread
+Libs.private: -lssl -lcrypto -lz -lpthread
 Cflags: -I${includedir}
-

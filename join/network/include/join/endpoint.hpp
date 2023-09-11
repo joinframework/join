@@ -474,27 +474,26 @@ namespace join
             std::regex reg (R"(^(?:([^:/?#]+)://)?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\])(?::([0-9]+))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?)");
             std::cmatch match;
 
-            std::string host (url);
+            _hostname = url;
             uint16_t port = 0;
 
             if (std::regex_match (url, match, reg))
             {
-                host = match[2];
-                host.erase (0, host.find_first_not_of ("["));
-                host.erase (host.find_last_not_of ("]") + 1);
+                _hostname = match[2];
+                _hostname.erase (0, _hostname.find_first_not_of ("["));
+                _hostname.erase (_hostname.find_last_not_of ("]") + 1);
                 port = (match[3].length ()) ? uint16_t (std::stoi (match[3])) : Resolver::resolveService (match[1]);
             }
 
             try
             {
-                this->ip (host);
+                this->ip (_hostname);
                 this->port (port);
             }
             catch (const std::exception& ex)
             {
-                this->ip (Resolver::resolveHost (host));
+                this->ip (Resolver::resolveHost (_hostname));
                 this->port (port);
-                _hostname = host;
             }
         }
 
