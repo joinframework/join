@@ -80,8 +80,6 @@ protected:
     {
         this->baseLocation (_basePath + "/");
         ASSERT_EQ (this->baseLocation (), _basePath);
-        this->uploadLocation (_uploadPath + "/");
-        ASSERT_EQ (this->uploadLocation (), _uploadPath);
         this->keepAlive (seconds (_timeout), _max);
         ASSERT_EQ (this->keepAliveTimeout (), seconds (_timeout));
         ASSERT_EQ (this->keepAliveMax (), _max);
@@ -93,7 +91,6 @@ protected:
         this->addExecute (HttpMethod::Get, "/exec/", "null", nullptr);
         this->addExecute (HttpMethod::Get, "/exec/", "get", getHandler);
         this->addExecute (HttpMethod::Post, "/exec/", "post", postHandler);
-        this->addUpload ("/upload/", "null", nullptr);
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), -1);
         ASSERT_EQ (join::lastError, Errc::InUse);
@@ -176,9 +173,6 @@ protected:
     /// base path.
     static const std::string _basePath;
 
-    /// upload path.
-    static const std::string _uploadPath;
-
     /// sample.
     static const std::string _sample;
 
@@ -205,7 +199,6 @@ protected:
 };
 
 const std::string HttpTest::_basePath       = "/tmp/www";
-const std::string HttpTest::_uploadPath     = "/tmp/upload";
 const std::string HttpTest::_sample         = "<html><body><h1>It works!</h1></body></html>";
 const std::string HttpTest::_sampleFileName = "sample.html";
 const std::string HttpTest::_sampleFile     = _basePath + "/" + _sampleFileName;
@@ -549,16 +542,6 @@ TEST_F (HttpTest, serverError)
     ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
 
     HttpResponse response;
-    ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
-    ASSERT_EQ (response.status (), "500");
-    ASSERT_EQ (response.reason (), "Internal Server Error");
-
-    request.clear ();
-    request.method (HttpMethod::Post);
-    request.path ("/upload/null");
-    ASSERT_EQ (client.send (request), 0) << join::lastError.message ();
-
-    response.clear ();
     ASSERT_EQ (client.receive (response), 0) << join::lastError.message ();
     ASSERT_EQ (response.status (), "500");
     ASSERT_EQ (response.reason (), "Internal Server Error");

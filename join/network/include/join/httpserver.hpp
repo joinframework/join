@@ -58,7 +58,6 @@ namespace join
         Alias,          /**< Content replaced by alias. */
         Exec,           /**< Executable content. */
         Redirect,       /**< Redirection. */
-        Upload,         /**< Upload content. */
     };
 
     /**
@@ -549,18 +548,6 @@ namespace join
                     this->sendRedirect ("302", "Found", alias);
                 }
             }
-            else if (content->type == HttpContentType::Upload)
-            {
-                if (content->contentHandler == nullptr)
-                {
-                    this->sendError ("500", "Internal Server Error");
-                    return;
-                }
-                //if (readMultipart ())
-                //{
-                //    content->contentHandler (this);
-                //}
-            }
         }
 
         /**
@@ -670,7 +657,6 @@ namespace join
         : _event (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE)),
           _nworkers (workers),
           _baseLocation ("/var/www"),
-          _uploadLocation ("/tmp/upload"),
           _keepTimeout (10)
         {
             [[maybe_unused]] int res = chdir (this->_baseLocation.c_str ());
@@ -766,29 +752,6 @@ namespace join
         const std::string& baseLocation () const
         {
             return this->_baseLocation;
-        }
-
-        /**
-         * @brief set upload location.
-         * @param path upload location path.
-         */
-        void uploadLocation (const std::string& path)
-        {
-            this->_uploadLocation = path;
-
-            if (*this->_uploadLocation.rbegin () == '/')
-            {
-                this->_uploadLocation.pop_back ();
-            }
-        }
-
-        /**
-         * @brief get upload location.
-         * @return upload location path.
-         */
-        const std::string& uploadLocation () const
-        {
-            return this->_uploadLocation;
         }
 
         /**
@@ -931,31 +894,6 @@ namespace join
             return newEntry;
         }
 
-        /**
-         * @brief map an URL allowed to upload file to a callback.
-         * @param dir directory.
-         * @param name file name.
-         * @param contentHandler content handler.
-         * @param accessHandler access handler.
-         * @return a pointer to the content on success, nullptr on failure.
-         */
-        Content* addUpload (const std::string& dir, const std::string& name, const ContentHandler& contentHandler, const AccessHandler& accessHandler = nullptr)
-        {
-            Content* newEntry = new Content;
-            if (newEntry != nullptr)
-            {
-                newEntry->methods        = Put | Post;
-                newEntry->type           = Upload;
-                newEntry->directory      = dir;
-                newEntry->name           = name;
-                newEntry->contentHandler = contentHandler;
-                newEntry->accessHandler  = accessHandler;
-                this->_contents.emplace_back (newEntry);
-            }
-
-            return newEntry;
-        }
-
     protected:
         /**
          * @brief find content.
@@ -1002,9 +940,6 @@ namespace join
 
         /// base location.
         std::string _baseLocation;
-
-        /// upload location.
-        std::string _uploadLocation;
 
         /// keep alive timeout.
         std::chrono::seconds _keepTimeout;
