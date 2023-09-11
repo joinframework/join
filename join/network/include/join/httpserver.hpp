@@ -673,7 +673,7 @@ namespace join
           _uploadLocation ("/tmp/upload"),
           _keepTimeout (10)
         {
-            chdir (this->_baseLocation.c_str ());
+            [[maybe_unused]] int res = chdir (this->_baseLocation.c_str ());
         }
 
         /**
@@ -756,7 +756,7 @@ namespace join
                 this->_baseLocation.pop_back ();
             }
 
-            chdir (this->_baseLocation.c_str ());
+            [[maybe_unused]] int res = chdir (this->_baseLocation.c_str ());
         }
 
         /**
