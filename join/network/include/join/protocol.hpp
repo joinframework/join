@@ -38,7 +38,6 @@ namespace join
     template <class Protocol> class BasicStreamSocket;
     template <class Protocol> class BasicTlsSocket;
 
-    template <class Protocol> class BasicSocketStreambuf;
     template <class Protocol> class BasicSocketStream;
     template <class Protocol> class BasicTlsStream;
 
@@ -51,8 +50,6 @@ namespace join
     template <class Protocol> class BasicWorker;
     template <class Protocol> class BasicHttpServer;
     template <class Protocol> class BasicHttpSecureServer;
-
-    template <class Protocol> class BasicResolver;
 
     /**
      * @brief unix datagram protocol class.

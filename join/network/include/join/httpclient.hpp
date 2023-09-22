@@ -180,7 +180,7 @@ namespace join
                 auth += this->host ();
             }
 
-            if (this->port () && (this->port () != Resolver::resolveService (this->scheme ())))
+            if (this->port () != Resolver::resolveService (this->scheme ()))
             {
                 auth += ":" + std::to_string (this->port ());
             }
