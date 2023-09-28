@@ -141,16 +141,15 @@ IpAddressList Resolver::resolveAllHost (const std::string& host, RecordType type
 // =========================================================================
 IpAddressList Resolver::resolveAllHost (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
 {
-    for (auto const& type : { RecordType::A, RecordType::AAAA })
+    IpAddressList addresses;
+
+    for (auto const& type : { RecordType::AAAA, RecordType::A })
     {
-        IpAddressList addresses = resolveAllHost (host, type, server, port, timeout);
-        if (!addresses.empty ())
-        {
-            return addresses;
-        }
+        IpAddressList tmp = resolveAllHost (host, type, server, port, timeout);
+        addresses.insert (addresses.end (), tmp.begin (), tmp.end ());
     }
 
-    return {};
+    return addresses;
 }
 
 // =========================================================================

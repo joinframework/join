@@ -2418,7 +2418,9 @@ namespace join
             int maxDepth = SSL_get_verify_depth (this->_tlsHandle.get ());
             int dpth = X509_STORE_CTX_get_error_depth (context);
 
+        #ifdef DEBUG
             std::cout << "verification started at depth="<< dpth << std::endl;
+        #endif
 
             // catch a too long certificate chain.
             if ((maxDepth >= 0) && (dpth > maxDepth))
@@ -2429,32 +2431,42 @@ namespace join
 
             if (!preverified)
             {
+            #ifdef DEBUG
                 std::cout << "verification failed at depth=" << dpth << " - " << X509_verify_cert_error_string (X509_STORE_CTX_get_error (context)) << std::endl;
+            #endif
                 return 0;
             }
 
             // check the certificate host name.
             if (!verifyCert (context))
             {
+            #ifdef DEBUG
                 std::cout << "rejected by CERT at depth=" << dpth << std::endl;
+            #endif
                 return 0;
             }
 
             // check the revocation list.
             /*if (!verifyCrl (context))
             {
+            #ifdef DEBUG
                 std::cout << "rejected by CRL at depth=" << dpth << std::endl;
+            #endif
                 return 0;
             }*/
 
             // check ocsp.
             /*if (!verifyOcsp (context))
             {
+            #ifdef DEBUG
                 std::cout << "rejected by OCSP at depth=" << dpth << std::endl;
+            #endif
                 return 0;
             }*/
 
+        #ifdef DEBUG
             std::cout << "certificate accepted at depth=" << dpth << std::endl;
+        #endif
 
             return 1;
         }
@@ -2471,7 +2483,9 @@ namespace join
 
             char buf[256];
             X509_NAME_oneline (X509_get_subject_name (cert), buf, sizeof (buf));
+        #ifdef DEBUG
             std::cout << "subject=" << buf << std::endl;
+        #endif
 
             // check the certificate host name
             if (depth == 0)
@@ -2479,7 +2493,9 @@ namespace join
                 // confirm a match between the hostname and the hostnames listed in the certificate.
                 if (!checkHostName (cert))
                 {
+                #ifdef DEBUG
                     std::cout << "no match for hostname in the certificate" << std::endl;
+                #endif
                     return 0;
                 }
             }
