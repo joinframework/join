@@ -386,19 +386,13 @@ int Resolver::lookup (DnsPacket& packet, int timeout)
 {
     Udp::Socket socket;
 
-    if (socket.open (packet.src.family ()) == -1)
+    if (socket.bind (packet.src) == -1)
     {
         notify (_onFailure, packet);
         return -1;
     }
 
     if (socket.bindToDevice (_interface) == -1)
-    {
-        notify (_onFailure, packet);
-        return -1;
-    }
-
-    if (socket.bind (packet.src) == -1)
     {
         notify (_onFailure, packet);
         return -1;
