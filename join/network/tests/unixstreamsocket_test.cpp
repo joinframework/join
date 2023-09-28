@@ -140,6 +140,20 @@ TEST_F (UnixStreamSocket, bind)
 }
 
 /**
+ * @brief Test bindToDevice method.
+ */
+TEST_F (UnixStreamSocket, bindToDevice)
+{
+    UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
+
+    ASSERT_EQ (unixSocket.bindToDevice (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
+
+    unixSocket.close ();
+}
+
+/**
  * @brief Test connect method.
  */
 TEST_F (UnixStreamSocket, connect)

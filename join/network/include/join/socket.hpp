@@ -791,16 +791,15 @@ namespace join
         }
 
         /**
-         * @brief assigns the specified interface to the socket.
-         * @param interface Interface name.
+         * @brief assigns the specified device to the socket.
+         * @param device device name.
          * @return 0 on success, -1 on failure.
          */
-        virtual int bindToDevice (const std::string& interface) noexcept
+        virtual int bindToDevice (const std::string& device) noexcept
         {
-            if (this->_state == State::Connected)
+            if (this->_protocol.family () == AF_UNIX)
             {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
+                return this->bind (device);
             }
 
             if (this->_state == State::Closed)
@@ -809,17 +808,21 @@ namespace join
                 return -1;
             }
 
+            if (this->_state == State::Connected)
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
             if ((this->_protocol.family () == AF_INET6) || (this->_protocol.family () == AF_INET))
             {
-                // allow reuse of local addresses.
                 if (setOption (Option::ReuseAddr, 1) == -1)
                 {
                     return -1;
                 }
             }
 
-            // assigns the specified interface to the socket.
-            int result = setsockopt (this->_handle, SOL_SOCKET, SO_BINDTODEVICE, interface.c_str (), interface.size ());
+            int result = setsockopt (this->_handle, SOL_SOCKET, SO_BINDTODEVICE, device.c_str (), device.size ());
             if (result == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));

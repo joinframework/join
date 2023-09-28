@@ -122,6 +122,28 @@ TEST_F (IcmpSocket, bind)
 }
 
 /**
+ * @brief Test bindToDevice method.
+ */
+TEST_F (IcmpSocket, bindToDevice)
+{
+    Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
+
+    ASSERT_EQ (icmpSocket.bindToDevice ("lo"), -1);
+
+    ASSERT_EQ (icmpSocket.connect (_host), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.bindToDevice ("lo"), -1);
+    ASSERT_EQ (icmpSocket.disconnect (), 0) << join::lastError.message ();
+
+    ASSERT_EQ (icmpSocket.bindToDevice ("lo"), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.connect (_host), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.disconnect (), 0) << join::lastError.message ();
+
+    ASSERT_EQ (icmpSocket.bindToDevice ("foo"), -1);
+
+    icmpSocket.close ();
+}
+
+/**
  * @brief Test connect method.
  */
 TEST_F (IcmpSocket, connect)

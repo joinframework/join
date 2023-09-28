@@ -142,6 +142,28 @@ TEST_F (UdpSocket, bind)
 }
 
 /**
+ * @brief Test bindToDevice method.
+ */
+TEST_F (UdpSocket, bindToDevice)
+{
+    Udp::Socket udpSocket (Udp::Socket::Blocking);
+
+    ASSERT_EQ (udpSocket.bindToDevice ("lo"), -1);
+
+    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.bindToDevice ("lo"), -1);
+    ASSERT_EQ (udpSocket.disconnect (), 0) << join::lastError.message ();
+
+    ASSERT_EQ (udpSocket.bindToDevice ("lo"), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect (_host), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.disconnect (), 0) << join::lastError.message ();
+
+    ASSERT_EQ (udpSocket.bindToDevice ("foo"), -1);
+
+    udpSocket.close ();
+}
+
+/**
  * @brief Test connect method.
  */
 TEST_F (UdpSocket, connect)
