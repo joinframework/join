@@ -91,6 +91,18 @@ TEST (Resolver, resolveAllHost)
 
     addressList = Resolver ().resolveAllHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_EQ (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("www.joinframework.net");
+    EXPECT_GT (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("www.netflix.com");
+    EXPECT_GT (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("www.google.com");
+    EXPECT_GT (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("www.amazon.com");
+    EXPECT_GT (addressList.size (), 0);
 }
 
 /**
@@ -144,6 +156,18 @@ TEST (Resolver, resolveHost)
 
     address = Resolver ().resolveHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_TRUE (address.isWildcard ());
+
+    address = Resolver ().resolveHost ("www.joinframework.net");
+    EXPECT_FALSE (address.isWildcard ());
+
+    address = Resolver ().resolveHost ("www.netflix.com");
+    EXPECT_FALSE (address.isWildcard ());
+
+    address = Resolver ().resolveHost ("www.google.com");
+    EXPECT_FALSE (address.isWildcard ());
+
+    address = Resolver ().resolveHost ("www.amazon.com");
+    EXPECT_FALSE (address.isWildcard ());
 }
 
 /**

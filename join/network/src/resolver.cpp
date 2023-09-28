@@ -881,20 +881,23 @@ std::error_code Resolver::parseError (int error)
 // =========================================================================
 void Resolver::defaultOnSuccess (const DnsPacket& packet)
 {
+    std::cout << std::endl;
     std::cout << "SERVER: " << packet.dest << "#" << packet.port << std::endl;
 
+    std::cout << std::endl;
+    std::cout << ";; QUESTION SECTION: " << std::endl;
     for (auto const& question : packet.questions)
     {
-        std::cout << "QUESTION SECTION: " << std::endl;
         std::cout << question.host;
         std::cout << "  " << typeName (question.type);
         std::cout << "  " << className (question.dnsclass);
         std::cout << std::endl;
     }
 
+    std::cout << std::endl;
+    std::cout << ";; ANSWER SECTION: " << std::endl;
     for (auto const& answer : packet.answers)
     {
-        std::cout << "ANSWER SECTION: " << std::endl;
         std::cout << answer.host;
         std::cout << "  " << typeName (answer.type);
         std::cout << "  " << className (answer.dnsclass);
@@ -930,17 +933,20 @@ void Resolver::defaultOnSuccess (const DnsPacket& packet)
 // =========================================================================
 void Resolver::defaultOnFailure (const DnsPacket& packet)
 {
+    std::cout << std::endl;
     std::cout << "SERVER: " << packet.dest << "#" << packet.port << std::endl;
 
+    std::cout << std::endl;
+    std::cout << ";; QUESTION SECTION: " << std::endl;
     for (auto const& question : packet.questions)
     {
-        std::cout << "QUESTION SECTION: " << std::endl;
         std::cout << question.host;
         std::cout << "  " << typeName (question.type);
         std::cout << "  " << className (question.dnsclass);
         std::cout << std::endl;
     }
 
+    std::cout << std::endl;
     std::cout << lastError.message () << std::endl;
 }
 #endif
