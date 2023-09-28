@@ -179,6 +179,25 @@ namespace join
         /**
          * @brief resolve host name and return all IP address found.
          * @param host host name to resolve.
+         * @param family address family.
+         * @param server server address.
+         * @param port server port.
+         * @param timeout timeout in milliseconds (default: 5000).
+         * @return the resolved IP address list.
+         */
+        IpAddressList resolveAllHost (const std::string& host, int family, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+
+        /**
+         * @brief resolve host name and return all IP address found.
+         * @param host host name to resolve.
+         * @param family address family.
+         * @return the resolved IP address list.
+         */
+        static IpAddressList resolveAllHost (const std::string& host, int family);
+
+        /**
+         * @brief resolve host name and return all IP address found.
+         * @param host host name to resolve.
          * @param server server address.
          * @param port server port.
          * @param timeout timeout in milliseconds (default: 5000).
@@ -194,15 +213,23 @@ namespace join
         static IpAddressList resolveAllHost (const std::string& host);
 
         /**
-         * @brief resolve host name and return all IP address found.
+         * @brief resolve host name using address family.
          * @param host host name to resolve.
-         * @param type DNS record type.
+         * @param family address family.
          * @param server server address.
          * @param port server port.
          * @param timeout timeout in milliseconds (default: 5000).
-         * @return the resolved IP address list.
+         * @return the first resolved IP address found matching address family.
          */
-        IpAddressList resolveAllHost (const std::string& host, RecordType type, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        IpAddress resolveHost (const std::string& host, int family, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+
+        /**
+         * @brief resolve host name using address family.
+         * @param host host name to resolve.
+         * @param family address family.
+         * @return the first resolved IP address found matching address family.
+         */
+        static IpAddress resolveHost (const std::string& host, int family);
 
         /**
          * @brief resolve host name.
@@ -220,25 +247,6 @@ namespace join
          * @return the first resolved IP address found.
          */
         static IpAddress resolveHost (const std::string& host);
-
-        /**
-         * @brief resolve host name using address family.
-         * @param host host name to resolve.
-         * @param family Address family.
-         * @param server server address.
-         * @param port server port.
-         * @param timeout timeout in milliseconds (default: 5000).
-         * @return the first resolved IP address found matching address family.
-         */
-        IpAddress resolveHost (const std::string& host, int family, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
-
-        /**
-         * @brief resolve host name using address family.
-         * @param host host name to resolve.
-         * @param family Address family.
-         * @return the first resolved IP address found matching address family.
-         */
-        static IpAddress resolveHost (const std::string& host, int family);
 
         /**
          * @brief resolve all host address.

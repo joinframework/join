@@ -103,7 +103,7 @@ IpAddressList Resolver::nameServers ()
 //   CLASS     : Resolver
 //   METHOD    : resolveAllHost
 // =========================================================================
-IpAddressList Resolver::resolveAllHost (const std::string& host, RecordType type, const IpAddress& server, uint16_t port, int timeout)
+IpAddressList Resolver::resolveAllHost (const std::string& host, int family, const IpAddress& server, uint16_t port, int timeout)
 {
     IpAddressList addresses;
 
@@ -114,7 +114,7 @@ IpAddressList Resolver::resolveAllHost (const std::string& host, RecordType type
 
     QuestionRecord question;
     question.host = host;
-    question.type = type;
+    question.type = (family == AF_INET6) ? RecordType::AAAA : RecordType::A;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -139,13 +139,31 @@ IpAddressList Resolver::resolveAllHost (const std::string& host, RecordType type
 //   CLASS     : Resolver
 //   METHOD    : resolveAllHost
 // =========================================================================
+IpAddressList Resolver::resolveAllHost (const std::string& host, int family)
+{
+    for (auto const& server : nameServers ())
+    {
+        IpAddressList addresses = Resolver ().resolveAllHost (host, family, server);
+        if (!addresses.empty ())
+        {
+            return addresses;
+        }
+    }
+
+    return {};
+}
+
+// =========================================================================
+//   CLASS     : Resolver
+//   METHOD    : resolveAllHost
+// =========================================================================
 IpAddressList Resolver::resolveAllHost (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
 {
     IpAddressList addresses;
 
-    for (auto const& type : { RecordType::AAAA, RecordType::A })
+    for (auto const& family : { AF_INET6, AF_INET })
     {
-        IpAddressList tmp = resolveAllHost (host, type, server, port, timeout);
+        IpAddressList tmp = resolveAllHost (host, family, server, port, timeout);
         addresses.insert (addresses.end (), tmp.begin (), tmp.end ());
     }
 
@@ -174,6 +192,34 @@ IpAddressList Resolver::resolveAllHost (const std::string& host)
 //   CLASS     : Resolver
 //   METHOD    : resolveHost
 // =========================================================================
+IpAddress Resolver::resolveHost (const std::string& host, int family, const IpAddress& server, uint16_t port, int timeout)
+{
+    for (auto const& address : resolveAllHost (host, family, server, port, timeout))
+    {
+        return address;
+    }
+
+    return IpAddress (family);
+}
+
+// =========================================================================
+//   CLASS     : Resolver
+//   METHOD    : resolveHost
+// =========================================================================
+IpAddress Resolver::resolveHost (const std::string& host, int family)
+{
+    for (auto const& address : Resolver ().resolveAllHost (host, family))
+    {
+        return address;
+    }
+
+    return IpAddress (family);
+}
+
+// =========================================================================
+//   CLASS     : Resolver
+//   METHOD    : resolveHost
+// =========================================================================
 IpAddress Resolver::resolveHost (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
 {
     for (auto const& address : resolveAllHost (host, server, port, timeout))
@@ -196,40 +242,6 @@ IpAddress Resolver::resolveHost (const std::string& host)
     }
 
     return {};
-}
-
-// =========================================================================
-//   CLASS     : Resolver
-//   METHOD    : resolveHost
-// =========================================================================
-IpAddress Resolver::resolveHost (const std::string& host, int family, const IpAddress& server, uint16_t port, int timeout)
-{
-    for (auto const& address : resolveAllHost (host, server, port, timeout))
-    {
-        if (address.family () == family)
-        {
-            return address;
-        }
-    }
-
-    return IpAddress (family);
-}
-
-// =========================================================================
-//   CLASS     : Resolver
-//   METHOD    : resolveHost
-// =========================================================================
-IpAddress Resolver::resolveHost (const std::string& host, int family)
-{
-    for (auto const& address : resolveAllHost (host))
-    {
-        if (address.family () == family)
-        {
-            return address;
-        }
-    }
-
-    return IpAddress (family);
 }
 
 // =========================================================================

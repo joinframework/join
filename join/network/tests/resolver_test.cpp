@@ -43,50 +43,65 @@ TEST (Resolver, nameServers)
 }
 
 /**
- * @brief test the resolveHost method.
- */
-TEST (Resolver, resolveHost)
-{
-    IpAddress address = Resolver::resolveHost ("");
-    EXPECT_TRUE (address.isWildcard ());
-
-    address = Resolver::resolveHost ("localhost");
-    EXPECT_TRUE (address.isLoopBack ());
-
-    address = Resolver::resolveHost ("ip6-localhost", AF_INET6);
-    EXPECT_TRUE (address.isIpv6Address ());
-    EXPECT_TRUE (address.isLoopBack ());
-
-    address = Resolver::resolveHost ("localhost", AF_INET);
-    EXPECT_TRUE (address.isIpv4Address ());
-    EXPECT_TRUE (address.isLoopBack ());
-}
-
-/**
  * @brief test the resolveAllHost method.
  */
 TEST (Resolver, resolveAllHost)
 {
-    IpAddressList addressList = Resolver::resolveAllHost ("");
+    IpAddressList addressList = Resolver ().resolveAllHost ("", AF_INET, "127.0.0.53");
     EXPECT_EQ (addressList.size (), 0);
-    
+
+    addressList = Resolver::resolveAllHost ("", AF_INET6);
+    EXPECT_EQ (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("", "127.0.0.53");
+    EXPECT_EQ (addressList.size (), 0);
+
+    addressList = Resolver::resolveAllHost ("");
+    EXPECT_EQ (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("localhost", AF_INET, "127.0.0.53");
+    EXPECT_GT (addressList.size (), 0);
+
+    addressList = Resolver::resolveAllHost ("localhost", AF_INET6);
+    EXPECT_GT (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("localhost", "127.0.0.53");
+    EXPECT_GT (addressList.size (), 0);
+
     addressList = Resolver::resolveAllHost ("localhost");
     EXPECT_GT (addressList.size (), 0);
 }
 
 /**
- * @brief test the resolveAddress method.
+ * @brief test the resolveHost method.
  */
-TEST (Resolver, resolveAddress)
+TEST (Resolver, resolveHost)
 {
-    std::string alias = Resolver::resolveAddress ("192.168.24.32");
-    EXPECT_TRUE (alias.empty ());
+    IpAddress address = Resolver ().resolveHost ("", AF_INET, "127.0.0.53");
+    EXPECT_TRUE (address.isWildcard ());
 
-    alias = Resolver::resolveAddress ("127.0.0.2");
-    EXPECT_FALSE (alias.empty ());
+    address = Resolver::resolveHost ("", AF_INET6);
+    EXPECT_TRUE (address.isWildcard ());
 
-    alias = Resolver::resolveAddress ("::1");
-    EXPECT_FALSE (alias.empty ());
+    address = Resolver ().resolveHost ("", "127.0.0.53");
+    EXPECT_TRUE (address.isWildcard ());
+
+    address = Resolver::resolveHost ("");
+    EXPECT_TRUE (address.isWildcard ());
+
+    address = Resolver ().resolveHost ("localhost", AF_INET, "127.0.0.53");
+    EXPECT_TRUE (address.isIpv4Address ());
+    EXPECT_TRUE (address.isLoopBack ());
+
+    address = Resolver::resolveHost ("localhost", AF_INET6);
+    EXPECT_TRUE (address.isIpv6Address ());
+    EXPECT_TRUE (address.isLoopBack ());
+
+    address = Resolver ().resolveHost ("localhost", "127.0.0.53");
+    EXPECT_TRUE (address.isLoopBack ());
+
+    address = Resolver::resolveHost ("localhost");
+    EXPECT_TRUE (address.isLoopBack ());
 }
 
 /**
@@ -94,14 +109,47 @@ TEST (Resolver, resolveAddress)
  */
 TEST (Resolver, resolveAllAddress)
 {
-    AliasList aliasList = Resolver::resolveAllAddress ("192.168.24.32");
+    AliasList aliasList = Resolver ().resolveAllAddress ("192.168.24.32", "127.0.0.53");
     EXPECT_EQ (aliasList.size (), 0);
+
+    aliasList = Resolver::resolveAllAddress ("192.168.24.32");
+    EXPECT_EQ (aliasList.size (), 0);
+
+    aliasList = Resolver ().resolveAllAddress ("127.0.0.2", "127.0.0.53");
+    EXPECT_GT (aliasList.size (), 0);
 
     aliasList = Resolver::resolveAllAddress ("127.0.0.2");
     EXPECT_GT (aliasList.size (), 0);
 
+    aliasList = Resolver ().resolveAllAddress ("::1", "127.0.0.53");
+    EXPECT_GT (aliasList.size (), 0);
+
     aliasList = Resolver::resolveAllAddress ("::1");
     EXPECT_GT (aliasList.size (), 0);
+}
+
+/**
+ * @brief test the resolveAddress method.
+ */
+TEST (Resolver, resolveAddress)
+{
+    std::string alias = Resolver ().resolveAddress ("192.168.24.32", "127.0.0.53");
+    EXPECT_TRUE (alias.empty ());
+
+    alias = Resolver::resolveAddress ("192.168.24.32");
+    EXPECT_TRUE (alias.empty ());
+
+    alias = Resolver ().resolveAddress ("127.0.0.2", "127.0.0.53");
+    EXPECT_FALSE (alias.empty ());
+
+    alias = Resolver::resolveAddress ("127.0.0.2");
+    EXPECT_FALSE (alias.empty ());
+
+    alias = Resolver ().resolveAddress ("::1", "127.0.0.53");
+    EXPECT_FALSE (alias.empty ());
+
+    alias = Resolver::resolveAddress ("::1");
+    EXPECT_FALSE (alias.empty ());
 }
 
 /**
