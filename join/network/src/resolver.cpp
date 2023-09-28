@@ -874,6 +874,7 @@ std::error_code Resolver::parseError (int error)
     return code;
 }
 
+#ifdef DEBUG
 // =========================================================================
 //   CLASS     : Resolver
 //   METHOD    : defaultOnSuccess
@@ -942,6 +943,7 @@ void Resolver::defaultOnFailure (const DnsPacket& packet)
 
     std::cout << lastError.message () << std::endl;
 }
+#endif
 
 // =========================================================================
 //   CLASS     : Resolver

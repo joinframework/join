@@ -73,6 +73,24 @@ TEST (Resolver, resolveAllHost)
 
     addressList = Resolver::resolveAllHost ("localhost");
     EXPECT_GT (addressList.size (), 0);
+
+    addressList = Resolver ("foo").resolveAllHost ("localhost", AF_INET, servers.front ());
+    EXPECT_EQ (addressList.size (), 0);
+
+    addressList = Resolver ("foo").resolveAllHost ("localhost", servers.front ());
+    EXPECT_EQ (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("localhost", AF_INET, "255.255.255.255");
+    EXPECT_EQ (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("localhost", "255.255.255.255");
+    EXPECT_EQ (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("localhost", AF_INET, "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_EQ (addressList.size (), 0);
+
+    addressList = Resolver ().resolveAllHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_EQ (addressList.size (), 0);
 }
 
 /**
@@ -108,6 +126,24 @@ TEST (Resolver, resolveHost)
 
     address = Resolver::resolveHost ("localhost");
     EXPECT_TRUE (address.isLoopBack ());
+
+    address = Resolver ("foo").resolveHost ("localhost", AF_INET, servers.front ());
+    EXPECT_TRUE (address.isWildcard ());
+
+    address = Resolver ("foo").resolveHost ("localhost", servers.front ());
+    EXPECT_TRUE (address.isWildcard ());
+
+    address = Resolver ().resolveHost ("localhost", AF_INET, "255.255.255.255");
+    EXPECT_TRUE (address.isWildcard ());
+
+    address = Resolver ().resolveHost ("localhost", "255.255.255.255");
+    EXPECT_TRUE (address.isWildcard ());
+
+    address = Resolver ().resolveHost ("localhost", AF_INET, "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_TRUE (address.isWildcard ());
+
+    address = Resolver ().resolveHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_TRUE (address.isWildcard ());
 }
 
 /**
@@ -135,6 +171,24 @@ TEST (Resolver, resolveAllAddress)
 
     aliasList = Resolver::resolveAllAddress ("::1");
     EXPECT_GT (aliasList.size (), 0);
+
+    aliasList = Resolver ("foo").resolveAllAddress ("127.0.0.2", servers.front ());
+    EXPECT_EQ (aliasList.size (), 0);
+
+    aliasList = Resolver ("foo").resolveAllAddress ("::1", servers.front ());
+    EXPECT_EQ (aliasList.size (), 0);
+
+    aliasList = Resolver ().resolveAllAddress ("127.0.0.2", "255.255.255.255");
+    EXPECT_EQ (aliasList.size (), 0);
+
+    aliasList = Resolver ().resolveAllAddress ("::1", "255.255.255.255");
+    EXPECT_EQ (aliasList.size (), 0);
+
+    aliasList = Resolver ().resolveAllAddress ("127.0.0.2", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_EQ (aliasList.size (), 0);
+
+    aliasList = Resolver ().resolveAllAddress ("::1", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_EQ (aliasList.size (), 0);
 }
 
 /**
@@ -162,6 +216,24 @@ TEST (Resolver, resolveAddress)
 
     alias = Resolver::resolveAddress ("::1");
     EXPECT_FALSE (alias.empty ());
+
+    alias = Resolver ("foo").resolveAddress ("127.0.0.2", servers.front ());
+    EXPECT_TRUE (alias.empty ());
+
+    alias = Resolver ("foo").resolveAddress ("::1", servers.front ());
+    EXPECT_TRUE (alias.empty ());
+
+    alias = Resolver ().resolveAddress ("127.0.0.2", "255.255.255.255");
+    EXPECT_TRUE (alias.empty ());
+
+    alias = Resolver ().resolveAddress ("::1", "255.255.255.255");
+    EXPECT_TRUE (alias.empty ());
+
+    alias = Resolver ().resolveAddress ("127.0.0.2", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_TRUE (alias.empty ());
+
+    alias = Resolver ().resolveAddress ("::1", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_TRUE (alias.empty ());
 }
 
 /**

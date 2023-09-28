@@ -413,6 +413,7 @@ namespace join
          */
         static std::error_code parseError (int error);
 
+    #ifdef DEBUG
         /*
         * @brief default callback called when a lookup sequence succeed.
         * @param packet DNS packet.
@@ -424,6 +425,7 @@ namespace join
         * @param packet DNS packet.
         */
         static void defaultOnFailure (const DnsPacket& packet);
+    #endif
 
         /**
          * @brief safe way to notify DNS events.
