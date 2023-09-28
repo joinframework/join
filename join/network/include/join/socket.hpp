@@ -795,7 +795,7 @@ namespace join
          * @param interface Interface name.
          * @return 0 on success, -1 on failure.
          */
-        /*virtual int bind (const std::string& interface) noexcept
+        virtual int bindToDevice (const std::string& interface) noexcept
         {
             if (this->_state == State::Connected)
             {
@@ -803,9 +803,9 @@ namespace join
                 return -1;
             }
 
-            if ((this->_state == State::Closed) && (this->open () == -1))
+            if (this->_state == State::Closed)
             {
-                lastError = make_error_code (Errc::OperationFailed);
+                lastError = make_error_code (Errc::ConnectionClosed);
                 return -1;
             }
 
@@ -827,7 +827,7 @@ namespace join
             }
 
             return 0;
-        }*/
+        }
 
         /**
          * @brief make a connection to the given endpoint.

@@ -30,6 +30,7 @@
 
 using join::IpAddress;
 using join::IpAddressList;
+using join::AliasList;
 using join::Resolver;
 
 /**
@@ -78,14 +79,29 @@ TEST (Resolver, resolveAllHost)
  */
 TEST (Resolver, resolveAddress)
 {
-    std::string name = Resolver::resolveAddress ("192.168.24.32");
-    EXPECT_EQ (name, "192.168.24.32");
+    std::string alias = Resolver::resolveAddress ("192.168.24.32");
+    EXPECT_TRUE (alias.empty ());
 
-    name = Resolver::resolveAddress ("127.0.0.1");
-    EXPECT_NE (name.find ("localhost"), std::string::npos);
+    alias = Resolver::resolveAddress ("127.0.0.2");
+    EXPECT_FALSE (alias.empty ());
 
-    name = Resolver::resolveAddress ("::1");
-    EXPECT_NE (name.find ("localhost"), std::string::npos);
+    alias = Resolver::resolveAddress ("::1");
+    EXPECT_FALSE (alias.empty ());
+}
+
+/**
+ * @brief test the resolveAllAddress method.
+ */
+TEST (Resolver, resolveAllAddress)
+{
+    AliasList aliasList = Resolver::resolveAllAddress ("192.168.24.32");
+    EXPECT_EQ (aliasList.size (), 0);
+
+    aliasList = Resolver::resolveAllAddress ("127.0.0.2");
+    EXPECT_GT (aliasList.size (), 0);
+
+    aliasList = Resolver::resolveAllAddress ("::1");
+    EXPECT_GT (aliasList.size (), 0);
 }
 
 /**
@@ -97,6 +113,30 @@ TEST (Resolver, resolveService)
     EXPECT_EQ (Resolver::resolveService ("smtp"), 25);
     EXPECT_EQ (Resolver::resolveService ("http"), 80);
     EXPECT_EQ (Resolver::resolveService ("https"), 443);
+}
+
+/**
+ * @brief test the typeName method.
+ */
+TEST (Resolver, typeName)
+{
+    EXPECT_EQ (Resolver::typeName (0), "UNKNOWN");
+    EXPECT_EQ (Resolver::typeName (Resolver::A), "A");
+    EXPECT_EQ (Resolver::typeName (Resolver::NS), "NS");
+    EXPECT_EQ (Resolver::typeName (Resolver::CNAME), "CNAME");
+    EXPECT_EQ (Resolver::typeName (Resolver::SOA), "SOA");
+    EXPECT_EQ (Resolver::typeName (Resolver::PTR), "PTR");
+    EXPECT_EQ (Resolver::typeName (Resolver::MX), "MX");
+    EXPECT_EQ (Resolver::typeName (Resolver::AAAA), "AAAA");
+}
+
+/**
+ * @brief test the className method.
+ */
+TEST (Resolver, className)
+{
+    EXPECT_EQ (Resolver::className (0), "UNKNOWN");
+    EXPECT_EQ (Resolver::className (Resolver::IN), "IN");
 }
 
 /**
