@@ -94,13 +94,13 @@ TEST (Resolver, resolveAllHost)
     addresses = Resolver ().resolveAllHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_EQ (addresses.size (), 0);
 
-    addresses = Resolver ().resolveAllHost ("netflix.com");
+    addresses = Resolver::resolveAllHost ("www.netflix.com");
     EXPECT_GT (addresses.size (), 0);
 
-    addresses = Resolver ().resolveAllHost ("google.com");
+    addresses = Resolver ().resolveAllHost ("www.google.com", servers.front ());
     EXPECT_GT (addresses.size (), 0);
 
-    addresses = Resolver ().resolveAllHost ("amazon.com");
+    addresses = Resolver::resolveAllHost ("www.amazon.com");
     EXPECT_GT (addresses.size (), 0);
 }
 
@@ -156,13 +156,13 @@ TEST (Resolver, resolveHost)
     address = Resolver ().resolveHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_TRUE (address.isWildcard ());
 
-    address = Resolver ().resolveHost ("netflix.com");
+    address = Resolver::resolveHost ("www.netflix.com");
     EXPECT_FALSE (address.isWildcard ());
 
-    address = Resolver ().resolveHost ("google.com");
+    address = Resolver ().resolveHost ("www.google.com", servers.front ());
     EXPECT_FALSE (address.isWildcard ());
 
-    address = Resolver ().resolveHost ("amazon.com");
+    address = Resolver::resolveHost ("www.amazon.com");
     EXPECT_FALSE (address.isWildcard ());
 }
 
@@ -285,13 +285,13 @@ TEST (Resolver, resolveAllAuthority)
     names = Resolver ().resolveAllAuthority ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_EQ (names.size (), 0);
 
-    names = Resolver ().resolveAllAuthority ("netflix.com");
+    names = Resolver::resolveAllAuthority ("netflix.com");
     EXPECT_GT (names.size (), 0);
 
-    names = Resolver ().resolveAllAuthority ("google.com");
+    names = Resolver ().resolveAllAuthority ("google.com", servers.front ());
     EXPECT_GT (names.size (), 0);
 
-    names = Resolver ().resolveAllAuthority ("amazon.com");
+    names = Resolver::resolveAllAuthority ("amazon.com");
     EXPECT_GT (names.size (), 0);
 }
 
@@ -324,13 +324,13 @@ TEST (Resolver, resolveAuthority)
     name = Resolver ().resolveAuthority ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_TRUE (name.empty ());
 
-    name = Resolver ().resolveAuthority ("netflix.com");
+    name = Resolver::resolveAuthority ("netflix.com");
     EXPECT_FALSE (name.empty ());
 
-    name = Resolver ().resolveAuthority ("google.com");
+    name = Resolver ().resolveAuthority ("google.com", servers.front ());
     EXPECT_FALSE (name.empty ());
 
-    name = Resolver ().resolveAuthority ("amazon.com");
+    name = Resolver::resolveAuthority ("amazon.com");
     EXPECT_FALSE (name.empty ());
 }
 
@@ -363,13 +363,13 @@ TEST (Resolver, resolveAllMailExchanger)
     exchangers = Resolver ().resolveAllMailExchanger ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_EQ (exchangers.size (), 0);
 
-    exchangers = Resolver ().resolveAllMailExchanger ("netflix.com");
+    exchangers = Resolver::resolveAllMailExchanger ("netflix.com");
     EXPECT_GT (exchangers.size (), 0);
 
-    exchangers = Resolver ().resolveAllMailExchanger ("google.com");
+    exchangers = Resolver ().resolveAllMailExchanger ("google.com", servers.front ());
     EXPECT_GT (exchangers.size (), 0);
 
-    exchangers = Resolver ().resolveAllMailExchanger ("amazon.com");
+    exchangers = Resolver::resolveAllMailExchanger ("amazon.com");
     EXPECT_GT (exchangers.size (), 0);
 }
 
@@ -402,13 +402,13 @@ TEST (Resolver, resolveMailExchanger)
     exchanger = Resolver ().resolveMailExchanger ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_TRUE (exchanger.empty ());
 
-    exchanger = Resolver ().resolveMailExchanger ("netflix.com");
+    exchanger = Resolver::resolveMailExchanger ("netflix.com");
     EXPECT_FALSE (exchanger.empty ());
 
-    exchanger = Resolver ().resolveMailExchanger ("google.com");
+    exchanger = Resolver ().resolveMailExchanger ("google.com", servers.front ());
     EXPECT_FALSE (exchanger.empty ());
 
-    exchanger = Resolver ().resolveMailExchanger ("amazon.com");
+    exchanger = Resolver::resolveMailExchanger ("amazon.com");
     EXPECT_FALSE (exchanger.empty ());
 }
 
