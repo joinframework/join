@@ -426,16 +426,14 @@ std::string Resolver::resolveAuthority (const std::string& host, const IpAddress
 
     packet.questions.push_back (question);
 
-    if (lookup (packet, timeout) == -1)
+    if (lookup (packet, timeout) == 0)
     {
-        return {};
-    }
-
-    for (auto const& answer : packet.answers)
-    {
-        if (!answer.name.empty ())
+        for (auto const& answer : packet.answers)
         {
-            return answer.name;
+            if (!answer.name.empty ())
+            {
+                return answer.name;
+            }
         }
     }
 
@@ -972,23 +970,19 @@ std::error_code Resolver::parseError (int error)
     {
         case 0:
             // The name server was unable to find a matching entry (not a regular DNS error).
+        case 3:
+            // The domain name referenced in the query does not exist.
             code = make_error_code (Errc::NotFound);
             break;
         case 1:
             // The name server was unable to interpret the query.
+        case 4:
+            // The name server does not support the requested kind of query.
             code = make_error_code (Errc::InvalidParam);
             break;
         case 2:
             // The name server was unable to process the query due to an internal problem.
             code = make_error_code (Errc::OperationFailed);
-            break;
-        case 3:
-            // The domain name referenced in the query does not exist.
-            code = make_error_code (Errc::NotFound);
-            break;
-        case 4:
-            // The name server does not support the requested kind of query.
-            code = make_error_code (Errc::InvalidParam);
             break;
         case 5:
             // The name server refuses to perform the specified operation for policy reasons.
