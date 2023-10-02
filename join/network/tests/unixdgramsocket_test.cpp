@@ -128,6 +128,20 @@ TEST_F (UnixDgramSocket, bind)
 }
 
 /**
+ * @brief Test bindToDevice method.
+ */
+TEST_F (UnixDgramSocket, bindToDevice)
+{
+    UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
+
+    ASSERT_EQ (unixSocket.bindToDevice (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
+
+    unixSocket.close ();
+}
+
+/**
  * @brief Test connect method.
  */
 TEST_F (UnixDgramSocket, connect)

@@ -791,35 +791,38 @@ namespace join
         }
 
         /**
-         * @brief assigns the specified interface to the socket.
-         * @param interface Interface name.
+         * @brief assigns the specified device to the socket.
+         * @param device device name.
          * @return 0 on success, -1 on failure.
          */
-        /*virtual int bind (const std::string& interface) noexcept
+        virtual int bindToDevice (const std::string& device) noexcept
         {
+            if (this->_protocol.family () == AF_UNIX)
+            {
+                return this->bind (device);
+            }
+
+            if (this->_state == State::Closed)
+            {
+                lastError = make_error_code (Errc::ConnectionClosed);
+                return -1;
+            }
+
             if (this->_state == State::Connected)
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            if ((this->_state == State::Closed) && (this->open () == -1))
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             if ((this->_protocol.family () == AF_INET6) || (this->_protocol.family () == AF_INET))
             {
-                // allow reuse of local addresses.
                 if (setOption (Option::ReuseAddr, 1) == -1)
                 {
                     return -1;
                 }
             }
 
-            // assigns the specified interface to the socket.
-            int result = setsockopt (this->_handle, SOL_SOCKET, SO_BINDTODEVICE, interface.c_str (), interface.size ());
+            int result = setsockopt (this->_handle, SOL_SOCKET, SO_BINDTODEVICE, device.c_str (), device.size ());
             if (result == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
@@ -827,7 +830,7 @@ namespace join
             }
 
             return 0;
-        }*/
+        }
 
         /**
          * @brief make a connection to the given endpoint.
@@ -2418,7 +2421,9 @@ namespace join
             int maxDepth = SSL_get_verify_depth (this->_tlsHandle.get ());
             int dpth = X509_STORE_CTX_get_error_depth (context);
 
+        #ifdef DEBUG
             std::cout << "verification started at depth="<< dpth << std::endl;
+        #endif
 
             // catch a too long certificate chain.
             if ((maxDepth >= 0) && (dpth > maxDepth))
@@ -2429,32 +2434,42 @@ namespace join
 
             if (!preverified)
             {
+            #ifdef DEBUG
                 std::cout << "verification failed at depth=" << dpth << " - " << X509_verify_cert_error_string (X509_STORE_CTX_get_error (context)) << std::endl;
+            #endif
                 return 0;
             }
 
             // check the certificate host name.
             if (!verifyCert (context))
             {
+            #ifdef DEBUG
                 std::cout << "rejected by CERT at depth=" << dpth << std::endl;
+            #endif
                 return 0;
             }
 
             // check the revocation list.
             /*if (!verifyCrl (context))
             {
+            #ifdef DEBUG
                 std::cout << "rejected by CRL at depth=" << dpth << std::endl;
+            #endif
                 return 0;
             }*/
 
             // check ocsp.
             /*if (!verifyOcsp (context))
             {
+            #ifdef DEBUG
                 std::cout << "rejected by OCSP at depth=" << dpth << std::endl;
+            #endif
                 return 0;
             }*/
 
+        #ifdef DEBUG
             std::cout << "certificate accepted at depth=" << dpth << std::endl;
+        #endif
 
             return 1;
         }
@@ -2471,7 +2486,9 @@ namespace join
 
             char buf[256];
             X509_NAME_oneline (X509_get_subject_name (cert), buf, sizeof (buf));
+        #ifdef DEBUG
             std::cout << "subject=" << buf << std::endl;
+        #endif
 
             // check the certificate host name
             if (depth == 0)
@@ -2479,7 +2496,9 @@ namespace join
                 // confirm a match between the hostname and the hostnames listed in the certificate.
                 if (!checkHostName (cert))
                 {
+                #ifdef DEBUG
                     std::cout << "no match for hostname in the certificate" << std::endl;
+                #endif
                     return 0;
                 }
             }

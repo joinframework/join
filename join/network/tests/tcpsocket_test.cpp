@@ -168,6 +168,29 @@ TEST_F (TcpSocket, bind)
 }
 
 /**
+ * @brief Test bindToDevice method.
+ */
+TEST_F (TcpSocket, bindToDevice)
+{
+    Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
+
+    ASSERT_EQ (tcpSocket.bindToDevice ("lo"), -1);
+
+    ASSERT_EQ (tcpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.bindToDevice ("lo"), -1);
+    ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
+
+    ASSERT_EQ (tcpSocket.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.bindToDevice ("lo"), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
+
+    ASSERT_EQ (tcpSocket.bindToDevice ("foo"), -1);
+
+    tcpSocket.close ();
+}
+
+/**
  * @brief Test connect method.
  */
 TEST_F (TcpSocket, connect)

@@ -348,6 +348,29 @@ TEST_F (TlsSocket, bind)
 }
 
 /**
+ * @brief Test bindToDevice method.
+ */
+TEST_F (TlsSocket, bindToDevice)
+{
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
+
+    ASSERT_EQ (tlsSocket.bindToDevice ("lo"), -1);
+
+    ASSERT_EQ (tlsSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.bindToDevice ("lo"), -1);
+    ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+
+    ASSERT_EQ (tlsSocket.open (Tls::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.bindToDevice ("lo"), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+
+    ASSERT_EQ (tlsSocket.bindToDevice ("foo"), -1);
+
+    tlsSocket.close ();
+}
+
+/**
  * @brief Test connect method.
  */
 TEST_F (TlsSocket, connect)
