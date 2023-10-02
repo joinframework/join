@@ -667,7 +667,7 @@ int Resolver::lookup (DnsPacket& packet, int timeout)
         }
 
         int error = std::bitset <4> (flags).to_ulong ();
-        if (error || ancount == 0)
+        if (error)
         {
             lastError = parseError (error);
             notify (_onFailure, packet);

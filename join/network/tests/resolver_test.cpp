@@ -291,6 +291,9 @@ TEST (Resolver, resolveAllNameServer)
     names = Resolver ().resolveAllNameServer ("google.com", servers.front ());
     EXPECT_GT (names.size (), 0);
 
+    names = Resolver ().resolveAllNameServer ("google.com", Resolver::resolveHost ("a.gtld-servers.net"));
+    EXPECT_EQ (names.size (), 0);
+
     names = Resolver::resolveAllNameServer ("amazon.com");
     EXPECT_GT (names.size (), 0);
 }
@@ -329,6 +332,9 @@ TEST (Resolver, resolveNameServer)
 
     name = Resolver ().resolveNameServer ("google.com", servers.front ());
     EXPECT_FALSE (name.empty ());
+
+    name = Resolver ().resolveNameServer ("google.com", Resolver::resolveHost ("a.gtld-servers.net"));
+    EXPECT_TRUE (name.empty ());
 
     name = Resolver::resolveNameServer ("amazon.com");
     EXPECT_FALSE (name.empty ());
