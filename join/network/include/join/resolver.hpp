@@ -37,8 +37,14 @@ namespace join
     /// list of alias.
     using AliasList = std::set <std::string>;
 
+    /// list of name servers.
+    using ServerList = std::set <std::string>;
+
+    /// list of mail exchangers.
+    using ExchangerList = std::set <std::string>;
+
     /**
-     *  @brief question record.
+     * @brief question record.
      */
     struct QuestionRecord
     {
@@ -48,21 +54,22 @@ namespace join
     };
 
     /**
-     *  @brief answer record.
+     * @brief answer record.
      */
     struct AnswerRecord : public QuestionRecord
     {
         uint32_t ttl = 0;                           /**< record TTL. */
         IpAddress addr;                             /**< address. */
+        std::string ns;                             /**< server name. */
         std::string cname;                          /**< canonical name. */
         uint16_t mxpref = 0;                        /**< mail exchange preference. */
         std::string mxname;                         /**< mail exchange name. */
     };
 
     /**
-     *  @brief name server record.
+     * @brief authority record.
      */
-    struct NameServerRecord : public QuestionRecord
+    struct AuthorityRecord : public QuestionRecord
     {
         uint32_t ttl = 0;                           /**< record TTL. */
         std::string ns;                             /**< server name. */
@@ -75,19 +82,20 @@ namespace join
     };
 
     /**
-     *  @brief additional record.
+     * @brief additional record.
      */
     struct AdditionalRecord : public QuestionRecord
     {
         uint32_t ttl = 0;                           /**< record TTL. */
         IpAddress addr;                             /**< address. */
+        std::string ns;                             /**< server name. */
         std::string cname;                          /**< canonical name. */
         uint16_t mxpref = 0;                        /**< mail exchange preference. */
         std::string mxname;                         /**< mail exchange name. */
     };
 
     /**
-     *  @brief DNS packet.
+     * @brief DNS packet.
      */
     struct DnsPacket
     {
@@ -96,7 +104,7 @@ namespace join
         uint16_t port = 0;                          /**< port.*/
         std::vector <QuestionRecord> questions;     /**< question records. */
         std::vector <AnswerRecord> answers;         /**< answer records. */
-        std::vector <NameServerRecord> servers;     /**< name server records. */
+        std::vector <AuthorityRecord> autorities;   /**< authority records. */
         std::vector <AdditionalRecord> additionals; /**< additional records. */
     };
 
@@ -283,6 +291,74 @@ namespace join
         static std::string resolveAddress (const IpAddress& address);
 
         /**
+         * @brief resolve all host name server.
+         * @param host host name to resolve.
+         * @param server server address.
+         * @param port server port.
+         * @param timeout timeout in milliseconds (default: 5000).
+         * @return the resolved name server list.
+         */
+        ServerList resolveAllAuthority (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+
+        /**
+         * @brief resolve all host name server.
+         * @param host host name to resolve.
+         * @return the resolved name server list.
+         */
+        static ServerList resolveAllAuthority (const std::string& host);
+
+        /**
+         * @brief resolve host name server.
+         * @param host host name to resolve.
+         * @param server server address.
+         * @param port server port.
+         * @param timeout timeout in milliseconds (default: 5000).
+         * @return the first resolved name server.
+         */
+        std::string resolveAuthority (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+
+        /**
+         * @brief resolve host name server.
+         * @param host host name to resolve.
+         * @return the first resolved name server.
+         */
+        static std::string resolveAuthority (const std::string& host);
+
+        /**
+         * @brief resolve all host mail exchanger.
+         * @param host host name to resolve.
+         * @param server server address.
+         * @param port server port.
+         * @param timeout timeout in milliseconds (default: 5000).
+         * @return the resolved mail exchanger list.
+         */
+        ExchangerList resolveAllMailExchanger (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+
+        /**
+         * @brief resolve all host mail exchanger.
+         * @param host host name to resolve.
+         * @return the resolved mail exchanger list.
+         */
+        static ExchangerList resolveAllMailExchanger (const std::string& host);
+
+        /**
+         * @brief resolve host mail exchanger.
+         * @param host host name to resolve.
+         * @param server server address.
+         * @param port server port.
+         * @param timeout timeout in milliseconds (default: 5000).
+         * @return the first resolved mail exchanger.
+         */
+        std::string resolveMailExchanger (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+
+        /**
+         * @brief resolve host mail exchanger.
+         * @param host host name to resolve.
+         * @return the first resolved mail exchanger.
+         */
+        static std::string resolveMailExchanger (const std::string& host);
+
+        /**
          * @brief resolve service name.
          * @param service service name to resolve (ex. "http", "ftp", "ssh" etc...).
          * @return the port resolved.
@@ -397,7 +473,7 @@ namespace join
          * @param data stream where the encoded mail is stored.
          * @return decoded  name server record.
          */
-        static NameServerRecord decodeNameServer (std::stringstream& data);
+        static AuthorityRecord decodeAuthority (std::stringstream& data);
 
         /**
          * @brief decode additional record.

@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2021 Mathieu Rabine
+ * Copyright (c) 2023 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,8 @@
 using join::IpAddress;
 using join::IpAddressList;
 using join::AliasList;
+using join::ServerList;
+using join::ExchangerList;
 using join::Resolver;
 
 /**
@@ -48,61 +50,58 @@ TEST (Resolver, nameServers)
 TEST (Resolver, resolveAllHost)
 {
     IpAddressList servers = Resolver::nameServers ();
-    EXPECT_GT (servers.size (), 0);
+    ASSERT_GT (servers.size (), 0);
 
-    IpAddressList addressList = Resolver ().resolveAllHost ("", AF_INET, servers.front ());
-    EXPECT_EQ (addressList.size (), 0);
+    IpAddressList addresses = Resolver ().resolveAllHost ("", AF_INET, servers.front ());
+    EXPECT_EQ (addresses.size (), 0);
 
-    addressList = Resolver::resolveAllHost ("", AF_INET6);
-    EXPECT_EQ (addressList.size (), 0);
+    addresses = Resolver::resolveAllHost ("", AF_INET6);
+    EXPECT_EQ (addresses.size (), 0);
 
-    addressList = Resolver ().resolveAllHost ("", servers.front ());
-    EXPECT_EQ (addressList.size (), 0);
+    addresses = Resolver ().resolveAllHost ("", servers.front ());
+    EXPECT_EQ (addresses.size (), 0);
 
-    addressList = Resolver::resolveAllHost ("");
-    EXPECT_EQ (addressList.size (), 0);
+    addresses = Resolver::resolveAllHost ("");
+    EXPECT_EQ (addresses.size (), 0);
 
-    addressList = Resolver ().resolveAllHost ("localhost", AF_INET, servers.front ());
-    EXPECT_GT (addressList.size (), 0);
+    addresses = Resolver ().resolveAllHost ("localhost", AF_INET, servers.front ());
+    EXPECT_GT (addresses.size (), 0);
 
-    addressList = Resolver::resolveAllHost ("localhost", AF_INET6);
-    EXPECT_GT (addressList.size (), 0);
+    addresses = Resolver::resolveAllHost ("localhost", AF_INET6);
+    EXPECT_GT (addresses.size (), 0);
 
-    addressList = Resolver ().resolveAllHost ("localhost", servers.front ());
-    EXPECT_GT (addressList.size (), 0);
+    addresses = Resolver ().resolveAllHost ("localhost", servers.front ());
+    EXPECT_GT (addresses.size (), 0);
 
-    addressList = Resolver::resolveAllHost ("localhost");
-    EXPECT_GT (addressList.size (), 0);
+    addresses = Resolver::resolveAllHost ("localhost");
+    EXPECT_GT (addresses.size (), 0);
 
-    addressList = Resolver ("foo").resolveAllHost ("localhost", AF_INET, servers.front ());
-    EXPECT_EQ (addressList.size (), 0);
+    addresses = Resolver ("foo").resolveAllHost ("localhost", AF_INET, servers.front ());
+    EXPECT_EQ (addresses.size (), 0);
 
-    addressList = Resolver ("foo").resolveAllHost ("localhost", servers.front ());
-    EXPECT_EQ (addressList.size (), 0);
+    addresses = Resolver ("foo").resolveAllHost ("localhost", servers.front ());
+    EXPECT_EQ (addresses.size (), 0);
 
-    addressList = Resolver ().resolveAllHost ("localhost", AF_INET, "255.255.255.255");
-    EXPECT_EQ (addressList.size (), 0);
+    addresses = Resolver ().resolveAllHost ("localhost", AF_INET, "255.255.255.255");
+    EXPECT_EQ (addresses.size (), 0);
 
-    addressList = Resolver ().resolveAllHost ("localhost", "255.255.255.255");
-    EXPECT_EQ (addressList.size (), 0);
+    addresses = Resolver ().resolveAllHost ("localhost", "255.255.255.255");
+    EXPECT_EQ (addresses.size (), 0);
 
-    addressList = Resolver ().resolveAllHost ("localhost", AF_INET, "192.168.15.168", Resolver::dnsPort, 50);
-    EXPECT_EQ (addressList.size (), 0);
+    addresses = Resolver ().resolveAllHost ("localhost", AF_INET, "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_EQ (addresses.size (), 0);
 
-    addressList = Resolver ().resolveAllHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
-    EXPECT_EQ (addressList.size (), 0);
+    addresses = Resolver ().resolveAllHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_EQ (addresses.size (), 0);
 
-    addressList = Resolver ().resolveAllHost ("www.joinframework.net");
-    EXPECT_GT (addressList.size (), 0);
+    addresses = Resolver ().resolveAllHost ("netflix.com");
+    EXPECT_GT (addresses.size (), 0);
 
-    addressList = Resolver ().resolveAllHost ("www.netflix.com");
-    EXPECT_GT (addressList.size (), 0);
+    addresses = Resolver ().resolveAllHost ("google.com");
+    EXPECT_GT (addresses.size (), 0);
 
-    addressList = Resolver ().resolveAllHost ("www.google.com");
-    EXPECT_GT (addressList.size (), 0);
-
-    addressList = Resolver ().resolveAllHost ("www.amazon.com");
-    EXPECT_GT (addressList.size (), 0);
+    addresses = Resolver ().resolveAllHost ("amazon.com");
+    EXPECT_GT (addresses.size (), 0);
 }
 
 /**
@@ -111,7 +110,7 @@ TEST (Resolver, resolveAllHost)
 TEST (Resolver, resolveHost)
 {
     IpAddressList servers = Resolver::nameServers ();
-    EXPECT_GT (servers.size (), 0);
+    ASSERT_GT (servers.size (), 0);
 
     IpAddress address = Resolver ().resolveHost ("", AF_INET, servers.front ());
     EXPECT_TRUE (address.isWildcard ());
@@ -157,16 +156,13 @@ TEST (Resolver, resolveHost)
     address = Resolver ().resolveHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_TRUE (address.isWildcard ());
 
-    address = Resolver ().resolveHost ("www.joinframework.net");
+    address = Resolver ().resolveHost ("netflix.com");
     EXPECT_FALSE (address.isWildcard ());
 
-    address = Resolver ().resolveHost ("www.netflix.com");
+    address = Resolver ().resolveHost ("google.com");
     EXPECT_FALSE (address.isWildcard ());
 
-    address = Resolver ().resolveHost ("www.google.com");
-    EXPECT_FALSE (address.isWildcard ());
-
-    address = Resolver ().resolveHost ("www.amazon.com");
+    address = Resolver ().resolveHost ("amazon.com");
     EXPECT_FALSE (address.isWildcard ());
 }
 
@@ -176,43 +172,43 @@ TEST (Resolver, resolveHost)
 TEST (Resolver, resolveAllAddress)
 {
     IpAddressList servers = Resolver::nameServers ();
-    EXPECT_GT (servers.size (), 0);
+    ASSERT_GT (servers.size (), 0);
 
-    AliasList aliasList = Resolver ().resolveAllAddress ("192.168.24.32", servers.front ());
-    EXPECT_EQ (aliasList.size (), 0);
+    AliasList aliases = Resolver ().resolveAllAddress ("192.168.24.32", servers.front ());
+    EXPECT_EQ (aliases.size (), 0);
 
-    aliasList = Resolver::resolveAllAddress ("192.168.24.32");
-    EXPECT_EQ (aliasList.size (), 0);
+    aliases = Resolver::resolveAllAddress ("192.168.24.32");
+    EXPECT_EQ (aliases.size (), 0);
 
-    aliasList = Resolver ().resolveAllAddress ("127.0.0.2", servers.front ());
-    EXPECT_GT (aliasList.size (), 0);
+    aliases = Resolver ().resolveAllAddress ("127.0.0.2", servers.front ());
+    EXPECT_GT (aliases.size (), 0);
 
-    aliasList = Resolver::resolveAllAddress ("127.0.0.2");
-    EXPECT_GT (aliasList.size (), 0);
+    aliases = Resolver::resolveAllAddress ("127.0.0.2");
+    EXPECT_GT (aliases.size (), 0);
 
-    aliasList = Resolver ().resolveAllAddress ("::1", servers.front ());
-    EXPECT_GT (aliasList.size (), 0);
+    aliases = Resolver ().resolveAllAddress ("::1", servers.front ());
+    EXPECT_GT (aliases.size (), 0);
 
-    aliasList = Resolver::resolveAllAddress ("::1");
-    EXPECT_GT (aliasList.size (), 0);
+    aliases = Resolver::resolveAllAddress ("::1");
+    EXPECT_GT (aliases.size (), 0);
 
-    aliasList = Resolver ("foo").resolveAllAddress ("127.0.0.2", servers.front ());
-    EXPECT_EQ (aliasList.size (), 0);
+    aliases = Resolver ("foo").resolveAllAddress ("127.0.0.2", servers.front ());
+    EXPECT_EQ (aliases.size (), 0);
 
-    aliasList = Resolver ("foo").resolveAllAddress ("::1", servers.front ());
-    EXPECT_EQ (aliasList.size (), 0);
+    aliases = Resolver ("foo").resolveAllAddress ("::1", servers.front ());
+    EXPECT_EQ (aliases.size (), 0);
 
-    aliasList = Resolver ().resolveAllAddress ("127.0.0.2", "255.255.255.255");
-    EXPECT_EQ (aliasList.size (), 0);
+    aliases = Resolver ().resolveAllAddress ("127.0.0.2", "255.255.255.255");
+    EXPECT_EQ (aliases.size (), 0);
 
-    aliasList = Resolver ().resolveAllAddress ("::1", "255.255.255.255");
-    EXPECT_EQ (aliasList.size (), 0);
+    aliases = Resolver ().resolveAllAddress ("::1", "255.255.255.255");
+    EXPECT_EQ (aliases.size (), 0);
 
-    aliasList = Resolver ().resolveAllAddress ("127.0.0.2", "192.168.15.168", Resolver::dnsPort, 50);
-    EXPECT_EQ (aliasList.size (), 0);
+    aliases = Resolver ().resolveAllAddress ("127.0.0.2", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_EQ (aliases.size (), 0);
 
-    aliasList = Resolver ().resolveAllAddress ("::1", "192.168.15.168", Resolver::dnsPort, 50);
-    EXPECT_EQ (aliasList.size (), 0);
+    aliases = Resolver ().resolveAllAddress ("::1", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_EQ (aliases.size (), 0);
 }
 
 /**
@@ -221,7 +217,7 @@ TEST (Resolver, resolveAllAddress)
 TEST (Resolver, resolveAddress)
 {
     IpAddressList servers = Resolver::nameServers ();
-    EXPECT_GT (servers.size (), 0);
+    ASSERT_GT (servers.size (), 0);
 
     std::string alias = Resolver ().resolveAddress ("192.168.24.32", servers.front ());
     EXPECT_TRUE (alias.empty ());
@@ -258,6 +254,162 @@ TEST (Resolver, resolveAddress)
 
     alias = Resolver ().resolveAddress ("::1", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_TRUE (alias.empty ());
+}
+
+/**
+ * @brief test the resolveAllAuthority method.
+ */
+TEST (Resolver, resolveAllAuthority)
+{
+    IpAddressList servers = Resolver::nameServers ();
+    ASSERT_GT (servers.size (), 0);
+
+    ServerList names = Resolver ().resolveAllAuthority ("", servers.front ());
+    EXPECT_GT (names.size (), 0);
+
+    names = Resolver::resolveAllAuthority ("");
+    EXPECT_GT (names.size (), 0);
+
+    names = Resolver ().resolveAllAuthority ("localhost", servers.front ());
+    EXPECT_EQ (names.size (), 0);
+
+    names = Resolver::resolveAllAuthority ("localhost");
+    EXPECT_EQ (names.size (), 0);
+
+    names = Resolver ("foo").resolveAllAuthority ("localhost", servers.front ());
+    EXPECT_EQ (names.size (), 0);
+
+    names = Resolver ().resolveAllAuthority ("localhost", "255.255.255.255");
+    EXPECT_EQ (names.size (), 0);
+
+    names = Resolver ().resolveAllAuthority ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_EQ (names.size (), 0);
+
+    names = Resolver ().resolveAllAuthority ("netflix.com");
+    EXPECT_GT (names.size (), 0);
+
+    names = Resolver ().resolveAllAuthority ("google.com");
+    EXPECT_GT (names.size (), 0);
+
+    names = Resolver ().resolveAllAuthority ("amazon.com");
+    EXPECT_GT (names.size (), 0);
+}
+
+/**
+ * @brief test the resolveAuthority method.
+ */
+TEST (Resolver, resolveAuthority)
+{
+    IpAddressList servers = Resolver::nameServers ();
+    ASSERT_GT (servers.size (), 0);
+
+    std::string name = Resolver ().resolveAuthority ("", servers.front ());
+    EXPECT_FALSE (name.empty ());
+
+    name = Resolver::resolveAuthority ("");
+    EXPECT_FALSE (name.empty ());
+
+    name = Resolver ().resolveAuthority ("localhost", servers.front ());
+    EXPECT_TRUE (name.empty ());
+
+    name = Resolver::resolveAuthority ("localhost");
+    EXPECT_TRUE (name.empty ());
+
+    name = Resolver ("foo").resolveAuthority ("localhost", servers.front ());
+    EXPECT_TRUE (name.empty ());
+
+    name = Resolver ().resolveAuthority ("localhost", "255.255.255.255");
+    EXPECT_TRUE (name.empty ());
+
+    name = Resolver ().resolveAuthority ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_TRUE (name.empty ());
+
+    name = Resolver ().resolveAuthority ("netflix.com");
+    EXPECT_FALSE (name.empty ());
+
+    name = Resolver ().resolveAuthority ("google.com");
+    EXPECT_FALSE (name.empty ());
+
+    name = Resolver ().resolveAuthority ("amazon.com");
+    EXPECT_FALSE (name.empty ());
+}
+
+/**
+ * @brief test the resolveAllMailExchanger method.
+ */
+TEST (Resolver, resolveAllMailExchanger)
+{
+    IpAddressList servers = Resolver::nameServers ();
+    ASSERT_GT (servers.size (), 0);
+
+    ExchangerList exchangers = Resolver ().resolveAllMailExchanger ("", servers.front ());
+    EXPECT_EQ (exchangers.size (), 0);
+
+    exchangers = Resolver::resolveAllMailExchanger ("");
+    EXPECT_EQ (exchangers.size (), 0);
+
+    exchangers = Resolver ().resolveAllMailExchanger ("localhost", servers.front ());
+    EXPECT_EQ (exchangers.size (), 0);
+
+    exchangers = Resolver::resolveAllMailExchanger ("localhost");
+    EXPECT_EQ (exchangers.size (), 0);
+
+    exchangers = Resolver ("foo").resolveAllMailExchanger ("localhost", servers.front ());
+    EXPECT_EQ (exchangers.size (), 0);
+
+    exchangers = Resolver ().resolveAllMailExchanger ("localhost", "255.255.255.255");
+    EXPECT_EQ (exchangers.size (), 0);
+
+    exchangers = Resolver ().resolveAllMailExchanger ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_EQ (exchangers.size (), 0);
+
+    exchangers = Resolver ().resolveAllMailExchanger ("netflix.com");
+    EXPECT_GT (exchangers.size (), 0);
+
+    exchangers = Resolver ().resolveAllMailExchanger ("google.com");
+    EXPECT_GT (exchangers.size (), 0);
+
+    exchangers = Resolver ().resolveAllMailExchanger ("amazon.com");
+    EXPECT_GT (exchangers.size (), 0);
+}
+
+/**
+ * @brief test the resolveMailExchanger method.
+ */
+TEST (Resolver, resolveMailExchanger)
+{
+    IpAddressList servers = Resolver::nameServers ();
+    ASSERT_GT (servers.size (), 0);
+
+    std::string exchanger = Resolver ().resolveMailExchanger ("", servers.front ());
+    EXPECT_TRUE (exchanger.empty ());
+
+    exchanger = Resolver::resolveMailExchanger ("");
+    EXPECT_TRUE (exchanger.empty ());
+
+    exchanger = Resolver ().resolveMailExchanger ("localhost", servers.front ());
+    EXPECT_TRUE (exchanger.empty ());
+
+    exchanger = Resolver::resolveMailExchanger ("localhost");
+    EXPECT_TRUE (exchanger.empty ());
+
+    exchanger = Resolver ("foo").resolveMailExchanger ("localhost", servers.front ());
+    EXPECT_TRUE (exchanger.empty ());
+
+    exchanger = Resolver ().resolveMailExchanger ("localhost", "255.255.255.255");
+    EXPECT_TRUE (exchanger.empty ());
+
+    exchanger = Resolver ().resolveMailExchanger ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_TRUE (exchanger.empty ());
+
+    exchanger = Resolver ().resolveMailExchanger ("netflix.com");
+    EXPECT_FALSE (exchanger.empty ());
+
+    exchanger = Resolver ().resolveMailExchanger ("google.com");
+    EXPECT_FALSE (exchanger.empty ());
+
+    exchanger = Resolver ().resolveMailExchanger ("amazon.com");
+    EXPECT_FALSE (exchanger.empty ());
 }
 
 /**
