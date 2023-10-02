@@ -82,19 +82,6 @@ namespace join
     };
 
     /**
-     * @brief additional record.
-     */
-    struct AdditionalRecord : public QuestionRecord
-    {
-        uint32_t ttl = 0;                           /**< record TTL. */
-        IpAddress addr;                             /**< address. */
-        std::string ns;                             /**< server name. */
-        std::string cname;                          /**< canonical name. */
-        uint16_t mxpref = 0;                        /**< mail exchange preference. */
-        std::string mxname;                         /**< mail exchange name. */
-    };
-
-    /**
      * @brief DNS packet.
      */
     struct DnsPacket
@@ -105,7 +92,7 @@ namespace join
         std::vector <QuestionRecord> questions;     /**< question records. */
         std::vector <AnswerRecord> answers;         /**< answer records. */
         std::vector <AuthorityRecord> autorities;   /**< authority records. */
-        std::vector <AdditionalRecord> additionals; /**< additional records. */
+        std::vector <AnswerRecord> additionals;     /**< additional records. */
     };
 
     /**
@@ -474,13 +461,6 @@ namespace join
          * @return decoded  name server record.
          */
         static AuthorityRecord decodeAuthority (std::stringstream& data);
-
-        /**
-         * @brief decode additional record.
-         * @param data stream where the encoded mail is stored.
-         * @return decoded additional record.
-         */
-        static AdditionalRecord decodeAdditional (std::stringstream& data);
 
         /**
          * @brief convert DNS error to system error code.

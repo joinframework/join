@@ -46,7 +46,6 @@ using join::Resolver;
 using join::QuestionRecord;
 using join::AnswerRecord;
 using join::AuthorityRecord;
-using join::AdditionalRecord;
 using join::Udp;
 
 // =========================================================================
@@ -626,9 +625,10 @@ int Resolver::lookup (DnsPacket& packet, int timeout)
             return -1;
         }
 
-        packet.questions.clear ();
         break;
     }
+
+    packet.questions.clear ();
 
     for (uint16_t i = 0; i < qcount; ++i)
     {
@@ -647,10 +647,11 @@ int Resolver::lookup (DnsPacket& packet, int timeout)
 
     for (uint16_t i = 0; i < arcount; ++i)
     {
-        packet.additionals.emplace_back (decodeAdditional (data));
+        packet.additionals.emplace_back (decodeAnswer (data));
     }
 
     notify (_onSuccess, packet);
+
     return 0;
 }
 
@@ -933,64 +934,6 @@ AuthorityRecord Resolver::decodeAuthority (std::stringstream& data)
     }
 
     return server;
-}
-
-// =========================================================================
-//   CLASS     : Resolver
-//   METHOD    : decodeAdditional
-// =========================================================================
-AdditionalRecord Resolver::decodeAdditional (std::stringstream& data)
-{
-    AdditionalRecord additional;
-
-    additional.host = decodeName (data);
-
-    data.read (reinterpret_cast <char *> (&additional.type), sizeof (additional.type));
-    additional.type = ntohs (additional.type);
-
-    data.read (reinterpret_cast <char *> (&additional.dnsclass), sizeof (additional.dnsclass));
-    additional.dnsclass = ntohs (additional.dnsclass);
-
-    data.read (reinterpret_cast <char *> (&additional.ttl), sizeof (additional.ttl));
-    additional.ttl = ntohl (additional.ttl);
-
-    uint16_t dataLen = 0;
-    data.read (reinterpret_cast <char *> (&dataLen), sizeof (dataLen));
-    dataLen = ntohs (dataLen);
-
-    if (additional.type == RecordType::A)
-    {
-        struct in_addr addr;
-        data.read (reinterpret_cast <char *> (&addr), sizeof (addr));
-        additional.addr = IpAddress (&addr, sizeof (struct in_addr));
-    }
-    else if (additional.type == RecordType::NS)
-    {
-        additional.ns = decodeName (data);
-    }
-    else if (additional.type == RecordType::CNAME)
-    {
-        additional.cname = decodeName (data);
-    }
-    else if (additional.type == RecordType::PTR)
-    {
-        additional.cname = decodeName (data);
-    }
-    else if (additional.type == RecordType::MX)
-    {
-        data.read (reinterpret_cast <char *> (&additional.mxpref), sizeof (additional.mxpref));
-        additional.mxpref = ntohs (additional.mxpref);
-
-        additional.mxname = decodeName (data);
-    }
-    else if (additional.type == RecordType::AAAA)
-    {
-        struct in6_addr addr;
-        data.read (reinterpret_cast <char *> (&addr), sizeof (addr));
-        additional.addr = IpAddress (&addr, sizeof (struct in6_addr));
-    }
-
-    return additional;
 }
 
 // =========================================================================
