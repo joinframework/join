@@ -88,10 +88,10 @@ TEST (Resolver, resolveAllHost)
     addresses = Resolver ().resolveAllHost ("localhost", "255.255.255.255");
     EXPECT_EQ (addresses.size (), 0);
 
-    addresses = Resolver ().resolveAllHost ("localhost", AF_INET, "192.168.15.168", Resolver::dnsPort, 50);
+    addresses = Resolver ().resolveAllHost ("joinframework.net", AF_INET, "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_EQ (addresses.size (), 0);
 
-    addresses = Resolver ().resolveAllHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    addresses = Resolver ().resolveAllHost ("joinframework.net", "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_EQ (addresses.size (), 0);
 
     addresses = Resolver::resolveAllHost ("www.netflix.com");
@@ -150,10 +150,10 @@ TEST (Resolver, resolveHost)
     address = Resolver ().resolveHost ("localhost", "255.255.255.255");
     EXPECT_TRUE (address.isWildcard ());
 
-    address = Resolver ().resolveHost ("localhost", AF_INET, "192.168.15.168", Resolver::dnsPort, 50);
+    address = Resolver ().resolveHost ("joinframework.net", AF_INET, "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_TRUE (address.isWildcard ());
 
-    address = Resolver ().resolveHost ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    address = Resolver ().resolveHost ("joinframework.net", "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_TRUE (address.isWildcard ());
 
     address = Resolver::resolveHost ("www.netflix.com");
@@ -204,10 +204,10 @@ TEST (Resolver, resolveAllAddress)
     aliases = Resolver ().resolveAllAddress ("::1", "255.255.255.255");
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = Resolver ().resolveAllAddress ("127.0.0.2", "192.168.15.168", Resolver::dnsPort, 50);
+    aliases = Resolver ().resolveAllAddress (Resolver::resolveHost ("joinframework.net", AF_INET), "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = Resolver ().resolveAllAddress ("::1", "192.168.15.168", Resolver::dnsPort, 50);
+    aliases = Resolver ().resolveAllAddress (Resolver::resolveHost ("joinframework.net", AF_INET6), "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_EQ (aliases.size (), 0);
 }
 
@@ -249,10 +249,10 @@ TEST (Resolver, resolveAddress)
     alias = Resolver ().resolveAddress ("::1", "255.255.255.255");
     EXPECT_TRUE (alias.empty ());
 
-    alias = Resolver ().resolveAddress ("127.0.0.2", "192.168.15.168", Resolver::dnsPort, 50);
+    alias = Resolver ().resolveAddress (Resolver::resolveHost ("joinframework.net", AF_INET), "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_TRUE (alias.empty ());
 
-    alias = Resolver ().resolveAddress ("::1", "192.168.15.168", Resolver::dnsPort, 50);
+    alias = Resolver ().resolveAddress (Resolver::resolveHost ("joinframework.net", AF_INET6), "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_TRUE (alias.empty ());
 }
 
@@ -282,7 +282,7 @@ TEST (Resolver, resolveAllNameServer)
     names = Resolver ().resolveAllNameServer ("localhost", "255.255.255.255");
     EXPECT_EQ (names.size (), 0);
 
-    names = Resolver ().resolveAllNameServer ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    names = Resolver ().resolveAllNameServer ("joinframework.net", "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_EQ (names.size (), 0);
 
     names = Resolver::resolveAllNameServer ("netflix.com");
@@ -324,7 +324,7 @@ TEST (Resolver, resolveNameServer)
     name = Resolver ().resolveNameServer ("localhost", "255.255.255.255");
     EXPECT_TRUE (name.empty ());
 
-    name = Resolver ().resolveNameServer ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    name = Resolver ().resolveNameServer ("joinframework.net", "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_TRUE (name.empty ());
 
     name = Resolver::resolveNameServer ("netflix.com");
@@ -366,7 +366,7 @@ TEST (Resolver, resolveAuthority)
     name = Resolver ().resolveAuthority ("localhost", "255.255.255.255");
     EXPECT_TRUE (name.empty ());
 
-    name = Resolver ().resolveAuthority ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    name = Resolver ().resolveAuthority ("joinframework.net", "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_TRUE (name.empty ());
 
     name = Resolver::resolveAuthority ("netflix.com");
@@ -405,7 +405,7 @@ TEST (Resolver, resolveAllMailExchanger)
     exchangers = Resolver ().resolveAllMailExchanger ("localhost", "255.255.255.255");
     EXPECT_EQ (exchangers.size (), 0);
 
-    exchangers = Resolver ().resolveAllMailExchanger ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    exchangers = Resolver ().resolveAllMailExchanger ("joinframework.net", "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_EQ (exchangers.size (), 0);
 
     exchangers = Resolver::resolveAllMailExchanger ("netflix.com");
@@ -444,7 +444,7 @@ TEST (Resolver, resolveMailExchanger)
     exchanger = Resolver ().resolveMailExchanger ("localhost", "255.255.255.255");
     EXPECT_TRUE (exchanger.empty ());
 
-    exchanger = Resolver ().resolveMailExchanger ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    exchanger = Resolver ().resolveMailExchanger ("joinframework.net", "8.8.8.8", Resolver::dnsPort, 1);
     EXPECT_TRUE (exchanger.empty ());
 
     exchanger = Resolver::resolveMailExchanger ("netflix.com");
