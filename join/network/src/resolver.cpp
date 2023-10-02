@@ -45,7 +45,6 @@ using join::ExchangerList;
 using join::Resolver;
 using join::QuestionRecord;
 using join::AnswerRecord;
-using join::AuthorityRecord;
 using join::Udp;
 
 // =========================================================================
@@ -272,9 +271,9 @@ AliasList Resolver::resolveAllAddress (const IpAddress& address, const IpAddress
 
     for (auto const& answer : packet.answers)
     {
-        if (!answer.cname.empty ())
+        if (!answer.name.empty ())
         {
-            aliases.insert (answer.cname);
+            aliases.insert (answer.name);
         }
     }
 
@@ -329,9 +328,9 @@ std::string Resolver::resolveAddress (const IpAddress& address)
 
 // =========================================================================
 //   CLASS     : Resolver
-//   METHOD    : resolveAllAuthority
+//   METHOD    : resolveAllNameServer
 // =========================================================================
-ServerList Resolver::resolveAllAuthority (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
+ServerList Resolver::resolveAllNameServer (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
 {
     ServerList names;
 
@@ -354,9 +353,9 @@ ServerList Resolver::resolveAllAuthority (const std::string& host, const IpAddre
 
     for (auto const& answer : packet.answers)
     {
-        if (!answer.ns.empty ())
+        if (!answer.name.empty ())
         {
-            names.insert (answer.ns);
+            names.insert (answer.name);
         }
     }
 
@@ -365,13 +364,13 @@ ServerList Resolver::resolveAllAuthority (const std::string& host, const IpAddre
 
 // =========================================================================
 //   CLASS     : Resolver
-//   METHOD    : resolveAllAuthority
+//   METHOD    : resolveAllNameServer
 // =========================================================================
-ServerList Resolver::resolveAllAuthority (const std::string& host)
+ServerList Resolver::resolveAllNameServer (const std::string& host)
 {
     for (auto const& server : nameServers ())
     {
-        ServerList names = Resolver ().resolveAllAuthority (host, server);
+        ServerList names = Resolver ().resolveAllNameServer (host, server);
         if (!names.empty ())
         {
             return names;
@@ -383,11 +382,25 @@ ServerList Resolver::resolveAllAuthority (const std::string& host)
 
 // =========================================================================
 //   CLASS     : Resolver
-//   METHOD    : resolveAuthority
+//   METHOD    : resolveNameServer
 // =========================================================================
-std::string Resolver::resolveAuthority (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
+std::string Resolver::resolveNameServer (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
 {
-    for (auto const& name : resolveAllAuthority (host, server, port, timeout))
+    for (auto const& name : resolveAllNameServer (host, server, port, timeout))
+    {
+        return name;
+    }
+
+    return {};
+}
+
+// =========================================================================
+//   CLASS     : Resolver
+//   METHOD    : resolveNameServer
+// =========================================================================
+std::string Resolver::resolveNameServer (const std::string& host)
+{
+    for (auto const& name : resolveAllNameServer (host))
     {
         return name;
     }
@@ -399,11 +412,49 @@ std::string Resolver::resolveAuthority (const std::string& host, const IpAddress
 //   CLASS     : Resolver
 //   METHOD    : resolveAuthority
 // =========================================================================
+std::string Resolver::resolveAuthority (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
+{
+    DnsPacket packet;
+    packet.src = IpAddress (server.family ());
+    packet.dest = server;
+    packet.port = port;
+
+    QuestionRecord question;
+    question.host = host;
+    question.type = RecordType::SOA;
+    question.dnsclass = RecordClass::IN;
+
+    packet.questions.push_back (question);
+
+    if (lookup (packet, timeout) == -1)
+    {
+        return {};
+    }
+
+    for (auto const& answer : packet.answers)
+    {
+        if (!answer.name.empty ())
+        {
+            return answer.name;
+        }
+    }
+
+    return {};
+}
+
+// =========================================================================
+//   CLASS     : Resolver
+//   METHOD    : resolveAuthority
+// =========================================================================
 std::string Resolver::resolveAuthority (const std::string& host)
 {
-    for (auto const& name : resolveAllAuthority (host))
+    for (auto const& server : nameServers ())
     {
-        return name;
+        std::string name = Resolver ().resolveAuthority (host, server);
+        if (!name.empty ())
+        {
+            return name;
+        }
     }
 
     return {};
@@ -436,9 +487,9 @@ ExchangerList Resolver::resolveAllMailExchanger (const std::string& host, const 
 
     for (auto const& answer : packet.answers)
     {
-        if (!answer.mxname.empty ())
+        if (!answer.name.empty ())
         {
-            exchangers.insert (answer.mxname);
+            exchangers.insert (answer.name);
         }
     }
 
@@ -642,7 +693,7 @@ int Resolver::lookup (DnsPacket& packet, int timeout)
 
     for (uint16_t i = 0; i < nscount; ++i)
     {
-        packet.autorities.emplace_back (decodeAuthority (data));
+        packet.authorities.emplace_back (decodeAnswer (data));
     }
 
     for (uint16_t i = 0; i < arcount; ++i)
@@ -861,22 +912,43 @@ AnswerRecord Resolver::decodeAnswer (std::stringstream& data)
     }
     else if (answer.type == RecordType::NS)
     {
-        answer.ns = decodeName (data);
+        answer.name = decodeName (data);
     }
     else if (answer.type == RecordType::CNAME)
     {
-        answer.cname = decodeName (data);
+        answer.name = decodeName (data);
+    }
+    else if (answer.type == RecordType::SOA)
+    {
+        answer.name = decodeName (data);
+
+        answer.mail = decodeMail (data);
+
+        data.read (reinterpret_cast <char *> (&answer.serial), sizeof (answer.serial));
+        answer.serial = ntohl (answer.serial);
+
+        data.read (reinterpret_cast <char *> (&answer.refresh), sizeof (answer.refresh));
+        answer.refresh = ntohl (answer.refresh);
+
+        data.read (reinterpret_cast <char *> (&answer.retry), sizeof (answer.retry));
+        answer.retry = ntohl (answer.retry);
+
+        data.read (reinterpret_cast <char *> (&answer.expire), sizeof (answer.expire));
+        answer.expire = ntohl (answer.expire);
+
+        data.read (reinterpret_cast <char *> (&answer.minimum), sizeof (answer.minimum));
+        answer.minimum = ntohl (answer.minimum);
     }
     else if (answer.type == RecordType::PTR)
     {
-        answer.cname = decodeName (data);
+        answer.name = decodeName (data);
     }
     else if (answer.type == RecordType::MX)
     {
         data.read (reinterpret_cast <char *> (&answer.mxpref), sizeof (answer.mxpref));
         answer.mxpref = ntohs (answer.mxpref);
 
-        answer.mxname = decodeName (data);
+        answer.name = decodeName (data);
     }
     else if (answer.type == RecordType::AAAA)
     {
@@ -886,54 +958,6 @@ AnswerRecord Resolver::decodeAnswer (std::stringstream& data)
     }
 
     return answer;
-}
-
-// =========================================================================
-//   CLASS     : Resolver
-//   METHOD    : decodeAuthority
-// =========================================================================
-AuthorityRecord Resolver::decodeAuthority (std::stringstream& data)
-{
-    AuthorityRecord server;
-
-    server.host = decodeName (data);
-
-    data.read (reinterpret_cast <char *> (&server.type), sizeof (server.type));
-    server.type = ntohs (server.type);
-
-    data.read (reinterpret_cast <char *> (&server.dnsclass), sizeof (server.dnsclass));
-    server.dnsclass = ntohs (server.dnsclass);
-
-    data.read (reinterpret_cast <char *> (&server.ttl), sizeof (server.ttl));
-    server.ttl = ntohl (server.ttl);
-
-    uint16_t dataLen = 0;
-    data.read (reinterpret_cast <char *> (&dataLen), sizeof (dataLen));
-    dataLen = ntohs (dataLen);
-
-    server.ns = decodeName (data);
-
-    if (server.type == RecordType::SOA)
-    {
-        server.mail = decodeMail (data);
-
-        data.read (reinterpret_cast <char *> (&server.serial), sizeof (server.serial));
-        server.serial = ntohl (server.serial);
-
-        data.read (reinterpret_cast <char *> (&server.refresh), sizeof (server.refresh));
-        server.refresh = ntohl (server.refresh);
-
-        data.read (reinterpret_cast <char *> (&server.retry), sizeof (server.retry));
-        server.retry = ntohl (server.retry);
-
-        data.read (reinterpret_cast <char *> (&server.expire), sizeof (server.expire));
-        server.expire = ntohl (server.expire);
-
-        data.read (reinterpret_cast <char *> (&server.minimum), sizeof (server.minimum));
-        server.minimum = ntohl (server.minimum);
-    }
-
-    return server;
 }
 
 // =========================================================================
@@ -1013,20 +1037,30 @@ void Resolver::defaultOnSuccess (const DnsPacket& packet)
         }
         else if (answer.type == RecordType::NS)
         {
-            std::cout << "  " << answer.ns;
+            std::cout << "  " << answer.name;
         }
         else if (answer.type == RecordType::CNAME)
         {
-            std::cout << "  " << answer.cname;
+            std::cout << "  " << answer.name;
+        }
+        else if (answer.type == RecordType::SOA)
+        {
+            std::cout << "  " << answer.name;
+            std::cout << "  " << answer.mail;
+            std::cout << "  " << answer.serial;
+            std::cout << "  " << answer.refresh;
+            std::cout << "  " << answer.retry;
+            std::cout << "  " << answer.expire;
+            std::cout << "  " << answer.minimum;
         }
         else if (answer.type == RecordType::PTR)
         {
-            std::cout << "  " << answer.cname;
+            std::cout << "  " << answer.name;
         }
         else if (answer.type == RecordType::MX)
         {
             std::cout << "  " << answer.mxpref;
-            std::cout << "  " << answer.mxname;
+            std::cout << "  " << answer.name;
         }
         else if (answer.type == RecordType::AAAA)
         {

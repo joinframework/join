@@ -60,25 +60,14 @@ namespace join
     {
         uint32_t ttl = 0;                           /**< record TTL. */
         IpAddress addr;                             /**< address. */
-        std::string ns;                             /**< server name. */
-        std::string cname;                          /**< canonical name. */
-        uint16_t mxpref = 0;                        /**< mail exchange preference. */
-        std::string mxname;                         /**< mail exchange name. */
-    };
-
-    /**
-     * @brief authority record.
-     */
-    struct AuthorityRecord : public QuestionRecord
-    {
-        uint32_t ttl = 0;                           /**< record TTL. */
-        std::string ns;                             /**< server name. */
+        std::string name;                           /**< canonical, server or mail exchanger name. */
         std::string mail;                           /**< server mail. */
         uint32_t serial = 0;                        /**< serial number. */
         uint32_t refresh = 0;                       /**< refresh interval. */
         uint32_t retry = 0;                         /**< retry interval. */
         uint32_t expire = 0;                        /**< upper limit before zone is no longer authoritative. */
         uint32_t minimum = 0;                       /**< minimum TTL. */
+        uint16_t mxpref = 0;                        /**< mail exchange preference. */
     };
 
     /**
@@ -91,7 +80,7 @@ namespace join
         uint16_t port = 0;                          /**< port.*/
         std::vector <QuestionRecord> questions;     /**< question records. */
         std::vector <AnswerRecord> answers;         /**< answer records. */
-        std::vector <AuthorityRecord> autorities;   /**< authority records. */
+        std::vector <AnswerRecord> authorities;     /**< authority records. */
         std::vector <AnswerRecord> additionals;     /**< additional records. */
     };
 
@@ -285,14 +274,14 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the resolved name server list.
          */
-        ServerList resolveAllAuthority (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        ServerList resolveAllNameServer (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
 
         /**
          * @brief resolve all host name server.
          * @param host host name to resolve.
          * @return the resolved name server list.
          */
-        static ServerList resolveAllAuthority (const std::string& host);
+        static ServerList resolveAllNameServer (const std::string& host);
 
         /**
          * @brief resolve host name server.
@@ -302,12 +291,29 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the first resolved name server.
          */
-        std::string resolveAuthority (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        std::string resolveNameServer (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
 
         /**
          * @brief resolve host name server.
          * @param host host name to resolve.
          * @return the first resolved name server.
+         */
+        static std::string resolveNameServer (const std::string& host);
+
+        /**
+         * @brief resolve host start of authority name server.
+         * @param host host name to resolve.
+         * @param server server address.
+         * @param port server port.
+         * @param timeout timeout in milliseconds (default: 5000).
+         * @return the start of authority name server.
+         */
+        std::string resolveAuthority (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+
+        /**
+         * @brief resolve host start of authority name server.
+         * @param host host name to resolve.
+         * @return the start of authority name server.
          */
         static std::string resolveAuthority (const std::string& host);
 
@@ -454,13 +460,6 @@ namespace join
          * @return decoded answer record.
          */
         static AnswerRecord decodeAnswer (std::stringstream& data);
-
-        /**
-         * @brief decode name server record.
-         * @param data stream where the encoded mail is stored.
-         * @return decoded  name server record.
-         */
-        static AuthorityRecord decodeAuthority (std::stringstream& data);
 
         /**
          * @brief convert DNS error to system error code.

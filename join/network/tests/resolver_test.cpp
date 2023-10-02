@@ -257,42 +257,81 @@ TEST (Resolver, resolveAddress)
 }
 
 /**
- * @brief test the resolveAllAuthority method.
+ * @brief test the resolveAllNameServer method.
  */
-TEST (Resolver, resolveAllAuthority)
+TEST (Resolver, resolveAllNameServer)
 {
     IpAddressList servers = Resolver::nameServers ();
     ASSERT_GT (servers.size (), 0);
 
-    ServerList names = Resolver ().resolveAllAuthority ("", servers.front ());
+    ServerList names = Resolver ().resolveAllNameServer ("", servers.front ());
     EXPECT_GT (names.size (), 0);
 
-    names = Resolver::resolveAllAuthority ("");
+    names = Resolver::resolveAllNameServer ("");
     EXPECT_GT (names.size (), 0);
 
-    names = Resolver ().resolveAllAuthority ("localhost", servers.front ());
+    names = Resolver ().resolveAllNameServer ("localhost", servers.front ());
     EXPECT_EQ (names.size (), 0);
 
-    names = Resolver::resolveAllAuthority ("localhost");
+    names = Resolver::resolveAllNameServer ("localhost");
     EXPECT_EQ (names.size (), 0);
 
-    names = Resolver ("foo").resolveAllAuthority ("localhost", servers.front ());
+    names = Resolver ("foo").resolveAllNameServer ("localhost", servers.front ());
     EXPECT_EQ (names.size (), 0);
 
-    names = Resolver ().resolveAllAuthority ("localhost", "255.255.255.255");
+    names = Resolver ().resolveAllNameServer ("localhost", "255.255.255.255");
     EXPECT_EQ (names.size (), 0);
 
-    names = Resolver ().resolveAllAuthority ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    names = Resolver ().resolveAllNameServer ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
     EXPECT_EQ (names.size (), 0);
 
-    names = Resolver::resolveAllAuthority ("netflix.com");
+    names = Resolver::resolveAllNameServer ("netflix.com");
     EXPECT_GT (names.size (), 0);
 
-    names = Resolver ().resolveAllAuthority ("google.com", servers.front ());
+    names = Resolver ().resolveAllNameServer ("google.com", servers.front ());
     EXPECT_GT (names.size (), 0);
 
-    names = Resolver::resolveAllAuthority ("amazon.com");
+    names = Resolver::resolveAllNameServer ("amazon.com");
     EXPECT_GT (names.size (), 0);
+}
+
+/**
+ * @brief test the resolveNameServer method.
+ */
+TEST (Resolver, resolveNameServer)
+{
+    IpAddressList servers = Resolver::nameServers ();
+    ASSERT_GT (servers.size (), 0);
+
+    std::string name = Resolver ().resolveNameServer ("", servers.front ());
+    EXPECT_FALSE (name.empty ());
+
+    name = Resolver::resolveNameServer ("");
+    EXPECT_FALSE (name.empty ());
+
+    name = Resolver ().resolveNameServer ("localhost", servers.front ());
+    EXPECT_TRUE (name.empty ());
+
+    name = Resolver::resolveNameServer ("localhost");
+    EXPECT_TRUE (name.empty ());
+
+    name = Resolver ("foo").resolveNameServer ("localhost", servers.front ());
+    EXPECT_TRUE (name.empty ());
+
+    name = Resolver ().resolveNameServer ("localhost", "255.255.255.255");
+    EXPECT_TRUE (name.empty ());
+
+    name = Resolver ().resolveNameServer ("localhost", "192.168.15.168", Resolver::dnsPort, 50);
+    EXPECT_TRUE (name.empty ());
+
+    name = Resolver::resolveNameServer ("netflix.com");
+    EXPECT_FALSE (name.empty ());
+
+    name = Resolver ().resolveNameServer ("google.com", servers.front ());
+    EXPECT_FALSE (name.empty ());
+
+    name = Resolver::resolveNameServer ("amazon.com");
+    EXPECT_FALSE (name.empty ());
 }
 
 /**
