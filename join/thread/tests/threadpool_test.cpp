@@ -55,7 +55,7 @@ TEST (ThreadPool, push)
     auto elapsed = join::benchmark ([]
     {
         ThreadPool pool;
-        for (size_t i = 0; i < pool.size (); ++i)
+        for (int i = 0; i < pool.size (); ++i)
         {
             pool.push (usleep, 20000);
         }

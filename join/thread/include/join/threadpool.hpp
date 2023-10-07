@@ -82,7 +82,7 @@ namespace join
          * @brief create thread pool.
          * @param workers number of worker threads.
          */
-        ThreadPool (size_t workers = std::thread::hardware_concurrency () + 1);
+        ThreadPool (int workers = std::max (int (std::thread::hardware_concurrency ()), 1));
 
         /**
          * @brief destroy thread pool.
@@ -92,7 +92,7 @@ namespace join
         /**
          * @brief return thread pool size.
          */
-        size_t size ();
+        int size ();
 
         /**
          * @brief push a job to the work queue.
@@ -129,19 +129,19 @@ namespace join
      * @brief determine the number of threads and tasks per thread to run and execute them.
      * @param first first iterator.
      * @param last last iterator.
-     * @param function function to execute in parallel.
+     * @param function function to run in parallel.
      */
     template <class InputIt, class Func>
     void dispatch (InputIt first, InputIt last, Func function)
     {
         // determine number of threads and task per thread to run.
-        size_t concurrency = std::thread::hardware_concurrency ();
-        size_t count       = std::distance (first, last);
-        size_t elements    = count / concurrency;
-        size_t rest        = count % concurrency;
+        int concurrency = std::max (int (std::thread::hardware_concurrency ()), 1);
+        int count       = std::distance (first, last);
+        int elements    = count / concurrency;
+        int rest        = count % concurrency;
 
-        std::vector <size_t> tasks (concurrency, elements);
-        for (size_t i = 0; i < rest; ++i)
+        std::vector <int> tasks (concurrency, elements);
+        for (int i = 0; i < rest; ++i)
         {
             tasks[i]++;
         }
