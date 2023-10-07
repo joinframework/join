@@ -134,9 +134,16 @@ namespace join
     template <class InputIt, class Func>
     void dispatch (InputIt first, InputIt last, Func function)
     {
+        // check if we have tasks to perform.
+        int count = std::distance (first, last);
+        if (count == 0)
+        {
+            return;
+        }
+
         // determine number of threads and task per thread to run.
         int concurrency = std::max (int (std::thread::hardware_concurrency ()), 1);
-        int count       = std::distance (first, last);
+        concurrency     = std::min (concurrency, count);
         int elements    = count / concurrency;
         int rest        = count % concurrency;
 
