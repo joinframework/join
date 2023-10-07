@@ -55,7 +55,7 @@ TEST (ThreadPool, push)
     auto elapsed = join::benchmark ([]
     {
         ThreadPool pool;
-        for (size_t i = 0; i < pool.size (); ++i)
+        for (int i = 0; i < pool.size (); ++i)
         {
             pool.push (usleep, 20000);
         }
@@ -68,10 +68,10 @@ TEST (ThreadPool, push)
  */
 TEST (ThreadPool, parallelForEach)
 {
-    std::vector <std::function <int (unsigned int)>> todo {usleep, usleep, usleep, usleep};
+    std::vector <std::function <int (unsigned int)>> todo {usleep, usleep, usleep, usleep, usleep};
     auto elapsed = join::benchmark ([&todo]
     {
-        join::parallelForEach (todo.begin (), todo.end (), [&todo] (auto& func)
+        join::parallelForEach (todo.begin (), todo.end (), [] (auto& func)
         {
             func (20000);
         });

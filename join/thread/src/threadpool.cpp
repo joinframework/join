@@ -74,10 +74,10 @@ void Worker::work ()
 //   CLASS     : ThreadPool
 //   METHOD    : ThreadPool
 // =========================================================================
-ThreadPool::ThreadPool (size_t workers)
+ThreadPool::ThreadPool (int workers)
 : _stop (false)
 {
-    for (size_t nworkers = 0; nworkers < workers; ++nworkers)
+    for (int nworkers = 0; nworkers < workers; ++nworkers)
     {
         _workers.emplace_back (new Worker (*this));
     }
@@ -98,7 +98,7 @@ ThreadPool::~ThreadPool ()
 //   CLASS     : ThreadPool
 //   METHOD    : size
 // =========================================================================
-size_t ThreadPool::size ()
+int ThreadPool::size ()
 {
     ScopedLock lock (_mutex);
     return _workers.size ();
