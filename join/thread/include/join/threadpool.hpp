@@ -186,17 +186,13 @@ namespace join
     template <class InputIt, class Func>
     void parallelForEach (InputIt first, InputIt last, Func function)
     {
-        // task executed by threads.
-        auto task = [&function] (InputIt beg, InputIt end)
+        dispatch (first, last, [&function] (InputIt beg, InputIt end)
         {
             for (; beg != end; ++beg)
             {
                 function (*beg);
             }
-        };
-
-        // execute tasks.
-        dispatch (first, last, task);
+        });
     }
 }
 
