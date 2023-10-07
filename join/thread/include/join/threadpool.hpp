@@ -148,12 +148,12 @@ namespace join
 
         // determine the real thread pool size (tasks minus 1 as we are a thread).
         std::vector <std::thread> pool;
-        auto nth = tasks.size () - 1;
+        int nth = concurrency - 1;
         pool.reserve (nth);
 
         // create threads.
         auto beg = first, end = first;
-        for (size_t i = 0; i < nth; ++i)
+        for (int i = 0; i < nth; ++i)
         {
             std::advance (end, tasks[i]);
             pool.emplace_back (function, beg, end);
