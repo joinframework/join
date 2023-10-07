@@ -146,7 +146,7 @@ namespace join
             tasks[i]++;
         }
 
-        // determine the real thread pool size (tasks minus 1 as we are a thread).
+        // determine the real thread pool size (concurrency minus 1 as we are a thread).
         std::vector <std::thread> pool;
         int nth = concurrency - 1;
         pool.reserve (nth);
