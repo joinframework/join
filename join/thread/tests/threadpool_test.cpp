@@ -71,7 +71,7 @@ TEST (ThreadPool, parallelForEach)
     std::vector <std::function <int (unsigned int)>> todo {usleep, usleep, usleep, usleep};
     auto elapsed = join::benchmark ([&todo]
     {
-        join::parallelForEach (todo.begin (), todo.end (), [&todo] (auto& func)
+        join::parallelForEach (todo.begin (), todo.end (), [] (auto& func)
         {
             func (20000);
         });

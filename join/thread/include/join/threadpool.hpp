@@ -126,20 +126,70 @@ namespace join
     };
 
     /**
+     * @brief determine the number of threads and tasks per thread to run and execute them.
+     * @param first first iterator.
+     * @param last last iterator.
+     * @param function function to execute in parallel.
+     */
+    template <class InputIt, class Func>
+    void dispatch (InputIt first, InputIt last, Func function)
+    {
+        // determine number of threads and task per thread to run.
+        size_t concurrency = std::thread::hardware_concurrency ();
+        size_t count       = std::distance (first, last);
+        size_t elements    = count / concurrency;
+        size_t rest        = count % concurrency;
+
+        std::vector <size_t> tasks (concurrency, elements);
+        for (size_t i = 0; i < rest; ++i)
+        {
+            tasks[i]++;
+        }
+
+        // determine the real thread pool size (tasks minus 1 as we are a thread).
+        std::vector <std::thread> pool;
+        auto nth = tasks.size () - 1;
+        pool.reserve (nth);
+
+        // create threads.
+        auto beg = first, end = first;
+        for (size_t i = 0; i < nth; ++i)
+        {
+            std::advance (end, tasks[i]);
+            pool.emplace_back (function, beg, end);
+            beg = end;
+        }
+
+        // we are a thread so we can help.
+        function (beg, last);
+
+        // wait for threads to terminate.
+        for (auto& thread : pool)
+        {
+            thread.join ();
+        }
+    }
+
+    /**
      * @brief parrallel for each loop.
      * @param first first iterator.
      * @param last last iterator.
      * @param function function to execute in parallel.
      */
     template <class InputIt, class Func>
-    static void parallelForEach (InputIt first, InputIt last, Func function)
+    void parallelForEach (InputIt first, InputIt last, Func function)
     {
-        ThreadPool pool;
-
-        for (; first != last; ++first)
+        // task executed by threads.
+        auto task = [&function] (InputIt beg, InputIt end)
         {
-            pool.push (function, std::ref (*first));
-        }
+            for (; beg != end; ++beg)
+            {
+                function (*beg);
+            }
+        };
+
+        // execute tasks.
+        dispatch (first, last, task);
     }
 }
 
