@@ -143,10 +143,11 @@ namespace join
 
         // determine number of threads and task per thread to run.
         int concurrency = std::max (int (std::thread::hardware_concurrency ()), 1);
+        // no need to create more threads than tasks.
         concurrency     = std::min (concurrency, count);
         int elements    = count / concurrency;
         int rest        = count % concurrency;
-
+        // dispatch tasks to threads.
         std::vector <int> tasks (concurrency, elements);
         for (int i = 0; i < rest; ++i)
         {
