@@ -151,11 +151,11 @@ namespace join
         std::vector <int> tasks (concurrency, elements);
         for (int i = 0; i < rest; ++i)
         {
-            tasks[i]++;
+            ++tasks[i];
         }
 
         // determine the real thread pool size (concurrency minus 1 as we are a thread).
-        std::vector <std::thread> pool;
+        std::vector <Thread> pool;
         int nth = concurrency - 1;
         pool.reserve (nth);
 
