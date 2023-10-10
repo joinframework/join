@@ -90,11 +90,6 @@ namespace join
         ~ThreadPool ();
 
         /**
-         * @brief return thread pool size.
-         */
-        int size ();
-
-        /**
          * @brief push a job to the work queue.
          */
         template <class Function, class... Args>
@@ -104,6 +99,11 @@ namespace join
             _jobs.emplace_back (std::bind (std::forward <Function> (func), std::forward <Args> (args)...));
             _condition.signal ();
         }
+
+        /**
+         * @brief return thread pool size.
+         */
+        size_t size ();
 
     private:
         /// worker threads.
@@ -126,13 +126,13 @@ namespace join
     };
 
     /**
-     * @brief determine the number of threads and tasks per thread to run and execute them.
+     * @brief determine the number of threads and tasks per thread to run and execute them in parallel.
      * @param first first iterator.
      * @param last last iterator.
-     * @param function function to run in parallel.
+     * @param function function to execute in parallel.
      */
     template <class InputIt, class Func>
-    void dispatch (InputIt first, InputIt last, Func function)
+    void distribute (InputIt first, InputIt last, Func function)
     {
         // check if we have tasks to perform.
         int count = std::distance (first, last);
@@ -141,13 +141,13 @@ namespace join
             return;
         }
 
-        // determine number of threads and task per thread to run.
+        // determine number of threads and tasks per thread to run.
         int concurrency = std::max (int (std::thread::hardware_concurrency ()), 1);
         // no need to create more threads than tasks.
         concurrency     = std::min (concurrency, count);
         int elements    = count / concurrency;
         int rest        = count % concurrency;
-        // dispatch tasks to threads.
+        // distribute tasks to threads.
         std::vector <int> tasks (concurrency, elements);
         for (int i = 0; i < rest; ++i)
         {
@@ -187,7 +187,7 @@ namespace join
     template <class InputIt, class Func>
     void parallelForEach (InputIt first, InputIt last, Func function)
     {
-        dispatch (first, last, [&function] (InputIt beg, InputIt end)
+        distribute (first, last, [&function] (InputIt beg, InputIt end)
         {
             for (; beg != end; ++beg)
             {

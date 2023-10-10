@@ -98,7 +98,7 @@ ThreadPool::~ThreadPool ()
 //   CLASS     : ThreadPool
 //   METHOD    : size
 // =========================================================================
-int ThreadPool::size ()
+size_t ThreadPool::size ()
 {
     ScopedLock lock (_mutex);
     return _workers.size ();
