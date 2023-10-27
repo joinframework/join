@@ -31,10 +31,10 @@
 namespace join
 {
     /**
-     * @brief basic acceptor class.
+     * @brief basic stream acceptor class.
      */
     template <class Protocol>
-    class BasicAcceptor : public EventHandler
+    class BasicStreamAcceptor : public EventHandler
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
@@ -44,26 +44,26 @@ namespace join
         /**
          * @brief create the acceptor instance.
          */
-        BasicAcceptor () = default;
+        BasicStreamAcceptor () = default;
 
         /**
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicAcceptor (const BasicAcceptor& other) = delete;
+        BasicStreamAcceptor (const BasicStreamAcceptor& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicAcceptor& operator= (const BasicAcceptor& other) = delete;
+        BasicStreamAcceptor& operator= (const BasicStreamAcceptor& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicAcceptor (BasicAcceptor&& other)
+        BasicStreamAcceptor (BasicStreamAcceptor&& other)
         : _handle (other._handle),
           _protocol (other._protocol)
         {
@@ -76,7 +76,7 @@ namespace join
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicAcceptor& operator= (BasicAcceptor&& other)
+        BasicStreamAcceptor& operator= (BasicStreamAcceptor&& other)
         {
             this->close ();
 
@@ -92,7 +92,7 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicAcceptor ()
+        virtual ~BasicStreamAcceptor ()
         {
             this->close ();
         }
@@ -173,6 +173,52 @@ namespace join
         }
 
         /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @return The client socket object on success, nullptr on failure.
+         */
+        virtual Socket accept () const
+        {
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
+            Socket client;
+
+            client._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
+            if (client._handle == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                return {};
+            }
+
+            client._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
+            client._state = Socket::Connected;
+
+            if (client.setMode (Socket::NonBlocking) == -1)
+            {
+                client.close ();
+                return {};
+            }
+
+            if (client.protocol () == IPPROTO_TCP && client.setOption (Socket::NoDelay, 1) == -1)
+            {
+                client.close ();
+                return {};
+            }
+
+            return client;
+        }
+
+        /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @return The client stream object on success, nullptr on failure.
+         */
+        virtual Stream acceptStream () const
+        {
+            Stream stream;
+            stream.socket () = this->accept ();
+            return stream;
+        }
+
+        /**
          * @brief determine the local endpoint associated with this socket.
          * @return local endpoint.
          */
@@ -244,106 +290,10 @@ namespace join
     };
 
     /**
-     * @brief basic stream acceptor class.
-     */
-    template <class Protocol>
-    class BasicStreamAcceptor : public BasicAcceptor <Protocol>
-    {
-    public:
-        using Endpoint = typename Protocol::Endpoint;
-        using Socket   = typename Protocol::Socket;
-        using Stream   = typename Protocol::Stream;
-
-        /**
-         * @brief create the acceptor instance.
-         */
-        BasicStreamAcceptor () = default;
-
-        /**
-         * @brief copy constructor.
-         * @param other other object to copy.
-         */
-        BasicStreamAcceptor (const BasicStreamAcceptor& other) = delete;
-
-        /**
-         * @brief copy assignment operator.
-         * @param other other object to assign.
-         * @return assigned object.
-         */
-        BasicStreamAcceptor& operator= (const BasicStreamAcceptor& other) = delete;
-
-        /**
-         * @brief move constructor.
-         * @param other other object to move.
-         */
-        BasicStreamAcceptor (BasicStreamAcceptor&& other) = default;
-
-        /**
-         * @brief move assignment operator.
-         * @param other other object to assign.
-         * @return assigned object.
-         */
-        BasicStreamAcceptor& operator= (BasicStreamAcceptor&& other) = default;
-
-        /**
-         * @brief destroy instance.
-         */
-        virtual ~BasicStreamAcceptor () = default;
-
-        /**
-         * @brief accept new connection and fill in the client object with connection parameters.
-         * @note the client socket object is allocated and must be released.
-         * @return The client socket object on success, nullptr on failure.
-         */
-        virtual Socket accept () const
-        {
-            struct sockaddr_storage sa;
-            socklen_t sa_len = sizeof (struct sockaddr_storage);
-            Socket client;
-
-            client._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
-            if (client._handle == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return {};
-            }
-
-            client._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
-            client._state = Socket::Connected;
-
-            if (client.setMode (Socket::NonBlocking) == -1)
-            {
-                client.close ();
-                return {};
-            }
-
-            if (client.protocol () == IPPROTO_TCP && client.setOption (Socket::NoDelay, 1) == -1)
-            {
-                client.close ();
-                return {};
-            }
-
-            return client;
-        }
-
-        /**
-         * @brief accept new connection and fill in the client object with connection parameters.
-         * @note the client stream object is allocated and must be released.
-         * @return The client stream object on success, nullptr on failure.
-         */
-        virtual Stream acceptStream () const
-        {
-            Stream stream;
-            stream.socket () = this->accept ();
-            return stream;
-        }
-    };
-
-    /**
      * @brief basic TLS acceptor class.
      */
     template <class Protocol>
-    class BasicTlsAcceptor : public BasicAcceptor <Protocol>
+    class BasicTlsAcceptor : public BasicStreamAcceptor <Protocol>
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
@@ -354,7 +304,7 @@ namespace join
          * @brief create the acceptor instance.
          */
         BasicTlsAcceptor ()
-        : BasicAcceptor <Protocol> (),
+        : BasicStreamAcceptor <Protocol> (),
         #if OPENSSL_VERSION_NUMBER < 0x10100000L
           _tlsContext (SSL_CTX_new (SSLv23_method ()), join::SslCtxDelete ()),
         #else
@@ -445,7 +395,7 @@ namespace join
          * @param other other object to move.
          */
         BasicTlsAcceptor (BasicTlsAcceptor&& other)
-        : BasicAcceptor <Protocol> (std::move (other)),
+        : BasicStreamAcceptor <Protocol> (std::move (other)),
           _tlsContext (std::move (other._tlsContext)),
           _sessionId (other._sessionId)
         {
@@ -459,7 +409,7 @@ namespace join
          */
         BasicTlsAcceptor& operator= (BasicTlsAcceptor&& other)
         {
-            BasicAcceptor <Protocol>::operator= (std::move (other));
+            BasicStreamAcceptor <Protocol>::operator= (std::move (other));
 
             _tlsContext = std::move (other._tlsContext);
             _sessionId = other._sessionId;
@@ -471,10 +421,9 @@ namespace join
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
-         * @note the client socket object is allocated and must be released.
          * @return The client socket object on success, nullptr on failure.
          */
-        virtual Socket accept () const
+        virtual Socket accept () const override
         {
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
@@ -540,10 +489,9 @@ namespace join
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
-         * @note the client stream object is allocated and must be released.
          * @return The client stream object on success, nullptr on failure.
          */
-        virtual Stream acceptStream () const
+        virtual Stream acceptStream () const override
         {
             Stream stream;
             stream.socket () = this->accept ();
