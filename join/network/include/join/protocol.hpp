@@ -445,7 +445,7 @@ namespace join
     };
 
     /**
-     * @brief Check if equals.
+     * @brief check if equals.
      * @param a protocol to check.
      * @param b protocol to check.
      * @return true if equals.
@@ -456,7 +456,7 @@ namespace join
     }
 
     /**
-     * @brief Check if not equals.
+     * @brief check if not equals.
      * @param a protocol to check.
      * @param b protocol to check.
      * @return true if not equals.
@@ -539,7 +539,7 @@ namespace join
     };
 
     /**
-     * @brief Check if equals.
+     * @brief check if equals.
      * @param a protocol to check.
      * @param b protocol to check.
      * @return true if equals.
@@ -550,7 +550,7 @@ namespace join
     }
 
     /**
-     * @brief Check if not equals.
+     * @brief check if not equals.
      * @param a protocol to check.
      * @param b protocol to check.
      * @return true if not equals.
@@ -636,7 +636,7 @@ namespace join
     };
 
     /**
-     * @brief Check if equals.
+     * @brief check if equals.
      * @param a protocol to check.
      * @param b protocol to check.
      * @return true if equals.
@@ -647,7 +647,7 @@ namespace join
     }
 
     /**
-     * @brief Check if not equals.
+     * @brief check if not equals.
      * @param a protocol to check.
      * @param b protocol to check.
      * @return true if not equals.
@@ -733,7 +733,7 @@ namespace join
     };
 
     /**
-     * @brief Check if equals.
+     * @brief check if equals.
      * @param a protocol to check.
      * @param b protocol to check.
      * @return true if equals.
@@ -744,7 +744,7 @@ namespace join
     }
 
     /**
-     * @brief Check if not equals.
+     * @brief check if not equals.
      * @param a protocol to check.
      * @param b protocol to check.
      * @return true if not equals.
