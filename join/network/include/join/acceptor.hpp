@@ -211,7 +211,7 @@ namespace join
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return The client stream object on success, nullptr on failure.
          */
-        virtual Stream acceptStream () const
+        Stream acceptStream () const
         {
             Stream stream;
             stream.socket () = this->accept ();
@@ -459,17 +459,6 @@ namespace join
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
-         * @return The client stream object on success, nullptr on failure.
-         */
-        virtual Stream acceptStream () const override
-        {
-            Stream stream;
-            stream.socket () = this->accept ();
-            return stream;
-        }
-
-        /**
-         * @brief accept new connection and fill in the client object with connection parameters.
          * @return The client socket object on success, nullptr on failure.
          */
         virtual Socket acceptEncrypted () const
@@ -518,7 +507,7 @@ namespace join
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return The client stream object on success, nullptr on failure.
          */
-        virtual Stream acceptStreamEncrypted () const
+        Stream acceptStreamEncrypted () const
         {
             Stream stream;
             stream.socket () = this->acceptEncrypted ();
