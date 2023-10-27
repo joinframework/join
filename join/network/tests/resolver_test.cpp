@@ -464,6 +464,7 @@ TEST (Resolver, resolveService)
 {
     EXPECT_EQ (Resolver::resolveService ("ssh"), 22);
     EXPECT_EQ (Resolver::resolveService ("smtp"), 25);
+    EXPECT_EQ (Resolver::resolveService ("smtps"), 465);
     EXPECT_EQ (Resolver::resolveService ("http"), 80);
     EXPECT_EQ (Resolver::resolveService ("https"), 443);
 }

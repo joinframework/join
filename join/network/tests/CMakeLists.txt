@@ -101,3 +101,23 @@ gtest_discover_tests(http.gtest)
 add_executable(https.gtest https_test.cpp)
 target_link_libraries(https.gtest ${PROJECT_NAME} gtest gtest_main pthread)
 gtest_discover_tests(https.gtest)
+
+add_executable(mailsender.gtest mailsender_test.cpp)
+target_link_libraries(mailsender.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(mailsender.gtest)
+
+add_executable(mailrecipient.gtest mailrecipient_test.cpp)
+target_link_libraries(mailrecipient.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(mailrecipient.gtest)
+
+add_executable(mailmessage.gtest mailmessage_test.cpp)
+target_link_libraries(mailmessage.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(mailmessage.gtest)
+
+add_executable(smtp.gtest smtp_test.cpp)
+target_link_libraries(smtp.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(smtp.gtest)
+
+add_executable(smtps.gtest smtps_test.cpp)
+target_link_libraries(smtps.gtest ${PROJECT_NAME} gtest gtest_main pthread)
+gtest_discover_tests(smtps.gtest)

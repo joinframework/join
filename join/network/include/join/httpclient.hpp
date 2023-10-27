@@ -35,13 +35,10 @@
 // C++.
 #include <chrono>
 
-using join::Zstream;
-using join::Chunkstream;
-
 namespace join
 {
     /**
-     * @brief Basic HTTP client.
+     * @brief basic HTTP client.
      */
     template <class Protocol> 
     class BasicHttpClient : public Protocol::Stream
