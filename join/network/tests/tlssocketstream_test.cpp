@@ -210,7 +210,7 @@ protected:
      */
     virtual void onReceive () override
     {
-        Tls::Socket sock = this->accept ();
+        Tls::Socket sock = this->acceptEncrypted ();
         if (sock.connected ())
         {
             char buf[1024];

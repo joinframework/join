@@ -347,7 +347,7 @@ namespace join
             SSL_CTX_set_cipher_list (_tlsContext.get (), join::defaultCipher_.c_str ());
 
         #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-            //  set default TLSv1.3 cipher suites.
+            // set default TLSv1.3 cipher suites.
             SSL_CTX_set_ciphersuites (_tlsContext.get (), join::defaultCipher_1_3_.c_str ());
 
             // disallow client-side renegotiation.
@@ -454,7 +454,34 @@ namespace join
                 return {};
             }
 
-            //  create an SSL object for the connection.
+            return client;
+        }
+
+        /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @return The client stream object on success, nullptr on failure.
+         */
+        virtual Stream acceptStream () const override
+        {
+            Stream stream;
+            stream.socket () = this->accept ();
+            return stream;
+        }
+
+        /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @return The client socket object on success, nullptr on failure.
+         */
+        virtual Socket acceptEncrypted () const
+        {
+            // accept connection.
+            Socket client = this->accept ();
+            if (!client.connected ())
+            {
+                return {};
+            }
+
+            // create an SSL object for the connection.
             client._tlsHandle.reset (SSL_new (client._tlsContext.get ()));
             if (client._tlsHandle == nullptr)
             {
@@ -491,10 +518,10 @@ namespace join
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return The client stream object on success, nullptr on failure.
          */
-        virtual Stream acceptStream () const override
+        virtual Stream acceptStreamEncrypted () const
         {
             Stream stream;
-            stream.socket () = this->accept ();
+            stream.socket () = this->acceptEncrypted ();
             return stream;
         }
 
