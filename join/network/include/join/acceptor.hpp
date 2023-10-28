@@ -464,7 +464,7 @@ namespace join
         Socket acceptEncrypted () const
         {
             // accept connection.
-            Socket client = this->accept ();
+            Socket client = BasicTlsAcceptor <Protocol>::accept ();
             if (!client.connected ())
             {
                 return {};
