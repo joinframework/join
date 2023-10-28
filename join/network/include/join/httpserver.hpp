@@ -47,7 +47,7 @@ namespace join
     using AccessHandler       = std::function <bool (const std::string&, const std::string&, std::error_code&)>;
 
     template <class Protocol>
-    using BasicContentHandler = std::function <void (BasicWorker <Protocol>*)>;
+    using BasicContentHandler = std::function <void (BasicHttpWorker <Protocol>*)>;
 
     /**
      * @brief HTTP content Type.
@@ -78,20 +78,20 @@ namespace join
     };
 
     /**
-     * @brief HTTP worker thread.
+     * @brief basic HTTP worker.
      */
     template <class Protocol>
-    class BasicWorker : public Protocol::Stream
+    class BasicHttpWorker : public Protocol::Stream
     {
     public:
         using Content = BasicContent <Protocol>;
         using Server  = BasicHttpServer <Protocol>;
 
         /**
-         * @brief Create the worker instance.
+         * @brief create the worker instance.
          * @param server Server instance.
          */
-        BasicWorker (Server* server)
+        BasicHttpWorker (Server* server)
         : _server (server),
           _thread ([this] () {work ();})
         {
@@ -101,32 +101,32 @@ namespace join
          * @brief create instance by copy.
          * @param other object to copy.
          */
-        BasicWorker (const BasicWorker& other) = delete;
+        BasicHttpWorker (const BasicHttpWorker& other) = delete;
 
         /**
          * @brief assign instance by copy.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        BasicWorker& operator= (const BasicWorker& other) = delete;
+        BasicHttpWorker& operator= (const BasicHttpWorker& other) = delete;
 
         /**
          * @brief create instance by move.
          * @param other object to move.
          */
-        BasicWorker (BasicWorker&& other) = delete;
+        BasicHttpWorker (BasicHttpWorker&& other) = delete;
 
         /**
          * @brief assign instance by move.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        BasicWorker& operator= (BasicWorker&& other) = delete;
+        BasicHttpWorker& operator= (BasicHttpWorker&& other) = delete;
 
         /**
          * @brief destroy worker thread.
          */
-        virtual ~BasicWorker ()
+        virtual ~BasicHttpWorker ()
         {
             this->_thread.join ();
         }
@@ -636,7 +636,7 @@ namespace join
     };
 
     /**
-     * @brief Basic HTTP server.
+     * @brief basic HTTP server.
      */
     template <class Protocol> 
     class BasicHttpServer : public Protocol::Acceptor
@@ -644,7 +644,7 @@ namespace join
     public:
         using Content        = BasicContent <Protocol>;
         using ContentHandler = BasicContentHandler <Protocol>;
-        using Worker         = BasicWorker <Protocol>;
+        using Worker         = BasicHttpWorker <Protocol>;
         using Endpoint       = typename Protocol::Endpoint;
         using Stream         = typename Protocol::Stream;
         using Acceptor       = typename Protocol::Acceptor;
@@ -951,11 +951,11 @@ namespace join
         Cache _cache;
 
         /// friendship with worker.
-        friend class BasicWorker <Protocol>;
+        friend class BasicHttpWorker <Protocol>;
     };
 
     /**
-     * @brief Basic HTTPS server.
+     * @brief basic HTTPS server.
      */
     template <class Protocol> 
     class BasicHttpSecureServer : public BasicHttpServer <Protocol>
@@ -963,8 +963,9 @@ namespace join
     public:
         using Content        = BasicContent <Protocol>;
         using ContentHandler = BasicContentHandler <Protocol>;
-        using Worker         = BasicWorker <Protocol>;
+        using Worker         = BasicHttpWorker <Protocol>;
         using Endpoint       = typename Protocol::Endpoint;
+        using Socket         = typename Protocol::Socket;
         using Stream         = typename Protocol::Stream;
         using Acceptor       = typename Protocol::Acceptor;
 
@@ -1017,8 +1018,17 @@ namespace join
             return "https";
         }
 
+        /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @return the accepted client socket object.
+         */
+        virtual Socket accept () const override
+        {
+            return this->acceptEncrypted ();
+        }
+
         /// friendship with worker.
-        friend class BasicWorker <Protocol>;
+        friend class BasicHttpWorker <Protocol>;
     };
 }
 

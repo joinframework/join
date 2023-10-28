@@ -174,7 +174,7 @@ namespace join
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
-         * @return The client socket object on success, nullptr on failure.
+         * @return the accepted client socket object.
          */
         virtual Socket accept () const
         {
@@ -421,7 +421,7 @@ namespace join
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
-         * @return The client socket object on success, nullptr on failure.
+         * @return the accepted client socket object.
          */
         virtual Socket accept () const override
         {
@@ -459,9 +459,9 @@ namespace join
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
-         * @return The client socket object on success, nullptr on failure.
+         * @return the accepted client socket object.
          */
-        virtual Socket acceptEncrypted () const
+        Socket acceptEncrypted () const
         {
             // accept connection.
             Socket client = this->accept ();
