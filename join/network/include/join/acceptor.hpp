@@ -192,16 +192,11 @@ namespace join
             sock._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
             sock._state = Socket::Connected;
 
-            if (sock.setMode (Socket::NonBlocking) == -1)
-            {
-                sock.close ();
-                return sock;
-            }
+            sock.setMode (Socket::NonBlocking);
 
-            if ((sock.protocol () == IPPROTO_TCP) && (sock.setOption (Socket::NoDelay, 1) == -1))
+            if (sock.protocol () == IPPROTO_TCP)
             {
-                sock.close ();
-                return sock;
+                sock.setOption (Socket::NoDelay, 1);
             }
 
             return sock;
@@ -402,12 +397,9 @@ namespace join
         BasicTlsAcceptor& operator= (BasicTlsAcceptor&& other)
         {
             BasicStreamAcceptor <Protocol>::operator= (std::move (other));
-
             _tlsContext = std::move (other._tlsContext);
             _sessionId = other._sessionId;
-
             other._sessionId = 0;
-
             return *this;
         }
 
@@ -432,19 +424,8 @@ namespace join
             sock._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
             sock._state = Socket::Connected;
 
-            // set client socket mode.
-            if (sock.setMode (Socket::NonBlocking) == -1)
-            {
-                sock.close ();
-                return sock;
-            }
-
-            // set the no delay option.
-            if (sock.setOption (Socket::NoDelay, 1) == -1)
-            {
-                sock.close ();
-                return sock;
-            }
+            sock.setMode (Socket::NonBlocking);
+            sock.setOption (Socket::NoDelay, 1);
 
             return sock;
         }
@@ -466,17 +447,9 @@ namespace join
                     return sock;
                 }
 
-                if (SSL_set_fd (sock._tlsHandle.get (), sock._handle) == 0)
-                {
-                    lastError = make_error_code (Errc::InvalidParam);
-                    sock.close ();
-                    return sock;
-                }
-
+                SSL_set_fd (sock._tlsHandle.get (), sock._handle);
                 SSL_set_accept_state (sock._tlsHandle.get ());
-
                 SSL_set_app_data (sock._tlsHandle.get (), &sock);
-
             #ifdef DEBUG
                 SSL_set_info_callback (sock._tlsHandle.get (), Socket::infoWrapper);
             #endif
