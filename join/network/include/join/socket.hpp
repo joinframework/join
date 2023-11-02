@@ -1607,15 +1607,6 @@ namespace join
         using Endpoint = typename Protocol::Endpoint;
 
         /**
-         * @brief TLS mode.
-         */
-        enum TlsMode
-        {
-            ClientMode,             /**< TLS client mode. */
-            ServerMode,             /**< TLS server mode. */
-        };
-
-        /**
          * @brief default constructor.
          */
         BasicTlsSocket ()
@@ -1629,11 +1620,7 @@ namespace join
          */
         BasicTlsSocket (Mode mode)
         : BasicStreamSocket <Protocol> (mode),
-        #if OPENSSL_VERSION_NUMBER < 0x10100000L
-          _tlsContext (SSL_CTX_new (SSLv23_method ()), join::SslCtxDelete ())
-        #else
-          _tlsContext (SSL_CTX_new (TLS_method ()), join::SslCtxDelete ())
-        #endif
+          _tlsContext (SSL_CTX_new (TLS_client_method ()))
         {
             if (this->_tlsContext == nullptr)
             {
@@ -1643,10 +1630,8 @@ namespace join
             // enable the OpenSSL bug workaround options.
             SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_ALL);
 
-        #if OPENSSL_VERSION_NUMBER >= 0x10100000L
             // disallow compression.
             SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_NO_COMPRESSION);
-        #endif
 
             // disallow usage of SSLv2, SSLv3, TLSv1 and TLSv1.1 which are considered insecure.
             SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
@@ -1664,34 +1649,29 @@ namespace join
             SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
 
             // set default TLSv1.2 and below cipher suites.
-            SSL_CTX_set_cipher_list (this->_tlsContext.get (), join::defaultCipher_.c_str ());
+            SSL_CTX_set_cipher_list (this->_tlsContext.get (), join::_defaultCipher.c_str ());
 
-        #if OPENSSL_VERSION_NUMBER >= 0x10101000L
             // set default TLSv1.3 cipher suites.
-            SSL_CTX_set_ciphersuites (this->_tlsContext.get (), join::defaultCipher_1_3_.c_str ());
-        #endif
+            SSL_CTX_set_ciphersuites (this->_tlsContext.get (), join::_defaultCipher_1_3.c_str ());
         }
 
         /**
-         * @brief create instance specifying TLS context and TLS mode.
+         * @brief create instance specifying TLS context.
          * @param tlsContext TLS context.
-         * @param tlsMode TLS mode.
          */
-        BasicTlsSocket (const join::SslCtxPtr& tlsContext, TlsMode tlsMode)
-        : BasicTlsSocket (Mode::NonBlocking, tlsContext, tlsMode)
+        BasicTlsSocket (join::SslCtxPtr tlsContext)
+        : BasicTlsSocket (Mode::NonBlocking, std::move (tlsContext))
         {
         }
 
         /**
-         * @brief Create socket instance specifying the socket mode, TLS context and TLS mode.
+         * @brief Create socket instance specifying the socket mode and TLS context.
          * @param mode Set the socket blocking mode.
          * @param tlsContext TLS context.
-         * @param tlsMode TLS mode.
          */
-        BasicTlsSocket (Mode mode, const join::SslCtxPtr& tlsContext, TlsMode tlsMode)
+        BasicTlsSocket (Mode mode, join::SslCtxPtr tlsContext)
         : BasicStreamSocket <Protocol> (mode),
-          _tlsContext (tlsContext),
-          _tlsMode (tlsMode)
+          _tlsContext (std::move (tlsContext))
         {
             if (this->_tlsContext == nullptr)
             {
@@ -1720,7 +1700,6 @@ namespace join
         : BasicStreamSocket <Protocol> (std::move (other)),
           _tlsContext (std::move (other._tlsContext)),
           _tlsHandle (std::move (other._tlsHandle)),
-          _tlsMode (other._tlsMode),
           _tlsState (other._tlsState)
         {
             if (this->_tlsHandle)
@@ -1728,7 +1707,6 @@ namespace join
                 SSL_set_app_data (this->_tlsHandle.get (), this);
             }
 
-            other._tlsMode = TlsMode::ClientMode;
             other._tlsState = TlsState::NonEncrypted;
         }
 
@@ -1743,7 +1721,6 @@ namespace join
 
             this->_tlsContext = std::move (other._tlsContext);
             this->_tlsHandle = std::move (other._tlsHandle);
-            this->_tlsMode = other._tlsMode;
             this->_tlsState = other._tlsState;
 
             if (this->_tlsHandle)
@@ -1751,7 +1728,6 @@ namespace join
                 SSL_set_app_data (this->_tlsHandle.get (), this);
             }
 
-            other._tlsMode = TlsMode::ClientMode;
             other._tlsState = TlsState::NonEncrypted;
 
             return *this;
@@ -1811,8 +1787,7 @@ namespace join
                     return -1;
                 }
 
-                // prepare the object to work in client or server mode.
-                if (this->_tlsMode == TlsMode::ClientMode)
+                if (SSL_is_server (this->_tlsHandle.get ()) == 0)
                 {
                     if (!this->_remote.hostname ().empty () && (SSL_set_tlsext_host_name (this->_tlsHandle.get (), this->_remote.hostname ().c_str ()) != 1))
                     {
@@ -1828,11 +1803,9 @@ namespace join
                     SSL_set_accept_state (this->_tlsHandle.get ());
                 }
 
-                // Save the internal context.
                 SSL_set_app_data (this->_tlsHandle.get (), this);
 
             #ifdef DEBUG
-                // Set info callback.
                 SSL_set_info_callback (this->_tlsHandle.get (), infoWrapper);
             #endif
 
@@ -2256,7 +2229,6 @@ namespace join
             return 0;
         }
 
-    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
         /**
          * @brief set the cipher list (TLSv1.3).
          * @param cipher the cipher list.
@@ -2273,7 +2245,6 @@ namespace join
 
             return 0;
         }
-    #endif
 
     protected:
         /**
@@ -2580,9 +2551,6 @@ namespace join
 
         /// TLS handle.
         join::SslPtr _tlsHandle;
-
-        /// TLS mode
-        TlsMode _tlsMode = TlsMode::ClientMode;
 
         /// TLS state.
         TlsState _tlsState = TlsState::NonEncrypted;

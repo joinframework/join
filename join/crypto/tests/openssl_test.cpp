@@ -257,11 +257,7 @@ TEST_F (Openssl, StackOfGeneralNamePtr)
  */
 TEST_F (Openssl, SslPtr)
 {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-    join::SslCtxPtr ctx (SSL_CTX_new (SSLv23_method ()), join::SslCtxDelete ());
-#else
-    join::SslCtxPtr ctx (SSL_CTX_new (TLS_method ()), join::SslCtxDelete ());
-#endif
+    join::SslCtxPtr ctx (SSL_CTX_new (TLS_method ()));
     ASSERT_NE (ctx, nullptr);
     join::SslPtr ssl (SSL_new (ctx.get ()));
     ASSERT_NE (ssl, nullptr);

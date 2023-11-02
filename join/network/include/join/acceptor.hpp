@@ -180,38 +180,38 @@ namespace join
         {
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
-            Socket client;
+            Socket sock;
 
-            client._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
-            if (client._handle == -1)
+            sock._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
+            if (sock._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return {};
             }
 
-            client._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
-            client._state = Socket::Connected;
+            sock._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
+            sock._state = Socket::Connected;
 
-            if (client.setMode (Socket::NonBlocking) == -1)
+            if (sock.setMode (Socket::NonBlocking) == -1)
             {
-                client.close ();
+                sock.close ();
                 return {};
             }
 
-            if (client.protocol () == IPPROTO_TCP && client.setOption (Socket::NoDelay, 1) == -1)
+            if ((sock.protocol () == IPPROTO_TCP) && (sock.setOption (Socket::NoDelay, 1) == -1))
             {
-                client.close ();
+                sock.close ();
                 return {};
             }
 
-            return client;
+            return sock;
         }
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return The client stream object on success, nullptr on failure.
          */
-        Stream acceptStream () const
+        virtual Stream acceptStream () const
         {
             Stream stream;
             stream.socket () = this->accept ();
@@ -305,11 +305,7 @@ namespace join
          */
         BasicTlsAcceptor ()
         : BasicStreamAcceptor <Protocol> (),
-        #if OPENSSL_VERSION_NUMBER < 0x10100000L
-          _tlsContext (SSL_CTX_new (SSLv23_method ()), join::SslCtxDelete ()),
-        #else
-          _tlsContext (SSL_CTX_new (TLS_method ()), join::SslCtxDelete ()),
-        #endif
+          _tlsContext (SSL_CTX_new (TLS_server_method ())),
           _sessionId (randomize <int> ())
         {
             if (_tlsContext == nullptr)
@@ -320,10 +316,8 @@ namespace join
             // enable the OpenSSL bug workaround options.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_ALL);
 
-        #if OPENSSL_VERSION_NUMBER >= 0x10100000L
             // disallow compression.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_COMPRESSION);
-        #endif
 
             // disallow usage of SSLv2, SSLv3, TLSv1 and TLSv1.1 which are considered insecure.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
@@ -344,22 +338,20 @@ namespace join
             SSL_CTX_set_verify (_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
 
             // set default TLSv1.2 and below cipher suites.
-            SSL_CTX_set_cipher_list (_tlsContext.get (), join::defaultCipher_.c_str ());
+            SSL_CTX_set_cipher_list (_tlsContext.get (), join::_defaultCipher.c_str ());
 
-        #if OPENSSL_VERSION_NUMBER >= 0x10101000L
             // set default TLSv1.3 cipher suites.
-            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::defaultCipher_1_3_.c_str ());
+            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::_defaultCipher_1_3.c_str ());
 
             // disallow client-side renegotiation.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_RENEGOTIATION);
-        #endif
 
         #if OPENSSL_VERSION_NUMBER >= 0x30000000L
             // use the default built-in Diffie-Hellman parameters.
             SSL_CTX_set_dh_auto (_tlsContext.get (), 1);
 
             // Set elliptic curve Diffie-Hellman key.
-            SSL_CTX_set1_groups_list (_tlsContext.get (), join::defaultCurve_.c_str ());
+            SSL_CTX_set1_groups_list (_tlsContext.get (), join::_defaultCurve.c_str ());
         #else
             // Set Diffie-Hellman key.
             join::DhKeyPtr dh (getDh2236 ());
@@ -427,87 +419,88 @@ namespace join
         {
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
-            Socket client (this->_tlsContext, Socket::ServerMode);
+            Socket sock (join::SslCtxPtr (this->_tlsContext.get ()));
+            SSL_CTX_up_ref (this->_tlsContext.get ());
 
             // accept connection.
-            client._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
-            if (client._handle == -1)
+            sock._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
+            if (sock._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return {};
             }
 
-            client._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
-            client._state = Socket::Connected;
+            sock._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
+            sock._state = Socket::Connected;
 
             // set client socket mode.
-            if (client.setMode (Socket::NonBlocking) == -1)
+            if (sock.setMode (Socket::NonBlocking) == -1)
             {
-                client.close ();
+                sock.close ();
                 return {};
             }
 
             // set the no delay option.
-            if (client.setOption (Socket::NoDelay, 1) == -1)
+            if (sock.setOption (Socket::NoDelay, 1) == -1)
             {
-                client.close ();
+                sock.close ();
                 return {};
             }
 
-            return client;
+            return sock;
         }
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return the accepted client socket object.
          */
-        Socket acceptEncrypted () const
+        virtual Socket acceptEncrypted () const
         {
             // accept connection.
-            Socket client = BasicTlsAcceptor <Protocol>::accept ();
-            if (!client.connected ())
+            Socket sock = BasicTlsAcceptor <Protocol>::accept ();
+            if (!sock.connected ())
             {
                 return {};
             }
 
             // create an SSL object for the connection.
-            client._tlsHandle.reset (SSL_new (client._tlsContext.get ()));
-            if (client._tlsHandle == nullptr)
+            sock._tlsHandle.reset (SSL_new (sock._tlsContext.get ()));
+            if (sock._tlsHandle == nullptr)
             {
                 lastError = make_error_code (Errc::OutOfMemory);
-                client.close ();
+                sock.close ();
                 return {};
             }
 
             // set the file descriptor as the input/output facility for the TLS/SSL handle.
-            if (SSL_set_fd (client._tlsHandle.get (), client._handle) == 0)
+            if (SSL_set_fd (sock._tlsHandle.get (), sock._handle) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
-                client.close ();
+                sock.close ();
                 return {};
             }
 
             // prepare the object to work in server mode.
-            SSL_set_accept_state (client._tlsHandle.get ());
+            SSL_set_accept_state (sock._tlsHandle.get ());
 
             // save the internal context.
-            SSL_set_app_data (client._tlsHandle.get (), &client);
+            SSL_set_app_data (sock._tlsHandle.get (), &sock);
 
         #ifdef DEBUG
             // set info callback.
-            SSL_set_info_callback (client._tlsHandle.get (), Socket::infoWrapper);
+            SSL_set_info_callback (sock._tlsHandle.get (), Socket::infoWrapper);
         #endif
 
-            client._tlsState = Socket::Encrypted;
+            sock._tlsState = Socket::Encrypted;
 
-            return client;
+            return sock;
         }
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return The client stream object on success, nullptr on failure.
          */
-        Stream acceptStreamEncrypted () const
+        virtual Stream acceptStreamEncrypted () const
         {
             Stream stream;
             stream.socket () = this->acceptEncrypted ();
@@ -605,7 +598,6 @@ namespace join
             return 0;
         }
 
-    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
         /**
          * @brief set the cipher list (TLSv1.3).
          * @param cipher the cipher list.
@@ -621,7 +613,6 @@ namespace join
 
             return 0;
         }
-    #endif
 
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L
         /**
