@@ -208,26 +208,26 @@ protected:
      */
     virtual void onReceive () override
     {
-        Tls::Socket sock = this->acceptEncrypted ();
-        if (sock.connected ())
+        Tls::Stream stream = this->acceptStreamEncrypted ();
+        if (stream.connected ())
         {
             char buf[1024];
             for (;;)
             {
                 // echo received data.
-                int nread = sock.read (buf, sizeof (buf));
+                int nread = stream.socket ().read (buf, sizeof (buf));
                 if (nread == -1)
                 {
                     if (join::lastError == Errc::TemporaryError)
                     {
-                        if (sock.waitReadyRead (_timeout))
+                        if (stream.socket ().waitReadyRead (_timeout))
                             continue;
                     }
                     break;
                 }
-                sock.writeExactly (buf, nread);
+                stream.socket ().writeExactly (buf, nread);
             }
-            sock.close ();
+            stream.close ();
         }
     }
 

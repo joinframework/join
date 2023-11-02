@@ -186,7 +186,7 @@ namespace join
             if (sock._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return {};
+                return sock;
             }
 
             sock._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
@@ -195,13 +195,13 @@ namespace join
             if (sock.setMode (Socket::NonBlocking) == -1)
             {
                 sock.close ();
-                return {};
+                return sock;
             }
 
             if ((sock.protocol () == IPPROTO_TCP) && (sock.setOption (Socket::NoDelay, 1) == -1))
             {
                 sock.close ();
-                return {};
+                return sock;
             }
 
             return sock;
@@ -422,12 +422,11 @@ namespace join
             Socket sock (join::SslCtxPtr (this->_tlsContext.get ()));
             SSL_CTX_up_ref (this->_tlsContext.get ());
 
-            // accept connection.
             sock._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
             if (sock._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return {};
+                return sock;
             }
 
             sock._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
@@ -437,14 +436,14 @@ namespace join
             if (sock.setMode (Socket::NonBlocking) == -1)
             {
                 sock.close ();
-                return {};
+                return sock;
             }
 
             // set the no delay option.
             if (sock.setOption (Socket::NoDelay, 1) == -1)
             {
                 sock.close ();
-                return {};
+                return sock;
             }
 
             return sock;
@@ -456,42 +455,34 @@ namespace join
          */
         virtual Socket acceptEncrypted () const
         {
-            // accept connection.
             Socket sock = BasicTlsAcceptor <Protocol>::accept ();
-            if (!sock.connected ())
+            if (sock.connected ())
             {
-                return {};
+                sock._tlsHandle.reset (SSL_new (sock._tlsContext.get ()));
+                if (sock._tlsHandle == nullptr)
+                {
+                    lastError = make_error_code (Errc::OutOfMemory);
+                    sock.close ();
+                    return sock;
+                }
+
+                if (SSL_set_fd (sock._tlsHandle.get (), sock._handle) == 0)
+                {
+                    lastError = make_error_code (Errc::InvalidParam);
+                    sock.close ();
+                    return sock;
+                }
+
+                SSL_set_accept_state (sock._tlsHandle.get ());
+
+                SSL_set_app_data (sock._tlsHandle.get (), &sock);
+
+            #ifdef DEBUG
+                SSL_set_info_callback (sock._tlsHandle.get (), Socket::infoWrapper);
+            #endif
+
+                sock._tlsState = Socket::Encrypted;
             }
-
-            // create an SSL object for the connection.
-            sock._tlsHandle.reset (SSL_new (sock._tlsContext.get ()));
-            if (sock._tlsHandle == nullptr)
-            {
-                lastError = make_error_code (Errc::OutOfMemory);
-                sock.close ();
-                return {};
-            }
-
-            // set the file descriptor as the input/output facility for the TLS/SSL handle.
-            if (SSL_set_fd (sock._tlsHandle.get (), sock._handle) == 0)
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                sock.close ();
-                return {};
-            }
-
-            // prepare the object to work in server mode.
-            SSL_set_accept_state (sock._tlsHandle.get ());
-
-            // save the internal context.
-            SSL_set_app_data (sock._tlsHandle.get (), &sock);
-
-        #ifdef DEBUG
-            // set info callback.
-            SSL_set_info_callback (sock._tlsHandle.get (), Socket::infoWrapper);
-        #endif
-
-            sock._tlsState = Socket::Encrypted;
 
             return sock;
         }
