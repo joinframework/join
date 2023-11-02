@@ -36,6 +36,7 @@ using namespace std::chrono;
 
 using join::Errc;
 using join::TlsErrc;
+using join::IpAddress;
 using join::Resolver;
 using join::HttpMethod;
 using join::HttpRequest;
@@ -184,8 +185,8 @@ protected:
         this->addExecute (HttpMethod::Get, "/exec/", "null", nullptr);
         this->addExecute (HttpMethod::Get, "/exec/", "get", getHandler);
         this->addExecute (HttpMethod::Post, "/exec/", "post", postHandler);
-        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), -1);
+        ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), -1);
         ASSERT_EQ (join::lastError, Errc::InUse);
     }
 

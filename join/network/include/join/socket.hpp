@@ -252,10 +252,7 @@ namespace join
             }
             else if ((endpoint.protocol ().family () == AF_INET6) || (endpoint.protocol ().family () == AF_INET))
             {
-                if (setOption (Option::ReuseAddr, 1) == -1)
-                {
-                    return -1;
-                }
+                this->setOption (Option::ReuseAddr, 1);
             }
             else if (endpoint.protocol ().family () == AF_UNIX)
             {
@@ -774,13 +771,13 @@ namespace join
                     return -1;
                 }
 
-                if (setOption (Option::MulticastTtl, this->_ttl) == -1)
+                if (this->setOption (Option::MulticastTtl, this->_ttl) == -1)
                 {
                     this->close ();
                     return -1;
                 }
 
-                if (setOption (Option::Ttl, this->_ttl) == -1)
+                if (this->setOption (Option::Ttl, this->_ttl) == -1)
                 {
                     this->close ();
                     return -1;
@@ -816,10 +813,7 @@ namespace join
 
             if ((this->_protocol.family () == AF_INET6) || (this->_protocol.family () == AF_INET))
             {
-                if (setOption (Option::ReuseAddr, 1) == -1)
-                {
-                    return -1;
-                }
+                this->setOption (Option::ReuseAddr, 1);
             }
 
             int result = setsockopt (this->_handle, SOL_SOCKET, SO_BINDTODEVICE, device.c_str (), device.size ());

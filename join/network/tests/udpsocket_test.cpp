@@ -47,7 +47,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (this->bind ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->bind ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -533,10 +533,14 @@ TEST_F (UdpSocket, mtu)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_EQ (udpSocket.mtu (), -1);
-    ASSERT_EQ (udpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.connect ({"127.0.0.1", _port}), 0) << join::lastError.message ();
     ASSERT_NE (udpSocket.mtu (), -1) << join::lastError.message ();
     udpSocket.close ();
+
     ASSERT_EQ (udpSocket.mtu (), -1);
+    ASSERT_EQ (udpSocket.connect ({"::1", _port}), 0) << join::lastError.message ();
+    ASSERT_NE (udpSocket.mtu (), -1) << join::lastError.message ();
+    udpSocket.close ();
 }
 
 /**

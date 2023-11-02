@@ -190,7 +190,7 @@ protected:
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
-        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -881,12 +881,18 @@ TEST_F (TlsSocket, mtu)
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_EQ (tlsSocket.mtu (), -1);
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({"127.0.0.1", _port}), 0) << join::lastError.message ();
     ASSERT_NE (tlsSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.mtu (), -1);
     tlsSocket.close ();
+
     ASSERT_EQ (tlsSocket.mtu (), -1);
+    ASSERT_EQ (tlsSocket.connectEncrypted ({"::1", _port}), 0) << join::lastError.message ();
+    ASSERT_NE (tlsSocket.mtu (), -1) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.mtu (), -1);
+    tlsSocket.close ();
 }
 
 /**

@@ -190,7 +190,7 @@ protected:
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
-        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
