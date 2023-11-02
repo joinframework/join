@@ -192,12 +192,11 @@ namespace join
             sock._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
             sock._state = Socket::Connected;
 
-            sock.setMode (Socket::NonBlocking);
-
             if (sock.protocol () == IPPROTO_TCP)
             {
                 sock.setOption (Socket::NoDelay, 1);
             }
+            sock.setMode (Socket::NonBlocking);
 
             return sock;
         }
@@ -303,11 +302,6 @@ namespace join
           _tlsContext (SSL_CTX_new (TLS_server_method ())),
           _sessionId (randomize <int> ())
         {
-            if (_tlsContext == nullptr)
-            {
-                throw std::runtime_error ("OpenSSL libraries were not initialized at process start");
-            }
-
             // enable the OpenSSL bug workaround options.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_ALL);
 
@@ -424,8 +418,8 @@ namespace join
             sock._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
             sock._state = Socket::Connected;
 
-            sock.setMode (Socket::NonBlocking);
             sock.setOption (Socket::NoDelay, 1);
+            sock.setMode (Socket::NonBlocking);
 
             return sock;
         }
@@ -437,25 +431,27 @@ namespace join
         virtual Socket acceptEncrypted () const
         {
             Socket sock = BasicTlsAcceptor <Protocol>::accept ();
-            if (sock.connected ())
+            if (!sock.connected ())
             {
-                sock._tlsHandle.reset (SSL_new (sock._tlsContext.get ()));
-                if (sock._tlsHandle == nullptr)
-                {
-                    lastError = make_error_code (Errc::OutOfMemory);
-                    sock.close ();
-                    return sock;
-                }
-
-                SSL_set_fd (sock._tlsHandle.get (), sock._handle);
-                SSL_set_accept_state (sock._tlsHandle.get ());
-                SSL_set_app_data (sock._tlsHandle.get (), &sock);
-            #ifdef DEBUG
-                SSL_set_info_callback (sock._tlsHandle.get (), Socket::infoWrapper);
-            #endif
-
-                sock._tlsState = Socket::Encrypted;
+                return sock;
             }
+
+            sock._tlsHandle.reset (SSL_new (sock._tlsContext.get ()));
+            if (sock._tlsHandle == nullptr)
+            {
+                lastError = make_error_code (Errc::OutOfMemory);
+                sock.close ();
+                return sock;
+            }
+
+            SSL_set_fd (sock._tlsHandle.get (), sock._handle);
+            SSL_set_accept_state (sock._tlsHandle.get ());
+            SSL_set_app_data (sock._tlsHandle.get (), &sock);
+        #ifdef DEBUG
+            SSL_set_info_callback (sock._tlsHandle.get (), Socket::infoWrapper);
+        #endif
+
+            sock._tlsState = Socket::Encrypted;
 
             return sock;
         }

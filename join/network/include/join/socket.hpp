@@ -771,17 +771,8 @@ namespace join
                     return -1;
                 }
 
-                if (this->setOption (Option::MulticastTtl, this->_ttl) == -1)
-                {
-                    this->close ();
-                    return -1;
-                }
-
-                if (this->setOption (Option::Ttl, this->_ttl) == -1)
-                {
-                    this->close ();
-                    return -1;
-                }
+                this->setOption (Option::MulticastTtl, this->_ttl);
+                this->setOption (Option::Ttl, this->_ttl);
             }
 
             return 0;
@@ -1616,11 +1607,6 @@ namespace join
         : BasicStreamSocket <Protocol> (mode),
           _tlsContext (SSL_CTX_new (TLS_client_method ()))
         {
-            if (this->_tlsContext == nullptr)
-            {
-                throw std::runtime_error ("OpenSSL libraries were not initialized at process start");
-            }
-
             // enable the OpenSSL bug workaround options.
             SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_ALL);
 
