@@ -16,7 +16,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3.5.0
+      uses: actions/checkout@v4.1.1
 
     - name: Configure
       run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_COVERAGE=ON -DJOIN_ENABLE_TESTS=ON
@@ -33,16 +33,17 @@ jobs:
         lcov --remove lcov.info "*/build/*" "*/tests/*" "/usr/include/*" --output-file lcov.info
 
     - name: Upload coverage report to coveralls
-      uses: coverallsapp/github-action@v2
+      uses: coverallsapp/github-action@v2.2.3
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         file: lcov.info
 
     - name: Upload coverage report to codecov
-      uses: codecov/codecov-action@v3.1.1
+      uses: codecov/codecov-action@v3.1.4
       with:
         fail_ci_if_error: true
         token: ${{secrets.CODECOV_TOKEN}}
+        functionalities: fixes
         flags: unittests
         file: lcov.info
 
