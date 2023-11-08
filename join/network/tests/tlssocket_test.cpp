@@ -666,14 +666,20 @@ TEST_F (TlsSocket, writeExactly)
  */
 TEST_F (TlsSocket, setMode)
 {
-    Tls::Socket tlsSocket (Tls::Socket::Blocking);
-
-    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::Blocking), 0) << join::lastError.message ();
+    Tls::Socket tlsSocket;
 
     ASSERT_EQ (tlsSocket.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::Blocking), 0) << join::lastError.message ();
+
+    int flags = ::fcntl (tlsSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
+
+    tlsSocket.setMode (Tls::Socket::Blocking);
+    flags = ::fcntl (tlsSocket.handle (), F_GETFL, 0);
+    ASSERT_FALSE (flags & O_NONBLOCK);
+
+    tlsSocket.setMode (Tls::Socket::NonBlocking);
+    flags = ::fcntl (tlsSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
 
     tlsSocket.close ();
 }

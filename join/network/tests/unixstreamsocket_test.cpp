@@ -374,12 +374,18 @@ TEST_F (UnixStreamSocket, setMode)
 {
     UnixStream::Socket unixSocket;
 
-    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::Blocking), 0) << join::lastError.message ();
-
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setMode (UnixStream::Socket::Blocking), 0) << join::lastError.message ();
+
+    int flags = ::fcntl (unixSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
+
+    unixSocket.setMode (UnixStream::Socket::Blocking);
+    flags = ::fcntl (unixSocket.handle (), F_GETFL, 0);
+    ASSERT_FALSE (flags & O_NONBLOCK);
+
+    unixSocket.setMode (UnixStream::Socket::NonBlocking);
+    flags = ::fcntl (unixSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
 
     unixSocket.close ();
 }

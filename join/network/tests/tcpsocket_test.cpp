@@ -417,12 +417,18 @@ TEST_F (TcpSocket, setMode)
 {
     Tcp::Socket tcpSocket;
 
-    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::Blocking), 0) << join::lastError.message ();
-
     ASSERT_EQ (tcpSocket.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::Blocking), 0) << join::lastError.message ();
+
+    int flags = ::fcntl (tcpSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
+
+    tcpSocket.setMode (Tcp::Socket::Blocking);
+    flags = ::fcntl (tcpSocket.handle (), F_GETFL, 0);
+    ASSERT_FALSE (flags & O_NONBLOCK);
+
+    tcpSocket.setMode (Tcp::Socket::NonBlocking);
+    flags = ::fcntl (tcpSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
 
     tcpSocket.close ();
 }

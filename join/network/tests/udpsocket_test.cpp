@@ -326,12 +326,18 @@ TEST_F (UdpSocket, setMode)
 {
     Udp::Socket udpSocket;
 
-    ASSERT_EQ (udpSocket.setMode (Udp::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.setMode (Udp::Socket::Blocking), 0) << join::lastError.message ();
-
     ASSERT_EQ (udpSocket.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.setMode (Udp::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (udpSocket.setMode (Udp::Socket::Blocking), 0) << join::lastError.message ();
+
+    int flags = ::fcntl (udpSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
+
+    udpSocket.setMode (Udp::Socket::Blocking);
+    flags = ::fcntl (udpSocket.handle (), F_GETFL, 0);
+    ASSERT_FALSE (flags & O_NONBLOCK);
+
+    udpSocket.setMode (Udp::Socket::NonBlocking);
+    flags = ::fcntl (udpSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
 
     udpSocket.close ();
 }

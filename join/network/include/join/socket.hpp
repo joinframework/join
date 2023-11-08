@@ -376,48 +376,26 @@ namespace join
         /**
          * @brief set the socket to the non-blocking or blocking mode.
          * @param mode blocking mode.
-         * @return 0 on success, -1 on failure.
          */
-        int setMode (Mode mode) noexcept
+        void setMode (Mode mode) noexcept
         {
-            // save socket mode.
             this->_mode = mode;
 
-            if (this->_state == State::Closed)
+            if (this->_state != State::Closed)
             {
-                // socket is closed.
-                // don't return an error because the mode will be set on next call to connect().
-                return 0;
-            }
+                int flags = ::fcntl (this->_handle, F_GETFL, 0);
 
-            int oldFlags, newFlags;
-
-            oldFlags = ::fcntl (this->_handle, F_GETFL, 0);
-            if (oldFlags == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return -1;
-            }
-
-            if (mode == Mode::NonBlocking)
-            {
-                newFlags = oldFlags | O_NONBLOCK;
-            }
-            else
-            {
-                newFlags = oldFlags & ~O_NONBLOCK;
-            }
-
-            if (newFlags != oldFlags)
-            {
-                if (::fcntl (this->_handle, F_SETFL, newFlags) == -1)
+                if (this->_mode == Mode::NonBlocking)
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
-                    return -1;
+                    flags = flags | O_NONBLOCK;
                 }
-            }
+                else
+                {
+                    flags = flags & ~O_NONBLOCK;
+                }
 
-            return 0;
+                ::fcntl (this->_handle, F_SETFL, flags);
+            }
         }
 
         /**
