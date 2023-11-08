@@ -653,7 +653,6 @@ namespace join
             return this->_sockbuf.socket ().setCipher (cipher);
         }
 
-    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
         /**
          * @brief set the cipher list (TLSv1.3).
          * @param cipher the cipher list.
@@ -663,7 +662,6 @@ namespace join
         {
             return this->_sockbuf.socket ().setCipher_1_3 (cipher);
         }
-    #endif
     };
 }
 

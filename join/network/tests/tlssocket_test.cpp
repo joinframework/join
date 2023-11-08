@@ -188,11 +188,9 @@ protected:
     void SetUp ()
     {
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher (join::defaultCipher_), 0) << join::lastError.message ();
-    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
-    #endif
-        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -210,7 +208,7 @@ protected:
      */
     virtual void onReceive () override
     {
-        Tls::Socket sock = this->accept ();
+        Tls::Socket sock = this->acceptEncrypted ();
         if (sock.connected ())
         {
             char buf[1024];
@@ -278,7 +276,7 @@ const std::string TlsSocket::_invalidKey   = "/tmp/tlssocket_test_invalid.key";
  */
 TEST_F (TlsSocket, construct)
 {
-    ASSERT_THROW (Tls::Socket (nullptr, Tls::Socket::ClientMode), std::invalid_argument);
+    ASSERT_THROW (Tls::Socket (nullptr), std::invalid_argument);
 }
 
 /**
@@ -668,14 +666,20 @@ TEST_F (TlsSocket, writeExactly)
  */
 TEST_F (TlsSocket, setMode)
 {
-    Tls::Socket tlsSocket (Tls::Socket::Blocking);
-
-    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::Blocking), 0) << join::lastError.message ();
+    Tls::Socket tlsSocket;
 
     ASSERT_EQ (tlsSocket.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setMode (Tls::Socket::Blocking), 0) << join::lastError.message ();
+
+    int flags = ::fcntl (tlsSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
+
+    tlsSocket.setMode (Tls::Socket::Blocking);
+    flags = ::fcntl (tlsSocket.handle (), F_GETFL, 0);
+    ASSERT_FALSE (flags & O_NONBLOCK);
+
+    tlsSocket.setMode (Tls::Socket::NonBlocking);
+    flags = ::fcntl (tlsSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
 
     tlsSocket.close ();
 }
@@ -883,12 +887,18 @@ TEST_F (TlsSocket, mtu)
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_EQ (tlsSocket.mtu (), -1);
-    ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({"127.0.0.1", _port}), 0) << join::lastError.message ();
     ASSERT_NE (tlsSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.mtu (), -1);
     tlsSocket.close ();
+
     ASSERT_EQ (tlsSocket.mtu (), -1);
+    ASSERT_EQ (tlsSocket.connectEncrypted ({"::1", _port}), 0) << join::lastError.message ();
+    ASSERT_NE (tlsSocket.mtu (), -1) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.mtu (), -1);
+    tlsSocket.close ();
 }
 
 /**
@@ -992,15 +1002,14 @@ TEST_F (TlsSocket, setCipher)
 
     ASSERT_EQ (tlsSocket.setCipher ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsSocket.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
     tlsSocket.close ();
 }
 
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 /**
  * @brief Test setCipher_1_3 method.
  */
@@ -1010,14 +1019,13 @@ TEST_F (TlsSocket, setCipher_1_3)
 
     ASSERT_EQ (tlsSocket.setCipher_1_3 ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
     tlsSocket.close ();
 }
-#endif
 
 /**
  * @brief Test is lower method.

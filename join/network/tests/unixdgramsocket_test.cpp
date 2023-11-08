@@ -304,12 +304,18 @@ TEST_F (UnixDgramSocket, setMode)
 {
     UnixDgram::Socket unixSocket;
 
-    ASSERT_EQ (unixSocket.setMode (UnixDgram::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setMode (UnixDgram::Socket::Blocking), 0) << join::lastError.message ();
-
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setMode (UnixDgram::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setMode (UnixDgram::Socket::Blocking), 0) << join::lastError.message ();
+
+    int flags = ::fcntl (unixSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
+
+    unixSocket.setMode (UnixDgram::Socket::Blocking);
+    flags = ::fcntl (unixSocket.handle (), F_GETFL, 0);
+    ASSERT_FALSE (flags & O_NONBLOCK);
+
+    unixSocket.setMode (UnixDgram::Socket::NonBlocking);
+    flags = ::fcntl (unixSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
 
     unixSocket.close ();
 }

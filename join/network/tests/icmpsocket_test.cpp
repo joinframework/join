@@ -351,9 +351,19 @@ TEST_F (IcmpSocket, setMode)
 {
     Icmp::Socket icmpSocket;
 
-    ASSERT_EQ (icmpSocket.setMode (Icmp::Socket::Blocking), 0) << join::lastError.message ();
-    ASSERT_EQ (icmpSocket.connect (_host), 0) << join::lastError.message ();
-    ASSERT_EQ (icmpSocket.setMode (Icmp::Socket::NonBlocking), 0) << join::lastError.message ();
+    ASSERT_EQ (icmpSocket.open (), 0) << join::lastError.message ();
+
+    int flags = ::fcntl (icmpSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
+
+    icmpSocket.setMode (Icmp::Socket::Blocking);
+    flags = ::fcntl (icmpSocket.handle (), F_GETFL, 0);
+    ASSERT_FALSE (flags & O_NONBLOCK);
+
+    icmpSocket.setMode (Icmp::Socket::NonBlocking);
+    flags = ::fcntl (icmpSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
+
     icmpSocket.close ();
 }
 

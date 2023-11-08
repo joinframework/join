@@ -136,45 +136,43 @@ namespace join
     {
         // check if we have tasks to perform.
         int count = std::distance (first, last);
-        if (count == 0)
+        if (count)
         {
-            return;
-        }
+            // determine number of threads and tasks per thread to run.
+            int concurrency = std::max (int (std::thread::hardware_concurrency ()), 1);
+            // no need to create more threads than tasks.
+            concurrency     = std::min (concurrency, count);
+            int elements    = count / concurrency;
+            int rest        = count % concurrency;
+            // distribute tasks to threads.
+            std::vector <int> tasks (concurrency, elements);
+            for (int i = 0; i < rest; ++i)
+            {
+                ++tasks[i];
+            }
 
-        // determine number of threads and tasks per thread to run.
-        int concurrency = std::max (int (std::thread::hardware_concurrency ()), 1);
-        // no need to create more threads than tasks.
-        concurrency     = std::min (concurrency, count);
-        int elements    = count / concurrency;
-        int rest        = count % concurrency;
-        // distribute tasks to threads.
-        std::vector <int> tasks (concurrency, elements);
-        for (int i = 0; i < rest; ++i)
-        {
-            ++tasks[i];
-        }
+            // determine the real thread pool size (concurrency minus 1 as we are a thread).
+            std::vector <Thread> pool;
+            int nth = concurrency - 1;
+            pool.reserve (nth);
 
-        // determine the real thread pool size (concurrency minus 1 as we are a thread).
-        std::vector <Thread> pool;
-        int nth = concurrency - 1;
-        pool.reserve (nth);
+            // create threads.
+            auto beg = first, end = first;
+            for (int i = 0; i < nth; ++i)
+            {
+                std::advance (end, tasks[i]);
+                pool.emplace_back (function, beg, end);
+                beg = end;
+            }
 
-        // create threads.
-        auto beg = first, end = first;
-        for (int i = 0; i < nth; ++i)
-        {
-            std::advance (end, tasks[i]);
-            pool.emplace_back (function, beg, end);
-            beg = end;
-        }
+            // we are a thread so we can help.
+            function (beg, last);
 
-        // we are a thread so we can help.
-        function (beg, last);
-
-        // wait for threads to terminate.
-        for (auto& thread : pool)
-        {
-            thread.join ();
+            // wait for threads to terminate.
+            for (auto& thread : pool)
+            {
+                thread.join ();
+            }
         }
     }
 

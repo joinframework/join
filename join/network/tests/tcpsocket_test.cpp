@@ -46,7 +46,7 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -417,12 +417,18 @@ TEST_F (TcpSocket, setMode)
 {
     Tcp::Socket tcpSocket;
 
-    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::Blocking), 0) << join::lastError.message ();
-
     ASSERT_EQ (tcpSocket.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (tcpSocket.setMode (Tcp::Socket::Blocking), 0) << join::lastError.message ();
+
+    int flags = ::fcntl (tcpSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
+
+    tcpSocket.setMode (Tcp::Socket::Blocking);
+    flags = ::fcntl (tcpSocket.handle (), F_GETFL, 0);
+    ASSERT_FALSE (flags & O_NONBLOCK);
+
+    tcpSocket.setMode (Tcp::Socket::NonBlocking);
+    flags = ::fcntl (tcpSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
 
     tcpSocket.close ();
 }
@@ -628,12 +634,18 @@ TEST_F (TcpSocket, mtu)
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
     ASSERT_EQ (tcpSocket.mtu (), -1);
-    ASSERT_EQ (tcpSocket.connect ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.connect ({"127.0.0.1", _port}), 0) << join::lastError.message ();
     ASSERT_NE (tcpSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.mtu (), -1);
     tcpSocket.close ();
+
     ASSERT_EQ (tcpSocket.mtu (), -1);
+    ASSERT_EQ (tcpSocket.connect ({"::1", _port}), 0) << join::lastError.message ();
+    ASSERT_NE (tcpSocket.mtu (), -1) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.mtu (), -1);
+    tcpSocket.close ();
 }
 
 /**
