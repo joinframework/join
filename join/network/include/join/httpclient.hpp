@@ -475,7 +475,7 @@ namespace join
     }
 
     /**
-     * @brief Basic HTTPS client.
+     * @brief basic HTTPS client.
      */
     template <class Protocol> 
     class BasicHttpSecureClient : public BasicHttpClient <Protocol>

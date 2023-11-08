@@ -300,7 +300,7 @@ namespace join
         virtual int readHeaders (std::istream& in);
 
         /**
-         * @brief write HTTP header to the given output stream.
+         * @brief write HTTP headers to the given output stream.
          * @param out output stream.
          * @return 0 on success, -1 on failure.
          */
@@ -493,7 +493,7 @@ namespace join
         virtual void clear () override;
 
         /**
-         * @brief write HTTP header to the given output stream.
+         * @brief write HTTP headers to the given output stream.
          * @param out output stream.
          * @return 0 on success, -1 on failure.
          */
@@ -604,7 +604,7 @@ namespace join
         virtual void clear () override;
 
         /**
-         * @brief write HTTP header to the given output stream.
+         * @brief write HTTP headers to the given output stream.
          * @param out output stream.
          * @return 0 on success, -1 on failure.
          */

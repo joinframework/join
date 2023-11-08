@@ -274,12 +274,18 @@ TEST_F (RawSocket, setMode)
 {
     Raw::Socket rawSocket;
 
-    ASSERT_EQ (rawSocket.setMode (Raw::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.setMode (Raw::Socket::Blocking), 0) << join::lastError.message ();
-
     ASSERT_EQ (rawSocket.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.setMode (Raw::Socket::NonBlocking), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.setMode (Raw::Socket::Blocking), 0) << join::lastError.message ();
+
+    int flags = ::fcntl (rawSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
+
+    rawSocket.setMode (Raw::Socket::Blocking);
+    flags = ::fcntl (rawSocket.handle (), F_GETFL, 0);
+    ASSERT_FALSE (flags & O_NONBLOCK);
+
+    rawSocket.setMode (Raw::Socket::NonBlocking);
+    flags = ::fcntl (rawSocket.handle (), F_GETFL, 0);
+    ASSERT_TRUE (flags & O_NONBLOCK);
 
     rawSocket.close ();
 }

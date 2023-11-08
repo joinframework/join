@@ -31,10 +31,10 @@
 namespace join
 {
     /**
-     * @brief basic acceptor class.
+     * @brief basic stream acceptor class.
      */
     template <class Protocol>
-    class BasicAcceptor : public EventHandler
+    class BasicStreamAcceptor : public EventHandler
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
@@ -44,26 +44,26 @@ namespace join
         /**
          * @brief create the acceptor instance.
          */
-        BasicAcceptor () = default;
+        BasicStreamAcceptor () = default;
 
         /**
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicAcceptor (const BasicAcceptor& other) = delete;
+        BasicStreamAcceptor (const BasicStreamAcceptor& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicAcceptor& operator= (const BasicAcceptor& other) = delete;
+        BasicStreamAcceptor& operator= (const BasicStreamAcceptor& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicAcceptor (BasicAcceptor&& other)
+        BasicStreamAcceptor (BasicStreamAcceptor&& other)
         : _handle (other._handle),
           _protocol (other._protocol)
         {
@@ -76,7 +76,7 @@ namespace join
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicAcceptor& operator= (BasicAcceptor&& other)
+        BasicStreamAcceptor& operator= (BasicStreamAcceptor&& other)
         {
             this->close ();
 
@@ -92,7 +92,7 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicAcceptor ()
+        virtual ~BasicStreamAcceptor ()
         {
             this->close ();
         }
@@ -173,6 +173,46 @@ namespace join
         }
 
         /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @return the accepted client socket object.
+         */
+        virtual Socket accept () const
+        {
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
+            Socket sock;
+
+            sock._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
+            if (sock._handle == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                return sock;
+            }
+
+            sock._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
+            sock._state = Socket::Connected;
+
+            if (sock.protocol () == IPPROTO_TCP)
+            {
+                sock.setOption (Socket::NoDelay, 1);
+            }
+            sock.setMode (Socket::NonBlocking);
+
+            return sock;
+        }
+
+        /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @return The client stream object on success, nullptr on failure.
+         */
+        virtual Stream acceptStream () const
+        {
+            Stream stream;
+            stream.socket () = this->accept ();
+            return stream;
+        }
+
+        /**
          * @brief determine the local endpoint associated with this socket.
          * @return local endpoint.
          */
@@ -244,106 +284,10 @@ namespace join
     };
 
     /**
-     * @brief basic stream acceptor class.
-     */
-    template <class Protocol>
-    class BasicStreamAcceptor : public BasicAcceptor <Protocol>
-    {
-    public:
-        using Endpoint = typename Protocol::Endpoint;
-        using Socket   = typename Protocol::Socket;
-        using Stream   = typename Protocol::Stream;
-
-        /**
-         * @brief create the acceptor instance.
-         */
-        BasicStreamAcceptor () = default;
-
-        /**
-         * @brief copy constructor.
-         * @param other other object to copy.
-         */
-        BasicStreamAcceptor (const BasicStreamAcceptor& other) = delete;
-
-        /**
-         * @brief copy assignment operator.
-         * @param other other object to assign.
-         * @return assigned object.
-         */
-        BasicStreamAcceptor& operator= (const BasicStreamAcceptor& other) = delete;
-
-        /**
-         * @brief move constructor.
-         * @param other other object to move.
-         */
-        BasicStreamAcceptor (BasicStreamAcceptor&& other) = default;
-
-        /**
-         * @brief move assignment operator.
-         * @param other other object to assign.
-         * @return assigned object.
-         */
-        BasicStreamAcceptor& operator= (BasicStreamAcceptor&& other) = default;
-
-        /**
-         * @brief destroy instance.
-         */
-        virtual ~BasicStreamAcceptor () = default;
-
-        /**
-         * @brief accept new connection and fill in the client object with connection parameters.
-         * @note the client socket object is allocated and must be released.
-         * @return The client socket object on success, nullptr on failure.
-         */
-        virtual Socket accept () const
-        {
-            struct sockaddr_storage sa;
-            socklen_t sa_len = sizeof (struct sockaddr_storage);
-            Socket client;
-
-            client._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
-            if (client._handle == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return {};
-            }
-
-            client._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
-            client._state = Socket::Connected;
-
-            if (client.setMode (Socket::NonBlocking) == -1)
-            {
-                client.close ();
-                return {};
-            }
-
-            if (client.protocol () == IPPROTO_TCP && client.setOption (Socket::NoDelay, 1) == -1)
-            {
-                client.close ();
-                return {};
-            }
-
-            return client;
-        }
-
-        /**
-         * @brief accept new connection and fill in the client object with connection parameters.
-         * @note the client stream object is allocated and must be released.
-         * @return The client stream object on success, nullptr on failure.
-         */
-        virtual Stream acceptStream () const
-        {
-            Stream stream;
-            stream.socket () = this->accept ();
-            return stream;
-        }
-    };
-
-    /**
      * @brief basic TLS acceptor class.
      */
     template <class Protocol>
-    class BasicTlsAcceptor : public BasicAcceptor <Protocol>
+    class BasicTlsAcceptor : public BasicStreamAcceptor <Protocol>
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
@@ -354,26 +298,15 @@ namespace join
          * @brief create the acceptor instance.
          */
         BasicTlsAcceptor ()
-        : BasicAcceptor <Protocol> (),
-        #if OPENSSL_VERSION_NUMBER < 0x10100000L
-          _tlsContext (SSL_CTX_new (SSLv23_method ()), join::SslCtxDelete ()),
-        #else
-          _tlsContext (SSL_CTX_new (TLS_method ()), join::SslCtxDelete ()),
-        #endif
+        : BasicStreamAcceptor <Protocol> (),
+          _tlsContext (SSL_CTX_new (TLS_server_method ())),
           _sessionId (randomize <int> ())
         {
-            if (_tlsContext == nullptr)
-            {
-                throw std::runtime_error ("OpenSSL libraries were not initialized at process start");
-            }
-
             // enable the OpenSSL bug workaround options.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_ALL);
 
-        #if OPENSSL_VERSION_NUMBER >= 0x10100000L
             // disallow compression.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_COMPRESSION);
-        #endif
 
             // disallow usage of SSLv2, SSLv3, TLSv1 and TLSv1.1 which are considered insecure.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
@@ -394,22 +327,20 @@ namespace join
             SSL_CTX_set_verify (_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
 
             // set default TLSv1.2 and below cipher suites.
-            SSL_CTX_set_cipher_list (_tlsContext.get (), join::defaultCipher_.c_str ());
+            SSL_CTX_set_cipher_list (_tlsContext.get (), join::_defaultCipher.c_str ());
 
-        #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-            //  set default TLSv1.3 cipher suites.
-            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::defaultCipher_1_3_.c_str ());
+            // set default TLSv1.3 cipher suites.
+            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::_defaultCipher_1_3.c_str ());
 
             // disallow client-side renegotiation.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_RENEGOTIATION);
-        #endif
 
         #if OPENSSL_VERSION_NUMBER >= 0x30000000L
             // use the default built-in Diffie-Hellman parameters.
             SSL_CTX_set_dh_auto (_tlsContext.get (), 1);
 
             // Set elliptic curve Diffie-Hellman key.
-            SSL_CTX_set1_groups_list (_tlsContext.get (), join::defaultCurve_.c_str ());
+            SSL_CTX_set1_groups_list (_tlsContext.get (), join::_defaultCurve.c_str ());
         #else
             // Set Diffie-Hellman key.
             join::DhKeyPtr dh (getDh2236 ());
@@ -445,7 +376,7 @@ namespace join
          * @param other other object to move.
          */
         BasicTlsAcceptor (BasicTlsAcceptor&& other)
-        : BasicAcceptor <Protocol> (std::move (other)),
+        : BasicStreamAcceptor <Protocol> (std::move (other)),
           _tlsContext (std::move (other._tlsContext)),
           _sessionId (other._sessionId)
         {
@@ -459,94 +390,80 @@ namespace join
          */
         BasicTlsAcceptor& operator= (BasicTlsAcceptor&& other)
         {
-            BasicAcceptor <Protocol>::operator= (std::move (other));
-
+            BasicStreamAcceptor <Protocol>::operator= (std::move (other));
             _tlsContext = std::move (other._tlsContext);
             _sessionId = other._sessionId;
-
             other._sessionId = 0;
-
             return *this;
         }
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
-         * @note the client socket object is allocated and must be released.
-         * @return The client socket object on success, nullptr on failure.
+         * @return the accepted client socket object.
          */
-        virtual Socket accept () const
+        virtual Socket accept () const override
         {
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
-            Socket client (this->_tlsContext, Socket::ServerMode);
+            Socket sock (join::SslCtxPtr (this->_tlsContext.get ()));
+            SSL_CTX_up_ref (this->_tlsContext.get ());
 
-            // accept connection.
-            client._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
-            if (client._handle == -1)
+            sock._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
+            if (sock._handle == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return {};
+                return sock;
             }
 
-            client._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
-            client._state = Socket::Connected;
+            sock._remote = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
+            sock._state = Socket::Connected;
 
-            // set client socket mode.
-            if (client.setMode (Socket::NonBlocking) == -1)
-            {
-                client.close ();
-                return {};
-            }
+            sock.setOption (Socket::NoDelay, 1);
+            sock.setMode (Socket::NonBlocking);
 
-            // set the no delay option.
-            if (client.setOption (Socket::NoDelay, 1) == -1)
-            {
-                client.close ();
-                return {};
-            }
-
-            //  create an SSL object for the connection.
-            client._tlsHandle.reset (SSL_new (client._tlsContext.get ()));
-            if (client._tlsHandle == nullptr)
-            {
-                lastError = make_error_code (Errc::OutOfMemory);
-                client.close ();
-                return {};
-            }
-
-            // set the file descriptor as the input/output facility for the TLS/SSL handle.
-            if (SSL_set_fd (client._tlsHandle.get (), client._handle) == 0)
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                client.close ();
-                return {};
-            }
-
-            // prepare the object to work in server mode.
-            SSL_set_accept_state (client._tlsHandle.get ());
-
-            // save the internal context.
-            SSL_set_app_data (client._tlsHandle.get (), &client);
-
-        #ifdef DEBUG
-            // set info callback.
-            SSL_set_info_callback (client._tlsHandle.get (), Socket::infoWrapper);
-        #endif
-
-            client._tlsState = Socket::Encrypted;
-
-            return client;
+            return sock;
         }
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
-         * @note the client stream object is allocated and must be released.
+         * @return the accepted client socket object.
+         */
+        virtual Socket acceptEncrypted () const
+        {
+            Socket sock = BasicTlsAcceptor <Protocol>::accept ();
+            if (!sock.connected ())
+            {
+                return sock;
+            }
+
+            sock._tlsHandle.reset (SSL_new (sock._tlsContext.get ()));
+            if (sock._tlsHandle == nullptr)
+            {
+                lastError = make_error_code (Errc::OutOfMemory);
+                sock.close ();
+                return sock;
+            }
+
+            SSL_set_fd (sock._tlsHandle.get (), sock._handle);
+            SSL_set_accept_state (sock._tlsHandle.get ());
+            SSL_set_app_data (sock._tlsHandle.get (), &sock);
+        #ifdef DEBUG
+            SSL_set_info_callback (sock._tlsHandle.get (), Socket::infoWrapper);
+        #endif
+
+            sock._tlsState = Socket::Encrypted;
+
+            return sock;
+        }
+
+        /**
+         * @brief accept new connection and fill in the client object with connection parameters.
          * @return The client stream object on success, nullptr on failure.
          */
-        virtual Stream acceptStream () const
+        virtual Stream acceptStreamEncrypted () const
         {
             Stream stream;
-            stream.socket () = this->accept ();
+            stream.socket () = this->acceptEncrypted ();
             return stream;
         }
 
@@ -641,7 +558,6 @@ namespace join
             return 0;
         }
 
-    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
         /**
          * @brief set the cipher list (TLSv1.3).
          * @param cipher the cipher list.
@@ -657,7 +573,6 @@ namespace join
 
             return 0;
         }
-    #endif
 
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L
         /**

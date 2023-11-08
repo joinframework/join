@@ -188,11 +188,9 @@ protected:
     void SetUp ()
     {
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher (join::defaultCipher_), 0) << join::lastError.message ();
-    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
-    #endif
-        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
 
@@ -210,26 +208,26 @@ protected:
      */
     virtual void onReceive () override
     {
-        Tls::Socket sock = this->accept ();
-        if (sock.connected ())
+        Tls::Stream stream = this->acceptStreamEncrypted ();
+        if (stream.connected ())
         {
             char buf[1024];
             for (;;)
             {
                 // echo received data.
-                int nread = sock.read (buf, sizeof (buf));
+                int nread = stream.socket ().read (buf, sizeof (buf));
                 if (nread == -1)
                 {
                     if (join::lastError == Errc::TemporaryError)
                     {
-                        if (sock.waitReadyRead (_timeout))
+                        if (stream.socket ().waitReadyRead (_timeout))
                             continue;
                     }
                     break;
                 }
-                sock.writeExactly (buf, nread);
+                stream.socket ().writeExactly (buf, nread);
             }
-            sock.close ();
+            stream.close ();
         }
     }
 
@@ -621,17 +619,16 @@ TEST_F (TlsSocketStream, setCipher)
     Tls::Stream tlsStream;
     ASSERT_EQ (tlsStream.setCipher ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsStream.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
     tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_EQ (tlsStream.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
     tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_EQ (tlsStream.setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
     tlsStream.close ();
 }
 
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 /**
  * @brief Test setCipher_1_3 method.
  */
@@ -640,16 +637,15 @@ TEST_F (TlsSocketStream, setCipher_1_3)
     Tls::Stream tlsStream;
     ASSERT_EQ (tlsStream.setCipher_1_3 ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsStream.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
     tlsStream.connectEncrypted (_host + ":" + std::to_string ( _port));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_EQ (tlsStream.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
     tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_EQ (tlsStream.setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
     tlsStream.close ();
 }
-#endif
 
 /**
  * @brief Test timeout method.

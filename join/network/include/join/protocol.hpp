@@ -47,7 +47,7 @@ namespace join
     template <class Protocol> class BasicHttpClient;
     template <class Protocol> class BasicHttpSecureClient;
 
-    template <class Protocol> class BasicWorker;
+    template <class Protocol> class BasicHttpWorker;
     template <class Protocol> class BasicHttpServer;
     template <class Protocol> class BasicHttpSecureServer;
 
@@ -574,7 +574,7 @@ namespace join
         using Stream   = BasicSocketStream <Http>;
         using Acceptor = BasicStreamAcceptor <Http>;
         using Client   = BasicHttpClient <Http>;
-        using Worker   = BasicWorker <Http>;
+        using Worker   = BasicHttpWorker <Http>;
         using Server   = BasicHttpServer <Http>;
 
         /**
@@ -671,7 +671,7 @@ namespace join
         using Stream   = BasicTlsStream <Https>;
         using Acceptor = BasicTlsAcceptor <Https>;
         using Client   = BasicHttpSecureClient <Https>;
-        using Worker   = BasicWorker <Https>;
+        using Worker   = BasicHttpWorker <Https>;
         using Server   = BasicHttpSecureServer <Https>;
 
         /**

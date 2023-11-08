@@ -190,7 +190,7 @@ namespace join
         }
     };
 
-    using SslCtxPtr = std::shared_ptr <SSL_CTX>;
+    using SslCtxPtr = std::unique_ptr <SSL_CTX, SslCtxDelete>;
 
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
     /**
@@ -233,27 +233,18 @@ namespace join
      */
     void initializeOpenSSL ();
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-    const std::string defaultCipher_ = "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:EECDH+ECDSA+CHACHA20:EECDH+aRSA+CHACHA20:EECDH+ECDSA+AESCCM:"
+    // default cipher.
+    const std::string _defaultCipher = "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:EECDH+ECDSA+CHACHA20:EECDH+aRSA+CHACHA20:EECDH+ECDSA+AESCCM:"
                                        "EDH+DSS+AESGCM:EDH+aRSA+CHACHA20:EDH+aRSA+AESCCM:-AESCCM8:EECDH+ECDSA+AESCCM8:EDH+aRSA+AESCCM8";
 
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
-    const std::string defaultCipher_1_3_ = "TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:"
+    // default cipher.
+    const std::string _defaultCipher_1_3 = "TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:"
                                            "TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256";
-#endif // OPENSSL_VERSION_NUMBER >= 0x1010101fL
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-    const std::string defaultCurve_ = "prime256v1";
-#endif // OPENSSL_VERSION_NUMBER >= 0x30000000L
+    // default curve.
+    const std::string _defaultCurve = "prime256v1";
+#endif
 }
-#else // OPENSSL_VERSION_NUMBER >= 0x10100000L
-    const std::string defaultCipher = "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:EDH+DSS+AESGCM";
-}
-
-#define ASN1_STRING_get0_data ASN1_STRING_data
-
-int DH_set0_pqg (DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g);
-
-#endif // OPENSSL_VERSION_NUMBER >= 0x10100000L
 
 #endif
