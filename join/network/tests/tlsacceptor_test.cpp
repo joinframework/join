@@ -259,6 +259,7 @@ TEST_F (TlsAcceptor, accept)
     ASSERT_EQ (clientSocket.connect({_hostip, _port}), 0) << join::lastError.message ();
     Tls::Socket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
+    ASSERT_FALSE (serverSocket.encrypted ());
     ASSERT_EQ (serverSocket.localEndpoint ().ip (), _hostip);
     ASSERT_EQ (serverSocket.localEndpoint ().port (), _port);
 }
@@ -277,6 +278,45 @@ TEST_F (TlsAcceptor, acceptStream)
     ASSERT_EQ (clientSocket.connect ({_hostip, _port}), 0) << join::lastError.message ();
     Tls::Stream serverStream = server.acceptStream ();
     ASSERT_TRUE (serverStream.connected ());
+    ASSERT_FALSE (serverStream.encrypted ());
+    ASSERT_EQ (serverStream.socket ().localEndpoint ().ip (), _hostip);
+    ASSERT_EQ (serverStream.socket ().localEndpoint ().port (), _port);
+}
+
+/**
+ * @brief Test acceptEncrypted method.
+ */
+TEST_F (TlsAcceptor, acceptEncrypted)
+{
+    Tls::Socket clientSocket (Tls::Socket::Blocking);
+    Tls::Acceptor server;
+
+    ASSERT_FALSE (server.acceptEncrypted ().connected ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (clientSocket.connect({_hostip, _port}), 0) << join::lastError.message ();
+    Tls::Socket serverSocket = server.acceptEncrypted ();
+    ASSERT_TRUE (serverSocket.connected ());
+    ASSERT_TRUE (serverSocket.encrypted ());
+    ASSERT_EQ (serverSocket.localEndpoint ().ip (), _hostip);
+    ASSERT_EQ (serverSocket.localEndpoint ().port (), _port);
+}
+
+/**
+ * @brief Test acceptStreamEncrypted method.
+ */
+TEST_F (TlsAcceptor, acceptStreamEncrypted)
+{
+    Tls::Socket clientSocket (Tls::Socket::Blocking);
+    Tls::Acceptor server;
+
+    ASSERT_FALSE (server.acceptStreamEncrypted ().connected ());
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (clientSocket.connect ({_hostip, _port}), 0) << join::lastError.message ();
+    Tls::Stream serverStream = server.acceptStreamEncrypted ();
+    ASSERT_TRUE (serverStream.connected ());
+    ASSERT_TRUE (serverStream.encrypted ());
     ASSERT_EQ (serverStream.socket ().localEndpoint ().ip (), _hostip);
     ASSERT_EQ (serverStream.socket ().localEndpoint ().port (), _port);
 }
