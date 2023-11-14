@@ -156,9 +156,9 @@ protected:
     void SetUp ()
     {
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher (join::defaultCipher_), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
     #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3_), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
     #endif
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
