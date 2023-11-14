@@ -508,6 +508,7 @@ TEST_F (TlsSocket, waitDisconnected)
 {
     Tls::Socket tlsSocket (Tls::Socket::NonBlocking);
 
+    ASSERT_TRUE (tlsSocket.waitDisconnected (_timeout)) << join::lastError.message ();
     if (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -528,7 +529,7 @@ TEST_F (TlsSocket, waitDisconnected)
 TEST_F (TlsSocket, waitReadyRead)
 {
     Tls::Socket tlsSocket;
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_FALSE (tlsSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -554,7 +555,7 @@ TEST_F (TlsSocket, waitReadyRead)
 TEST_F (TlsSocket, canRead)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tlsSocket.canRead (), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -574,7 +575,7 @@ TEST_F (TlsSocket, canRead)
 TEST_F (TlsSocket, read)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tlsSocket.read (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -593,8 +594,9 @@ TEST_F (TlsSocket, read)
 TEST_F (TlsSocket, readExactly)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
+    ASSERT_EQ (tlsSocket.readExactly (data, sizeof (data)), -1);
     ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
@@ -633,7 +635,7 @@ TEST_F (TlsSocket, waitReadyWrite)
 TEST_F (TlsSocket, write)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tlsSocket.write (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -651,8 +653,9 @@ TEST_F (TlsSocket, write)
 TEST_F (TlsSocket, writeExactly)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
+    ASSERT_EQ (tlsSocket.writeExactly (data, sizeof (data)), -1);
     ASSERT_EQ (tlsSocket.connectEncrypted ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();

@@ -214,6 +214,7 @@ TEST_F (UnixStreamSocket, waitDisconnected)
 {
     UnixStream::Socket unixSocket;
 
+    ASSERT_TRUE (unixSocket.waitDisconnected (_timeout)) << join::lastError.message ();
     if (unixSocket.connect (_serverpath) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -235,7 +236,7 @@ TEST_F (UnixStreamSocket, waitDisconnected)
 TEST_F (UnixStreamSocket, canRead)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.canRead (), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -254,7 +255,7 @@ TEST_F (UnixStreamSocket, canRead)
 TEST_F (UnixStreamSocket, waitReadyRead)
 {
     UnixStream::Socket unixSocket;
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_FALSE (unixSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -280,7 +281,7 @@ TEST_F (UnixStreamSocket, waitReadyRead)
 TEST_F (UnixStreamSocket, read)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.read (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -299,8 +300,9 @@ TEST_F (UnixStreamSocket, read)
 TEST_F (UnixStreamSocket, readExactly)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
+    ASSERT_EQ (unixSocket.readExactly (data, sizeof (data)), -1);
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
@@ -339,7 +341,7 @@ TEST_F (UnixStreamSocket, waitReadyWrite)
 TEST_F (UnixStreamSocket, write)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.write (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -357,8 +359,9 @@ TEST_F (UnixStreamSocket, write)
 TEST_F (UnixStreamSocket, writeExactly)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
+    ASSERT_EQ (unixSocket.writeExactly (data, sizeof (data)), -1);
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();

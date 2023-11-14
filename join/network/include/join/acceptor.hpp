@@ -208,7 +208,7 @@ namespace join
         virtual Stream acceptStream () const
         {
             Stream stream;
-            stream.socket () = this->accept ();
+            stream.socket () = BasicStreamAcceptor <Protocol>::accept ();
             return stream;
         }
 
@@ -463,7 +463,7 @@ namespace join
         virtual Stream acceptStreamEncrypted () const
         {
             Stream stream;
-            stream.socket () = this->acceptEncrypted ();
+            stream.socket () = BasicTlsAcceptor <Protocol>::acceptEncrypted ();
             return stream;
         }
 
