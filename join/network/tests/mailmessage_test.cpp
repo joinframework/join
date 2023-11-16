@@ -125,11 +125,14 @@ TEST (MailMessage, writeHeaders)
 {
     MailMessage message;
     message.sender ({"foo@bar.com", "foo"});
-    message.addRecipient ({"baz@fun.com", "baz", MailRecipient::Recipient});
+    MailRecipient recipient1 = {"baz@fun.com", "baz", MailRecipient::Recipient};
+    message.addRecipient (recipient1);
     message.addRecipient ({"nlo@fre.com", "nlo", MailRecipient::Recipient});
-    message.addRecipient ({"bla@zom.com", "bla", MailRecipient::CCRecipient});
+    MailRecipient recipient2 = {"bla@zom.com", "bla", MailRecipient::CCRecipient};
+    message.addRecipient (recipient2);
     message.addRecipient ({"hbd@qsd.com", "hbd", MailRecipient::CCRecipient});
-    message.addRecipient ({"flu@mlo.com", "flu", MailRecipient::BCCRecipient});
+    MailRecipient recipient3 = {"flu@mlo.com", "flu", MailRecipient::BCCRecipient};
+    message.addRecipient (recipient3);
     message.addRecipient ({"kjl@try.com", "kjl", MailRecipient::BCCRecipient});
     message.subject ("test");
 
