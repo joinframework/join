@@ -25,33 +25,33 @@
 // libjoin.
 #include <join/threadpool.hpp>
 
-using join::Worker;
+using join::WorkerThread;
 using join::ThreadPool;
 
 // =========================================================================
-//   CLASS     : Worker
-//   METHOD    : Worker
+//   CLASS     : WorkerThread
+//   METHOD    : WorkerThread
 // =========================================================================
-Worker::Worker (ThreadPool& pool)
+WorkerThread::WorkerThread (ThreadPool& pool)
 : _pool (std::addressof (pool)),
   _thread ([this] () {work ();})
 {
 }
 
 // =========================================================================
-//   CLASS     : Worker
-//   METHOD    : ~Worker
+//   CLASS     : WorkerThread
+//   METHOD    : ~WorkerThread
 // =========================================================================
-Worker::~Worker ()
+WorkerThread::~WorkerThread ()
 {
     _thread.join ();
 }
 
 // =========================================================================
-//   CLASS     : Condition
+//   CLASS     : WorkerThread
 //   METHOD    : work
 // =========================================================================
-void Worker::work ()
+void WorkerThread::work ()
 {
     for (;;)
     {
@@ -79,7 +79,7 @@ ThreadPool::ThreadPool (int workers)
 {
     for (int nworkers = 0; nworkers < workers; ++nworkers)
     {
-        _workers.emplace_back (new Worker (*this));
+        _workers.emplace_back (new WorkerThread (*this));
     }
 }
 

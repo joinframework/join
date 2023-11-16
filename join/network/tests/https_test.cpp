@@ -45,7 +45,7 @@ using join::HttpErrc;
 using join::Https;
 
 /**
- * @brief Class used to test the HTTP API.
+ * @brief Class used to test the HTTPS API.
  */
 class HttpsTest : public Https::Server, public ::testing::Test
 {
@@ -288,7 +288,7 @@ protected:
     /// server keep alive timeout.
     static const int _timeout;
 
-    /// server  keep alive max requests.
+    /// server keep alive max requests.
     static const int _max;
 
     /// root certificate.

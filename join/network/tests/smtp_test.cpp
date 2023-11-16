@@ -178,26 +178,67 @@ protected:
      */
     virtual void onReceive () override
     {
-        Tls::Socket sock = this->accept ();
-        if (sock.connected ())
+        Tls::Stream stream = this->acceptStream ();
+        if (stream.connected ())
         {
-            char buf[1024];
-            for (;;)
-            {
-                // echo received data.
-                int nread = sock.read (buf, sizeof (buf));
-                if (nread == -1)
-                {
-                    if (join::lastError == Errc::TemporaryError)
-                    {
-                        if (sock.waitReadyRead (_timeout))
-                            continue;
-                    }
-                    break;
-                }
-                sock.writeExactly (buf, nread);
-            }
-            sock.close ();
+            std::string tmp;
+            stream << "220 mail.foo.bar ESMTP Postfix\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "250-mail.foo.bar\r\n";
+            stream << "250-PIPELINING\r\n";
+            stream << "250-SIZE 10485760\r\n";
+            stream << "250-ETRN\r\n";
+            stream << "250-STARTTLS\r\n";
+            stream << "250-AUTH PLAIN LOGIN\r\n";
+            stream << "250-AUTH=PLAIN LOGIN\r\n";
+            stream << "250-ENHANCEDSTATUSCODES\r\n";
+            stream << "250-8BITMIME\r\n";
+            stream << "250-DSN\r\n";
+            stream << "250 CHUNKING\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "220 2.0.0 Ready to start TLS\r\n";
+            stream.flush ();
+            stream.startEncryption ();
+            join::getline (stream, tmp);
+            stream << "250-mail.foo.bar\r\n";
+            stream << "250-PIPELINING\r\n";
+            stream << "250-SIZE 10485760\r\n";
+            stream << "250-ETRN\r\n";
+            stream << "250-AUTH PLAIN LOGIN\r\n";
+            stream << "250-AUTH=PLAIN LOGIN\r\n";
+            stream << "250-ENHANCEDSTATUSCODES\r\n";
+            stream << "250-8BITMIME\r\n";
+            stream << "250-DSN\r\n";
+            stream << "250 CHUNKING\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "334 VXNlcm5hbWU6\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "334 UGFzc3dvcmQ6\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "235 2.7.0 Authentication successful\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "250 2.1.0 Ok\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "250 2.1.5 Ok\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "354 End data with <CR><LF>.<CR><LF>\r\n";
+            stream.flush ();
+            while (join::getline (stream, tmp) && tmp != ".") {};
+            stream << "250 2.0.0 Ok: queued as 1A208D10002C\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "221 2.0.0 Bye\r\n";
+            stream.flush ();
+            stream.disconnect ();
+            stream.close ();
         }
     }
 
@@ -221,6 +262,12 @@ protected:
 
     /// private key.
     static const std::string _key;
+
+    /// user.
+    static const std::string _user;
+
+    /// password.
+    static const std::string _password;
 };
 
 const std::string SmtpClient::_host     = "localhost";
@@ -230,6 +277,8 @@ const std::string SmtpClient::_rootcert = "/tmp/tlssocket_test_root.cert";
 const std::string SmtpClient::_certPath = "/tmp/certs";
 const std::string SmtpClient::_certFile = _certPath + "/tlssocket_test.cert";
 const std::string SmtpClient::_key      = "/tmp/tlssocket_test.key";
+const std::string SmtpClient::_user     = "admin";
+const std::string SmtpClient::_password = "12345";
 
 /**
  * @brief Test scheme.
@@ -286,7 +335,7 @@ TEST_F (SmtpClient, authority)
 }
 
 /**
- * @brief Test port.
+ * @brief Test url.
  */
 TEST_F (SmtpClient, url)
 {
@@ -304,13 +353,6 @@ TEST_F (SmtpClient, url)
 }
 
 /**
- * @brief Test credentials.
- */
-TEST_F (SmtpClient, credentials)
-{
-}
-
-/**
  * @brief Test send.
  */
 TEST_F (SmtpClient, send)
@@ -322,6 +364,7 @@ TEST_F (SmtpClient, send)
     message.content ("this is a test");
 
     Smtp::Client client (_host, _port);
+    client.credentials (_user, _password);
     ASSERT_EQ (client.send (message), 0) << join::lastError.message ();
 }
 

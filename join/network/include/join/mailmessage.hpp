@@ -320,11 +320,18 @@ namespace join
         const std::string& content () const;
 
         /**
-         * @brief write HTTP header to the given output stream.
+         * @brief write header to the given output stream.
          * @param out output stream.
          * @return 0 on success, -1 on failure.
          */
         int writeHeaders (std::ostream& out) const;
+
+        /**
+         * @brief write content to the given output stream.
+         * @param out output stream.
+         * @return 0 on success, -1 on failure.
+         */
+        int writeContent (std::ostream& out) const;
 
     protected:
         /// mail sender.

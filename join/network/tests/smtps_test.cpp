@@ -24,11 +24,332 @@
 
 // libjoin.
 #include <join/smtpclient.hpp>
+#include <join/acceptor.hpp>
+#include <join/reactor.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <fstream>
+
+using join::Errc;
+using join::Resolver;
+using join::Reactor;
+using join::MailMessage;
 using join::Smtps;
+using join::Tls;
+
+/**
+ * @brief Class used to test the SMTPS client.
+ */
+class SmtpsClient : public Tls::Acceptor, public ::testing::Test
+{
+public:
+    /**
+     * @brief set up test case.
+     */
+    static void SetUpTestCase ()
+    {
+        std::ofstream rootCertFile (_rootcert);
+        if (rootCertFile.is_open ())
+        {
+            rootCertFile << "-----BEGIN CERTIFICATE-----" << std::endl;
+            rootCertFile << "MIIChjCCAisCFBuHxbqMUGyl7OQUQcoRg3pOBJF+MAoGCCqGSM49BAMCMIHEMQsw" << std::endl;
+            rootCertFile << "CQYDVQQGEwJGUjESMBAGA1UECAwJT2NjaXRhbmllMRAwDgYDVQQHDAdDYXN0cmVz" << std::endl;
+            rootCertFile << "MRcwFQYDVQQKDA5Kb2luIEZyYW1ld29yazEtMCsGA1UECwwkSm9pbiBGcmFtZXdv" << std::endl;
+            rootCertFile << "cmsgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MR0wGwYDVQQDDBRjYS5qb2luZnJhbWV3" << std::endl;
+            rootCertFile << "b3JrLm5ldDEoMCYGCSqGSIb3DQEJARYZc3VwcG9ydEBqb2luZnJhbWV3b3JrLm5l" << std::endl;
+            rootCertFile << "dDAeFw0yMjA3MDUxNjMxMTZaFw0zMjA3MDIxNjMxMTZaMIHEMQswCQYDVQQGEwJG" << std::endl;
+            rootCertFile << "UjESMBAGA1UECAwJT2NjaXRhbmllMRAwDgYDVQQHDAdDYXN0cmVzMRcwFQYDVQQK" << std::endl;
+            rootCertFile << "DA5Kb2luIEZyYW1ld29yazEtMCsGA1UECwwkSm9pbiBGcmFtZXdvcmsgQ2VydGlm" << std::endl;
+            rootCertFile << "aWNhdGUgQXV0aG9yaXR5MR0wGwYDVQQDDBRjYS5qb2luZnJhbWV3b3JrLm5ldDEo" << std::endl;
+            rootCertFile << "MCYGCSqGSIb3DQEJARYZc3VwcG9ydEBqb2luZnJhbWV3b3JrLm5ldDBZMBMGByqG" << std::endl;
+            rootCertFile << "SM49AgEGCCqGSM49AwEHA0IABASk0zCrKtXQi0Ycx+Anx+VWv8gncbPmNQ1yutii" << std::endl;
+            rootCertFile << "gQjP2mF9NIqlxpcKNuE/6DDnfSzCEDhFyvGiK0NJ1C3RBowwCgYIKoZIzj0EAwID" << std::endl;
+            rootCertFile << "SQAwRgIhAIFqdbxTb5kRjy4UY0N205ZEhHSMK89p2oUyn4iNbXH2AiEAtmV1UyRX" << std::endl;
+            rootCertFile << "DIAGr/F+1SwQMPoJzSQxZ7NdxjNgW286e9Q=" << std::endl;
+            rootCertFile << "-----END CERTIFICATE-----" << std::endl;
+            rootCertFile.close ();
+        }
+
+        mkdir (_certPath.c_str (), 0777);
+        std::ofstream certFile (_certFile);
+        if (certFile.is_open ())
+        {
+            certFile << "-----BEGIN CERTIFICATE-----" << std::endl;
+            certFile << "MIIDgDCCAyagAwIBAgIUR3ZIuKMt0BdaOZQnPwhSMR9qzfgwCgYIKoZIzj0EAwIw" << std::endl;
+            certFile << "gcQxCzAJBgNVBAYTAkZSMRIwEAYDVQQIDAlPY2NpdGFuaWUxEDAOBgNVBAcMB0Nh" << std::endl;
+            certFile << "c3RyZXMxFzAVBgNVBAoMDkpvaW4gRnJhbWV3b3JrMS0wKwYDVQQLDCRKb2luIEZy" << std::endl;
+            certFile << "YW1ld29yayBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkxHTAbBgNVBAMMFGNhLmpvaW5m" << std::endl;
+            certFile << "cmFtZXdvcmsubmV0MSgwJgYJKoZIhvcNAQkBFhlzdXBwb3J0QGpvaW5mcmFtZXdv" << std::endl;
+            certFile << "cmsubmV0MB4XDTIyMDcwNzEyMTIxMFoXDTMyMDcwNDEyMTIxMFowgagxCzAJBgNV" << std::endl;
+            certFile << "BAYTAkZSMRIwEAYDVQQIDAlPY2NpdGFuaWUxEDAOBgNVBAcMB0Nhc3RyZXMxFzAV" << std::endl;
+            certFile << "BgNVBAoMDkpvaW4gRnJhbWV3b3JrMRswGQYDVQQLDBJKb2luIEZyYW1ld29yayBE" << std::endl;
+            certFile << "ZXYxEzARBgNVBAMMCmxvY2FsaG9zdC4xKDAmBgkqhkiG9w0BCQEWGXN1cHBvcnRA" << std::endl;
+            certFile << "am9pbmZyYW1ld29yay5uZXQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB" << std::endl;
+            certFile << "AQDSNtw5zEoJFPf6Rl0Y1n8BQfE0YTPCELvFAeioUfj8CAnUleHL9pwAEFg6kgoG" << std::endl;
+            certFile << "hvwto5/yWGPUqNNfe3xbFTJcHgMhgtjqy5H6sYDkTi3kYIIMBfTHr8NI7HWE8Nz1" << std::endl;
+            certFile << "qU1snjtERnkoLilIZf/2BojNVMtHC1H316WbMicXS0v7HQo3lv6PYSana9Q9ow9O" << std::endl;
+            certFile << "2/FiW5qq1eOhI1ZedRanX+bl0jHWCd3WsI87+5bTaQrfetdHTOmav6O17Iq9FiTh" << std::endl;
+            certFile << "Sg9fbM3s2Hw15kI+mws029dhcwXs5sYY+NgtrQwjR5qH+54BdUaPwQfl/KyulfEl" << std::endl;
+            certFile << "TJykJ+3w6MorxUr55F68uBNbAgMBAAGjRTBDMAsGA1UdDwQEAwIF4DAdBgNVHSUE" << std::endl;
+            certFile << "FjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwFQYDVR0RBA4wDIIKbG9jYWxob3N0LjAK" << std::endl;
+            certFile << "BggqhkjOPQQDAgNIADBFAiA120ufIbhcw7BJQ1L6WudDdW2mHrVXvdgeOzVGgz1d" << std::endl;
+            certFile << "iAIhAMm/sWI3yzb2IMPffxWKYusWEQE2hZvs24ESSC/ZZ0s+" << std::endl;
+            certFile << "-----END CERTIFICATE-----" << std::endl;
+            certFile.close ();
+        }
+
+        [[maybe_unused]] int result;
+        result = std::system (std::string ("/usr/bin/c_rehash " + _certPath).c_str ());
+
+        std::ofstream keyFile (_key);
+        if (keyFile.is_open ())
+        {
+            keyFile << "-----BEGIN RSA PRIVATE KEY-----" << std::endl;
+            keyFile << "MIIEowIBAAKCAQEA0jbcOcxKCRT3+kZdGNZ/AUHxNGEzwhC7xQHoqFH4/AgJ1JXh" << std::endl;
+            keyFile << "y/acABBYOpIKBob8LaOf8lhj1KjTX3t8WxUyXB4DIYLY6suR+rGA5E4t5GCCDAX0" << std::endl;
+            keyFile << "x6/DSOx1hPDc9alNbJ47REZ5KC4pSGX/9gaIzVTLRwtR99elmzInF0tL+x0KN5b+" << std::endl;
+            keyFile << "j2Emp2vUPaMPTtvxYluaqtXjoSNWXnUWp1/m5dIx1gnd1rCPO/uW02kK33rXR0zp" << std::endl;
+            keyFile << "mr+jteyKvRYk4UoPX2zN7Nh8NeZCPpsLNNvXYXMF7ObGGPjYLa0MI0eah/ueAXVG" << std::endl;
+            keyFile << "j8EH5fysrpXxJUycpCft8OjKK8VK+eRevLgTWwIDAQABAoIBAAzdlK7o5OMXaHHl" << std::endl;
+            keyFile << "2o7Jme5Oxd9pz4wiEAvnqQCcO7vZFhjvr2kXR8btOSkkhP6PRmHYsNJZPIroZj9i" << std::endl;
+            keyFile << "xGKisnlW0OQ9KN995ApO0M+oRUDD81GfD7Mk+7O73Rls0GksmnN6X7A3C/U8lgQ7" << std::endl;
+            keyFile << "UeYR0k+Wz/YiKDsd9KHB+QiA8D6HFQ9I8Y2P97KOcYnxXZfSwNm+ENNU3wShZOl2" << std::endl;
+            keyFile << "ZYJJ4DE+5m2SwZ6g8b5Zre4cDbOduwuz/jXzjy2tAZBlTS4DVpYlhd14z+ssUWiu" << std::endl;
+            keyFile << "AdS/nqSF7Obj0TRhoGNfrkisFzV4itavQ5DKGj/6hjueIJVLteUOzcCeg26YosNy" << std::endl;
+            keyFile << "QzZSjOECgYEA7y3InEoh93/4HZCZmdwN8KfZtqirX0t966FntgAT8RkIs+KvNS8B" << std::endl;
+            keyFile << "m3RfNLa/EuDt5zTmHRGx+oeN+17i9QQjKWcR0NnJ6aSZbvJByj3yKxLF9XVllzp/" << std::endl;
+            keyFile << "vHSSyB264RoKIrWmFN6cCO4u4h9ZPY75pASWBCDMdnGK8axAcqAnlqsCgYEA4P+Y" << std::endl;
+            keyFile << "FF9RW4rhrVU4dpXSfcr6vOwqfp9F9vhTVL0JS/SLOFoJNNpS9Rnq3pVLEuKyCphd" << std::endl;
+            keyFile << "3nk9VFfoRygmMaGBvwGaXZPPvosoaIUgOdTt7KIfSHPichBEVxRuWCrtTGGkG0ok" << std::endl;
+            keyFile << "s/RPHhvxZE267vsVj1PktK8Yr5Ba0AL2ycztNhECgYB5OAwHYe8LIBlg6otelk+e" << std::endl;
+            keyFile << "W4OU9rE8L+eWx4vniuyQce6eNNI1syguYHFsJv56E/OfDYlezDwWzCLidnmyUjF7" << std::endl;
+            keyFile << "51f5MJgLyTdWKoO7e1/EAtS/jYs6dRSOL8rAj4jKU0c1xjhxNU2BnS23vsmc0Fyn" << std::endl;
+            keyFile << "iwd4+iKGGQ+hYnqbXZ4S1wKBgD/3an0gPDkSWua0e8D7B0TMGEztt4cYMQPtxYMp" << std::endl;
+            keyFile << "2yLE+2+h6UwlZcBZBfUR7K4J1SQ9/THqtgzskRTpzTH/AKwVAJXqF/3MAkj00Byg" << std::endl;
+            keyFile << "9KN50/r9NzvGdCdtn5FhYuV8PPOlOJoQsw2UVCR4FNUsfQyqhTL5NMN0/tx0e0UU" << std::endl;
+            keyFile << "BbyBAoGBANu5ifByauVELH8UEl5rXRu1S9iAVV+Bc5jboXwc4VxJtEyomGJ7+YdL" << std::endl;
+            keyFile << "5c9LFV+STUp7CE12uSXQZTQM0tEjPinLntRinNzu9tIHR1vy7FZHEwMFIgB4VTY7" << std::endl;
+            keyFile << "ALRYv1/QpTuywpNUFRS15JkfGNf5JIkrUEWLgkX3OVCBsRGHUugy" << std::endl;
+            keyFile << "-----END RSA PRIVATE KEY-----" << std::endl;
+            keyFile.close ();
+        }
+    }
+
+    /**
+     * @brief tear down test case.
+     */
+    static void TearDownTestCase ()
+    {
+        unlink (_rootcert.c_str ());
+        unlink (_certFile.c_str ());
+        rmdir  (_certPath.c_str ());
+        unlink (_key.c_str ());
+    }
+
+protected:
+    /**
+     * @brief Sets up the test fixture.
+     */
+    void SetUp ()
+    {
+        ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
+        ASSERT_EQ (this->setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    #endif
+        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+    }
+
+    /**
+     * @brief Tears down the test fixture.
+     */
+    void TearDown ()
+    {
+        ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+        this->close ();
+    }
+
+    /**
+     * @brief method called when data are ready to be read on handle.
+     */
+    virtual void onReceive () override
+    {
+        Tls::Stream stream = this->acceptStreamEncrypted ();
+        if (stream.connected ())
+        {
+            std::string tmp;
+            stream << "220 mail.foo.bar ESMTP Postfix\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "250-mail.foo.bar\r\n";
+            stream << "250-PIPELINING\r\n";
+            stream << "250-SIZE 10485760\r\n";
+            stream << "250-ETRN\r\n";
+            stream << "250-AUTH PLAIN LOGIN\r\n";
+            stream << "250-AUTH=PLAIN LOGIN\r\n";
+            stream << "250-ENHANCEDSTATUSCODES\r\n";
+            stream << "250-8BITMIME\r\n";
+            stream << "250-DSN\r\n";
+            stream << "250 CHUNKING\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "334 VXNlcm5hbWU6\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "334 UGFzc3dvcmQ6\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "235 2.7.0 Authentication successful\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "250 2.1.0 Ok\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "250 2.1.5 Ok\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "354 End data with <CR><LF>.<CR><LF>\r\n";
+            stream.flush ();
+            while (join::getline (stream, tmp) && tmp != ".") {};
+            stream << "250 2.0.0 Ok: queued as 1A208D10002C\r\n";
+            stream.flush ();
+            join::getline (stream, tmp);
+            stream << "221 2.0.0 Bye\r\n";
+            stream.flush ();
+            stream.disconnect ();
+            stream.close ();
+        }
+    }
+
+    /// host.
+    static const std::string _host;
+
+    /// port.
+    static const uint16_t _port;
+
+    /// timeout.
+    static const int _timeout;
+
+    /// root certificate.
+    static const std::string _rootcert;
+
+    /// certificate path.
+    static const std::string _certPath;
+
+    /// certificate file.
+    static const std::string _certFile;
+
+    /// private key.
+    static const std::string _key;
+
+    /// user.
+    static const std::string _user;
+
+    /// password.
+    static const std::string _password;
+};
+
+const std::string SmtpsClient::_host     = "localhost";
+const uint16_t    SmtpsClient::_port     = 5000;
+const int         SmtpsClient::_timeout  = 1000;
+const std::string SmtpsClient::_rootcert = "/tmp/tlssocket_test_root.cert";
+const std::string SmtpsClient::_certPath = "/tmp/certs";
+const std::string SmtpsClient::_certFile = _certPath + "/tlssocket_test.cert";
+const std::string SmtpsClient::_key      = "/tmp/tlssocket_test.key";
+const std::string SmtpsClient::_user     = "admin";
+const std::string SmtpsClient::_password = "12345";
+
+/**
+ * @brief Test scheme.
+ */
+TEST_F (SmtpsClient, scheme)
+{
+    Smtps::Client client1 ("localhost", 25);
+    ASSERT_EQ (client1.scheme (), "smtps");
+
+    Smtps::Client client2 ("localhost", 465);
+    ASSERT_EQ (client2.scheme (), "smtps");
+}
+
+/**
+ * @brief Test host.
+ */
+TEST_F (SmtpsClient, host)
+{
+    Smtps::Client client1 ("91.66.32.78", 25);
+    ASSERT_EQ (client1.host (), "91.66.32.78");
+
+    Smtps::Client client2 ("localhost", 465);
+    ASSERT_EQ (client2.host (), "localhost");
+}
+
+/**
+ * @brief Test port.
+ */
+TEST_F (SmtpsClient, port)
+{
+    Smtps::Client client1 ("91.66.32.78", 25);
+    ASSERT_EQ (client1.port (), 25);
+
+    Smtps::Client client2 ("91.66.32.78", 465);
+    ASSERT_EQ (client2.port (), 465);
+}
+
+/**
+ * @brief Test authority.
+ */
+TEST_F (SmtpsClient, authority)
+{
+    ASSERT_EQ (Smtps::Client ("localhost", 25).authority (), "localhost:25");
+    ASSERT_EQ (Smtps::Client ("localhost", 465).authority (), "localhost");
+    ASSERT_EQ (Smtps::Client ("localhost", 5000).authority (), "localhost:5000");
+
+    ASSERT_EQ (Smtps::Client ("91.66.32.78", 25).authority (), "91.66.32.78:25");
+    ASSERT_EQ (Smtps::Client ("91.66.32.78", 465).authority (), "91.66.32.78");
+    ASSERT_EQ (Smtps::Client ("91.66.32.78", 5000).authority (), "91.66.32.78:5000");
+
+    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 25).authority (), "[2001:db8:1234:5678::1]:25");
+    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 465).authority (), "[2001:db8:1234:5678::1]");
+    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 5000).authority (), "[2001:db8:1234:5678::1]:5000");
+}
+
+/**
+ * @brief Test url.
+ */
+TEST_F (SmtpsClient, url)
+{
+    ASSERT_EQ (Smtps::Client ("localhost", 25).url (), "smtps://localhost:25");
+    ASSERT_EQ (Smtps::Client ("localhost", 465).url (), "smtps://localhost");
+    ASSERT_EQ (Smtps::Client ("localhost", 5000).url (), "smtps://localhost:5000");
+
+    ASSERT_EQ (Smtps::Client ("91.66.32.78", 25).url (), "smtps://91.66.32.78:25");
+    ASSERT_EQ (Smtps::Client ("91.66.32.78", 465).url (), "smtps://91.66.32.78");
+    ASSERT_EQ (Smtps::Client ("91.66.32.78", 5000).url (), "smtps://91.66.32.78:5000");
+
+    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 25).url (), "smtps://[2001:db8:1234:5678::1]:25");
+    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 465).url (), "smtps://[2001:db8:1234:5678::1]");
+    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 5000).url (), "smtps://[2001:db8:1234:5678::1]:5000");
+}
+
+/**
+ * @brief Test send.
+ */
+TEST_F (SmtpsClient, send)
+{
+    MailMessage message;
+    message.sender ({"test@foo.com", "tester"});
+    message.addRecipient ({"admin@foo.com", "admin"});
+    message.subject ("this is a test");
+    message.content ("this is a test");
+
+    Smtps::Client client (_host, _port);
+    client.credentials (_user, _password);
+    ASSERT_EQ (client.send (message), 0) << join::lastError.message ();
+}
 
 /**
  * @brief main function.

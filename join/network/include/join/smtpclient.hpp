@@ -36,10 +36,11 @@ namespace join
      * @brief basic SMTP client.
      */
     template <class Protocol> 
-    class BasicSmtpClient : public Protocol::Stream
+    class BasicSmtpClient
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
+        using Stream   = typename Protocol::Stream;
 
         /**
          * @brief create the basic SMTP client instance.
@@ -80,7 +81,7 @@ namespace join
          * @param other request to move.
          */
         BasicSmtpClient (BasicSmtpClient&& other)
-        : Protocol::Stream (std::move (other)),
+        : _stream (std::move (other._stream)),
           _host (std::move (other._host)),
           _port (other._port),
           _login (std::move (other._login)),
@@ -95,7 +96,7 @@ namespace join
          */
         BasicSmtpClient& operator= (BasicSmtpClient&& other)
         {
-            Protocol::Stream::operator= (std::move (other));
+            this->_stream = std::move (other._stream);
             this->_host = std::move (other._host);
             this->_port = other._port;
             this->_login = std::move (other._login);
@@ -110,7 +111,7 @@ namespace join
 
         /**
          * @brief get scheme.
-         * @return smtp or smtps.
+         * @return scheme.
          */
         virtual std::string scheme () const
         {
@@ -181,20 +182,82 @@ namespace join
         }
 
         /**
+         * @brief set the certificate and the private key.
+         * @param cert certificate path.
+         * @param key private key path.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCertificate (const std::string& cert, const std::string& key = "")
+        {
+            return this->_stream.setCertificate (cert, key);
+        }
+
+        /**
+         * @brief set the location of the trusted CA certificates.
+         * @param caPath path of the trusted CA certificates.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCaPath (const std::string& caPath)
+        {
+            return this->_stream.setCaPath (caPath);
+        }
+
+        /**
+         * @brief set the location of the trusted CA certificate file.
+         * @param caFile path of the trusted CA certificate file.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCaFile (const std::string& caFile)
+        {
+            return this->_stream.setCaFile (caFile);
+        }
+
+        /**
+         * @brief Enable/Disable the verification of the peer certificate.
+         * @param verify Enable peer verification if set to true, false otherwise.
+         * @param depth The maximum certificate verification depth (default: no limit).
+         */
+        void setVerify (bool verify, int depth = -1)
+        {
+            this->_stream.setVerify (verify, depth);
+        }
+
+        /**
+         * @brief set the cipher list (TLSv1.2 and below).
+         * @param cipher the cipher list.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCipher (const std::string &cipher)
+        {
+            return this->_stream.setCipher (cipher);
+        }
+
+        /**
+         * @brief set the cipher list (TLSv1.3).
+         * @param cipher the cipher list.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCipher_1_3 (const std::string &cipher)
+        {
+            return this->_stream.setCipher_1_3 (cipher);
+        }
+
+        /**
          * @brief send mail message.
          * @param mail mail message to send.
          * @return 0 on success, -1 on failure.
          */
         int send (const MailMessage& mail)
         {
-            this->connect (this->url ());
-            if (this->fail ())
+            if (this->connect (this->url ())== -1)
             {
+                this->close ();
                 return -1;
             }
 
             if (this->greeting () == -1)
             {
+                this->close ();
                 return -1;
             }
 
@@ -206,6 +269,7 @@ namespace join
 
                 if (this->initialize (replies) == -1)
                 {
+                    this->close ();
                     return -1;
                 }
 
@@ -213,6 +277,7 @@ namespace join
                 {
                     if (this->startTls () == -1)
                     {
+                        this->close ();
                         return -1;
                     }
                     continue;
@@ -221,19 +286,22 @@ namespace join
                 break;
             }
 
-            if (std::find (replies.begin (), replies.end (), "AUTH") != replies.end ())
+            auto auth = std::find_if (replies.begin (), replies.end (), [] (auto const &r) {return r.find ("AUTH") != std::string::npos;});
+            if (auth != replies.end ())
             {
-                if (std::find (replies.begin (), replies.end (), "LOGIN") != replies.end ())
+                if (auth->find ("LOGIN") != std::string::npos)
                 {
                     if (this->loginAuthenticate () == -1)
                     {
+                        this->close ();
                         return -1;
                     }
                 }
-                else if (std::find (replies.begin (), replies.end (), "PLAIN") != replies.end ())
+                else if (auth->find ("PLAIN") != std::string::npos)
                 {
                     if (this->plainAuthenticate () == -1)
                     {
+                        this->close ();
                         return -1;
                     }
                 }
@@ -241,51 +309,68 @@ namespace join
 
             if (this->sendFrom (mail) == -1)
             {
+                this->close ();
                 return -1;
             }
 
             if (this->sendTo (mail) == -1)
             {
+                this->close ();
                 return -1;
             }
 
             if (this->sendData (mail) == -1)
             {
+                this->close ();
                 return -1;
             }
 
             if (this->quit () == -1)
             {
+                this->close ();
                 return -1;
             }
 
+            this->close ();
             return 0;
         }
 
     protected:
         /**
-         * @brief get host name.
-         * @return host name.
+         * @brief make a connection to the given endpoint.
+         * @param endpoint endpoint to connect to.
+         * @return 0 on success, -1 on failure.
          */
-        std::string hostname () const
+        virtual int connect (const Endpoint& endpoint)
         {
-            char name[255] = {};
-            gethostname (name, sizeof (name));
-            return name;
+            this->_stream.connect (endpoint);
+            return this->_stream.fail () ? -1 : 0;
+        }
+
+        /**
+         * @brief close the connection.
+         * @return this on success, nullptr on failure.
+         */
+        void close ()
+        {
+            this->_stream.disconnect ();
+            this->_stream.close ();
         }
 
         /**
          * @brief send message.
          * @param message message to send.
+         * @return 0 on success, -1 on failure.
          */
-        void sendMessage (const std::string& message)
+        int sendMessage (const std::string& message)
         {
         #ifdef DEBUG
             std::cout << message << std::endl;
         #endif
-            this->write (message.c_str (), message.size ());
-            this->write ("\r\n", 2);
-            this->flush ();
+            this->_stream.write (message.c_str (), message.size ());
+            this->_stream.write ("\r\n", 2);
+            this->_stream.flush ();
+            return this->_stream.fail () ? -1 : 0;
         }
 
         /**
@@ -298,7 +383,7 @@ namespace join
             std::string reply, code;
             for (;;)
             {
-                if (!join::getline (*this, reply))
+                if (!join::getline (this->_stream, reply))
                 {
                     return {};
                 }
@@ -307,7 +392,7 @@ namespace join
             #endif
                 if ((reply.find ("-") != 3) && (reply.find (" ") != 3))
                 {
-                    //join::lastError = make_error_code (Errc::MessageTooLong);
+                    join::lastError = make_error_code (Errc::MessageUnknown);
                     return {};
                 }
                 if (code.empty ())
@@ -340,14 +425,13 @@ namespace join
         }
 
         /**
-         * @brief client initiation.
+         * @brief client init.
          * @param replies server replies.
          * @return 0 on success, -1 on failure.
          */
         int initialize (std::vector <std::string>& replies)
         {
-            this->sendMessage ("EHLO " + this->hostname ());
-            if (this->fail ())
+            if (this->sendMessage ("EHLO " + this->hostname ()) == -1)
             {
                 return -1;
             }
@@ -364,8 +448,7 @@ namespace join
          */
         int startTls ()
         {
-            this->sendMessage ("STARTTLS");
-            if (this->fail ())
+            if (this->sendMessage ("STARTTLS") == -1)
             {
                 return -1;
             }
@@ -373,8 +456,8 @@ namespace join
             {
                 return -1;
             }
-            this->startEncryption ();
-            if (this->fail ())
+            this->_stream.startEncryption ();
+            if (this->_stream.fail ())
             {
                 return -1;
             }
@@ -387,8 +470,7 @@ namespace join
          */
         int loginAuthenticate ()
         {
-            this->sendMessage ("AUTH LOGIN");
-            if (this->fail ())
+            if (this->sendMessage ("AUTH LOGIN") == -1)
             {
                 return -1;
             }
@@ -396,8 +478,7 @@ namespace join
             {
                 return -1;
             }
-            this->sendMessage (Base64::encode (this->_login));
-            if (this->fail ())
+            if (this->sendMessage (Base64::encode (this->_login)) == -1)
             {
                 return -1;
             }
@@ -405,8 +486,7 @@ namespace join
             {
                 return -1;
             }
-            this->sendMessage (Base64::encode (this->_password));
-            if (this->fail ())
+            if (this->sendMessage (Base64::encode (this->_password)) == -1)
             {
                 return -1;
             }
@@ -423,8 +503,7 @@ namespace join
          */
         int plainAuthenticate ()
         {
-            this->sendMessage ("AUTH PLAIN");
-            if (this->fail ())
+            if (this->sendMessage ("AUTH PLAIN") == -1)
             {
                 return -1;
             }
@@ -432,8 +511,7 @@ namespace join
             {
                 return -1;
             }
-            this->sendMessage (Base64::encode ('\0' + this->_login + '\0' + this->_password));
-            if (this->fail ())
+            if (this->sendMessage (Base64::encode ('\0' + this->_login + '\0' + this->_password)) == -1)
             {
                 return -1;
             }
@@ -445,14 +523,13 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @param message .
+         * @brief send sender address.
+         * @param message mail message.
          * @return 0 on success, -1 on failure.
          */
         int sendFrom (const MailMessage& message)
         {
-            this->sendMessage ("MAIL FROM: <" + message.sender ().address () + ">");
-            if (this->fail ())
+            if (this->sendMessage ("MAIL FROM: <" + message.sender ().address () + ">") == -1)
             {
                 return -1;
             }
@@ -464,16 +541,15 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @param message .
+         * @brief send recpient address.
+         * @param message mail message.
          * @return 0 on success, -1 on failure.
          */
         int sendTo (const MailMessage& message)
         {
             for (auto const& recipient : message.recipients ())
             {
-                this->sendMessage ("RCPT TO: <" + recipient.address () + ">");
-                if (this->fail ())
+                if (this->sendMessage ("RCPT TO: <" + recipient.address () + ">") == -1)
                 {
                     return -1;
                 }
@@ -486,14 +562,13 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @param .
+         * @brief send message.
+         * @param message message to send.
          * @return 0 on success, -1 on failure.
          */
         int sendData (const MailMessage& message)
         {
-            this->sendMessage ("DATA");
-            if (this->fail ())
+            if (this->sendMessage ("DATA") == -1)
             {
                 return -1;
             }
@@ -501,14 +576,14 @@ namespace join
             {
                 return -1;
             }
-            if (message.writeHeaders (*this) == -1)
+            if (message.writeHeaders (this->_stream) == -1)
             {
                 return -1;
             }
-            /*if (this->sendContent () == -1)
+            if (message.writeContent (this->_stream) == -1)
             {
                 return -1;
-            }*/
+            }
             if (this->readReplies () != "250")
             {
                 return -1;
@@ -517,14 +592,12 @@ namespace join
         }
 
         /**
-         * @brief .
-         * @param .
+         * @brief send quit.
          * @return 0 on success, -1 on failure.
          */
         int quit ()
         {
-            this->sendMessage ("QUIT");
-            if (this->fail ())
+            if (this->sendMessage ("QUIT") == -1)
             {
                 return -1;
             }
@@ -534,6 +607,20 @@ namespace join
             }
             return 0;
         }
+
+        /**
+         * @brief get host name.
+         * @return host name.
+         */
+        std::string hostname () const
+        {
+            char name[255] = {};
+            gethostname (name, sizeof (name));
+            return name;
+        }
+
+        /// stream.
+        Stream _stream;
 
         /// SMTP host.
         std::string _host;
@@ -617,11 +704,23 @@ namespace join
 
         /**
          * @brief get scheme.
-         * @return smtp or smtps.
+         * @return scheme.
          */
         std::string scheme () const override
         {
             return "smtps";
+        }
+
+    protected:
+        /**
+         * @brief make a connection to the given endpoint.
+         * @param endpoint endpoint to connect to.
+         * @return 0 on success, -1 on failure.
+         */
+        int connect (const Endpoint& endpoint) override
+        {
+            this->_stream.connectEncrypted (endpoint);
+            return this->_stream.fail () ? -1 : 0;
         }
     };
 }

@@ -368,8 +368,8 @@ const std::string& MailMessage::content () const
 int MailMessage::writeHeaders (std::ostream& out) const
 {
     MailRecipients to, cc, bcc;
-    std::copy_if (_recipients.begin (), _recipients.end(), std::back_inserter (to), [] (auto const& t) { return t.type () == MailRecipient::Recipient; });
-    std::copy_if (_recipients.begin (), _recipients.end(), std::back_inserter (cc), [] (auto const& t) { return t.type () == MailRecipient::CCRecipient; });
+    std::copy_if (_recipients.begin (), _recipients.end(), std::back_inserter (to),  [] (auto const& t) { return t.type () == MailRecipient::Recipient; });
+    std::copy_if (_recipients.begin (), _recipients.end(), std::back_inserter (cc),  [] (auto const& t) { return t.type () == MailRecipient::CCRecipient; });
     std::copy_if (_recipients.begin (), _recipients.end(), std::back_inserter (bcc), [] (auto const& t) { return t.type () == MailRecipient::BCCRecipient; });
 
     // write date.
@@ -423,12 +423,35 @@ int MailMessage::writeHeaders (std::ostream& out) const
     out << "Content-type: text/plain; charset=iso-8859-1";
     out << "\r\n";
 
-    // write content encoding.
+    // write content transfert encoding.
     out << "Content-Transfer-Encoding: 7bit";
     out << "\r\n";
 
     // write end of headers.
     out << "\r\n";
+
+    // flush data.
+    out.flush ();
+
+    return out.fail () ? -1 : 0;
+}
+
+// =========================================================================
+//   CLASS     : MailMessage
+//   METHOD    : writeContent
+// =========================================================================
+int MailMessage::writeContent (std::ostream& out) const
+{
+    // write content.
+    out << _content;
+    out << "\r\n";
+
+    // end content.
+    out << ".";
+    out << "\r\n";
+
+    // flush data.
+    out.flush ();
 
     return out.fail () ? -1 : 0;
 }
