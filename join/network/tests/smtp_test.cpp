@@ -136,6 +136,39 @@ public:
             keyFile << "-----END RSA PRIVATE KEY-----" << std::endl;
             keyFile.close ();
         }
+
+        std::ofstream invalidKeyFile (_invalidKey);
+        if (invalidKeyFile.is_open ())
+        {
+            invalidKeyFile << "-----BEGIN RSA PRIVATE KEY-----" << std::endl;
+            invalidKeyFile << "MIIEowIBAAKCAQEA2Q0DOyG039uVMuxNnZ5fpfOcvXXOTguST1QR6eLVkdG7OKpM" << std::endl;
+            invalidKeyFile << "nc9K597jx1syT1q+SwFcykMtvWxCfD8BR7bcLILeO6z+HlRfvjOhUiHaX/KCaTN8" << std::endl;
+            invalidKeyFile << "l7OJOgmUlL0FhQ1SXxw7KCSGd+rgu1iHwjFDDkj/tG24ashdmNt+DYdeoJu2mzgw" << std::endl;
+            invalidKeyFile << "tEASfG9VjqBR7ni4Hg/sRpwXvEK5nI1JSLyZbcPCxGlBRdB8hMdny/VW+SBwKD2/" << std::endl;
+            invalidKeyFile << "ivpVJLulw2oniSIcCCcr9d+ERY4XrO71UsiACwPxfdEtbG0KrZfpK91k7vl64DHM" << std::endl;
+            invalidKeyFile << "CeTQPKRZm+LDKOUfv/eTF9F6GY4Dpw2LMwLM5QIDAQABAoIBABjV91etzK+Mxa61" << std::endl;
+            invalidKeyFile << "AVCWzaUEkhvPvhKKGmy/VulnTj7IO98JBYlNLeoIRBIMql4QKRQWDNMMCtDQ8W6c" << std::endl;
+            invalidKeyFile << "Gv5kux7QvrMfYViBGQ9/gucN/pnZ+vgkrw4AuiQM8pZuZpJJ6vH9HfvC6iwQkTR+" << std::endl;
+            invalidKeyFile << "tdIPpvecfL3djCuTz7ns66iKo9ZGpRE6emTBynr8og/oqD8Vw5bW+JJ+AJ3IqZf4" << std::endl;
+            invalidKeyFile << "NslNist7d5FZ5N/+nxWyBUcFglP7bZzb/raOVc/flrYIeDy72asnWOYbDTPzMyH1" << std::endl;
+            invalidKeyFile << "dfaox6QKZtA5NdO9x4aHHGgAz8BTgqs7LvxPwoH+XF1dDCsb3kIeQxHTfcc1opMw" << std::endl;
+            invalidKeyFile << "atxpgwECgYEA8Zq/7Z3tKcBlMz4XNKWWvaDxhBUIS62tGeLJ2spLRFvkL1ixnjcK" << std::endl;
+            invalidKeyFile << "72YWOwDpoINEWa8AhAhM6afE9VxrupSGg+C9uALaJ8HTWTP6u6/F8sbsYaoWHyA/" << std::endl;
+            invalidKeyFile << "k/8/nFEr43ciKUjBhMHB42vYidAgiOvDVXc+/k7HIMQfl/vyp32ecEECgYEA5fu9" << std::endl;
+            invalidKeyFile << "ePLh55TYbXe8SCL0hsZcC8Q/ioT/0GJ6uevGb0lw3XAa+HC6//upu90T7ZOIqysc" << std::endl;
+            invalidKeyFile << "aAqln7ZEeCfvXI/3YJyJ2RWatD+2itECbd0WV2/JflO/OAzDSSFvpxxmwIzccIeA" << std::endl;
+            invalidKeyFile << "UNuNcQGD8HDwFzU+sULvF82yuwMt1syPd/mns6UCgYAviqP5vfnNHW7MhotKcMsY" << std::endl;
+            invalidKeyFile << "xXLA6uKXAbXuQhI2W1g0O2DLcEiDOZGNSilVsvhF/Y6VlzoiwP9hewHmxijsrg1K" << std::endl;
+            invalidKeyFile << "Jg8vBmCnMhzEkNXl2NC61SnujemMdmwMU03RFKfuOqMePJLX7MiaV75kX/AHAV2O" << std::endl;
+            invalidKeyFile << "k8hxgk7sw6rz3UACdVWYAQKBgHUu5ScoksS+Cd0VQmF7Nh8qGSKBt2KsS/BxDVmI" << std::endl;
+            invalidKeyFile << "ck6oHBMomQV340CliaHIjuvh3aRhzhKRQjzz0UVsC8GdNY4LlQ2AvZgUUr2+q78x" << std::endl;
+            invalidKeyFile << "BL4+nmt43pj/n822dL6wcQaxf2zzDgWlKReojwLHeP5KSgxmL49wZx51CzlEd+HI" << std::endl;
+            invalidKeyFile << "2pNlAoGBAObdC7woN7jEfdfYz1BhUpmBsIRqW2yLA1DnlK9lfgs2i1w7spzAh2hV" << std::endl;
+            invalidKeyFile << "djPiKj5vZdcrbaa+SBAnZbFTHyXmAbKbO/iZpSromaZYyCK8NktJu/YxpWZmjnRF" << std::endl;
+            invalidKeyFile << "2xOadRGCav5fTGzCN/ADLgIo4gIAI2o/UnV/MdaSAdHyIeSrxBAb" << std::endl;
+            invalidKeyFile << "-----END RSA PRIVATE KEY-----" << std::endl;
+            invalidKeyFile.close ();
+        }
     }
 
     /**
@@ -147,6 +180,7 @@ public:
         unlink (_certFile.c_str ());
         rmdir  (_certPath.c_str ());
         unlink (_key.c_str ());
+        unlink (_invalidKey.c_str ());
     }
 
 protected:
@@ -263,6 +297,9 @@ protected:
     /// private key.
     static const std::string _key;
 
+    /// invalid private key.
+    static const std::string _invalidKey;
+
     /// user.
     static const std::string _user;
 
@@ -270,15 +307,31 @@ protected:
     static const std::string _password;
 };
 
-const std::string SmtpClient::_host     = "localhost";
-const uint16_t    SmtpClient::_port     = 5000;
-const int         SmtpClient::_timeout  = 1000;
-const std::string SmtpClient::_rootcert = "/tmp/tlssocket_test_root.cert";
-const std::string SmtpClient::_certPath = "/tmp/certs";
-const std::string SmtpClient::_certFile = _certPath + "/tlssocket_test.cert";
-const std::string SmtpClient::_key      = "/tmp/tlssocket_test.key";
-const std::string SmtpClient::_user     = "admin";
-const std::string SmtpClient::_password = "12345";
+const std::string SmtpClient::_host       = "localhost";
+const uint16_t    SmtpClient::_port       = 5000;
+const int         SmtpClient::_timeout    = 1000;
+const std::string SmtpClient::_rootcert   = "/tmp/tlssocket_test_root.cert";
+const std::string SmtpClient::_certPath   = "/tmp/certs";
+const std::string SmtpClient::_certFile   = _certPath + "/tlssocket_test.cert";
+const std::string SmtpClient::_key        = "/tmp/tlssocket_test.key";
+const std::string SmtpClient::_invalidKey = "/tmp/tlssocket_test_invalid.key";
+const std::string SmtpClient::_user       = "admin";
+const std::string SmtpClient::_password   = "12345";
+
+/**
+ * @brief Test move.
+ */
+TEST_F (SmtpClient, move)
+{
+    Smtp::Client client1 = Smtp::Client (_host, _port); 
+    ASSERT_EQ (client1.host (), _host);
+
+    Smtp::Client  client2 ("localhost");
+    ASSERT_EQ (client2.host (), "localhost");
+
+    client2 = std::move (client1);
+    ASSERT_EQ (client2.host (), _host);
+}
 
 /**
  * @brief Test scheme.
@@ -353,6 +406,71 @@ TEST_F (SmtpClient, url)
 }
 
 /**
+ * @brief Test setCertificate.
+ */
+TEST_F (SmtpClient, setCertificate)
+{
+    Smtp::Client client (_host, _port);
+    ASSERT_EQ (client.setCertificate ("/invalid/cert/path"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (client.setCertificate (_certFile), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (client.setCertificate (_certFile, "/invalid/key/path"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (client.setCertificate (_certFile, _invalidKey), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (client.setCertificate (_certFile, _key), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test setCaPath.
+ */
+TEST_F (SmtpClient, setCaPath)
+{
+    Smtp::Client client (_host, _port);
+    ASSERT_EQ (client.setCaPath ("/invalid/ca/path"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (client.setCaPath (_certFile), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (client.setCaPath (_certPath), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test setCaFile.
+ */
+TEST_F (SmtpClient, setCaFile)
+{
+    Smtp::Client client (_host, _port);
+    ASSERT_EQ (client.setCaFile ("/invalid/ca/file"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (client.setCaFile (_certPath), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (client.setCaFile (_certFile), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test setCipher.
+ */
+TEST_F (SmtpClient, setCipher)
+{
+    Smtp::Client client (_host, _port);
+    ASSERT_EQ (client.setCipher ("foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test setCipher_1_3.
+ */
+TEST_F (SmtpClient, setCipher_1_3)
+{
+    Smtp::Client client (_host, _port);
+    ASSERT_EQ (client.setCipher_1_3 ("foo"), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+}
+
+/**
  * @brief Test send.
  */
 TEST_F (SmtpClient, send)
@@ -365,6 +483,13 @@ TEST_F (SmtpClient, send)
 
     Smtp::Client client (_host, _port);
     client.credentials (_user, _password);
+    client.setVerify (false);
+    ASSERT_EQ (client.send (message), 0) << join::lastError.message ();
+    client.setVerify (true, 0);
+    ASSERT_EQ (client.send (message), -1);
+    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
+    ASSERT_EQ (client.send (message), -1);
+    client.setVerify (true, 1);
     ASSERT_EQ (client.send (message), 0) << join::lastError.message ();
 }
 
@@ -373,6 +498,7 @@ TEST_F (SmtpClient, send)
  */
 int main (int argc, char **argv)
 {
+    join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }
