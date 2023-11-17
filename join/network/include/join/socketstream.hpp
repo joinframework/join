@@ -426,7 +426,6 @@ namespace join
         virtual void close ()
         {
             this->_sockbuf.close ();
-            this->clear ();
         }
 
         /**

@@ -355,6 +355,7 @@ namespace join
         {
             this->_stream.disconnect ();
             this->_stream.close ();
+            this->_stream.clear ();
         }
 
         /**
