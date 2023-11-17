@@ -96,7 +96,7 @@ namespace join
          * @brief get socket address length.
          * @return socket address length.
          */
-        constexpr socklen_t length () const noexcept
+        virtual socklen_t length () const noexcept
         {
             return sizeof (struct sockaddr_storage);
         }
@@ -155,7 +155,7 @@ namespace join
          * @brief get socket address length.
          * @return socket address length.
          */
-        constexpr socklen_t length () const noexcept
+        socklen_t length () const noexcept override
         {
             return sizeof (struct sockaddr_un);
         }
@@ -315,7 +315,7 @@ namespace join
          * @brief get socket address length.
          * @return socket address length.
          */
-        constexpr socklen_t length () const noexcept
+        socklen_t length () const noexcept override
         {
             return sizeof (struct sockaddr_ll);
         }
@@ -458,7 +458,7 @@ namespace join
          * @brief create the endpoint instance.
          * @param url endpoint URL.
          */
-        /*constexpr*/ BasicInternetEndpoint (const char* url) noexcept
+        BasicInternetEndpoint (const char* url) noexcept
         : BasicEndpoint <Protocol> ()
         {
             // regular expression inspired by rfc3986 (see https://www.ietf.org/rfc/rfc3986.txt)
@@ -637,7 +637,7 @@ namespace join
          * @brief get socket address length.
          * @return socket address length.
          */
-        constexpr socklen_t length () const noexcept
+        socklen_t length () const noexcept override
         {
             return (this->_addr.ss_family == AF_INET6) ? sizeof (struct sockaddr_in6) 
                                                        : sizeof (struct sockaddr_in);
