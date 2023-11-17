@@ -224,8 +224,8 @@ protected:
             stream << "250-SIZE 10485760\r\n";
             stream << "250-ETRN\r\n";
             stream << "250-STARTTLS\r\n";
-            stream << "250-AUTH PLAIN LOGIN\r\n";
-            stream << "250-AUTH=PLAIN LOGIN\r\n";
+            stream << "250-AUTH PLAIN\r\n";
+            stream << "250-AUTH=PLAIN\r\n";
             stream << "250-ENHANCEDSTATUSCODES\r\n";
             stream << "250-8BITMIME\r\n";
             stream << "250-DSN\r\n";
@@ -240,8 +240,8 @@ protected:
             stream << "250-PIPELINING\r\n";
             stream << "250-SIZE 10485760\r\n";
             stream << "250-ETRN\r\n";
-            stream << "250-AUTH PLAIN LOGIN\r\n";
-            stream << "250-AUTH=PLAIN LOGIN\r\n";
+            stream << "250-AUTH PLAIN\r\n";
+            stream << "250-AUTH=PLAIN\r\n";
             stream << "250-ENHANCEDSTATUSCODES\r\n";
             stream << "250-8BITMIME\r\n";
             stream << "250-DSN\r\n";
@@ -249,9 +249,6 @@ protected:
             stream.flush ();
             join::getline (stream, tmp);
             stream << "334 VXNlcm5hbWU6\r\n";
-            stream.flush ();
-            join::getline (stream, tmp);
-            stream << "334 UGFzc3dvcmQ6\r\n";
             stream.flush ();
             join::getline (stream, tmp);
             stream << "235 2.7.0 Authentication successful\r\n";

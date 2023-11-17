@@ -223,8 +223,8 @@ protected:
             stream << "250-PIPELINING\r\n";
             stream << "250-SIZE 10485760\r\n";
             stream << "250-ETRN\r\n";
-            stream << "250-AUTH PLAIN LOGIN\r\n";
-            stream << "250-AUTH=PLAIN LOGIN\r\n";
+            stream << "250-AUTH LOGIN\r\n";
+            stream << "250-AUTH=LOGIN\r\n";
             stream << "250-ENHANCEDSTATUSCODES\r\n";
             stream << "250-8BITMIME\r\n";
             stream << "250-DSN\r\n";
