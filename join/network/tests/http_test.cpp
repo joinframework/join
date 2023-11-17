@@ -195,7 +195,7 @@ protected:
     /// server keep alive timeout.
     static const int _timeout;
 
-    /// server  keep alive max requests.
+    /// server keep alive max requests.
     static const int _max;
 };
 

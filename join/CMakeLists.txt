@@ -56,6 +56,8 @@ set(PUBLIC_HEADERS
     network/include/join/httpmessage.hpp
     network/include/join/httpclient.hpp
     network/include/join/httpserver.hpp
+    network/include/join/mailmessage.hpp
+    network/include/join/smtpclient.hpp
     sax/include/join/diyfp.hpp
     sax/include/join/dtoa.hpp
     sax/include/join/value.hpp
@@ -85,6 +87,7 @@ set(SOURCES
     network/src/arp.cpp
     network/src/chunkstream.cpp
     network/src/httpmessage.cpp
+    network/src/mailmessage.cpp
     sax/src/value.cpp
     sax/src/sax.cpp
     sax/src/json.cpp

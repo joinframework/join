@@ -51,6 +51,9 @@ namespace join
     template <class Protocol> class BasicHttpServer;
     template <class Protocol> class BasicHttpSecureServer;
 
+    template <class Protocol> class BasicSmtpClient;
+    template <class Protocol> class BasicSmtpSecureClient;
+
     /**
      * @brief unix datagram protocol class.
      */
@@ -750,6 +753,194 @@ namespace join
      * @return true if not equals.
      */
     constexpr bool operator!= (const Https& a, const Https& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief SMTP protocol class.
+     */
+    class Smtp
+    {
+    public:
+        using Endpoint = BasicInternetEndpoint <Smtp>;
+        using Socket   = BasicTlsSocket <Smtp>;
+        using Stream   = BasicTlsStream <Smtp>;
+        using Client   = BasicSmtpClient <Smtp>;
+
+        /**
+         * @brief create the SMTP protocol  instance.
+         * @param family IP address family.
+         */
+        constexpr Smtp (int family = AF_INET) noexcept
+        : _family (family)
+        {
+        }
+
+        /**
+         * @brief get protocol suitable for IPv4 address family.
+         * @return an IPv4 address family suitable protocol.
+         */
+        static inline Smtp& v4 () noexcept
+        {
+            static Smtp smtpv4 (AF_INET);
+            return smtpv4;
+        }
+
+        /**
+         * @brief get protocol suitable for IPv6 address family.
+         * @return an IPv6 address family suitable protocol.
+         */
+        static inline Smtp& v6 () noexcept
+        {
+            static Smtp smtpv6 (AF_INET6);
+            return smtpv6;
+        }
+
+        /**
+         * @brief get the protocol IP address family.
+         * @return the protocol IP address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return _family;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_STREAM;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return IPPROTO_TCP;
+        }
+
+    private:
+        /// IP address family.
+        int _family;
+    };
+
+    /**
+     * @brief check if equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if equals.
+     */
+    constexpr bool operator== (const Smtp& a, const Smtp& b) noexcept
+    {
+        return a.family () == b.family ();
+    }
+
+    /**
+     * @brief check if not equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if not equals.
+     */
+    constexpr bool operator!= (const Smtp& a, const Smtp& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief SMTPS protocol class.
+     */
+    class Smtps
+    {
+    public:
+        using Endpoint = BasicInternetEndpoint <Smtps>;
+        using Socket   = BasicTlsSocket <Smtps>;
+        using Stream   = BasicTlsStream <Smtps>;
+        using Client   = BasicSmtpSecureClient <Smtps>;
+
+        /**
+         * @brief create the SMTPS protocol  instance.
+         * @param family IP address family.
+         */
+        constexpr Smtps (int family = AF_INET) noexcept
+        : _family (family)
+        {
+        }
+
+        /**
+         * @brief get protocol suitable for IPv4 address family.
+         * @return an IPv4 address family suitable protocol.
+         */
+        static inline Smtps& v4 () noexcept
+        {
+            static Smtps smtpsv4 (AF_INET);
+            return smtpsv4;
+        }
+
+        /**
+         * @brief get protocol suitable for IPv6 address family.
+         * @return an IPv6 address family suitable protocol.
+         */
+        static inline Smtps& v6 () noexcept
+        {
+            static Smtps smtpsv6 (AF_INET6);
+            return smtpsv6;
+        }
+
+        /**
+         * @brief get the protocol IP address family.
+         * @return the protocol IP address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return _family;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_STREAM;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return IPPROTO_TCP;
+        }
+
+    private:
+        /// IP address family.
+        int _family;
+    };
+
+    /**
+     * @brief check if equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if equals.
+     */
+    constexpr bool operator== (const Smtps& a, const Smtps& b) noexcept
+    {
+        return a.family () == b.family ();
+    }
+
+    /**
+     * @brief check if not equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if not equals.
+     */
+    constexpr bool operator!= (const Smtps& a, const Smtps& b) noexcept
     {
         return !(a == b);
     }

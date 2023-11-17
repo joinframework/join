@@ -44,11 +44,6 @@
 
 namespace join
 {
-    using AccessHandler       = std::function <bool (const std::string&, const std::string&, std::error_code&)>;
-
-    template <class Protocol>
-    using BasicContentHandler = std::function <void (BasicHttpWorker <Protocol>*)>;
-
     /**
      * @brief HTTP content Type.
      */
@@ -61,20 +56,21 @@ namespace join
     };
 
     /**
-     * @brief HTTP content.
+     * @brief basic HTTP content.
      */
     template <class Protocol>
-    struct BasicContent
+    struct BasicHttpContent
     {
-        using ContentHandler = BasicContentHandler <Protocol>;
+        using Handler = std::function <void (typename Protocol::Worker*)>;
+        using Access  = std::function <bool (const std::string&, const std::string&, std::error_code&)>;
 
-        HttpMethod      methods;            /**< allowed methods. */
-        HttpContentType type;               /**< content type (root, alias etc...). */
-        std::string     directory;          /**< requested resource directory. */
-        std::string     name;               /**< requested resource file name. */
-        std::string     alias;              /**< mapped file system path. */
-        AccessHandler   accessHandler;      /**< access handler. */
-        ContentHandler  contentHandler;     /**< mapped content handler. */
+        HttpMethod      methods;        /**< allowed methods. */
+        HttpContentType type;           /**< content type (root, alias etc...). */
+        std::string     directory;      /**< requested resource directory. */
+        std::string     name;           /**< requested resource file name. */
+        std::string     alias;          /**< mapped file system path. */
+        Handler         handler;        /**< mapped content handler. */
+        Access          access;         /**< access handler. */
     };
 
     /**
@@ -84,7 +80,7 @@ namespace join
     class BasicHttpWorker : public Protocol::Stream
     {
     public:
-        using Content = BasicContent <Protocol>;
+        using Content = BasicHttpContent <Protocol>;
         using Server  = BasicHttpServer <Protocol>;
 
         /**
@@ -156,7 +152,7 @@ namespace join
                 if (this->_max && compareNoCase (this->_request.header ("Connection"), "keep-alive"))
                 {
                     std::stringstream keepAlive;
-                    keepAlive << "timeout=" << this->_server->_keepTimeout.count () << ", max=" << this->_server->_keepMax;
+                    keepAlive << "timeout=" << this->_server->keepAliveTimeout ().count () << ", max=" << this->_server->keepAliveMax ();
                     this->_response.header ("Keep-Alive", keepAlive.str ());
                     this->_response.header ("Connection", "Keep-Alive");
                 }
@@ -369,8 +365,8 @@ namespace join
 
             FD_SET (this->_server->_event, &setfd);
             fdmax = std::max (fdmax, this->_server->_event);
-            FD_SET (this->_server->_handle, &setfd);
-            fdmax = std::max (fdmax, this->_server->_handle);
+            FD_SET (this->_server->_acceptor.handle (), &setfd);
+            fdmax = std::max (fdmax, this->_server->_acceptor.handle ());
 
             for (;;)
             {
@@ -388,7 +384,7 @@ namespace join
                             return;
                         }
 
-                        if (FD_ISSET (this->_server->_handle, &fdset))
+                        if (FD_ISSET (this->_server->_acceptor.handle (), &fdset))
                         {
                             this->_sockbuf.socket () = this->_server->accept ();
                             this->_sockbuf.timeout (this->_server->keepAliveTimeout ().count () * 1000);
@@ -485,7 +481,7 @@ namespace join
                 return;
             }
 
-            if (content->accessHandler != nullptr)
+            if (content->access != nullptr)
             {
                 if (!this->_request.hasHeader ("Authorization"))
                 {
@@ -494,7 +490,7 @@ namespace join
                 }
 
                 std::error_code err;
-                if (!content->accessHandler (this->_request.auth (), this->_request.credentials (), err))
+                if (!content->access (this->_request.auth (), this->_request.credentials (), err))
                 {
                     if (err == HttpErrc::Unauthorized)
                     {
@@ -530,12 +526,12 @@ namespace join
             }
             else if (content->type == HttpContentType::Exec)
             {
-                if (content->contentHandler == nullptr)
+                if (content->handler == nullptr)
                 {
                     this->sendError ("500", "Internal Server Error");
                     return;
                 }
-                content->contentHandler (this);
+                content->handler (this);
             }
             else if (content->type == HttpContentType::Redirect)
             {
@@ -639,21 +635,22 @@ namespace join
      * @brief basic HTTP server.
      */
     template <class Protocol> 
-    class BasicHttpServer : public Protocol::Acceptor
+    class BasicHttpServer
     {
     public:
-        using Content        = BasicContent <Protocol>;
-        using ContentHandler = BasicContentHandler <Protocol>;
-        using Worker         = BasicHttpWorker <Protocol>;
-        using Endpoint       = typename Protocol::Endpoint;
-        using Stream         = typename Protocol::Stream;
-        using Acceptor       = typename Protocol::Acceptor;
+        using Worker   = BasicHttpWorker <Protocol>;
+        using Content  = BasicHttpContent <Protocol>;
+        using Handler  = typename Content::Handler;
+        using Access   = typename Content::Access;
+        using Endpoint = typename Protocol::Endpoint;
+        using Socket   = typename Protocol::Socket;
+        using Acceptor = typename Protocol::Acceptor;
 
         /**
          * @brief create the HTTP server instance.
          * @param workers number of worker threads.
          */
-        BasicHttpServer (size_t workers = std::thread::hardware_concurrency () + 1)
+        BasicHttpServer (size_t workers = std::thread::hardware_concurrency ())
         : _event (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE)),
           _nworkers (workers),
           _baseLocation ("/var/www"),
@@ -693,7 +690,7 @@ namespace join
          */
         virtual ~BasicHttpServer ()
         {
-            this->close ();
+            this->_acceptor.close ();
             this->_contents.clear ();
             ::close (this->_event);
         }
@@ -703,9 +700,9 @@ namespace join
          * @param endpoint endpoint to assign to the server.
          * @return 0 on success, -1 on failure.
          */
-        virtual int create (const Endpoint& endpoint) noexcept override
+        int create (const Endpoint& endpoint) noexcept
         {
-            if (Acceptor::create (endpoint) == -1)
+            if (this->_acceptor.create (endpoint) == -1)
             {
                 return -1;
             }
@@ -721,12 +718,21 @@ namespace join
         /**
          * @brief close server.
          */
-        virtual void close () noexcept override
+        void close () noexcept
         {
             uint64_t val = this->_nworkers;
             [[maybe_unused]] ssize_t bytes = ::write (this->_event, &val, sizeof (uint64_t));
             this->_workers.clear ();
-            Acceptor::close ();
+            this->_acceptor.close ();
+        }
+
+        /**
+         * @brief accept new connection.
+         * @return the accepted client socket object.
+         */
+        virtual Socket accept () const
+        {
+            return this->_acceptor.accept ();
         }
 
         /**
@@ -796,20 +802,20 @@ namespace join
          * @brief map an URL to filesystem adding URL path to the base location.
          * @param dir directory.
          * @param name file name.
-         * @param accessHandler access handler.
+         * @param access access handler.
          * @return a pointer to the content on success, nullptr on failure.
          */
-        Content* addDocumentRoot (const std::string& dir, const std::string& name, const AccessHandler& accessHandler = nullptr)
+        Content* addDocumentRoot (const std::string& dir, const std::string& name, const Access& access = nullptr)
         {
             Content* newEntry = new Content;
             if (newEntry != nullptr)
             {
-                newEntry->methods        = Head | Get;
-                newEntry->type           = Root;
-                newEntry->directory      = dir;
-                newEntry->name           = name;
-                newEntry->contentHandler = nullptr;
-                newEntry->accessHandler  = accessHandler;
+                newEntry->methods   = Head | Get;
+                newEntry->type      = Root;
+                newEntry->directory = dir;
+                newEntry->name      = name;
+                newEntry->handler   = nullptr;
+                newEntry->access    = access;
                 this->_contents.emplace_back (newEntry);
             }
 
@@ -821,21 +827,21 @@ namespace join
          * @param dir directory.
          * @param name file name.
          * @param alias corresponding file system path.
-         * @param accessHandler access handler.
+         * @param access access handler.
          * @return a pointer to the content on success, nullptr on failure.
          */
-        Content* addAlias (const std::string& dir, const std::string& name, const std::string& alias, const AccessHandler& accessHandler = nullptr)
+        Content* addAlias (const std::string& dir, const std::string& name, const std::string& alias, const Access& access = nullptr)
         {
             Content* newEntry = new Content;
             if (newEntry != nullptr)
             {
-                newEntry->methods        = Head | Get;
-                newEntry->type           = Alias;
-                newEntry->directory      = dir;
-                newEntry->name           = name;
-                newEntry->alias          = alias;
-                newEntry->contentHandler = nullptr;
-                newEntry->accessHandler  = accessHandler;
+                newEntry->methods   = Head | Get;
+                newEntry->type      = Alias;
+                newEntry->directory = dir;
+                newEntry->name      = name;
+                newEntry->alias     = alias;
+                newEntry->handler   = nullptr;
+                newEntry->access    = access;
                 this->_contents.emplace_back (newEntry);
             }
 
@@ -847,21 +853,21 @@ namespace join
          * @param methods allowed methods.
          * @param dir directory.
          * @param name file name.
-         * @param contentHandler content handler.
-         * @param accessHandler access handler.
+         * @param handler content handler.
+         * @param access access handler.
          * @return a pointer to the content on success, nullptr on failure.
          */
-        Content* addExecute (const HttpMethod methods, const std::string& dir, const std::string& name, const ContentHandler& contentHandler, const AccessHandler& accessHandler = nullptr)
+        Content* addExecute (const HttpMethod methods, const std::string& dir, const std::string& name, const Handler& handler, const Access& access = nullptr)
         {
             Content* newEntry = new Content;
             if (newEntry != nullptr)
             {
-                newEntry->methods        = methods;
-                newEntry->type           = Exec;
-                newEntry->directory      = dir;
-                newEntry->name           = name;
-                newEntry->contentHandler = contentHandler;
-                newEntry->accessHandler  = accessHandler;
+                newEntry->methods   = methods;
+                newEntry->type      = Exec;
+                newEntry->directory = dir;
+                newEntry->name      = name;
+                newEntry->handler   = handler;
+                newEntry->access    = access;
                 this->_contents.emplace_back (newEntry);
             }
 
@@ -873,21 +879,21 @@ namespace join
          * @param dir directory.
          * @param name file name.
          * @param location location where to do the redirection.
-         * @param accessHandler access handler.
+         * @param access access handler.
          * @return a pointer to the content on success, nullptr on failure.
          */
-        Content* addRedirect (const std::string& dir, const std::string& name, const std::string& location, const AccessHandler& accessHandler = nullptr)
+        Content* addRedirect (const std::string& dir, const std::string& name, const std::string& location, const Access& access = nullptr)
         {
             Content* newEntry = new Content;
             if (newEntry != nullptr)
             {
-                newEntry->methods        = Head | Get | Put | Post | Delete;
-                newEntry->type           = Redirect;
-                newEntry->directory      = dir;
-                newEntry->name           = name;
-                newEntry->alias          = location;
-                newEntry->contentHandler = nullptr;
-                newEntry->accessHandler  = accessHandler;
+                newEntry->methods   = Head | Get | Put | Post | Delete;
+                newEntry->type      = Redirect;
+                newEntry->directory = dir;
+                newEntry->name      = name;
+                newEntry->alias     = location;
+                newEntry->handler   = nullptr;
+                newEntry->access    = access;
                 this->_contents.emplace_back (newEntry);
             }
 
@@ -923,6 +929,9 @@ namespace join
             return nullptr;
         }
 
+        /// acceptor.
+        Acceptor _acceptor;
+
         /// gracefully stop all workers.
         int _event = -1;
 
@@ -951,7 +960,7 @@ namespace join
         Cache _cache;
 
         /// friendship with worker.
-        friend class BasicHttpWorker <Protocol>;
+        friend Worker;
     };
 
     /**
@@ -961,19 +970,19 @@ namespace join
     class BasicHttpSecureServer : public BasicHttpServer <Protocol>
     {
     public:
-        using Content        = BasicContent <Protocol>;
-        using ContentHandler = BasicContentHandler <Protocol>;
-        using Worker         = BasicHttpWorker <Protocol>;
-        using Endpoint       = typename Protocol::Endpoint;
-        using Socket         = typename Protocol::Socket;
-        using Stream         = typename Protocol::Stream;
-        using Acceptor       = typename Protocol::Acceptor;
+        using Worker   = BasicHttpWorker <Protocol>;
+        using Content  = BasicHttpContent <Protocol>;
+        using Handler  = typename Content::Handler;
+        using Access   = typename Content::Access;
+        using Endpoint = typename Protocol::Endpoint;
+        using Socket   = typename Protocol::Socket;
+        using Acceptor = typename Protocol::Acceptor;
 
         /**
          * @brief create the HTTPS server instance.
          * @param workers number of worker threads.
          */
-        BasicHttpSecureServer (size_t workers = std::thread::hardware_concurrency () + 1)
+        BasicHttpSecureServer (size_t workers = std::thread::hardware_concurrency ())
         : BasicHttpServer <Protocol> (workers)
         {
         }
@@ -1010,6 +1019,78 @@ namespace join
         virtual ~BasicHttpSecureServer () = default;
 
         /**
+         * @brief accept new connection and fill in the client object with connection parameters.
+         * @return the accepted client socket object.
+         */
+        Socket accept () const override
+        {
+            return this->_acceptor.acceptEncrypted ();
+        }
+
+        /**
+         * @brief set the certificate and the private key.
+         * @param cert certificate path.
+         * @param key private key path.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCertificate (const std::string& cert, const std::string& key = "")
+        {
+            return this->_acceptor.setCertificate (cert, key);
+        }
+
+        /**
+         * @brief Set the location of the trusted CA certificate.
+         * @param caFile path of the trusted CA certificate file.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCaCertificate (const std::string& caFile)
+        {
+            return this->_acceptor.setCaCertificate (caFile);
+        }
+
+        /**
+         * @brief Enable/Disable the verification of the peer certificate.
+         * @param verify Enable peer verification if set to true, false otherwise.
+         * @param depth The maximum certificate verification depth (default: no limit).
+         */
+        void setVerify (bool verify, int depth = -1)
+        {
+            return this->_acceptor.setVerify (verify, depth);
+        }
+
+        /**
+         * @brief set the cipher list (TLSv1.2 and below).
+         * @param cipher the cipher list.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCipher (const std::string& cipher)
+        {
+            return this->_acceptor.setCipher (cipher);
+        }
+
+        /**
+         * @brief set the cipher list (TLSv1.3).
+         * @param cipher the cipher list.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCipher_1_3 (const std::string &cipher)
+        {
+            return this->_acceptor.setCipher_1_3 (cipher);
+        }
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        /**
+         * @brief set curve list.
+         * @param curves curve list.
+         * @return 0 on success, -1 on failure.
+         */
+        int setCurve (const std::string &curves)
+        {
+            return this->_acceptor.setCurve (curves);
+        }
+#endif
+
+        /**
          * @brief get scheme.
          * @return htpp or https.
          */
@@ -1018,17 +1099,8 @@ namespace join
             return "https";
         }
 
-        /**
-         * @brief accept new connection and fill in the client object with connection parameters.
-         * @return the accepted client socket object.
-         */
-        virtual Socket accept () const override
-        {
-            return this->acceptEncrypted ();
-        }
-
         /// friendship with worker.
-        friend class BasicHttpWorker <Protocol>;
+        friend Worker;
     };
 }
 

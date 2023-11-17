@@ -37,6 +37,8 @@ using join::Tcp;
 using join::Tls;
 using join::Http;
 using join::Https;
+using join::Smtp;
+using join::Smtps;
 
 /**
  * @brief test the family method.
@@ -64,6 +66,12 @@ TEST (Protocol, family)
     ASSERT_EQ (Https ().family (), AF_INET);
     ASSERT_EQ (Https::v6 ().family (), AF_INET6);
     ASSERT_EQ (Https::v4 ().family (), AF_INET);
+    ASSERT_EQ (Smtp ().family (), AF_INET);
+    ASSERT_EQ (Smtp::v6 ().family (), AF_INET6);
+    ASSERT_EQ (Smtp::v4 ().family (), AF_INET);
+    ASSERT_EQ (Smtps ().family (), AF_INET);
+    ASSERT_EQ (Smtps::v6 ().family (), AF_INET6);
+    ASSERT_EQ (Smtps::v4 ().family (), AF_INET);
 }
 
 /**
@@ -80,6 +88,8 @@ TEST (Protocol, type)
     ASSERT_EQ (Tls ().type (), SOCK_STREAM);
     ASSERT_EQ (Http ().type (), SOCK_STREAM);
     ASSERT_EQ (Https ().type (), SOCK_STREAM);
+    ASSERT_EQ (Smtp ().type (), SOCK_STREAM);
+    ASSERT_EQ (Smtps ().type (), SOCK_STREAM);
 }
 
 /**
@@ -97,6 +107,8 @@ TEST (Protocol, protocol)
     ASSERT_EQ (Tls ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Http ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Https ().protocol (), IPPROTO_TCP);
+    ASSERT_EQ (Smtp ().protocol (), IPPROTO_TCP);
+    ASSERT_EQ (Smtps ().protocol (), IPPROTO_TCP);
 }
 
 /**
@@ -133,6 +145,16 @@ TEST (Protocol, equal)
     ASSERT_NE (Https::v4 (), Https::v6 ());
     ASSERT_EQ (Https::v6 (), Https::v6 ());
     ASSERT_NE (Https::v6 (), Https::v4 ());
+
+    ASSERT_EQ (Smtp::v4 (), Smtp::v4 ());
+    ASSERT_NE (Smtp::v4 (), Smtp::v6 ());
+    ASSERT_EQ (Smtp::v6 (), Smtp::v6 ());
+    ASSERT_NE (Smtp::v6 (), Smtp::v4 ());
+
+    ASSERT_EQ (Smtps::v4 (), Smtps::v4 ());
+    ASSERT_NE (Smtps::v4 (), Smtps::v6 ());
+    ASSERT_EQ (Smtps::v6 (), Smtps::v6 ());
+    ASSERT_NE (Smtps::v6 (), Smtps::v4 ());
 }
 
 /**

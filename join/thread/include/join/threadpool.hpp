@@ -45,19 +45,19 @@ namespace join
     /**
      * @brief worker thread class.
      */
-    class Worker
+    class WorkerThread
     {
     public:
         /**
          * @brief create worker thread.
          * @param pool thread pool.
          */
-        Worker (ThreadPool& pool);
+        WorkerThread (ThreadPool& pool);
 
         /**
          * @brief destroy worker thread.
          */
-        ~Worker ();
+        ~WorkerThread ();
 
     private:
         /**
@@ -107,7 +107,7 @@ namespace join
 
     private:
         /// worker threads.
-        std::vector <std::unique_ptr <Worker>> _workers;
+        std::vector <std::unique_ptr <WorkerThread>> _workers;
 
         /// condition shared with worker threads.
         Condition _condition;
@@ -121,8 +121,8 @@ namespace join
         /// jobs queue.
         std::deque <std::function <void ()>> _jobs;
 
-        /// friendship with worker.
-        friend class Worker;
+        /// friendship with worker thread.
+        friend class WorkerThread;
     };
 
     /**
