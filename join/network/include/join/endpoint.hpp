@@ -52,7 +52,7 @@ namespace join
          */
         constexpr BasicEndpoint () noexcept
         {
-            this->_addr.ss_family = this->protocol ().family ();
+            this->_addr.ss_family = Protocol ().family ();
         }
 
         /**
@@ -81,24 +81,6 @@ namespace join
         const struct sockaddr* addr () const noexcept
         {
             return reinterpret_cast <const struct sockaddr*> (&this->_addr);
-        }
-
-        /**
-         * @brief get endpoint protocol.
-         * @return endpoint protocol.
-         */
-        constexpr Protocol protocol () const noexcept
-        {
-            return Protocol ();
-        }
-
-        /**
-         * @brief get socket address length.
-         * @return socket address length.
-         */
-        constexpr socklen_t length () const noexcept
-        {
-            return sizeof (struct sockaddr_storage);
         }
 
     protected:
@@ -149,6 +131,15 @@ namespace join
         constexpr BasicUnixEndpoint (const std::string& dev) noexcept
         : BasicUnixEndpoint <Protocol> (dev.c_str ())
         {
+        }
+
+        /**
+         * @brief get endpoint protocol.
+         * @return endpoint protocol.
+         */
+        constexpr Protocol protocol () const noexcept
+        {
+            return Protocol ();
         }
 
         /**
@@ -312,6 +303,15 @@ namespace join
         }
 
         /**
+         * @brief get endpoint protocol.
+         * @return endpoint protocol.
+         */
+        constexpr Protocol protocol () const noexcept
+        {
+            return Protocol ();
+        }
+
+        /**
          * @brief get socket address length.
          * @return socket address length.
          */
@@ -458,7 +458,7 @@ namespace join
          * @brief create the endpoint instance.
          * @param url endpoint URL.
          */
-        /*constexpr*/ BasicInternetEndpoint (const char* url) noexcept
+        BasicInternetEndpoint (const char* url) noexcept
         : BasicEndpoint <Protocol> ()
         {
             // regular expression inspired by rfc3986 (see https://www.ietf.org/rfc/rfc3986.txt)
@@ -634,13 +634,30 @@ namespace join
         }
 
         /**
+         * @brief get endpoint protocol.
+         * @return endpoint protocol.
+         * @throw invalid_argument if address family is not specified.
+         */
+        constexpr Protocol protocol () const noexcept
+        {
+            if (this->_addr.ss_family == AF_INET)
+            {
+                return Protocol::v4 ();
+            }
+            return Protocol::v6 ();
+        }
+
+        /**
          * @brief get socket address length.
          * @return socket address length.
          */
         constexpr socklen_t length () const noexcept
         {
-            return (this->_addr.ss_family == AF_INET6) ? sizeof (struct sockaddr_in6) 
-                                                       : sizeof (struct sockaddr_in);
+            if (this->_addr.ss_family == AF_INET)
+            {
+                return sizeof (struct sockaddr_in);
+            }
+            return sizeof (struct sockaddr_in6);
         }
 
         /**
@@ -670,20 +687,6 @@ namespace join
                 }
             }
             return {};
-        }
-
-        /**
-         * @brief get endpoint protocol.
-         * @return endpoint protocol.
-         * @throw invalid_argument if address family is not specified.
-         */
-        constexpr Protocol protocol () const noexcept
-        {
-            if (this->_addr.ss_family == AF_INET)
-            {
-                return Protocol::v4 ();
-            }
-            return Protocol::v6 ();
         }
 
     protected:
