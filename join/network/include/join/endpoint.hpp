@@ -92,15 +92,6 @@ namespace join
             return Protocol ();
         }
 
-        /**
-         * @brief get socket address length.
-         * @return socket address length.
-         */
-        virtual socklen_t length () const noexcept
-        {
-            return sizeof (struct sockaddr_storage);
-        }
-
     protected:
         /// socket address storage.
         struct sockaddr_storage _addr = {};
@@ -155,7 +146,7 @@ namespace join
          * @brief get socket address length.
          * @return socket address length.
          */
-        socklen_t length () const noexcept override
+        constexpr socklen_t length () const noexcept
         {
             return sizeof (struct sockaddr_un);
         }
@@ -315,7 +306,7 @@ namespace join
          * @brief get socket address length.
          * @return socket address length.
          */
-        socklen_t length () const noexcept override
+        constexpr socklen_t length () const noexcept
         {
             return sizeof (struct sockaddr_ll);
         }
@@ -634,10 +625,24 @@ namespace join
         }
 
         /**
+         * @brief get endpoint protocol.
+         * @return endpoint protocol.
+         * @throw invalid_argument if address family is not specified.
+         */
+        constexpr Protocol protocol () const noexcept
+        {
+            if (this->_addr.ss_family == AF_INET)
+            {
+                return Protocol::v4 ();
+            }
+            return Protocol::v6 ();
+        }
+
+        /**
          * @brief get socket address length.
          * @return socket address length.
          */
-        socklen_t length () const noexcept override
+        constexpr socklen_t length () const noexcept
         {
             return (this->_addr.ss_family == AF_INET6) ? sizeof (struct sockaddr_in6) 
                                                        : sizeof (struct sockaddr_in);
@@ -670,20 +675,6 @@ namespace join
                 }
             }
             return {};
-        }
-
-        /**
-         * @brief get endpoint protocol.
-         * @return endpoint protocol.
-         * @throw invalid_argument if address family is not specified.
-         */
-        constexpr Protocol protocol () const noexcept
-        {
-            if (this->_addr.ss_family == AF_INET)
-            {
-                return Protocol::v4 ();
-            }
-            return Protocol::v6 ();
         }
 
     protected:
