@@ -132,7 +132,7 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
             return traits_type::eof ();
         }
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        EVP_MAC_init (_ctx.get (), _key.c_str (), _key.size (), nullptr);
+        EVP_MAC_init (_ctx.get (), reinterpret_cast <const uint8_t *> (_key.c_str ()), _key.size (), nullptr);
     #else
         HMAC_Init_ex (_ctx.get (), _key.c_str (), _key.size (), _mac, nullptr);
     #endif
