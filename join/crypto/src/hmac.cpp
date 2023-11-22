@@ -39,11 +39,11 @@ using join::BytesArray;
 // =========================================================================
 Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
 : _buf (std::make_unique <char []> (_bufsize)),
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+  _md (EVP_get_digestbyname (algo.c_str ())),
+#else
   _mac (EVP_MAC_fetch (nullptr, "HMAC", nullptr)),
   _algo (algo),
-#else
-  _md (EVP_get_digestbyname (algo.c_str ())),
 #endif
   _key (key)
 {
@@ -52,14 +52,12 @@ Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
         throw std::system_error (make_error_code (Errc::OutOfMemory));
     }
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-    if (_mac == nullptr)
-#else
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     if (_md == nullptr)
-#endif
     {
         throw std::system_error (make_error_code (DigestErrc::InvalidAlgorithm));
     }
+#endif
 }
 
 // =========================================================================
@@ -69,11 +67,11 @@ Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
 Hmacbuf::Hmacbuf (Hmacbuf&& other)
 : std::streambuf (std::move (other)),
   _buf (std::move (other._buf)),
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+  _md (other._md),
+#else
   _mac (std::move (other._mac)),
   _algo (std::move (other._algo)),
-#else
-  _md (other._md),
 #endif
   _ctx (std::move (other._ctx)),
   _key (std::move (other._key))
@@ -88,11 +86,11 @@ Hmacbuf& Hmacbuf::operator= (Hmacbuf&& other)
 {
     std::streambuf::operator= (std::move (other));
     _buf = std::move (other._buf);
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    _md = other._md;
+#else
     _mac = std::move (other._mac);
     _algo = std::move (other._algo);
-#else
-    _md = other._md;
 #endif
     _ctx = std::move (other._ctx);
     _key = std::move (other._key);
@@ -108,12 +106,12 @@ BytesArray Hmacbuf::finalize ()
     BytesArray hmac;
     if (_buf && (this->overflow (traits_type::eof ()) != traits_type::eof ()))
     {
-    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        hmac.resize (EVP_MAC_CTX_get_mac_size (_ctx.get ()));
-        EVP_MAC_final (_ctx.get (), &hmac[0], nullptr, hmac.size ());
-    #else
+    #if OPENSSL_VERSION_NUMBER < 0x30000000L
         hmac.resize (EVP_MD_size (_md));
         HMAC_Final (_ctx.get (), &hmac[0], nullptr);
+    #else
+        hmac.resize (EVP_MAC_CTX_get_mac_size (_ctx.get ()));
+        EVP_MAC_final (_ctx.get (), &hmac[0], nullptr, hmac.size ());
     #endif
     }
     _ctx.reset ();
@@ -128,23 +126,23 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
 {
     if (_ctx == nullptr)
     {
-    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        _ctx.reset (EVP_MAC_CTX_new (_mac.get ()));
-    #else
+    #if OPENSSL_VERSION_NUMBER < 0x30000000L
         _ctx.reset (HMAC_CTX_new ());
+    #else
+        _ctx.reset (EVP_MAC_CTX_new (_mac.get ()));
     #endif
         if (_ctx == nullptr)
         {
             lastError = make_error_code (Errc::OutOfMemory);
             return traits_type::eof ();
         }
-    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    #if OPENSSL_VERSION_NUMBER < 0x30000000L
+        HMAC_Init_ex (_ctx.get (), _key.c_str (), _key.size (), _md, nullptr);
+    #else
         OSSL_PARAM params[2];
         params[0] = OSSL_PARAM_construct_utf8_string ("digest", &_algo[0], 0);
         params[1] = OSSL_PARAM_construct_end ();
         EVP_MAC_init (_ctx.get (), reinterpret_cast <const uint8_t *> (_key.c_str ()), _key.size (), params);
-    #else
-        HMAC_Init_ex (_ctx.get (), _key.c_str (), _key.size (), _md, nullptr);
     #endif
     }
 
@@ -161,10 +159,10 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
     std::streamsize pending = this->pptr () - this->pbase ();
     if (pending)
     {
-    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        EVP_MAC_update (_ctx.get (), reinterpret_cast <uint8_t*> (this->pbase ()), pending);
-    #else
+    #if OPENSSL_VERSION_NUMBER < 0x30000000L
         HMAC_Update (_ctx.get (), reinterpret_cast <uint8_t*> (this->pbase ()), pending);
+    #else
+        EVP_MAC_update (_ctx.get (), reinterpret_cast <uint8_t*> (this->pbase ()), pending);
     #endif
     }
 

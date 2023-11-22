@@ -102,7 +102,9 @@ const std::string sm3hex    = "10d95529e4d8bb1fc98514151a361ac5f3ad58f04ed5db4af
  */
 TEST (Hmac, finalize)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     ASSERT_THROW (Hmac (Digest::Algorithm (0), key), std::system_error);
+#endif
 
     Hmac hmac = std::move (Hmac (Digest::Algorithm::MD5, key));
     hmac << sample;

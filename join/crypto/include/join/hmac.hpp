@@ -97,7 +97,13 @@ namespace join
         /// internal buffer.
         std::unique_ptr <char []> _buf;
 
-    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    #if OPENSSL_VERSION_NUMBER < 0x30000000L
+        /// message digest.
+        const EVP_MD* _md;
+
+        /// context.
+        HmacCtxPtr _ctx;
+    #else
         /// mac.
         EvpMacPtr _mac;
 
@@ -106,12 +112,6 @@ namespace join
 
         /// context.
         EvpMacCtxPtr _ctx;
-    #else
-        /// message digest.
-        const EVP_MD* _md;
-
-        /// context.
-        HmacCtxPtr _ctx;
     #endif
 
         /// key.
