@@ -141,12 +141,15 @@ Digestbuf& Digestbuf::operator= (Digestbuf&& other)
 BytesArray Digestbuf::finalize ()
 {
     BytesArray digest;
+
     if (_buf && (this->overflow (traits_type::eof ()) != traits_type::eof ()))
     {
         digest.resize (EVP_MD_size (_md));
         EVP_DigestFinal_ex (_ctx.get (), &digest[0], nullptr);
     }
+
     _ctx.reset ();
+
     return digest;
 }
 

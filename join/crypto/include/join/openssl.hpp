@@ -132,7 +132,22 @@ namespace join
 
     using EvpMdCtxPtr = std::unique_ptr <EVP_MD_CTX, EvpMdCtxDelete>;
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    /**
+     * @brief custom functor for HMAC_CTX deletion.
+     */
+    struct HmacCtxDelete
+    {
+        constexpr HmacCtxDelete () noexcept = default;
+
+        void operator ()(HMAC_CTX* hmacCtx)
+        {
+            HMAC_CTX_free (hmacCtx);
+        }
+    };
+
+    using HmacCtxPtr = std::unique_ptr <HMAC_CTX, HmacCtxDelete>;
+#else
     /**
      * @brief custom functor for EVP_MAC deletion.
      */
@@ -162,21 +177,6 @@ namespace join
     };
 
     using EvpMacCtxPtr = std::unique_ptr <EVP_MAC_CTX, EvpMacCtxDelete>;
-#else
-    /**
-     * @brief custom functor for HMAC_CTX deletion.
-     */
-    struct HmacCtxDelete
-    {
-        constexpr HmacCtxDelete () noexcept = default;
-
-        void operator ()(HMAC_CTX* hmacCtx)
-        {
-            HMAC_CTX_free (hmacCtx);
-        }
-    };
-
-    using HmacCtxPtr = std::unique_ptr <HMAC_CTX, HmacCtxDelete>;
 #endif
 
     /**

@@ -104,6 +104,7 @@ Hmacbuf& Hmacbuf::operator= (Hmacbuf&& other)
 BytesArray Hmacbuf::finalize ()
 {
     BytesArray hmac;
+
     if (_buf && (this->overflow (traits_type::eof ()) != traits_type::eof ()))
     {
     #if OPENSSL_VERSION_NUMBER < 0x30000000L
@@ -114,7 +115,9 @@ BytesArray Hmacbuf::finalize ()
         EVP_MAC_final (_ctx.get (), &hmac[0], nullptr, hmac.size ());
     #endif
     }
+
     _ctx.reset ();
+
     return hmac;
 }
 
