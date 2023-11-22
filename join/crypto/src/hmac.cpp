@@ -40,7 +40,7 @@ using join::BytesArray;
 Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
 : _buf (std::make_unique <char []> (_bufsize)),
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-  _mac (EVP_MAC_new (nullptr, "HMAC", nullptr)),
+  _mac (EVP_MAC_fetch (nullptr, "HMAC", nullptr)),
   _algo (algo),
 #else
   _md (EVP_get_digestbyname (algo.c_str ())),
@@ -70,7 +70,7 @@ Hmacbuf::Hmacbuf (Hmacbuf&& other)
 : std::streambuf (std::move (other)),
   _buf (std::move (other._buf)),
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-  _mac (std::move (other.__mac)),
+  _mac (std::move (other._mac)),
   _algo (std::move (other._algo)),
 #else
   _md (other._md),
@@ -139,7 +139,7 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
             return traits_type::eof ();
         }
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        OSSL_PARAMS params[2];
+        OSSL_PARAM params[2];
         params[0] = OSSL_PARAMS_construct_utf8_string ("digest", _algo.c_str (), 0);
         params[1] = OSSL_PARAMS_construct_end ();
         EVP_MAC_init (_ctx.get (), reinterpret_cast <const uint8_t *> (_key.c_str ()), _key.size (), params);
