@@ -97,14 +97,22 @@ namespace join
         /// internal buffer.
         std::unique_ptr <char []> _buf;
 
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        /// message digest.
+        const EVP_MAC* _md;
+
+        /// HMAC context.
+        EvpMacCtxPtr _ctx;
+    #else
         /// message digest.
         const EVP_MD* _md;
 
-        /// HMAC key.
-        std::string _key;
-
         /// HMAC context.
         HmacCtxPtr _ctx;
+    #endif
+
+        /// HMAC key.
+        std::string _key;
     };
 
     /**

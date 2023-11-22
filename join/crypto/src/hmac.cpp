@@ -39,7 +39,11 @@ using join::BytesArray;
 // =========================================================================
 Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
 : _buf (std::make_unique <char []> (_bufsize)),
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  _md (EVP_MAC_fetch (nullptr, algo.c_str (), nullptr)),
+#else
   _md (EVP_get_digestbyname (algo.c_str ())),
+#endif
   _key (key)
 {
     if (_buf == nullptr)
@@ -61,8 +65,8 @@ Hmacbuf::Hmacbuf (Hmacbuf&& other)
 : std::streambuf (std::move (other)),
   _buf (std::move (other._buf)),
   _md (other._md),
-  _key (std::move (other._key)),
-  _ctx (std::move (other._ctx))
+  _ctx (std::move (other._ctx)),
+  _key (std::move (other._key))
 {
 }
 
@@ -75,8 +79,8 @@ Hmacbuf& Hmacbuf::operator= (Hmacbuf&& other)
     std::streambuf::operator= (std::move (other));
     _buf = std::move (other._buf);
     _md = other._md;
-    _key = std::move (other._key);
     _ctx = std::move (other._ctx);
+    _key = std::move (other._key);
     return *this;
 }
 
@@ -90,7 +94,11 @@ BytesArray Hmacbuf::finalize ()
     if (_buf && (this->overflow (traits_type::eof ()) != traits_type::eof ()))
     {
         hmac.resize (EVP_MD_size (_md));
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        EVP_MAC_final (_ctx.get (), &hmac[0], nullptr, hmac.size ());
+    #else
         HMAC_Final (_ctx.get (), &hmac[0], nullptr);
+    #endif
     }
     _ctx.reset ();
     return hmac;
@@ -104,13 +112,21 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
 {
     if (_ctx == nullptr)
     {
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        _ctx.reset (EVP_MAC_CTX_new (_md));
+    #else
         _ctx.reset (HMAC_CTX_new ());
+    #endif
         if (_ctx == nullptr)
         {
             lastError = make_error_code (Errc::OutOfMemory);
             return traits_type::eof ();
         }
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        EVP_MAC_init (_ctx.get (), _key.c_str (), _key.size (), nullptr);
+    #else
         HMAC_Init_ex (_ctx.get (), _key.c_str (), _key.size (), _md, nullptr);
+    #endif
     }
 
     if (this->pbase () == nullptr)
@@ -126,7 +142,11 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
     std::streamsize pending = this->pptr () - this->pbase ();
     if (pending)
     {
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        EVP_MAC_update (_ctx.get (), reinterpret_cast <uint8_t*> (this->pbase ()), pending);
+    #else
         HMAC_Update (_ctx.get (), reinterpret_cast <uint8_t*> (this->pbase ()), pending);
+    #endif
     }
 
     this->setp (this->pbase (), this->pbase () + _bufsize);
