@@ -140,8 +140,8 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
         }
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L
         OSSL_PARAM params[2];
-        params[0] = OSSL_PARAMS_construct_utf8_string ("digest", _algo.c_str (), 0);
-        params[1] = OSSL_PARAMS_construct_end ();
+        params[0] = OSSL_PARAM_construct_utf8_string ("digest", _algo.c_str (), 0);
+        params[1] = OSSL_PARAM_construct_end ();
         EVP_MAC_init (_ctx.get (), reinterpret_cast <const uint8_t *> (_key.c_str ()), _key.size (), params);
     #else
         HMAC_Init_ex (_ctx.get (), _key.c_str (), _key.size (), _md, nullptr);

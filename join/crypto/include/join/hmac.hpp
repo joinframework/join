@@ -101,12 +101,11 @@ namespace join
         /// mac.
         EvpMacPtr _mac;
 
-        /// context.
-        EvpMacCtxPtr _ctx;
-
         /// algorithm.
         std::string _algo;
 
+        /// context.
+        EvpMacCtxPtr _ctx;
     #else
         /// message digest.
         const EVP_MD* _md;
