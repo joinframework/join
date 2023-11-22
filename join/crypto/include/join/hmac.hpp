@@ -98,20 +98,24 @@ namespace join
         std::unique_ptr <char []> _buf;
 
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        /// message digest.
+        /// mac.
         EvpMacPtr _mac;
 
-        /// HMAC context.
+        /// context.
         EvpMacCtxPtr _ctx;
+
+        /// algorithm.
+        std::string _algo;
+
     #else
         /// message digest.
-        const EVP_MD* _mac;
+        const EVP_MD* _md;
 
-        /// HMAC context.
+        /// context.
         HmacCtxPtr _ctx;
     #endif
 
-        /// HMAC key.
+        /// key.
         std::string _key;
     };
 
