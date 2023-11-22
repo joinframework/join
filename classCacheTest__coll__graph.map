@@ -1,0 +1,6 @@
+<map id="CacheTest" name="CacheTest">
+<area shape="rect" id="node1" title="Class used to test cache." alt="" coords="48,181,133,207"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,93,99,119"/>
+<area shape="rect" id="node3" href="$classjoin_1_1Cache.html" title="File cache." alt="" coords="123,93,208,119"/>
+<area shape="rect" id="node4" href="$classjoin_1_1Mutex.html" title="class used to protect shared data from being simultaneously accessed by multiple threads." alt="" coords="124,5,207,31"/>
+</map>

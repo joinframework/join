@@ -1,0 +1,5 @@
+<map id="join::AnswerRecord" name="join::AnswerRecord">
+<area shape="rect" id="node1" title="answer record." alt="" coords="57,156,191,181"/>
+<area shape="rect" id="node2" href="$structjoin_1_1QuestionRecord.html" title="question record." alt="" coords="5,37,147,62"/>
+<area shape="rect" id="node3" href="$classjoin_1_1IpAddress.html" title="IPv6, IPv4 address class." alt="" coords="171,37,277,62"/>
+</map>

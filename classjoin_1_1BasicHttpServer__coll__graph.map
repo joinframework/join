@@ -1,0 +1,5 @@
+<map id="join::BasicHttpServer&lt; Protocol &gt;" name="join::BasicHttpServer&lt; Protocol &gt;">
+<area shape="rect" id="node1" title="basic HTTP server." alt="" coords="5,181,149,221"/>
+<area shape="rect" id="node2" href="$classjoin_1_1Mutex.html" title="class used to protect shared data from being simultaneously accessed by multiple threads." alt="" coords="36,5,119,31"/>
+<area shape="rect" id="node3" href="$classjoin_1_1Cache.html" title="File cache." alt="" coords="125,93,211,119"/>
+</map>
