@@ -89,6 +89,8 @@ protected:
     static const std::string sample;
 
     /// signatures.
+    static const std::string rsa5sig;
+    static const std::string rsa1sig;
     static const std::string rsa224sig;
     static const std::string rsa256sig;
     static const std::string rsa384sig;
@@ -144,6 +146,18 @@ const std::string SignatureTest::sample = "Lorem ipsum dolor sit amet, consectet
                                           "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n";
 
 /// signatures.
+const std::string SignatureTest::rsa5sig   = "u60S1HZEBgcjlO1JQjNJzNNCK8OpeMo2LQXwYnDNwgDaqUSePdWuXtYKu8r/Mtmy"
+                                             "cGDCrQCWcvgZXYmebSKLxJAH8Q7NQWzJRg++VClvMdkXGya/QJUm92b4omRCKqwf"
+                                             "kIKNN4ojqqDbOkN2GeUS4hYDQuvnH9joO9S6/BoJ92aLWCaGdFD+wWrxlK7+CrHq"
+                                             "diBdMN4JuCzwGfjIpIOu4cfTZYoMlzwjihFsGOCzAwDAV3P5/VRFww3PI/PSaOxe"
+                                             "kzuPjc9sutkDO5C0QCavS1nKfFXykdkqyc0CSJ5cKjCpC+9jxu6xXRhkcXYqbkSC"
+                                             "QQLg4TgE8NxWDs3RW4lpsg==";
+const std::string SignatureTest::rsa1sig   = "W4HYSRWaQu2w7I5nYc04Cnt+pFNnD1ddHUfG8XPr1koAoY3V3UN3wa8bqwwpIxoL"
+                                             "qtLVbjwkiF5EgsbiYWYgqXNJhsmTnRvaUN9hKDOufCAH6nOQB1QBH7EibNZ/2frj"
+                                             "ZnoY/TAW+RQH5VmYdAIDV2VQVlgv8PHoFX0AWNCWzQ0KZk2PbP0+KbYv9rlblY3Y"
+                                             "sGV7i7MJI+8bYgHjczCV0S5o9QS3u2QsCpC5IUF7H3N5MknOKyx8hLrAeiq6FPl9"
+                                             "MujuFSMVBT6PbFGcogEKjVRBoSpKZBzEajW+e5/OqjVnlemW4nh+h4RV2v6Gf+yK"
+                                             "xHtWqgu8ZoSSex/k+qeFcg==";
 const std::string SignatureTest::rsa224sig = "c+WnKME5Tw5z9As/byt2BDWlxFkD8mOkYI2ldVl3RQ03vGhZyENgASSb19z/Km6H"
                                              "Y/frFFGOoKOWCYLHeaiGz94biB9XzJd5RU+9vkOcg6gmEcT4oHCYpMyupPAeEplU"
                                              "synWkfxTl+NBHrjrrg29lYi0r7OWzbwehBVg0eeKomwuo8yhM6qlesP5p36Dadvh"
@@ -176,7 +190,19 @@ TEST_F (SignatureTest, sign)
 {
     ASSERT_THROW (Signature (Digest::Algorithm (0)), std::system_error);
 
-    Signature sig = std::move (Signature (Digest::Algorithm::SHA224));
+    Signature sig = std::move (Signature (Digest::Algorithm::MD5));
+    sig << sample;
+    ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::MD5)) << join::lastError.message ();
+    sig.write (sample.data (), sample.size ());
+    ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::MD5)) << join::lastError.message ();
+
+    sig = std::move (Signature (Digest::Algorithm::SHA1));
+    sig << sample;
+    ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA1)) << join::lastError.message ();
+    sig.write (sample.data (), sample.size ());
+    ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA1)) << join::lastError.message ();
+
+    sig = std::move (Signature (Digest::Algorithm::SHA224));
     sig << sample;
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA224)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
@@ -220,6 +246,38 @@ TEST_F (SignatureTest, sign_failures)
 }
 
 /**
+ * @brief Test md5sign.
+ */
+TEST_F (SignatureTest, md5sign)
+{
+    BytesArray signature;
+
+    ASSERT_FALSE ((signature = Signature::sign (sample, rsaPriKeyPath, Digest::Algorithm::MD5)).empty ()) << join::lastError.message ();
+    ASSERT_TRUE  (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::MD5)) << join::lastError.message ();
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA1));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA224));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA256));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA384));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA512));
+}
+
+/**
+ * @brief Test sha1sign.
+ */
+TEST_F (SignatureTest, sha1sign)
+{
+    BytesArray signature;
+
+    ASSERT_FALSE ((signature = Signature::sign (sample, rsaPriKeyPath, Digest::Algorithm::SHA1)).empty ()) << join::lastError.message ();
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::MD5));
+    ASSERT_TRUE  (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA1)) << join::lastError.message ();
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA224));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA256));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA384));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA512));
+}
+
+/**
  * @brief Test sha224sign.
  */
 TEST_F (SignatureTest, sha224sign)
@@ -227,6 +285,8 @@ TEST_F (SignatureTest, sha224sign)
     BytesArray signature;
 
     ASSERT_FALSE ((signature = Signature::sign (sample, rsaPriKeyPath, Digest::Algorithm::SHA224)).empty ()) << join::lastError.message ();
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::MD5));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA1));
     ASSERT_TRUE  (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA224)) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA256));
     ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA384));
@@ -241,6 +301,8 @@ TEST_F (SignatureTest, sha256sign)
     BytesArray signature;
 
     ASSERT_FALSE ((signature = Signature::sign (sample, rsaPriKeyPath, Digest::Algorithm::SHA256)).empty ()) << join::lastError.message ();
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::MD5));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA1));
     ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA224));
     ASSERT_TRUE  (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA256)) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA384));
@@ -255,6 +317,8 @@ TEST_F (SignatureTest, sha384sign)
     BytesArray signature;
 
     ASSERT_FALSE ((signature = Signature::sign (sample, rsaPriKeyPath, Digest::Algorithm::SHA384)).empty ()) << join::lastError.message ();
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::MD5));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA1));
     ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA224));
     ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA256));
     ASSERT_TRUE  (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA384)) << join::lastError.message ();
@@ -269,6 +333,8 @@ TEST_F (SignatureTest, sha512sign)
     BytesArray signature;
 
     ASSERT_FALSE ((signature = Signature::sign (sample, rsaPriKeyPath, Digest::Algorithm::SHA512)).empty ()) << join::lastError.message ();
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::MD5));
+    ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA1));
     ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA224));
     ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA256));
     ASSERT_FALSE (Signature::verify (sample, signature, rsaPubKeyPath, Digest::Algorithm::SHA384));
@@ -282,7 +348,19 @@ TEST_F (SignatureTest, verify)
 {
     ASSERT_THROW (Signature (Digest::Algorithm (0)), std::system_error);
 
-    Signature sig = std::move (Signature (Digest::Algorithm::SHA224));
+    Signature sig = std::move (Signature (Digest::Algorithm::MD5));
+    sig << sample;
+    ASSERT_TRUE (sig.verify (Base64::decode (rsa5sig), rsaPubKeyPath)) << join::lastError.message ();
+    sig.write (sample.data (), sample.size ());
+    ASSERT_TRUE (sig.verify (Base64::decode (rsa5sig), rsaPubKeyPath)) << join::lastError.message ();
+
+    sig = std::move (Signature (Digest::Algorithm::SHA1));
+    sig << sample;
+    ASSERT_TRUE (sig.verify (Base64::decode (rsa1sig), rsaPubKeyPath)) << join::lastError.message ();
+    sig.write (sample.data (), sample.size ());
+    ASSERT_TRUE (sig.verify (Base64::decode (rsa1sig), rsaPubKeyPath)) << join::lastError.message ();
+
+    sig = std::move (Signature (Digest::Algorithm::SHA224));
     sig << sample;
     ASSERT_TRUE (sig.verify (Base64::decode (rsa224sig), rsaPubKeyPath)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
@@ -329,10 +407,38 @@ TEST_F (SignatureTest, verify_failures)
 }
 
 /**
+ * @brief Test md5verify.
+ */
+TEST_F (SignatureTest, md5verify)
+{
+    ASSERT_TRUE  (Signature::verify (sample, Base64::decode (rsa5sig), rsaPubKeyPath, Digest::Algorithm::MD5)) << join::lastError.message ();
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa5sig), rsaPubKeyPath, Digest::Algorithm::SHA1));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa5sig), rsaPubKeyPath, Digest::Algorithm::SHA224));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa5sig), rsaPubKeyPath, Digest::Algorithm::SHA256));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa5sig), rsaPubKeyPath, Digest::Algorithm::SHA384));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa5sig), rsaPubKeyPath, Digest::Algorithm::SHA512));
+}
+
+/**
+ * @brief Test sha1verify.
+ */
+TEST_F (SignatureTest, sha1verify)
+{
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa1sig), rsaPubKeyPath, Digest::Algorithm::MD5));
+    ASSERT_TRUE  (Signature::verify (sample, Base64::decode (rsa1sig), rsaPubKeyPath, Digest::Algorithm::SHA1)) << join::lastError.message ();
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa1sig), rsaPubKeyPath, Digest::Algorithm::SHA224));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa1sig), rsaPubKeyPath, Digest::Algorithm::SHA256));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa1sig), rsaPubKeyPath, Digest::Algorithm::SHA384));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa1sig), rsaPubKeyPath, Digest::Algorithm::SHA512));
+}
+
+/**
  * @brief Test sha224verify.
  */
 TEST_F (SignatureTest, sha224verify)
 {
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa224sig), rsaPubKeyPath, Digest::Algorithm::MD5));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa224sig), rsaPubKeyPath, Digest::Algorithm::SHA1));
     ASSERT_TRUE  (Signature::verify (sample, Base64::decode (rsa224sig), rsaPubKeyPath, Digest::Algorithm::SHA224)) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa224sig), rsaPubKeyPath, Digest::Algorithm::SHA256));
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa224sig), rsaPubKeyPath, Digest::Algorithm::SHA384));
@@ -344,6 +450,8 @@ TEST_F (SignatureTest, sha224verify)
  */
 TEST_F (SignatureTest, sha256verify)
 {
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa256sig), rsaPubKeyPath, Digest::Algorithm::MD5));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa256sig), rsaPubKeyPath, Digest::Algorithm::SHA1));
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa256sig), rsaPubKeyPath, Digest::Algorithm::SHA224));
     ASSERT_TRUE  (Signature::verify (sample, Base64::decode (rsa256sig), rsaPubKeyPath, Digest::Algorithm::SHA256)) << join::lastError.message ();
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa256sig), rsaPubKeyPath, Digest::Algorithm::SHA384));
@@ -355,6 +463,8 @@ TEST_F (SignatureTest, sha256verify)
  */
 TEST_F (SignatureTest, sha384verify)
 {
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa384sig), rsaPubKeyPath, Digest::Algorithm::MD5));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa384sig), rsaPubKeyPath, Digest::Algorithm::SHA1));
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa384sig), rsaPubKeyPath, Digest::Algorithm::SHA224));
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa384sig), rsaPubKeyPath, Digest::Algorithm::SHA256));
     ASSERT_TRUE  (Signature::verify (sample, Base64::decode (rsa384sig), rsaPubKeyPath, Digest::Algorithm::SHA384)) << join::lastError.message ();
@@ -366,6 +476,8 @@ TEST_F (SignatureTest, sha384verify)
  */
 TEST_F (SignatureTest, sha512verify)
 {
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa512sig), rsaPubKeyPath, Digest::Algorithm::MD5));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa512sig), rsaPubKeyPath, Digest::Algorithm::SHA1));
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa512sig), rsaPubKeyPath, Digest::Algorithm::SHA224));
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa512sig), rsaPubKeyPath, Digest::Algorithm::SHA256));
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa512sig), rsaPubKeyPath, Digest::Algorithm::SHA384));

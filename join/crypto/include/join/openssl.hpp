@@ -133,6 +133,21 @@ namespace join
     using EvpMdCtxPtr = std::unique_ptr <EVP_MD_CTX, EvpMdCtxDelete>;
 
     /**
+     * @brief custom functor for HMAC_CTX deletion.
+     */
+    struct HmacCtxDelete
+    {
+        constexpr HmacCtxDelete () noexcept = default;
+
+        void operator ()(HMAC_CTX* hmacCtx)
+        {
+            HMAC_CTX_free (hmacCtx);
+        }
+    };
+
+    using HmacCtxPtr = std::unique_ptr <HMAC_CTX, HmacCtxDelete>;
+
+    /**
      * @brief Custom functor for STACK_OF(X509_NAME) deletion.
      */
     struct StackOfX509NameDelete

@@ -41,6 +41,7 @@ set(PUBLIC_HEADERS
     crypto/include/join/openssl.hpp
     crypto/include/join/base64.hpp
     crypto/include/join/digest.hpp
+    crypto/include/join/hmac.hpp
     crypto/include/join/tlskey.hpp
     crypto/include/join/signature.hpp
     network/include/join/macaddress.hpp
@@ -78,6 +79,7 @@ set(SOURCES
     crypto/src/openssl.cpp
     crypto/src/base64.cpp
     crypto/src/digest.cpp
+    crypto/src/hmac.cpp
     crypto/src/tlskey.cpp
     crypto/src/signature.cpp
     network/src/macaddress.cpp

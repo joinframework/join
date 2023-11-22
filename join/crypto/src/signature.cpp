@@ -62,7 +62,7 @@ BytesArray Signaturebuf::sign (const std::string& privKey)
 {
     if (_buf && (this->overflow (traits_type::eof ()) == traits_type::eof ()))
     {
-        _mdctx.reset ();
+        _ctx.reset ();
         return {};
     }
 
@@ -72,15 +72,15 @@ BytesArray Signaturebuf::sign (const std::string& privKey)
     sig.resize (EVP_PKEY_size (key.handle ()));
     uint32_t siglen = 0;
 
-    if (!EVP_SignFinal (_mdctx.get (), &sig[0], &siglen, key.handle ()))
+    if (!EVP_SignFinal (_ctx.get (), &sig[0], &siglen, key.handle ()))
     {
         lastError = make_error_code (DigestErrc::InvalidAlgorithm);
-        _mdctx.reset ();
+        _ctx.reset ();
         return {};
     }
 
     sig.resize (siglen);
-    _mdctx.reset ();
+    _ctx.reset ();
 
     return sig;
 }
@@ -93,24 +93,24 @@ bool Signaturebuf::verify (const BytesArray& sig, const std::string& pubKey)
 {
     if (_buf && (this->overflow (traits_type::eof ()) == traits_type::eof ()))
     {
-        _mdctx.reset ();
+        _ctx.reset ();
         return {};
     }
 
     TlsKey key (pubKey, TlsKey::Public);
 
-    int ret = EVP_VerifyFinal (_mdctx.get (), sig.data (), sig.size (), key.handle ());
+    int ret = EVP_VerifyFinal (_ctx.get (), sig.data (), sig.size (), key.handle ());
     if (ret != 1)
     {
         if (ret == 0)
             lastError = make_error_code (DigestErrc::InvalidSignature);
         else
             lastError = make_error_code (DigestErrc::InvalidAlgorithm);
-        _mdctx.reset ();
+        _ctx.reset ();
         return false;
     }
 
-    _mdctx.reset ();
+    _ctx.reset ();
 
     return true;
 }

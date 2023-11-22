@@ -30,12 +30,28 @@
 
 // C++.
 #include <iostream>
+#include <iomanip>
 #include <string>
 
 namespace join
 {
     /// bytes array.
     using BytesArray = std::vector <uint8_t>;
+
+    /**
+     * @brief convert bytes array to string.
+     * @param bin bytes array.
+     * @return converted bytes array string.
+     */
+    __inline__ std::string bin2hex (const BytesArray& bin)
+    {
+        std::stringstream oss;
+        for (size_t i = 0; i < bin.size (); ++i)
+        {
+            oss << std::hex << std::setw (2) << std::setfill ('0') << static_cast <uint32_t> (bin[i]);
+        }
+        return oss.str ();
+    }
 
     /**
      * @brief encoder stream buffer.

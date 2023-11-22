@@ -29,9 +29,6 @@
 #include <join/openssl.hpp>
 #include <join/base64.hpp>
 
-// C++.
-#include <iostream>
-
 namespace join
 {
     /**
@@ -134,7 +131,7 @@ namespace join
          * @brief get message digest.
          * @return message digest.
          */
-        BytesArray get ();
+        BytesArray finalize ();
 
     protected:
         /**
@@ -150,11 +147,11 @@ namespace join
         /// internal buffer.
         std::unique_ptr <char []> _buf;
 
-        /// message digest context.
-        EvpMdCtxPtr _mdctx;
-
         /// message digest.
         const EVP_MD* _md;
+
+        /// message digest context.
+        EvpMdCtxPtr _ctx;
     };
 
     /**
@@ -168,7 +165,8 @@ namespace join
          */
         enum Algorithm
         {
-            SHA1 = 1,   /**< secure hash algorithm v1 */
+            MD5 = 1,    /**< message digest 5 */
+            SHA1,       /**< secure hash algorithm v1 */
             SHA224,     /**< secure hash algorithm v2 with a 224 bits digest */
             SHA256,     /**< secure hash algorithm v2 with a 256 bits digest */
             SHA384,     /**< secure hash algorithm v2 with a 384 bits digest */
@@ -217,7 +215,51 @@ namespace join
          * @brief get message digest.
          * @return message digest.
          */
-        BytesArray get ();
+        BytesArray finalize ();
+
+        /**
+         * @brief get MD5 message digest.
+         * @param data data to hash.
+         * @param size data size.
+         * @return MD5 message digest.
+         */
+        static BytesArray md5bin (const char* data, std::streamsize size);
+
+        /**
+         * @brief get MD5 message digest.
+         * @param data data to hash.
+         * @return MD5 message digest.
+         */
+        static BytesArray md5bin (const BytesArray& data);
+
+        /**
+         * @brief get MD5 message digest.
+         * @param data data to hash.
+         * @return MD5 message digest.
+         */
+        static BytesArray md5bin (const std::string& data);
+
+        /**
+         * @brief get MD5 message digest.
+         * @param data data to hash.
+         * @param size data size.
+         * @return MD5 message digest.
+         */
+        static std::string md5hex (const char* data, std::streamsize size);
+
+        /**
+         * @brief get MD5 message digest.
+         * @param data data to hash.
+         * @return MD5 message digest.
+         */
+        static std::string md5hex (const BytesArray& data);
+
+        /**
+         * @brief get MD5 message digest.
+         * @param data data to hash.
+         * @return MD5 message digest.
+         */
+        static std::string md5hex (const std::string& data);
 
         /**
          * @brief get SHA1 message digest.
@@ -225,21 +267,43 @@ namespace join
          * @param size data size.
          * @return SHA1 message digest.
          */
-        static BytesArray sha1 (const char* data, std::streamsize size);
+        static BytesArray sha1bin (const char* data, std::streamsize size);
 
         /**
          * @brief get SHA1 message digest.
          * @param data data to hash.
          * @return SHA1 message digest.
          */
-        static BytesArray sha1 (const BytesArray& data);
+        static BytesArray sha1bin (const BytesArray& data);
 
         /**
          * @brief get SHA1 message digest.
          * @param data data to hash.
          * @return SHA1 message digest.
          */
-        static BytesArray sha1 (const std::string& data);
+        static BytesArray sha1bin (const std::string& data);
+
+        /**
+         * @brief get SHA1 message digest.
+         * @param data data to hash.
+         * @param size data size.
+         * @return SHA1 message digest.
+         */
+        static std::string sha1hex (const char* data, std::streamsize size);
+
+        /**
+         * @brief get SHA1 message digest.
+         * @param data data to hash.
+         * @return SHA1 message digest.
+         */
+        static std::string sha1hex (const BytesArray& data);
+
+        /**
+         * @brief get SHA1 message digest.
+         * @param data data to hash.
+         * @return SSHA1 message digest.
+         */
+        static std::string sha1hex (const std::string& data);
 
         /**
          * @brief get SHA224 message digest.
@@ -247,21 +311,43 @@ namespace join
          * @param size data size.
          * @return SHA224 message digest.
          */
-        static BytesArray sha224 (const char* data, std::streamsize size);
+        static BytesArray sha224bin (const char* data, std::streamsize size);
 
         /**
          * @brief get SHA224 message digest.
          * @param data data to hash.
          * @return SHA224 message digest.
          */
-        static BytesArray sha224 (const BytesArray& data);
+        static BytesArray sha224bin (const BytesArray& data);
 
         /**
          * @brief get SHA224 message digest.
          * @param data data to hash.
          * @return SHA224 message digest.
          */
-        static BytesArray sha224 (const std::string& data);
+        static BytesArray sha224bin (const std::string& data);
+
+        /**
+         * @brief get SHA224 message digest.
+         * @param data data to hash.
+         * @param size data size.
+         * @return SHA224 message digest.
+         */
+        static std::string sha224hex (const char* data, std::streamsize size);
+
+        /**
+         * @brief get SHA224 message digest.
+         * @param data data to hash.
+         * @return SHA224 message digest.
+         */
+        static std::string sha224hex (const BytesArray& data);
+
+        /**
+         * @brief get SHA224 message digest.
+         * @param data data to hash.
+         * @return SSHA224 message digest.
+         */
+        static std::string sha224hex (const std::string& data);
 
         /**
          * @brief get SHA256 message digest.
@@ -269,21 +355,43 @@ namespace join
          * @param size data size.
          * @return SHA256 message digest.
          */
-        static BytesArray sha256 (const char* data, std::streamsize size);
+        static BytesArray sha256bin (const char* data, std::streamsize size);
 
         /**
          * @brief get SHA256 message digest.
          * @param data data to hash.
          * @return SHA256 message digest.
          */
-        static BytesArray sha256 (const BytesArray& data);
+        static BytesArray sha256bin (const BytesArray& data);
 
         /**
          * @brief get SHA256 message digest.
          * @param data data to hash.
          * @return SHA256 message digest.
          */
-        static BytesArray sha256 (const std::string& data);
+        static BytesArray sha256bin (const std::string& data);
+
+        /**
+         * @brief get SHA256 message digest.
+         * @param data data to hash.
+         * @param size data size.
+         * @return SHA256 message digest.
+         */
+        static std::string sha256hex (const char* data, std::streamsize size);
+
+        /**
+         * @brief get SHA256 message digest.
+         * @param data data to hash.
+         * @return SHA256 message digest.
+         */
+        static std::string sha256hex (const BytesArray& data);
+
+        /**
+         * @brief get SHA256 message digest.
+         * @param data data to hash.
+         * @return SSHA256 message digest.
+         */
+        static std::string sha256hex (const std::string& data);
 
         /**
          * @brief get SHA384 message digest.
@@ -291,21 +399,43 @@ namespace join
          * @param size data size.
          * @return SHA384 message digest.
          */
-        static BytesArray sha384 (const char* data, std::streamsize size);
+        static BytesArray sha384bin (const char* data, std::streamsize size);
 
         /**
          * @brief get SHA384 message digest.
          * @param data data to hash.
          * @return SHA384 message digest.
          */
-        static BytesArray sha384 (const BytesArray& data);
+        static BytesArray sha384bin (const BytesArray& data);
 
         /**
          * @brief get SHA384 message digest.
          * @param data data to hash.
          * @return SHA384 message digest.
          */
-        static BytesArray sha384 (const std::string& data);
+        static BytesArray sha384bin (const std::string& data);
+
+        /**
+         * @brief get SHA384 message digest.
+         * @param data data to hash.
+         * @param size data size.
+         * @return SHA384 message digest.
+         */
+        static std::string sha384hex (const char* data, std::streamsize size);
+
+        /**
+         * @brief get SHA384 message digest.
+         * @param data data to hash.
+         * @return SHA384 message digest.
+         */
+        static std::string sha384hex (const BytesArray& data);
+
+        /**
+         * @brief get SHA384 message digest.
+         * @param data data to hash.
+         * @return SSHA384 message digest.
+         */
+        static std::string sha384hex (const std::string& data);
 
         /**
          * @brief get SHA512 message digest.
@@ -313,21 +443,43 @@ namespace join
          * @param size data size.
          * @return SHA512 message digest.
          */
-        static BytesArray sha512 (const char* data, std::streamsize size);
+        static BytesArray sha512bin (const char* data, std::streamsize size);
 
         /**
          * @brief get SHA512 message digest.
          * @param data data to hash.
          * @return SHA512 message digest.
          */
-        static BytesArray sha512 (const BytesArray& data);
+        static BytesArray sha512bin (const BytesArray& data);
 
         /**
          * @brief get SHA512 message digest.
          * @param data data to hash.
          * @return SHA512 message digest.
          */
-        static BytesArray sha512 (const std::string& data);
+        static BytesArray sha512bin (const std::string& data);
+
+        /**
+         * @brief get SHA512 message digest.
+         * @param data data to hash.
+         * @param size data size.
+         * @return SHA512 message digest.
+         */
+        static std::string sha512hex (const char* data, std::streamsize size);
+
+        /**
+         * @brief get SHA512 message digest.
+         * @param data data to hash.
+         * @return SHA512 message digest.
+         */
+        static std::string sha512hex (const BytesArray& data);
+
+        /**
+         * @brief get SHA512 message digest.
+         * @param data data to hash.
+         * @return SSHA512 message digest.
+         */
+        static std::string sha512hex (const std::string& data);
 
         /**
          * @brief get SM3 message digest.
@@ -335,29 +487,45 @@ namespace join
          * @param size data size.
          * @return SM3 message digest.
          */
-        static BytesArray sm3 (const char* data, std::streamsize size);
+        static BytesArray sm3bin (const char* data, std::streamsize size);
 
         /**
          * @brief get SM3 message digest.
          * @param data data to hash.
          * @return SM3 message digest.
          */
-        static BytesArray sm3 (const BytesArray& data);
+        static BytesArray sm3bin (const BytesArray& data);
 
         /**
          * @brief get SM3 message digest.
          * @param data data to hash.
          * @return SM3 message digest.
          */
-        static BytesArray sm3 (const std::string& data);
+        static BytesArray sm3bin (const std::string& data);
 
         /**
-         * @brief convert bytes array to string.
-         * @param bin bytes array.
-         * @return converted bytes array string.
+         * @brief get SM3 message digest.
+         * @param data data to hash.
+         * @param size data size.
+         * @return SM3 message digest.
          */
-        static std::string bin2hex (const BytesArray& bin);
+        static std::string sm3hex (const char* data, std::streamsize size);
 
+        /**
+         * @brief get SM3 message digest.
+         * @param data data to hash.
+         * @return SM3 message digest.
+         */
+        static std::string sm3hex (const BytesArray& data);
+
+        /**
+         * @brief get SM3 message digest.
+         * @param data data to hash.
+         * @return SM3 message digest.
+         */
+        static std::string sm3hex (const std::string& data);
+
+    protected:
         /**
          * @brief get algorithm name.
          * @param algo digest algorithm.
@@ -365,9 +533,14 @@ namespace join
          */
         static const char* algorithm (Algorithm algo);
 
-    private:
         /// associated digest stream buffer.
         Digestbuf _digestbuf;
+
+        /// friendship with signature.
+        friend class Signature;
+
+        /// friendship with HMAC.
+        friend class Hmac;
     };
 }
 

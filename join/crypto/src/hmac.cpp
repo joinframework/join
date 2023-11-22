@@ -23,80 +23,24 @@
  */
 
 // libjoin.
-#include <join/digest.hpp>
+#include <join/hmac.hpp>
 #include <join/error.hpp>
-#include <join/utils.hpp>
 
 using join::Errc;
 using join::DigestErrc;
-using join::DigestCategory;
-using join::Digestbuf;
 using join::Digest;
+using join::Hmacbuf;
+using join::Hmac;
 using join::BytesArray;
 
 // =========================================================================
-//   CLASS     : DigestCategory
-//   METHOD    : name
+//   CLASS     : Hmacbuf
+//   METHOD    : Hmacbuf
 // =========================================================================
-const char* DigestCategory::name () const noexcept
-{
-    return "libjoin";
-}
-
-// =========================================================================
-//   CLASS     : DigestCategory
-//   METHOD    : message
-// =========================================================================
-std::string DigestCategory::message (int code) const
-{
-    switch (static_cast <DigestErrc> (code))
-    {
-        case DigestErrc::InvalidAlgorithm:
-            return "invalid algorithm";
-        case DigestErrc::InvalidKey:
-            return "invalid key";
-        case DigestErrc::InvalidSignature:
-            return "invalid signature";
-        default:
-            return "success";
-    }
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : getDigestCategory
-// =========================================================================
-const std::error_category& join::getDigestCategory ()
-{
-    static DigestCategory instance;
-    return instance;
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : make_error_code
-// =========================================================================
-std::error_code join::make_error_code (DigestErrc code)
-{
-    return std::error_code (static_cast <int> (code), getDigestCategory ());
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : make_error_condition
-// =========================================================================
-std::error_condition join::make_error_condition (DigestErrc code)
-{
-    return std::error_condition (static_cast <int> (code), getDigestCategory ());
-}
-
-// =========================================================================
-//   CLASS     : Digestbuf
-//   METHOD    : Digestbuf
-// =========================================================================
-Digestbuf::Digestbuf (const std::string& algo)
+Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
 : _buf (std::make_unique <char []> (_bufsize)),
-  _md (EVP_get_digestbyname (algo.c_str ()))
+  _md (EVP_get_digestbyname (algo.c_str ())),
+  _key (key)
 {
     if (_buf == nullptr)
     {
@@ -110,62 +54,63 @@ Digestbuf::Digestbuf (const std::string& algo)
 }
 
 // =========================================================================
-//   CLASS     : Digestbuf
-//   METHOD    : Digestbuf
+//   CLASS     : Hmacbuf
+//   METHOD    : Hmacbuf
 // =========================================================================
-Digestbuf::Digestbuf (Digestbuf&& other)
+Hmacbuf::Hmacbuf (Hmacbuf&& other)
 : std::streambuf (std::move (other)),
   _buf (std::move (other._buf)),
   _md (other._md),
+  _key (std::move (other._key)),
   _ctx (std::move (other._ctx))
 {
 }
 
 // =========================================================================
-//   CLASS     : Digestbuf
+//   CLASS     : Hmacbuf
 //   METHOD    : operator=
 // =========================================================================
-Digestbuf& Digestbuf::operator= (Digestbuf&& other)
+Hmacbuf& Hmacbuf::operator= (Hmacbuf&& other)
 {
     std::streambuf::operator= (std::move (other));
     _buf = std::move (other._buf);
     _md = other._md;
+    _key = std::move (other._key);
     _ctx = std::move (other._ctx);
     return *this;
 }
 
 // =========================================================================
-//   CLASS     : Digestbuf
+//   CLASS     : Hmacbuf
 //   METHOD    : finalize
 // =========================================================================
-BytesArray Digestbuf::finalize ()
+BytesArray Hmacbuf::finalize ()
 {
-    BytesArray digest;
+    BytesArray hmac;
     if (_buf && (this->overflow (traits_type::eof ()) != traits_type::eof ()))
     {
-        digest.resize (EVP_MD_size (_md));
-        EVP_DigestFinal_ex (_ctx.get (), &digest[0], nullptr);
+        hmac.resize (EVP_MD_size (_md));
+        HMAC_Final (_ctx.get (), &hmac[0], nullptr);
     }
     _ctx.reset ();
-    return digest;
+    return hmac;
 }
 
 // =========================================================================
-//   CLASS     : Digestbuf
+//   CLASS     : Hmacbuf
 //   METHOD    : overflow
 // =========================================================================
-Digestbuf::int_type Digestbuf::overflow (int_type c)
+Hmacbuf::int_type Hmacbuf::overflow (int_type c)
 {
     if (_ctx == nullptr)
     {
-        _ctx.reset (EVP_MD_CTX_new ());
+        _ctx.reset (HMAC_CTX_new ());
         if (_ctx == nullptr)
         {
             lastError = make_error_code (Errc::OutOfMemory);
             return traits_type::eof ();
         }
-
-        EVP_DigestInit_ex (_ctx.get (), _md, nullptr);
+        HMAC_Init_ex (_ctx.get (), _key.c_str (), _key.size (), _md, nullptr);
     }
 
     if (this->pbase () == nullptr)
@@ -181,7 +126,7 @@ Digestbuf::int_type Digestbuf::overflow (int_type c)
     std::streamsize pending = this->pptr () - this->pbase ();
     if (pending)
     {
-        EVP_DigestUpdate (_ctx.get (), this->pbase (), pending);
+        HMAC_Update (_ctx.get (), reinterpret_cast <uint8_t*> (this->pbase ()), pending);
     }
 
     this->setp (this->pbase (), this->pbase () + _bufsize);
@@ -195,459 +140,439 @@ Digestbuf::int_type Digestbuf::overflow (int_type c)
 }
 
 // =========================================================================
-//   CLASS     : Digest
-//   METHOD    : Digest
+//   CLASS     : Hmac
+//   METHOD    : Hmac
 // =========================================================================
-Digest::Digest (Algorithm algo)
-: _digestbuf (algorithm (algo))
+Hmac::Hmac (Digest::Algorithm algo, const std::string& key)
+: _hmacbuf (Digest::algorithm (algo), key)
 {
-    this->init (&_digestbuf);
+    this->init (&_hmacbuf);
 }
 
 // =========================================================================
-//   CLASS     : Digest
-//   METHOD    : Digest
+//   CLASS     : Hmac
+//   METHOD    : Hmac
 // =========================================================================
-Digest::Digest (Digest&& other)
+Hmac::Hmac (Hmac&& other)
 : std::ostream (std::move (other)),
-  _digestbuf (std::move (other._digestbuf))
+  _hmacbuf (std::move (other._hmacbuf))
 {
-    this->set_rdbuf (&_digestbuf);
+    this->set_rdbuf (&_hmacbuf);
 }
 
 // =========================================================================
-//   CLASS     : Digest
-//   METHOD    : Digest
+//   CLASS     : Hmac
+//   METHOD    : Hmac
 // =========================================================================
-Digest& Digest::operator=(Digest&& other)
+Hmac& Hmac::operator=(Hmac&& other)
 {
     std::ostream::operator= (std::move (other));
-    _digestbuf = std::move (other._digestbuf);
+    _hmacbuf = std::move (other._hmacbuf);
     return *this;
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : finalize
 // =========================================================================
-BytesArray Digest::finalize ()
+BytesArray Hmac::finalize ()
 {
-    BytesArray digest = _digestbuf.finalize ();
-    if (digest.empty ())
+    BytesArray hmac = _hmacbuf.finalize ();
+    if (hmac.empty ())
     {
         this->setstate (std::ios_base::failbit);
     }
-    return digest;
+    return hmac;
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : md5bin
 // =========================================================================
-BytesArray Digest::md5bin (const char* data, std::streamsize size)
+BytesArray Hmac::md5bin (const char* message, std::streamsize size, const std::string& key)
 {
-    Digest digest (MD5);
-    digest.write (data, size);
-    return digest.finalize ();
+    Hmac hmac (Digest::MD5, key);
+    hmac.write (message, size);
+    return hmac.finalize ();
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : md5bin
 // =========================================================================
-BytesArray Digest::md5bin (const BytesArray& data)
+BytesArray Hmac::md5bin (const BytesArray& message, const std::string& key)
 {
-    return md5bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return md5bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : md5bin
 // =========================================================================
-BytesArray Digest::md5bin (const std::string& data)
+BytesArray Hmac::md5bin (const std::string& message, const std::string& key)
 {
-    return md5bin (BytesArray (data.begin (), data.end ()));
+    return md5bin (BytesArray (message.begin (), message.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : md5hex
 // =========================================================================
-std::string Digest::md5hex (const char* data, std::streamsize size)
+std::string Hmac::md5hex (const char* data, std::streamsize size, const std::string& key)
 {
-    return bin2hex (md5bin (data, size));
+    return bin2hex (md5bin (data, size, key));
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : md5hex
 // =========================================================================
-std::string Digest::md5hex (const BytesArray& data)
+std::string Hmac::md5hex (const BytesArray& data, const std::string& key)
 {
-    return md5hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return md5hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : md5hex
 // =========================================================================
-std::string Digest::md5hex (const std::string& data)
+std::string Hmac::md5hex (const std::string& data, const std::string& key)
 {
-    return md5hex (BytesArray (data.begin (), data.end ()));
+    return md5hex (BytesArray (data.begin (), data.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha1bin
 // =========================================================================
-BytesArray Digest::sha1bin (const char* data, std::streamsize size)
+BytesArray Hmac::sha1bin (const char* message, std::streamsize size, const std::string& key)
 {
-    Digest digest (SHA1);
-    digest.write (data, size);
-    return digest.finalize ();
+    Hmac hmac (Digest::SHA1, key);
+    hmac.write (message, size);
+    return hmac.finalize ();
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha1bin
 // =========================================================================
-BytesArray Digest::sha1bin (const BytesArray& data)
+BytesArray Hmac::sha1bin (const BytesArray& message, const std::string& key)
 {
-    return sha1bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha1bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha1bin
 // =========================================================================
-BytesArray Digest::sha1bin (const std::string& data)
+BytesArray Hmac::sha1bin (const std::string& message, const std::string& key)
 {
-    return sha1bin (BytesArray (data.begin (), data.end ()));
+    return sha1bin (BytesArray (message.begin (), message.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha1hex
 // =========================================================================
-std::string Digest::sha1hex (const char* data, std::streamsize size)
+std::string Hmac::sha1hex (const char* data, std::streamsize size, const std::string& key)
 {
-    return bin2hex (sha1bin (data, size));
+    return bin2hex (sha1bin (data, size, key));
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha1hex
 // =========================================================================
-std::string Digest::sha1hex (const BytesArray& data)
+std::string Hmac::sha1hex (const BytesArray& data, const std::string& key)
 {
-    return sha1hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha1hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha1hex
 // =========================================================================
-std::string Digest::sha1hex (const std::string& data)
+std::string Hmac::sha1hex (const std::string& data, const std::string& key)
 {
-    return sha1hex (BytesArray (data.begin (), data.end ()));
+    return sha1hex (BytesArray (data.begin (), data.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha224bin
 // =========================================================================
-BytesArray Digest::sha224bin (const char* data, std::streamsize size)
+BytesArray Hmac::sha224bin (const char* message, std::streamsize size, const std::string& key)
 {
-    Digest digest (SHA224);
-    digest.write (data, size);
-    return digest.finalize ();
+    Hmac hmac (Digest::SHA224, key);
+    hmac.write (message, size);
+    return hmac.finalize ();
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha224bin
 // =========================================================================
-BytesArray Digest::sha224bin (const BytesArray& data)
+BytesArray Hmac::sha224bin (const BytesArray& message, const std::string& key)
 {
-    return sha224bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha224bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha224bin
 // =========================================================================
-BytesArray Digest::sha224bin (const std::string& data)
+BytesArray Hmac::sha224bin (const std::string& message, const std::string& key)
 {
-    return sha224bin (BytesArray (data.begin (), data.end ()));
+    return sha224bin (BytesArray (message.begin (), message.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha224hex
 // =========================================================================
-std::string Digest::sha224hex (const char* data, std::streamsize size)
+std::string Hmac::sha224hex (const char* data, std::streamsize size, const std::string& key)
 {
-    return bin2hex (sha224bin (data, size));
+    return bin2hex (sha224bin (data, size, key));
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha224hex
 // =========================================================================
-std::string Digest::sha224hex (const BytesArray& data)
+std::string Hmac::sha224hex (const BytesArray& data, const std::string& key)
 {
-    return sha224hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha224hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha224hex
 // =========================================================================
-std::string Digest::sha224hex (const std::string& data)
+std::string Hmac::sha224hex (const std::string& data, const std::string& key)
 {
-    return sha224hex (BytesArray (data.begin (), data.end ()));
+    return sha224hex (BytesArray (data.begin (), data.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha256bin
 // =========================================================================
-BytesArray Digest::sha256bin (const char* data, std::streamsize size)
+BytesArray Hmac::sha256bin (const char* message, std::streamsize size, const std::string& key)
 {
-    Digest digest (SHA256);
-    digest.write (data, size);
-    return digest.finalize ();
+    Hmac hmac (Digest::SHA256, key);
+    hmac.write (message, size);
+    return hmac.finalize ();
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha256bin
 // =========================================================================
-BytesArray Digest::sha256bin (const BytesArray& data)
+BytesArray Hmac::sha256bin (const BytesArray& message, const std::string& key)
 {
-    return sha256bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha256bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha256bin
 // =========================================================================
-BytesArray Digest::sha256bin (const std::string& data)
+BytesArray Hmac::sha256bin (const std::string& message, const std::string& key)
 {
-    return sha256bin (BytesArray (data.begin (), data.end ()));
+    return sha256bin (BytesArray (message.begin (), message.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha256hex
 // =========================================================================
-std::string Digest::sha256hex (const char* data, std::streamsize size)
+std::string Hmac::sha256hex (const char* data, std::streamsize size, const std::string& key)
 {
-    return bin2hex (sha256bin (data, size));
+    return bin2hex (sha256bin (data, size, key));
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha256hex
 // =========================================================================
-std::string Digest::sha256hex (const BytesArray& data)
+std::string Hmac::sha256hex (const BytesArray& data, const std::string& key)
 {
-    return sha256hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha256hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha256hex
 // =========================================================================
-std::string Digest::sha256hex (const std::string& data)
+std::string Hmac::sha256hex (const std::string& data, const std::string& key)
 {
-    return sha256hex (BytesArray (data.begin (), data.end ()));
+    return sha256hex (BytesArray (data.begin (), data.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha384bin
 // =========================================================================
-BytesArray Digest::sha384bin (const char* data, std::streamsize size)
+BytesArray Hmac::sha384bin (const char* message, std::streamsize size, const std::string& key)
 {
-    Digest digest (SHA384);
-    digest.write (data, size);
-    return digest.finalize ();
+    Hmac hmac (Digest::SHA384, key);
+    hmac.write (message, size);
+    return hmac.finalize ();
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha384bin
 // =========================================================================
-BytesArray Digest::sha384bin (const BytesArray& data)
+BytesArray Hmac::sha384bin (const BytesArray& message, const std::string& key)
 {
-    return sha384bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha384bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha384bin
 // =========================================================================
-BytesArray Digest::sha384bin (const std::string& data)
+BytesArray Hmac::sha384bin (const std::string& message, const std::string& key)
 {
-    return sha384bin (BytesArray (data.begin (), data.end ()));
+    return sha384bin (BytesArray (message.begin (), message.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha384hex
 // =========================================================================
-std::string Digest::sha384hex (const char* data, std::streamsize size)
+std::string Hmac::sha384hex (const char* data, std::streamsize size, const std::string& key)
 {
-    return bin2hex (sha384bin (data, size));
+    return bin2hex (sha384bin (data, size, key));
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha384hex
 // =========================================================================
-std::string Digest::sha384hex (const BytesArray& data)
+std::string Hmac::sha384hex (const BytesArray& data, const std::string& key)
 {
-    return sha384hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha384hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha384hex
 // =========================================================================
-std::string Digest::sha384hex (const std::string& data)
+std::string Hmac::sha384hex (const std::string& data, const std::string& key)
 {
-    return sha384hex (BytesArray (data.begin (), data.end ()));
+    return sha384hex (BytesArray (data.begin (), data.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha512bin
 // =========================================================================
-BytesArray Digest::sha512bin (const char* data, std::streamsize size)
+BytesArray Hmac::sha512bin (const char* message, std::streamsize size, const std::string& key)
 {
-    Digest digest (SHA512);
-    digest.write (data, size);
-    return digest.finalize ();
+    Hmac hmac (Digest::SHA512, key);
+    hmac.write (message, size);
+    return hmac.finalize ();
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha512bin
 // =========================================================================
-BytesArray Digest::sha512bin (const BytesArray& data)
+BytesArray Hmac::sha512bin (const BytesArray& message, const std::string& key)
 {
-    return sha512bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha512bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha512bin
 // =========================================================================
-BytesArray Digest::sha512bin (const std::string& data)
+BytesArray Hmac::sha512bin (const std::string& message, const std::string& key)
 {
-    return sha512bin (BytesArray (data.begin (), data.end ()));
+    return sha512bin (BytesArray (message.begin (), message.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha512hex
 // =========================================================================
-std::string Digest::sha512hex (const char* data, std::streamsize size)
+std::string Hmac::sha512hex (const char* data, std::streamsize size, const std::string& key)
 {
-    return bin2hex (sha512bin (data, size));
+    return bin2hex (sha512bin (data, size, key));
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha512hex
 // =========================================================================
-std::string Digest::sha512hex (const BytesArray& data)
+std::string Hmac::sha512hex (const BytesArray& data, const std::string& key)
 {
-    return sha512hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha512hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sha512hex
 // =========================================================================
-std::string Digest::sha512hex (const std::string& data)
+std::string Hmac::sha512hex (const std::string& data, const std::string& key)
 {
-    return sha512hex (BytesArray (data.begin (), data.end ()));
+    return sha512hex (BytesArray (data.begin (), data.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sm3bin
 // =========================================================================
-BytesArray Digest::sm3bin (const char* data, std::streamsize size)
+BytesArray Hmac::sm3bin (const char* message, std::streamsize size, const std::string& key)
 {
-    Digest digest (SM3);
-    digest.write (data, size);
-    return digest.finalize ();
+    Hmac hmac (Digest::SM3, key);
+    hmac.write (message, size);
+    return hmac.finalize ();
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sm3bin
 // =========================================================================
-BytesArray Digest::sm3bin (const BytesArray& data)
+BytesArray Hmac::sm3bin (const BytesArray& message, const std::string& key)
 {
-    return sm3bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sm3bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sm3bin
 // =========================================================================
-BytesArray Digest::sm3bin (const std::string& data)
+BytesArray Hmac::sm3bin (const std::string& message, const std::string& key)
 {
-    return sm3bin (BytesArray (data.begin (), data.end ()));
+    return sm3bin (BytesArray (message.begin (), message.end ()), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sm3hex
 // =========================================================================
-std::string Digest::sm3hex (const char* data, std::streamsize size)
+std::string Hmac::sm3hex (const char* data, std::streamsize size, const std::string& key)
 {
-    return bin2hex (sm3bin (data, size));
+    return bin2hex (sm3bin (data, size, key));
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sm3hex
 // =========================================================================
-std::string Digest::sm3hex (const BytesArray& data)
+std::string Hmac::sm3hex (const BytesArray& data, const std::string& key)
 {
-    return sm3hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sm3hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
-//   CLASS     : Digest
+//   CLASS     : Hmac
 //   METHOD    : sm3hex
 // =========================================================================
-std::string Digest::sm3hex (const std::string& data)
+std::string Hmac::sm3hex (const std::string& data, const std::string& key)
 {
-    return sm3hex (BytesArray (data.begin (), data.end ()));
-}
-
-// =========================================================================
-//   CLASS     : Digest
-//   METHOD    : algorithm
-// =========================================================================
-const char* Digest::algorithm (Algorithm algo)
-{
-   switch (algo)
-   {
-        OUT_ENUM (MD5);
-        OUT_ENUM (SHA1);
-        OUT_ENUM (SHA224);
-        OUT_ENUM (SHA256);
-        OUT_ENUM (SHA384);
-        OUT_ENUM (SHA512);
-        OUT_ENUM (SM3);
-   }
-
-   return "UNKNOWN";
+    return sm3hex (BytesArray (data.begin (), data.end ()), key);
 }
