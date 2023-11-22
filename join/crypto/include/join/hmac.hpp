@@ -99,13 +99,13 @@ namespace join
 
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L
         /// message digest.
-        const EVP_MAC* _md;
+        EvpMacPtr _mac;
 
         /// HMAC context.
         EvpMacCtxPtr _ctx;
     #else
         /// message digest.
-        const EVP_MD* _md;
+        const EVP_MD* _mac;
 
         /// HMAC context.
         HmacCtxPtr _ctx;

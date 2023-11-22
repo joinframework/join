@@ -134,6 +134,21 @@ namespace join
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
     /**
+     * @brief custom functor for EVP_MAC deletion.
+     */
+    struct EvpMacDelete
+    {
+        constexpr EvpMacDelete () noexcept = default;
+
+        void operator ()(EVP_MAC* evpMac)
+        {
+            EVP_MAC_free (evpMac);
+        }
+    };
+
+    using EvpMacPtr = std::unique_ptr <EVP_MAC, EvpMacDelete>;
+
+    /**
      * @brief custom functor for EVP_MAC_CTX deletion.
      */
     struct EvpMacCtxDelete

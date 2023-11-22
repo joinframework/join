@@ -40,9 +40,9 @@ using join::BytesArray;
 Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
 : _buf (std::make_unique <char []> (_bufsize)),
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-  _md (EVP_MAC_fetch (nullptr, algo.c_str (), nullptr)),
+  _mac (EVP_MAC_fetch (nullptr, algo.c_str (), nullptr)),
 #else
-  _md (EVP_get_digestbyname (algo.c_str ())),
+  _mac (EVP_get_digestbyname (algo.c_str ())),
 #endif
   _key (key)
 {
@@ -51,7 +51,7 @@ Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
         throw std::system_error (make_error_code (Errc::OutOfMemory));
     }
 
-    if (_md == nullptr)
+    if (_mac == nullptr)
     {
         throw std::system_error (make_error_code (DigestErrc::InvalidAlgorithm));
     }
@@ -64,7 +64,11 @@ Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
 Hmacbuf::Hmacbuf (Hmacbuf&& other)
 : std::streambuf (std::move (other)),
   _buf (std::move (other._buf)),
-  _md (other._md),
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  _mac (std::move (other._mac)),
+#else
+  _mac (other._mac),
+#endif
   _ctx (std::move (other._ctx)),
   _key (std::move (other._key))
 {
@@ -78,7 +82,11 @@ Hmacbuf& Hmacbuf::operator= (Hmacbuf&& other)
 {
     std::streambuf::operator= (std::move (other));
     _buf = std::move (other._buf);
-    _md = other._md;
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    _mac = std::move (other._mac);
+#else
+    _mac = other._mac;
+#endif
     _ctx = std::move (other._ctx);
     _key = std::move (other._key);
     return *this;
@@ -93,10 +101,11 @@ BytesArray Hmacbuf::finalize ()
     BytesArray hmac;
     if (_buf && (this->overflow (traits_type::eof ()) != traits_type::eof ()))
     {
-        hmac.resize (EVP_MD_size (_md));
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        hmac.resize (EVP_MAC_CTX_get_mac_size (_ctx.get ()));
         EVP_MAC_final (_ctx.get (), &hmac[0], nullptr, hmac.size ());
     #else
+        hmac.resize (EVP_MD_size (_mac));
         HMAC_Final (_ctx.get (), &hmac[0], nullptr);
     #endif
     }
@@ -113,7 +122,7 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
     if (_ctx == nullptr)
     {
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        _ctx.reset (EVP_MAC_CTX_new (_md));
+        _ctx.reset (EVP_MAC_CTX_new (_mac.get ()));
     #else
         _ctx.reset (HMAC_CTX_new ());
     #endif
@@ -125,7 +134,7 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L
         EVP_MAC_init (_ctx.get (), _key.c_str (), _key.size (), nullptr);
     #else
-        HMAC_Init_ex (_ctx.get (), _key.c_str (), _key.size (), _md, nullptr);
+        HMAC_Init_ex (_ctx.get (), _key.c_str (), _key.size (), _mac, nullptr);
     #endif
     }
 
