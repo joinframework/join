@@ -138,10 +138,16 @@ namespace join
         template <class Rep, class Period, class Predicate>
         bool timedWait (ScopedLock& lock, std::chrono::duration <Rep, Period> rt, Predicate pred)
         {
+            auto tp = std::chrono::steady_clock::now () + rt;
+            auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);
+            auto ns = std::chrono::time_point_cast <std::chrono::nanoseconds> (tp) - std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
+            struct timespec ts = {secs.time_since_epoch ().count (), ns.count ()};
             while (!pred ())
             {
-                if (!timedWait (lock, rt))
+                int err = pthread_cond_timedwait (&_handle, &lock._mutex._handle, &ts);
+                if (err != 0)
                 {
+                    lastError = std::make_error_code (static_cast <std::errc> (err));
                     return pred ();
                 }
             }
