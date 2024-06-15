@@ -37,6 +37,7 @@
 #include <limits>
 
 // C.
+#include <cstdint>
 #include <cmath>
 
 namespace join
