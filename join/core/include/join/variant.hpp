@@ -113,9 +113,23 @@ namespace join
              * @param otherData other storage pointer.
              * @return true if lower than, false otherwise.
              */
+            template <typename T = Last, typename std::enable_if_t <!std::is_null_pointer <T>::value>* = nullptr>
             inline static bool lower (std::size_t /*index*/, const void* data, const void* otherData)
             {
                 return *reinterpret_cast <const Last *> (data) < *reinterpret_cast <const Last *> (otherData);
+            }
+
+            /**
+             * @brief external routine to compare if one object is lower than an other of the same type.
+             * @param index object data type index.
+             * @param data storage pointer.
+             * @param otherData other storage pointer.
+             * @return true if lower than, false otherwise.
+             */
+            template <typename T = Last, typename std::enable_if_t <std::is_null_pointer <T>::value>* = nullptr>
+            inline static bool lower (std::size_t /*index*/, const void* /*data*/, const void* /*otherData*/)
+            {
+                return false;
             }
         };
 
@@ -204,11 +218,32 @@ namespace join
              * @param otherData other storage pointer.
              * @return true if lower than, false otherwise.
              */
+            template <typename T = First, typename std::enable_if_t <!std::is_null_pointer <T>::value>* = nullptr>
             inline static bool lower (std::size_t index, const void* data, const void* otherData)
             {
                 if (index == sizeof... (Ts))
                 {
                     return *reinterpret_cast <const First *> (data) < *reinterpret_cast <const First *> (otherData);
+                }
+                else
+                {
+                    return VariantHelper <Ts...>::lower (index, data, otherData);
+                }
+            }
+
+            /**
+             * @brief external routine to compare if one object is lower than an other of the same type.
+             * @param index object data type index.
+             * @param data storage pointer.
+             * @param otherData other storage pointer.
+             * @return true if lower than, false otherwise.
+             */
+            template <typename T = First, typename std::enable_if_t <std::is_null_pointer <T>::value>* = nullptr>
+            inline static bool lower (std::size_t index, const void* data, const void* otherData)
+            {
+                if (index == sizeof... (Ts))
+                {
+                    return false;
                 }
                 else
                 {
