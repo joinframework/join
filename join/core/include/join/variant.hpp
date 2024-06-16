@@ -52,21 +52,24 @@ namespace join
          * @brief helper class for variant creation/deletion.
          */
         template <typename... Ts>
-        struct VariantHelper;
+        struct VariantHelper
+        {
+        };
 
         /**
          * @brief helper class for recursive operations.
          */
-        template <>
-        struct VariantHelper <>
+        template <typename Last>
+        struct VariantHelper <Last>
         {
             /**
              * @brief external routine to destroy the object.
              * @param index object data type index.
              * @param data storage pointer.
              */
-            inline static void destroy (std::size_t /*index*/, void* /*data*/)
+            inline static void destroy (std::size_t /*index*/, void* data)
             {
+                reinterpret_cast <Last *> (data)->~Last ();
             }
 
             /**
@@ -75,8 +78,9 @@ namespace join
              * @param oldData old object storage pointer.
              * @param newData new object storage pointer.
              */
-            inline static void copy (std::size_t /*oldIndex*/, const void* /*oldData*/, void* /*newData*/)
+            inline static void copy (std::size_t /*oldIndex*/, const void* oldData, void* newData)
             {
+                new (newData) Last (*reinterpret_cast <const Last *> (oldData));
             }
 
             /**
@@ -85,8 +89,9 @@ namespace join
              * @param oldData old object storage pointer.
              * @param newData new object storage pointer.
              */
-            inline static void move (std::size_t /*oldIndex*/, void* /*oldData*/, void* /*newData*/)
+            inline static void move (std::size_t /*oldIndex*/, void* oldData, void* newData)
             {
+                new (newData) Last (std::move (*reinterpret_cast <Last *> (oldData)));
             }
 
             /**
@@ -96,9 +101,9 @@ namespace join
              * @param otherData other storage pointer.
              * @return true if equal, false otherwise.
              */
-            inline static bool isEqual (std::size_t /*index*/, const void* /*data*/, const void* /*otherData*/)
+            inline static bool equal (std::size_t /*index*/, const void* data, const void* otherData)
             {
-                return false;
+                return *reinterpret_cast <const Last *> (data) == *reinterpret_cast <const Last *> (otherData);
             }
 
             /**
@@ -108,9 +113,9 @@ namespace join
              * @param otherData other storage pointer.
              * @return true if lower than, false otherwise.
              */
-            inline static bool isLower (std::size_t /*index*/, const void* /*data*/, const void* /*otherData*/)
+            inline static bool lower (std::size_t /*index*/, const void* data, const void* otherData)
             {
-                return false;
+                return *reinterpret_cast <const Last *> (data) < *reinterpret_cast <const Last *> (otherData);
             }
         };
 
@@ -180,7 +185,7 @@ namespace join
              * @param otherData other storage pointer.
              * @return true if equal, false otherwise.
              */
-            inline static bool isEqual (std::size_t index, const void* data, const void* otherData)
+            inline static bool equal (std::size_t index, const void* data, const void* otherData)
             {
                 if (index == sizeof... (Ts))
                 {
@@ -188,7 +193,7 @@ namespace join
                 }
                 else
                 {
-                    return VariantHelper <Ts...>::isEqual (index, data, otherData);
+                    return VariantHelper <Ts...>::equal (index, data, otherData);
                 }
             }
 
@@ -199,7 +204,7 @@ namespace join
              * @param otherData other storage pointer.
              * @return true if lower than, false otherwise.
              */
-            inline static bool isLower (std::size_t index, const void* data, const void* otherData)
+            inline static bool lower (std::size_t index, const void* data, const void* otherData)
             {
                 if (index == sizeof... (Ts))
                 {
@@ -207,7 +212,7 @@ namespace join
                 }
                 else
                 {
-                    return VariantHelper <Ts...>::isLower (index, data, otherData);
+                    return VariantHelper <Ts...>::lower (index, data, otherData);
                 }
             }
         };
@@ -608,7 +613,7 @@ namespace join
             {
                 return false;
             }
-            return details::VariantHelper <Ts...>::isEqual (this->_which, this->storage (), rhs.storage ());
+            return details::VariantHelper <Ts...>::equal (this->_which, this->storage (), rhs.storage ());
         }
 
         /**
@@ -626,7 +631,7 @@ namespace join
             {
                 return false;
             }
-            return details::VariantHelper <Ts...>::isLower (this->_which, this->storage (), rhs.storage ());
+            return details::VariantHelper <Ts...>::lower (this->_which, this->storage (), rhs.storage ());
         }
 
         // friendship with equal operator.
