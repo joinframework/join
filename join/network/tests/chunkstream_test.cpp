@@ -58,7 +58,8 @@ TEST (Chunkstream, encode)
     std::stringstream stream;
 
     // encode.
-    Chunkstream chunkstream = std::move (Chunkstream (stream, chuncksize));
+    Chunkstream tmp (stream, chuncksize);
+    Chunkstream chunkstream = std::move (tmp);
     chunkstream.write (decoded.c_str (), decoded.size ());
     chunkstream.flush ();
     ASSERT_TRUE (chunkstream.good ());

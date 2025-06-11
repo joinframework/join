@@ -320,7 +320,8 @@ const std::string SmtpClient::_password   = "12345";
  */
 TEST_F (SmtpClient, move)
 {
-    Smtp::Client client1 (std::move (Smtp::Client (_host, _port))); 
+    Smtp::Client tmp (_host, _port);
+    Smtp::Client client1 (std::move (tmp)); 
     ASSERT_EQ (client1.host (), _host);
 
     Smtp::Client  client2 ("localhost");

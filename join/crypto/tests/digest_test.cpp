@@ -100,7 +100,8 @@ TEST (Digest, finalize)
 {
     ASSERT_THROW (Digest (Digest::Algorithm (0)), std::system_error);
 
-    Digest digest = std::move (Digest (Digest::Algorithm::MD5));
+    Digest tmp (Digest::Algorithm::MD5);
+    Digest digest = std::move(tmp);
     digest << sample;
     ASSERT_EQ (digest.finalize (), md5bin);
     digest.write (sample.data (), sample.size ());

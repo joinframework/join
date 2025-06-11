@@ -417,7 +417,8 @@ TEST_F (UnixStreamSocket, setOption)
     ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::TimeStamp, 1), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::ReusePort, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::Broadcast, 1), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.setOption (UnixStream::Socket::Ttl, 1), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);

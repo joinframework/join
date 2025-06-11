@@ -62,7 +62,8 @@ TEST (Zstream, deflate)
 
     // compress using the deflate data format.
     stream.clear (std::ios::goodbit);
-    Zstream zstream (stream, Zstream::Deflate);
+    Zstream tmp (stream, Zstream::Deflate);
+    Zstream zstream = std::move (tmp);
     zstream.write (sample.c_str (), sample.length ());
     zstream.flush ();
     ASSERT_TRUE (zstream.good ());
@@ -83,7 +84,7 @@ TEST (Zstream, deflate)
     // test concrete output stream failure.
     stream.clear (std::ios::failbit);
     stream.seekg (0);
-    Zstream tmp = std::move (Zstream (stream, Zstream::Deflate));
+    tmp = Zstream (stream, Zstream::Deflate);
     out.resize (sample.size ());
     tmp.read (&out[0], out.size ());
     ASSERT_TRUE (tmp.fail ());
@@ -115,7 +116,8 @@ TEST (Zstream, zlib)
 
     // compress using the zlib data format.
     stream.clear (std::ios::goodbit);
-    Zstream zstream (stream, Zstream::Zlib);
+    Zstream tmp (stream, Zstream::Zlib);
+    Zstream zstream = std::move (tmp);
     zstream.write (sample.c_str (), sample.length ());
     zstream.flush ();
     ASSERT_TRUE (zstream.good ());
@@ -136,7 +138,7 @@ TEST (Zstream, zlib)
     // uncompress using invalid deflate data format.
     stream.clear (std::ios::goodbit);
     stream.seekg (0);
-    Zstream tmp = std::move (Zstream (stream, Zstream::Deflate));
+    tmp = Zstream (stream, Zstream::Deflate);
     out.resize (sample.size ());
     tmp.read (&out[0], out.size ());
     ASSERT_TRUE (tmp.fail ());
@@ -168,6 +170,7 @@ TEST (Zstream, gzip)
 
     // compress using the gzip data format.
     stream.clear (std::ios::goodbit);
+    Zstream tmp (stream, Zstream::Gzip);
     Zstream zstream (stream, Zstream::Gzip);
     zstream.write (sample.c_str (), sample.length ());
     zstream.flush ();
@@ -189,7 +192,7 @@ TEST (Zstream, gzip)
     // uncompress using invalid deflate data format.
     stream.clear (std::ios::goodbit);
     stream.seekg (0);
-    Zstream tmp = std::move (Zstream (stream, Zstream::Deflate));
+    tmp = Zstream (stream, Zstream::Deflate);
     out.resize (sample.size ());
     tmp.read (&out[0], out.size ());
     ASSERT_TRUE (tmp.fail ());

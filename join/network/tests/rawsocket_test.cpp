@@ -314,7 +314,8 @@ TEST_F (RawSocket, setOption)
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::TimeStamp, 1), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::ReuseAddr, 1), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.setOption (Raw::Socket::ReusePort, 1), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.setOption (Raw::Socket::ReusePort, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::Broadcast, 1), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.setOption (Raw::Socket::Ttl, 1), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);

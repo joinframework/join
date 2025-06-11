@@ -190,7 +190,8 @@ TEST_F (SignatureTest, sign)
 {
     ASSERT_THROW (Signature (Digest::Algorithm (0)), std::system_error);
 
-    Signature sig = std::move (Signature (Digest::Algorithm::MD5));
+    Signature tmp (Digest::Algorithm::MD5);
+    Signature sig = std::move (tmp);
     sig << sample;
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::MD5)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
@@ -348,7 +349,7 @@ TEST_F (SignatureTest, verify)
 {
     ASSERT_THROW (Signature (Digest::Algorithm (0)), std::system_error);
 
-    Signature sig = std::move (Signature (Digest::Algorithm::MD5));
+    Signature sig (Digest::Algorithm::MD5);
     sig << sample;
     ASSERT_TRUE (sig.verify (Base64::decode (rsa5sig), rsaPubKeyPath)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());

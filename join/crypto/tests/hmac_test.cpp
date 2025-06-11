@@ -106,7 +106,8 @@ TEST (Hmac, finalize)
     ASSERT_THROW (Hmac (Digest::Algorithm (0), key), std::system_error);
 #endif
 
-    Hmac hmac = std::move (Hmac (Digest::Algorithm::MD5, key));
+    Hmac tmp (Digest::Algorithm::MD5, key);
+    Hmac hmac = std::move (tmp);
     hmac << sample;
     ASSERT_EQ (hmac.finalize (), md5bin);
     hmac.write (sample.data (), sample.size ());
