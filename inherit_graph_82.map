@@ -1,0 +1,9 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" title=" " alt="" coords="5,129,133,155"/>
+<area shape="rect" id="node2" href="$classjoin_1_1DigestCategory.html" title="digest error category." alt="" coords="181,5,317,31"/>
+<area shape="rect" id="node3" href="$classjoin_1_1ErrorCategory.html" title="Error category." alt="" coords="186,55,313,80"/>
+<area shape="rect" id="node4" href="$classjoin_1_1HttpCategory.html" title="HTTP API generic error category." alt="" coords="187,104,311,129"/>
+<area shape="rect" id="node5" href="$classjoin_1_1JsonCategory.html" title="JSON error category." alt="" coords="186,153,313,179"/>
+<area shape="rect" id="node6" href="$classjoin_1_1SaxCategory.html" title="SAX API generic error category." alt="" coords="189,203,310,228"/>
+<area shape="rect" id="node7" href="$classjoin_1_1TlsCategory.html" title="TLS error category." alt="" coords="191,252,308,277"/>
+</map>

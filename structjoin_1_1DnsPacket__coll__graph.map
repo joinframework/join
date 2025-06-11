@@ -1,0 +1,4 @@
+<map id="join::DnsPacket" name="join::DnsPacket">
+<area shape="rect" id="node1" title="DNS packet." alt="" coords="5,171,117,196"/>
+<area shape="rect" id="node2" href="$classjoin_1_1IpAddress.html" title="IPv6, IPv4 address class." alt="" coords="8,37,115,62"/>
+</map>

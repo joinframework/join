@@ -1,0 +1,5 @@
+<map id="join::JsonReader" name="join::JsonReader">
+<area shape="rect" id="node1" title="JSON reader class." alt="" coords="12,152,129,177"/>
+<area shape="rect" id="node2" href="$classjoin_1_1StreamReader.html" title="stream deserializer abstract class." alt="" coords="5,79,136,104"/>
+<area shape="rect" id="node3" href="$classjoin_1_1SaxHandler.html" title="SAX API interface class." alt="" coords="13,5,128,31"/>
+</map>

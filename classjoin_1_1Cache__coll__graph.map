@@ -1,0 +1,4 @@
+<map id="join::Cache" name="join::Cache">
+<area shape="rect" id="node1" title="File cache." alt="" coords="5,93,91,119"/>
+<area shape="rect" id="node2" href="$classjoin_1_1Mutex.html" title="class used to protect shared data from being simultaneously accessed by multiple threads." alt="" coords="7,5,89,31"/>
+</map>

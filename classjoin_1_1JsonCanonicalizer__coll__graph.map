@@ -1,0 +1,6 @@
+<map id="join::JsonCanonicalizer" name="join::JsonCanonicalizer">
+<area shape="rect" id="node1" title="JSON canonicalizer class." alt="" coords="5,225,159,251"/>
+<area shape="rect" id="node2" href="$classjoin_1_1JsonWriter.html" title="JSON writer class." alt="" coords="27,152,137,177"/>
+<area shape="rect" id="node3" href="$classjoin_1_1StreamWriter.html" title="stream serializer abstract class." alt="" coords="20,79,144,104"/>
+<area shape="rect" id="node4" href="$classjoin_1_1SaxHandler.html" title="SAX API interface class." alt="" coords="25,5,139,31"/>
+</map>

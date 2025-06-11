@@ -1,0 +1,6 @@
+<map id="join::BasicHttpSecureServer&lt; Protocol &gt;" name="join::BasicHttpSecureServer&lt; Protocol &gt;">
+<area shape="rect" id="node1" title="basic HTTPS server." alt="" coords="5,271,191,311"/>
+<area shape="rect" id="node2" href="$classjoin_1_1BasicHttpServer.html" title="basic HTTP server." alt="" coords="26,181,170,221"/>
+<area shape="rect" id="node3" href="$classjoin_1_1Mutex.html" title="class used to protect shared data from being simultaneously accessed by multiple threads." alt="" coords="57,5,139,31"/>
+<area shape="rect" id="node4" href="$classjoin_1_1Cache.html" title="File cache." alt="" coords="146,93,231,119"/>
+</map>

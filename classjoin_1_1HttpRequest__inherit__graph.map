@@ -1,0 +1,4 @@
+<map id="join::HttpRequest" name="join::HttpRequest">
+<area shape="rect" id="node1" title="HTTP request." alt="" coords="8,79,129,104"/>
+<area shape="rect" id="node2" href="$classjoin_1_1HttpMessage.html" title="HTTP message." alt="" coords="5,5,132,31"/>
+</map>

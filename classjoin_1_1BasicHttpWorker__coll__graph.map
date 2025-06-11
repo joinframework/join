@@ -1,0 +1,11 @@
+<map id="join::BasicHttpWorker&lt; Protocol &gt;" name="join::BasicHttpWorker&lt; Protocol &gt;">
+<area shape="rect" id="node1" title="basic HTTP worker." alt="" coords="657,97,804,137"/>
+<area shape="rect" id="node2" title=" " alt="" coords="414,5,533,31"/>
+<area shape="rect" id="node3" href="$classjoin_1_1HttpRequest.html" title="HTTP request." alt="" coords="413,55,534,80"/>
+<area shape="rect" id="node4" href="$classjoin_1_1HttpMessage.html" title="HTTP message." alt="" coords="181,79,308,104"/>
+<area shape="rect" id="node5" href="$classjoin_1_1HttpResponse.html" title="HTTP response." alt="" coords="408,104,539,129"/>
+<area shape="rect" id="node6" href="$classjoin_1_1BasicHttpServer.html" title="basic HTTP server." alt="" coords="401,154,545,194"/>
+<area shape="rect" id="node7" href="$classjoin_1_1Mutex.html" title="class used to protect shared data from being simultaneously accessed by multiple threads." alt="" coords="5,179,88,204"/>
+<area shape="rect" id="node8" href="$classjoin_1_1Cache.html" title="File cache." alt="" coords="202,209,287,235"/>
+<area shape="rect" id="node9" href="$classjoin_1_1Thread.html" title="thread class." alt="" coords="429,219,517,244"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" title=" " alt="" coords="5,70,101,95"/>
+<area shape="rect" id="node2" href="$classjoin_1_1BasicSocketStream.html" title="socket stream class." alt="" coords="149,5,313,45"/>
+<area shape="rect" id="node4" href="$classjoin_1_1Chunkstream.html" title="chunk stream." alt="" coords="169,70,294,95"/>
+<area shape="rect" id="node5" href="$classjoin_1_1Zstream.html" title="zlib stream." alt="" coords="183,119,279,145"/>
+<area shape="rect" id="node3" href="$classjoin_1_1BasicTlsStream.html" title="TLS stream class." alt="" coords="361,5,503,45"/>
+</map>

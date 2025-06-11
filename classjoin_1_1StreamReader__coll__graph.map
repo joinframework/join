@@ -1,0 +1,9 @@
+<map id="join::StreamReader" name="join::StreamReader">
+<area shape="rect" id="node1" title="stream deserializer abstract class." alt="" coords="657,59,788,85"/>
+<area shape="rect" id="node2" href="$classjoin_1_1SaxHandler.html" title="SAX API interface class." alt="" coords="461,35,576,61"/>
+<area shape="rect" id="node3" href="$classjoin_1_1Value.html" title="value class." alt="" coords="478,85,559,110"/>
+<area shape="rect" id="node4" href="$classjoin_1_1Variant.html" title=" " alt="" coords="265,55,412,139"/>
+<area shape="rect" id="node5" href="$structjoin_1_1details_1_1VariantStorage.html" title=" " alt="" coords="21,5,200,45"/>
+<area shape="rect" id="node6" title=" " alt="" coords="5,70,216,125"/>
+<area shape="rect" id="node7" title=" " alt="" coords="5,149,216,262"/>
+</map>
