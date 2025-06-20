@@ -41,6 +41,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.2.2
 
+      - name: Mark repo as safe
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Configure
         run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_COVERAGE=ON -DJOIN_ENABLE_TESTS=ON
 
@@ -119,10 +122,6 @@ jobs:
         uses: actions/upload-pages-artifact@v3.0.1
         with:
           path: ./doc/html
-
-      - name: Cleanup
-        if: always()
-        run: rm -rf $GITHUB_WORKSPACE/*
 
   deploy:
     if: ${{ inputs.doc }}
