@@ -41,9 +41,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.2.2
 
+      - name: Mark repo as safe
+        if: ${{ inputs.scan }}
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Perform codacy static analysis
         if: ${{ inputs.scan }}
-        uses: codacy/codacy-analysis-cli-action@v4.4.5
+        uses: codacy/codacy-analysis-cli-action@v4.3.0
         with:
           project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
           verbose: true
@@ -57,10 +61,6 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2.22.0
         with:
           sarif_file: results.sarif
-
-      - name: Mark repo as safe
-        if: ${{ inputs.scan }}
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Configure
         run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_COVERAGE=ON -DJOIN_ENABLE_TESTS=ON
