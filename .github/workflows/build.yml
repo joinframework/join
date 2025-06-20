@@ -41,7 +41,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.2.2
 
+      - name: Perform codacy static analysis
+        if: ${{ inputs.scan }}
+        uses: codacy/codacy-analysis-cli-action@v4.4.5
+        with:
+          project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
+          verbose: true
+          output: results.sarif
+          format: sarif
+          gh-code-scanning-compat: true
+          max-allowed-issues: 2147483647
+
+      - name: Upload codacy scan report to github
+        if: ${{ inputs.scan }}
+        uses: github/codeql-action/upload-sarif@v2.22.0
+        with:
+          sarif_file: results.sarif
+
       - name: Mark repo as safe
+        if: ${{ inputs.scan }}
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Configure
@@ -58,23 +76,6 @@ jobs:
       - name: Perform codeql analysis
         if: ${{ inputs.scan }}
         uses: github/codeql-action/analyze@v2.22.0
-
-      - name: Perform codacy analysis
-        if: ${{ inputs.scan }}
-        uses: codacy/codacy-analysis-cli-action@v4.4.5
-        with:
-          project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
-          verbose: true
-          output: results.sarif
-          format: sarif
-          gh-code-scanning-compat: true
-          max-allowed-issues: 2147483647
-
-      - name: Upload codacy scan report to github
-        if: ${{ inputs.scan }}
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: results.sarif
 
       - name: Run tests
         if: ${{ inputs.coverage }}
