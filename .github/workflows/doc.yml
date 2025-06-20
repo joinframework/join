@@ -1,11 +1,11 @@
-name: doxygen
+name: doc
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  doc:
+  gen:
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:

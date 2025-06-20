@@ -41,13 +41,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.2.2
 
-      - name: Mark repo as safe
+      - name: Setup Environment
         if: ${{ inputs.scan }}
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          mkdir -p "$GITHUB_ACTION_PATH"
 
       - name: Perform codacy static analysis
         if: ${{ inputs.scan }}
-        uses: codacy/codacy-analysis-cli-action@v4.3.0
+        uses: codacy/codacy-analysis-cli-action@v4.4.5
         with:
           project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
           verbose: true
