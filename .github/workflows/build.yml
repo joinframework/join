@@ -40,14 +40,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
 
       - name: Setup Environment
-        if: ${{ inputs.scan }}
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          mkdir -p "$GITHUB_ACTION_PATH"
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: Perform codacy static analysis
+      - name: Run codacy static analysis
         if: ${{ inputs.scan }}
         uses: codacy/codacy-analysis-cli-action@v4.4.5
         with:
@@ -75,7 +74,7 @@ jobs:
         if: ${{ inputs.scan || inputs.coverage }}
         run: cmake --build build --config Debug
 
-      - name: Perform codeql analysis
+      - name: Run codeql analysis
         if: ${{ inputs.scan }}
         uses: github/codeql-action/analyze@v2.22.0
 
