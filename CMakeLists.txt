@@ -29,12 +29,6 @@ option(JOIN_ENABLE_TESTS "Enable tests." OFF)
 option(JOIN_ENABLE_COVERAGE "Enable coverage." OFF)
 
 if(JOIN_ENABLE_TESTS)
-    include(FetchContent)
-    FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/archive/refs/heads/main.zip
-    )
-    FetchContent_MakeAvailable(googletest)
     enable_testing()
 endif()
 
