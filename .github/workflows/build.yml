@@ -85,7 +85,7 @@ jobs:
       - name: Generate coverage report
         if: ${{ inputs.coverage }}
         run: |
-          lcov --directory . --capture --output-file lcov.info
+          lcov --directory . --capture --output-file lcov.info --ignore-errors mismatched-end
           lcov --remove lcov.info "*/build/*" "*/tests/*" "/usr/include/*" --output-file lcov.info
 
       - name: Upload coverage report to coveralls
