@@ -11,7 +11,7 @@ jobs:
   ci:
     uses: ./.github/workflows/build.yml
     secrets: inherit
-    inputs:
+    with:
       scan: true
       coverage: true
       doc: false
