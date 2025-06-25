@@ -37,6 +37,10 @@ jobs:
       image: joinframework/join-ci:latest
       options: --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0
 
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -45,23 +49,6 @@ jobs:
 
       - name: Setup Environment
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      # - name: Run codacy static analysis
-      #   if: ${{ inputs.scan }}
-      #   uses: codacy/codacy-analysis-cli-action@v4.4.5
-      #   with:
-      #     project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
-      #     verbose: true
-      #     output: results.sarif
-      #     format: sarif
-      #     gh-code-scanning-compat: true
-      #     max-allowed-issues: 2147483647
-
-      # - name: Upload codacy scan report to github
-      #   if: ${{ inputs.scan }}
-      #   uses: github/codeql-action/upload-sarif@v2.22.0
-      #   with:
-      #     sarif_file: results.sarif
 
       - name: Configure
         run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_COVERAGE=ON -DJOIN_ENABLE_TESTS=ON
@@ -74,10 +61,6 @@ jobs:
         if: ${{ inputs.scan || inputs.coverage }}
         run: cmake --build build --config Debug
 
-      - name: Run codeql analysis
-        if: ${{ inputs.scan }}
-        uses: github/codeql-action/analyze@v2.22.0
-
       - name: Run tests
         if: ${{ inputs.coverage }}
         run: ctest --test-dir build --output-on-failure -C Debug
@@ -85,32 +68,15 @@ jobs:
       - name: Generate coverage report
         if: ${{ inputs.coverage }}
         run: |
-          lcov --directory . --capture --output-file lcov.info --ignore-errors mismatched-end
-          lcov --remove lcov.info "*/build/*" "*/tests/*" "/usr/include/*" --output-file lcov.info
+          lcov --directory . --capture --output-file lcov.info
+          lcov --remove lcov.info "/usr/include/*" "/usr/src/gtest/*" "*/googletest/*" "*/gtest/*" "*/tests/*" --output-file lcov.info
 
-      - name: Upload coverage report to coveralls
+      - name: Upload coverage report to GitHub
         if: ${{ inputs.coverage }}
-        uses: coverallsapp/github-action@v2.3.6
+        uses: actions/upload-artifact@v4.6.2
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          file: lcov.info
-
-      - name: Upload coverage report to codecov
-        if: ${{ inputs.coverage }}
-        uses: codecov/codecov-action@v5.4.3
-        with:
-          fail_ci_if_error: true
-          token: ${{secrets.CODECOV_TOKEN}}
-          functionalities: fixes
-          flags: unittests
-          file: lcov.info
-
-      - name: Upload coverage report to codacy
-        if: ${{ inputs.coverage }}
-        uses: codacy/codacy-coverage-reporter-action@v1.3.0
-        with:
-          project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
-          coverage-reports: lcov.info
+          name: coverage-report
+          path: lcov.info
 
       - name: Run doxygen
         if: ${{ inputs.doc }}
@@ -125,18 +91,58 @@ jobs:
         with:
           path: ./doc/html
 
+      - name: Run codeql analysis
+        if: ${{ inputs.scan }}
+        uses: github/codeql-action/analyze@v2.22.0
+
   deploy:
-    if: ${{ inputs.doc }}
+    runs-on: ubuntu-latest
+
+    container:
+      image: joinframework/join-ci:latest
+
+    defaults:
+      run:
+        shell: bash
 
     needs: build
-
-    runs-on: ubuntu-latest
 
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Download coverage report from GitHub
+        if: ${{ inputs.coverage }}
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: coverage-report
+
+      - name: Deploy coverage report to coveralls
+        if: ${{ inputs.coverage }}
+        uses: coverallsapp/github-action@v2.3.6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          file: lcov.info
+
+      - name: Deploy coverage report to codecov
+        if: ${{ inputs.coverage }}
+        uses: codecov/codecov-action@v5.4.3
+        with:
+          fail_ci_if_error: true
+          token: ${{secrets.CODECOV_TOKEN}}
+          functionalities: fixes
+          flags: unittests
+          file: lcov.info
+
+      - name: Deploy coverage report to codacy
+        if: ${{ inputs.coverage }}
+        uses: codacy/codacy-coverage-reporter-action@v1.3.0
+        with:
+          project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
+          coverage-reports: lcov.info
+
+      - name: Deploy GitHub Pages
+        if: ${{ inputs.doc }}
         id: deployment
         uses: actions/deploy-pages@v4.0.5
