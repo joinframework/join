@@ -1,0 +1,20 @@
+name: security
+
+on:
+  push:
+    branches: [ main ]
+
+  pull_request:
+    branches: [ main ]
+
+  schedule:
+    - cron: "0 11 * * 0"
+
+jobs:
+  scan:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      scan: true
+      coverage: false
+      doc: false

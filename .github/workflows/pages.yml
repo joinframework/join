@@ -1,17 +1,14 @@
-name: pr
+name: pages
 
 on:
   push:
     branches: [ main ]
 
-  pull_request:
-    branches: [ main ]
-
 jobs:
-  ci:
+  generate:
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      scan: true
-      coverage: true
-      doc: false
+      scan: false
+      coverage: false
+      doc: true

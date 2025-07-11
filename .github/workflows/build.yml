@@ -37,6 +37,11 @@ jobs:
       image: joinframework/join-ci:latest
       options: --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0
 
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
     defaults:
       run:
         shell: bash
@@ -44,22 +49,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
-        with:
-          fetch-depth: 0
 
-      - name: Setup Environment
+      - name: Setup Build Environment
+        if: ${{ inputs.scan || inputs.coverage }}
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Configure
-        run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_COVERAGE=ON -DJOIN_ENABLE_TESTS=ON
 
       - name: Initialize codeql
         if: ${{ inputs.scan }}
         uses: github/codeql-action/init@v2.22.0
 
+      - name: Configure
+        if: ${{ inputs.scan || inputs.coverage }}
+        run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_COVERAGE=ON -DJOIN_ENABLE_TESTS=ON
+
       - name: Build
         if: ${{ inputs.scan || inputs.coverage }}
         run: cmake --build build --config Debug
+
+      - name: Run codeql scan
+        if: ${{ inputs.scan }}
+        uses: github/codeql-action/analyze@v2.22.0
 
       - name: Run tests
         if: ${{ inputs.coverage }}
@@ -90,10 +99,6 @@ jobs:
         uses: actions/upload-pages-artifact@v3.0.1
         with:
           path: ./doc/html
-
-      - name: Run codeql analysis
-        if: ${{ inputs.scan }}
-        uses: github/codeql-action/analyze@v2.22.0
 
   deploy:
     runs-on: ubuntu-latest
