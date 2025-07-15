@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.14)
 
 find_package(GTest REQUIRED)
 
-include(GoogleTest)
-
 add_executable(openssl.gtest openssl_test.cpp)
 target_link_libraries(openssl.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(openssl.gtest)

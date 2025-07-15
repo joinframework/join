@@ -43,11 +43,11 @@ using join::Cache;
  */
 class CacheTest : public ::testing::Test
 {
-protected:
+public:
     /**
      * @brief Set up test.
      */
-    virtual void SetUp ()
+    virtual void SetUp () override
     {
         ASSERT_TRUE (writeFile (path, content));
         ASSERT_TRUE (writeFile (other, otherContent));
@@ -60,7 +60,7 @@ protected:
     /**
      * @brief Tear down test.
      */
-    virtual void TearDown ()
+    virtual void TearDown () override
     {
         ASSERT_NO_THROW (cache.clear ());
         remove (other.c_str ());
@@ -91,47 +91,48 @@ protected:
         return true;
     }
 
-    /// server instance.
+protected:
+    // server instance.
     static Cache cache;
 
-    /// file base.
+    // file base.
     static const std::string base;
 
-    /// file name without extension.
+    // file name without extension.
     static const std::string stem;
 
-    /// file extension.
+    // file extension.
     static const std::string ext;
 
-    /// file name.
+    // file name.
     static const std::string name;
 
-    /// file path.
+    // file path.
     static const std::string path;
 
-    /// file content.
+    // file content.
     static const std::string content;
 
-    /// bad file path.
+    // bad file path.
     static const std::string bad;
 
-    /// other file path.
+    // other file path.
     static const std::string other;
 
-    /// other file content.
+    // other file content.
     static const std::string otherContent;
 };
 
-Cache             CacheTest::cache;
-const std::string CacheTest::base             = "/tmp/";
-const std::string CacheTest::stem             = "join_cache_test";
-const std::string CacheTest::ext              = "txt";
-const std::string CacheTest::name             = stem + "." + ext;
-const std::string CacheTest::path             = base + name;
-const std::string CacheTest::content          = "test string";
-const std::string CacheTest::bad              = base + stem + ".bad";
-const std::string CacheTest::other            = base + stem + ".other";
-const std::string CacheTest::otherContent     = "other test string";
+Cache CacheTest::cache;
+const std::string CacheTest::base = "/tmp/";
+const std::string CacheTest::stem = "join_cache_test";
+const std::string CacheTest::ext = "txt";
+const std::string CacheTest::name = stem + "." + ext;
+const std::string CacheTest::path = base + name;
+const std::string CacheTest::content = "test string";
+const std::string CacheTest::bad = base + stem + ".bad";
+const std::string CacheTest::other = base + stem + ".other";
+const std::string CacheTest::otherContent = "other test string";
 
 /**
  * @brief Test get method.

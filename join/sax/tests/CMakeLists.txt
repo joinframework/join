@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.14)
 
 find_package(GTest REQUIRED)
 
-include(GoogleTest)
-
 add_executable(dtoa.gtest dtoa_test.cpp)
 target_link_libraries(dtoa.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(dtoa.gtest)
