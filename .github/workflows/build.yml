@@ -129,6 +129,7 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           file: lcov.info
+          path: .
 
       - name: Deploy coverage report to codecov
         if: ${{ inputs.coverage }}
