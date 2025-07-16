@@ -123,9 +123,9 @@ jobs:
         with:
           name: coverage-report
 
-      - name: Extract coverage report
+      - name: List downloaded artifacts
         if: ${{ inputs.coverage }}
-        run: unzip coverage-report.zip
+        run: ls -la
 
       - name: Deploy coverage report to coveralls
         if: ${{ inputs.coverage }}
