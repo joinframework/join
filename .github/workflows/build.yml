@@ -116,6 +116,8 @@ jobs:
           path: ./doc/html
 
   deploy:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.doc }}
+
     runs-on: ubuntu-latest
 
     container:
@@ -138,6 +140,5 @@ jobs:
 
     steps:
       - name: Deploy GitHub Pages
-        if: ${{ inputs.doc }}
         id: deployment
         uses: actions/deploy-pages@v4
