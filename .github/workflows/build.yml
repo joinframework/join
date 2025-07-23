@@ -38,7 +38,6 @@ jobs:
       options: --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0
 
     permissions:
-      actions: read
       contents: read
       security-events: write
 
@@ -117,13 +116,14 @@ jobs:
           path: ./doc/html
 
   deploy:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.doc }}
+
     runs-on: ubuntu-latest
 
     container:
       image: joinframework/join-ci:latest
 
     permissions:
-      actions: read
       contents: read
       id-token: write
       pages: write
@@ -140,6 +140,5 @@ jobs:
 
     steps:
       - name: Deploy GitHub Pages
-        if: ${{ inputs.doc }}
         id: deployment
         uses: actions/deploy-pages@v4
