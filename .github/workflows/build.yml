@@ -57,8 +57,6 @@ jobs:
       - name: Initialize codeql
         if: ${{ inputs.scan }}
         uses: github/codeql-action/init@v3
-        with:
-          tools: latest
 
       - name: Configure
         if: ${{ inputs.scan || inputs.coverage }}
