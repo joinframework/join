@@ -38,6 +38,7 @@ jobs:
       options: --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0
 
     permissions:
+      contents: read
       security-events: write
 
     defaults:
