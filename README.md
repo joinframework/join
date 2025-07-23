@@ -10,7 +10,7 @@
 [![GitHub Releases](https://img.shields.io/github/release/joinframework/join.svg)](https://github.com/joinframework/join/releases/latest)
 [![GitHub License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/joinframework/join/blob/main/LICENSE)
 
-**join** is a lightweight C++14 network framework library
+**join** is a lightweight C++ network framework library
 
 ## Dependencies
 
