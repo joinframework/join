@@ -122,8 +122,9 @@ jobs:
       image: joinframework/join-ci:latest
 
     permissions:
-      pages: write
+      contents: read
       id-token: write
+      pages: write
 
     defaults:
       run:
