@@ -122,6 +122,12 @@ jobs:
     container:
       image: joinframework/join-ci:latest
 
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      pages: write
+
     defaults:
       run:
         shell: bash
