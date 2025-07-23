@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       - name: Setup Build Environment
         if: ${{ inputs.scan || inputs.coverage }}
@@ -56,7 +56,7 @@ jobs:
 
       - name: Initialize codeql
         if: ${{ inputs.scan }}
-        uses: github/codeql-action/init@v2.22.0
+        uses: github/codeql-action/init@v3
 
       - name: Configure
         if: ${{ inputs.scan || inputs.coverage }}
@@ -68,7 +68,7 @@ jobs:
 
       - name: Run codeql scan
         if: ${{ inputs.scan }}
-        uses: github/codeql-action/analyze@v2.22.0
+        uses: github/codeql-action/analyze@v3
 
       - name: Run tests
         if: ${{ inputs.coverage }}
@@ -82,14 +82,14 @@ jobs:
 
       - name: Deploy coverage report to coveralls
         if: ${{ inputs.coverage }}
-        uses: coverallsapp/github-action@v2.3.6
+        uses: coverallsapp/github-action@v2
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           file: lcov.info
 
       - name: Deploy coverage report to codecov
         if: ${{ inputs.coverage }}
-        uses: codecov/codecov-action@v5.4.3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           flags: unittests
@@ -98,21 +98,21 @@ jobs:
 
       - name: Deploy coverage report to codacy
         if: ${{ inputs.coverage }}
-        uses: codacy/codacy-coverage-reporter-action@v1.3.0
+        uses: codacy/codacy-coverage-reporter-action@v1
         with:
           project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
           coverage-reports: lcov.info
 
       - name: Run doxygen
         if: ${{ inputs.doc }}
-        uses: mattnotmitt/doxygen-action@v1.12.0
+        uses: mattnotmitt/doxygen-action@v1
         with:
           doxyfile-path: ./doxyfile
           working-directory: .
 
       - name: Upload documentation
         if: ${{ inputs.doc }}
-        uses: actions/upload-pages-artifact@v3.0.1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./doc/html
 
@@ -136,4 +136,4 @@ jobs:
       - name: Deploy GitHub Pages
         if: ${{ inputs.doc }}
         id: deployment
-        uses: actions/deploy-pages@v4.0.5
+        uses: actions/deploy-pages@v4
