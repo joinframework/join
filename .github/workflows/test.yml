@@ -1,17 +1,14 @@
-name: security
+name: test
 
 on:
   pull_request:
     branches: [ main ]
 
-  schedule:
-    - cron: "0 11 * * 0"
-
 jobs:
-  scan:
+  coverage:
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      scan: true
-      coverage: false
+      scan: false
+      coverage: true
       doc: false

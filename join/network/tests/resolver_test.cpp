@@ -180,10 +180,10 @@ TEST (Resolver, resolveAllAddress)
     aliases = Resolver::resolveAllAddress ("192.168.24.32");
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = Resolver ().resolveAllAddress ("127.0.0.2", servers.front ());
+    aliases = Resolver ().resolveAllAddress ("127.0.0.1", servers.front ());
     EXPECT_GT (aliases.size (), 0);
 
-    aliases = Resolver::resolveAllAddress ("127.0.0.2");
+    aliases = Resolver::resolveAllAddress ("127.0.0.1");
     EXPECT_GT (aliases.size (), 0);
 
     aliases = Resolver ().resolveAllAddress ("::1", servers.front ());
@@ -192,13 +192,13 @@ TEST (Resolver, resolveAllAddress)
     aliases = Resolver::resolveAllAddress ("::1");
     EXPECT_GT (aliases.size (), 0);
 
-    aliases = Resolver ("foo").resolveAllAddress ("127.0.0.2", servers.front ());
+    aliases = Resolver ("foo").resolveAllAddress ("127.0.0.1", servers.front ());
     EXPECT_EQ (aliases.size (), 0);
 
     aliases = Resolver ("foo").resolveAllAddress ("::1", servers.front ());
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = Resolver ().resolveAllAddress ("127.0.0.2", "255.255.255.255");
+    aliases = Resolver ().resolveAllAddress ("127.0.0.1", "255.255.255.255");
     EXPECT_EQ (aliases.size (), 0);
 
     aliases = Resolver ().resolveAllAddress ("::1", "255.255.255.255");
@@ -225,10 +225,10 @@ TEST (Resolver, resolveAddress)
     alias = Resolver::resolveAddress ("192.168.24.32");
     EXPECT_TRUE (alias.empty ());
 
-    alias = Resolver ().resolveAddress ("127.0.0.2", servers.front ());
+    alias = Resolver ().resolveAddress ("127.0.0.1", servers.front ());
     EXPECT_FALSE (alias.empty ());
 
-    alias = Resolver::resolveAddress ("127.0.0.2");
+    alias = Resolver::resolveAddress ("127.0.0.1");
     EXPECT_FALSE (alias.empty ());
 
     alias = Resolver ().resolveAddress ("::1", servers.front ());
@@ -237,13 +237,13 @@ TEST (Resolver, resolveAddress)
     alias = Resolver::resolveAddress ("::1");
     EXPECT_FALSE (alias.empty ());
 
-    alias = Resolver ("foo").resolveAddress ("127.0.0.2", servers.front ());
+    alias = Resolver ("foo").resolveAddress ("127.0.0.1", servers.front ());
     EXPECT_TRUE (alias.empty ());
 
     alias = Resolver ("foo").resolveAddress ("::1", servers.front ());
     EXPECT_TRUE (alias.empty ());
 
-    alias = Resolver ().resolveAddress ("127.0.0.2", "255.255.255.255");
+    alias = Resolver ().resolveAddress ("127.0.0.1", "255.255.255.255");
     EXPECT_TRUE (alias.empty ());
 
     alias = Resolver ().resolveAddress ("::1", "255.255.255.255");

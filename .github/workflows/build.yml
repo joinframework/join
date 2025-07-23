@@ -1,0 +1,139 @@
+name: build
+
+on:
+  workflow_call:
+    inputs:
+      scan:
+        type: boolean
+        default: false
+
+      coverage:
+        type: boolean
+        default: false
+
+      doc:
+        type: boolean
+        default: false
+
+  workflow_dispatch:
+    inputs:
+      scan:
+        type: boolean
+        default: false
+
+      coverage:
+        type: boolean
+        default: false
+
+      doc:
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: joinframework/join-ci:latest
+      options: --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Build Environment
+        if: ${{ inputs.scan || inputs.coverage }}
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize codeql
+        if: ${{ inputs.scan }}
+        uses: github/codeql-action/init@v3
+
+      - name: Configure
+        if: ${{ inputs.scan || inputs.coverage }}
+        run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_COVERAGE=ON -DJOIN_ENABLE_TESTS=ON
+
+      - name: Build
+        if: ${{ inputs.scan || inputs.coverage }}
+        run: cmake --build build --config Debug
+
+      - name: Run codeql scan
+        if: ${{ inputs.scan }}
+        uses: github/codeql-action/analyze@v3
+
+      - name: Run tests
+        if: ${{ inputs.coverage }}
+        run: ctest --test-dir build --output-on-failure -C Debug
+
+      - name: Generate coverage report
+        if: ${{ inputs.coverage }}
+        run: |
+          lcov --directory build --capture --exclude '*/tests/*' --rc geninfo_unexecuted_blocks=1 --output-file lcov.info
+          lcov --remove lcov.info "/usr/include/*" --output-file lcov.info
+
+      - name: Deploy coverage report to coveralls
+        if: ${{ inputs.coverage }}
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          file: lcov.info
+
+      - name: Deploy coverage report to codecov
+        if: ${{ inputs.coverage }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          flags: unittests
+          file: lcov.info
+          fail_ci_if_error: true
+
+      - name: Deploy coverage report to codacy
+        if: ${{ inputs.coverage }}
+        uses: codacy/codacy-coverage-reporter-action@v1
+        with:
+          project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
+          coverage-reports: lcov.info
+
+      - name: Run doxygen
+        if: ${{ inputs.doc }}
+        uses: mattnotmitt/doxygen-action@v1
+        with:
+          doxyfile-path: ./doxyfile
+          working-directory: .
+
+      - name: Upload documentation
+        if: ${{ inputs.doc }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./doc/html
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    container:
+      image: joinframework/join-ci:latest
+
+    defaults:
+      run:
+        shell: bash
+
+    needs: build
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy GitHub Pages
+        if: ${{ inputs.doc }}
+        id: deployment
+        uses: actions/deploy-pages@v4

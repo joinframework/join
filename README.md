@@ -10,4 +10,43 @@
 [![GitHub Releases](https://img.shields.io/github/release/joinframework/join.svg)](https://github.com/joinframework/join/releases/latest)
 [![GitHub License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/joinframework/join/blob/main/LICENSE)
 
-**join** is a lightweight C++14 network framework library
+**join** is a lightweight C++ network framework library
+
+## Dependencies
+
+To install join framework dependencies do this:
+```bash
+sudo apt update && sudo apt install libssl-dev zlib1g-dev libgtest-dev libgmock-dev
+```
+
+## Download
+
+To download the latest source do this:
+```bash
+git clone https://github.com/joinframework/join.git
+```
+
+## Configuration
+
+To configure **join** with test and coverage enabled do this:
+```bash
+cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
+```
+
+## Build
+
+To build **join** do this:
+```bash
+cmake --build build --config Debug
+```
+
+## Tests
+
+To test **join** do this:
+```bash
+ctest --test-dir build --output-on-failure -C Debug
+```
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)
