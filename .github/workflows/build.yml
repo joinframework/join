@@ -3,28 +3,24 @@ name: build
 on:
   workflow_call:
     inputs:
-      scan:
-        type: boolean
-        default: false
-
       coverage:
         type: boolean
         default: false
-
+      scan:
+        type: boolean
+        default: false
       doc:
         type: boolean
         default: false
 
   workflow_dispatch:
     inputs:
-      scan:
-        type: boolean
-        default: false
-
       coverage:
         type: boolean
         default: false
-
+      scan:
+        type: boolean
+        default: false
       doc:
         type: boolean
         default: false
@@ -79,28 +75,12 @@ jobs:
           lcov --directory build --capture --exclude '*/tests/*' --rc geninfo_unexecuted_blocks=1 --output-file lcov.info
           lcov --remove lcov.info "/usr/include/*" --output-file lcov.info
 
-      - name: Deploy coverage report to coveralls
+      - name: Upload coverage report to GitHub
         if: ${{ inputs.coverage }}
-        uses: coverallsapp/github-action@v2
+        uses: actions/upload-artifact@v4
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          file: lcov.info
-
-      - name: Deploy coverage report to codecov
-        if: ${{ inputs.coverage }}
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{secrets.CODECOV_TOKEN}}
-          flags: unittests
-          file: lcov.info
-          fail_ci_if_error: true
-
-      - name: Deploy coverage report to codacy
-        if: ${{ inputs.coverage }}
-        uses: codacy/codacy-coverage-reporter-action@v1
-        with:
-          project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
-          coverage-reports: lcov.info
+          name: coverage-report
+          path: lcov.info
 
       - name: Run doxygen
         if: ${{ inputs.doc }}
@@ -109,15 +89,13 @@ jobs:
           doxyfile-path: ./doxyfile
           working-directory: .
 
-      - name: Upload documentation
+      - name: Upload documentation to GitHub
         if: ${{ inputs.doc }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./doc/html
 
   deploy:
-    if: ${{ github.ref == 'refs/heads/main' && inputs.doc }}
-
     runs-on: ubuntu-latest
 
     container:
@@ -134,11 +112,43 @@ jobs:
 
     needs: build
 
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
-      - name: Deploy GitHub Pages
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Download coverage report from GitHub
+        if: ${{ inputs.coverage }}
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: ./
+
+      - name: Deploy coverage report to coveralls
+        if: ${{ inputs.coverage }}
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          files: lcov.info
+
+      - name: Deploy coverage report to codecov
+        if: ${{ inputs.coverage }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          flags: unittests
+          files: lcov.info
+          fail_ci_if_error: true
+
+      - name: Deploy coverage report to codacy
+        if: ${{ inputs.coverage }}
+        uses: codacy/codacy-coverage-reporter-action@v1
+        with:
+          project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
+          coverage-reports: lcov.info
+
+      - name: Deploy documentation to GitHub Pages
+        if: ${{ inputs.doc }}
         id: deployment
         uses: actions/deploy-pages@v4

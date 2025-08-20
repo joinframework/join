@@ -940,7 +940,17 @@ namespace join
          * @return variable held by value as a string value.
          * @throw std::bad_cast.
          */
-        constexpr std::string& getString () const
+        constexpr const std::string& getString () const
+        {
+            return get <String> ();
+        }
+
+        /**
+         * @brief get variable held by value as a string value.
+         * @return variable held by value as a string value.
+         * @throw std::bad_cast.
+         */
+        constexpr std::string& getString ()
         {
             return get <String> ();
         }
@@ -969,7 +979,17 @@ namespace join
          * @return variable held by value as an array.
          * @throw std::bad_cast.
          */
-        constexpr Array& getArray () const
+        constexpr const Array& getArray () const
+        {
+            return get <ArrayValue> ();
+        }
+
+        /**
+         * @brief get variable held by value as an array.
+         * @return variable held by value as an array.
+         * @throw std::bad_cast.
+         */
+        constexpr Array& getArray ()
         {
             return get <ArrayValue> ();
         }
@@ -988,7 +1008,17 @@ namespace join
          * @return variable held by value as an object.
          * @throw std::bad_cast.
          */
-        constexpr Object& getObject () const
+        constexpr const Object& getObject () const
+        {
+            return get <ObjectValue> ();
+        }
+
+        /**
+         * @brief get variable held by value as an object.
+         * @return variable held by value as an object.
+         * @throw std::bad_cast.
+         */
+        constexpr Object& getObject ()
         {
             return get <ObjectValue> ();
         }
@@ -1065,17 +1095,6 @@ namespace join
         }
 
         /**
-         * @brief returns a reference to the element at specified location pos.
-         * @param pos Position of the element to return.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        const Value& operator[] (size_t pos) const
-        {
-            return get <ArrayValue> ()[pos];
-        }
-
-        /**
          * @brief returns a reference to the value that is mapped to a key.
          * @param key the key of the element to find.
          * @return a reference to the mapped element.
@@ -1088,27 +1107,6 @@ namespace join
                 set <ObjectValue> ();
             }
 
-            for (auto& member : get <ObjectValue> ())
-            {
-                if (member.first == key)
-                {
-                    return member.second;
-                }
-            }
-
-            get <ObjectValue> ().emplace_back (key, nullptr);
-
-            return get <ObjectValue> ().back ().second;
-        }
-
-        /**
-         * @brief returns a reference to the value that is mapped to a key.
-         * @param key the key of the element to find.
-         * @return a reference to the mapped element.
-         * @throw std::bad_cast.
-         */
-        const Value& operator[] (const std::string& key) const
-        {
             for (auto& member : get <ObjectValue> ())
             {
                 if (member.first == key)

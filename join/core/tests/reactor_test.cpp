@@ -170,12 +170,14 @@ TEST_F (ReactorTest, instance)
  */
 TEST_F (ReactorTest, addHandler)
 {
+    Reactor reactor;
+
     // test invalid parameter.
-    ASSERT_EQ (Reactor::instance ()->addHandler (nullptr), -1);
+    ASSERT_EQ (reactor.addHandler (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     // test invalid handle.
-    ASSERT_EQ (Reactor::instance ()->addHandler (this), -1);
+    ASSERT_EQ (reactor.addHandler (this), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     // connect socket.
@@ -183,14 +185,11 @@ TEST_F (ReactorTest, addHandler)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (reactor.addHandler (this), 0) << join::lastError.message ();
 
     // test already in use.
-    ASSERT_EQ (Reactor::instance ()->addHandler (this), -1);
+    ASSERT_EQ (reactor.addHandler (this), -1);
     ASSERT_EQ (join::lastError, std::errc::file_exists) << join::lastError.message ();
-
-    // delete handler
-    ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
 }
 
 /**
@@ -198,12 +197,14 @@ TEST_F (ReactorTest, addHandler)
  */
 TEST_F (ReactorTest, delHandler)
 {
+    Reactor reactor;
+
     // test invalid parameter.
-    ASSERT_EQ (Reactor::instance ()->delHandler (nullptr), -1);
+    ASSERT_EQ (reactor.delHandler (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     // test invalid handle.
-    ASSERT_EQ (Reactor::instance ()->delHandler (this), -1);
+    ASSERT_EQ (reactor.delHandler (this), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     // connect socket.
@@ -211,13 +212,13 @@ TEST_F (ReactorTest, delHandler)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (reactor.addHandler (this), 0) << join::lastError.message ();
 
     // delete handler
-    ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (reactor.delHandler (this), 0) << join::lastError.message ();
 
     // test already deleted.
-    ASSERT_EQ (Reactor::instance ()->delHandler (this), -1);
+    ASSERT_EQ (reactor.delHandler (this), -1);
     ASSERT_EQ (join::lastError, std::errc::no_such_file_or_directory);
 }
 

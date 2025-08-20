@@ -39,12 +39,31 @@ using join::Reactor;
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : instance
+//   METHOD    : Reactor
 // =========================================================================
-Reactor* Reactor::instance ()
+Reactor::Reactor ()
+: _eventfd (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
+  _epoll (epoll_create1 (EPOLL_CLOEXEC))
 {
-    static Reactor reactor;
-    return &reactor;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : ~Reactor
+// =========================================================================
+Reactor::~Reactor ()
+{
+    ScopedLock lock (_mutex);
+
+    if (_running)
+    {
+        uint64_t value = 1;
+        [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
+        _end.wait (lock, [this] () { return !_running; });
+    }
+
+    ::close (_eventfd);
+    ::close (_epoll);
 }
 
 // =========================================================================
@@ -111,31 +130,12 @@ int Reactor::delHandler (EventHandler* handler)
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : Reactor
+//   METHOD    : instance
 // =========================================================================
-Reactor::Reactor ()
-: _eventfd (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
-  _epoll (epoll_create1 (EPOLL_CLOEXEC))
+Reactor* Reactor::instance ()
 {
-}
-
-// =========================================================================
-//   CLASS     : Reactor
-//   METHOD    : ~Reactor
-// =========================================================================
-Reactor::~Reactor ()
-{
-    ScopedLock lock (_mutex);
-
-    if (_running)
-    {
-        uint64_t value = 1;
-        [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
-        _end.wait (lock, [this] () { return !_running; });
-    }
-
-    ::close (_eventfd);
-    ::close (_epoll);
+    static Reactor reactor;
+    return &reactor;
 }
 
 // =========================================================================

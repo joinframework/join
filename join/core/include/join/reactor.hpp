@@ -37,7 +37,7 @@
 namespace join
 {
     /**
-     *  @brief Event handler interface class.
+     * @brief Event handler interface class.
      */
     class EventHandler
     {
@@ -88,32 +88,11 @@ namespace join
     };
 
     /**
-     *  @brief Reactor class.
+     * @brief Reactor class.
      */
     class Reactor
     {
     public:
-        /**
-         * @brief create the Reactor instance.
-         * @return Reactor instance pointer.
-         */
-        static Reactor* instance ();
-
-        /**
-         * @brief add handler to reactor.
-         * @param handler handler pointer.
-         * @return 0 on success, -1 on failure.
-         */
-        int addHandler (EventHandler* handler);
-
-        /**
-         * @brief delete handler from reactor.
-         * @param handler handler pointer.
-         * @return 0 on success, -1 on failure.
-         */
-        int delHandler (EventHandler* handler);
-
-    protected:
         /**
          * @brief default constructor.
          */
@@ -150,6 +129,27 @@ namespace join
          */
         ~Reactor ();
 
+        /**
+         * @brief add handler to reactor.
+         * @param handler handler pointer.
+         * @return 0 on success, -1 on failure.
+         */
+        int addHandler (EventHandler* handler);
+
+        /**
+         * @brief delete handler from reactor.
+         * @param handler handler pointer.
+         * @return 0 on success, -1 on failure.
+         */
+        int delHandler (EventHandler* handler);
+
+        /**
+         * @brief create the Reactor instance.
+         * @return Reactor instance pointer.
+         */
+        static Reactor* instance ();
+
+    protected:
         /**
          * @brief dispatch events received.
          */
