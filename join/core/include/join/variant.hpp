@@ -300,7 +300,7 @@ namespace join
             /**
              * @brief destroy the VariantStorage instance.
              */
-            virtual ~VariantStorage ()
+            ~VariantStorage ()
             {
                 VariantHelper <Ts...>::destroy (_which, storage ());
             }
@@ -332,12 +332,21 @@ namespace join
             }
 
             /**
-             * @brief get storage address removing const qualifier.
+             * @brief get storage address.
              * @return storage address.
              */
-            constexpr void* storage () const
+            constexpr void* storage ()
             {
-                return const_cast <void *> (static_cast <const void *> (std::addressof (_data)));
+                return static_cast <void *> (std::addressof (_data));
+            }
+
+            /**
+             * @brief get storage address.
+             * @return storage address.
+             */
+            constexpr const void* storage () const
+            {
+                return static_cast <const void *> (std::addressof (_data));
             }
 
             /// aligned storage.
@@ -546,8 +555,8 @@ namespace join
             find_element_t <I, Ts...>, Args&&...>::value, find_element_t <I, Ts...>&>
         set (Args&& ...args)
         {
-            this->~Variant ();
-            new (this) Variant (in_place_index_t <I> {}, std::forward <Args> (args)...);
+            Variant tmp (in_place_index_t <I> {}, std::forward <Args> (args)...);
+            *this = std::move (tmp);
             return get <I> ();
         }
 
@@ -561,8 +570,8 @@ namespace join
                 std::initializer_list <Up>&, Args&&...>::value, find_element_t <I, Ts...>&>
         set (std::initializer_list <Up> il, Args&&... args)
         {
-            this->~Variant ();
-            new (this) Variant (in_place_index_t <I> {}, il, std::forward <Args> (args)...);
+            Variant tmp (in_place_index_t <I> {}, il, std::forward <Args> (args)...);
+            *this = std::move (tmp);
             return get <I> ();
         }
 
@@ -572,13 +581,28 @@ namespace join
          */
         template <typename T>
         constexpr std::enable_if_t <is_unique <T, Ts...>::value, T&>
+        get ()
+        {
+            if (index () != find_index <T, Ts...>::value)
+            {
+                throw std::bad_cast ();
+            }
+            return *reinterpret_cast <T*> (this->storage ());
+        }
+
+        /**
+         * @brief get the variable value of the object type identified by type.
+         * @return the object value.
+         */
+        template <typename T>
+        constexpr std::enable_if_t <is_unique <T, Ts...>::value, const T&>
         get () const
         {
             if (index () != find_index <T, Ts...>::value)
             {
                 throw std::bad_cast ();
             }
-            return *reinterpret_cast <T *> (this->storage ());
+            return *reinterpret_cast <const T*> (this->storage ());
         }
 
         /**
@@ -587,13 +611,28 @@ namespace join
          */
         template <std::size_t I>
         constexpr std::enable_if_t <is_index <I, Ts...>::value, find_element_t <I, Ts...>&>
+        get ()
+        {
+            if (index () != I)
+            {
+                throw std::bad_cast ();
+            }
+            return *reinterpret_cast <find_element_t <I, Ts...>*> (this->storage ());
+        }
+
+        /**
+         * @brief get the variable value of the object type identified by index.
+         * @return the object value.
+         */
+        template <std::size_t I>
+        constexpr std::enable_if_t <is_index <I, Ts...>::value, const find_element_t <I, Ts...>&>
         get () const
         {
             if (index () != I)
             {
                 throw std::bad_cast ();
             }
-            return *reinterpret_cast <find_element_t <I, Ts...> *> (this->storage ());
+            return *reinterpret_cast <const find_element_t <I, Ts...>*> (this->storage ());
         }
 
         /**
@@ -601,14 +640,29 @@ namespace join
          * @return the object value address if type is correct, nullptr otherwise.
          */
         template <typename T>
-        constexpr std::enable_if_t <is_unique <T, Ts...>::value, std::add_pointer_t <T>>
+        constexpr std::enable_if_t <is_unique <T, Ts...>::value, T*>
+        getIf ()
+        {
+            if (index () != find_index <T, Ts...>::value)
+            {
+                return nullptr;
+            }
+            return reinterpret_cast <T*> (this->storage ());
+        }
+
+        /**
+         * @brief get the variable value address of the object type identified by type.
+         * @return the object value address if type is correct, nullptr otherwise.
+         */
+        template <typename T>
+        constexpr std::enable_if_t <is_unique <T, Ts...>::value, const T*>
         getIf () const
         {
             if (index () != find_index <T, Ts...>::value)
             {
                 return nullptr;
             }
-            return reinterpret_cast <T *> (this->storage ());
+            return reinterpret_cast <const T*> (this->storage ());
         }
 
         /**
@@ -617,14 +671,30 @@ namespace join
          */
         template <std::size_t I>
         constexpr std::enable_if_t <
-            is_index <I, Ts...>::value, std::add_pointer_t <find_element_t <I, Ts...>>>
+            is_index <I, Ts...>::value, find_element_t <I, Ts...>*>
+        getIf ()
+        {
+            if (index () != I)
+            {
+                return nullptr;
+            }
+            return reinterpret_cast <find_element_t <I, Ts...>*> (this->storage ());
+        }
+
+        /**
+         * @brief get the variable value address of the object type identified by index.
+         * @return the object value address if index is correct, nullptr otherwise.
+         */
+        template <std::size_t I>
+        constexpr std::enable_if_t <
+            is_index <I, Ts...>::value, const find_element_t <I, Ts...>*>
         getIf () const
         {
             if (index () != I)
             {
                 return nullptr;
             }
-            return reinterpret_cast <find_element_t <I, Ts...> *> (this->storage ());
+            return reinterpret_cast <const find_element_t <I, Ts...>*> (this->storage ());
         }
 
         /**

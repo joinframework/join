@@ -1241,6 +1241,13 @@ TEST (Variant, less)
     EXPECT_FALSE (var1 < var2);
     EXPECT_TRUE (var1 < var3);
 
+    var1.set <std::nullptr_t> (nullptr);
+    var2.set <std::nullptr_t> (nullptr);
+    var3.set <std::nullptr_t> (nullptr);
+
+    EXPECT_FALSE (var1 < var2);
+    EXPECT_FALSE (var1 < var3);
+
     var1.set <int> (3);
     var2.set <double> (0.5);
     var3.set <std::string> ("foo");
@@ -1291,6 +1298,13 @@ TEST (Variant, greater)
     EXPECT_FALSE (var1 > var2);
     EXPECT_TRUE (var3 > var1);
 
+    var1.set <std::nullptr_t> (nullptr);
+    var2.set <std::nullptr_t> (nullptr);
+    var3.set <std::nullptr_t> (nullptr);
+
+    EXPECT_FALSE (var1 > var2);
+    EXPECT_FALSE (var1 > var3);
+
     var1.set <int> (3);
     var2.set <double> (0.5);
     var3.set <std::string> ("foo");
@@ -1337,6 +1351,13 @@ TEST (Variant, less_or_equal)
     var1.set <bool> (false);
     var2.set <bool> (false);
     var3.set <bool> (true);
+
+    EXPECT_TRUE (var1 <= var2);
+    EXPECT_TRUE (var1 <= var3);
+
+    var1.set <std::nullptr_t> (nullptr);
+    var2.set <std::nullptr_t> (nullptr);
+    var3.set <std::nullptr_t> (nullptr);
 
     EXPECT_TRUE (var1 <= var2);
     EXPECT_TRUE (var1 <= var3);
@@ -1390,6 +1411,13 @@ TEST (Variant, greater_or_equal)
 
     EXPECT_TRUE (var1 >= var2);
     EXPECT_TRUE (var3 >= var1);
+
+    var1.set <std::nullptr_t> (nullptr);
+    var2.set <std::nullptr_t> (nullptr);
+    var3.set <std::nullptr_t> (nullptr);
+
+    EXPECT_TRUE (var1 >= var2);
+    EXPECT_TRUE (var1 >= var3);
 
     var1.set <int> (3);
     var2.set <double> (0.5);

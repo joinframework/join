@@ -141,9 +141,14 @@ IpAddressList Resolver::resolveAllHost (const std::string& host, int family, con
 // =========================================================================
 IpAddressList Resolver::resolveAllHost (const std::string& host, int family)
 {
+    Resolver resolver;
+
+    resolver._onSuccess = nullptr;
+    resolver._onFailure = nullptr;
+
     for (auto const& server : nameServers ())
     {
-        IpAddressList addresses = Resolver ().resolveAllHost (host, family, server);
+        IpAddressList addresses = resolver.resolveAllHost (host, family, server);
         if (!addresses.empty ())
         {
             return addresses;
@@ -176,9 +181,14 @@ IpAddressList Resolver::resolveAllHost (const std::string& host, const IpAddress
 // =========================================================================
 IpAddressList Resolver::resolveAllHost (const std::string& host)
 {
+    Resolver resolver;
+
+    resolver._onSuccess = nullptr;
+    resolver._onFailure = nullptr;
+
     for (auto const& server : nameServers ())
     {
-        IpAddressList addresses = Resolver ().resolveAllHost (host, server);
+        IpAddressList addresses = resolver.resolveAllHost (host, server);
         if (!addresses.empty ())
         {
             return addresses;
@@ -208,7 +218,12 @@ IpAddress Resolver::resolveHost (const std::string& host, int family, const IpAd
 // =========================================================================
 IpAddress Resolver::resolveHost (const std::string& host, int family)
 {
-    for (auto const& address : Resolver ().resolveAllHost (host, family))
+    Resolver resolver;
+
+    resolver._onSuccess = nullptr;
+    resolver._onFailure = nullptr;
+
+    for (auto const& address : resolver.resolveAllHost (host, family))
     {
         return address;
     }
@@ -286,9 +301,14 @@ AliasList Resolver::resolveAllAddress (const IpAddress& address, const IpAddress
 // =========================================================================
 AliasList Resolver::resolveAllAddress (const IpAddress& address)
 {
+    Resolver resolver;
+
+    resolver._onSuccess = nullptr;
+    resolver._onFailure = nullptr;
+
     for (auto const& server : nameServers ())
     {
-        AliasList aliases = Resolver ().resolveAllAddress (address, server);
+        AliasList aliases = resolver.resolveAllAddress (address, server);
         if (!aliases.empty ())
         {
             return aliases;
@@ -368,9 +388,14 @@ ServerList Resolver::resolveAllNameServer (const std::string& host, const IpAddr
 // =========================================================================
 ServerList Resolver::resolveAllNameServer (const std::string& host)
 {
+    Resolver resolver;
+
+    resolver._onSuccess = nullptr;
+    resolver._onFailure = nullptr;
+
     for (auto const& server : nameServers ())
     {
-        ServerList names = Resolver ().resolveAllNameServer (host, server);
+        ServerList names = resolver.resolveAllNameServer (host, server);
         if (!names.empty ())
         {
             return names;
@@ -446,9 +471,14 @@ std::string Resolver::resolveAuthority (const std::string& host, const IpAddress
 // =========================================================================
 std::string Resolver::resolveAuthority (const std::string& host)
 {
+    Resolver resolver;
+
+    resolver._onSuccess = nullptr;
+    resolver._onFailure = nullptr;
+
     for (auto const& server : nameServers ())
     {
-        std::string name = Resolver ().resolveAuthority (host, server);
+        std::string name = resolver.resolveAuthority (host, server);
         if (!name.empty ())
         {
             return name;
@@ -500,9 +530,14 @@ ExchangerList Resolver::resolveAllMailExchanger (const std::string& host, const 
 // =========================================================================
 ExchangerList Resolver::resolveAllMailExchanger (const std::string& host)
 {
+    Resolver resolver;
+
+    resolver._onSuccess = nullptr;
+    resolver._onFailure = nullptr;
+
     for (auto const& server : nameServers ())
     {
-        ExchangerList aliases = Resolver ().resolveAllMailExchanger (host, server);
+        ExchangerList aliases = resolver.resolveAllMailExchanger (host, server);
         if (!aliases.empty ())
         {
             return aliases;
