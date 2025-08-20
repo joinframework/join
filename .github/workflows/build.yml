@@ -3,10 +3,10 @@ name: build
 on:
   workflow_call:
     inputs:
-      scan:
+      coverage:
         type: boolean
         default: false
-      coverage:
+      scan:
         type: boolean
         default: false
       doc:
@@ -15,10 +15,10 @@ on:
 
   workflow_dispatch:
     inputs:
-      scan:
+      coverage:
         type: boolean
         default: false
-      coverage:
+      scan:
         type: boolean
         default: false
       doc:
@@ -113,6 +113,11 @@ jobs:
     needs: build
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
       - name: Download coverage report from GitHub
         if: ${{ inputs.coverage }}
         uses: actions/download-artifact@v4
@@ -120,17 +125,12 @@ jobs:
           name: coverage-report
           path: ./
 
-      - name: check
-        if: ${{ inputs.coverage }}
-        run: |
-          ls -l .
-
       - name: Deploy coverage report to coveralls
         if: ${{ inputs.coverage }}
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
-          files: ./lcov.info
+          files: lcov.info
 
       - name: Deploy coverage report to codecov
         if: ${{ inputs.coverage }}
@@ -138,7 +138,7 @@ jobs:
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           flags: unittests
-          files: ./lcov.info
+          files: lcov.info
           fail_ci_if_error: true
 
       - name: Deploy coverage report to codacy
@@ -146,7 +146,7 @@ jobs:
         uses: codacy/codacy-coverage-reporter-action@v1
         with:
           project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
-          coverage-reports: ./lcov.info
+          coverage-reports: lcov.info
 
       - name: Deploy documentation to GitHub Pages
         if: ${{ inputs.doc }}
