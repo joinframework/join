@@ -2124,8 +2124,8 @@ namespace join
         int setCaPath (const std::string& caPath)
         {
             struct stat st;
-            stat (caPath.c_str (), &st);
-            if (!S_ISDIR (st.st_mode) || SSL_CTX_load_verify_locations (this->_tlsContext.get (), nullptr, caPath.c_str ()) == 0)
+            if (stat (caPath.c_str (), &st) != 0 || !S_ISDIR (st.st_mode) ||
+                SSL_CTX_load_verify_locations (this->_tlsContext.get (), nullptr, caPath.c_str ()) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
@@ -2142,8 +2142,8 @@ namespace join
         int setCaFile (const std::string& caFile)
         {
             struct stat st;
-            stat (caFile.c_str (), &st);
-            if (!S_ISREG (st.st_mode) || SSL_CTX_load_verify_locations (this->_tlsContext.get (), caFile.c_str (), nullptr) == 0)
+            if (stat (caFile.c_str (), &st) != 0 || !S_ISREG (st.st_mode) ||
+                SSL_CTX_load_verify_locations (this->_tlsContext.get (), caFile.c_str (), nullptr) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
