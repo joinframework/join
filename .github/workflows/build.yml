@@ -95,7 +95,9 @@ jobs:
         with:
           path: ./doc/html
 
-  deploy:
+  deploy-coverage:
+    if: ${{ inputs.coverage }}
+
     runs-on: ubuntu-latest
 
     container:
@@ -103,12 +105,6 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write
-      pages: write
-
-    defaults:
-      run:
-        shell: bash
 
     needs: build
 
@@ -119,21 +115,18 @@ jobs:
           ref: ${{ github.sha }}
 
       - name: Download coverage report from GitHub
-        if: ${{ inputs.coverage }}
         uses: actions/download-artifact@v4
         with:
           name: coverage-report
           path: ./
 
       - name: Deploy coverage report to coveralls
-        if: ${{ inputs.coverage }}
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           files: lcov.info
 
       - name: Deploy coverage report to codecov
-        if: ${{ inputs.coverage }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{secrets.CODECOV_TOKEN}}
@@ -142,13 +135,30 @@ jobs:
           fail_ci_if_error: true
 
       - name: Deploy coverage report to codacy
-        if: ${{ inputs.coverage }}
         uses: codacy/codacy-coverage-reporter-action@v1
         with:
           project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
           coverage-reports: lcov.info
 
+  deploy-pages:
+    if: ${{ inputs.doc }}
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: joinframework/join-ci:latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    needs: build
+
+    steps:
       - name: Deploy documentation to GitHub Pages
-        if: ${{ inputs.doc }}
         id: deployment
         uses: actions/deploy-pages@v4
