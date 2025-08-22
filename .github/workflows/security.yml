@@ -15,6 +15,14 @@ on:
 jobs:
   scan:
     uses: ./.github/workflows/build.yml
+
     secrets: inherit
+
     with:
       scan: true
+
+    permissions:
+      contents: read
+      security-events: write
+      pages: write
+      id-token: write
