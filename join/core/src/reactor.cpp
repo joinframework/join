@@ -80,7 +80,7 @@ int Reactor::addHandler (EventHandler* handler)
         return -1;
     }
 
-    struct epoll_event ev;
+    struct epoll_event ev {};
     ev.events = EPOLLIN | EPOLLRDHUP;
     ev.data.ptr = handler;
 

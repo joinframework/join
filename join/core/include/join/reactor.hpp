@@ -165,10 +165,10 @@ namespace join
         /// thread id.
         std::thread::id _threadId;
 
-        /// epoll protection mutex.
+        /// protection mutex.
         Mutex _mutex;
 
-        /// epoll thread status event.
+        /// thread status event.
         Condition _threadStatus;
 
         /// status.
