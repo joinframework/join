@@ -24,3 +24,5 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      pages: write
+      id-token: write
