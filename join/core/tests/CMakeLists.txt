@@ -37,3 +37,7 @@ gtest_discover_tests(reactor.gtest)
 add_executable(zstream.gtest zstream_test.cpp)
 target_link_libraries(zstream.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(zstream.gtest)
+
+add_executable(timer.gtest timer_test.cpp)
+target_link_libraries(timer.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(timer.gtest)

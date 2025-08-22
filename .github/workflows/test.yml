@@ -12,6 +12,11 @@ on:
 jobs:
   coverage:
     uses: ./.github/workflows/build.yml
+
     secrets: inherit
+
     with:
       coverage: true
+
+    permissions:
+      contents: read

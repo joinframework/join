@@ -58,7 +58,7 @@ namespace join
          */
         StringView (const char * in)
         : _buf (in),
-          _len (strlen (in))
+          _len (std::char_traits <char>::length (in))
         {
         }
 
