@@ -29,6 +29,7 @@
 #include <join/condition.hpp>
 
 // C++.
+#include <thread>
 #include <vector>
 
 // C.
@@ -161,11 +162,14 @@ namespace join
         /// epoll descriptor.
         int _epoll = -1;
 
-        /// epoll protection mutex.
+        /// thread id.
+        std::thread::id _threadId;
+
+        /// protection mutex.
         Mutex _mutex;
 
-        /// epoll end event.
-        Condition _end;
+        /// thread status event.
+        Condition _threadStatus;
 
         /// status.
         bool _running = false;

@@ -59,7 +59,7 @@ Reactor::~Reactor ()
     {
         uint64_t value = 1;
         [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
-        _end.wait (lock, [this] () { return !_running; });
+        _threadStatus.wait (lock, [this] () { return !_running; });
     }
 
     ::close (_eventfd);
@@ -80,7 +80,7 @@ int Reactor::addHandler (EventHandler* handler)
         return -1;
     }
 
-    struct epoll_event ev;
+    struct epoll_event ev {};
     ev.events = EPOLLIN | EPOLLRDHUP;
     ev.data.ptr = handler;
 
@@ -92,8 +92,14 @@ int Reactor::addHandler (EventHandler* handler)
 
     if (++_num == 1)
     {
-        std::thread (std::bind (&Reactor::dispatch, this)).detach ();
-        _running = true;
+        std::thread th (std::bind (&Reactor::dispatch, this));
+        _threadId = th.get_id ();
+        th.detach ();
+    }
+
+    if (std::this_thread::get_id () != _threadId)
+    {
+        _threadStatus.wait (lock, [this] () { return _running; });
     }
 
     return 0;
@@ -123,6 +129,11 @@ int Reactor::delHandler (EventHandler* handler)
     {
         uint64_t value = 1;
         [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
+
+        if (std::this_thread::get_id () != _threadId)
+        {
+            _threadStatus.wait (lock, [this] () { return !_running; });
+        }
     }
 
     return 0;
@@ -145,6 +156,9 @@ Reactor* Reactor::instance ()
 void Reactor::dispatch ()
 {
     _mutex.lock ();
+
+    _running = true;
+    _threadStatus.broadcast ();
 
     std::vector <struct epoll_event> ev (32);
 
@@ -194,7 +208,7 @@ void Reactor::dispatch ()
     }
 
     _running = false;
-    _end.signal ();
+    _threadStatus.broadcast ();
 
     _mutex.unlock ();
 }
