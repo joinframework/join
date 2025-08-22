@@ -4,11 +4,11 @@ on:
   push:
     branches: [ main ]
 
+    workflow_dispatch:
+
 jobs:
   generate:
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      scan: false
-      coverage: false
       doc: true
