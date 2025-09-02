@@ -36,17 +36,21 @@
 
 namespace join
 {
+    class RealTime;
+    class Steady;
+
     /**
-     * @brief timer class.
+     * @brief base timer class.
      */
-    class Timer : protected EventHandler
+    template <class ClockPolicy>
+    class BasicTimer : protected EventHandler
     {
     public:
         /**
          * @brief create instance.
          */
-        Timer ()
-        : _handle (timerfd_create (CLOCK_MONOTONIC, TFD_NONBLOCK))
+        BasicTimer ()
+        : _handle (timerfd_create (_policy.type (), TFD_NONBLOCK))
         {
             Reactor::instance ()->addHandler (this);
         }
@@ -55,31 +59,31 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        Timer (const Timer& other) = delete;
+        BasicTimer (const BasicTimer& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        Timer& operator= (const Timer& other) = delete;
+        BasicTimer& operator= (const BasicTimer& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        Timer (Timer&& other) noexcept
-        : _handle (other._handle)
-        , _callback (std::move (other._callback))
-        , _oneShot (other._oneShot)
+        BasicTimer (BasicTimer&& other) noexcept
+        : _callback (std::move (other._callback))
         , _ns (other._ns)
+        , _oneShot (other._oneShot)
+        , _handle (other._handle)
         {
             Reactor::instance ()->delHandler (&other);
 
-            other._handle = -1;
             other._callback = nullptr;
+            other._ns = std::chrono::nanoseconds::zero ();
             other._oneShot = true;
-            other._ns = 0;
+            other._handle = -1;
 
             Reactor::instance ()->addHandler (this);
         }
@@ -89,23 +93,26 @@ namespace join
          * @param other other object to assign.
          * @return assigned object.
          */
-        Timer& operator= (Timer&& other) noexcept
+        BasicTimer& operator= (BasicTimer&& other) noexcept
         {
             Reactor::instance ()->delHandler (this);
             cancel ();
-            close (_handle);
+            if (_handle != -1)
+            {
+                close (_handle);
+            }
 
-            _handle = other._handle;
             _callback = std::move (other._callback);
-            _oneShot = other._oneShot;
             _ns = other._ns;
+            _oneShot = other._oneShot;
+            _handle = other._handle;
 
             Reactor::instance ()->delHandler (&other);
 
-            other._handle = -1;
             other._callback = nullptr;
+            other._ns = std::chrono::nanoseconds::zero ();
             other._oneShot = true;
-            other._ns = 0;
+            other._handle = -1;
 
             Reactor::instance ()->addHandler (this);
 
@@ -115,11 +122,14 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~Timer ()
+        virtual ~BasicTimer ()
         {
             Reactor::instance ()->delHandler (this);
             cancel ();
-            close (_handle);
+            if (_handle != -1)
+            {
+                close (_handle);
+            }
         }
 
         /**
@@ -133,12 +143,34 @@ namespace join
             auto ns = std::chrono::duration_cast <std::chrono::nanoseconds> (duration);
             _callback = std::forward <Func> (callback);
             _oneShot = true;
-            _ns = 0;
+            _ns = std::chrono::nanoseconds::zero ();
 
-            struct itimerspec ts {};
-            ts.it_value.tv_sec = ns.count () / NS_PER_SEC;
-            ts.it_value.tv_nsec = ns.count () % NS_PER_SEC;
+            auto ts = toTimerSpec (ns);
             timerfd_settime (_handle, 0, &ts, nullptr);
+        }
+
+        /**
+         * @brief arm the timer as a one-shot timer with absolute time.
+         * @param timePoint absolute time when timer should expire.
+         * @param callback function to call when timer expires.
+         */
+        template <class Clock, class Duration, typename Func>
+        void setOneShot (std::chrono::time_point <Clock, Duration> timePoint, Func&& callback)
+        {
+            static_assert(
+                (std::is_same <ClockPolicy, RealTime>::value && std::is_same <Clock, std::chrono::system_clock>::value) ||
+                (std::is_same <ClockPolicy, Steady>::value && std::is_same <Clock, std::chrono::steady_clock>::value),
+                "Clock type mismatch timer policy"
+            );
+
+            auto elapsed = timePoint.time_since_epoch ();
+            auto ns = std::chrono::duration_cast <std::chrono::nanoseconds> (elapsed);
+            _callback = std::forward <Func> (callback);
+            _oneShot = true;
+            _ns = std::chrono::nanoseconds::zero ();
+
+            auto ts = toTimerSpec (ns);
+            timerfd_settime (_handle, TFD_TIMER_ABSTIME, &ts, nullptr);
         }
 
         /**
@@ -152,13 +184,9 @@ namespace join
             auto ns = std::chrono::duration_cast <std::chrono::nanoseconds> (duration);
             _callback = std::forward <Func> (callback);
             _oneShot = false;
-            _ns = ns.count ();
+            _ns = ns;
 
-            struct itimerspec ts {};
-            ts.it_value.tv_sec = ns.count () / NS_PER_SEC;
-            ts.it_value.tv_nsec = ns.count () % NS_PER_SEC;
-            ts.it_interval.tv_sec = ns.count () / NS_PER_SEC;
-            ts.it_interval.tv_nsec = ns.count () % NS_PER_SEC;
+            auto ts = toTimerSpec (ns, true);
             timerfd_settime (_handle, 0, &ts, nullptr);
         }
 
@@ -169,26 +197,17 @@ namespace join
         {
             _callback = nullptr;
             _oneShot = true;
-            _ns = 0;
+            _ns = std::chrono::nanoseconds::zero ();
 
             struct itimerspec ts {};
             timerfd_settime (_handle, 0, &ts, nullptr);
         }
 
         /**
-         * @brief get the interval of the running periodic timer.
-         * @return interval duration in nanoseconds, zero if one-shot or inactive.
-         */
-        std::chrono::nanoseconds interval () const
-        {
-            return std::chrono::nanoseconds (_ns);
-        }
-
-        /**
          * @brief check if timer is running.
          * @return true if timer is active.
          */
-        bool isActive () const
+        bool active () const
         {
             struct itimerspec ts {};
             timerfd_gettime (_handle, &ts);
@@ -198,24 +217,44 @@ namespace join
         }
 
         /**
+         * @brief get the remaining time until expiration.
+         * @return remaining duration.
+         */
+        std::chrono::nanoseconds remaining () const
+        {
+            struct itimerspec ts {};
+            timerfd_gettime (_handle, &ts);
+            return std::chrono::seconds (ts.it_value.tv_sec) + std::chrono::nanoseconds (ts.it_value.tv_nsec);
+        }
+
+        /**
+         * @brief get the interval of the running periodic timer.
+         * @return interval duration in nanoseconds, zero if one-shot or inactive.
+         */
+        std::chrono::nanoseconds interval () const noexcept
+        {
+            return _ns;
+        }
+
+        /**
          * @brief check if timer is a one-shot timer.
          * @return true if timer is a one-shot timer.
          */
-        bool isOneShot () const
+        bool oneShot () const noexcept
         {
             return _oneShot;
         }
 
-protected:
         /**
-         * @brief get native handle.
-         * @return native handle.
+         * @brief get the timer type.
+         * @return the timer type.
          */
-        virtual int handle () const noexcept override
+        int type () const noexcept
         {
-            return _handle;
+            return _policy.type ();
         }
 
+    protected:
         /**
          * @brief method called when data are ready to be read on handle.
          */
@@ -223,7 +262,6 @@ protected:
         {
             uint64_t expirations;
             ssize_t result = read (_handle, &expirations, sizeof (expirations));
-
             if (result == sizeof (expirations) && _callback)
             {
                 for (uint64_t i = 0; i < expirations; ++i)
@@ -233,20 +271,97 @@ protected:
             }
         }
 
+        /**
+         * @brief convert nsec to itimerspec.
+         * @param ns value to convert.
+         * @param periodic specify if periodic.
+         * @return itimerspec.
+         */
+        static itimerspec toTimerSpec (std::chrono::nanoseconds ns, bool periodic = false) noexcept
+        {
+            itimerspec ts {};
+            ts.it_value.tv_sec = ns.count () / NS_PER_SEC;
+            ts.it_value.tv_nsec = ns.count () % NS_PER_SEC;
+            if (periodic)
+            {
+                ts.it_interval.tv_sec = ts.it_value.tv_sec;
+                ts.it_interval.tv_nsec = ts.it_value.tv_nsec;
+            }
+            return ts;
+        }
+
+        /**
+         * @brief get native handle.
+         * @return native handle.
+         */
+        virtual int handle () const noexcept override
+        {
+            return _handle;
+        }
+
     private:
         /// ns per sec.
         static constexpr uint64_t NS_PER_SEC = 1000000000ULL;
 
-        /// timer handle.
-        int _handle = -1;
+        /// clock policy.
+        ClockPolicy _policy;
 
         /// callback function
         std::function <void ()> _callback;
 
+        /// interval.
+        std::chrono::nanoseconds _ns {};
+
         /// timer type
         bool _oneShot = true;
 
-        /// interval.
-        uint64_t _ns = 0;
+        /// timer handle.
+        int _handle = -1;
+    };
+
+    /**
+     * @brief system clock policy class.
+     */
+    class RealTime
+    {
+    public:
+        using Timer = BasicTimer <RealTime>;
+
+        /**
+         * @brief construct the timer policy instance by default.
+         */
+        constexpr RealTime () noexcept = default;
+
+        /**
+         * @brief get timer type.
+         * @return the timer type.
+         */
+        constexpr int type () const noexcept
+        {
+            return CLOCK_REALTIME;
+        }
+    };
+
+    /**
+     * @brief monotonic clock policy class.
+     */
+    class Steady
+    {
+    public:
+        using Timer = BasicTimer <Steady>;
+
+        /**
+         * @brief construct the timer policy instance by default.
+         */
+        constexpr Steady () noexcept = default;
+
+        /**
+         * @brief get timer type.
+         * @return the timer type.
+         */
+        constexpr int type () const noexcept
+        {
+            return CLOCK_MONOTONIC;
+        }
     };
 }

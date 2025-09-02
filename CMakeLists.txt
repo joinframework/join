@@ -19,10 +19,23 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-strong -Wformat -Wformat-security -Wall -Wextra -Werror -Wno-address-of-packed-member" CACHE STRING "CXXFLAGS" FORCE)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -O0 -g" CACHE STRING "CXXFLAGS for debug" FORCE)
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG -O2 -D_FORTIFY_SOURCE=2" CACHE STRING "CXXFLAGS for release" FORCE)
-set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -Wl,--as-needed -Wl,-z,relro,-z,now" CACHE STRING "LDFLAGS")
+add_compile_options(
+    -fstack-protector-strong
+    -Wformat
+    -Wformat-security
+    -Wall
+    -Wextra
+    -Werror
+    -Wno-address-of-packed-member
+)
+
+add_link_options(
+    -Wl,--as-needed
+    -Wl,-z,relro,-z,now
+)
+
+set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -D_FORTIFY_SOURCE=2")
 
 option(BUILD_SHARED_LIBS "Build as shared libraries." ON)
 option(JOIN_ENABLE_TESTS "Enable tests." OFF)
@@ -37,8 +50,8 @@ if(JOIN_ENABLE_COVERAGE)
         message(FATAL_ERROR "Code coverage results with a non-Debug build may be misleading")
     endif()
     if(CMAKE_COMPILER_IS_GNUCXX)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage" CACHE STRING "CXXFLAGS" FORCE)
-        set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} --coverage" CACHE STRING "LDFLAGS")
+        add_compile_options(--coverage)
+        add_link_options(--coverage)
     else()
         message(FATAL_ERROR "Code coverage requires GCC")
     endif()
