@@ -37,67 +37,74 @@
 
 using namespace std::chrono_literals;
 
-using join::Timer;
+using join::Steady;
 
 /**
  * @brief Test move.
  */
-TEST (Timer, move)
+TEST (SteadyTimer, move)
 {
-    Timer timer1, timer2;
+    Steady::Timer timer1, timer2;
     int count = 0;
 
-    EXPECT_TRUE (timer1.isOneShot ());
-    EXPECT_TRUE (timer2.isOneShot ());
+    EXPECT_TRUE (timer1.oneShot ());
+    EXPECT_TRUE (timer2.oneShot ());
     timer1.setInterval (1ms, [&] { ++count; });
-    EXPECT_FALSE (timer1.isOneShot ());
-    EXPECT_TRUE (timer2.isOneShot ());
+    EXPECT_FALSE (timer1.oneShot ());
+    EXPECT_TRUE (timer2.oneShot ());
     timer2 = std::move (timer1);
-    EXPECT_TRUE (timer1.isOneShot ());
-    EXPECT_FALSE (timer2.isOneShot ());
-    Timer Timer3 (std::move (timer2));
-    EXPECT_TRUE (timer2.isOneShot ());
-    EXPECT_FALSE (Timer3.isOneShot ());
+    EXPECT_TRUE (timer1.oneShot ());
+    EXPECT_FALSE (timer2.oneShot ());
+    Steady::Timer Timer3 (std::move (timer2));
+    EXPECT_TRUE (timer2.oneShot ());
+    EXPECT_FALSE (Timer3.oneShot ());
 }
 
 /**
  * @brief Test setOneShot.
  */
-TEST (Timer, setOneShot)
+TEST (SteadyTimer, setOneShot)
 {
-    Timer timer;
+    Steady::Timer timer;
     int count = 0;
 
     timer.setOneShot (1ms, [&] { ++count; });
     std::this_thread::sleep_for (3ms);
     EXPECT_EQ (count, 1);
-    EXPECT_FALSE (timer.isActive ());
-    EXPECT_TRUE (timer.isOneShot ());
+    EXPECT_FALSE (timer.active ());
+    EXPECT_TRUE (timer.oneShot ());
+    EXPECT_EQ (timer.interval (), 0ms);
+
+    timer.setOneShot (std::chrono::steady_clock::now () + 1ms, [&] { ++count; });
+    std::this_thread::sleep_for (3ms);
+    EXPECT_EQ (count, 2);
+    EXPECT_FALSE (timer.active ());
+    EXPECT_TRUE (timer.oneShot ());
     EXPECT_EQ (timer.interval (), 0ms);
 }
 
 /**
  * @brief Test setInterval.
  */
-TEST (Timer, setInterval)
+TEST (SteadyTimer, setInterval)
 {
-    Timer timer;
+    Steady::Timer timer;
     int count = 0;
 
     timer.setInterval (1ms, [&] { ++count; });
     std::this_thread::sleep_for (3ms);
     EXPECT_GT (count, 1);
-    EXPECT_TRUE (timer.isActive ());
-    EXPECT_FALSE (timer.isOneShot ());
+    EXPECT_TRUE (timer.active ());
+    EXPECT_FALSE (timer.oneShot ());
     EXPECT_EQ (timer.interval (), 1ms);
 }
 
 /**
  * @brief Test cancel.
  */
-TEST (Timer, cancel)
+TEST (SteadyTimer, cancel)
 {
-    Timer timer;
+    Steady::Timer timer;
     int count1 = 0, count2 = 0;
 
     timer.setInterval (1ms, [&] { count1++; });
@@ -110,11 +117,54 @@ TEST (Timer, cancel)
 }
 
 /**
+ * @brief Test active.
+ */
+TEST (SteadyTimer, active)
+{
+    Steady::Timer timer;
+    int count = 0;
+
+    ASSERT_FALSE (timer.active ());
+    timer.setInterval (1ms, [&] { ++count; });
+    ASSERT_TRUE (timer.active ());
+    timer.cancel ();
+    ASSERT_FALSE (timer.active ());
+}
+
+/**
+ * @brief Test remaining.
+ */
+TEST(SteadyTimer, remaining)
+{
+    Steady::Timer timer;
+
+    timer.setOneShot (5ms, [] {});
+    auto t1 = timer.remaining ();
+    std::this_thread::sleep_for (3ms);
+    auto t2 = timer.remaining ();
+    EXPECT_GT (t2.count (), 0);
+    EXPECT_LT (t2.count (), t1.count ());
+    std::this_thread::sleep_for (3ms);
+    auto t3 = timer.remaining ();
+    EXPECT_EQ (t3.count (), 0); // remaining time is zero
+
+    timer.setInterval (5ms, [] {});
+    t1 = timer.remaining ();
+    std::this_thread::sleep_for (3ms);
+    t2 = timer.remaining ();
+    EXPECT_GT (t2.count (), 0);
+    EXPECT_LT (t2.count (), t1.count ());
+    std::this_thread::sleep_for (3ms);
+    t3 = timer.remaining ();
+    EXPECT_GT (t3.count (), 0); // next interval has started
+}
+
+/**
  * @brief Test interval.
  */
-TEST (Timer, interval)
+TEST (SteadyTimer, interval)
 {
-    Timer timer;
+    Steady::Timer timer;
     int count = 0;
 
     ASSERT_EQ (timer.interval (), 0ms);
@@ -125,33 +175,28 @@ TEST (Timer, interval)
 }
 
 /**
- * @brief Test isActive.
+ * @brief Test oneShot.
  */
-TEST (Timer, isActive)
+TEST (SteadyTimer, oneShot)
 {
-    Timer timer;
+    Steady::Timer timer;
     int count = 0;
 
-    ASSERT_FALSE (timer.isActive ());
+    ASSERT_TRUE (timer.oneShot ());
     timer.setInterval (1ms, [&] { ++count; });
-    ASSERT_TRUE (timer.isActive ());
+    ASSERT_FALSE (timer.oneShot ());
     timer.cancel ();
-    ASSERT_FALSE (timer.isActive ());
+    ASSERT_TRUE (timer.oneShot ());
 }
 
 /**
- * @brief Test isOneShot.
+ * @brief Test type.
  */
-TEST (Timer, isOneShot)
+TEST (SteadyTimer, type)
 {
-    Timer timer;
-    int count = 0;
+    Steady::Timer timer;
 
-    ASSERT_TRUE (timer.isOneShot ());
-    timer.setInterval (1ms, [&] { ++count; });
-    ASSERT_FALSE (timer.isOneShot ());
-    timer.cancel ();
-    ASSERT_TRUE (timer.isOneShot ());
+    ASSERT_EQ (timer.type (), CLOCK_MONOTONIC);
 }
 
 /**
