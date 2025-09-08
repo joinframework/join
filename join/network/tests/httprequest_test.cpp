@@ -389,11 +389,19 @@ TEST (HttpRequest, writeHeaders)
 TEST (HttpRequest, readHeaders)
 {
     std::stringstream ss;
+    ss << "GET /path?val HTTP/1.0\r\n";
+    ss << "\r\n";
+
+    HttpRequest request;
+    ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
+    ASSERT_TRUE (request.parameter ("val").empty ());
+
+    ss.clear ();
+    ss.str ("");
     ss << "GET /path?val1=1&val2=2 HTTP/1.0\r\n";
     ss << "Connection: keep-alive\r\n";
     ss << "\r\n";
 
-    HttpRequest request;
     ASSERT_EQ (request.readHeaders (ss), 0) << join::lastError.message ();
     ASSERT_EQ (request.method (), HttpMethod::Get);
     ASSERT_EQ (request.path (), "/path");
