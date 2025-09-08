@@ -22,6 +22,9 @@
  * SOFTWARE.
  */
 
+#ifndef __JOIN_TIMER_HPP__
+#define __JOIN_TIMER_HPP__
+
  // libjoin.
 #include <join/reactor.hpp>
 
@@ -365,3 +368,5 @@ namespace join
         }
     };
 }
+
+#endif
