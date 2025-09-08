@@ -859,11 +859,15 @@ void HttpRequest::store (const std::string &query)
     {
         size_t equalPos = query.find ("=", pos);
         if (equalPos == std::string::npos)
-            return;
+        {
+            break;
+        }
 
         size_t sepPos = query.find ("&", equalPos + 1);
         if (sepPos == std::string::npos)
+        {
             sepPos = query.length ();
+        }
 
         std::string name  = query.substr (pos, equalPos - pos);
         decodeUrl (name);
@@ -874,7 +878,9 @@ void HttpRequest::store (const std::string &query)
         parameter (name, value);
 
         if (sepPos == query.length ())
-            return;
+        {
+            break;
+        }
 
         pos = sepPos + 1;
     }

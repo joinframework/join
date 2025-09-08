@@ -34,8 +34,8 @@ add_link_options(
     -Wl,-z,relro,-z,now
 )
 
-set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -D_FORTIFY_SOURCE=2")
+set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG -O0 -g")
+set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -D_FORTIFY_SOURCE=2 -O3")
 
 option(BUILD_SHARED_LIBS "Build as shared libraries." ON)
 option(JOIN_ENABLE_TESTS "Enable tests." OFF)
