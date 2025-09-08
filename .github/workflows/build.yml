@@ -73,13 +73,21 @@ jobs:
         if: ${{ inputs.coverage }}
         run: |
           lcov --directory build --capture --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
+          genhtml lcov.info --prefix $GITHUB_WORKSPACE --output-directory coverage
+
+      - name: Upload coverage data to GitHub
+        if: ${{ inputs.coverage }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data
+          path: lcov.info
 
       - name: Upload coverage report to GitHub
         if: ${{ inputs.coverage }}
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: lcov.info
+          path: coverage/
 
       - name: Run doxygen
         if: ${{ inputs.doc }}
@@ -113,10 +121,10 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - name: Download coverage report from GitHub
+      - name: Download coverage data from GitHub
         uses: actions/download-artifact@v4
         with:
-          name: coverage-report
+          name: coverage-data
           path: ./
 
       - name: Deploy coverage report to coveralls
