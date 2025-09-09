@@ -37,14 +37,14 @@
 
 using namespace std::chrono_literals;
 
-using join::Steady;
+using join::Monotonic;
 
 /**
  * @brief Test move.
  */
-TEST (SteadyTimer, move)
+TEST (MonotonicTimer, move)
 {
-    Steady::Timer timer1, timer2;
+    Monotonic::Timer timer1, timer2;
     int count = 0;
 
     EXPECT_TRUE (timer1.oneShot ());
@@ -55,7 +55,7 @@ TEST (SteadyTimer, move)
     timer2 = std::move (timer1);
     EXPECT_TRUE (timer1.oneShot ());
     EXPECT_FALSE (timer2.oneShot ());
-    Steady::Timer Timer3 (std::move (timer2));
+    Monotonic::Timer Timer3 (std::move (timer2));
     EXPECT_TRUE (timer2.oneShot ());
     EXPECT_FALSE (Timer3.oneShot ());
 }
@@ -63,9 +63,9 @@ TEST (SteadyTimer, move)
 /**
  * @brief Test setOneShot.
  */
-TEST (SteadyTimer, setOneShot)
+TEST (MonotonicTimer, setOneShot)
 {
-    Steady::Timer timer;
+    Monotonic::Timer timer;
     int count = 0;
 
     timer.setOneShot (1ms, [&] { ++count; });
@@ -86,9 +86,9 @@ TEST (SteadyTimer, setOneShot)
 /**
  * @brief Test setInterval.
  */
-TEST (SteadyTimer, setInterval)
+TEST (MonotonicTimer, setInterval)
 {
-    Steady::Timer timer;
+    Monotonic::Timer timer;
     int count = 0;
 
     timer.setInterval (1ms, [&] { ++count; });
@@ -102,9 +102,9 @@ TEST (SteadyTimer, setInterval)
 /**
  * @brief Test cancel.
  */
-TEST (SteadyTimer, cancel)
+TEST (MonotonicTimer, cancel)
 {
-    Steady::Timer timer;
+    Monotonic::Timer timer;
     int count1 = 0, count2 = 0;
 
     timer.setInterval (1ms, [&] { count1++; });
@@ -119,9 +119,9 @@ TEST (SteadyTimer, cancel)
 /**
  * @brief Test active.
  */
-TEST (SteadyTimer, active)
+TEST (MonotonicTimer, active)
 {
-    Steady::Timer timer;
+    Monotonic::Timer timer;
     int count = 0;
 
     ASSERT_FALSE (timer.active ());
@@ -134,9 +134,9 @@ TEST (SteadyTimer, active)
 /**
  * @brief Test remaining.
  */
-TEST(SteadyTimer, remaining)
+TEST(MonotonicTimer, remaining)
 {
-    Steady::Timer timer;
+    Monotonic::Timer timer;
 
     timer.setOneShot (5ms, [] {});
     auto t1 = timer.remaining ();
@@ -162,9 +162,9 @@ TEST(SteadyTimer, remaining)
 /**
  * @brief Test interval.
  */
-TEST (SteadyTimer, interval)
+TEST (MonotonicTimer, interval)
 {
-    Steady::Timer timer;
+    Monotonic::Timer timer;
     int count = 0;
 
     ASSERT_EQ (timer.interval (), 0ms);
@@ -177,9 +177,9 @@ TEST (SteadyTimer, interval)
 /**
  * @brief Test oneShot.
  */
-TEST (SteadyTimer, oneShot)
+TEST (MonotonicTimer, oneShot)
 {
-    Steady::Timer timer;
+    Monotonic::Timer timer;
     int count = 0;
 
     ASSERT_TRUE (timer.oneShot ());
@@ -192,9 +192,9 @@ TEST (SteadyTimer, oneShot)
 /**
  * @brief Test type.
  */
-TEST (SteadyTimer, type)
+TEST (MonotonicTimer, type)
 {
-    Steady::Timer timer;
+    Monotonic::Timer timer;
 
     ASSERT_EQ (timer.type (), CLOCK_MONOTONIC);
 }
