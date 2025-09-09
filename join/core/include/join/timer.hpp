@@ -40,7 +40,7 @@
 namespace join
 {
     class RealTime;
-    class Steady;
+    class Monotonic;
 
     /**
      * @brief base timer class.
@@ -161,8 +161,8 @@ namespace join
         void setOneShot (std::chrono::time_point <Clock, Duration> timePoint, Func&& callback)
         {
             static_assert(
-                (std::is_same <ClockPolicy, RealTime>::value && std::is_same <Clock, std::chrono::system_clock>::value) ||
-                (std::is_same <ClockPolicy, Steady>::value && std::is_same <Clock, std::chrono::steady_clock>::value),
+                (std::is_same <ClockPolicy, RealTime>::value  && std::is_same <Clock, std::chrono::system_clock>::value) ||
+                (std::is_same <ClockPolicy, Monotonic>::value && std::is_same <Clock, std::chrono::steady_clock>::value),
                 "Clock type mismatch timer policy"
             );
 
@@ -283,11 +283,11 @@ namespace join
         static itimerspec toTimerSpec (std::chrono::nanoseconds ns, bool periodic = false) noexcept
         {
             itimerspec ts {};
-            ts.it_value.tv_sec = ns.count () / NS_PER_SEC;
+            ts.it_value.tv_sec  = ns.count () / NS_PER_SEC;
             ts.it_value.tv_nsec = ns.count () % NS_PER_SEC;
             if (periodic)
             {
-                ts.it_interval.tv_sec = ts.it_value.tv_sec;
+                ts.it_interval.tv_sec  = ts.it_value.tv_sec;
                 ts.it_interval.tv_nsec = ts.it_value.tv_nsec;
             }
             return ts;
@@ -323,7 +323,7 @@ namespace join
     };
 
     /**
-     * @brief system clock policy class.
+     * @brief real time clock policy class.
      */
     class RealTime
     {
@@ -348,15 +348,15 @@ namespace join
     /**
      * @brief monotonic clock policy class.
      */
-    class Steady
+    class Monotonic
     {
     public:
-        using Timer = BasicTimer <Steady>;
+        using Timer = BasicTimer <Monotonic>;
 
         /**
          * @brief construct the timer policy instance by default.
          */
-        constexpr Steady () noexcept = default;
+        constexpr Monotonic () noexcept = default;
 
         /**
          * @brief get timer type.
