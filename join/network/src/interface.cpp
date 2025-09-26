@@ -172,15 +172,13 @@ const Interface::AddressList& Interface::addressList () const noexcept
 //   CLASS     : Interface
 //   METHOD    : hasAddress
 // =========================================================================
-bool Interface::hasAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast)
+bool Interface::hasAddress (const IpAddress& ipAddress)
 {
     ScopedLock lock (_mutex);
 
     for (const auto& addr : _addresses)
     {
-        if (std::get <0> (addr) == ipAddress &&
-            std::get <1> (addr) == prefix &&
-            std::get <2> (addr) == broadcast)
+        if (std::get <0> (addr) == IpAddress (ipAddress.addr (), ipAddress.length (), _index))
         {
             return true;
         }
@@ -191,20 +189,11 @@ bool Interface::hasAddress (const IpAddress& ipAddress, uint32_t prefix, const I
 
 // =========================================================================
 //   CLASS     : Interface
-//   METHOD    : hasAddress
-// =========================================================================
-bool Interface::hasAddress (const Address& address)
-{
-    return hasAddress (std::get <0> (address), std::get <1> (address), std::get <2> (address));
-}
-
-// =========================================================================
-//   CLASS     : Interface
 //   METHOD    : addRoute
 // =========================================================================
-int Interface::addRoute (const IpAddress& dest, const IpAddress& gateway, uint32_t prefix, uint32_t metric, bool sync)
+int Interface::addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync)
 {
-    return _manager->addRoute (_index, dest, gateway, prefix, metric, sync);
+    return _manager->addRoute (_index, dest, prefix, gateway, metric, sync);
 }
 
 // =========================================================================
@@ -220,9 +209,9 @@ int Interface::addRoute (const Route& route, bool sync)
 //   CLASS     : Interface
 //   METHOD    : removeRoute
 // =========================================================================
-int Interface::removeRoute (const IpAddress& dest, const IpAddress& gateway, uint32_t prefix, bool sync)
+int Interface::removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync)
 {
-    return _manager->removeRoute (_index, dest, gateway, prefix, sync);
+    return _manager->removeRoute (_index, dest, prefix, gateway, metric, sync);
 }
 
 // =========================================================================
@@ -231,7 +220,7 @@ int Interface::removeRoute (const IpAddress& dest, const IpAddress& gateway, uin
 // =========================================================================
 int Interface::removeRoute (const Route& route, bool sync)
 {
-    return removeRoute (std::get <0> (route), std::get <1> (route), std::get <2> (route), sync);
+    return removeRoute (std::get <0> (route), std::get <1> (route), std::get <2> (route), std::get <3> (route), sync);
 }
 
 // =========================================================================
@@ -247,15 +236,15 @@ const Interface::RouteList& Interface::routeList () const noexcept
 //   CLASS     : Interface
 //   METHOD    : hasRoute
 // =========================================================================
-bool Interface::hasRoute (const IpAddress& dest, const IpAddress& gateway, uint32_t prefix, uint32_t metric)
+bool Interface::hasRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric)
 {
     ScopedLock lock (_mutex);
 
     for (const auto& rt : _routes)
     {
         if (std::get <0> (rt) == dest &&
-            std::get <1> (rt) == gateway &&
-            std::get <2> (rt) == prefix &&
+            std::get <1> (rt) == prefix &&
+            std::get <2> (rt) == gateway &&
             std::get <3> (rt) == metric)
         {
             return true;

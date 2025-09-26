@@ -185,17 +185,9 @@ TEST_F (InterfaceTest, addAddress)
     ASSERT_NE (ve, nullptr);
 
     ASSERT_EQ (ve->addAddress ({"2001:db8:abcd:12::1", 64, {}}, true), 0) << lastError.message ();
-}
-
-/**
- * @brief test the removeAddress method.
- */
-TEST_F (InterfaceTest, removeAddress)
-{
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
-    ASSERT_NE (ve, nullptr);
-
+    ASSERT_TRUE (ve->hasAddress ("2001:db8:abcd:12::1"));
     ASSERT_EQ (ve->removeAddress ({"2001:db8:abcd:12::1", 64, {}}, true), 0) << lastError.message ();
+    ASSERT_FALSE (ve->hasAddress ("2001:db8:abcd:12::1"));
 }
 
 /**
@@ -217,18 +209,6 @@ TEST_F (InterfaceTest, addressList)
 }
 
 /**
- * @brief test the hasAddress method.
- */
-TEST_F (InterfaceTest, hasAddress)
-{
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
-    ASSERT_NE (ve, nullptr);
-
-    ASSERT_TRUE (ve->hasAddress ({"192.168.100.1", 24, "192.168.100.255"}));
-    ASSERT_FALSE (ve->hasAddress ({"2001:db8:abcd:12::1", 64, {}}));
-}
-
-/**
  * @brief test the addRoute method.
  */
 TEST_F (InterfaceTest, addRoute)
@@ -236,18 +216,10 @@ TEST_F (InterfaceTest, addRoute)
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
 
-    ASSERT_EQ (ve->addRoute ({"192.168.200.0", "192.168.100.254", 24, 0}, true), 0) << lastError.message();
-}
-
-/**
- * @brief test the removeRoute method.
- */
-TEST_F (InterfaceTest, removeRoute)
-{
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
-    ASSERT_NE (ve, nullptr);
-
-    ASSERT_EQ (ve->removeRoute ({"192.168.200.0", "192.168.100.254", 24, 0}, true), 0) << lastError.message();
+    ASSERT_EQ (ve->addRoute ({"192.168.200.0", 24, "192.168.100.254", 0}, true), 0) << lastError.message();
+    ASSERT_TRUE (ve->hasRoute ({"192.168.200.0", 24, "192.168.100.254", 0}));
+    ASSERT_EQ (ve->removeRoute ({"192.168.200.0", 24, "192.168.100.254", 0}, true), 0) << lastError.message();
+    ASSERT_FALSE (ve->hasRoute ({"192.168.200.0", 24, "192.168.100.254", 0}));
 }
 
 /**
@@ -266,18 +238,6 @@ TEST_F (InterfaceTest, routeList)
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->routeList ().empty ());
-}
-
-/**
- * @brief test the hasRoute method.
- */
-TEST_F (InterfaceTest, hasRoute)
-{
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
-    ASSERT_NE (ve, nullptr);
-
-    ASSERT_TRUE (ve->hasRoute ({"192.168.100.0", "0.0.0.0", 24, 0}));
-    ASSERT_FALSE (ve->hasRoute ({"192.168.200.0", "0.0.0.0", 24, 0}));
 }
 
 /**

@@ -53,7 +53,7 @@ namespace join
         using Ptr           = std::shared_ptr <Interface>;
         using Address       = std::tuple <IpAddress, uint32_t, IpAddress>;
         using AddressList   = std::vector <Address>;
-        using Route         = std::tuple <IpAddress, IpAddress, uint32_t, uint32_t>;
+        using Route         = std::tuple <IpAddress, uint32_t, IpAddress, uint32_t>;
         using RouteList     = std::vector <Route>;
 
         /**
@@ -122,7 +122,7 @@ namespace join
          * @brief add address to interface.
          * @param ipAddress ip address to add.
          * @param prefix prefix length.
-         * @param broadcast broadcast address (optional).
+         * @param broadcast broadcast address .
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
@@ -140,7 +140,7 @@ namespace join
          * @brief remove address from interface.
          * @param ipAddress ip address to delete.
          * @param prefix prefix length.
-         * @param broadcast broadcast address (optional).
+         * @param broadcast broadcast address .
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
@@ -163,29 +163,20 @@ namespace join
         /**
          * @brief check if interface has address stored.
          * @param ipAddress ip address to delete.
-         * @param prefix prefix length.
-         * @param broadcast broadcast address (optional).
          * @return true if interface has address stored, false otherwise
          */
-        bool hasAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {});
-
-        /**
-         * @brief check if interface has address stored.
-         * @param address address.
-         * @return true if interface has address stored, false otherwise
-         */
-        bool hasAddress (const Address& address);
+        bool hasAddress (const IpAddress& ipAddress);
 
         /**
          * @brief add route to interface.
          * @param dest destination network.
-         * @param gateway gateway address.
          * @param prefix prefix length.
+         * @param gateway gateway address.
          * @param metric route metric.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addRoute (const IpAddress& dest, const IpAddress& gateway, uint32_t prefix, uint32_t metric = 0, bool sync = false);
+        int addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway = {}, uint32_t metric = 0, bool sync = false);
 
         /**
          * @brief add route to interface.
@@ -198,12 +189,13 @@ namespace join
         /**
          * @brief remove route from interface.
          * @param dest destination network.
-         * @param gateway gateway address.
          * @param prefix prefix length.
+         * @param gateway gateway address.
+         * @param metric route metric.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int removeRoute (const IpAddress& dest, const IpAddress& gateway, uint32_t prefix, bool sync = false);
+        int removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway = {}, uint32_t metric = 0, bool sync = false);
 
         /**
          * @brief remove route from interface.
@@ -222,12 +214,12 @@ namespace join
         /**
          * @brief check if interface has route stored.
          * @param dest destination network.
-         * @param gateway gateway address.
          * @param prefix prefix length.
+         * @param gateway gateway address.
          * @param metric route metric.
          * @return 0 on success, -1 on failure.
          */
-        bool hasRoute (const IpAddress& dest, const IpAddress& gateway, uint32_t prefix, uint32_t metric = 0);
+        bool hasRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric);
 
         /**
          * @brief check if interface has route stored.

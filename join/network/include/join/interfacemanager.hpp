@@ -496,24 +496,25 @@ namespace join
          * @brief add route to interface.
          * @param interfaceIndex interface index.
          * @param dest destination network.
-         * @param gateway gateway address.
          * @param prefix prefix length.
+         * @param gateway gateway address.
          * @param metric route metric.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addRoute (uint32_t interfaceIndex, const IpAddress& dest, const IpAddress& gateway, uint32_t prefix, uint32_t metric, bool sync = false);
+        int addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync = false);
 
         /**
          * @brief remove route from interface.
          * @param interfaceIndex interface index.
          * @param dest destination network.
-         * @param gateway gateway address.
          * @param prefix prefix length.
+         * @param gateway gateway address.
+         * @param metric route metric.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int removeRoute (uint32_t interfaceIndex, const IpAddress& dest, const IpAddress& gateway, uint32_t prefix, bool sync = false);
+        int removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync = false);
 
         /**
          * @brief send netlink request.

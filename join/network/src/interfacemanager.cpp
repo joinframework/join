@@ -835,7 +835,7 @@ int InterfaceManager::addAddress (uint32_t interfaceIndex, const IpAddress& ipAd
     addAttributes (nlh, IFA_ADDRESS, ipAddress.addr (), ipAddress.length ());
 
     // add broadcast address if specified.
-    if (broadcast.isBroadcast () && ipAddress.family () == AF_INET)
+    if (ipAddress.family () == AF_INET && broadcast.isBroadcast ())
     {
         addAttributes (nlh, IFA_BROADCAST, broadcast.addr (), broadcast.length ());
     }
@@ -873,7 +873,7 @@ int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& i
     addAttributes (nlh, IFA_ADDRESS, ipAddress.addr (), ipAddress.length ());
 
     // add broadcast address if specified.
-    if (broadcast.isBroadcast () && ipAddress.family () == AF_INET)
+    if (ipAddress.family () == AF_INET && broadcast.isBroadcast ())
     {
         addAttributes (nlh, IFA_BROADCAST, broadcast.addr (), broadcast.length ());
     }
@@ -886,7 +886,7 @@ int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& i
 //   CLASS     : InterfaceManager
 //   METHOD    : addRoute
 // =========================================================================
-int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, const IpAddress& gateway, uint32_t prefix, uint32_t metric, bool sync)
+int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync)
 {
     char buffer[_bufferSize];
     memset (buffer, 0, sizeof (buffer));
@@ -907,16 +907,13 @@ int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, 
     rtm->rtm_scope = RT_SCOPE_UNIVERSE;
     rtm->rtm_type = RTN_UNICAST;
 
-    // add destination if specified.
-    if (!dest.isWildcard ())
-    {
-        addAttributes (nlh, RTA_DST, dest.addr (), dest.length ());
-    }
+    // add destination.
+    addAttributes (nlh, RTA_DST, dest.addr (), dest.length ());
 
     // add gateway if specified.
     if (!gateway.isWildcard ())
     {
-        addAttributes(nlh, RTA_GATEWAY, gateway.addr (), gateway.length ()); 
+        addAttributes (nlh, RTA_GATEWAY, gateway.addr (), gateway.length ()); 
     }
 
     // add output interface.
@@ -936,7 +933,7 @@ int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, 
 //   CLASS     : InterfaceManager
 //   METHOD    : removeRoute
 // =========================================================================
-int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& dest, const IpAddress& gateway, uint32_t prefix, bool sync)
+int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync)
 {
     char buffer[_bufferSize];
     memset (buffer, 0, sizeof (buffer));
@@ -957,11 +954,8 @@ int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& des
     rtm->rtm_scope = RT_SCOPE_UNIVERSE;
     rtm->rtm_type = RTN_UNICAST;
 
-    // add destination if specified.
-    if (!dest.isWildcard ())
-    {
-        addAttributes (nlh, RTA_DST, dest.addr (), dest.length ());
-    }
+    // add destination.
+    addAttributes (nlh, RTA_DST, dest.addr (), dest.length ());
 
     // add gateway if specified.
     if (!gateway.isWildcard ())
@@ -971,6 +965,12 @@ int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& des
 
     // add output interface.
     addAttributes (nlh, RTA_OIF, &interfaceIndex, sizeof (uint32_t));
+
+    // add metric if specified.
+    if (metric > 0)
+    {
+        addAttributes (nlh, RTA_PRIORITY, &metric, sizeof (uint32_t));
+    }
 
     // send request.
     return sendRequest (nlh, sync);
@@ -1297,7 +1297,7 @@ void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
     socklen_t addrlen = (rtm->rtm_family == AF_INET6) ? IpAddress::ipv6Length
                                                       : IpAddress::ipv4Length;
 
-    std::get <2> (info.route) = rtm->rtm_dst_len;
+    std::get <1> (info.route) = rtm->rtm_dst_len;
 
     while (RTA_OK (rta, len))
     {
@@ -1308,7 +1308,7 @@ void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
                 break;
 
             case RTA_GATEWAY:
-                std::get <1> (info.route) = IpAddress (RTA_DATA (rta), addrlen);
+                std::get <2> (info.route) = IpAddress (RTA_DATA (rta), addrlen);
                 break;
 
             case RTA_PRIORITY:
