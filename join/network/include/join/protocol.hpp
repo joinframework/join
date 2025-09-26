@@ -29,6 +29,7 @@
 #include <join/endpoint.hpp>
 
 // C.
+#include <linux/netlink.h>
 #include <net/ethernet.h>
 
 namespace join
@@ -184,6 +185,66 @@ namespace join
             }
             return ETH_P_ALL;
         }
+    };
+
+    /**
+     * @brief netlink protocol class.
+     */
+    class NetLink
+    {
+    public:
+        using Endpoint = BasicNetLinkEndpoint <NetLink>;
+        using Socket   = BasicDatagramSocket <NetLink>;
+
+        /**
+         * @brief construct the netlink protocol instance by default.
+         * @param proto protocol type.
+         */
+        constexpr NetLink (int proto = NETLINK_ROUTE) noexcept
+        : _proto (proto)
+        {
+        }
+
+        /**
+         * @brief get protocol suitable for netlink route.
+         * @return a netlink route protocol.
+         */
+        static inline NetLink& rt () noexcept
+        {
+            static NetLink rt (NETLINK_ROUTE);
+            return rt;
+        }
+
+        /**
+         * @brief get the protocol address family.
+         * @return the protocol address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return AF_NETLINK;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_RAW;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return _proto;
+        }
+
+    private:
+        /// protocol.
+        int _proto;
     };
 
     /**

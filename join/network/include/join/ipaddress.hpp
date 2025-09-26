@@ -360,11 +360,17 @@ namespace join
         /// routers multicast IPv6 address.
         static const IpAddress ipv6Routers;
 
+        /// IPv6 length.
+        static const socklen_t ipv6Length = 16;
+
         /// wildcard IPv4 address.
         static const IpAddress ipv4Wildcard;
 
         /// broadcast IPv4 address.
         static const IpAddress ipv4Broadcast;
+
+        /// IPv4 length.
+        static const socklen_t ipv4Length = 4;
 
     private:
         /// IP address implementation.

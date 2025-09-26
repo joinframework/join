@@ -25,10 +25,10 @@
 #ifndef __JOIN_TIMER_HPP__
 #define __JOIN_TIMER_HPP__
 
- // libjoin.
+// libjoin.
 #include <join/reactor.hpp>
 
-// C++
+// C++.
 #include <functional>
 #include <stdexcept>
 #include <chrono>

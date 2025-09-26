@@ -35,6 +35,7 @@
 
 // C.
 #include <linux/if_packet.h>
+#include <linux/netlink.h>
 #include <sys/un.h>
 #include <cstring>
 
@@ -60,7 +61,7 @@ namespace join
          * @param addr socket address.
          * @param len socket address length.
          */
-        constexpr BasicEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
+        BasicEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
         {
             memcpy (&this->_addr, addr, len);
         }
@@ -108,7 +109,7 @@ namespace join
          * @param addr socket address.
          * @param len socket address length.
          */
-        constexpr BasicUnixEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
+        BasicUnixEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
         : BasicEndpoint <Protocol> (addr, len)
         {
         }
@@ -117,7 +118,7 @@ namespace join
          * @brief create instance using device name.
          * @param dev device name to set.
          */
-        constexpr BasicUnixEndpoint (const char* dev) noexcept
+        BasicUnixEndpoint (const char* dev) noexcept
         : BasicUnixEndpoint ()
         {
             struct sockaddr_un* sa = reinterpret_cast <struct sockaddr_un*> (&this->_addr);
@@ -128,7 +129,7 @@ namespace join
          * @brief create instance using device name.
          * @param dev device name to set.
          */
-        constexpr BasicUnixEndpoint (const std::string& dev) noexcept
+        BasicUnixEndpoint (const std::string& dev) noexcept
         : BasicUnixEndpoint <Protocol> (dev.c_str ())
         {
         }
@@ -165,7 +166,7 @@ namespace join
          * @brief get endpoint device name.
          * @return endpoint device name.
          */
-        constexpr std::string device () const noexcept
+        std::string device () const noexcept
         {
             return reinterpret_cast <const struct sockaddr_un*> (&this->_addr)->sun_path;
         }
@@ -174,11 +175,11 @@ namespace join
     /**
      * @brief compare if endpoints are equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints are equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator== (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator== (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
     {
         return a.device () == b.device ();
     }
@@ -186,11 +187,11 @@ namespace join
     /**
      * @brief compare if endpoints are not equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints are not equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator!= (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator!= (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
     {
         return !(a == b);
     }
@@ -198,11 +199,11 @@ namespace join
     /**
      * @brief compare if endpoint is lower.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator< (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator< (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
     {
         return a.device () < b.device ();
     }
@@ -210,11 +211,11 @@ namespace join
     /**
      * @brief compare if endpoint is greater.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator> (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator> (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
     {
         return b < a;
     }
@@ -222,11 +223,11 @@ namespace join
     /**
      * @brief compare if endpoint is lower or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator<= (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator<= (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
     {
         return !(b < a);
     }
@@ -234,11 +235,11 @@ namespace join
     /**
      * @brief compare if endpoint is greater or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator>= (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator>= (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
     {
         return !(a < b);
     }
@@ -278,7 +279,7 @@ namespace join
          * @param addr socket address.
          * @param len socket address length.
          */
-        constexpr BasicLinkLayerEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
+        BasicLinkLayerEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
         : BasicEndpoint <Protocol> (addr, len)
         {
         }
@@ -287,7 +288,7 @@ namespace join
          * @brief create instance using device name.
          * @param dev device name to set.
          */
-        constexpr BasicLinkLayerEndpoint (const char* dev) noexcept
+        BasicLinkLayerEndpoint (const char* dev) noexcept
         : BasicEndpoint <Protocol> ()
         {
             reinterpret_cast <struct sockaddr_ll*> (&this->_addr)->sll_ifindex = if_nametoindex (dev);
@@ -297,7 +298,7 @@ namespace join
          * @brief create instance using device name.
          * @param dev device name to set.
          */
-        constexpr BasicLinkLayerEndpoint (const std::string& dev) noexcept
+        BasicLinkLayerEndpoint (const std::string& dev) noexcept
         : BasicLinkLayerEndpoint <Protocol> (dev.c_str ())
         {
         }
@@ -333,7 +334,7 @@ namespace join
          * @brief get endpoint device name.
          * @return endpoint device name.
          */
-        constexpr std::string device () const noexcept
+        std::string device () const noexcept
         {
             char ifname[IFNAMSIZ];
             if (if_indextoname (reinterpret_cast <const struct sockaddr_ll*> (&this->_addr)->sll_ifindex, ifname))
@@ -347,11 +348,11 @@ namespace join
     /**
      * @brief compare if endpoints are equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints are equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator== (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator== (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
     {
         return a.device () == b.device ();
     }
@@ -359,11 +360,11 @@ namespace join
     /**
      * @brief compare if endpoints are not equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints are not equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator!= (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator!= (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
     {
         return !(a == b);
     }
@@ -371,11 +372,11 @@ namespace join
     /**
      * @brief compare if endpoint is lower.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator< (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator< (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
     {
         return a.device () < b.device ();
     }
@@ -383,11 +384,11 @@ namespace join
     /**
      * @brief compare if endpoint is greater.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator> (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator> (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
     {
         return b < a;
     }
@@ -395,11 +396,11 @@ namespace join
     /**
      * @brief compare if endpoint is lower or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator<= (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator<= (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
     {
         return !(b < a);
     }
@@ -407,7 +408,7 @@ namespace join
     /**
      * @brief compare if endpoint is greater or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
@@ -424,6 +425,216 @@ namespace join
      */
     template <class Protocol>
     std::ostream& operator<< (std::ostream& os, const BasicLinkLayerEndpoint <Protocol>& endpoint)
+    {
+        std::ostringstream ss;
+        ss << endpoint.device ();
+        return os << ss.str ();
+    }
+
+    /**
+     * @brief basic netlink endpoint class.
+     */
+    template <class Protocol>
+    class BasicNetLinkEndpoint : public BasicEndpoint <Protocol>
+    {
+    public:
+        /**
+         * @brief default constructor.
+         */
+        constexpr BasicNetLinkEndpoint () noexcept
+        : BasicEndpoint <Protocol> ()
+        {
+        }
+
+        /**
+         * @brief create instance using socket address.
+         * @param addr socket address.
+         * @param len socket address length.
+         */
+        BasicNetLinkEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
+        : BasicEndpoint <Protocol> (addr, len)
+        {
+        }
+
+        /**
+         * @brief create instance using device name.
+         * @param dev device name to set.
+         */
+        BasicNetLinkEndpoint (const char* dev) noexcept
+        : BasicNetLinkEndpoint ()
+        {
+            device (dev);
+        }
+
+        /**
+         * @brief create instance using device name.
+         * @param dev device name to set.
+         */
+        BasicNetLinkEndpoint (const std::string& dev) noexcept
+        : BasicNetLinkEndpoint (dev.c_str ())
+        {
+        }
+
+        /**
+         * @brief create instance using netlink groups.
+         * @param pid process id.
+         * @param groups netlink groups to set.
+         */
+        constexpr BasicNetLinkEndpoint (uint32_t pid, uint32_t groups) noexcept
+        : BasicEndpoint <Protocol> ()
+        {
+            struct sockaddr_nl* sa = reinterpret_cast <struct sockaddr_nl*> (&this->_addr);
+            sa->nl_pid = pid;
+            sa->nl_groups = groups;
+        }
+
+        /**
+         * @brief create instance using netlink groups.
+         * @param groups netlink groups to set.
+         */
+        constexpr BasicNetLinkEndpoint (uint32_t groups) noexcept
+        : BasicNetLinkEndpoint (getpid (), groups)
+        {
+        }
+
+        /**
+         * @brief get endpoint protocol.
+         * @return endpoint protocol.
+         */
+        constexpr Protocol protocol () const noexcept
+        {
+            return Protocol::rt ();
+        }
+
+        /**
+         * @brief get socket address length.
+         * @return socket address length.
+         */
+        constexpr socklen_t length () const noexcept
+        {
+            return sizeof (struct sockaddr_nl);
+        }
+
+        /**
+         * @brief set endpoint device name.
+         * @param dev device name to set.
+         */
+        void device (const std::string& dev) noexcept
+        {
+            _index = if_nametoindex (dev.c_str ());
+        }
+
+        /**
+         * @brief get endpoint device name.
+         * @return endpoint device name.
+         */
+        std::string device () const noexcept
+        {
+            if (_index != 0)
+            {
+                char ifname[IFNAMSIZ];
+                if (if_indextoname (_index, ifname))
+                {
+                    return ifname;
+                }
+            }
+            return {};
+        }
+
+        /**
+         * @brief get endpoint device index.
+         * @return endpoint device index.
+         */
+        constexpr uint32_t index () const noexcept
+        {
+            return _index;
+        }
+
+    private:
+        /// interface index.
+        uint32_t _index = 0;
+    };
+
+    /**
+     * @brief compare if endpoints are equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if endpoints are equal, false otherwise.
+     */
+    template <class Protocol>
+    bool operator== (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    {
+        return a.device () == b.device ();
+    }
+
+    /**
+     * @brief compare if endpoints are not equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if endpoints are not equal, false otherwise.
+     */
+    template <class Protocol>
+    bool operator!= (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief compare if endpoint is lower.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if lower, false otherwise.
+     */
+    template <class Protocol>
+    bool operator< (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    {
+        return a.device () < b.device ();
+    }
+
+    /**
+     * @brief compare if endpoint is greater.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if greater, false otherwise.
+     */
+    template <class Protocol>
+    bool operator> (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    {
+        return b < a;
+    }
+
+    /**
+     * @brief compare if endpoint is lower or equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if lower or equal, false otherwise.
+     */
+    template <class Protocol>
+    bool operator<= (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    {
+        return !(b < a);
+    }
+
+    /**
+     * @brief compare if endpoint is greater or equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if greater or equal, false otherwise.
+     */
+    template <class Protocol>
+    bool operator>= (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    {
+        return !(a < b);
+    }
+
+    /**
+     * @brief push endpoint representation into a stream.
+     * @param os output stream.
+     * @param endpoint endpoint to push.
+     * @return output stream.
+     */
+    template <class Protocol>
+    std::ostream& operator<< (std::ostream& os, const BasicNetLinkEndpoint <Protocol>& endpoint)
     {
         std::ostringstream ss;
         ss << endpoint.device ();
@@ -449,7 +660,7 @@ namespace join
          * @brief create the endpoint instance.
          * @param addr socket address.
          */
-        constexpr BasicInternetEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
+        BasicInternetEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
         : BasicEndpoint <Protocol> (addr, len)
         {
         }
@@ -458,7 +669,7 @@ namespace join
          * @brief create the endpoint instance.
          * @param url endpoint URL.
          */
-        BasicInternetEndpoint (const char* url) noexcept
+        BasicInternetEndpoint (const char* url)
         : BasicEndpoint <Protocol> ()
         {
             // regular expression inspired by rfc3986 (see https://www.ietf.org/rfc/rfc3986.txt)
@@ -501,7 +712,7 @@ namespace join
          * @brief create the endpoint instance.
          * @param url endpoint URL.
          */
-        constexpr BasicInternetEndpoint (const std::string& url) noexcept
+        BasicInternetEndpoint (const std::string& url)
         : BasicInternetEndpoint <Protocol> (url.c_str ())
         {
         }
@@ -511,7 +722,7 @@ namespace join
          * @param ip endpoint IP address.
          * @param port endpoint port number.
          */
-        constexpr BasicInternetEndpoint (const IpAddress& ip, uint16_t port = 0) noexcept
+        BasicInternetEndpoint (const IpAddress& ip, uint16_t port = 0) noexcept
         : BasicEndpoint <Protocol> ()
         {
             if (ip.family () == AF_INET6)
@@ -536,7 +747,7 @@ namespace join
          * @param protocol endpoint protocol.
          * @param port endpoint port number.
          */
-        constexpr BasicInternetEndpoint (const Protocol& protocol, uint16_t port = 0) noexcept
+        BasicInternetEndpoint (const Protocol& protocol, uint16_t port = 0) noexcept
         : BasicEndpoint <Protocol> ()
         {
             if (protocol.family () == AF_INET6)
@@ -596,7 +807,7 @@ namespace join
          * @brief get endpoint IP address.
          * @return endpoint IP address.
          */
-        constexpr IpAddress ip () const noexcept
+        IpAddress ip () const noexcept
         {
             return *reinterpret_cast <const struct sockaddr*> (&this->_addr);
         }
@@ -636,7 +847,6 @@ namespace join
         /**
          * @brief get endpoint protocol.
          * @return endpoint protocol.
-         * @throw invalid_argument if address family is not specified.
          */
         constexpr Protocol protocol () const noexcept
         {
@@ -676,7 +886,7 @@ namespace join
          * @brief get endpoint device name.
          * @return endpoint device name.
          */
-        constexpr std::string device () const noexcept
+        std::string device () const noexcept
         {
             if (this->_addr.ss_family == AF_INET6)
             {
@@ -697,11 +907,11 @@ namespace join
     /**
      * @brief compare if equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints is equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator== (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator== (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
     {
         return a.ip () == b.ip () && a.port () == b.port ();
     }
@@ -709,11 +919,11 @@ namespace join
     /**
      * @brief compare if not equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints is not equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator!= (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator!= (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
     {
         return !(a == b);
     }
@@ -721,11 +931,11 @@ namespace join
     /**
      * @brief compare if lower.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator< (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator< (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
     {
         return std::tie (a.ip (), a.port ()) < std::tie (b.ip (), b.port ());
     }
@@ -733,11 +943,11 @@ namespace join
     /**
      * @brief compare if greater.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator> (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator> (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
     {
         return b < a;
     }
@@ -745,11 +955,11 @@ namespace join
     /**
      * @brief compare if lower or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator<= (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator<= (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
     {
         return !(b < a);
     }
@@ -757,11 +967,11 @@ namespace join
     /**
      * @brief compare if greater or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
-    constexpr bool operator>= (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator>= (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
     {
         return !(a < b);
     }

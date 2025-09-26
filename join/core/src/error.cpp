@@ -90,7 +90,8 @@ bool ErrorCategory::equivalent (const std::error_code& code, int condition) cons
         case Errc::InUse:
             return code == std::errc::already_connected ||
                    code == std::errc::connection_already_in_progress ||
-                   code == std::errc::address_in_use;
+                   code == std::errc::address_in_use ||
+                   code == std::errc::file_exists;
         case Errc::InvalidParam:
             return code == std::errc::no_such_file_or_directory ||
                    code == std::errc::address_family_not_supported ||
