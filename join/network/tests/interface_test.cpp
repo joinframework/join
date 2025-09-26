@@ -187,6 +187,13 @@ TEST_F (InterfaceTest, addAddress)
     ASSERT_TRUE (ve->hasAddress ("2001:db8:abcd:12::1"));
     ASSERT_EQ (ve->removeAddress ({"2001:db8:abcd:12::1", 64, {}}, true), 0) << lastError.message ();
     ASSERT_FALSE (ve->hasAddress ("2001:db8:abcd:12::1"));
+
+    auto br = InterfaceManager::instance ()->findByName ("br0");
+    ASSERT_NE (br, nullptr);
+    ASSERT_EQ (br->addAddress ({"2001:db8:abcd:12::2", 64, {}}, true), 0) << lastError.message ();
+    ASSERT_TRUE (br->hasAddress ("2001:db8:abcd:12::2"));
+    ASSERT_EQ (br->removeAddress ({"2001:db8:abcd:12::2", 64, {}}, true), 0) << lastError.message ();
+    ASSERT_FALSE (br->hasAddress ("2001:db8:abcd:12::2"));
 }
 
 /**
@@ -490,7 +497,7 @@ TEST_F (InterfaceTest, supportsIpv4)
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
-    ASSERT_FALSE (ve->supportsIpv4 ());
+    ASSERT_TRUE (ve->supportsIpv4 ());
 
     auto br = InterfaceManager::instance ()->findByName ("br0");
     ASSERT_NE (br, nullptr);
@@ -508,11 +515,13 @@ TEST_F (InterfaceTest, supportsIpv6)
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
-    ASSERT_FALSE (ve->supportsIpv6 ());
+    ASSERT_EQ (ve->addAddress ({"2001:db8:abcd:12::1", 64, {}}, true), 0) << lastError.message ();
+    ASSERT_TRUE (ve->supportsIpv6 ());
 
     auto br = InterfaceManager::instance ()->findByName ("br0");
     ASSERT_NE (br, nullptr);
-    ASSERT_FALSE (br->supportsIpv6 ());
+    ASSERT_EQ (br->addAddress ({"2001:db8:abcd:12::2", 64, {}}, true), 0) << lastError.message ();
+    ASSERT_TRUE (br->supportsIpv6 ());
 }
 
 /**

@@ -1091,7 +1091,7 @@ void InterfaceManager::onReceive ()
 void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
 {
     struct ifinfomsg* ifi = reinterpret_cast <struct ifinfomsg*> (NLMSG_DATA (nlh));
-    if (!ifi)
+    if (!ifi || (ifi->ifi_family == AF_BRIDGE))
     {
         return;
     }
