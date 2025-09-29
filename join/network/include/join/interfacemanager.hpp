@@ -153,17 +153,19 @@ namespace join
     /**
      * @brief interface manager class.
      */
-    class InterfaceManager : private NetLink::Socket
+    class InterfaceManager : private NetLink::Socket, public std::enable_shared_from_this <InterfaceManager>
     {
     private:
-        using LinkNotify    = std::function <void (const LinkInfo& info)>;
-        using AddressNotify = std::function <void (const AddressInfo& info)>;
-        using RouteNotify   = std::function <void (const RouteInfo& info)>;
-
         /**
          * @brief create instance.
          */
         InterfaceManager ();
+
+    public:
+        using Ptr           = std::shared_ptr <InterfaceManager>;
+        using LinkNotify    = std::function <void (const LinkInfo& info)>;
+        using AddressNotify = std::function <void (const AddressInfo& info)>;
+        using RouteNotify   = std::function <void (const RouteInfo& info)>;
 
         /**
          * @brief create instance by copy.
@@ -196,33 +198,11 @@ namespace join
          */
         ~InterfaceManager ();
 
-    public:
         /**
          * @brief create the InterfaceManager instance.
          * @return InterfaceManager instance pointer.
          */
-        static InterfaceManager* instance ();
-
-        /**
-         * @brief dump link data.
-         * @param sync wait for completion.
-         * @return 0 on success, -1 on failure.
-         */
-        int dumpLink (bool sync = false);
-
-        /**
-         * @brief dump address data.
-         * @param sync wait for completion.
-         * @return 0 on success, -1 on failure.
-         */
-        int dumpAddress (bool sync = false);
-
-        /**
-         * @brief dump route data.
-         * @param sync wait for completion.
-         * @return 0 on success, -1 on failure.
-         */
-        int dumpRoute (bool sync = false);
+        static InterfaceManager::Ptr instance ();
 
         /**
          * @brief find interface by index.
@@ -243,6 +223,13 @@ namespace join
          * @return all interfaces.
          */
         InterfaceList enumerate ();
+
+        /**
+         * @brief refresh all data by dumping link, address, and route data.
+         * @param sync wait for completion.
+         * @return 0 on success, -1 on failure.
+         */
+        int refresh (bool sync = true);
 
         /**
          * @brief registers a callback to be invoked when a link update occurs.
@@ -289,14 +276,6 @@ namespace join
         int createDummyInterface (const std::string& interfaceName, bool sync = false);
 
         /**
-         * @brief creates a point to point interface.
-         * @param interfaceName name of the point to point interface to be created.
-         * @param sync wait for completion.
-         * @return 0 on success, -1 on failure.
-         */
-        int createPointToPointInterface (const std::string& interfaceName, bool sync = false);
-
-        /**
          * @brief creates a bridge interface.
          * @param interfaceName name of the bridge interface to be created.
          * @param sync wait for completion.
@@ -334,7 +313,7 @@ namespace join
          * @param sync wait for completion.
          * @return 0 on success, -1 on failure.
          */
-        int createVethInterface (const std::string& hostName, const std::string& peerName, pid_t* pid, bool sync = false);
+        int createVethInterface (const std::string& hostName, const std::string& peerName, pid_t* pid = nullptr, bool sync = false);
 
         /**
          * @brief creates a a GRE tunnel interface.
@@ -350,7 +329,7 @@ namespace join
          */
         int createGreInterface (const std::string& tunnelName, uint32_t parentIndex,
                                 const IpAddress& localAddress, const IpAddress& remoteAddress,
-                                const uint32_t* ikey, const uint32_t* okey, uint8_t ttl, bool sync = false);
+                                const uint32_t* ikey = nullptr, const uint32_t* okey = nullptr, uint8_t ttl = 64, bool sync = false);
 
         /**
          * @brief creates a a GRE tunnel interface.
@@ -366,7 +345,7 @@ namespace join
          */
         int createGreInterface (const std::string& tunnelName, const std::string& parentName,
                                 const IpAddress& localAddress, const IpAddress& remoteAddress,
-                                const uint32_t* ikey, const uint32_t* okey, uint8_t ttl, bool sync = false);
+                                const uint32_t* ikey = nullptr, const uint32_t* okey = nullptr, uint8_t ttl = 64, bool sync = false);
 
         /**
          * @brief deletes the specified network interface.
@@ -425,6 +404,13 @@ namespace join
          * @brief nested attributes pointer.
          */
         int stopNestedAttributes (struct nlmsghdr *nlh, struct rtattr *nested);
+
+        /**
+         * @brief Add veth peer info data.
+         * @brief nlh netlink message header.
+         * @brief peerName peer interface name.
+         */
+        void addPeerInfoData (struct nlmsghdr *nlh, const std::string& peerName);
 
         /**
          * @brief set interface mtu.
@@ -515,6 +501,27 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync = false);
+
+        /**
+         * @brief dump link data.
+         * @param sync wait for completion.
+         * @return 0 on success, -1 on failure.
+         */
+        int dumpLink (bool sync = false);
+
+        /**
+         * @brief dump address data.
+         * @param sync wait for completion.
+         * @return 0 on success, -1 on failure.
+         */
+        int dumpAddress (bool sync = false);
+
+        /**
+         * @brief dump route data.
+         * @param sync wait for completion.
+         * @return 0 on success, -1 on failure.
+         */
+        int dumpRoute (bool sync = false);
 
         /**
          * @brief send netlink request.

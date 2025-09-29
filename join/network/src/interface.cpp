@@ -45,7 +45,7 @@ using join::MacAddress;
 //   CLASS     : Interface
 //   METHOD    : Interface
 // =========================================================================
-Interface::Interface (InterfaceManager* manager, uint32_t index)
+Interface::Interface (std::weak_ptr <InterfaceManager> manager, uint32_t index)
 : _manager (manager)
 , _index (index)
 {
@@ -84,7 +84,14 @@ const std::string& Interface::name () const noexcept
 // =========================================================================
 int Interface::mtu (uint32_t mtuBytes, bool sync)
 {
-    return _manager->mtu (_index, mtuBytes, sync);
+    auto mgr = _manager.lock ();
+    if (!mgr)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
+    return mgr->mtu (_index, mtuBytes, sync);
 }
 
 // =========================================================================
@@ -111,7 +118,14 @@ const std::string& Interface::kind () const noexcept
 // =========================================================================
 int Interface::mac (const MacAddress& macAddress, bool sync)
 {
-    return _manager->mac (_index, macAddress, sync);
+    auto mgr = _manager.lock ();
+    if (!mgr)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
+    return mgr->mac (_index, macAddress, sync);
 }
 
 // =========================================================================
@@ -129,7 +143,14 @@ const MacAddress& Interface::mac () const noexcept
 // =========================================================================
 int Interface::addAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast, bool sync)
 {
-    return _manager->addAddress (_index, ipAddress, prefix, broadcast, sync);
+    auto mgr = _manager.lock ();
+    if (!mgr)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
+    return mgr->addAddress (_index, ipAddress, prefix, broadcast, sync);
 }
 
 // =========================================================================
@@ -147,7 +168,14 @@ int Interface::addAddress (const Address& address, bool sync)
 // =========================================================================
 int Interface::removeAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast, bool sync)
 {
-    return _manager->removeAddress (_index, ipAddress, prefix, broadcast, sync);
+    auto mgr = _manager.lock ();
+    if (!mgr)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
+    return mgr->removeAddress (_index, ipAddress, prefix, broadcast, sync);
 }
 
 // =========================================================================
@@ -193,7 +221,14 @@ bool Interface::hasAddress (const IpAddress& ipAddress)
 // =========================================================================
 int Interface::addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync)
 {
-    return _manager->addRoute (_index, dest, prefix, gateway, metric, sync);
+    auto mgr = _manager.lock ();
+    if (!mgr)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
+    return mgr->addRoute (_index, dest, prefix, gateway, metric, sync);
 }
 
 // =========================================================================
@@ -211,7 +246,14 @@ int Interface::addRoute (const Route& route, bool sync)
 // =========================================================================
 int Interface::removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync)
 {
-    return _manager->removeRoute (_index, dest, prefix, gateway, metric, sync);
+    auto mgr = _manager.lock ();
+    if (!mgr)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
+    return mgr->removeRoute (_index, dest, prefix, gateway, metric, sync);
 }
 
 // =========================================================================
@@ -269,7 +311,14 @@ bool Interface::hasRoute (const Route& route)
 // =========================================================================
 int Interface::addToBridge (uint32_t masterIndex, bool sync)
 {
-    return _manager->addToBridge (_index, masterIndex, sync);
+    auto mgr = _manager.lock ();
+    if (!mgr)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
+    return mgr->addToBridge (_index, masterIndex, sync);
 }
 
 // =========================================================================
@@ -294,7 +343,14 @@ int Interface::addToBridge (const std::string& masterName, bool sync)
 // =========================================================================
 int Interface::removeFromBridge (bool sync)
 {
-    return _manager->removeFromBridge (_index, sync);
+    auto mgr = _manager.lock ();
+    if (!mgr)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
+    return mgr->removeFromBridge (_index, sync);
 }
 
 // =========================================================================
@@ -312,7 +368,14 @@ uint32_t Interface::flags () const noexcept
 // =========================================================================
 int Interface::enable (bool enabled, bool sync)
 {
-    return _manager->enable (_index, enabled, sync);
+    auto mgr = _manager.lock ();
+    if (!mgr)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
+    return mgr->enable (_index, enabled, sync);
 }
 
 // =========================================================================
@@ -349,6 +412,15 @@ bool Interface::isLoopback () const noexcept
 bool Interface::isPointToPoint () const noexcept
 {
     return (_flags & IFF_POINTOPOINT);
+}
+
+// =========================================================================
+//   CLASS     : Interface
+//   METHOD    : isDummy
+// =========================================================================
+bool Interface::isDummy () const noexcept
+{
+    return (_kind == "dummy");
 }
 
 // =========================================================================

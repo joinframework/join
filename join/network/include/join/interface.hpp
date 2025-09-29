@@ -49,6 +49,14 @@ namespace join
      */
     class Interface
     {
+    private:
+        /**
+         * @brief create instance.
+         * @param manager interface manager.
+         * @param index interface index.
+         */
+        explicit Interface (std::weak_ptr <InterfaceManager> manager, uint32_t index);
+
     public:
         using Ptr           = std::shared_ptr <Interface>;
         using Address       = std::tuple <IpAddress, uint32_t, IpAddress>;
@@ -290,6 +298,12 @@ namespace join
         bool isPointToPoint () const noexcept;
 
         /**
+         * @brief is interface a dummy interface.
+         * @return true if dummy interface.
+         */
+        bool isDummy () const noexcept;
+
+        /**
          * @brief is interface a bridge interface.
          * @return true if bridge interface.
          */
@@ -344,15 +358,8 @@ namespace join
         bool supportsIpv6 ();
 
     private:
-        /**
-         * @brief create instance.
-         * @param manager interface manager.
-         * @param index interface index.
-         */
-        explicit Interface (InterfaceManager* manager, uint32_t index);
-
         /// interface manager
-        InterfaceManager* _manager;
+        std::weak_ptr <InterfaceManager> _manager;
 
         /// interface index.
         uint32_t _index = 0;

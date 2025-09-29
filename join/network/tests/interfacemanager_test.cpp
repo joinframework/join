@@ -43,35 +43,13 @@ TEST (InterfaceManager, instance)
 }
 
 /**
- * @brief test the dumpLink method.
- */
-TEST (InterfaceManager, dumpLink)
-{
-    ASSERT_EQ (InterfaceManager::instance ()->dumpLink (true), 0) << lastError.message ();
-}
-
-/**
- * @brief test the dumpAddress method.
- */
-TEST (InterfaceManager, dumpAddress)
-{
-    ASSERT_EQ (InterfaceManager::instance ()->dumpAddress (true), 0) << lastError.message ();
-}
-
-/**
- * @brief test the dumpRoute method.
- */
-TEST (InterfaceManager, dumpRoute)
-{
-    ASSERT_EQ (InterfaceManager::instance ()->dumpRoute (true), 0) << lastError.message ();
-}
-
-/**
  * @brief test the findByIndex method.
  */
 TEST (InterfaceManager, findByIndex)
 {
-    auto lo = InterfaceManager::instance ()->findByIndex (if_nametoindex ("lo"));
+    std::string loopback ("lo");
+
+    auto lo = InterfaceManager::instance ()->findByIndex (if_nametoindex (loopback.c_str ()));
     ASSERT_NE (lo, nullptr);
 }
 
@@ -80,7 +58,9 @@ TEST (InterfaceManager, findByIndex)
  */
 TEST (InterfaceManager, findByName)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    std::string loopback ("lo");
+
+    auto lo = InterfaceManager::instance ()->findByName (loopback);
     ASSERT_NE (lo, nullptr);
 }
 
@@ -101,10 +81,17 @@ TEST (InterfaceManager, addLinkListener)
     bool called = false;
     auto cb = [&] (const auto& /*info*/) { called = true; };
 
+    EXPECT_EQ (InterfaceManager::instance ()->refresh (true), 0) << lastError.message ();
+    EXPECT_FALSE (called);
+
     InterfaceManager::instance ()->addLinkListener (cb);
-    EXPECT_EQ (InterfaceManager::instance ()->dumpLink (true), 0) << lastError.message ();
+    EXPECT_EQ (InterfaceManager::instance ()->refresh (true), 0) << lastError.message ();
     EXPECT_TRUE (called);
+
     InterfaceManager::instance ()->removeLinkListener (cb);
+    called = false;
+    EXPECT_EQ (InterfaceManager::instance ()->refresh (true), 0) << lastError.message ();
+    EXPECT_FALSE (called);
 }
 
 /**
@@ -115,10 +102,17 @@ TEST (InterfaceManager, addAddressListener)
     bool called = false;
     auto cb = [&] (const auto& /*info*/) { called = true; };
 
+    EXPECT_EQ (InterfaceManager::instance ()->refresh (true), 0) << lastError.message ();
+    EXPECT_FALSE (called);
+
     InterfaceManager::instance ()->addAddressListener (cb);
-    EXPECT_EQ (InterfaceManager::instance ()->dumpAddress (true), 0) << lastError.message ();
+    EXPECT_EQ (InterfaceManager::instance ()->refresh (true), 0) << lastError.message ();
     EXPECT_TRUE (called);
+
     InterfaceManager::instance ()->removeAddressListener (cb);
+    called = false;
+    EXPECT_EQ (InterfaceManager::instance ()->refresh (true), 0) << lastError.message ();
+    EXPECT_FALSE (called);
 }
 
 /**
@@ -129,10 +123,17 @@ TEST (InterfaceManager, addRouteListener)
     bool called = false;
     auto cb = [&] (const auto& /*info*/) { called = true; };
 
+    EXPECT_EQ (InterfaceManager::instance ()->refresh (true), 0) << lastError.message ();
+    EXPECT_FALSE (called);
+
     InterfaceManager::instance ()->addRouteListener (cb);
-    EXPECT_EQ (InterfaceManager::instance ()->dumpRoute (true), 0) << lastError.message ();
+    EXPECT_EQ (InterfaceManager::instance ()->refresh (true), 0) << lastError.message ();
     EXPECT_TRUE (called);
+
     InterfaceManager::instance ()->removeRouteListener (cb);
+    called = false;
+    EXPECT_EQ (InterfaceManager::instance ()->refresh (true), 0) << lastError.message ();
+    EXPECT_FALSE (called);
 }
 
 /**
@@ -140,17 +141,16 @@ TEST (InterfaceManager, addRouteListener)
  */
 TEST (InterfaceManager, createDummyInterface)
 {
-    ASSERT_EQ (InterfaceManager::instance ()->createDummyInterface ("dummy0", true), 0) << lastError.message ();
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
-    ASSERT_NE (dm, nullptr);
-    EXPECT_EQ (InterfaceManager::instance ()->removeInterface ("dummy0", true), 0) << lastError.message ();
-}
+    std::string dummy0 ("dummy0");
+    InterfaceManager::instance ()->removeInterface (dummy0, true);
 
-/**
- * @brief test the createPointToPointInterface method.
- */
-TEST (InterfaceManager, createPointToPointInterface)
-{
+    ASSERT_EQ (InterfaceManager::instance ()->createDummyInterface (dummy0, true), 0) << lastError.message ();
+    auto dm = InterfaceManager::instance ()->findByName (dummy0);
+    ASSERT_NE (dm, nullptr);
+    ASSERT_TRUE (dm->isDummy ());
+    ASSERT_EQ (dm->enable (true, true), 0) << lastError.message ();
+    ASSERT_EQ (dm->enable (false, true), 0) << lastError.message ();
+    EXPECT_EQ (InterfaceManager::instance ()->removeInterface (dummy0, true), 0) << lastError.message ();
 }
 
 /**
@@ -158,10 +158,16 @@ TEST (InterfaceManager, createPointToPointInterface)
  */
 TEST (InterfaceManager, createBridgeInterface)
 {
-    ASSERT_EQ (InterfaceManager::instance ()->createBridgeInterface ("br0", true), 0) << lastError.message ();
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    std::string bridge0 ("br0");
+    InterfaceManager::instance ()->removeInterface (bridge0, true);
+
+    ASSERT_EQ (InterfaceManager::instance ()->createBridgeInterface (bridge0, true), 0) << lastError.message ();
+    auto br = InterfaceManager::instance ()->findByName (bridge0);
     ASSERT_NE (br, nullptr);
-    EXPECT_EQ (InterfaceManager::instance ()->removeInterface ("br0", true), 0) << lastError.message ();
+    ASSERT_TRUE (br->isBridge ());
+    ASSERT_EQ (br->enable (true, true), 0) << lastError.message ();
+    ASSERT_EQ (br->enable (false, true), 0) << lastError.message ();
+    EXPECT_EQ (InterfaceManager::instance ()->removeInterface (bridge0, true), 0) << lastError.message ();
 }
 
 /**
@@ -169,6 +175,25 @@ TEST (InterfaceManager, createBridgeInterface)
  */
 TEST (InterfaceManager, createVlanInterface)
 {
+    uint16_t id = 10;
+    std::string dummy0 ("dummy0");
+    std::string vlan10 = dummy0 + "." + std::to_string (id);
+    InterfaceManager::instance ()->removeInterface (vlan10, true);
+    InterfaceManager::instance ()->removeInterface (dummy0, true);
+
+    ASSERT_EQ (InterfaceManager::instance ()->createDummyInterface (dummy0, true), 0) << lastError.message ();
+    auto dm = InterfaceManager::instance ()->findByName (dummy0);
+    ASSERT_NE (dm, nullptr);
+    ASSERT_EQ (dm->enable (true, true), 0) << lastError.message ();
+
+    ASSERT_EQ (InterfaceManager::instance ()->createVlanInterface (vlan10, dummy0, id, ETH_P_8021Q, true), 0) << lastError.message ();
+    auto vl = InterfaceManager::instance ()->findByName (vlan10);
+    ASSERT_TRUE (vl->isVlan ());
+    ASSERT_EQ (vl->enable (true, true), 0) << lastError.message ();
+    ASSERT_EQ (vl->enable (false, true), 0) << lastError.message ();
+    EXPECT_EQ (InterfaceManager::instance ()->removeInterface (vlan10, true), 0) << lastError.message ();
+
+    EXPECT_EQ (InterfaceManager::instance ()->removeInterface (dummy0, true), 0) << lastError.message ();
 }
 
 /**
@@ -176,11 +201,21 @@ TEST (InterfaceManager, createVlanInterface)
  */
 TEST (InterfaceManager, createVethInterface)
 {
-    // pid_t pid = getpid ();
-    // ASSERT_EQ (InterfaceManager::instance ()->createVethInterface ("veth0", "veth1", &pid, true), 0) << lastError.message ();
-    // auto ve = InterfaceManager::instance ()->findByName ("veth0");
-    // ASSERT_NE (ve, nullptr);
-    // EXPECT_EQ (InterfaceManager::instance ()->removeInterface ("veth0", true), 0) << lastError.message ();
+    std::string vhost ("veth2"), vpeer ("veth3");
+    InterfaceManager::instance ()->removeInterface (vhost, true);
+
+    ASSERT_EQ (InterfaceManager::instance ()->createVethInterface (vhost, vpeer, nullptr, true), 0) << lastError.message ();
+    auto vh = InterfaceManager::instance ()->findByName (vhost);
+    ASSERT_NE (vh, nullptr);
+    ASSERT_TRUE (vh->isVeth ());
+    auto vp = InterfaceManager::instance ()->findByName (vpeer);
+    ASSERT_NE (vp, nullptr);
+    ASSERT_TRUE (vp->isVeth ());
+    ASSERT_EQ (vh->enable (true, true), 0) << lastError.message ();
+    ASSERT_EQ (vp->enable (true, true), 0) << lastError.message ();
+    ASSERT_EQ (vh->enable (false, true), 0) << lastError.message ();
+    ASSERT_EQ (vp->enable (false, true), 0) << lastError.message ();
+    EXPECT_EQ (InterfaceManager::instance ()->removeInterface (vhost, true), 0) << lastError.message ();
 }
 
 /**
@@ -188,6 +223,33 @@ TEST (InterfaceManager, createVethInterface)
  */
 TEST (InterfaceManager, createGreInterface)
 {
+    std::string dummy0 ("dummy0"), gre4 ("gre4"), gre6 ("gre6");
+    InterfaceManager::instance ()->removeInterface (gre4, true);
+    InterfaceManager::instance ()->removeInterface (gre6, true);
+    InterfaceManager::instance ()->removeInterface (dummy0, true);
+
+    ASSERT_EQ (InterfaceManager::instance ()->createDummyInterface (dummy0, true), 0) << lastError.message ();
+    auto dm = InterfaceManager::instance ()->findByName (dummy0);
+    ASSERT_NE (dm, nullptr);
+    ASSERT_EQ (dm->enable (true, true), 0) << lastError.message ();
+
+    ASSERT_EQ (InterfaceManager::instance ()->createGreInterface (gre4, dummy0, "0.0.0.0", "172.217.22.142", nullptr, nullptr, 64, true), 0) << lastError.message ();
+    auto gr = InterfaceManager::instance ()->findByName (gre4);
+    ASSERT_NE (gr, nullptr);
+    ASSERT_TRUE (gr->isGre ());
+    ASSERT_EQ (gr->enable (true, true), 0) << lastError.message ();
+    ASSERT_EQ (gr->enable (false, true), 0) << lastError.message ();
+    EXPECT_EQ (InterfaceManager::instance ()->removeInterface (gre4, true), 0) << lastError.message ();
+
+    ASSERT_EQ (InterfaceManager::instance ()->createGreInterface (gre6, dummy0, "::", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true), 0) << lastError.message ();
+    gr = InterfaceManager::instance ()->findByName (gre6);
+    ASSERT_NE (gr, nullptr);
+    ASSERT_TRUE (gr->isGre ());
+    ASSERT_EQ (gr->enable (true, true), 0) << lastError.message ();
+    ASSERT_EQ (gr->enable (false, true), 0) << lastError.message ();
+    EXPECT_EQ (InterfaceManager::instance ()->removeInterface (gre6, true), 0) << lastError.message ();
+
+    EXPECT_EQ (InterfaceManager::instance ()->removeInterface (dummy0, true), 0) << lastError.message ();
 }
 
 /**

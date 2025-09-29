@@ -28,6 +28,7 @@
 
 // C++.
 #include <iostream>
+#include <mutex>
 
 // C.
 #include <linux/if_tunnel.h>
@@ -78,82 +79,18 @@ InterfaceManager::~InterfaceManager ()
 //   CLASS     : InterfaceManager
 //   METHOD    : instance
 // =========================================================================
-InterfaceManager* InterfaceManager::instance ()
+InterfaceManager::Ptr InterfaceManager::instance ()
 {
-    static InterfaceManager manager;
-    return &manager;
-}
+    static std::once_flag initialized;
+    static Ptr manager (new InterfaceManager ());
 
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : dumpLink
-// =========================================================================
-int InterfaceManager::dumpLink (bool sync)
-{
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    std::call_once (initialized, [] () {
+        manager->dumpLink (true);
+        manager->dumpAddress (true);
+        manager->dumpRoute (true);
+    });
 
-    // netlink header.
-    struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (rtgenmsg));
-    nlh->nlmsg_type = RTM_GETLINK;
-    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-    nlh->nlmsg_seq = ++_seq;
-
-    // general message.
-    struct rtgenmsg *rtgen = reinterpret_cast <struct rtgenmsg*> (NLMSG_DATA (nlh));
-    rtgen->rtgen_family = AF_UNSPEC;
-
-    // send request.
-    return sendRequest (nlh, sync);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : dumpAddress
-// =========================================================================
-int InterfaceManager::dumpAddress (bool sync)
-{
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
-
-    // netlink header.
-    struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (rtgenmsg));
-    nlh->nlmsg_type = RTM_GETADDR;
-    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-    nlh->nlmsg_seq = ++_seq;
-
-    // general message.
-    struct rtgenmsg *rtgen = reinterpret_cast <struct rtgenmsg*> (NLMSG_DATA (nlh));
-    rtgen->rtgen_family = AF_UNSPEC;
-
-    // send request.
-    return sendRequest (nlh, sync);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : dumpRoute
-// =========================================================================
-int InterfaceManager::dumpRoute (bool sync)
-{
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
-
-    // netlink header.
-    struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (rtgenmsg));
-    nlh->nlmsg_type = RTM_GETROUTE;
-    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-    nlh->nlmsg_seq = ++_seq;
-
-    // general message.
-    struct rtgenmsg *rtgen = reinterpret_cast <struct rtgenmsg*> (NLMSG_DATA (nlh));
-    rtgen->rtgen_family = AF_UNSPEC;
-
-    // send request.
-    return sendRequest (nlh, sync);
+    return manager;
 }
 
 // =========================================================================
@@ -198,6 +135,30 @@ InterfaceList InterfaceManager::enumerate ()
     }
 
     return ifaces;
+}
+
+// =========================================================================
+//   CLASS     : InterfaceManager
+//   METHOD    : refresh
+// =========================================================================
+int InterfaceManager::refresh (bool sync)
+{
+    if (dumpLink (sync) != 0)
+    {
+        return -1;
+    }
+
+    if (dumpAddress (sync) != 0)
+    {
+        return -1;
+    }
+
+    if (dumpRoute (sync) != 0) 
+    {
+        return -1;
+    }
+
+    return 0;
 }
 
 // =========================================================================
@@ -286,7 +247,7 @@ int InterfaceManager::createDummyInterface (const std::string& interfaceName, bo
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
     nlh->nlmsg_type = RTM_NEWLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
     nlh->nlmsg_seq = ++_seq;
@@ -315,42 +276,6 @@ int InterfaceManager::createDummyInterface (const std::string& interfaceName, bo
 //   CLASS     : InterfaceManager
 //   METHOD    : createBridgeInterface
 // =========================================================================
-int InterfaceManager::createPointToPointInterface (const std::string& interfaceName, bool sync)
-{
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof(buffer));
-
-    // netlink header
-    struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
-    nlh->nlmsg_type = RTM_NEWLINK;
-    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
-    nlh->nlmsg_seq = ++_seq;
-
-    // interface info
-    struct ifinfomsg *ifi = reinterpret_cast <struct ifinfomsg *> (NLMSG_DATA (nlh));
-    ifi->ifi_family = AF_UNSPEC;
-
-    // set interface name
-    addAttributes (nlh, IFLA_IFNAME, interfaceName.c_str (), interfaceName.length () + 1);
-
-    // nested link info
-    struct rtattr *linkinfo = startNestedAttributes (nlh, IFLA_LINKINFO);
-
-    // interface kind
-    addAttributes (nlh, IFLA_INFO_KIND, "ppp", strlen ("ppp") + 1);
-
-    // stop nested attributes
-    stopNestedAttributes (nlh, linkinfo);
-
-    // send request
-    return sendRequest (nlh, sync);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : createBridgeInterface
-// =========================================================================
 int InterfaceManager::createBridgeInterface (const std::string& interfaceName, bool sync)
 {
     char buffer[_bufferSize];
@@ -358,7 +283,7 @@ int InterfaceManager::createBridgeInterface (const std::string& interfaceName, b
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
     nlh->nlmsg_type = RTM_NEWLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
     nlh->nlmsg_seq = ++_seq;
@@ -400,7 +325,7 @@ int InterfaceManager::createVlanInterface (const std::string& interfaceName, uin
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
     nlh->nlmsg_type = RTM_NEWLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
     nlh->nlmsg_seq = ++_seq;
@@ -428,8 +353,8 @@ int InterfaceManager::createVlanInterface (const std::string& interfaceName, uin
     addAttributes (nlh, IFLA_VLAN_ID, &id, sizeof (uint16_t));
 
     // add VLAN protocol.
-    uint16_t proto_be = htons (proto);
-    addAttributes (nlh, IFLA_VLAN_PROTOCOL, &proto_be, sizeof (uint16_t));
+    uint16_t vproto = htons (proto);
+    addAttributes (nlh, IFLA_VLAN_PROTOCOL, &vproto, sizeof (uint16_t));
 
     // stop nested link info data.
     stopNestedAttributes (nlh, data);
@@ -461,7 +386,7 @@ int InterfaceManager::createVethInterface (const std::string& hostName, const st
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
     nlh->nlmsg_type = RTM_NEWLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
     nlh->nlmsg_seq = ++_seq;
@@ -471,7 +396,7 @@ int InterfaceManager::createVethInterface (const std::string& hostName, const st
     ifi->ifi_family = AF_UNSPEC;
 
     // add pid if specified.
-    if (pid)
+    if (pid && (*pid > 0))
     {
         addAttributes (nlh, IFLA_NET_NS_PID, pid, sizeof (pid_t));
     }
@@ -488,14 +413,8 @@ int InterfaceManager::createVethInterface (const std::string& hostName, const st
     // start nested link info data.
     struct rtattr *data = startNestedAttributes (nlh, IFLA_INFO_DATA);
 
-    // start nested peer info data.
-    struct rtattr *peerinfo = startNestedAttributes (nlh, VETH_INFO_PEER);
-
-    // set peer interface name.
-    addAttributes (nlh, IFLA_IFNAME, peerName.c_str (), peerName.length () + 1);
-
-    // stop nested peer info data.
-    stopNestedAttributes (nlh, peerinfo);
+    // add peer info data.
+    addPeerInfoData (nlh, peerName);
 
     // stop nested link info data.
     stopNestedAttributes (nlh, data);
@@ -526,7 +445,7 @@ int InterfaceManager::createGreInterface (const std::string& tunnelName, uint32_
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
     nlh->nlmsg_type = RTM_NEWLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
     nlh->nlmsg_seq = ++_seq;
@@ -629,7 +548,7 @@ int InterfaceManager::removeInterface (uint32_t interfaceIndex, bool sync)
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
     nlh->nlmsg_type = RTM_DELLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
     nlh->nlmsg_seq = ++_seq;
@@ -689,6 +608,28 @@ int InterfaceManager::stopNestedAttributes (struct nlmsghdr *nlh, struct rtattr 
 
 // =========================================================================
 //   CLASS     : InterfaceManager
+//   METHOD    : addPeerInfoData
+// =========================================================================
+void InterfaceManager::addPeerInfoData (struct nlmsghdr *nlh, const std::string& peerName)
+{
+    // start nested peer info data.
+    struct rtattr *peerinfo = startNestedAttributes (nlh, VETH_INFO_PEER);
+
+    // peer info message.
+    struct ifinfomsg *ifi = reinterpret_cast <struct ifinfomsg *> (reinterpret_cast <char *> (nlh) + nlh->nlmsg_len);
+    ifi->ifi_family = AF_UNSPEC;
+
+    nlh->nlmsg_len += NLMSG_ALIGN (sizeof (struct ifinfomsg));
+
+    // set peer interface name.
+    addAttributes (nlh, IFLA_IFNAME, peerName.c_str (), peerName.length () + 1);
+
+    // stop nested peer info data.
+    stopNestedAttributes (nlh, peerinfo);
+}
+
+// =========================================================================
+//   CLASS     : InterfaceManager
 //   METHOD    : mtu
 // =========================================================================
 int InterfaceManager::mtu (uint32_t interfaceIndex, uint32_t mtuBytes, bool sync)
@@ -698,7 +639,7 @@ int InterfaceManager::mtu (uint32_t interfaceIndex, uint32_t mtuBytes, bool sync
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
     nlh->nlmsg_type = RTM_SETLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
     nlh->nlmsg_seq = ++_seq;
@@ -726,7 +667,7 @@ int InterfaceManager::mac (uint32_t interfaceIndex, const MacAddress& macAddress
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
     nlh->nlmsg_type = RTM_SETLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
     nlh->nlmsg_seq = ++_seq;
@@ -754,7 +695,7 @@ int InterfaceManager::addToBridge (uint32_t interfaceIndex, const uint32_t maste
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
     nlh->nlmsg_type = RTM_SETLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
     nlh->nlmsg_seq = ++_seq;
@@ -790,7 +731,7 @@ int InterfaceManager::enable (uint32_t interfaceIndex, bool enabled, bool sync)
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifinfomsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
     nlh->nlmsg_type = RTM_SETLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
     nlh->nlmsg_seq = ++_seq;
@@ -817,7 +758,7 @@ int InterfaceManager::addAddress (uint32_t interfaceIndex, const IpAddress& ipAd
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifaddrmsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifaddrmsg));
     nlh->nlmsg_type = RTM_NEWADDR;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
     nlh->nlmsg_seq = ++_seq;
@@ -855,7 +796,7 @@ int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& i
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (ifaddrmsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifaddrmsg));
     nlh->nlmsg_type = RTM_DELADDR;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
     nlh->nlmsg_seq = ++_seq;
@@ -893,7 +834,7 @@ int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, 
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (rtmsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtmsg));
     nlh->nlmsg_type = RTM_NEWROUTE;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_REPLACE;
     nlh->nlmsg_seq = ++_seq;
@@ -940,7 +881,7 @@ int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& des
 
     // netlink header.
     struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
-    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (rtmsg));
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtmsg));
     nlh->nlmsg_type = RTM_DELROUTE;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
     nlh->nlmsg_seq = ++_seq;
@@ -971,6 +912,78 @@ int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& des
     {
         addAttributes (nlh, RTA_PRIORITY, &metric, sizeof (uint32_t));
     }
+
+    // send request.
+    return sendRequest (nlh, sync);
+}
+
+// =========================================================================
+//   CLASS     : InterfaceManager
+//   METHOD    : dumpLink
+// =========================================================================
+int InterfaceManager::dumpLink (bool sync)
+{
+    char buffer[_bufferSize];
+    memset (buffer, 0, sizeof (buffer));
+
+    // netlink header.
+    struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtgenmsg));
+    nlh->nlmsg_type = RTM_GETLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    nlh->nlmsg_seq = ++_seq;
+
+    // general message.
+    struct rtgenmsg *rtgen = reinterpret_cast <struct rtgenmsg*> (NLMSG_DATA (nlh));
+    rtgen->rtgen_family = AF_UNSPEC;
+
+    // send request.
+    return sendRequest (nlh, sync);
+}
+
+// =========================================================================
+//   CLASS     : InterfaceManager
+//   METHOD    : dumpAddress
+// =========================================================================
+int InterfaceManager::dumpAddress (bool sync)
+{
+    char buffer[_bufferSize];
+    memset (buffer, 0, sizeof (buffer));
+
+    // netlink header.
+    struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtgenmsg));
+    nlh->nlmsg_type = RTM_GETADDR;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    nlh->nlmsg_seq = ++_seq;
+
+    // general message.
+    struct rtgenmsg *rtgen = reinterpret_cast <struct rtgenmsg*> (NLMSG_DATA (nlh));
+    rtgen->rtgen_family = AF_UNSPEC;
+
+    // send request.
+    return sendRequest (nlh, sync);
+}
+
+// =========================================================================
+//   CLASS     : InterfaceManager
+//   METHOD    : dumpRoute
+// =========================================================================
+int InterfaceManager::dumpRoute (bool sync)
+{
+    char buffer[_bufferSize];
+    memset (buffer, 0, sizeof (buffer));
+
+    // netlink header.
+    struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (buffer);
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtgenmsg));
+    nlh->nlmsg_type = RTM_GETROUTE;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    nlh->nlmsg_seq = ++_seq;
+
+    // general message.
+    struct rtgenmsg *rtgen = reinterpret_cast <struct rtgenmsg*> (NLMSG_DATA (nlh));
+    rtgen->rtgen_family = AF_UNSPEC;
 
     // send request.
     return sendRequest (nlh, sync);
@@ -1461,7 +1474,7 @@ Interface::Ptr InterfaceManager::acquire (LinkInfo& info)
         return it->second;
     }
 
-    Interface::Ptr iface (new Interface (this, info.index));
+   Interface::Ptr iface (new Interface (shared_from_this (), info.index));
     _interfaces[info.index] = iface;
     info.flags |= ChangeType::Added;
 
