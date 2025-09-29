@@ -263,7 +263,8 @@ int InterfaceManager::createDummyInterface (const std::string& interfaceName, bo
     struct rtattr *linkinfo = startNestedAttributes (nlh, IFLA_LINKINFO);
 
     // add interface kind
-    addAttributes (nlh, IFLA_INFO_KIND, "dummy", strlen ("dummy") + 1);
+    std::string kind = "dummy";
+    addAttributes (nlh, IFLA_INFO_KIND, kind.c_str (), kind.size () + 1);
 
     // stop nested link info attributes.
     stopNestedAttributes (nlh, linkinfo);
@@ -299,7 +300,8 @@ int InterfaceManager::createBridgeInterface (const std::string& interfaceName, b
     struct rtattr *linkinfo = startNestedAttributes (nlh, IFLA_LINKINFO);
 
     // add interface kind.
-    addAttributes (nlh, IFLA_INFO_KIND, "bridge", strlen ("bridge") + 1);
+    std::string kind = "bridge";
+    addAttributes (nlh, IFLA_INFO_KIND, kind.c_str (), kind.size () + 1);
 
     // stop nested link info attributes.
     stopNestedAttributes (nlh, linkinfo);
@@ -344,7 +346,8 @@ int InterfaceManager::createVlanInterface (const std::string& interfaceName, uin
     struct rtattr *linkinfo = startNestedAttributes (nlh, IFLA_LINKINFO);
 
     // add interface kind.
-    addAttributes (nlh, IFLA_INFO_KIND, "vlan", strlen ("vlan") + 1);
+    std::string kind = "vlan";
+    addAttributes (nlh, IFLA_INFO_KIND, kind.c_str (), kind.size () + 1);
 
     // start nested link info data.
     struct rtattr *data = startNestedAttributes (nlh, IFLA_INFO_DATA);
@@ -408,7 +411,8 @@ int InterfaceManager::createVethInterface (const std::string& hostName, const st
     struct rtattr *linkinfo = startNestedAttributes (nlh, IFLA_LINKINFO);
 
     // add info kind.
-    addAttributes (nlh, IFLA_INFO_KIND, "veth", strlen ("veth") + 1);
+    std::string kind = "veth";
+    addAttributes (nlh, IFLA_INFO_KIND, kind.c_str (), kind.size () + 1);
 
     // start nested link info data.
     struct rtattr *data = startNestedAttributes (nlh, IFLA_INFO_DATA);
@@ -461,8 +465,8 @@ int InterfaceManager::createGreInterface (const std::string& tunnelName, uint32_
     struct rtattr * linkinfo = startNestedAttributes (nlh, IFLA_LINKINFO);
 
     // add info kind.
-    std::string type = localAddress.isIpv4Address () ? "gre" : "ip6gre";
-    addAttributes (nlh, IFLA_INFO_KIND, type.c_str (), type.length () + 1);
+    std::string kind = localAddress.isIpv4Address () ? "gre" : "ip6gre";
+    addAttributes (nlh, IFLA_INFO_KIND, kind.c_str (), kind.length () + 1);
 
     // start nested link info data.
     struct rtattr * data = startNestedAttributes (nlh, IFLA_INFO_DATA);
