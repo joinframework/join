@@ -228,7 +228,7 @@ int Interface::addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress
         return -1;
     }
 
-    return mgr->addRoute (_index, dest, prefix, gateway, metric, sync);
+    return mgr->addRoute (_index, dest, prefix, gateway, &metric, sync);
 }
 
 // =========================================================================
@@ -253,7 +253,7 @@ int Interface::removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddr
         return -1;
     }
 
-    return mgr->removeRoute (_index, dest, prefix, gateway, metric, sync);
+    return mgr->removeRoute (_index, dest, prefix, gateway, &metric, sync);
 }
 
 // =========================================================================

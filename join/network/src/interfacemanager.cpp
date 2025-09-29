@@ -316,7 +316,7 @@ int InterfaceManager::createBridgeInterface (const std::string& interfaceName, b
 // =========================================================================
 int InterfaceManager::createVlanInterface (const std::string& interfaceName, uint32_t parentIndex, uint16_t id, uint16_t proto, bool sync)
 {
-    if (id == 0 || id >= 4095)
+    if ((id == reservedVlanId) || (id > maxVlanId))
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
@@ -831,7 +831,7 @@ int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& i
 //   CLASS     : InterfaceManager
 //   METHOD    : addRoute
 // =========================================================================
-int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync)
+int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t* metric, bool sync)
 {
     char buffer[_bufferSize];
     memset (buffer, 0, sizeof (buffer));
@@ -865,9 +865,9 @@ int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, 
     addAttributes (nlh, RTA_OIF, &interfaceIndex, sizeof (uint32_t));
 
     // add metric if specified.
-    if (metric > 0)
+    if (metric)
     {
-        addAttributes (nlh, RTA_PRIORITY, &metric, sizeof (uint32_t));
+        addAttributes (nlh, RTA_PRIORITY, metric, sizeof (uint32_t));
     }
 
     // send request.
@@ -878,7 +878,7 @@ int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, 
 //   CLASS     : InterfaceManager
 //   METHOD    : removeRoute
 // =========================================================================
-int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync)
+int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t* metric, bool sync)
 {
     char buffer[_bufferSize];
     memset (buffer, 0, sizeof (buffer));
@@ -912,9 +912,9 @@ int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& des
     addAttributes (nlh, RTA_OIF, &interfaceIndex, sizeof (uint32_t));
 
     // add metric if specified.
-    if (metric > 0)
+    if (metric)
     {
-        addAttributes (nlh, RTA_PRIORITY, &metric, sizeof (uint32_t));
+        addAttributes (nlh, RTA_PRIORITY, metric, sizeof (uint32_t));
     }
 
     // send request.
@@ -1054,50 +1054,48 @@ int InterfaceManager::waitResponse (ScopedLock& lock, uint32_t seq, uint32_t tim
 void InterfaceManager::onReceive ()
 {
     ssize_t len = read (_buffer.get (), _bufferSize);
-    if (len < 0)
+    if (len != -1)
     {
-        return;
-    }
-
-    struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (_buffer.get ());
-    while (NLMSG_OK (nlh, len))
-    {
-        if (nlh->nlmsg_type == NLMSG_DONE)
+        struct nlmsghdr *nlh = reinterpret_cast <struct nlmsghdr *> (_buffer.get ());
+        while (NLMSG_OK (nlh, len))
         {
-            notifyRequest (nlh->nlmsg_seq, 0);
-            break;
-        }
+            if (nlh->nlmsg_type == NLMSG_DONE)
+            {
+                notifyRequest (nlh->nlmsg_seq, 0);
+                break;
+            }
 
-        if (nlh->nlmsg_type == NLMSG_ERROR)
-        {
-            struct nlmsgerr* err = static_cast <struct nlmsgerr*> (NLMSG_DATA (nlh));
-            notifyRequest (err->msg.nlmsg_seq, -err->error);
+            if (nlh->nlmsg_type == NLMSG_ERROR)
+            {
+                struct nlmsgerr* err = static_cast <struct nlmsgerr*> (NLMSG_DATA (nlh));
+                notifyRequest (err->msg.nlmsg_seq, -err->error);
+                nlh = NLMSG_NEXT (nlh, len);
+                continue;
+            }
+
+            switch (nlh->nlmsg_type)
+            {
+                case RTM_NEWLINK:
+                case RTM_DELLINK:
+                    onLinkMessage (nlh);
+                    break;
+
+                case RTM_NEWADDR:
+                case RTM_DELADDR:
+                    onAddressMessage (nlh);
+                    break;
+
+                case RTM_NEWROUTE:
+                case RTM_DELROUTE:
+                    onRouteMessage (nlh);
+                    break;
+
+                default:
+                    break;
+            }
+
             nlh = NLMSG_NEXT (nlh, len);
-            continue;
         }
-
-        switch (nlh->nlmsg_type)
-        {
-            case RTM_NEWLINK:
-            case RTM_DELLINK:
-                onLinkMessage (nlh);
-                break;
-
-            case RTM_NEWADDR:
-            case RTM_DELADDR:
-                onAddressMessage (nlh);
-                break;
-
-            case RTM_NEWROUTE:
-            case RTM_DELROUTE:
-                onRouteMessage (nlh);
-                break;
-
-            default:
-                break;
-        }
-
-        nlh = NLMSG_NEXT (nlh, len);
     }
 }
 

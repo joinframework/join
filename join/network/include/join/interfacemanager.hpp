@@ -488,7 +488,7 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync = false);
+        int addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t* metric = nullptr, bool sync = false);
 
         /**
          * @brief remove route from interface.
@@ -500,7 +500,7 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync = false);
+        int removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t* metric = nullptr, bool sync = false);
 
         /**
          * @brief dump link data.
@@ -602,10 +602,16 @@ namespace join
         Interface::Ptr acquire (LinkInfo& info);
 
         /// internal buffer size.
-        static const size_t _bufferSize = 32768;
+        static constexpr size_t _bufferSize = 32768;
 
         /// internal read buffer.
         std::unique_ptr <char []> _buffer;
+
+        /// reserved vlan id.
+        static constexpr uint16_t reservedVlanId = 0;
+
+        /// max vlan id.
+        static constexpr uint16_t maxVlanId = 4094;
 
         /// interfaces.
         std::map <uint32_t, Interface::Ptr> _interfaces;
