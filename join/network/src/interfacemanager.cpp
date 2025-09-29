@@ -316,7 +316,7 @@ int InterfaceManager::createBridgeInterface (const std::string& interfaceName, b
 // =========================================================================
 int InterfaceManager::createVlanInterface (const std::string& interfaceName, uint32_t parentIndex, uint16_t id, uint16_t proto, bool sync)
 {
-    if(id == 0 || id >= 4095)
+    if (id == 0 || id >= 4095)
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;

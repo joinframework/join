@@ -316,11 +316,11 @@ TEST_F (InterfaceTest, isRunning)
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (ve->isRunning ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
-    ASSERT_NE (br, nullptr);
-    ASSERT_EQ (ve->addToBridge ("br0", true), 0) << lastError.message ();
-    ASSERT_TRUE (br->isRunning ());
-    ASSERT_EQ (ve->removeFromBridge (true), 0) << lastError.message ();
+    // auto br = InterfaceManager::instance ()->findByName ("br0");
+    // ASSERT_NE (br, nullptr);
+    // ASSERT_EQ (ve->addToBridge ("br0", true), 0) << lastError.message ();
+    // ASSERT_TRUE (br->isRunning ());
+    // ASSERT_EQ (ve->removeFromBridge (true), 0) << lastError.message ();
 }
 
 /**

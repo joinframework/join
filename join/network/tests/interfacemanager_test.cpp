@@ -47,9 +47,10 @@ TEST (InterfaceManager, instance)
  */
 TEST (InterfaceManager, findByIndex)
 {
-    std::string loopback ("lo");
+    auto foo = InterfaceManager::instance ()->findByIndex (50000);
+    ASSERT_EQ (foo, nullptr);
 
-    auto lo = InterfaceManager::instance ()->findByIndex (if_nametoindex (loopback.c_str ()));
+    auto lo = InterfaceManager::instance ()->findByIndex (if_nametoindex ("lo"));
     ASSERT_NE (lo, nullptr);
 }
 
@@ -58,9 +59,10 @@ TEST (InterfaceManager, findByIndex)
  */
 TEST (InterfaceManager, findByName)
 {
-    std::string loopback ("lo");
+    auto foo = InterfaceManager::instance ()->findByName ("foo");
+    ASSERT_EQ (foo, nullptr);
 
-    auto lo = InterfaceManager::instance ()->findByName (loopback);
+    auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
 }
 
@@ -186,6 +188,7 @@ TEST (InterfaceManager, createVlanInterface)
     ASSERT_NE (dm, nullptr);
     ASSERT_EQ (dm->enable (true, true), 0) << lastError.message ();
 
+    ASSERT_EQ (InterfaceManager::instance ()->createVlanInterface (vlan10, dummy0, 0, ETH_P_8021Q, true), -1);
     ASSERT_EQ (InterfaceManager::instance ()->createVlanInterface (vlan10, dummy0, id, ETH_P_8021Q, true), 0) << lastError.message ();
     auto vl = InterfaceManager::instance ()->findByName (vlan10);
     ASSERT_TRUE (vl->isVlan ());
@@ -223,6 +226,7 @@ TEST (InterfaceManager, createVethInterface)
  */
 TEST (InterfaceManager, createGreInterface)
 {
+    uint32_t ikey = 10, okey = 15;
     std::string dummy0 ("dummy0"), gre4 ("gre4"), gre6 ("gre6");
     InterfaceManager::instance ()->removeInterface (gre4, true);
     InterfaceManager::instance ()->removeInterface (gre6, true);
@@ -233,7 +237,8 @@ TEST (InterfaceManager, createGreInterface)
     ASSERT_NE (dm, nullptr);
     ASSERT_EQ (dm->enable (true, true), 0) << lastError.message ();
 
-    ASSERT_EQ (InterfaceManager::instance ()->createGreInterface (gre4, dummy0, "0.0.0.0", "172.217.22.142", nullptr, nullptr, 64, true), 0) << lastError.message ();
+    ASSERT_EQ (InterfaceManager::instance ()->createGreInterface (gre4, dummy0, "0.0.0.0", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true), -1);
+    ASSERT_EQ (InterfaceManager::instance ()->createGreInterface (gre4, dummy0, "0.0.0.0", "172.217.22.142", &ikey, &okey, 64, true), 0) << lastError.message ();
     auto gr = InterfaceManager::instance ()->findByName (gre4);
     ASSERT_NE (gr, nullptr);
     ASSERT_TRUE (gr->isGre ());
@@ -241,7 +246,8 @@ TEST (InterfaceManager, createGreInterface)
     ASSERT_EQ (gr->enable (false, true), 0) << lastError.message ();
     EXPECT_EQ (InterfaceManager::instance ()->removeInterface (gre4, true), 0) << lastError.message ();
 
-    ASSERT_EQ (InterfaceManager::instance ()->createGreInterface (gre6, dummy0, "::", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true), 0) << lastError.message ();
+    ASSERT_EQ (InterfaceManager::instance ()->createGreInterface (gre6, dummy0, "0.0.0.0", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true), -1);
+    ASSERT_EQ (InterfaceManager::instance ()->createGreInterface (gre6, dummy0, "::", "2a00:1450:4007:811::200e", &ikey, &okey, 64, true), 0) << lastError.message ();
     gr = InterfaceManager::instance ()->findByName (gre6);
     ASSERT_NE (gr, nullptr);
     ASSERT_TRUE (gr->isGre ());
