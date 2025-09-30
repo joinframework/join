@@ -334,6 +334,7 @@ TEST_F (InterfaceTest, addToBridge)
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_EQ (ve->master (), 0);
+    ASSERT_EQ (ve->addToBridge ("foo", true), -1);
     ASSERT_EQ (ve->addToBridge ("br0", true), 0) << lastError.message ();
     ASSERT_GT (ve->master (), 0);
     ASSERT_EQ (ve->removeFromBridge (), 0) << lastError.message ();

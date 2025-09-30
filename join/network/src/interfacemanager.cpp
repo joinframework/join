@@ -47,22 +47,13 @@ InterfaceManager::InterfaceManager()
 : _buffer (std::make_unique <char []> (_bufferSize))
 , _seq (0)
 {
-    if (open (Netlink::rt ()) == -1)
-    {
-        throw std::runtime_error ("failed to open netlink socket");
-    }
-
-    if (bind (RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE) == -1)
+    if ((open (Netlink::rt ()) == -1) || (bind (RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE) == -1))
     {
         close ();
         throw std::runtime_error ("failed to bind netlink socket");
     }
 
-    if (Reactor::instance ()->addHandler (this) == -1)
-    {
-        close ();
-        throw std::runtime_error ("failed to handle netlink socket events");
-    }
+    Reactor::instance ()->addHandler (this);
 }
 
 // =========================================================================
@@ -768,7 +759,7 @@ int InterfaceManager::addAddress (uint32_t interfaceIndex, const IpAddress& ipAd
     addAttributes (nlh, IFA_ADDRESS, ipAddress.addr (), ipAddress.length ());
 
     // add broadcast address if specified.
-    if (ipAddress.family () == AF_INET && broadcast.isBroadcast ())
+    if (ipAddress.family () == AF_INET && broadcast.isBroadcast (prefix))
     {
         addAttributes (nlh, IFA_BROADCAST, broadcast.addr (), broadcast.length ());
     }
@@ -806,7 +797,7 @@ int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& i
     addAttributes (nlh, IFA_ADDRESS, ipAddress.addr (), ipAddress.length ());
 
     // add broadcast address if specified.
-    if (ipAddress.family () == AF_INET && broadcast.isBroadcast ())
+    if (ipAddress.family () == AF_INET && broadcast.isBroadcast (prefix))
     {
         addAttributes (nlh, IFA_BROADCAST, broadcast.addr (), broadcast.length ());
     }

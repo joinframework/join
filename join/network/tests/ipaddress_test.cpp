@@ -1024,6 +1024,18 @@ TEST (IpAddress, isBroadcast)
 
     ip = "2001:db8:1234:5678::1";
     ASSERT_FALSE (ip.isBroadcast ());
+
+    ip = "192.255.255.255";
+    ASSERT_TRUE (ip.isBroadcast (8));
+
+    ip = "192.168.255.255";
+    ASSERT_TRUE (ip.isBroadcast (16));
+
+    ip = "192.168.13.255";
+    ASSERT_TRUE (ip.isBroadcast (24));
+
+    ip = "192.168.13.255";
+    ASSERT_FALSE (ip.isBroadcast (33));
 }
 
 /**

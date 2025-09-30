@@ -352,7 +352,7 @@ namespace join
             if (prefix >= 0 && prefix <= 32)
             {
                 uint32_t mask = (prefix == 0) ? 0 : (0xFFFFFFFF << (32 - prefix));
-                return ip == ((ip & mask) | ~mask);
+                return (ip == ((ip & mask) | ~mask));
             }
 
             return false;
