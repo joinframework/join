@@ -47,7 +47,7 @@ InterfaceManager::InterfaceManager()
 : _buffer (std::make_unique <char []> (_bufferSize))
 , _seq (0)
 {
-    if (open (NetLink::rt ()) == -1)
+    if (open (Netlink::rt ()) == -1)
     {
         throw std::runtime_error ("failed to open netlink socket");
     }
@@ -85,9 +85,7 @@ InterfaceManager::Ptr InterfaceManager::instance ()
     static Ptr manager (new InterfaceManager ());
 
     std::call_once (initialized, [] () {
-        manager->dumpLink (true);
-        manager->dumpAddress (true);
-        manager->dumpRoute (true);
+        manager->refresh (true);
     });
 
     return manager;
@@ -143,17 +141,7 @@ InterfaceList InterfaceManager::enumerate ()
 // =========================================================================
 int InterfaceManager::refresh (bool sync)
 {
-    if (dumpLink (sync) != 0)
-    {
-        return -1;
-    }
-
-    if (dumpAddress (sync) != 0)
-    {
-        return -1;
-    }
-
-    if (dumpRoute (sync) != 0) 
+    if (dumpLink (sync) != 0 || dumpAddress (sync) != 0 || dumpRoute (sync) != 0)
     {
         return -1;
     }

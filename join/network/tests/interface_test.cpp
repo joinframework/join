@@ -47,10 +47,17 @@ public:
     {
         [[maybe_unused]] int result;
 
+        result = std::system ("ip link add dummy0 type dummy");
+        result = std::system ("ip link set dummy0 address aa:66:d6:26:e4:59");
+        result = std::system ("ip addr add 192.168.35.100/24 brd 192.168.35.255 dev dummy0");
+        result = std::system ("ip -6 addr add 2001:db8::1234/64 dev dummy0");
+        result = std::system ("ip link set dummy0 up arp on multicast on");
+
         result = std::system ("ip netns add red");
         result = std::system ("ip link add veth0 type veth peer name eth0 netns red");
         result = std::system ("ip link set veth0 address 4e:ed:ed:ee:59:db");
         result = std::system ("ip addr add 192.168.100.1/24 brd 192.168.100.255 dev veth0");
+        result = std::system ("ip -6 addr add 2001:db8::1235/64 dev veth0");
         result = std::system ("ip link set veth0 up arp on multicast on");
         result = std::system ("ip -n red link set eth0 address 4e:ed:ed:ee:59:dc");
         result = std::system ("ip -n red addr add 192.168.16.200/24 brd 192.168.16.255 dev eth0");
@@ -59,6 +66,7 @@ public:
         result = std::system ("brctl addbr br0");
         result = std::system ("ip link set br0 address 4e:ed:ed:ee:59:da");
         result = std::system ("ip addr add 192.168.16.100/24 brd 192.168.16.255 dev br0");
+        result = std::system ("ip -6 addr add 2001:db8::1236/64 dev veth0");
         result = std::system ("ip link set br0 up");
     }
 
@@ -69,12 +77,35 @@ public:
     {
         [[maybe_unused]] int result;
 
+        result = std::system ("ip link set dummy0 down");
+        result = std::system ("ip link del dummy0");
+
         result = std::system ("ip link set dev veth0 down");
         result = std::system ("ip link del veth0");
         result = std::system ("ip netns del red");
 
         result = std::system ("ip link set br0 down");
         result = std::system ("brctl delbr br0");
+    }
+
+    /**
+     * @brief wait for link local address.
+     * @param iface interface.
+     * @param timeout timeout.
+     * @return true if has link local address, false otherwise.
+     */
+    static bool waitLinkLocal (const Interface::Ptr& iface, int timeout = 5000)
+    {
+        auto deadline = std::chrono::steady_clock::now () + std::chrono::milliseconds (timeout);
+        while (std::chrono::steady_clock::now () < deadline)
+        {
+            if (iface->hasLocalAddress ())
+            {
+                return true;
+            }
+            std::this_thread::sleep_for (std::chrono::milliseconds (100));
+        }
+        return false;
     }
 };
 
@@ -86,6 +117,10 @@ TEST_F (InterfaceTest, index)
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_EQ (lo->index (), if_nametoindex ("lo"));
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_EQ (dm->index (), if_nametoindex ("dummy0"));
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -105,6 +140,10 @@ TEST_F (InterfaceTest, name)
     ASSERT_NE (lo, nullptr);
     ASSERT_EQ (lo->name (), "lo");
 
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_EQ (dm->name (), "dummy0");
+
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_EQ (ve->name (), "veth0");
@@ -122,6 +161,10 @@ TEST_F (InterfaceTest, mtu)
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_EQ (lo->mtu (), 65536);
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_EQ (dm->mtu (), 1500);
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -143,6 +186,10 @@ TEST_F (InterfaceTest, kind)
     ASSERT_NE (lo, nullptr);
     ASSERT_EQ (lo->kind (), "");
 
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_EQ (dm->kind (), "dummy");
+
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_EQ (ve->kind (), "veth");
@@ -161,6 +208,10 @@ TEST_F (InterfaceTest, mac)
     ASSERT_NE (lo, nullptr);
     ASSERT_EQ (lo->mac (), "00:00:00:00:00:00");
 
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_EQ (dm->mac ().toString(), "aa:66:d6:26:e4:59");
+
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_EQ (ve->mac (), "4e:ed:ed:ee:59:db");
@@ -177,19 +228,44 @@ TEST_F (InterfaceTest, mac)
  */
 TEST_F (InterfaceTest, addAddress)
 {
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+
+    ASSERT_FALSE (dm->hasAddress ("192.168.31.100"));
+    ASSERT_EQ (dm->addAddress ({"192.168.31.100", 24, "192.168.31.255"}, true), 0) << lastError.message ();
+    ASSERT_TRUE (dm->hasAddress ("192.168.31.100"));
+    ASSERT_EQ (dm->removeAddress ({"192.168.31.100", 24, "192.168.31.255"}), 0) << lastError.message ();
+
+    ASSERT_FALSE (dm->hasAddress ("2001:db8:abcd:12::8"));
+    ASSERT_EQ (dm->addAddress ({"2001:db8:abcd:12::8", 64, {}}, true), 0) << lastError.message ();
+    ASSERT_TRUE (dm->hasAddress ("2001:db8:abcd:12::8"));
+    ASSERT_EQ (dm->removeAddress ({"2001:db8:abcd:12::8", 64, {}}), 0) << lastError.message ();
+
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
+
+    ASSERT_FALSE (ve->hasAddress ("192.168.200.100"));
+    ASSERT_EQ (ve->addAddress ({"192.168.200.100", 24, "192.168.200.255"}, true), 0) << lastError.message ();
+    ASSERT_TRUE (ve->hasAddress ("192.168.200.100"));
+    ASSERT_EQ (ve->removeAddress ({"192.168.200.100", 24, "192.168.200.255"}), 0) << lastError.message ();
+
+    ASSERT_FALSE (ve->hasAddress ("2001:db8:abcd:12::1"));
     ASSERT_EQ (ve->addAddress ({"2001:db8:abcd:12::1", 64, {}}, true), 0) << lastError.message ();
     ASSERT_TRUE (ve->hasAddress ("2001:db8:abcd:12::1"));
-    ASSERT_EQ (ve->removeAddress ({"2001:db8:abcd:12::1", 64, {}}, true), 0) << lastError.message ();
-    ASSERT_FALSE (ve->hasAddress ("2001:db8:abcd:12::1"));
+    ASSERT_EQ (ve->removeAddress ({"2001:db8:abcd:12::1", 64, {}}), 0) << lastError.message ();
 
     auto br = InterfaceManager::instance ()->findByName ("br0");
     ASSERT_NE (br, nullptr);
+
+    ASSERT_FALSE (ve->hasAddress ("192.168.33.100"));
+    ASSERT_EQ (ve->addAddress ({"192.168.33.100", 24, "192.168.33.255"}, true), 0) << lastError.message ();
+    ASSERT_TRUE (ve->hasAddress ("192.168.33.100"));
+    ASSERT_EQ (ve->removeAddress ({"192.168.33.100", 24, "192.168.33.255"}), 0) << lastError.message ();
+
+    ASSERT_FALSE (br->hasAddress ("2001:db8:abcd:12::2"));
     ASSERT_EQ (br->addAddress ({"2001:db8:abcd:12::2", 64, {}}, true), 0) << lastError.message ();
     ASSERT_TRUE (br->hasAddress ("2001:db8:abcd:12::2"));
-    ASSERT_EQ (br->removeAddress ({"2001:db8:abcd:12::2", 64, {}}, true), 0) << lastError.message ();
-    ASSERT_FALSE (br->hasAddress ("2001:db8:abcd:12::2"));
+    ASSERT_EQ (br->removeAddress ({"2001:db8:abcd:12::2", 64, {}}), 0) << lastError.message ();
 }
 
 /**
@@ -200,6 +276,10 @@ TEST_F (InterfaceTest, addressList)
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->addressList ().empty ());
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_FALSE (dm->addressList ().empty ());
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -217,10 +297,11 @@ TEST_F (InterfaceTest, addRoute)
 {
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
+
+    ASSERT_FALSE (ve->hasRoute ({"192.168.200.0", 24, "192.168.100.254", 0}));
     ASSERT_EQ (ve->addRoute ({"192.168.200.0", 24, "192.168.100.254", 0}, true), 0) << lastError.message();
     ASSERT_TRUE (ve->hasRoute ({"192.168.200.0", 24, "192.168.100.254", 0}));
-    ASSERT_EQ (ve->removeRoute ({"192.168.200.0", 24, "192.168.100.254", 0}, true), 0) << lastError.message();
-    ASSERT_FALSE (ve->hasRoute ({"192.168.200.0", 24, "192.168.100.254", 0}));
+    ASSERT_EQ (ve->removeRoute ({"192.168.200.0", 24, "192.168.100.254", 0}), 0) << lastError.message();
 }
 
 /**
@@ -231,6 +312,10 @@ TEST_F (InterfaceTest, routeList)
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->routeList ().empty ());
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_FALSE (dm->routeList ().empty ());
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -251,7 +336,7 @@ TEST_F (InterfaceTest, addToBridge)
     ASSERT_EQ (ve->master (), 0);
     ASSERT_EQ (ve->addToBridge ("br0", true), 0) << lastError.message ();
     ASSERT_GT (ve->master (), 0);
-    ASSERT_EQ (ve->removeFromBridge (true), 0) << lastError.message ();
+    ASSERT_EQ (ve->removeFromBridge (), 0) << lastError.message ();
 }
 
 /**
@@ -262,6 +347,10 @@ TEST_F (InterfaceTest, flags)
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_GT (lo->flags (), 0);
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_GT (dm->flags (), 0);
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -277,30 +366,33 @@ TEST_F (InterfaceTest, flags)
  */
 TEST_F (InterfaceTest, enable)
 {
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
-    ASSERT_NE (ve, nullptr);
-    ASSERT_EQ (ve->enable (false, true), 0) << lastError.message ();
-    ASSERT_FALSE (ve->isEnabled ());
-    ASSERT_EQ (ve->enable (true, true), 0) << lastError.message ();
-    ASSERT_TRUE (ve->isEnabled ());
-}
-
-/**
- * @brief test the isEnabled method.
- */
-TEST_F (InterfaceTest, isEnabled)
-{
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (lo->isEnabled ());
+    ASSERT_EQ (lo->enable (false, true), 0) << lastError.message ();
+    ASSERT_FALSE (lo->isEnabled ());
+    ASSERT_EQ (lo->enable (true), 0) << lastError.message ();
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_TRUE (dm->isEnabled ());
+    ASSERT_EQ (dm->enable (false, true), 0) << lastError.message ();
+    ASSERT_FALSE (dm->isEnabled ());
+    ASSERT_EQ (dm->enable (true), 0) << lastError.message ();
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (ve->isEnabled ());
+    ASSERT_EQ (ve->enable (false, true), 0) << lastError.message ();
+    ASSERT_FALSE (ve->isEnabled ());
+    ASSERT_EQ (ve->enable (true), 0) << lastError.message ();
 
     auto br = InterfaceManager::instance ()->findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_TRUE (br->isEnabled ());
+    ASSERT_EQ (br->enable (false, true), 0) << lastError.message ();
+    ASSERT_FALSE (br->isEnabled ());
+    ASSERT_EQ (br->enable (true), 0) << lastError.message ();
 }
 
 /**
@@ -312,15 +404,22 @@ TEST_F (InterfaceTest, isRunning)
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (lo->isRunning ());
 
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_TRUE (waitLinkLocal (dm));
+    ASSERT_TRUE (dm->isRunning ());
+
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
+    ASSERT_TRUE (waitLinkLocal (ve));
     ASSERT_TRUE (ve->isRunning ());
 
-    // auto br = InterfaceManager::instance ()->findByName ("br0");
-    // ASSERT_NE (br, nullptr);
-    // ASSERT_EQ (ve->addToBridge ("br0", true), 0) << lastError.message ();
-    // ASSERT_TRUE (br->isRunning ());
-    // ASSERT_EQ (ve->removeFromBridge (true), 0) << lastError.message ();
+    auto br = InterfaceManager::instance ()->findByName ("br0");
+    ASSERT_NE (br, nullptr);
+    ASSERT_EQ (ve->addToBridge ("br0", true), 0) << lastError.message ();
+    ASSERT_TRUE (waitLinkLocal (br));
+    ASSERT_TRUE (br->isRunning ());
+    ASSERT_EQ (ve->removeFromBridge (true), 0) << lastError.message ();
 }
 
 /**
@@ -331,6 +430,10 @@ TEST_F (InterfaceTest, isLoopback)
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (lo->isLoopback ());
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_FALSE (dm->isLoopback ());
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -350,6 +453,10 @@ TEST_F (InterfaceTest, isPointToPoint)
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isPointToPoint ());
 
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_FALSE (dm->isPointToPoint ());
+
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->isPointToPoint ());
@@ -362,11 +469,37 @@ TEST_F (InterfaceTest, isPointToPoint)
 /**
  * @brief test the isBridge method.
  */
+TEST_F (InterfaceTest, isDummy)
+{
+    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    ASSERT_NE (lo, nullptr);
+    ASSERT_FALSE (lo->isDummy ());
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_TRUE (dm->isDummy ());
+
+    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    ASSERT_NE (ve, nullptr);
+    ASSERT_FALSE (ve->isDummy ());
+
+    auto br = InterfaceManager::instance ()->findByName ("br0");
+    ASSERT_NE (br, nullptr);
+    ASSERT_FALSE (br->isDummy ());
+}
+
+/**
+ * @brief test the isBridge method.
+ */
 TEST_F (InterfaceTest, isBridge)
 {
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isBridge ());
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_FALSE (dm->isBridge ());
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -386,6 +519,10 @@ TEST_F (InterfaceTest, isVlan)
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isVlan ());
 
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_FALSE (dm->isVlan ());
+
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->isVlan ());
@@ -403,6 +540,10 @@ TEST_F (InterfaceTest, isVeth)
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isVeth ());
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_FALSE (dm->isVeth ());
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -422,6 +563,10 @@ TEST_F (InterfaceTest, isGre)
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isGre ());
 
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_FALSE (dm->isGre ());
+
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->isGre ());
@@ -439,6 +584,10 @@ TEST_F (InterfaceTest, isTun)
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isTun ());
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_FALSE (dm->isTun ());
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -458,6 +607,10 @@ TEST_F (InterfaceTest, supportsBroadcast)
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->supportsBroadcast ());
 
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_TRUE (dm->supportsBroadcast ());
+
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (ve->supportsBroadcast ());
@@ -475,6 +628,10 @@ TEST_F (InterfaceTest, supportsMulticast)
     auto lo = InterfaceManager::instance ()->findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->supportsMulticast ());
+
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_TRUE (dm->supportsMulticast ());
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -494,6 +651,10 @@ TEST_F (InterfaceTest, supportsIpv4)
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (lo->supportsIpv4 ());
 
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_TRUE (dm->supportsIpv4 ());
+
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (ve->supportsIpv4 ());
@@ -512,15 +673,22 @@ TEST_F (InterfaceTest, supportsIpv6)
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (lo->supportsIpv6 ());
 
-    // TODO: wait for link local address.
+    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    ASSERT_NE (dm, nullptr);
+    ASSERT_TRUE (waitLinkLocal (dm));
+    ASSERT_TRUE (dm->supportsIpv6 ());
 
-    // auto ve = InterfaceManager::instance ()->findByName ("veth0");
-    // ASSERT_NE (ve, nullptr);
-    // ASSERT_TRUE (ve->supportsIpv6 ());
+    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    ASSERT_NE (ve, nullptr);
+    ASSERT_TRUE (waitLinkLocal (ve));
+    ASSERT_TRUE (ve->supportsIpv6 ());
 
-    // auto br = InterfaceManager::instance ()->findByName ("br0");
-    // ASSERT_NE (br, nullptr);
-    // ASSERT_TRUE (br->supportsIpv6 ());
+    auto br = InterfaceManager::instance ()->findByName ("br0");
+    ASSERT_NE (br, nullptr);
+    ASSERT_EQ (ve->addToBridge ("br0", true), 0) << lastError.message ();
+    ASSERT_TRUE (waitLinkLocal (br));
+    ASSERT_TRUE (br->supportsIpv6 ());
+    ASSERT_EQ (ve->removeFromBridge (true), 0) << lastError.message ();
 }
 
 /**

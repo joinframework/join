@@ -435,13 +435,13 @@ namespace join
      * @brief basic netlink endpoint class.
      */
     template <class Protocol>
-    class BasicNetLinkEndpoint : public BasicEndpoint <Protocol>
+    class BasicNetlinkEndpoint : public BasicEndpoint <Protocol>
     {
     public:
         /**
          * @brief default constructor.
          */
-        constexpr BasicNetLinkEndpoint () noexcept
+        constexpr BasicNetlinkEndpoint () noexcept
         : BasicEndpoint <Protocol> ()
         {
         }
@@ -451,7 +451,7 @@ namespace join
          * @param addr socket address.
          * @param len socket address length.
          */
-        BasicNetLinkEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
+        BasicNetlinkEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
         : BasicEndpoint <Protocol> (addr, len)
         {
         }
@@ -460,8 +460,8 @@ namespace join
          * @brief create instance using device name.
          * @param dev device name to set.
          */
-        BasicNetLinkEndpoint (const char* dev) noexcept
-        : BasicNetLinkEndpoint ()
+        BasicNetlinkEndpoint (const char* dev) noexcept
+        : BasicNetlinkEndpoint ()
         {
             device (dev);
         }
@@ -470,8 +470,8 @@ namespace join
          * @brief create instance using device name.
          * @param dev device name to set.
          */
-        BasicNetLinkEndpoint (const std::string& dev) noexcept
-        : BasicNetLinkEndpoint (dev.c_str ())
+        BasicNetlinkEndpoint (const std::string& dev) noexcept
+        : BasicNetlinkEndpoint (dev.c_str ())
         {
         }
 
@@ -480,7 +480,7 @@ namespace join
          * @param pid process id.
          * @param groups netlink groups to set.
          */
-        constexpr BasicNetLinkEndpoint (uint32_t pid, uint32_t groups) noexcept
+        constexpr BasicNetlinkEndpoint (uint32_t pid, uint32_t groups) noexcept
         : BasicEndpoint <Protocol> ()
         {
             struct sockaddr_nl* sa = reinterpret_cast <struct sockaddr_nl*> (&this->_addr);
@@ -492,8 +492,8 @@ namespace join
          * @brief create instance using netlink groups.
          * @param groups netlink groups to set.
          */
-        constexpr BasicNetLinkEndpoint (uint32_t groups) noexcept
-        : BasicNetLinkEndpoint (getpid (), groups)
+        constexpr BasicNetlinkEndpoint (uint32_t groups) noexcept
+        : BasicNetlinkEndpoint (getpid (), groups)
         {
         }
 
@@ -562,7 +562,7 @@ namespace join
      * @return true if endpoints are equal, false otherwise.
      */
     template <class Protocol>
-    bool operator== (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    bool operator== (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
     {
         return a.device () == b.device ();
     }
@@ -574,7 +574,7 @@ namespace join
      * @return true if endpoints are not equal, false otherwise.
      */
     template <class Protocol>
-    bool operator!= (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    bool operator!= (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
     {
         return !(a == b);
     }
@@ -586,7 +586,7 @@ namespace join
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
-    bool operator< (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    bool operator< (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
     {
         return a.device () < b.device ();
     }
@@ -598,7 +598,7 @@ namespace join
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
-    bool operator> (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    bool operator> (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
     {
         return b < a;
     }
@@ -610,7 +610,7 @@ namespace join
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
-    bool operator<= (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    bool operator<= (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
     {
         return !(b < a);
     }
@@ -622,7 +622,7 @@ namespace join
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
-    bool operator>= (const BasicNetLinkEndpoint <Protocol>& a, const BasicNetLinkEndpoint <Protocol>& b) noexcept
+    bool operator>= (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
     {
         return !(a < b);
     }
@@ -634,7 +634,7 @@ namespace join
      * @return output stream.
      */
     template <class Protocol>
-    std::ostream& operator<< (std::ostream& os, const BasicNetLinkEndpoint <Protocol>& endpoint)
+    std::ostream& operator<< (std::ostream& os, const BasicNetlinkEndpoint <Protocol>& endpoint)
     {
         std::ostringstream ss;
         ss << endpoint.device ();

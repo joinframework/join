@@ -176,6 +176,12 @@ namespace join
         bool hasAddress (const IpAddress& ipAddress);
 
         /**
+         * @brief check if interface has link local address stored.
+         * @return true if interface has link local address stored, false otherwise
+         */
+        bool hasLocalAddress ();
+
+        /**
          * @brief add route to interface.
          * @param dest destination network.
          * @param prefix prefix length.

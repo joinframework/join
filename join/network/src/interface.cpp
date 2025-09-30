@@ -217,6 +217,25 @@ bool Interface::hasAddress (const IpAddress& ipAddress)
 
 // =========================================================================
 //   CLASS     : Interface
+//   METHOD    : hasLocalAddress
+// =========================================================================
+bool Interface::hasLocalAddress ()
+{
+    ScopedLock lock (_mutex);
+
+    for (const auto& addr : _addresses)
+    {
+        if (std::get <0> (addr).isLinkLocal ())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// =========================================================================
+//   CLASS     : Interface
 //   METHOD    : addRoute
 // =========================================================================
 int Interface::addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync)

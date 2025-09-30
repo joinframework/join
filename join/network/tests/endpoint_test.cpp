@@ -35,6 +35,7 @@ using join::Udp;
 using join::Icmp;
 using join::Tcp;
 using join::Tls;
+using join::Netlink;
 
 /**
  * @brief test the addr method.
@@ -61,6 +62,9 @@ TEST (Endpoint, addr)
 
     Tls::Endpoint tlsEndpoint;
     ASSERT_NE (tlsEndpoint.addr (), nullptr);
+
+    Netlink::Endpoint netlinkEndpoint;
+    ASSERT_NE (netlinkEndpoint.addr (), nullptr);
 }
 
 /**
@@ -100,6 +104,9 @@ TEST (Endpoint, length)
 
     Tls::Endpoint tlsEndpoint6 (Tls::v6 ());
     ASSERT_EQ (tlsEndpoint6.length (), sizeof (struct sockaddr_in6));
+
+    Netlink::Endpoint netlinkEndpoint;
+    ASSERT_EQ (netlinkEndpoint.length (), sizeof (struct sockaddr_nl));
 }
 
 /**
@@ -141,6 +148,11 @@ TEST (Endpoint, device)
     ASSERT_EQ (tlsEndpoint.device (), "");
     tlsEndpoint.device ("lo");
     ASSERT_EQ (tlsEndpoint.device (), "lo");
+
+    Netlink::Endpoint netlinkEndpoint;
+    ASSERT_EQ (netlinkEndpoint.device (), "");
+    netlinkEndpoint.device ("lo");
+    ASSERT_EQ (netlinkEndpoint.device (), "lo");
 }
 
 /**
@@ -370,6 +382,11 @@ TEST (Endpoint, serialize)
     tlsEndpoint.ip ("::");
     ASSERT_NO_THROW (stream << tlsEndpoint);
     ASSERT_EQ (stream.str (), "[::]:80");
+
+    stream.str ("");
+    Netlink::Endpoint netlinkEndpoint ("lo");
+    ASSERT_NO_THROW (stream << netlinkEndpoint);
+    ASSERT_EQ (stream.str (), "lo");
 }
 
 /**

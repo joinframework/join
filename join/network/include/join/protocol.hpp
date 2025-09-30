@@ -190,17 +190,17 @@ namespace join
     /**
      * @brief netlink protocol class.
      */
-    class NetLink
+    class Netlink
     {
     public:
-        using Endpoint = BasicNetLinkEndpoint <NetLink>;
-        using Socket   = BasicDatagramSocket <NetLink>;
+        using Endpoint = BasicNetlinkEndpoint <Netlink>;
+        using Socket   = BasicDatagramSocket <Netlink>;
 
         /**
          * @brief construct the netlink protocol instance by default.
          * @param proto protocol type.
          */
-        constexpr NetLink (int proto = NETLINK_ROUTE) noexcept
+        constexpr Netlink (int proto = NETLINK_ROUTE) noexcept
         : _proto (proto)
         {
         }
@@ -209,9 +209,9 @@ namespace join
          * @brief get protocol suitable for netlink route.
          * @return a netlink route protocol.
          */
-        static inline NetLink& rt () noexcept
+        static inline Netlink& rt () noexcept
         {
-            static NetLink rt (NETLINK_ROUTE);
+            static Netlink rt (NETLINK_ROUTE);
             return rt;
         }
 

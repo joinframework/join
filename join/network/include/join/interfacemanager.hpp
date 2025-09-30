@@ -153,7 +153,7 @@ namespace join
     /**
      * @brief interface manager class.
      */
-    class InterfaceManager : private NetLink::Socket, public std::enable_shared_from_this <InterfaceManager>
+    class InterfaceManager : private Netlink::Socket, public std::enable_shared_from_this <InterfaceManager>
     {
     private:
         /**
