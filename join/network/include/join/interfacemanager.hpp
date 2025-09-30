@@ -153,7 +153,7 @@ namespace join
     /**
      * @brief interface manager class.
      */
-    class InterfaceManager : private Netlink::Socket, public std::enable_shared_from_this <InterfaceManager>
+    class InterfaceManager : private Netlink::Socket
     {
     private:
         /**
@@ -162,7 +162,6 @@ namespace join
         InterfaceManager ();
 
     public:
-        using Ptr           = std::shared_ptr <InterfaceManager>;
         using LinkNotify    = std::function <void (const LinkInfo& info)>;
         using AddressNotify = std::function <void (const AddressInfo& info)>;
         using RouteNotify   = std::function <void (const RouteInfo& info)>;
@@ -202,7 +201,7 @@ namespace join
          * @brief create the InterfaceManager instance.
          * @return InterfaceManager instance pointer.
          */
-        static InterfaceManager::Ptr instance ();
+        static InterfaceManager* instance ();
 
         /**
          * @brief find interface by index.

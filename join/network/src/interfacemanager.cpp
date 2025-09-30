@@ -79,16 +79,16 @@ InterfaceManager::~InterfaceManager ()
 //   CLASS     : InterfaceManager
 //   METHOD    : instance
 // =========================================================================
-InterfaceManager::Ptr InterfaceManager::instance ()
+InterfaceManager* InterfaceManager::instance ()
 {
     static std::once_flag initialized;
-    static Ptr manager (new InterfaceManager ());
+    static InterfaceManager manager;
 
     std::call_once (initialized, [] () {
-        manager->refresh (true);
+        manager.refresh (true);
     });
 
-    return manager;
+    return &manager;
 }
 
 // =========================================================================
@@ -1464,7 +1464,7 @@ Interface::Ptr InterfaceManager::acquire (LinkInfo& info)
         return it->second;
     }
 
-   Interface::Ptr iface (new Interface (shared_from_this (), info.index));
+   Interface::Ptr iface (new Interface (this, info.index));
     _interfaces[info.index] = iface;
     info.flags |= ChangeType::Added;
 

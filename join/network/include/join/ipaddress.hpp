@@ -229,9 +229,10 @@ namespace join
 
         /**
          * @brief check if IP address is a broadcast address.
+         * @param prefix prefix length.
          * @return if broadcast true is returned, false otherwise.
          */
-        bool isBroadcast () const;
+        bool isBroadcast (int prefix = 0) const;
 
         /**
          * @brief check if IP address is multicast.

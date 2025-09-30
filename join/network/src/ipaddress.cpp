@@ -129,9 +129,10 @@ namespace join
 
         /**
          * @brief check if IP address is a broadcast address.
+         * @param prefix prefix length.
          * @return if broadcast true is returned, false otherwise.
          */
-        virtual bool isBroadcast () const = 0;
+        virtual bool isBroadcast (int prefix) const = 0;
 
         /**
          * @brief check if IP address is multicast.
@@ -336,11 +337,25 @@ namespace join
 
         /**
          * @brief check if IP address is a broadcast address.
+         * @param prefix prefix length.
          * @return if broadcast true is returned, false otherwise.
          */
-        bool isBroadcast () const
+        bool isBroadcast (int prefix) const
         {
-            return ntohl (_addr.s_addr) == INADDR_BROADCAST;
+            uint32_t ip = ntohl (_addr.s_addr);
+
+            if (ip == INADDR_BROADCAST)
+            {
+                return true;
+            }
+
+            if (prefix >= 0 && prefix <= 32)
+            {
+                uint32_t mask = (prefix == 0) ? 0 : (0xFFFFFFFF << (32 - prefix));
+                return ip == ((ip & mask) | ~mask);
+            }
+
+            return false;
         }
 
         /**
@@ -695,9 +710,10 @@ namespace join
 
         /**
          * @brief check if IP address is a broadcast address.
+         * @param prefix prefix length.
          * @return if broadcast true is returned, false otherwise.
          */
-        bool isBroadcast () const
+        bool isBroadcast (int /*prefix*/) const
         {
             return false;
         }
@@ -1330,9 +1346,9 @@ bool IpAddress::isUniqueLocal () const
 //   CLASS     : IpAddress
 //   METHOD    : isBroadcast
 // =========================================================================
-bool IpAddress::isBroadcast () const
+bool IpAddress::isBroadcast (int prefix) const
 {
-    return _ip->isBroadcast ();
+    return _ip->isBroadcast (prefix);
 }
 
 // =========================================================================

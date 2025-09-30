@@ -55,7 +55,7 @@ namespace join
          * @param manager interface manager.
          * @param index interface index.
          */
-        explicit Interface (std::weak_ptr <InterfaceManager> manager, uint32_t index);
+        explicit Interface (InterfaceManager* manager, uint32_t index);
 
     public:
         using Ptr           = std::shared_ptr <Interface>;
@@ -365,7 +365,7 @@ namespace join
 
     private:
         /// interface manager
-        std::weak_ptr <InterfaceManager> _manager;
+        InterfaceManager* _manager = nullptr;
 
         /// interface index.
         uint32_t _index = 0;
