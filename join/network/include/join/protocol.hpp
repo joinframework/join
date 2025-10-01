@@ -29,7 +29,6 @@
 #include <join/endpoint.hpp>
 
 // C.
-#include <linux/netlink.h>
 #include <net/ethernet.h>
 
 namespace join
@@ -147,8 +146,8 @@ namespace join
     class Netlink
     {
     public:
-        // using Endpoint = BasicNetlinkEndpoint <Netlink>;
-        // using Socket   = BasicDatagramSocket <Netlink>;
+        using Endpoint = BasicNetlinkEndpoint <Netlink>;
+        using Socket   = BasicDatagramSocket <Netlink>;
 
         /**
          * @brief construct the netlink protocol instance by default.

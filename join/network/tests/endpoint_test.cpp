@@ -35,6 +35,7 @@ using join::Udp;
 using join::Icmp;
 using join::Tcp;
 using join::Tls;
+using join::Netlink;
 
 /**
  * @brief test the addr method.
@@ -61,6 +62,9 @@ TEST (Endpoint, addr)
 
     Tls::Endpoint tlsEndpoint;
     ASSERT_NE (tlsEndpoint.addr (), nullptr);
+
+    Netlink::Endpoint netlinkEndpoint;
+    ASSERT_NE (netlinkEndpoint.addr (), nullptr);
 }
 
 /**
@@ -100,6 +104,9 @@ TEST (Endpoint, length)
 
     Tls::Endpoint tlsEndpoint6 (Tls::v6 ());
     ASSERT_EQ (tlsEndpoint6.length (), sizeof (struct sockaddr_in6));
+
+    Netlink::Endpoint netlinkEndpoint;
+    ASSERT_EQ (netlinkEndpoint.length (), sizeof (struct sockaddr_nl));
 }
 
 /**
@@ -141,6 +148,9 @@ TEST (Endpoint, device)
     ASSERT_EQ (tlsEndpoint.device (), "");
     tlsEndpoint.device ("lo");
     ASSERT_EQ (tlsEndpoint.device (), "lo");
+
+    Netlink::Endpoint netlinkEndpoint;
+    ASSERT_EQ (netlinkEndpoint.device (), "");
 }
 
 /**
@@ -273,6 +283,13 @@ TEST (Endpoint, protocol)
     ASSERT_NE (Tls::Endpoint ("127.0.0.1").protocol (), Tls::v6 ());
     ASSERT_NE (Tls::Endpoint ("::").protocol (), Tls::v4 ());
     ASSERT_EQ (Tls::Endpoint ("::").protocol (), Tls::v6 ());
+
+    ASSERT_EQ (Netlink::Endpoint ().protocol (), Netlink::rt ());
+    ASSERT_EQ (Netlink::Endpoint (Netlink::rt (), RTMGRP_LINK).protocol (), Netlink::rt ());
+    ASSERT_NE (Netlink::Endpoint (Netlink::rt (), RTMGRP_LINK).protocol (), Netlink::nf ());
+    ASSERT_EQ (Netlink::Endpoint (Netlink::nf (), NFNLGRP_NONE).protocol (), Netlink::nf ());
+    ASSERT_EQ (Netlink::Endpoint (RTMGRP_LINK).protocol (), Netlink::rt ());
+    ASSERT_NE (Netlink::Endpoint (RTMGRP_LINK).protocol (), Netlink::nf ());
 }
 
 /**
@@ -309,6 +326,11 @@ TEST (Endpoint, equal)
     ASSERT_NE (Tls::Endpoint ("127.0.0.1", 80), Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
     ASSERT_EQ (Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
     ASSERT_NE (Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tls::Endpoint ("127.0.0.1", 80));
+
+    ASSERT_EQ (Netlink::Endpoint (RTMGRP_LINK), Netlink::Endpoint (RTMGRP_LINK));
+    ASSERT_NE (Netlink::Endpoint (RTMGRP_LINK), Netlink::Endpoint (RTMGRP_IPV4_IFADDR));
+    ASSERT_EQ (Netlink::Endpoint (RTMGRP_IPV4_IFADDR), Netlink::Endpoint (RTMGRP_IPV4_IFADDR));
+    ASSERT_NE (Netlink::Endpoint (RTMGRP_IPV4_IFADDR), Netlink::Endpoint (RTMGRP_LINK));
 }
 
 /**
@@ -370,6 +392,13 @@ TEST (Endpoint, serialize)
     tlsEndpoint.ip ("::");
     ASSERT_NO_THROW (stream << tlsEndpoint);
     ASSERT_EQ (stream.str (), "[::]:80");
+
+    stream.str ("");
+    Netlink::Endpoint netlinkEndpoint (RTMGRP_LINK);
+    ASSERT_NO_THROW (stream << netlinkEndpoint);
+    std::stringstream ss;
+    ss << "pid=" << getpid () << ",groups=" << uint32_t (RTMGRP_LINK);
+    ASSERT_EQ (stream.str (), ss.str ());
 }
 
 /**
