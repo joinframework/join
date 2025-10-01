@@ -601,7 +601,7 @@ namespace join
         Interface::Ptr acquire (LinkInfo& info);
 
         /// internal buffer size.
-        static constexpr size_t _bufferSize = 32768;
+        static constexpr size_t _bufferSize = 4096;
 
         /// internal read buffer.
         std::unique_ptr <char []> _buffer;
