@@ -174,7 +174,7 @@ namespace join
     /**
      * @brief compare if endpoints are equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints are equal, false otherwise.
      */
     template <class Protocol>
@@ -186,7 +186,7 @@ namespace join
     /**
      * @brief compare if endpoints are not equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints are not equal, false otherwise.
      */
     template <class Protocol>
@@ -198,7 +198,7 @@ namespace join
     /**
      * @brief compare if endpoint is lower.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
@@ -210,7 +210,7 @@ namespace join
     /**
      * @brief compare if endpoint is greater.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
@@ -222,7 +222,7 @@ namespace join
     /**
      * @brief compare if endpoint is lower or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
@@ -234,7 +234,7 @@ namespace join
     /**
      * @brief compare if endpoint is greater or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
@@ -347,7 +347,7 @@ namespace join
     /**
      * @brief compare if endpoints are equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints are equal, false otherwise.
      */
     template <class Protocol>
@@ -359,7 +359,7 @@ namespace join
     /**
      * @brief compare if endpoints are not equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints are not equal, false otherwise.
      */
     template <class Protocol>
@@ -371,7 +371,7 @@ namespace join
     /**
      * @brief compare if endpoint is lower.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
@@ -383,7 +383,7 @@ namespace join
     /**
      * @brief compare if endpoint is greater.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
@@ -395,7 +395,7 @@ namespace join
     /**
      * @brief compare if endpoint is lower or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
@@ -407,7 +407,7 @@ namespace join
     /**
      * @brief compare if endpoint is greater or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
@@ -697,7 +697,7 @@ namespace join
     /**
      * @brief compare if equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints is equal, false otherwise.
      */
     template <class Protocol>
@@ -709,7 +709,7 @@ namespace join
     /**
      * @brief compare if not equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if endpoints is not equal, false otherwise.
      */
     template <class Protocol>
@@ -721,7 +721,7 @@ namespace join
     /**
      * @brief compare if lower.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
@@ -733,7 +733,7 @@ namespace join
     /**
      * @brief compare if greater.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
@@ -745,7 +745,7 @@ namespace join
     /**
      * @brief compare if lower or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
@@ -757,7 +757,7 @@ namespace join
     /**
      * @brief compare if greater or equal.
      * @param a endpoint to compare.
-     * @param a endpoint to compare to.
+     * @param b endpoint to compare to.
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
