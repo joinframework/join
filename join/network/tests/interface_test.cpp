@@ -780,16 +780,23 @@ TEST_F (InterfaceTest, supportsIpv6)
     ASSERT_NE (vl, nullptr);
     ASSERT_TRUE (waitLinkLocal (vl));
     ASSERT_TRUE (vl->supportsIpv6 ());
+    ASSERT_EQ (vl->enable (false, true), 0) << lastError.message ();
+    ASSERT_FALSE (vl->supportsIpv6 ());
 
     auto dm = InterfaceManager::instance ()->findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_TRUE (waitLinkLocal (dm));
     ASSERT_TRUE (dm->supportsIpv6 ());
+    ASSERT_EQ (dm->enable (false, true), 0) << lastError.message ();
+    ASSERT_FALSE (dm->supportsIpv6 ());
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (waitLinkLocal (ve));
     ASSERT_TRUE (ve->supportsIpv6 ());
+    ASSERT_EQ (ve->enable (false, true), 0) << lastError.message ();
+    ASSERT_FALSE (ve->supportsIpv6 ());
+
 
     auto br = InterfaceManager::instance ()->findByName ("br0");
     ASSERT_NE (br, nullptr);
@@ -797,6 +804,8 @@ TEST_F (InterfaceTest, supportsIpv6)
     ASSERT_TRUE (waitLinkLocal (br));
     ASSERT_TRUE (br->supportsIpv6 ());
     ASSERT_EQ (ve->removeFromBridge (true), 0) << lastError.message ();
+    ASSERT_EQ (br->enable (false, true), 0) << lastError.message ();
+    ASSERT_FALSE (br->supportsIpv6 ());
 }
 
 /**

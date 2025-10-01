@@ -47,12 +47,8 @@ InterfaceManager::InterfaceManager()
 : _buffer (std::make_unique <char []> (_bufferSize))
 , _seq (0)
 {
-    if ((open (Netlink::rt ()) == -1) || (bind (RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE) == -1))
-    {
-        close ();
-        throw std::runtime_error ("failed to bind netlink socket");
-    }
-
+    open (Netlink::rt ());
+    bind (RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE);
     Reactor::instance ()->addHandler (this);
 }
 
@@ -1085,16 +1081,16 @@ void InterfaceManager::onReceive ()
 void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
 {
     struct ifinfomsg* ifi = reinterpret_cast <struct ifinfomsg*> (NLMSG_DATA (nlh));
-    if (!ifi || (ifi->ifi_family == AF_BRIDGE))
+    struct rtattr* rta = IFLA_RTA (ifi);
+    int len = IFLA_PAYLOAD (nlh);
+
+    if (ifi->ifi_family == AF_BRIDGE)
     {
         return;
     }
 
     LinkInfo info = {};
     info.index = ifi->ifi_index;
-
-    struct rtattr* rta = IFLA_RTA (ifi);
-    int len = IFLA_PAYLOAD (nlh);
 
     if (nlh->nlmsg_type == RTM_DELLINK)
     {
@@ -1189,16 +1185,11 @@ void InterfaceManager::onLinkInfoMessage (Interface::Ptr& iface, struct rtattr* 
 void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
 {
     struct ifaddrmsg* ifa = reinterpret_cast <struct ifaddrmsg*> (NLMSG_DATA (nlh));
-    if (!ifa)
-    {
-        return;
-    }
+    struct rtattr* rta = IFA_RTA (ifa);
+    int len = IFA_PAYLOAD (nlh);
 
     AddressInfo info = {};
     info.index = ifa->ifa_index;
-
-    struct rtattr* rta = IFA_RTA (ifa);
-    int len = IFA_PAYLOAD (nlh);
 
     socklen_t addrlen = (ifa->ifa_family == AF_INET6) ? IpAddress::ipv6Length 
                                                       : IpAddress::ipv4Length;
@@ -1278,15 +1269,10 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
 void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
 {
     struct rtmsg* rtm = reinterpret_cast <struct rtmsg*> (NLMSG_DATA (nlh));
-    if (!rtm)
-    {
-        return;
-    }
-
-    RouteInfo info = {};
-
     struct rtattr* rta = RTM_RTA (rtm);
     int len = RTM_PAYLOAD (nlh);
+
+    RouteInfo info = {};
 
     socklen_t addrlen = (rtm->rtm_family == AF_INET6) ? IpAddress::ipv6Length
                                                       : IpAddress::ipv4Length;
@@ -1318,11 +1304,6 @@ void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
         }
 
         rta = RTA_NEXT (rta, len);
-    }
-
-    if (info.index == 0)
-    {
-        return;
     }
 
     Interface::Ptr iface = findByIndex (info.index);
