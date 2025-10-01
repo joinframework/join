@@ -26,6 +26,10 @@ add_executable(unixstreamsocket.gtest unixstreamsocket_test.cpp)
 target_link_libraries(unixstreamsocket.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(unixstreamsocket.gtest)
 
+add_executable(netlinksocket.gtest netlinksocket_test.cpp)
+target_link_libraries(netlinksocket.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(netlinksocket.gtest)
+
 add_executable(unixstreamacceptor.gtest unixstreamacceptor_test.cpp)
 target_link_libraries(unixstreamacceptor.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(unixstreamacceptor.gtest)

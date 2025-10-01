@@ -151,8 +151,6 @@ TEST (Endpoint, device)
 
     Netlink::Endpoint netlinkEndpoint;
     ASSERT_EQ (netlinkEndpoint.device (), "");
-    netlinkEndpoint.device ("lo");
-    ASSERT_EQ (netlinkEndpoint.device (), "lo");
 }
 
 /**
@@ -285,6 +283,13 @@ TEST (Endpoint, protocol)
     ASSERT_NE (Tls::Endpoint ("127.0.0.1").protocol (), Tls::v6 ());
     ASSERT_NE (Tls::Endpoint ("::").protocol (), Tls::v4 ());
     ASSERT_EQ (Tls::Endpoint ("::").protocol (), Tls::v6 ());
+
+    ASSERT_EQ (Netlink::Endpoint ().protocol (), Netlink::rt ());
+    ASSERT_EQ (Netlink::Endpoint (Netlink::rt (), RTMGRP_LINK).protocol (), Netlink::rt ());
+    ASSERT_NE (Netlink::Endpoint (Netlink::rt (), RTMGRP_LINK).protocol (), Netlink::nf ());
+    ASSERT_EQ (Netlink::Endpoint (Netlink::nf (), NFNLGRP_NONE).protocol (), Netlink::nf ());
+    ASSERT_EQ (Netlink::Endpoint (RTMGRP_LINK).protocol (), Netlink::rt ());
+    ASSERT_NE (Netlink::Endpoint (RTMGRP_LINK).protocol (), Netlink::nf ());
 }
 
 /**
@@ -321,6 +326,11 @@ TEST (Endpoint, equal)
     ASSERT_NE (Tls::Endpoint ("127.0.0.1", 80), Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
     ASSERT_EQ (Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
     ASSERT_NE (Tls::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tls::Endpoint ("127.0.0.1", 80));
+
+    ASSERT_EQ (Netlink::Endpoint (RTMGRP_LINK), Netlink::Endpoint (RTMGRP_LINK));
+    ASSERT_NE (Netlink::Endpoint (RTMGRP_LINK), Netlink::Endpoint (RTMGRP_IPV4_IFADDR));
+    ASSERT_EQ (Netlink::Endpoint (RTMGRP_IPV4_IFADDR), Netlink::Endpoint (RTMGRP_IPV4_IFADDR));
+    ASSERT_NE (Netlink::Endpoint (RTMGRP_IPV4_IFADDR), Netlink::Endpoint (RTMGRP_LINK));
 }
 
 /**
@@ -384,9 +394,11 @@ TEST (Endpoint, serialize)
     ASSERT_EQ (stream.str (), "[::]:80");
 
     stream.str ("");
-    Netlink::Endpoint netlinkEndpoint ("lo");
+    Netlink::Endpoint netlinkEndpoint (RTMGRP_LINK);
     ASSERT_NO_THROW (stream << netlinkEndpoint);
-    ASSERT_EQ (stream.str (), "lo");
+    std::stringstream ss;
+    ss << "pid=" << getpid () << ",groups=" << uint32_t (RTMGRP_LINK);
+    ASSERT_EQ (stream.str (), ss.str ());
 }
 
 /**

@@ -113,6 +113,8 @@ TEST (Protocol, protocol)
     ASSERT_EQ (Smtp ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Smtps ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Netlink ().protocol (), NETLINK_ROUTE);
+    ASSERT_EQ (Netlink::rt ().protocol (), NETLINK_ROUTE);
+    ASSERT_EQ (Netlink::nf ().protocol (), NETLINK_NETFILTER);
 }
 
 /**
@@ -159,6 +161,11 @@ TEST (Protocol, equal)
     ASSERT_NE (Smtps::v4 (), Smtps::v6 ());
     ASSERT_EQ (Smtps::v6 (), Smtps::v6 ());
     ASSERT_NE (Smtps::v6 (), Smtps::v4 ());
+
+    ASSERT_EQ (Netlink::rt (), Netlink::rt ());
+    ASSERT_NE (Netlink::rt (), Netlink::nf ());
+    ASSERT_EQ (Netlink::nf (), Netlink::nf ());
+    ASSERT_NE (Netlink::nf (), Netlink::rt ());
 }
 
 /**
