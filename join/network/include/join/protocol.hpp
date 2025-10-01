@@ -280,66 +280,6 @@ namespace join
     };
 
     /**
-     * @brief netlink protocol class.
-     */
-    class Netlink
-    {
-    public:
-        using Endpoint = BasicNetlinkEndpoint <Netlink>;
-        using Socket   = BasicDatagramSocket <Netlink>;
-
-        /**
-         * @brief construct the netlink protocol instance by default.
-         * @param proto protocol type.
-         */
-        constexpr Netlink (int proto = NETLINK_ROUTE) noexcept
-        : _proto (proto)
-        {
-        }
-
-        /**
-         * @brief get protocol suitable for netlink route.
-         * @return a netlink route protocol.
-         */
-        static inline Netlink& rt () noexcept
-        {
-            static Netlink rt (NETLINK_ROUTE);
-            return rt;
-        }
-
-        /**
-         * @brief get the protocol address family.
-         * @return the protocol address family.
-         */
-        constexpr int family () const noexcept
-        {
-            return AF_NETLINK;
-        }
-
-        /**
-         * @brief get the protocol communication semantic.
-         * @return the protocol communication semantic.
-         */
-        constexpr int type () const noexcept
-        {
-            return SOCK_RAW;
-        }
-
-        /**
-         * @brief get the protocol type.
-         * @return the protocol type.
-         */
-        constexpr int protocol () const noexcept
-        {
-            return _proto;
-        }
-
-    private:
-        /// protocol.
-        int _proto;
-    };
-
-    /**
      * @brief UDP protocol class.
      */
     class Udp
