@@ -763,11 +763,6 @@ namespace join
          */
         virtual int bindToDevice (const std::string& device) noexcept
         {
-            if (this->_protocol.family () == AF_UNIX)
-            {
-                return this->bind (device);
-            }
-
             if (this->_state == State::Closed)
             {
                 lastError = make_error_code (Errc::ConnectionClosed);
@@ -880,12 +875,6 @@ namespace join
          */
         virtual int read (char *data, unsigned long maxSize) noexcept override
         {
-            if ((this->_state != State::Connected) && (this->_state != State::Disconnecting))
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             return BasicSocket <Protocol>::read (data, maxSize);
         }
 
@@ -933,12 +922,6 @@ namespace join
          */
         virtual int write (const char *data, unsigned long maxSize) noexcept override
         {
-            if (this->_state != State::Connected)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             return BasicSocket <Protocol>::write (data, maxSize);
         }
 
@@ -1723,12 +1706,6 @@ namespace join
          */
         int startEncryption ()
         {
-            if (this->_state != State::Connected)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             if (this->encrypted () == false)
             {
                 this->_tlsHandle.reset (SSL_new (this->_tlsContext.get ()));
@@ -1782,12 +1759,6 @@ namespace join
         {
             if (this->encrypted () == false)
             {
-                if ((this->_state != State::Connecting) && (this->_state != State::Connected))
-                {
-                    lastError = make_error_code (Errc::OperationFailed);
-                    return false;
-                }
-
                 if (this->_state == State::Connecting)
                 {
                     if (!this->waitConnected (timeout))
