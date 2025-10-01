@@ -29,6 +29,7 @@
 #include <join/endpoint.hpp>
 
 // C.
+#include <linux/netlink.h>
 #include <net/ethernet.h>
 
 namespace join

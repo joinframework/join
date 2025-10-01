@@ -869,7 +869,6 @@ namespace join
         /**
          * @brief get endpoint protocol.
          * @return endpoint protocol.
-         * @throw invalid_argument if address family is not specified.
          */
         Protocol protocol () const noexcept
         {

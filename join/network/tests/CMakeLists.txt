@@ -125,3 +125,11 @@ gtest_discover_tests(smtp.gtest)
 add_executable(smtps.gtest smtps_test.cpp)
 target_link_libraries(smtps.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(smtps.gtest)
+
+add_executable(interface.gtest interface_test.cpp)
+target_link_libraries(interface.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(interface.gtest)
+
+add_executable(interfacemanager.gtest interfacemanager_test.cpp)
+target_link_libraries(interfacemanager.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(interfacemanager.gtest)
