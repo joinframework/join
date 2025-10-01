@@ -763,11 +763,6 @@ namespace join
          */
         virtual int bindToDevice (const std::string& device) noexcept
         {
-            if (this->_protocol.family () == AF_UNIX)
-            {
-                return this->bind (device);
-            }
-
             if (this->_state == State::Closed)
             {
                 lastError = make_error_code (Errc::ConnectionClosed);
