@@ -39,6 +39,7 @@ using join::Http;
 using join::Https;
 using join::Smtp;
 using join::Smtps;
+using join::Netlink;
 
 /**
  * @brief test the family method.
@@ -72,6 +73,7 @@ TEST (Protocol, family)
     ASSERT_EQ (Smtps ().family (), AF_INET);
     ASSERT_EQ (Smtps::v6 ().family (), AF_INET6);
     ASSERT_EQ (Smtps::v4 ().family (), AF_INET);
+    ASSERT_EQ (Netlink::rt ().family (), AF_NETLINK);
 }
 
 /**
@@ -90,6 +92,7 @@ TEST (Protocol, type)
     ASSERT_EQ (Https ().type (), SOCK_STREAM);
     ASSERT_EQ (Smtp ().type (), SOCK_STREAM);
     ASSERT_EQ (Smtps ().type (), SOCK_STREAM);
+    ASSERT_EQ (Netlink ().type (), SOCK_RAW);
 }
 
 /**
@@ -109,6 +112,9 @@ TEST (Protocol, protocol)
     ASSERT_EQ (Https ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Smtp ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Smtps ().protocol (), IPPROTO_TCP);
+    ASSERT_EQ (Netlink ().protocol (), NETLINK_ROUTE);
+    ASSERT_EQ (Netlink::rt ().protocol (), NETLINK_ROUTE);
+    ASSERT_EQ (Netlink::nf ().protocol (), NETLINK_NETFILTER);
 }
 
 /**
@@ -155,6 +161,11 @@ TEST (Protocol, equal)
     ASSERT_NE (Smtps::v4 (), Smtps::v6 ());
     ASSERT_EQ (Smtps::v6 (), Smtps::v6 ());
     ASSERT_NE (Smtps::v6 (), Smtps::v4 ());
+
+    ASSERT_EQ (Netlink::rt (), Netlink::rt ());
+    ASSERT_NE (Netlink::rt (), Netlink::nf ());
+    ASSERT_EQ (Netlink::nf (), Netlink::nf ());
+    ASSERT_NE (Netlink::nf (), Netlink::rt ());
 }
 
 /**
