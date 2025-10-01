@@ -1029,7 +1029,13 @@ TEST (IpAddress, isBroadcast)
     ASSERT_TRUE (ip.isBroadcast (8));
 
     ip = "192.168.255.255";
+    ASSERT_FALSE (ip.isBroadcast (8));
+
+    ip = "192.168.255.255";
     ASSERT_TRUE (ip.isBroadcast (16));
+
+    ip = "192.168.13.255";
+    ASSERT_FALSE (ip.isBroadcast (16));
 
     ip = "192.168.13.255";
     ASSERT_TRUE (ip.isBroadcast (24));
