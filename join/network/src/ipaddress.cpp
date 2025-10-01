@@ -129,9 +129,10 @@ namespace join
 
         /**
          * @brief check if IP address is a broadcast address.
+         * @param prefix prefix length.
          * @return if broadcast true is returned, false otherwise.
          */
-        virtual bool isBroadcast () const = 0;
+        virtual bool isBroadcast (int prefix) const = 0;
 
         /**
          * @brief check if IP address is multicast.
@@ -188,7 +189,7 @@ namespace join
          */
         Ipv4Address ()
         {
-            memset (&addr_, 0, sizeof addr_);
+            memset (&_addr, 0, sizeof _addr);
         }
 
         /**
@@ -197,7 +198,7 @@ namespace join
          */
         Ipv4Address (const Ipv4Address& address)
         {
-            memcpy (&addr_, &address.addr_, sizeof addr_);
+            memcpy (&_addr, &address._addr, sizeof _addr);
         }
 
         /**
@@ -206,7 +207,7 @@ namespace join
          */
         Ipv4Address& operator= (const Ipv4Address& address)
         {
-            memcpy (&addr_, &address.addr_, sizeof addr_);
+            memcpy (&_addr, &address._addr, sizeof _addr);
             return *this;
         }
 
@@ -216,7 +217,7 @@ namespace join
          */
         Ipv4Address (const void * address)
         {
-            memcpy (&addr_, address, sizeof addr_);
+            memcpy (&_addr, address, sizeof _addr);
         }
 
         /**
@@ -227,11 +228,11 @@ namespace join
         {
             if (prefix)
             {
-                addr_.s_addr = htonl (~((1 << (32 - prefix)) - 1));
+                _addr.s_addr = htonl (~((1 << (32 - prefix)) - 1));
             }
             else
             {
-                addr_.s_addr = htonl (0);
+                _addr.s_addr = htonl (0);
             }
         }
 
@@ -257,7 +258,7 @@ namespace join
          */
         const void* addr () const
         {
-            return &addr_;
+            return &_addr;
         }
 
         /**
@@ -266,7 +267,7 @@ namespace join
          */
         socklen_t length () const
         {
-            return sizeof addr_;
+            return sizeof _addr;
         }
 
         /**
@@ -284,7 +285,7 @@ namespace join
          */
         int prefix () const
         {
-            return std::bitset <32> (ntohl (addr_.s_addr)).count ();
+            return std::bitset <32> (ntohl (_addr.s_addr)).count ();
         }
 
         /**
@@ -293,7 +294,7 @@ namespace join
          */
         bool isWildcard () const
         {
-            return ntohl (addr_.s_addr) == INADDR_ANY;
+            return ntohl (_addr.s_addr) == INADDR_ANY;
         }
 
         /**
@@ -302,7 +303,7 @@ namespace join
          */
         bool isLoopBack () const
         {
-            return ntohl (addr_.s_addr) == INADDR_LOOPBACK;
+            return ntohl (_addr.s_addr) == INADDR_LOOPBACK;
         }
 
         /**
@@ -311,7 +312,7 @@ namespace join
          */
         bool isLinkLocal () const
         {
-            return (ntohl(addr_.s_addr) & 0xFFFF0000) == 0xA9FE0000;
+            return (ntohl(_addr.s_addr) & 0xFFFF0000) == 0xA9FE0000;
         }
 
         /**
@@ -329,18 +330,32 @@ namespace join
          */
         bool isUniqueLocal () const
         {
-            return (ntohl(addr_.s_addr) & 0xFF000000) == 0x0A000000 ||
-                   (ntohl(addr_.s_addr) & 0xFFFF0000) == 0xC0A80000 ||
-                   (ntohl(addr_.s_addr) >= 0xAC100000 && ntohl(addr_.s_addr) <= 0xAC1FFFFF);
+            return (ntohl(_addr.s_addr) & 0xFF000000) == 0x0A000000 ||
+                   (ntohl(_addr.s_addr) & 0xFFFF0000) == 0xC0A80000 ||
+                   (ntohl(_addr.s_addr) >= 0xAC100000 && ntohl(_addr.s_addr) <= 0xAC1FFFFF);
         }
 
         /**
          * @brief check if IP address is a broadcast address.
+         * @param prefix prefix length.
          * @return if broadcast true is returned, false otherwise.
          */
-        bool isBroadcast () const
+        bool isBroadcast (int prefix) const
         {
-            return ntohl (addr_.s_addr) == INADDR_BROADCAST;
+            uint32_t ip = ntohl (_addr.s_addr);
+
+            if (ip == INADDR_BROADCAST)
+            {
+                return true;
+            }
+
+            if (prefix >= 0 && prefix <= 32)
+            {
+                uint32_t mask = (prefix == 0) ? 0 : (0xFFFFFFFF << (32 - prefix));
+                return (ip == ((ip & mask) | ~mask));
+            }
+
+            return false;
         }
 
         /**
@@ -349,7 +364,7 @@ namespace join
          */
         bool isMulticast () const
         {
-            return IN_MULTICAST (ntohl(addr_.s_addr));
+            return IN_MULTICAST (ntohl(_addr.s_addr));
         }
 
         /**
@@ -392,10 +407,10 @@ namespace join
         std::string toArpa () const
         {
             std::stringstream arpa;
-            arpa << static_cast <int> ((addr_.s_addr & 0xFF000000) >> 24) << ".";
-            arpa << static_cast <int> ((addr_.s_addr & 0x00FF0000) >> 16) << ".";
-            arpa << static_cast <int> ((addr_.s_addr & 0x0000FF00) >> 8) << ".";
-            arpa << static_cast <int> ((addr_.s_addr & 0x000000FF)) << ".";
+            arpa << static_cast <int> ((_addr.s_addr & 0xFF000000) >> 24) << ".";
+            arpa << static_cast <int> ((_addr.s_addr & 0x00FF0000) >> 16) << ".";
+            arpa << static_cast <int> ((_addr.s_addr & 0x0000FF00) >> 8) << ".";
+            arpa << static_cast <int> ((_addr.s_addr & 0x000000FF)) << ".";
             arpa << "in-addr.arpa";
             return arpa.str ();
         }
@@ -428,7 +443,7 @@ namespace join
         Ipv4Address operator& (const Ipv4Address& address) const
         {
             Ipv4Address addr (*this);
-            addr.addr_.s_addr &= address.addr_.s_addr;
+            addr._addr.s_addr &= address._addr.s_addr;
             return addr;
         }
 
@@ -440,7 +455,7 @@ namespace join
         Ipv4Address operator| (const Ipv4Address& address) const
         {
             Ipv4Address addr (*this);
-            addr.addr_.s_addr |= address.addr_.s_addr;
+            addr._addr.s_addr |= address._addr.s_addr;
             return addr;
         }
 
@@ -452,7 +467,7 @@ namespace join
         Ipv4Address operator^ (const Ipv4Address& address) const
         {
             Ipv4Address addr (*this);
-            addr.addr_.s_addr ^= address.addr_.s_addr;
+            addr._addr.s_addr ^= address._addr.s_addr;
             return addr;
         }
 
@@ -463,7 +478,7 @@ namespace join
         Ipv4Address operator~ () const
         {
             Ipv4Address addr (*this);
-            addr.addr_.s_addr ^= 0xffffffff;
+            addr._addr.s_addr ^= 0xffffffff;
             return addr;
         }
 
@@ -472,7 +487,7 @@ namespace join
          */
         void clear ()
         {
-            memset (&addr_, 0, sizeof addr_);
+            memset (&_addr, 0, sizeof _addr);
         }
 
         /**
@@ -488,12 +503,12 @@ namespace join
                 throw std::out_of_range ("position is out of range");
             }
 
-            return *(reinterpret_cast <uint8_t*> (&addr_) + position);
+            return *(reinterpret_cast <uint8_t*> (&_addr) + position);
         }
 
     private:
         /// IPv4 address.
-        struct in_addr addr_;
+        struct in_addr _addr;
     };
 
     /**
@@ -507,7 +522,7 @@ namespace join
          */
         Ipv6Address ()
         {
-            memset (&addr_, 0, sizeof addr_);
+            memset (&_addr, 0, sizeof _addr);
         }
 
         /**
@@ -516,10 +531,10 @@ namespace join
          */
         Ipv6Address (const Ipv4Address& address)
         {
-            addr_.s6_addr32[0] = 0;
-            addr_.s6_addr32[1] = 0;
-            addr_.s6_addr32[2] = htonl (0xffff);
-            addr_.s6_addr32[3] = reinterpret_cast <const in_addr*> (address.addr ())->s_addr;
+            _addr.s6_addr32[0] = 0;
+            _addr.s6_addr32[1] = 0;
+            _addr.s6_addr32[2] = htonl (0xffff);
+            _addr.s6_addr32[3] = reinterpret_cast <const in_addr*> (address.addr ())->s_addr;
         }
 
         /**
@@ -527,9 +542,9 @@ namespace join
          * @param address address to copy.
          */
         Ipv6Address (const Ipv6Address& address)
-        : scope_ (address.scope_)
+        : _scope (address._scope)
         {
-            memcpy (&addr_, &address.addr_, sizeof addr_);
+            memcpy (&_addr, &address._addr, sizeof _addr);
         }
 
         /**
@@ -538,8 +553,8 @@ namespace join
          */
         Ipv6Address& operator= (const Ipv6Address& address)
         {
-            memcpy (&addr_, &address.addr_, sizeof addr_);
-            scope_ = address.scope_;
+            memcpy (&_addr, &address._addr, sizeof _addr);
+            _scope = address._scope;
             return *this;
         }
 
@@ -549,7 +564,7 @@ namespace join
          */
         Ipv6Address (const void* address)
         {
-            memcpy (&addr_, address, sizeof addr_);
+            memcpy (&_addr, address, sizeof _addr);
         }
 
         /**
@@ -558,9 +573,9 @@ namespace join
          * @param scope the scope identifier of the address.
          */
         Ipv6Address (const void* address, uint32_t scope)
-        : scope_ (scope)
+        : _scope (scope)
         {
-            memcpy (&addr_, address, sizeof addr_);
+            memcpy (&_addr, address, sizeof _addr);
         }
 
         /**
@@ -569,17 +584,17 @@ namespace join
          */
         Ipv6Address (int prefix)
         {
-            memset (&addr_, 0, sizeof addr_);
+            memset (&_addr, 0, sizeof _addr);
 
             for (int i = 0; prefix > 0; prefix -= 8, ++i)
             {
                 if (prefix >= 8)
                 {
-                    addr_.s6_addr[i] = 0xff;
+                    _addr.s6_addr[i] = 0xff;
                 }
                 else
                 {
-                    addr_.s6_addr[i] = (unsigned long) (0xffU << (8 - prefix));
+                    _addr.s6_addr[i] = (unsigned long) (0xffU << (8 - prefix));
                 }
             }
         }
@@ -606,7 +621,7 @@ namespace join
          */
         const void* addr () const
         {
-            return &addr_;
+            return &_addr;
         }
 
         /**
@@ -615,7 +630,7 @@ namespace join
          */
         socklen_t length () const
         {
-            return sizeof addr_;
+            return sizeof _addr;
         }
 
         /**
@@ -624,7 +639,7 @@ namespace join
          */
         uint32_t scope () const
         {
-            return scope_;
+            return _scope;
         }
 
         /**
@@ -637,7 +652,7 @@ namespace join
 
             for (int i = 3; i >= 0; --i)
             {
-                uint32_t bits = std::bitset <32> (ntohl (addr_.s6_addr32[i])).count ();
+                uint32_t bits = std::bitset <32> (ntohl (_addr.s6_addr32[i])).count ();
                 if (bits)
                 {
                     return (bitPos - (32 - bits));
@@ -654,7 +669,7 @@ namespace join
          */
         bool isWildcard () const
         {
-            return IN6_IS_ADDR_UNSPECIFIED (&addr_);
+            return IN6_IS_ADDR_UNSPECIFIED (&_addr);
         }
 
         /**
@@ -663,7 +678,7 @@ namespace join
          */
         bool isLoopBack () const
         {
-            return IN6_IS_ADDR_LOOPBACK (&addr_);
+            return IN6_IS_ADDR_LOOPBACK (&_addr);
         }
 
         /**
@@ -672,7 +687,7 @@ namespace join
          */
         bool isLinkLocal () const
         {
-            return IN6_IS_ADDR_LINKLOCAL (&addr_);
+            return IN6_IS_ADDR_LINKLOCAL (&_addr);
         }
 
         /**
@@ -681,7 +696,7 @@ namespace join
          */
         bool isSiteLocal () const
         {
-            return IN6_IS_ADDR_SITELOCAL (&addr_);
+            return IN6_IS_ADDR_SITELOCAL (&_addr);
         }
 
         /**
@@ -690,14 +705,15 @@ namespace join
          */
         bool isUniqueLocal () const
         {
-            return (addr_.__in6_u.__u6_addr32[0] & htonl (0xfe000000)) == htonl (0xfc000000);
+            return (_addr.__in6_u.__u6_addr32[0] & htonl (0xfe000000)) == htonl (0xfc000000);
         }
 
         /**
          * @brief check if IP address is a broadcast address.
+         * @param prefix prefix length.
          * @return if broadcast true is returned, false otherwise.
          */
-        bool isBroadcast () const
+        bool isBroadcast ([[maybe_unused]] int prefix) const
         {
             return false;
         }
@@ -708,7 +724,7 @@ namespace join
          */
         bool isMulticast () const
         {
-            return IN6_IS_ADDR_MULTICAST (&addr_);
+            return IN6_IS_ADDR_MULTICAST (&_addr);
         }
 
         /**
@@ -717,7 +733,7 @@ namespace join
          */
         bool isIpv4Compat () const
         {
-            return IN6_IS_ADDR_V4COMPAT (&addr_);
+            return IN6_IS_ADDR_V4COMPAT (&_addr);
         }
 
         /**
@@ -726,7 +742,7 @@ namespace join
          */
         bool isIpv4Mapped () const
         {
-            return IN6_IS_ADDR_V4MAPPED (&addr_);
+            return IN6_IS_ADDR_V4MAPPED (&_addr);
         }
 
         /**
@@ -740,17 +756,17 @@ namespace join
             if (inet_ntop (family (), addr (), buffer, INET6_ADDRSTRLEN) != nullptr)
             {
                 address.append (buffer);
-                if (scope_ > 0)
+                if (_scope > 0)
                 {
                     address.append ("%");
                     char ifname[IFNAMSIZ];
-                    if (if_indextoname (scope_, ifname))
+                    if (if_indextoname (_scope, ifname))
                     {
                         address.append (ifname);
                     }
                     else
                     {
-                        address.append (std::to_string (scope_));
+                        address.append (std::to_string (_scope));
                     }
                 }
             }
@@ -768,8 +784,8 @@ namespace join
             while (i--)
             {
                 arpa << std::hex;
-                arpa << static_cast <int> ((addr_.s6_addr[i] & 0x0F)) << ".";
-                arpa << static_cast <int> ((addr_.s6_addr[i] & 0xF0) >> 4) << ".";
+                arpa << static_cast <int> ((_addr.s6_addr[i] & 0x0F)) << ".";
+                arpa << static_cast <int> ((_addr.s6_addr[i] & 0xF0) >> 4) << ".";
             }
             arpa << "ip6.arpa";
             return arpa.str ();
@@ -820,10 +836,10 @@ namespace join
         Ipv6Address operator& (const Ipv6Address& address) const
         {
             Ipv6Address addr (*this);
-            addr.addr_.s6_addr32[0] &= address.addr_.s6_addr32[0];
-            addr.addr_.s6_addr32[1] &= address.addr_.s6_addr32[1];
-            addr.addr_.s6_addr32[2] &= address.addr_.s6_addr32[2];
-            addr.addr_.s6_addr32[3] &= address.addr_.s6_addr32[3];
+            addr._addr.s6_addr32[0] &= address._addr.s6_addr32[0];
+            addr._addr.s6_addr32[1] &= address._addr.s6_addr32[1];
+            addr._addr.s6_addr32[2] &= address._addr.s6_addr32[2];
+            addr._addr.s6_addr32[3] &= address._addr.s6_addr32[3];
             return addr;
         }
 
@@ -835,10 +851,10 @@ namespace join
         Ipv6Address operator| (const Ipv6Address& address) const
         {
             Ipv6Address addr (*this);
-            addr.addr_.s6_addr32[0] |= address.addr_.s6_addr32[0];
-            addr.addr_.s6_addr32[1] |= address.addr_.s6_addr32[1];
-            addr.addr_.s6_addr32[2] |= address.addr_.s6_addr32[2];
-            addr.addr_.s6_addr32[3] |= address.addr_.s6_addr32[3];
+            addr._addr.s6_addr32[0] |= address._addr.s6_addr32[0];
+            addr._addr.s6_addr32[1] |= address._addr.s6_addr32[1];
+            addr._addr.s6_addr32[2] |= address._addr.s6_addr32[2];
+            addr._addr.s6_addr32[3] |= address._addr.s6_addr32[3];
             return addr;
         }
 
@@ -850,10 +866,10 @@ namespace join
         Ipv6Address operator^ (const Ipv6Address& address) const
         {
             Ipv6Address addr (*this);
-            addr.addr_.s6_addr32[0] ^= address.addr_.s6_addr32[0];
-            addr.addr_.s6_addr32[1] ^= address.addr_.s6_addr32[1];
-            addr.addr_.s6_addr32[2] ^= address.addr_.s6_addr32[2];
-            addr.addr_.s6_addr32[3] ^= address.addr_.s6_addr32[3];
+            addr._addr.s6_addr32[0] ^= address._addr.s6_addr32[0];
+            addr._addr.s6_addr32[1] ^= address._addr.s6_addr32[1];
+            addr._addr.s6_addr32[2] ^= address._addr.s6_addr32[2];
+            addr._addr.s6_addr32[3] ^= address._addr.s6_addr32[3];
             return addr;
         }
 
@@ -864,10 +880,10 @@ namespace join
         Ipv6Address operator~ () const
         {
             Ipv6Address addr (*this);
-            addr.addr_.s6_addr32[0] ^= 0xffffffff;
-            addr.addr_.s6_addr32[1] ^= 0xffffffff;
-            addr.addr_.s6_addr32[2] ^= 0xffffffff;
-            addr.addr_.s6_addr32[3] ^= 0xffffffff;
+            addr._addr.s6_addr32[0] ^= 0xffffffff;
+            addr._addr.s6_addr32[1] ^= 0xffffffff;
+            addr._addr.s6_addr32[2] ^= 0xffffffff;
+            addr._addr.s6_addr32[3] ^= 0xffffffff;
             return addr;
         }
 
@@ -876,7 +892,7 @@ namespace join
          */
         void clear ()
         {
-            memset (&addr_, 0, sizeof addr_);
+            memset (&_addr, 0, sizeof _addr);
         }
 
         /**
@@ -892,15 +908,15 @@ namespace join
                 throw std::out_of_range ("position is out of range");
             }
 
-            return addr_.s6_addr[position];
+            return _addr.s6_addr[position];
         }
 
     private:
         /// IPv6 address.
-        struct in6_addr addr_;
+        struct in6_addr _addr;
 
         /// IPv6 address scope.
-        uint32_t scope_ = 0;
+        uint32_t _scope = 0;
     };
 }
 
@@ -1330,9 +1346,9 @@ bool IpAddress::isUniqueLocal () const
 //   CLASS     : IpAddress
 //   METHOD    : isBroadcast
 // =========================================================================
-bool IpAddress::isBroadcast () const
+bool IpAddress::isBroadcast (int prefix) const
 {
-    return _ip->isBroadcast ();
+    return _ip->isBroadcast (prefix);
 }
 
 // =========================================================================
