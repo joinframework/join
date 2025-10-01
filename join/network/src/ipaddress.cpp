@@ -713,7 +713,7 @@ namespace join
          * @param prefix prefix length.
          * @return if broadcast true is returned, false otherwise.
          */
-        bool isBroadcast (int /*prefix*/) const
+        bool isBroadcast ([[maybe_unused]] int prefix) const
         {
             return false;
         }
