@@ -229,9 +229,10 @@ namespace join
 
         /**
          * @brief check if IP address is a broadcast address.
+         * @param prefix prefix length.
          * @return if broadcast true is returned, false otherwise.
          */
-        bool isBroadcast () const;
+        bool isBroadcast (int prefix = 0) const;
 
         /**
          * @brief check if IP address is multicast.
@@ -360,11 +361,17 @@ namespace join
         /// routers multicast IPv6 address.
         static const IpAddress ipv6Routers;
 
+        /// IPv6 length.
+        static constexpr socklen_t ipv6Length = 16;
+
         /// wildcard IPv4 address.
         static const IpAddress ipv4Wildcard;
 
         /// broadcast IPv4 address.
         static const IpAddress ipv4Broadcast;
+
+        /// IPv4 length.
+        static constexpr socklen_t ipv4Length = 4;
 
     private:
         /// IP address implementation.

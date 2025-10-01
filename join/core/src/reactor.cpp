@@ -142,7 +142,7 @@ int Reactor::delHandler (EventHandler* handler)
 
             // wait until dispatcher has stopped,
             // unless we're the dispatcher thread itself.
-            _threadStatus.wait (lock, [this] {
+            _threadStatus.wait (lock, [this] () {
                 return (std::this_thread::get_id () == _threadId) || !_running;
             });
         }
