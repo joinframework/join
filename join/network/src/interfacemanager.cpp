@@ -1436,7 +1436,7 @@ Interface::Ptr InterfaceManager::acquire (LinkInfo& info)
         return it->second;
     }
 
-   Interface::Ptr iface (new Interface (this, info.index));
+    Interface::Ptr iface (new Interface (this, info.index));
     _interfaces[info.index] = iface;
     info.flags |= ChangeType::Added;
 

@@ -782,6 +782,7 @@ TEST_F (InterfaceTest, supportsIpv6)
     ASSERT_TRUE (vl->supportsIpv6 ());
     ASSERT_EQ (vl->enable (false, true), 0) << lastError.message ();
     ASSERT_FALSE (vl->supportsIpv6 ());
+    ASSERT_EQ (vl->enable (true, true), 0) << lastError.message ();
 
     auto dm = InterfaceManager::instance ()->findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
@@ -789,6 +790,7 @@ TEST_F (InterfaceTest, supportsIpv6)
     ASSERT_TRUE (dm->supportsIpv6 ());
     ASSERT_EQ (dm->enable (false, true), 0) << lastError.message ();
     ASSERT_FALSE (dm->supportsIpv6 ());
+    ASSERT_EQ (dm->enable (true, true), 0) << lastError.message ();
 
     auto ve = InterfaceManager::instance ()->findByName ("veth0");
     ASSERT_NE (ve, nullptr);
@@ -796,7 +798,7 @@ TEST_F (InterfaceTest, supportsIpv6)
     ASSERT_TRUE (ve->supportsIpv6 ());
     ASSERT_EQ (ve->enable (false, true), 0) << lastError.message ();
     ASSERT_FALSE (ve->supportsIpv6 ());
-
+    ASSERT_EQ (ve->enable (true, true), 0) << lastError.message ();
 
     auto br = InterfaceManager::instance ()->findByName ("br0");
     ASSERT_NE (br, nullptr);
@@ -806,6 +808,7 @@ TEST_F (InterfaceTest, supportsIpv6)
     ASSERT_EQ (ve->removeFromBridge (true), 0) << lastError.message ();
     ASSERT_EQ (br->enable (false, true), 0) << lastError.message ();
     ASSERT_FALSE (br->supportsIpv6 ());
+    ASSERT_EQ (br->enable (true, true), 0) << lastError.message ();
 }
 
 /**
