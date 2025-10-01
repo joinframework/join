@@ -128,12 +128,7 @@ InterfaceList InterfaceManager::enumerate ()
 // =========================================================================
 int InterfaceManager::refresh (bool sync)
 {
-    if (dumpLink (sync) != 0 || dumpAddress (sync) != 0 || dumpRoute (sync) != 0)
-    {
-        return -1;
-    }
-
-    return 0;
+    return -(dumpLink (sync) != 0 || dumpAddress (sync) != 0 || dumpRoute (sync) != 0);
 }
 
 // =========================================================================
@@ -976,8 +971,7 @@ int InterfaceManager::sendRequest (struct nlmsghdr* nlh, bool sync)
 {
     ScopedLock lock (_syncMutex);
 
-    int sent = write (reinterpret_cast <const char *> (nlh), nlh->nlmsg_len);
-    if (sent < 0)
+    if (write (reinterpret_cast <const char *> (nlh), nlh->nlmsg_len) == -1)
     {
         return -1;
     }
