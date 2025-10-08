@@ -83,23 +83,29 @@ TEST_F (ShmTest, notify)
 {
     std::thread th ([&] () {
         std::this_thread::sleep_for (std::chrono::milliseconds (10));
-        EXPECT_EQ (client.open (_name, true), 0);
-        EXPECT_EQ (client.wait (), 0) << join::lastError.message ();
-        EXPECT_STREQ (static_cast <char*> (client.get ()), "Ping");
+        ASSERT_EQ (client.handle (), -1);
+        ASSERT_EQ (client.open (_name, true), 0) << join::lastError.message ();
+        ASSERT_GE (client.handle (), 0) << join::lastError.message ();
+        ASSERT_EQ (client.wait (), 0) << join::lastError.message ();
+        ASSERT_STREQ (static_cast <char*> (client.get ()), "Ping");
         ::strcpy (static_cast <char *> (client.get ()), "Pong");
-        EXPECT_EQ (client.notify (), 0) << join::lastError.message ();
+        ASSERT_EQ (client.notify (), 0) << join::lastError.message ();
     });
 
-    EXPECT_EQ (server.open (_name, true), 0);
+    ASSERT_EQ (server.handle (), -1);
+    ASSERT_EQ (server.open (_name, true), 0) << join::lastError.message ();
+    ASSERT_GE (server.handle (), 0) << join::lastError.message ();
     ::strcpy (static_cast <char *> (server.get ()), "Ping");
-    EXPECT_EQ (server.notify (), 0) << join::lastError.message ();
-    EXPECT_EQ (server.wait (), 0) << join::lastError.message ();
-    EXPECT_STREQ (static_cast <char*> (server.get ()), "Pong");
+    ASSERT_EQ (server.notify (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.wait (), 0) << join::lastError.message ();
+    ASSERT_STREQ (static_cast <char*> (server.get ()), "Pong");
 
     th.join ();
 
     client.close ();
+    ASSERT_EQ (client.handle (), -1);
     server.close ();
+    ASSERT_EQ (server.handle (), -1);
 }
 
 /**
