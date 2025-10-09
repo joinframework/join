@@ -551,12 +551,6 @@ namespace join
         void onLinkMessage (struct nlmsghdr* nlh);
 
         /**
-         * @brief handle link notification.
-         * @param nlh netlink message.
-         */
-        void onBridgeMessage (struct nlmsghdr* nlh);
-
-        /**
          * @brief handle link info notification.
          * @param nlh netlink message.
          * @param flags interface change flags.

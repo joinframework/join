@@ -1075,6 +1075,8 @@ void InterfaceManager::onReceive ()
 void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
 {
     struct ifinfomsg* ifi = reinterpret_cast <struct ifinfomsg*> (NLMSG_DATA (nlh));
+    struct rtattr* rta = IFLA_RTA (ifi);
+    int len = IFLA_PAYLOAD (nlh);
 
     if (ifi->ifi_family == AF_BRIDGE)
     {
@@ -1095,8 +1097,6 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
     }
 
     Interface::Ptr iface = acquire (info);
-    uint32_t oldMasterIndex = 0;
-    uint32_t newMasterIndex = 0;
 
     iface->_mutex.lock ();
 
@@ -1111,11 +1111,6 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
     }
 
     iface->_flags = ifi->ifi_flags;
-
-    struct rtattr* rta = IFLA_RTA (ifi);
-    int len = IFLA_PAYLOAD (nlh);
-
-    oldMasterIndex = iface->_master;
 
     while (RTA_OK (rta, len))
     {
@@ -1148,70 +1143,9 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
         rta = RTA_NEXT (rta, len);
     }
 
-    newMasterIndex = iface->_master;
-
     iface->_mutex.unlock ();
 
-    if (oldMasterIndex != newMasterIndex)
-    {
-        Interface::Ptr oldMaster = findByIndex (oldMasterIndex);
-        if (oldMaster)
-        {
-            ScopedLock <Mutex> lock (oldMaster->_mutex);
-            std::cout << iface->name () << " removed from " << oldMaster->name () << std::endl;
-            // oldMaster->_slaves.erase (ifi->ifi_index);
-        }
-
-        Interface::Ptr newMaster = findByIndex (newMasterIndex);
-        if (newMaster)
-        {
-            ScopedLock <Mutex> lock (newMaster->_mutex);
-            std::cout << iface->name () << " added to " << newMaster->name () << std::endl;
-            // newMaster->_slaves.insert (ifi->ifi_index);
-        }
-    }
-
     notifyLinkUpdate (info);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : onBridgeMessage
-// =========================================================================
-void InterfaceManager::onBridgeMessage (struct nlmsghdr* nlh)
-{
-    struct ifinfomsg* ifi = reinterpret_cast <struct ifinfomsg*> (NLMSG_DATA (nlh));
-
-    if (nlh->nlmsg_type == RTM_DELLINK)
-    {
-        Interface::Ptr slave = findByIndex (ifi->ifi_index);
-        if (slave)
-        {
-            ScopedLock <Mutex> lock (slave->_mutex);
-            Interface::Ptr master = findByIndex (slave->_master);
-            if (master)
-            {
-                ScopedLock <Mutex> lock (master->_mutex);
-                std::cout << slave->name () << " removed from " << master->name () << std::endl;
-                // master->_slaves.erase (ifi->ifi_index);
-            }
-        }
-    }
-    else
-    {
-        Interface::Ptr slave = findByIndex (ifi->ifi_index);
-        if (slave)
-        {
-            ScopedLock <Mutex> lock (slave->_mutex);
-            Interface::Ptr master = findByIndex (slave->_master);
-            if (master)
-            {
-                ScopedLock <Mutex> lock (master->_mutex);
-                std::cout << slave->name () << " added to " << master->name () << std::endl;
-                // master->_slaves.insert(ifi->ifi_index);
-            }
-        }
-    }
 }
 
 // =========================================================================
