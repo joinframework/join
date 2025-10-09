@@ -30,42 +30,35 @@
 
 using join::Shm;
 
-class ShmTest : public ::testing::Test
+const std::string _name = "/test_shm";
+
+TEST (Shm, open)
 {
-protected:
-    /**
-     * @brief Tears down the test fixture.
-     */
-    void TearDown () override
-    {
-        server.close ();
-        client.close ();
-    }
+    Shm::Server server1, server2 (-sizeof (join::ShmSync) - 1), server3 (-sizeof (join::ShmSync));
+    Shm::Client client1;
 
-    Shm::Server server {1024};
-    Shm::Client client {1024};
-
-    /// name.
-    static const std::string _name;
-};
-
-const std::string ShmTest::_name = "/test_shm";
-
-TEST_F (ShmTest, open)
-{
-    ASSERT_EQ (server.open (_name, false), 0) << join::lastError.message ();
-    EXPECT_EQ (client.open (_name, false), 0) << join::lastError.message ();
-    client.close ();
-    server.close ();
+    ASSERT_EQ (client1.open (_name), -1);
+    ASSERT_EQ (server1.open (_name), 0) << join::lastError.message ();
+    ASSERT_EQ (server1.open (_name), -1);
+    ASSERT_EQ (server2.open (_name), -1);
+    ASSERT_EQ (client1.open (_name), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.open (_name), -1);
+    client1.close ();
+    server1.close ();
+    ASSERT_EQ (server2.open (_name), -1);
+    ASSERT_EQ (server3.open (_name), -1);
 }
 
-TEST_F (ShmTest, get)
+TEST (Shm, get)
 {
+    Shm::Server server (1024);
+    Shm::Client client (1024);
+
     ASSERT_EQ (server.get (), nullptr);
-    ASSERT_EQ (server.open (_name, false), 0) << join::lastError.message ();
+    ASSERT_EQ (server.open (_name), 0) << join::lastError.message ();
     ASSERT_NE (server.get (), nullptr);
     ASSERT_EQ (client.get (), nullptr);
-    EXPECT_EQ (client.open (_name, false), 0) << join::lastError.message ();
+    EXPECT_EQ (client.open (_name), 0) << join::lastError.message ();
     ASSERT_NE (client.get (), nullptr);
     client.close ();
     ASSERT_EQ (client.get (), nullptr);
@@ -73,28 +66,34 @@ TEST_F (ShmTest, get)
     ASSERT_EQ (server.get (), nullptr);
 }
 
-TEST_F (ShmTest, size)
+TEST (Shm, size)
 {
+    Shm::Server server (1024);
+    Shm::Client client (1024);
+
     ASSERT_EQ (server.size (), 1024);
     ASSERT_EQ (client.size (), 1024);
 }
 
-TEST_F (ShmTest, notify)
+TEST (Shm, notify)
 {
+    Shm::Server server (1024);
+    Shm::Client client (1024);
+
     std::thread th ([&] () {
         std::this_thread::sleep_for (std::chrono::milliseconds (10));
-        ASSERT_EQ (client.handle (), -1);
-        ASSERT_EQ (client.open (_name, true), 0) << join::lastError.message ();
-        ASSERT_GE (client.handle (), 0) << join::lastError.message ();
+        ASSERT_EQ (client.notify (), -1);
+        ASSERT_EQ (client.wait (), -1);
+        ASSERT_EQ (client.open (_name), 0) << join::lastError.message ();
         ASSERT_EQ (client.wait (), 0) << join::lastError.message ();
         ASSERT_STREQ (static_cast <char*> (client.get ()), "Ping");
         ::strcpy (static_cast <char *> (client.get ()), "Pong");
         ASSERT_EQ (client.notify (), 0) << join::lastError.message ();
     });
 
-    ASSERT_EQ (server.handle (), -1);
-    ASSERT_EQ (server.open (_name, true), 0) << join::lastError.message ();
-    ASSERT_GE (server.handle (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.notify (), -1);
+    ASSERT_EQ (server.wait (), -1);
+    ASSERT_EQ (server.open (_name), 0) << join::lastError.message ();
     ::strcpy (static_cast <char *> (server.get ()), "Ping");
     ASSERT_EQ (server.notify (), 0) << join::lastError.message ();
     ASSERT_EQ (server.wait (), 0) << join::lastError.message ();
@@ -103,9 +102,7 @@ TEST_F (ShmTest, notify)
     th.join ();
 
     client.close ();
-    ASSERT_EQ (client.handle (), -1);
     server.close ();
-    ASSERT_EQ (server.handle (), -1);
 }
 
 /**

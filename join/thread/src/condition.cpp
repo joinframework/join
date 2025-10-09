@@ -25,8 +25,9 @@
 // libjoin.
 #include <join/condition.hpp>
 
-using join::ScopedLock;
 using join::Condition;
+using join::SharedCondition;
+using join::ScopedLock;
 
 // =========================================================================
 //   CLASS     : Condition
@@ -34,9 +35,11 @@ using join::Condition;
 // =========================================================================
 Condition::Condition ()
 {
-    pthread_condattr_init (&_attr);
-    pthread_condattr_setclock (&_attr, CLOCK_MONOTONIC);
-    pthread_cond_init (&_handle, &_attr);
+    pthread_condattr_t attr;
+    pthread_condattr_init (&attr);
+    pthread_condattr_setclock (&attr, CLOCK_MONOTONIC);
+    pthread_cond_init (&_handle, &attr);
+    pthread_condattr_destroy (&attr);
 }
 
 // =========================================================================
@@ -46,7 +49,6 @@ Condition::Condition ()
 Condition::~Condition ()
 {
     pthread_cond_destroy (&_handle);
-    pthread_condattr_destroy (&_attr);
 }
 
 // =========================================================================
@@ -71,7 +73,57 @@ void Condition::broadcast () noexcept
 //   CLASS     : Condition
 //   METHOD    : wait
 // =========================================================================
-void Condition::wait (ScopedLock& lock)
+void Condition::wait (ScopedLock <Mutex>& lock)
 {
-    pthread_cond_wait (&_handle, &lock._mutex._handle);
+    pthread_cond_wait (&_handle, lock.mutex ()->handle ());
+}
+
+// =========================================================================
+//   CLASS     : SharedCondition
+//   METHOD    : SharedCondition
+// =========================================================================
+SharedCondition::SharedCondition ()
+{
+    pthread_condattr_t attr;
+    pthread_condattr_init (&attr);
+    pthread_condattr_setclock (&attr, CLOCK_MONOTONIC);
+    pthread_condattr_setpshared (&attr, PTHREAD_PROCESS_SHARED);
+    pthread_cond_init (&_handle, &attr);
+    pthread_condattr_destroy (&attr);
+}
+
+// =========================================================================
+//   CLASS     : SharedCondition
+//   METHOD    : ~SharedCondition
+// =========================================================================
+SharedCondition::~SharedCondition ()
+{
+    pthread_cond_destroy (&_handle);
+}
+
+// =========================================================================
+//   CLASS     : SharedCondition
+//   METHOD    : signal
+// =========================================================================
+void SharedCondition::signal () noexcept
+{
+    pthread_cond_signal (&_handle);
+}
+
+// =========================================================================
+//   CLASS     : SharedCondition
+//   METHOD    : broadcast
+// =========================================================================
+void SharedCondition::broadcast () noexcept
+{
+    pthread_cond_broadcast (&_handle);
+}
+
+// =========================================================================
+//   CLASS     : SharedCondition
+//   METHOD    : wait
+// =========================================================================
+void SharedCondition::wait (ScopedLock <SharedMutex>& lock)
+{
+    pthread_cond_wait (&_handle, lock.mutex ()->handle ());
 }

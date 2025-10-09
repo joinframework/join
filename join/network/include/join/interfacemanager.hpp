@@ -537,7 +537,7 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int waitResponse (ScopedLock& lock, uint32_t seq, uint32_t timeout = 5000);
+        int waitResponse (ScopedLock <Mutex>& lock, uint32_t seq, uint32_t timeout = 5000);
 
         /**
          * @brief method called when data are ready to be read on handle.
@@ -549,6 +549,12 @@ namespace join
          * @param nlh netlink message.
          */
         void onLinkMessage (struct nlmsghdr* nlh);
+
+        /**
+         * @brief handle link notification.
+         * @param nlh netlink message.
+         */
+        void onBridgeMessage (struct nlmsghdr* nlh);
 
         /**
          * @brief handle link info notification.

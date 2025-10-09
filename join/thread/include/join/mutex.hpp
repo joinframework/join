@@ -88,20 +88,90 @@ namespace join
          */
         void unlock ();
 
-    private:
-        /// mutex attributes.
-        pthread_mutexattr_t _attr;
+        /**
+         * @brief get native handle.
+         * @return native handle.
+         */
+        pthread_mutex_t* handle ();
 
+    private:
         /// mutex handle.
         pthread_mutex_t _handle;
+    };
 
-        /// friendship with condition.
-        friend class Condition;
+    /**
+     * @brief class used to protect shared data from being simultaneously accessed by multiple process via a shared memory.
+     */
+    class SharedMutex
+    {
+    public:
+        /**
+         * @brief default constructor.
+         */
+        SharedMutex ();
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        SharedMutex (const SharedMutex& other) = delete;
+
+        /**
+         * @brief copy assignment.
+         * @param other other object to copy.
+         * @return a reference to the current object.
+         */
+        SharedMutex& operator= (const SharedMutex& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        SharedMutex (SharedMutex&& other) = delete;
+
+        /**
+         * @brief move assignment.
+         * @param other other object to move.
+         * @return a reference to the current object.
+         */
+        SharedMutex& operator= (SharedMutex&& other) = delete;
+
+        /**
+         * @brief destroys the mutex object.
+         */
+        ~SharedMutex ();
+
+        /**
+         * @brief lock the mutex.
+         */
+        void lock ();
+
+        /**
+         * @brief lock the mutex or return immediatly if the mutex is already locked.
+         * @return true if locked, false otherwise.
+         */
+        bool tryLock ();
+
+        /**
+         * @brief unlock the mutex.
+         */
+        void unlock ();
+
+        /**
+         * @brief get native handle.
+         * @return native handle.
+         */
+        pthread_mutex_t* handle ();
+
+    private:
+        /// mutex handle.
+        pthread_mutex_t _handle;
     };
 
     /**
      * @brief class owning a mutex for the duration of a scoped block.
      */
+    template <typename Lockable>
     class ScopedLock
     {
     public:
@@ -114,7 +184,11 @@ namespace join
          * @brief acquires ownership of the given mutex.
          * @param mutex mutex to acquire ownership of.
          */
-        explicit ScopedLock (Mutex& mutex);
+        explicit ScopedLock (Lockable& mutex)
+        : _mutex (mutex)
+        {
+            _mutex.lock ();
+        }
 
         /**
          * @brief copy constructor.
@@ -145,14 +219,23 @@ namespace join
         /**
          * @brief releases the ownership of the owned mutex.
          */
-        ~ScopedLock ();
+        ~ScopedLock ()
+        {
+            _mutex.unlock ();
+        }
+
+        /**
+         * @brief get associated mutex.
+         * @return associated mutex.
+         */
+        Lockable* mutex ()
+        {
+            return &_mutex;
+        }
 
     private:
         /// mutex owned for the duration of a scoped block.
-        Mutex& _mutex;
-
-        /// friendship with condition.
-        friend class Condition;
+        Lockable& _mutex;
     };
 }
 

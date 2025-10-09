@@ -56,7 +56,7 @@ void* Cache::get (const std::string &fileName, struct stat &sbuf)
         return nullptr;
     }
 
-    ScopedLock lock (_mutex);
+    ScopedLock <Mutex> lock (_mutex);
 
     auto it = _entries.find (fileName);
     if (it != _entries.end ())
@@ -99,7 +99,7 @@ void* Cache::get (const std::string &fileName, struct stat &sbuf)
 // =========================================================================
 void Cache::remove (const std::string &fileName)
 {
-    ScopedLock lock (_mutex);
+    ScopedLock <Mutex> lock (_mutex);
 
     auto it = _entries.find (fileName);
     if (it != _entries.end ())
@@ -115,7 +115,7 @@ void Cache::remove (const std::string &fileName)
 // =========================================================================
 void Cache::clear ()
 {
-    ScopedLock lock (_mutex);
+    ScopedLock <Mutex> lock (_mutex);
 
     for (auto const& entry : _entries)
     {
@@ -131,7 +131,7 @@ void Cache::clear ()
 // =========================================================================
 size_t Cache::size ()
 {
-    ScopedLock lock (_mutex);
+    ScopedLock <Mutex> lock (_mutex);
 
     return _entries.size ();
 }

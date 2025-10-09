@@ -174,7 +174,7 @@ const Interface::AddressList& Interface::addressList () const noexcept
 // =========================================================================
 bool Interface::hasAddress (const IpAddress& ipAddress)
 {
-    ScopedLock lock (_mutex);
+    ScopedLock <Mutex> lock (_mutex);
 
     for (const auto& addr : _addresses)
     {
@@ -193,7 +193,7 @@ bool Interface::hasAddress (const IpAddress& ipAddress)
 // =========================================================================
 bool Interface::hasLocalAddress ()
 {
-    ScopedLock lock (_mutex);
+    ScopedLock <Mutex> lock (_mutex);
 
     for (const auto& addr : _addresses)
     {
@@ -257,7 +257,7 @@ const Interface::RouteList& Interface::routeList () const noexcept
 // =========================================================================
 bool Interface::hasRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric)
 {
-    ScopedLock lock (_mutex);
+    ScopedLock <Mutex> lock (_mutex);
 
     for (const auto& rt : _routes)
     {
@@ -448,7 +448,7 @@ bool Interface::supportsMulticast () const noexcept
 // =========================================================================
 bool Interface::supportsIpv4 ()
 {
-    ScopedLock lock (_mutex);
+    ScopedLock <Mutex> lock (_mutex);
 
     for (auto const& addr : _addresses)
     {
@@ -467,7 +467,7 @@ bool Interface::supportsIpv4 ()
 // =========================================================================
 bool Interface::supportsIpv6 ()
 {
-    ScopedLock lock (_mutex);
+    ScopedLock <Mutex> lock (_mutex);
 
     for (auto const& addr : _addresses)
     {

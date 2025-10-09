@@ -22,10 +22,16 @@
  * SOFTWARE.
  */
 
+#define _XOPEN_SOURCE 700
+
 // libjoin.
 #include <join/mutex.hpp>
 
+// C.
+#include <cerrno>
+
 using join::Mutex;
+using join::SharedMutex;
 using join::ScopedLock;
 
 // =========================================================================
@@ -34,9 +40,11 @@ using join::ScopedLock;
 // =========================================================================
 Mutex::Mutex ()
 {
-    pthread_mutexattr_init (&_attr);
-    pthread_mutexattr_settype (&_attr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init (&_handle, &_attr);
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init (&attr);
+    pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init (&_handle, &attr);
+    pthread_mutexattr_destroy (&attr);
 }
 
 // =========================================================================
@@ -46,7 +54,6 @@ Mutex::Mutex ()
 Mutex::~Mutex ()
 {
     pthread_mutex_destroy (&_handle);
-    pthread_mutexattr_destroy (&_attr);
 }
 
 // =========================================================================
@@ -77,20 +84,78 @@ void Mutex::unlock ()
 }
 
 // =========================================================================
-//   CLASS     : ScopedLock
-//   METHOD    : ScopedLock
+//   CLASS     : Mutex
+//   METHOD    : handle
 // =========================================================================
-ScopedLock::ScopedLock (Mutex& mutex)
-: _mutex (mutex)
+pthread_mutex_t* Mutex::handle ()
 {
-    _mutex.lock ();
+    return &_handle;
 }
 
 // =========================================================================
-//   CLASS     : ScopedLock
-//   METHOD    : ~ScopedLock
+//   CLASS     : SharedMutex
+//   METHOD    : SharedMutex
 // =========================================================================
-ScopedLock::~ScopedLock ()
+SharedMutex::SharedMutex ()
 {
-    _mutex.unlock ();
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init (&attr);
+    pthread_mutexattr_setpshared (&attr, PTHREAD_PROCESS_SHARED);
+    pthread_mutexattr_setrobust (&attr, PTHREAD_MUTEX_ROBUST);
+    pthread_mutex_init (&_handle, &attr);
+    pthread_mutexattr_destroy (&attr);
+}
+
+// =========================================================================
+//   CLASS     : SharedMutex
+//   METHOD    : ~SharedMutex
+// =========================================================================
+SharedMutex::~SharedMutex ()
+{
+    pthread_mutex_destroy (&_handle);
+}
+
+// =========================================================================
+//   CLASS     : SharedMutex
+//   METHOD    : lock
+// =========================================================================
+void SharedMutex::lock ()
+{
+    if (pthread_mutex_lock (&_handle) == EOWNERDEAD)
+    {
+        pthread_mutex_consistent (&_handle);
+    }
+}
+
+// =========================================================================
+//   CLASS     : SharedMutex
+//   METHOD    : tryLock
+// =========================================================================
+bool SharedMutex::tryLock ()
+{
+    int result = pthread_mutex_trylock (&_handle);
+    if (result == EOWNERDEAD)
+    {
+        pthread_mutex_consistent (&_handle);
+        return true;
+    }
+    return (result == 0);
+}
+
+// =========================================================================
+//   CLASS     : SharedMutex
+//   METHOD    : unlock
+// =========================================================================
+void SharedMutex::unlock ()
+{
+    pthread_mutex_unlock (&_handle);
+}
+
+// =========================================================================
+//   CLASS     : SharedMutex
+//   METHOD    : handle
+// =========================================================================
+pthread_mutex_t* SharedMutex::handle ()
+{
+    return &_handle;
 }

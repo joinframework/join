@@ -32,7 +32,7 @@
 #include <future>
 #include <thread>
 
-using join::Mutex;
+using join::SharedMutex;
 using join::ScopedLock;
 
 using namespace std::chrono_literals;
@@ -40,9 +40,9 @@ using namespace std::chrono_literals;
 /**
  * @brief test lock.
  */
-TEST (Mutex, lock)
+TEST (SharedMutex, lock)
 {
-    Mutex mutex;
+    SharedMutex mutex;
     auto task = std::async (std::launch::async, [&mutex] () {
         mutex.lock ();
         std::this_thread::sleep_for (15ms);
@@ -60,9 +60,9 @@ TEST (Mutex, lock)
 /**
  * @brief test tryLock.
  */
-TEST (Mutex, tryLock)
+TEST (SharedMutex, tryLock)
 {
-    Mutex mutex;
+    SharedMutex mutex;
     auto task = std::async (std::launch::async, [&mutex] () {
         mutex.lock ();
         std::this_thread::sleep_for (15ms);
@@ -79,11 +79,11 @@ TEST (Mutex, tryLock)
 /**
  * @brief test scoped lock.
  */
-TEST (Mutex, scopedLock)
+TEST (SharedMutex, scopedLock)
 {
-    Mutex mutex;
+    SharedMutex mutex;
     auto task = std::async (std::launch::async, [&mutex] () {
-        ScopedLock <Mutex> lock (mutex);
+        ScopedLock <SharedMutex> lock (mutex);
         std::this_thread::sleep_for (15ms);
     });
     std::this_thread::sleep_for (5ms);

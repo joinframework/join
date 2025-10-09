@@ -26,6 +26,7 @@
 #define __JOIN_SHM_HPP__
 
 // libjoin.
+#include <join/condition.hpp>
 #include <join/acceptor.hpp>
 #include <join/reactor.hpp>
 #include <join/error.hpp>
@@ -46,17 +47,167 @@
 namespace join
 {
     /**
+     * @brief synchronization primitives.
+     */
+    struct ShmSync
+    {
+        /// protection mutex.
+        SharedMutex _mutex;
+
+        /// server condition.
+        SharedCondition _serverCond;
+        bool _serverSignaled = false;
+
+        /// client condition.
+        SharedCondition _clientCond;
+        bool _clientSignaled = false;
+    };
+
+    /**
+     * @brief shared memory server policy.
+     */
+    class ServerPolicy
+    {
+    public:
+        /**
+         * @brief create instance.
+         */
+        ServerPolicy () noexcept = default;
+
+        /**
+         * @brief destroy instance.
+         */
+        ~ServerPolicy () noexcept = default;
+
+        /**
+         * @brief notify the client via eventfd.
+         * @param sync synchronization primitives.
+         * @return 0 on success, -1 on failure.
+         */
+        int notify (ShmSync* sync)
+        {
+            if (sync == nullptr)
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            ScopedLock <SharedMutex> lock (sync->_mutex);
+            sync->_clientSignaled = true;
+            sync->_clientCond.signal ();
+
+            return 0;
+        }
+
+        /**
+         * @brief wait client notification via eventfd.
+         * @param sync synchronization primitives.
+         * @return 0 on success, -1 on failure.
+         */
+        int wait (ShmSync* sync)
+        {
+            if (sync == nullptr)
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            ScopedLock <SharedMutex> lock (sync->_mutex);
+            sync->_serverCond.wait (lock, [&] () { return sync->_serverSignaled;});
+            sync->_serverSignaled = false;
+
+            return 0;
+        }
+
+        /**
+         * @brief get open flags for shared memory.
+         * @return open flags.
+         */
+        constexpr int flag () const noexcept
+        {
+            return O_CREAT | O_EXCL | O_RDWR;
+        }
+    };
+
+    /**
+     * @brief shared memory client policy.
+     */
+    class ClientPolicy
+    {
+    public:
+        /**
+         * @brief create instance.
+         */
+        ClientPolicy () noexcept = default;
+
+        /**
+         * @brief destroy instance.
+         */
+        ~ClientPolicy () noexcept = default;
+
+        /**
+         * @brief notify the client via eventfd.
+         * @param sync synchronization primitives.
+         * @return 0 on success, -1 on failure.
+         */
+        int notify (ShmSync* sync)
+        {
+            if (sync == nullptr)
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            ScopedLock <SharedMutex> lock (sync->_mutex);
+            sync->_serverSignaled = true;
+            sync->_serverCond.signal ();
+
+            return 0;
+        }
+
+        /**
+         * @brief wait client notification via eventfd.
+         * @param sync synchronization primitives.
+         * @return 0 on success, -1 on failure.
+         */
+        int wait (ShmSync* sync)
+        {
+            if (sync == nullptr)
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            ScopedLock <SharedMutex> lock (sync->_mutex);
+            sync->_clientCond.wait (lock, [&] () { return sync->_clientSignaled;});
+            sync->_clientSignaled = false;
+
+            return 0;
+        }
+
+        /**
+         * @brief get open flags for shared memory.
+         * @return open flags.
+         */
+        constexpr int flag () const noexcept
+        {
+            return O_RDWR;
+        }
+    };
+
+    /**
      * @brief shared memory handler base class.
      */
     template <class ShmPolicy>
-    class BasicShm : public EventHandler
+    class BasicShm
     {
     public:
         /**
          * @brief create instance.
          */
         BasicShm (off_t size = 4096) noexcept
-        : _size (size)
+        : _userSize (size)
+        , _totalSize (size + sizeof (ShmSync))
         {
         }
 
@@ -76,7 +227,7 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicShm () noexcept
+        ~BasicShm () noexcept
         {
             close ();
         }
@@ -84,38 +235,48 @@ namespace join
         /**
          * @brief open or create the shared memory segment.
          * @param name shared memory object name (must start with '/').
-         * @param fdpass if true, eventfd descriptors are exchanged via Unix socket.
          * @return 0 on success, -1 on failure.
          */
-        int open (const std::string& name, bool fdpass = false)
+        int open (const std::string& name)
         {
-            _fd = ::shm_open (name.c_str (), _policy.flag (), 0640);
+            if (opened ())
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            _fd = ::shm_open (name.c_str (), _policy.flag () | O_CLOEXEC, 0640);
             if (_fd == -1)
             {
-                close ();
-                return -1;
-            }
-
-            if ((_policy.flag () & O_CREAT) && (::ftruncate (_fd, _size) == -1))
-            {
-                close ();
-                return -1;
-            }
-
-            _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_SHARED, _fd, 0);
-            if (_ptr == MAP_FAILED)
-            {
-                close ();
-                return -1;
-            }
-
-            if ((fdpass) && (_policy.initialize (makePath (name)) == -1))
-            {
-                close ();
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return -1;
             }
 
             _name = name;
+
+            if ((_policy.flag () & O_CREAT) && (::ftruncate (_fd, _totalSize) == -1))
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                close ();
+                return -1;
+            }
+
+            _ptr = ::mmap (nullptr, _totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, _fd, 0);
+            if (_ptr == MAP_FAILED)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                close ();
+                return -1;
+            }
+
+            _sync = static_cast <ShmSync*> (_ptr);
+
+            if (_policy.flag () & O_CREAT)
+            {
+                new (&_sync->_mutex) SharedMutex ();
+                new (&_sync->_serverCond) SharedCondition ();
+                new (&_sync->_clientCond) SharedCondition ();
+            }
 
             return 0;
         }
@@ -125,11 +286,18 @@ namespace join
          */
         void close () noexcept
         {
-            _policy.cleanup ();
-
             if ((_ptr != nullptr) && (_ptr != MAP_FAILED))
             {
-                ::munmap (_ptr, _size);
+                if (_policy.flag () & O_CREAT)
+                {
+                    _sync->_mutex.~SharedMutex ();
+                    _sync->_serverCond.~SharedCondition ();
+                    _sync->_clientCond.~SharedCondition ();
+                }
+
+                ::munmap (_ptr, _totalSize);
+
+                _sync = nullptr;
                 _ptr = nullptr;
             }
 
@@ -137,14 +305,23 @@ namespace join
             {
                 ::close (_fd);
                 _fd = -1;
-            }
 
-            if (_policy.flag () & O_CREAT)
-            {
-                ::shm_unlink (_name.c_str ());
+                if (_policy.flag () & O_CREAT)
+                {
+                    ::shm_unlink (_name.c_str ());
+                }
             }
 
             _name.clear ();
+        }
+
+        /**
+         * @brief check if opened.
+         * @return true if opened, false otherwise.
+         */
+        bool opened () const noexcept
+        {
+            return (_fd != -1);
         }
 
         /**
@@ -153,7 +330,7 @@ namespace join
          */
         int notify ()
         {
-            return _policy.notify ();
+            return _policy.notify (_sync);
         }
 
         /**
@@ -162,7 +339,7 @@ namespace join
          */
         int wait ()
         {
-            return _policy.wait ();
+            return _policy.wait (_sync);
         }
 
         /**
@@ -171,7 +348,12 @@ namespace join
          */
         const void* get () const noexcept
         {
-            return _ptr;
+            if (!_ptr)
+            {
+                return nullptr;
+            }
+
+            return static_cast <const char*> (_ptr) + sizeof (ShmSync);
         }
 
         /**
@@ -180,7 +362,12 @@ namespace join
          */
         void* get () noexcept
         {
-            return _ptr;
+            if (!_ptr)
+            {
+                return nullptr;
+            }
+
+            return static_cast <char*> (_ptr) + sizeof (ShmSync);
         }
 
         /**
@@ -189,37 +376,24 @@ namespace join
          */
         off_t size () const noexcept
         {
-            return _size;
-        }
-
-        /**
-         * @brief get native handle.
-         * @return native handle.
-         */
-        virtual int handle () const noexcept override
-        {
-            return _policy.handle ();
+            return _userSize;
         }
 
     private:
-        /**
-         * @brief derive unix domain path from shm name.
-         * @param name shm name.
-         * @return derived unix domain path.
-         */
-        static std::string makePath (const std::string& name)
-        {
-            return "/tmp" + name + ".sock";
-        }
-
         /// policy defining behavior (server/client).
         ShmPolicy _policy;
 
         /// pointer to mapped shared memory.
         void* _ptr = nullptr;
 
-        /// shared memory size.
-        off_t _size = 0;
+        /// pointer to synchronization primitives stored in shared memory.
+        ShmSync* _sync = nullptr;
+
+        /// user shared memory size.
+        off_t _userSize = 0;
+
+        /// total shared memory size.
+        off_t _totalSize = 0;
 
         /// shared memory descriptor.
         int _fd = -1;
@@ -229,312 +403,7 @@ namespace join
     };
 
     /**
-     * @brief base class for shared memory policies.
-     */
-    class PolicyBase
-    {
-    public:
-        /**
-         * @brief create instance.
-         */
-        PolicyBase () noexcept = default;
-
-        /**
-         * @brief destroy instance.
-         */
-        virtual ~PolicyBase () noexcept
-        {
-            cleanup ();
-        }
-
-        /**
-         * @brief initialize event signaling resources.
-         * @param path unix socket path used for file descriptor passing.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int initialize (const std::string& path) = 0;
-
-        /**
-         * @brief release eventfd resources.
-         */
-        void cleanup () noexcept
-         {
-            for (auto& fd : _evfds)
-            {
-                if (fd != -1)
-                {
-                    ::close (fd);
-                    fd = -1;
-                }
-            }
-        }
-
-    protected:
-        /// index of server event descriptor.
-        static constexpr int _serverIdx = 0;
-
-        /// index of client event descriptor.
-        static constexpr int _clientIdx = 1;
-
-        /// event descriptors used for synchronization.
-        std::array <int , 2> _evfds = { -1, -1 };
-    };
-
-    /**
-     * @brief shared memory policy for the server side.
-     */
-    class ServerPolicy : public PolicyBase
-    {
-    public:
-        /**
-         * @brief create instance.
-         */
-        ServerPolicy () noexcept = default;
-
-        /**
-         * @brief destroy instance.
-         */
-        ~ServerPolicy () noexcept = default;
-
-        /**
-         * @brief initialize event signaling resources.
-         * @param path unix socket path used for file descriptor passing.
-         * @return 0 on success, -1 on failure.
-         */
-        int initialize (const std::string& path) override
-        {
-            for (auto& fd : _evfds)
-            {
-                fd = ::eventfd (0, EFD_SEMAPHORE);
-                if (fd == -1)
-                {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
-                    cleanup ();
-                    return -1;
-                }
-            }
-
-            UnixStream::Acceptor server;
-            if (server.create (path) == -1)
-            {
-                cleanup ();
-                return -1;
-            }
-
-            UnixStream::Socket socket = server.accept ();
-            if (!socket.connected ())
-            {
-                cleanup ();
-                return -1;
-            }
-
-            char dummy = 'X';
-            struct iovec iov = {.iov_base = &dummy, .iov_len = sizeof (dummy)};
-            char control[CMSG_SPACE (sizeof (int) * _evfds.size ())] = {};
-
-            struct msghdr msg = {};
-            msg.msg_iov = &iov;
-            msg.msg_iovlen = 1;
-            msg.msg_control = control;
-            msg.msg_controllen = sizeof (control);
-
-            struct cmsghdr* cmsg = CMSG_FIRSTHDR (&msg);
-            cmsg->cmsg_len = CMSG_LEN (sizeof (int) * _evfds.size ());
-            cmsg->cmsg_level = SOL_SOCKET;
-            cmsg->cmsg_type = SCM_RIGHTS;
-            std::memcpy (CMSG_DATA (cmsg), _evfds.data (), sizeof (int) * _evfds.size ());
-
-            if (::sendmsg (socket.handle (), &msg, 0) == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                cleanup ();
-                return -1;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief notify the client via eventfd.
-         * @return 0 on success, -1 on failure.
-         */
-        int notify ()
-        {
-            uint64_t val = 1;
-
-            if (::write (_evfds[_clientIdx], &val, sizeof (val)) != sizeof (val))
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return -1;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief wait client notification via eventfd.
-         * @return 0 on success, -1 on failure.
-         */
-        int wait ()
-        {
-            uint64_t val;
-
-            if (::read (_evfds[_serverIdx], &val, sizeof(val)) != sizeof(val))
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return -1;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief get open flags for shared memory.
-         * @return open flags.
-         */
-        constexpr int flag () const noexcept
-        {
-            return O_CREAT | O_RDWR;
-        }
-
-        /**
-         * @brief get native handle.
-         * @return native handle.
-         */
-        int handle () const noexcept
-        {
-            return _evfds[_serverIdx];
-        }
-    };
-
-    /**
-     * @brief shared memory policy for the client side.
-     */
-    class ClientPolicy : public PolicyBase
-    {
-    public:
-        /**
-         * @brief create instance.
-         */
-        ClientPolicy () noexcept = default;
-
-        /**
-         * @brief destroy instance.
-         */
-        ~ClientPolicy () noexcept = default;
-
-        /**
-         * @brief initialize event signaling resources.
-         * @param path unix socket path used for file descriptor passing.
-         * @return 0 on success, -1 on failure.
-         */
-        int initialize (const std::string& path) override
-        {
-            UnixStream::Socket socket (UnixStream::Socket::Blocking);
-            if (socket.connect (path) == -1)
-            {
-                cleanup ();
-                return -1;
-            }
-
-            char dummy;
-            struct iovec iov = {.iov_base = &dummy, .iov_len = 1};
-            char control[CMSG_SPACE (sizeof (int) * _evfds.size ())] = {};
-
-            struct msghdr msg = {};
-            msg.msg_iov = &iov;
-            msg.msg_iovlen = 1;
-            msg.msg_control = control;
-            msg.msg_controllen = sizeof (control);
-
-            if (::recvmsg (socket.handle (), &msg, 0) == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                cleanup ();
-                return -1;
-            }
-
-            struct cmsghdr* cmsg = CMSG_FIRSTHDR (&msg);
-            if ((cmsg == nullptr) || (cmsg->cmsg_level != SOL_SOCKET) || (cmsg->cmsg_type != SCM_RIGHTS))
-            {
-                lastError = make_error_code (Errc::MessageUnknown);
-                cleanup ();
-                return -1;
-            }
-
-            int* fds = reinterpret_cast <int*> (CMSG_DATA (cmsg));
-            size_t count = (cmsg->cmsg_len - CMSG_LEN (0)) / sizeof (int);
-            if (count > _evfds.size ())
-            {
-                lastError = make_error_code (Errc::MessageTooLong);
-                cleanup ();
-                return -1;
-            }
-
-            ::memcpy (_evfds.data (), fds, count * sizeof (int));
-
-            return 0;
-        }
-
-        /**
-         * @brief notify the server via eventfd.
-         * @return 0 on success, -1 on failure.
-         */
-        int notify ()
-        {
-            uint64_t val = 1;
-
-            if (::write (_evfds[_serverIdx], &val, sizeof (val)) != sizeof (val))
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return -1;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief wait server notification via eventfd.
-         * @return 0 on success, -1 on failure.
-         */
-        int wait ()
-        {
-            uint64_t val;
-
-            if (::read (_evfds[_clientIdx], &val, sizeof(val)) != sizeof(val))
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return -1;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief get open flags for shared memory.
-         * @return open flags.
-         */
-        constexpr int flag () const noexcept
-        {
-            return O_RDWR;
-        }
-
-        /**
-         * @brief get native handle.
-         * @return native handle.
-         */
-        int handle () const noexcept
-        {
-            return _evfds[_clientIdx];
-        }
-    };
-
-    /**
      * @brief convenience wrapper for server/client shared memory types.
-     * 
-     * provides aliases for easy access:
-     *  - Shm::Server → BasicShm<ServerPolicy>
-     *  - Shm::Client → BasicShm<ClientPolicy>
      */
     struct Shm
     {
