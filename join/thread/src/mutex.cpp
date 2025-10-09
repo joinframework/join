@@ -60,7 +60,7 @@ Mutex::~Mutex ()
 //   CLASS     : Mutex
 //   METHOD    : lock
 // =========================================================================
-void Mutex::lock ()
+void Mutex::lock () noexcept
 {
     pthread_mutex_lock (&_handle);
 }
@@ -69,7 +69,7 @@ void Mutex::lock ()
 //   CLASS     : Mutex
 //   METHOD    : tryLock
 // =========================================================================
-bool Mutex::tryLock ()
+bool Mutex::tryLock () noexcept
 {
     return (pthread_mutex_trylock (&_handle) == 0);
 }
@@ -78,7 +78,7 @@ bool Mutex::tryLock ()
 //   CLASS     : Mutex
 //   METHOD    : unlock
 // =========================================================================
-void Mutex::unlock ()
+void Mutex::unlock () noexcept
 {
     pthread_mutex_unlock (&_handle);
 }
@@ -87,7 +87,7 @@ void Mutex::unlock ()
 //   CLASS     : Mutex
 //   METHOD    : handle
 // =========================================================================
-pthread_mutex_t* Mutex::handle ()
+pthread_mutex_t* Mutex::handle () noexcept
 {
     return &_handle;
 }
@@ -119,7 +119,7 @@ SharedMutex::~SharedMutex ()
 //   CLASS     : SharedMutex
 //   METHOD    : lock
 // =========================================================================
-void SharedMutex::lock ()
+void SharedMutex::lock () noexcept
 {
     if (pthread_mutex_lock (&_handle) == EOWNERDEAD)
     {
@@ -131,7 +131,7 @@ void SharedMutex::lock ()
 //   CLASS     : SharedMutex
 //   METHOD    : tryLock
 // =========================================================================
-bool SharedMutex::tryLock ()
+bool SharedMutex::tryLock () noexcept
 {
     int result = pthread_mutex_trylock (&_handle);
     if (result == EOWNERDEAD)
@@ -146,7 +146,7 @@ bool SharedMutex::tryLock ()
 //   CLASS     : SharedMutex
 //   METHOD    : unlock
 // =========================================================================
-void SharedMutex::unlock ()
+void SharedMutex::unlock () noexcept
 {
     pthread_mutex_unlock (&_handle);
 }
@@ -155,7 +155,7 @@ void SharedMutex::unlock ()
 //   CLASS     : SharedMutex
 //   METHOD    : handle
 // =========================================================================
-pthread_mutex_t* SharedMutex::handle ()
+pthread_mutex_t* SharedMutex::handle () noexcept
 {
     return &_handle;
 }

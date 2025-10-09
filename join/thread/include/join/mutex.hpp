@@ -75,24 +75,24 @@ namespace join
         /**
          * @brief lock the mutex.
          */
-        void lock ();
+        void lock () noexcept;
 
         /**
          * @brief lock the mutex or return immediatly if the mutex is already locked.
          * @return true if locked, false otherwise.
          */
-        bool tryLock ();
+        bool tryLock () noexcept;
 
         /**
          * @brief unlock the mutex.
          */
-        void unlock ();
+        void unlock () noexcept;
 
         /**
          * @brief get native handle.
          * @return native handle.
          */
-        pthread_mutex_t* handle ();
+        pthread_mutex_t* handle () noexcept;
 
     private:
         /// mutex handle.
@@ -144,24 +144,24 @@ namespace join
         /**
          * @brief lock the mutex.
          */
-        void lock ();
+        void lock () noexcept;
 
         /**
          * @brief lock the mutex or return immediatly if the mutex is already locked.
          * @return true if locked, false otherwise.
          */
-        bool tryLock ();
+        bool tryLock () noexcept;
 
         /**
          * @brief unlock the mutex.
          */
-        void unlock ();
+        void unlock () noexcept;
 
         /**
          * @brief get native handle.
          * @return native handle.
          */
-        pthread_mutex_t* handle ();
+        pthread_mutex_t* handle () noexcept;
 
     private:
         /// mutex handle.
@@ -228,7 +228,7 @@ namespace join
          * @brief get associated mutex.
          * @return associated mutex.
          */
-        Lockable* mutex ()
+        Lockable* mutex () const
         {
             return &_mutex;
         }

@@ -23,12 +23,14 @@
  */
 
 // libjoin.
+#include <join/thread.hpp>
 #include <join/shm.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
 using join::Shm;
+using join::Thread;
 
 const std::string _name = "/test_shm";
 
@@ -80,7 +82,7 @@ TEST (Shm, notify)
     Shm::Server server (1024);
     Shm::Client client (1024);
 
-    std::thread th ([&] () {
+    Thread th ([&] () {
         std::this_thread::sleep_for (std::chrono::milliseconds (10));
         ASSERT_EQ (client.notify (), -1);
         ASSERT_EQ (client.wait (), -1);

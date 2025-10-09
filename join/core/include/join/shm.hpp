@@ -27,20 +27,16 @@
 
 // libjoin.
 #include <join/condition.hpp>
-#include <join/acceptor.hpp>
-#include <join/reactor.hpp>
 #include <join/error.hpp>
 
 // C++.
+#include <utility>
+#include <atomic>
 #include <string>
-#include <array>
 
 // C.
-#include <sys/eventfd.h>
-#include <sys/socket.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/un.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -52,15 +48,15 @@ namespace join
     struct ShmSync
     {
         /// protection mutex.
-        SharedMutex _mutex;
+        alignas (64) SharedMutex _mutex;
 
         /// server condition.
         SharedCondition _serverCond;
-        bool _serverSignaled = false;
+        alignas (64) std::atomic <bool> _serverSignaled;
 
         /// client condition.
         SharedCondition _clientCond;
-        bool _clientSignaled = false;
+        alignas (64) std::atomic <bool> _clientSignaled;
     };
 
     /**
@@ -80,11 +76,11 @@ namespace join
         ~ServerPolicy () noexcept = default;
 
         /**
-         * @brief notify the client via eventfd.
+         * @brief notify the client.
          * @param sync synchronization primitives.
          * @return 0 on success, -1 on failure.
          */
-        int notify (ShmSync* sync)
+        int notify (ShmSync* sync) const
         {
             if (sync == nullptr)
             {
@@ -92,19 +88,21 @@ namespace join
                 return -1;
             }
 
-            ScopedLock <SharedMutex> lock (sync->_mutex);
-            sync->_clientSignaled = true;
+            // fast path
+            sync->_clientSignaled.store (true, std::memory_order_release);
+
+            // slow path
             sync->_clientCond.signal ();
 
             return 0;
         }
 
         /**
-         * @brief wait client notification via eventfd.
+         * @brief wait client notification.
          * @param sync synchronization primitives.
          * @return 0 on success, -1 on failure.
          */
-        int wait (ShmSync* sync)
+        int wait (ShmSync* sync) const
         {
             if (sync == nullptr)
             {
@@ -112,9 +110,16 @@ namespace join
                 return -1;
             }
 
+            // fast path (if already signaled)
+            if (sync->_serverSignaled.exchange (false, std::memory_order_acquire))
+            {
+                return 0;
+            }
+
+            // slow path (wait)
             ScopedLock <SharedMutex> lock (sync->_mutex);
-            sync->_serverCond.wait (lock, [&] () { return sync->_serverSignaled;});
-            sync->_serverSignaled = false;
+            sync->_serverCond.wait (lock, [&] () { return sync->_serverSignaled.load (std::memory_order_acquire); });
+            sync->_serverSignaled.store (false, std::memory_order_relaxed);
 
             return 0;
         }
@@ -146,11 +151,11 @@ namespace join
         ~ClientPolicy () noexcept = default;
 
         /**
-         * @brief notify the client via eventfd.
+         * @brief notify the server.
          * @param sync synchronization primitives.
          * @return 0 on success, -1 on failure.
          */
-        int notify (ShmSync* sync)
+        int notify (ShmSync* sync) const
         {
             if (sync == nullptr)
             {
@@ -158,19 +163,21 @@ namespace join
                 return -1;
             }
 
-            ScopedLock <SharedMutex> lock (sync->_mutex);
-            sync->_serverSignaled = true;
+            // fast path
+            sync->_serverSignaled.store (true, std::memory_order_release);
+
+            // slow path
             sync->_serverCond.signal ();
 
             return 0;
         }
 
         /**
-         * @brief wait client notification via eventfd.
+         * @brief wait server notification.
          * @param sync synchronization primitives.
          * @return 0 on success, -1 on failure.
          */
-        int wait (ShmSync* sync)
+        int wait (ShmSync* sync) const
         {
             if (sync == nullptr)
             {
@@ -178,9 +185,16 @@ namespace join
                 return -1;
             }
 
+            // fast path (if already signaled)
+            if (sync->_clientSignaled.exchange (false, std::memory_order_acquire))
+            {
+                return 0;
+            }
+
+            // slow path (wait)
             ScopedLock <SharedMutex> lock (sync->_mutex);
-            sync->_clientCond.wait (lock, [&] () { return sync->_clientSignaled;});
-            sync->_clientSignaled = false;
+            sync->_clientCond.wait (lock, [&] () { return sync->_clientSignaled.load (std::memory_order_acquire); });
+            sync->_clientSignaled.store (false, std::memory_order_relaxed);
 
             return 0;
         }
@@ -275,7 +289,9 @@ namespace join
             {
                 new (&_sync->_mutex) SharedMutex ();
                 new (&_sync->_serverCond) SharedCondition ();
+                new (&_sync->_serverSignaled) std::atomic <bool> (false);
                 new (&_sync->_clientCond) SharedCondition ();
+                new (&_sync->_clientSignaled) std::atomic <bool> (false); 
             }
 
             return 0;
@@ -328,7 +344,7 @@ namespace join
          * @brief send an event notification to the peer.
          * @return 0 on success, -1 on failure.
          */
-        int notify ()
+        int notify () const
         {
             return _policy.notify (_sync);
         }
@@ -337,7 +353,7 @@ namespace join
          * @brief wait peer notification event.
          * @return 0 on success, -1 on failure.
          */
-        int wait ()
+        int wait () const
         {
             return _policy.wait (_sync);
         }
