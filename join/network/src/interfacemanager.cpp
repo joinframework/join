@@ -1080,7 +1080,6 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
 
     if (ifi->ifi_family == AF_BRIDGE)
     {
-        onBridgeMessage (nlh);
         return;
     }
 
