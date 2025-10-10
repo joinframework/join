@@ -31,6 +31,7 @@
 
 // C++.
 #include <utility>
+#include <chrono>
 #include <atomic>
 #include <string>
 
@@ -125,6 +126,38 @@ namespace join
         }
 
         /**
+         * @brief wait client notification until timeout expire.
+         * @param sync synchronization primitives.
+         * @param rt relative timeout.
+         * @return 0 on success, -1 on failure.
+         */
+        template <class Rep, class Period>
+        int timedWait (ShmSync* sync, std::chrono::duration <Rep, Period> rt) const
+        {
+            if (sync == nullptr)
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            // fast path (if already signaled)
+            if (sync->_serverSignaled.exchange (false, std::memory_order_acquire))
+            {
+                return 0;
+            }
+
+            // slow path (wait)
+            ScopedLock <SharedMutex> lock (sync->_mutex);
+            if (!sync->_serverCond.timedWait (lock, rt, [&] () { return sync->_serverSignaled.load (std::memory_order_acquire); }))
+            {
+                return -1;
+            }
+            sync->_serverSignaled.store (false, std::memory_order_relaxed);
+
+            return 0;
+        }
+
+        /**
          * @brief get open flags for shared memory.
          * @return open flags.
          */
@@ -194,6 +227,38 @@ namespace join
             // slow path (wait)
             ScopedLock <SharedMutex> lock (sync->_mutex);
             sync->_clientCond.wait (lock, [&] () { return sync->_clientSignaled.load (std::memory_order_acquire); });
+            sync->_clientSignaled.store (false, std::memory_order_relaxed);
+
+            return 0;
+        }
+
+        /**
+         * @brief wait server notification until timeout expire.
+         * @param sync synchronization primitives.
+         * @param rt relative timeout.
+         * @return 0 on success, -1 on failure.
+         */
+        template <class Rep, class Period>
+        int timedWait (ShmSync* sync, std::chrono::duration <Rep, Period> rt) const
+        {
+            if (sync == nullptr)
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            // fast path (if already signaled)
+            if (sync->_clientSignaled.exchange (false, std::memory_order_acquire))
+            {
+                return 0;
+            }
+
+            // slow path (wait)
+            ScopedLock <SharedMutex> lock (sync->_mutex);
+            if (!sync->_clientCond.timedWait (lock, rt, [&] () { return sync->_clientSignaled.load (std::memory_order_acquire); }))
+            {
+                return -1;
+            }
             sync->_clientSignaled.store (false, std::memory_order_relaxed);
 
             return 0;
@@ -356,6 +421,17 @@ namespace join
         int wait () const
         {
             return _policy.wait (_sync);
+        }
+
+        /**
+         * @brief wait peer notification event until timeout expire.
+         * @param rt relative timeout.
+         * @return 0 on success, -1 on failure.
+         */
+        template <class Rep, class Period>
+        int timedWait (std::chrono::duration <Rep, Period> rt) const
+        {
+            return _policy.timedWait (_sync, rt);
         }
 
         /**

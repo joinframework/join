@@ -91,6 +91,10 @@ TEST (Shm, notify)
         ASSERT_STREQ (static_cast <char*> (client.get ()), "Ping");
         ::strcpy (static_cast <char *> (client.get ()), "Pong");
         ASSERT_EQ (client.notify (), 0) << join::lastError.message ();
+        ASSERT_EQ (client.timedWait (std::chrono::milliseconds (10)), 0) << join::lastError.message ();
+        ASSERT_STREQ (static_cast <char*> (client.get ()), "Ping");
+        ::strcpy (static_cast <char *> (client.get ()), "Pong");
+        ASSERT_EQ (client.notify (), 0) << join::lastError.message ();
     });
 
     ASSERT_EQ (server.notify (), -1);
@@ -99,6 +103,10 @@ TEST (Shm, notify)
     ::strcpy (static_cast <char *> (server.get ()), "Ping");
     ASSERT_EQ (server.notify (), 0) << join::lastError.message ();
     ASSERT_EQ (server.wait (), 0) << join::lastError.message ();
+    ASSERT_STREQ (static_cast <char*> (server.get ()), "Pong");
+    ::strcpy (static_cast <char *> (server.get ()), "Ping");
+    ASSERT_EQ (server.notify (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.timedWait (std::chrono::milliseconds (10)), 0) << join::lastError.message ();
     ASSERT_STREQ (static_cast <char*> (server.get ()), "Pong");
 
     th.join ();
