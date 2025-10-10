@@ -86,6 +86,7 @@ TEST (Shm, notify)
         std::this_thread::sleep_for (std::chrono::milliseconds (10));
         ASSERT_EQ (client.notify (), -1);
         ASSERT_EQ (client.wait (), -1);
+        ASSERT_EQ (client.timedWait (std::chrono::milliseconds (10)), -1);
         ASSERT_EQ (client.open (_name), 0) << join::lastError.message ();
         ASSERT_EQ (client.wait (), 0) << join::lastError.message ();
         ASSERT_STREQ (static_cast <char*> (client.get ()), "Ping");
@@ -95,10 +96,12 @@ TEST (Shm, notify)
         ASSERT_STREQ (static_cast <char*> (client.get ()), "Ping");
         ::strcpy (static_cast <char *> (client.get ()), "Pong");
         ASSERT_EQ (client.notify (), 0) << join::lastError.message ();
+        ASSERT_EQ (client.timedWait (std::chrono::milliseconds (1)), -1);
     });
 
     ASSERT_EQ (server.notify (), -1);
     ASSERT_EQ (server.wait (), -1);
+    ASSERT_EQ (server.timedWait (std::chrono::milliseconds (10)), -1);
     ASSERT_EQ (server.open (_name), 0) << join::lastError.message ();
     ::strcpy (static_cast <char *> (server.get ()), "Ping");
     ASSERT_EQ (server.notify (), 0) << join::lastError.message ();
@@ -108,6 +111,7 @@ TEST (Shm, notify)
     ASSERT_EQ (server.notify (), 0) << join::lastError.message ();
     ASSERT_EQ (server.timedWait (std::chrono::milliseconds (10)), 0) << join::lastError.message ();
     ASSERT_STREQ (static_cast <char*> (server.get ()), "Pong");
+    ASSERT_EQ (server.timedWait (std::chrono::milliseconds (1)), -1);
 
     th.join ();
 
