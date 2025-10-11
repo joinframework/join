@@ -639,6 +639,10 @@ namespace join
             std::memcpy (static_cast <char*> (_data) + (next * _elementSize), element, _elementSize);
             _header->_head.store (head + 1, std::memory_order_release);
 
+            // CRITICAL: The nested shared memory must be notified after updating the head index.
+            // This will ensure that the internal signal count is incremented and that any waiting subscribers are woken up.
+            // If removed, internal counters may become inconsistent and lead to deadlocks.
+            // Fast path is handled inside the notify() method.
             _shm.notify ();
 
             return 0;
@@ -658,12 +662,13 @@ namespace join
                 return -1;
             }
 
-            while (empty ())
+            // CRITICAL: The nested shared memory must be waited on before reading the tail index.
+            // This will ensure that the internal signal count is decremented and that we only proceed if there is data to read.
+            // If removed, internal counters may become inconsistent and lead to deadlocks.
+            // Fast path is handled inside the wait() method.
+            if (_shm.wait() == -1)
             {
-                if (_shm.wait () == -1)
-                {
-                    return -1;
-                }
+                return -1;
             }
 
             auto tail = _header->_tail.load (std::memory_order_acquire);
@@ -690,19 +695,13 @@ namespace join
                 return -1;
             }
 
-            auto end = std::chrono::steady_clock::now () + rt;
-            while (empty ())
+            // CRITICAL: The nested shared memory must be waited on before reading the tail index.
+            // This will ensure that the internal signal count is decremented and that we only proceed if there is data to read.
+            // If removed, internal counters may become inconsistent and lead to deadlocks.
+            // Fast path is handled inside the timedWait() method.
+            if (_shm.timedWait (rt) == -1)
             {
-                auto now = std::chrono::steady_clock::now ();
-                if (now >= end)
-                {
-                    lastError = make_error_code (Errc::TimedOut);
-                    return -1;
-                }
-                if (_shm.timedWait (end - now) == -1)
-                {
-                    return -1;
-                }
+                return -1;
             }
 
             auto tail = _header->_tail.load (std::memory_order_acquire);
