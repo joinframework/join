@@ -40,6 +40,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <cstring>
 
 namespace join
 {
@@ -48,36 +49,29 @@ namespace join
      */
     struct ShmSync
     {
-        /// protection mutex.
         alignas (64) SharedMutex _mutex;
-
-        /// server condition.
-        SharedCondition _serverCond;
-        alignas (64) std::atomic <bool> _serverSignaled;
-
-        /// client condition.
-        SharedCondition _clientCond;
-        alignas (64) std::atomic <bool> _clientSignaled;
+        SharedCondition _condition;
+        alignas (64) std::atomic_ulong _signalCount;
     };
 
     /**
-     * @brief shared memory server policy.
+     * @brief shared memory publisher policy.
      */
-    class ServerPolicy
+    class PublisherPolicy
     {
     public:
         /**
          * @brief create instance.
          */
-        ServerPolicy () noexcept = default;
+        PublisherPolicy () noexcept = default;
 
         /**
          * @brief destroy instance.
          */
-        ~ServerPolicy () noexcept = default;
+        ~PublisherPolicy () noexcept = default;
 
         /**
-         * @brief notify the client.
+         * @brief notify the subscriber.
          * @param sync synchronization primitives.
          * @return 0 on success, -1 on failure.
          */
@@ -90,69 +84,10 @@ namespace join
             }
 
             // fast path
-            sync->_clientSignaled.store (true, std::memory_order_release);
+            sync->_signalCount.fetch_add (1, std::memory_order_release);
 
             // slow path
-            sync->_clientCond.signal ();
-
-            return 0;
-        }
-
-        /**
-         * @brief wait client notification.
-         * @param sync synchronization primitives.
-         * @return 0 on success, -1 on failure.
-         */
-        int wait (ShmSync* sync) const
-        {
-            if (sync == nullptr)
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-            }
-
-            // fast path (if already signaled)
-            if (sync->_serverSignaled.exchange (false, std::memory_order_acquire))
-            {
-                return 0;
-            }
-
-            // slow path (wait)
-            ScopedLock <SharedMutex> lock (sync->_mutex);
-            sync->_serverCond.wait (lock, [&] () { return sync->_serverSignaled.load (std::memory_order_acquire); });
-            sync->_serverSignaled.store (false, std::memory_order_relaxed);
-
-            return 0;
-        }
-
-        /**
-         * @brief wait client notification until timeout expire.
-         * @param sync synchronization primitives.
-         * @param rt relative timeout.
-         * @return 0 on success, -1 on failure.
-         */
-        template <class Rep, class Period>
-        int timedWait (ShmSync* sync, std::chrono::duration <Rep, Period> rt) const
-        {
-            if (sync == nullptr)
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-            }
-
-            // fast path (if already signaled)
-            if (sync->_serverSignaled.exchange (false, std::memory_order_acquire))
-            {
-                return 0;
-            }
-
-            // slow path (wait)
-            ScopedLock <SharedMutex> lock (sync->_mutex);
-            if (!sync->_serverCond.timedWait (lock, rt, [&] () { return sync->_serverSignaled.load (std::memory_order_acquire); }))
-            {
-                return -1;
-            }
-            sync->_serverSignaled.store (false, std::memory_order_relaxed);
+            sync->_condition.signal ();
 
             return 0;
         }
@@ -168,45 +103,23 @@ namespace join
     };
 
     /**
-     * @brief shared memory client policy.
+     * @brief shared memory subscriber policy.
      */
-    class ClientPolicy
+    class SubscriberPolicy
     {
     public:
         /**
          * @brief create instance.
          */
-        ClientPolicy () noexcept = default;
+        SubscriberPolicy () noexcept = default;
 
         /**
          * @brief destroy instance.
          */
-        ~ClientPolicy () noexcept = default;
+        ~SubscriberPolicy () noexcept = default;
 
         /**
-         * @brief notify the server.
-         * @param sync synchronization primitives.
-         * @return 0 on success, -1 on failure.
-         */
-        int notify (ShmSync* sync) const
-        {
-            if (sync == nullptr)
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-            }
-
-            // fast path
-            sync->_serverSignaled.store (true, std::memory_order_release);
-
-            // slow path
-            sync->_serverCond.signal ();
-
-            return 0;
-        }
-
-        /**
-         * @brief wait server notification.
+         * @brief wait publisher notification.
          * @param sync synchronization primitives.
          * @return 0 on success, -1 on failure.
          */
@@ -219,21 +132,31 @@ namespace join
             }
 
             // fast path (if already signaled)
-            if (sync->_clientSignaled.exchange (false, std::memory_order_acquire))
+            auto expected = sync->_signalCount.load (std::memory_order_acquire);
+            if (expected > 0 && sync->_signalCount.compare_exchange_strong (expected, expected - 1, std::memory_order_acquire, std::memory_order_relaxed))
             {
                 return 0;
             }
 
             // slow path (wait)
             ScopedLock <SharedMutex> lock (sync->_mutex);
-            sync->_clientCond.wait (lock, [&] () { return sync->_clientSignaled.load (std::memory_order_acquire); });
-            sync->_clientSignaled.store (false, std::memory_order_relaxed);
+
+            // re-check after locking the mutex
+            expected = sync->_signalCount.load (std::memory_order_relaxed);
+            if (expected > 0)
+            {
+                sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
+                return 0;
+            }
+
+            sync->_condition.wait (lock, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; });
+            sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
 
             return 0;
         }
 
         /**
-         * @brief wait server notification until timeout expire.
+         * @brief wait publisher notification until timeout expire.
          * @param sync synchronization primitives.
          * @param rt relative timeout.
          * @return 0 on success, -1 on failure.
@@ -248,18 +171,28 @@ namespace join
             }
 
             // fast path (if already signaled)
-            if (sync->_clientSignaled.exchange (false, std::memory_order_acquire))
+            auto expected = sync->_signalCount.load (std::memory_order_acquire);
+            if (expected > 0 && sync->_signalCount.compare_exchange_strong (expected, expected - 1, std::memory_order_acquire, std::memory_order_relaxed))
             {
                 return 0;
             }
 
             // slow path (wait)
             ScopedLock <SharedMutex> lock (sync->_mutex);
-            if (!sync->_clientCond.timedWait (lock, rt, [&] () { return sync->_clientSignaled.load (std::memory_order_acquire); }))
+            
+            // re-check after locking the mutex
+            expected = sync->_signalCount.load (std::memory_order_relaxed);
+            if (expected > 0)
+            {
+                sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
+                return 0;
+            }
+
+            if (!sync->_condition.timedWait (lock, rt, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; }))
             {
                 return -1;
             }
-            sync->_clientSignaled.store (false, std::memory_order_relaxed);
+            sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
 
             return 0;
         }
@@ -349,14 +282,13 @@ namespace join
             }
 
             _sync = static_cast <ShmSync*> (_ptr);
+            _data = static_cast <char*> (_ptr) + sizeof (ShmSync);
 
             if (_policy.flag () & O_CREAT)
             {
                 new (&_sync->_mutex) SharedMutex ();
-                new (&_sync->_serverCond) SharedCondition ();
-                new (&_sync->_serverSignaled) std::atomic <bool> (false);
-                new (&_sync->_clientCond) SharedCondition ();
-                new (&_sync->_clientSignaled) std::atomic <bool> (false); 
+                new (&_sync->_condition) SharedCondition ();
+                new (&_sync->_signalCount) std::atomic_ulong (0);
             }
 
             return 0;
@@ -372,13 +304,13 @@ namespace join
                 if (_policy.flag () & O_CREAT)
                 {
                     _sync->_mutex.~SharedMutex ();
-                    _sync->_serverCond.~SharedCondition ();
-                    _sync->_clientCond.~SharedCondition ();
+                    _sync->_condition.~SharedCondition ();
                 }
 
                 ::munmap (_ptr, _totalSize);
 
                 _sync = nullptr;
+                _data = nullptr;
                 _ptr = nullptr;
             }
 
@@ -409,6 +341,7 @@ namespace join
          * @brief send an event notification to the peer.
          * @return 0 on success, -1 on failure.
          */
+        template <typename P = ShmPolicy, typename = typename std::enable_if <std::is_same <P, PublisherPolicy>::value>::type>
         int notify () const
         {
             return _policy.notify (_sync);
@@ -418,6 +351,7 @@ namespace join
          * @brief wait peer notification event.
          * @return 0 on success, -1 on failure.
          */
+        template <typename P = ShmPolicy, typename = typename std::enable_if <std::is_same <P, SubscriberPolicy>::value>::type>
         int wait () const
         {
             return _policy.wait (_sync);
@@ -428,7 +362,7 @@ namespace join
          * @param rt relative timeout.
          * @return 0 on success, -1 on failure.
          */
-        template <class Rep, class Period>
+        template <class Rep, class Period, typename P = ShmPolicy, typename = typename std::enable_if <std::is_same <P, SubscriberPolicy>::value>::type>
         int timedWait (std::chrono::duration <Rep, Period> rt) const
         {
             return _policy.timedWait (_sync, rt);
@@ -440,12 +374,7 @@ namespace join
          */
         const void* get () const noexcept
         {
-            if (!_ptr)
-            {
-                return nullptr;
-            }
-
-            return static_cast <const char*> (_ptr) + sizeof (ShmSync);
+            return _data;
         }
 
         /**
@@ -454,12 +383,7 @@ namespace join
          */
         void* get () noexcept
         {
-            if (!_ptr)
-            {
-                return nullptr;
-            }
-
-            return static_cast <char*> (_ptr) + sizeof (ShmSync);
+            return _data;
         }
 
         /**
@@ -472,7 +396,7 @@ namespace join
         }
 
     private:
-        /// policy defining behavior (server/client).
+        /// policy defining behavior (publisher/subscriber).
         ShmPolicy _policy;
 
         /// pointer to mapped shared memory.
@@ -480,6 +404,9 @@ namespace join
 
         /// pointer to synchronization primitives stored in shared memory.
         ShmSync* _sync = nullptr;
+
+        /// pointer to buffer data.
+        void* _data = nullptr;
 
         /// user shared memory size.
         off_t _userSize = 0;
@@ -495,12 +422,329 @@ namespace join
     };
 
     /**
-     * @brief convenience wrapper for server/client shared memory types.
+     * @brief convenience wrapper for publisher/subscriber shared memory types.
      */
     struct Shm
     {
-        using Server = BasicShm <ServerPolicy>;
-        using Client = BasicShm <ClientPolicy>;
+        using Publisher  = BasicShm <PublisherPolicy>;
+        using Subscriber = BasicShm <SubscriberPolicy>;
+    };
+
+    /**
+     * @brief ring buffer header.
+     */
+    struct RingHeader
+    {
+        alignas (64) std::atomic_ulong _head;
+        alignas (64) std::atomic_ulong _tail;
+        uint64_t _elementSize;
+        uint64_t _capacity;
+    };
+
+    /**
+     * @brief shared memory ring buffer for inter-process communication.
+     */
+    template <typename ShmType>
+    class BasicShmRing
+    {
+    public:
+        /**
+         * @brief create instance.
+         * @param elementSize size of each element in the ring buffer.
+         * @param capacity number of elements in the ring buffer.
+         */
+        BasicShmRing (uint64_t elementSize = 64, uint64_t capacity = 1024) noexcept
+        : _shm (sizeof (RingHeader) + (elementSize * capacity))
+        , _elementSize (elementSize)
+        , _capacity (capacity)
+        {
+        }
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        BasicShmRing (const BasicShmRing& other) = delete;
+
+        /**
+         * @brief copy assignment.
+         * @param other other object to copy.
+         * @return a reference to the current object.
+         */
+        BasicShmRing& operator= (const BasicShmRing& other) = delete;
+
+        /**
+         * @brief destroy instance.
+         */
+        ~BasicShmRing () noexcept
+        {
+            close ();
+        }
+
+        /**
+         * @brief open or create the shared memory segment.
+         * @param name shared memory object name (must start with '/').
+         * @return 0 on success, -1 on failure.
+         */
+        int open (const std::string& name)
+        {
+            if (_shm.open (name) == -1)
+            {
+                return -1;
+            }
+
+            _header = static_cast <RingHeader*> (_shm.get ());
+            _data = static_cast <char*> (_shm.get ()) + sizeof (RingHeader);
+
+            if (std::is_same <ShmType, Shm::Publisher>::value)
+            {
+                new (&_header->_head) std::atomic_ulong (0);
+                new (&_header->_tail) std::atomic_ulong (0);
+                _header->_elementSize = _elementSize;
+                _header->_capacity = _capacity;
+            }
+            else
+            {
+                if ((_header->_elementSize != _elementSize) || (_header->_capacity != _capacity))
+                {
+                    lastError = make_error_code (Errc::InvalidParam);
+                    close ();
+                    return -1;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief close the shared memory segment.
+         */
+        void close () noexcept
+        {
+            _header = nullptr;
+            _data = nullptr;
+            _shm.close ();
+        }
+
+        /**
+         * @brief check if opened.
+         * @return true if opened, false otherwise.
+         */
+        bool opened () const noexcept
+        {
+            return _shm.opened ();
+        }
+
+        /**
+         * @brief push element into ring buffer.
+         * @param element pointer to element to push.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename T = ShmType, typename = typename std::enable_if <std::is_same <T, Shm::Publisher>::value>::type>
+        int push (const void* element) noexcept
+        {
+            if ((_header == nullptr) || (element == nullptr))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            if (full ())
+            {
+                lastError = make_error_code (Errc::TemporaryError);
+                return -1;
+            }
+
+            auto head = _header->_head.load (std::memory_order_relaxed);
+            auto next = head % _capacity;
+
+            std::memcpy (static_cast <char*> (_data) + (next * _elementSize), element, _elementSize);
+            _header->_head.store (head + 1, std::memory_order_release);
+
+            _shm.notify ();
+
+            return 0;
+        }
+
+        /**
+         * @brief pop element from ring buffer.
+         * @param element pointer to output element.
+         * @return  0 on success, -1 otherwise.
+         */
+        template <typename T = ShmType, typename = typename std::enable_if <std::is_same <T, Shm::Subscriber>::value>::type>
+        int pop (void* element) noexcept
+        {
+            if ((_header == nullptr) || (element == nullptr))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            while (empty ())
+            {
+                if (_shm.wait () == -1)
+                {
+                    return -1;
+                }
+            }
+
+            auto tail = _header->_tail.load (std::memory_order_relaxed);
+            auto next = tail % _capacity;
+
+            std::memcpy (element, static_cast <char*> (_data) + (next * _elementSize), _elementSize);
+            _header->_tail.store (tail + 1, std::memory_order_release);
+
+            return 0;
+        }
+
+        /**
+         * @brief pop element from ring buffer.
+         * @param element pointer to output element.
+         * @param rt relative timeout.
+         * @return  0 on success, -1 otherwise.
+         */
+        template <class Rep, class Period, typename T = ShmType, typename = typename std::enable_if <std::is_same <T, Shm::Subscriber>::value>::type>
+        int timedPop (void* element, std::chrono::duration <Rep, Period> rt) noexcept
+        {
+            if ((_header == nullptr) || (element == nullptr))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            auto end = std::chrono::steady_clock::now () + rt;
+            while (empty ())
+            {
+                auto now = std::chrono::steady_clock::now ();
+                if (now >= end)
+                {
+                    lastError = make_error_code (Errc::TimedOut);
+                    return -1;
+                }
+                if (_shm.timedWait (end - now) == -1)
+                {
+                    return -1;
+                }
+            }
+
+            auto tail = _header->_tail.load (std::memory_order_relaxed);
+            auto next = tail % _capacity;
+
+            std::memcpy (element, static_cast <char*> (_data) + (next * _elementSize), _elementSize);
+            _header->_tail.store (tail + 1, std::memory_order_release);
+
+            return 0;
+        }
+
+        /**
+         * @brief get available elements to read.
+         * @return number of elements available to read.
+         */
+        uint64_t available () const noexcept
+        {
+            if (_header == nullptr)
+            {
+                return 0;
+            }
+
+            auto head = _header->_head.load (std::memory_order_acquire);
+            auto tail = _header->_tail.load (std::memory_order_acquire);
+
+            return head - tail;
+        }
+
+        /**
+         * @brief get available space to write.
+         * @return number of elements available to write.
+         */
+        uint64_t space () const noexcept
+        {
+            if (_header == nullptr)
+            {
+                return 0;
+            }
+
+            return _capacity - available ();
+        }
+
+        /**
+         * @brief check if the ring buffer is empty.
+         * @return true if empty, false otherwise.
+         */
+        bool empty () const noexcept
+        {
+            return available () == 0;
+        }
+
+        /**
+         * @brief check if the ring buffer is full.
+         * @return true if full, false otherwise.
+         */
+        bool full () const noexcept
+        {
+            return space () == 0;
+        }
+
+        /**
+         * @brief get the capacity of the ring buffer.
+         * @return capacity in number of elements.
+         */
+        uint64_t capacity () const noexcept 
+        {
+            return _capacity;
+        }
+
+        /**
+         * @brief get the size of each element in the ring buffer.
+         * @return element size in bytes.
+         */
+        uint64_t elementSize () const noexcept
+        {
+            return _elementSize;
+        }
+
+        /**
+         * @brief get a const pointer to the shared memory.
+         * @return pointer to the mapped memory region.
+         */
+        const void* get () const noexcept
+        {
+            return _data;
+        }
+
+        /**
+         * @brief get a pointer to the shared memory.
+         * @return pointer to the mapped memory region.
+         */
+        void* get () noexcept
+        {
+            return _data;
+        }
+
+    private:
+        /// shared memory object.
+        ShmType _shm;
+
+        /// pointer to ring buffer header.
+        RingHeader* _header = nullptr;
+
+        /// pointer to ring buffer data.
+        void* _data = nullptr;
+
+        /// ring buffer element size.
+        uint64_t _elementSize = 0;
+
+        /// ring buffer capacity
+        uint64_t _capacity = 0;
+    };
+
+    /**
+     * @brief convenience wrapper for producer/consumer ring buffer types.
+     */
+    struct ShmRing
+    {
+        using Producer = BasicShmRing <Shm::Publisher>;
+        using Consumer = BasicShmRing <Shm::Subscriber>;
     };
 }
 

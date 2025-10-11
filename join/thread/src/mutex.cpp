@@ -31,6 +31,7 @@
 #include <cerrno>
 
 using join::Mutex;
+using join::RecursiveMutex;
 using join::SharedMutex;
 using join::ScopedLock;
 
@@ -42,7 +43,6 @@ Mutex::Mutex ()
 {
     pthread_mutexattr_t attr;
     pthread_mutexattr_init (&attr);
-    pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_RECURSIVE);
     pthread_mutex_init (&_handle, &attr);
     pthread_mutexattr_destroy (&attr);
 }
@@ -88,6 +88,64 @@ void Mutex::unlock () noexcept
 //   METHOD    : handle
 // =========================================================================
 pthread_mutex_t* Mutex::handle () noexcept
+{
+    return &_handle;
+}
+
+// =========================================================================
+//   CLASS     : RecursiveMutex
+//   METHOD    : RecursiveMutex
+// =========================================================================
+RecursiveMutex::RecursiveMutex ()
+{
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init (&attr);
+    pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init (&_handle, &attr);
+    pthread_mutexattr_destroy (&attr);
+}
+
+// =========================================================================
+//   CLASS     : RecursiveMutex
+//   METHOD    : ~RecursiveMutex
+// =========================================================================
+RecursiveMutex::~RecursiveMutex ()
+{
+    pthread_mutex_destroy (&_handle);
+}
+
+// =========================================================================
+//   CLASS     : RecursiveMutex
+//   METHOD    : lock
+// =========================================================================
+void RecursiveMutex::lock () noexcept
+{
+    pthread_mutex_lock (&_handle);
+}
+
+// =========================================================================
+//   CLASS     : RecursiveMutex
+//   METHOD    : tryLock
+// =========================================================================
+bool RecursiveMutex::tryLock () noexcept
+{
+    return (pthread_mutex_trylock (&_handle) == 0);
+}
+
+// =========================================================================
+//   CLASS     : RecursiveMutex
+//   METHOD    : unlock
+// =========================================================================
+void RecursiveMutex::unlock () noexcept
+{
+    pthread_mutex_unlock (&_handle);
+}
+
+// =========================================================================
+//   CLASS     : RecursiveMutex
+//   METHOD    : handle
+// =========================================================================
+pthread_mutex_t* RecursiveMutex::handle () noexcept
 {
     return &_handle;
 }

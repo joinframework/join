@@ -57,7 +57,7 @@ Reactor::Reactor ()
 // =========================================================================
 Reactor::~Reactor ()
 {
-    ScopedLock <Mutex> lock (_mutex);
+    ScopedLock <RecursiveMutex> lock (_mutex);
 
     if (_running)
     {
@@ -93,7 +93,7 @@ int Reactor::addHandler (EventHandler* handler)
     }
 
     {
-        ScopedLock <Mutex> lock (_mutex);
+        ScopedLock <RecursiveMutex> lock (_mutex);
 
         if (++_num == 1)
         {
@@ -132,7 +132,7 @@ int Reactor::delHandler (EventHandler* handler)
     }
 
     {
-        ScopedLock <Mutex> lock (_mutex);
+        ScopedLock <RecursiveMutex> lock (_mutex);
 
         if (--_num == 0)
         {
@@ -168,7 +168,7 @@ Reactor* Reactor::instance ()
 void Reactor::dispatch ()
 {
     {
-        ScopedLock <Mutex> lock (_mutex);
+        ScopedLock <RecursiveMutex> lock (_mutex);
         _running = true;
         _threadStatus.broadcast ();
     }
@@ -180,7 +180,7 @@ void Reactor::dispatch ()
     {
         int nset = epoll_wait (_epoll, ev.data (), ev.size (), -1);
 
-        ScopedLock <Mutex> lock (_mutex);
+        ScopedLock <RecursiveMutex> lock (_mutex);
 
         for (int n = 0; n < nset; ++n)
         {
@@ -213,7 +213,7 @@ void Reactor::dispatch ()
     }
 
     {
-        ScopedLock <Mutex> lock (_mutex);
+        ScopedLock <RecursiveMutex> lock (_mutex);
         _running = false;
         _threadStatus.broadcast ();
     }

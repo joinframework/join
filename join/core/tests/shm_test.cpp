@@ -38,106 +38,87 @@ const std::string _name = "/test_shm";
 
 TEST (Shm, open)
 {
-    Shm::Server server1, server2 (-sizeof (join::ShmSync) - 1), server3 (-sizeof (join::ShmSync));
-    Shm::Client client1;
+    Shm::Publisher pub1, pub2 (-sizeof (join::ShmSync) - 1), pub3 (-sizeof (join::ShmSync));
+    Shm::Subscriber sub1;
 
-    ASSERT_EQ (client1.open (_name), -1);
-    ASSERT_EQ (server1.open (_name), 0) << join::lastError.message ();
-    ASSERT_EQ (server1.open (_name), -1);
-    ASSERT_EQ (server2.open (_name), -1);
-    ASSERT_EQ (client1.open (_name), 0) << join::lastError.message ();
-    ASSERT_EQ (client1.open (_name), -1);
-    client1.close ();
-    server1.close ();
-    ASSERT_EQ (server2.open (_name), -1);
-    ASSERT_EQ (server3.open (_name), -1);
+    ASSERT_EQ (sub1.open (_name), -1);
+    ASSERT_EQ (pub1.open (_name), 0) << join::lastError.message ();
+    ASSERT_EQ (pub1.open (_name), -1);
+    ASSERT_EQ (pub2.open (_name), -1);
+    ASSERT_EQ (sub1.open (_name), 0) << join::lastError.message ();
+    ASSERT_EQ (sub1.open (_name), -1);
+    sub1.close ();
+    pub1.close ();
+    ASSERT_EQ (pub2.open (_name), -1);
+    ASSERT_EQ (pub3.open (_name), -1);
 }
 
 TEST (Shm, get)
 {
-    Shm::Server server (1024);
-    Shm::Client client (1024);
+    Shm::Publisher pub (1024);
+    Shm::Subscriber sub (1024);
 
-    ASSERT_EQ (server.get (), nullptr);
-    ASSERT_EQ (server.open (_name), 0) << join::lastError.message ();
-    ASSERT_NE (server.get (), nullptr);
-    ASSERT_EQ (client.get (), nullptr);
-    EXPECT_EQ (client.open (_name), 0) << join::lastError.message ();
-    ASSERT_NE (client.get (), nullptr);
-    client.close ();
-    ASSERT_EQ (client.get (), nullptr);
-    server.close ();
-    ASSERT_EQ (server.get (), nullptr);
+    ASSERT_EQ (pub.get (), nullptr);
+    ASSERT_EQ (pub.open (_name), 0) << join::lastError.message ();
+    ASSERT_NE (pub.get (), nullptr);
+    ASSERT_EQ (sub.get (), nullptr);
+    EXPECT_EQ (sub.open (_name), 0) << join::lastError.message ();
+    ASSERT_NE (sub.get (), nullptr);
+    sub.close ();
+    ASSERT_EQ (sub.get (), nullptr);
+    pub.close ();
+    ASSERT_EQ (pub.get (), nullptr);
 }
 
 TEST (Shm, size)
 {
-    Shm::Server server (1024);
-    Shm::Client client (1024);
+    Shm::Publisher pub (1024);
+    Shm::Subscriber sub (1024);
 
-    ASSERT_EQ (server.size (), 1024);
-    ASSERT_EQ (client.size (), 1024);
+    ASSERT_EQ (pub.size (), 1024);
+    ASSERT_EQ (sub.size (), 1024);
 }
 
 TEST (Shm, notify)
 {
-    Shm::Server server (1024);
-    Shm::Client client (1024);
+    Shm::Publisher pub (1024);
+    Shm::Subscriber sub (1024);
 
     Thread th ([&] () {
-        ASSERT_EQ (client.notify (), -1);
-        ASSERT_EQ (client.wait (), -1);
-        ASSERT_EQ (client.timedWait (3ms), -1);
-        std::this_thread::sleep_for (2ms);
-        ASSERT_EQ (client.open (_name), 0) << join::lastError.message ();
-        ASSERT_EQ (client.wait (), 0) << join::lastError.message ();
-        ASSERT_STREQ (static_cast <char*> (client.get ()), "Ping");
-        ::strcpy (static_cast <char *> (client.get ()), "Pong");
-        ASSERT_EQ (client.notify (), 0) << join::lastError.message ();
-        ASSERT_EQ (client.timedWait (3ms), 0) << join::lastError.message ();
-        ASSERT_STREQ (static_cast <char*> (client.get ()), "Ping");
-        ::strcpy (static_cast <char *> (client.get ()), "Pong");
-        ASSERT_EQ (client.notify (), 0) << join::lastError.message ();
-        ASSERT_EQ (client.wait (), 0) << join::lastError.message ();
-        ASSERT_STREQ (static_cast <char*> (client.get ()), "Ping");
-        ::strcpy (static_cast <char *> (client.get ()), "Pong");
-        ASSERT_EQ (client.notify (), 0) << join::lastError.message ();
-        std::this_thread::sleep_for (6ms);
-        ASSERT_EQ (client.timedWait (3ms), 0) << join::lastError.message ();
-        ASSERT_STREQ (static_cast <char*> (client.get ()), "Ping");
-        ::strcpy (static_cast <char *> (client.get ()), "Pong");
-        ASSERT_EQ (client.notify (), 0) << join::lastError.message ();
-        ASSERT_EQ (client.timedWait (3ms), -1);
+        ASSERT_EQ (sub.wait (), -1);
+        ASSERT_EQ (sub.timedWait (10ms), -1);
+        std::this_thread::sleep_for (5ms);
+        ASSERT_EQ (sub.open (_name), 0) << join::lastError.message ();
+        ASSERT_EQ (sub.wait (), 0) << join::lastError.message ();
+        ASSERT_STREQ (static_cast <char*> (sub.get ()), "Ping");
+        ASSERT_EQ (sub.timedWait (10ms), 0) << join::lastError.message ();
+        ASSERT_STREQ (static_cast <char*> (sub.get ()), "Pong");
+        ASSERT_EQ (sub.wait (), 0) << join::lastError.message ();
+        ASSERT_STREQ (static_cast <char*> (sub.get ()), "Ping");
+        std::this_thread::sleep_for (10ms);
+        ASSERT_EQ (sub.timedWait (10ms), 0) << join::lastError.message ();
+        ASSERT_STREQ (static_cast <char*> (sub.get ()), "Pong");
+        ASSERT_EQ (sub.timedWait (10ms), -1);
     });
 
-    ASSERT_EQ (server.notify (), -1);
-    ASSERT_EQ (server.wait (), -1);
-    ASSERT_EQ (server.timedWait (3ms), -1);
-    ASSERT_EQ (server.open (_name), 0) << join::lastError.message ();
-    ::strcpy (static_cast <char *> (server.get ()), "Ping");
-    ASSERT_EQ (server.notify (), 0) << join::lastError.message ();
-    std::this_thread::sleep_for (4ms);
-    ASSERT_EQ (server.wait (), 0) << join::lastError.message ();
-    ASSERT_STREQ (static_cast <char*> (server.get ()), "Pong");
-    ::strcpy (static_cast <char *> (server.get ()), "Ping");
-    ASSERT_EQ (server.notify (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.timedWait (3ms), 0) << join::lastError.message ();
-    ASSERT_STREQ (static_cast <char*> (server.get ()), "Pong");
-    ::strcpy (static_cast <char *> (server.get ()), "Ping");
-    ASSERT_EQ (server.notify (), 0) << join::lastError.message ();
-    ASSERT_EQ (server.wait (), 0) << join::lastError.message ();
-    ASSERT_STREQ (static_cast <char*> (server.get ()), "Pong");
-    ::strcpy (static_cast <char *> (server.get ()), "Ping");
-    ASSERT_EQ (server.notify (), 0) << join::lastError.message ();
-    std::this_thread::sleep_for (8ms);
-    ASSERT_EQ (server.timedWait (3ms), 0) << join::lastError.message ();
-    ASSERT_STREQ (static_cast <char*> (server.get ()), "Pong");
-    ASSERT_EQ (server.timedWait (3ms), -1);
+    ASSERT_EQ (pub.notify (), -1);
+    ASSERT_EQ (pub.open (_name), 0) << join::lastError.message ();
+    ::strcpy (static_cast <char *> (pub.get ()), "Ping");
+    ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
+    std::this_thread::sleep_for (10ms);
+    ::strcpy (static_cast <char *> (pub.get ()), "Pong");
+    ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
+    std::this_thread::sleep_for (10ms);
+    ::strcpy (static_cast <char *> (pub.get ()), "Ping");
+    ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
+    std::this_thread::sleep_for (10ms);
+    ::strcpy (static_cast <char *> (pub.get ()), "Pong");
+    ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
 
     th.join ();
 
-    client.close ();
-    server.close ();
+    sub.close ();
+    pub.close ();
 }
 
 /**

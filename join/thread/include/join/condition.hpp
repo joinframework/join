@@ -90,15 +90,19 @@ namespace join
          * @brief wait on a condition.
          * @param lock mutex previously locked by the calling thread.
          */
-        void wait (ScopedLock <Mutex>& lock);
+        template <class Lock>
+        void wait (Lock& lock)
+        {
+            pthread_cond_wait (&_handle, lock.mutex ()->handle ());
+        }
 
         /**
          * @brief wait on a condition with predicate.
          * @param lock mutex previously locked by the calling thread.
          * @param pred predicate.
          */
-        template <class Predicate>
-        void wait (ScopedLock <Mutex>& lock, Predicate pred)
+        template <class Lock, class Predicate>
+        void wait (Lock& lock, Predicate pred)
         {
             while (!pred ())
             {
@@ -112,8 +116,8 @@ namespace join
          * @param rt relative timeout.
          * @return true on success, false on timeout.
          */
-        template <class Rep, class Period>
-        bool timedWait (ScopedLock <Mutex>& lock, std::chrono::duration <Rep, Period> rt)
+        template <class Lock, class Rep, class Period>
+        bool timedWait (Lock& lock, std::chrono::duration <Rep, Period> rt)
         {
             auto tp = std::chrono::steady_clock::now () + rt;
             auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);
@@ -135,8 +139,8 @@ namespace join
          * @param pred predicate.
          * @return true on success, false on timeout.
          */
-        template <class Rep, class Period, class Predicate>
-        bool timedWait (ScopedLock <Mutex>& lock, std::chrono::duration <Rep, Period> rt, Predicate pred)
+        template <class Lock, class Rep, class Period, class Predicate>
+        bool timedWait (Lock& lock, std::chrono::duration <Rep, Period> rt, Predicate pred)
         {
             auto tp = std::chrono::steady_clock::now () + rt;
             auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);

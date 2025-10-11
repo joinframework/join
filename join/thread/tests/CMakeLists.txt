@@ -6,6 +6,10 @@ add_executable(mutex.gtest mutex_test.cpp)
 target_link_libraries(mutex.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(mutex.gtest)
 
+add_executable(recursivemutex.gtest recursivemutex_test.cpp)
+target_link_libraries(recursivemutex.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(recursivemutex.gtest)
+
 add_executable(sharedmutex.gtest sharedmutex_test.cpp)
 target_link_libraries(sharedmutex.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(sharedmutex.gtest)

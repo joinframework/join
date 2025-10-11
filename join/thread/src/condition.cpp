@@ -70,15 +70,6 @@ void Condition::broadcast () noexcept
 }
 
 // =========================================================================
-//   CLASS     : Condition
-//   METHOD    : wait
-// =========================================================================
-void Condition::wait (ScopedLock <Mutex>& lock)
-{
-    pthread_cond_wait (&_handle, lock.mutex ()->handle ());
-}
-
-// =========================================================================
 //   CLASS     : SharedCondition
 //   METHOD    : SharedCondition
 // =========================================================================

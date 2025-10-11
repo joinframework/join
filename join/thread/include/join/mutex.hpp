@@ -100,6 +100,75 @@ namespace join
     };
 
     /**
+     * @brief class used to protect shared data from being simultaneously accessed by multiple threads.
+     */
+    class RecursiveMutex
+    {
+    public:
+        /**
+         * @brief default constructor.
+         */
+        RecursiveMutex ();
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        RecursiveMutex (const Mutex& other) = delete;
+
+        /**
+         * @brief copy assignment.
+         * @param other other object to copy.
+         * @return a reference to the current object.
+         */
+        RecursiveMutex& operator= (const RecursiveMutex& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        RecursiveMutex (RecursiveMutex&& other) = delete;
+
+        /**
+         * @brief move assignment.
+         * @param other other object to move.
+         * @return a reference to the current object.
+         */
+        RecursiveMutex& operator= (RecursiveMutex&& other) = delete;
+
+        /**
+         * @brief destroys the mutex object.
+         */
+        ~RecursiveMutex ();
+
+        /**
+         * @brief lock the mutex.
+         */
+        void lock () noexcept;
+
+        /**
+         * @brief lock the mutex or return immediatly if the mutex is already locked.
+         * @return true if locked, false otherwise.
+         */
+        bool tryLock () noexcept;
+
+        /**
+         * @brief unlock the mutex.
+         */
+        void unlock () noexcept;
+
+        /**
+         * @brief get native handle.
+         * @return native handle.
+         */
+        pthread_mutex_t* handle () noexcept;
+
+    private:
+        /// mutex handle.
+        pthread_mutex_t _handle;
+    };
+
+    /**
      * @brief class used to protect shared data from being simultaneously accessed by multiple process via a shared memory.
      */
     class SharedMutex
