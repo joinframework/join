@@ -643,9 +643,7 @@ namespace join
             // This will ensure that the internal signal count is incremented and that any waiting subscribers are woken up.
             // If removed, internal counters may become inconsistent and lead to deadlocks.
             // Fast path is handled inside the notify() method.
-            _shm.notify ();
-
-            return 0;
+            return _shm.notify ();
         }
 
         /**
