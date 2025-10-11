@@ -93,12 +93,21 @@ namespace join
         }
 
         /**
-         * @brief get open flags for shared memory.
+         * @brief get shared memory open flags.
          * @return open flags.
          */
-        constexpr int flag () const noexcept
+        constexpr int mode () const noexcept
         {
-            return O_CREAT | O_EXCL | O_RDWR;
+            return O_CREAT | O_EXCL | O_WRONLY;
+        }
+
+        /**
+         * @brief get shared memory maping protection flags.
+         * @return protection flags.
+         */
+        constexpr int protection () const noexcept
+        {
+            return PROT_WRITE;
         }
     };
 
@@ -133,7 +142,7 @@ namespace join
 
             // fast path (if already signaled)
             auto expected = sync->_signalCount.load (std::memory_order_acquire);
-            if (expected > 0 && sync->_signalCount.compare_exchange_strong (expected, expected - 1, std::memory_order_acquire, std::memory_order_relaxed))
+            if (expected > 0 && sync->_signalCount.compare_exchange_strong (expected, expected - 1, std::memory_order_acquire, std::memory_order_acquire))
             {
                 return 0;
             }
@@ -172,7 +181,7 @@ namespace join
 
             // fast path (if already signaled)
             auto expected = sync->_signalCount.load (std::memory_order_acquire);
-            if (expected > 0 && sync->_signalCount.compare_exchange_strong (expected, expected - 1, std::memory_order_acquire, std::memory_order_relaxed))
+            if (expected > 0 && sync->_signalCount.compare_exchange_strong (expected, expected - 1, std::memory_order_acquire, std::memory_order_acquire))
             {
                 return 0;
             }
@@ -198,12 +207,21 @@ namespace join
         }
 
         /**
-         * @brief get open flags for shared memory.
+         * @brief get shared memory open flags.
          * @return open flags.
          */
-        constexpr int flag () const noexcept
+        constexpr int mode () const noexcept
         {
-            return O_RDWR;
+            return O_RDONLY;
+        }
+
+        /**
+         * @brief get shared memory maping protection flags.
+         * @return protection flags.
+         */
+        constexpr int protection () const noexcept
+        {
+            return PROT_READ;
         }
     };
 
@@ -257,7 +275,7 @@ namespace join
                 return -1;
             }
 
-            _fd = ::shm_open (name.c_str (), _policy.flag () | O_CLOEXEC, 0640);
+            _fd = ::shm_open (name.c_str (), _policy.mode () | O_CLOEXEC, 0640);
             if (_fd == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
@@ -266,14 +284,14 @@ namespace join
 
             _name = name;
 
-            if ((_policy.flag () & O_CREAT) && (::ftruncate (_fd, _totalSize) == -1))
+            if ((_policy.mode () & O_CREAT) && (::ftruncate (_fd, _totalSize) == -1))
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 close ();
                 return -1;
             }
 
-            _ptr = ::mmap (nullptr, _totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, _fd, 0);
+            _ptr = ::mmap (nullptr, _totalSize, _policy.protection (), MAP_SHARED, _fd, 0);
             if (_ptr == MAP_FAILED)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
@@ -284,7 +302,7 @@ namespace join
             _sync = static_cast <ShmSync*> (_ptr);
             _data = static_cast <char*> (_ptr) + sizeof (ShmSync);
 
-            if (_policy.flag () & O_CREAT)
+            if (_policy.mode () & O_CREAT)
             {
                 new (&_sync->_mutex) SharedMutex ();
                 new (&_sync->_condition) SharedCondition ();
@@ -301,7 +319,7 @@ namespace join
         {
             if ((_ptr != nullptr) && (_ptr != MAP_FAILED))
             {
-                if (_policy.flag () & O_CREAT)
+                if (_policy.mode () & O_CREAT)
                 {
                     _sync->_mutex.~SharedMutex ();
                     _sync->_condition.~SharedCondition ();
@@ -319,7 +337,7 @@ namespace join
                 ::close (_fd);
                 _fd = -1;
 
-                if (_policy.flag () & O_CREAT)
+                if (_policy.mode () & O_CREAT)
                 {
                     ::shm_unlink (_name.c_str ());
                 }
@@ -555,7 +573,7 @@ namespace join
                 return -1;
             }
 
-            auto head = _header->_head.load (std::memory_order_relaxed);
+            auto head = _header->_head.load (std::memory_order_acquire);
             auto next = head % _capacity;
 
             std::memcpy (static_cast <char*> (_data) + (next * _elementSize), element, _elementSize);
@@ -588,7 +606,7 @@ namespace join
                 }
             }
 
-            auto tail = _header->_tail.load (std::memory_order_relaxed);
+            auto tail = _header->_tail.load (std::memory_order_acquire);
             auto next = tail % _capacity;
 
             std::memcpy (element, static_cast <char*> (_data) + (next * _elementSize), _elementSize);
@@ -627,7 +645,7 @@ namespace join
                 }
             }
 
-            auto tail = _header->_tail.load (std::memory_order_relaxed);
+            auto tail = _header->_tail.load (std::memory_order_acquire);
             auto next = tail % _capacity;
 
             std::memcpy (element, static_cast <char*> (_data) + (next * _elementSize), _elementSize);
