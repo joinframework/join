@@ -202,6 +202,7 @@ namespace join
             {
                 return -1;
             }
+
             sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
 
             return 0;
