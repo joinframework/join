@@ -49,3 +49,7 @@ gtest_discover_tests(monotonictimer.gtest)
 add_executable(shm.gtest shm_test.cpp)
 target_link_libraries(shm.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(shm.gtest)
+
+add_executable(shmring.gtest shmring_test.cpp)
+target_link_libraries(shmring.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(shmring.gtest)

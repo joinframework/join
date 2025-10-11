@@ -335,11 +335,11 @@ namespace join
                 new (&_sync->_condition) SharedCondition ();
                 new (&_sync->_signalCount) std::atomic_ulong (0);
 
-                // signal that the shared memory is ready.
-                ::sem_post (_sem);
-
                 // we are the semaphore owner.
                 _semOwner = true;
+
+                // signal that publisher is ready.
+                ::sem_post (_sem);
             }
 
             return 0;
@@ -715,10 +715,10 @@ namespace join
         }
 
         /**
-         * @brief get available elements to read.
-         * @return number of elements available to read.
+         * @brief get pending elements to read.
+         * @return number of pending elements to read.
          */
-        uint64_t available () const noexcept
+        uint64_t pending () const noexcept
         {
             if (_header == nullptr)
             {
@@ -732,17 +732,17 @@ namespace join
         }
 
         /**
-         * @brief get available space to write.
-         * @return number of elements available to write.
+         * @brief get available slots to write.
+         * @return number of available slots to write.
          */
-        uint64_t space () const noexcept
+        uint64_t available () const noexcept
         {
             if (_header == nullptr)
             {
                 return 0;
             }
 
-            return _capacity - available ();
+            return _capacity - pending ();
         }
 
         /**
@@ -751,7 +751,7 @@ namespace join
          */
         bool empty () const noexcept
         {
-            return available () == 0;
+            return pending () == 0;
         }
 
         /**
@@ -760,7 +760,7 @@ namespace join
          */
         bool full () const noexcept
         {
-            return space () == 0;
+            return available () == 0;
         }
 
         /**
