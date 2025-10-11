@@ -153,13 +153,11 @@ namespace join
 
             // re-check after locking the mutex
             expected = sync->_signalCount.load (std::memory_order_relaxed);
-            if (expected > 0)
+            if (expected == 0)
             {
-                sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
-                return 0;
+                sync->_condition.wait (lock, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; });
             }
 
-            sync->_condition.wait (lock, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; });
             sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
 
             return 0;
@@ -192,15 +190,12 @@ namespace join
             
             // re-check after locking the mutex
             expected = sync->_signalCount.load (std::memory_order_relaxed);
-            if (expected > 0)
+            if (expected == 0)
             {
-                sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
-                return 0;
-            }
-
-            if (!sync->_condition.timedWait (lock, rt, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; }))
-            {
-                return -1;
+                if (!sync->_condition.timedWait (lock, rt, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; }))
+                {
+                    return -1;
+                }
             }
 
             sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
