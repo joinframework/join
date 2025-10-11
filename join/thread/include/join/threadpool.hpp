@@ -95,7 +95,7 @@ namespace join
         template <class Function, class... Args>
         void push (Function&& func, Args&&... args)
         {
-            ScopedLock lock (_mutex);
+            ScopedLock <Mutex> lock (_mutex);
             _jobs.emplace_back (std::bind (std::forward <Function> (func), std::forward <Args> (args)...));
             _condition.signal ();
         }

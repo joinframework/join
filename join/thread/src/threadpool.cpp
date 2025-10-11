@@ -57,7 +57,7 @@ void WorkerThread::work ()
     {
         std::function <void ()> func;
         {
-            ScopedLock lock (_pool->_mutex);
+            ScopedLock <Mutex> lock (_pool->_mutex);
             _pool->_condition.wait (lock, [&] () {return _pool->_stop || !_pool->_jobs.empty ();});
             if (_pool->_stop && _pool->_jobs.empty ())
             {
@@ -100,6 +100,6 @@ ThreadPool::~ThreadPool ()
 // =========================================================================
 size_t ThreadPool::size ()
 {
-    ScopedLock lock (_mutex);
+    ScopedLock <Mutex> lock (_mutex);
     return _workers.size ();
 }

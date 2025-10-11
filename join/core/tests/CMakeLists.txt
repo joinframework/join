@@ -45,3 +45,7 @@ gtest_discover_tests(realtimetimer.gtest)
 add_executable(monotonictimer.gtest monotonictimer_test.cpp)
 target_link_libraries(monotonictimer.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(monotonictimer.gtest)
+
+add_executable(shm.gtest shm_test.cpp)
+target_link_libraries(shm.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(shm.gtest)

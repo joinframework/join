@@ -47,10 +47,10 @@ TEST (Condition, wait)
     bool ready = false;
     Condition condition;
     Mutex mutex;
-    ScopedLock lock (mutex);
+    ScopedLock <Mutex> lock (mutex);
     auto task = std::async (std::launch::async, [&] () {
         std::this_thread::sleep_for (5ms);
-        ScopedLock lk (mutex);
+        ScopedLock <Mutex> lk (mutex);
         std::this_thread::sleep_for (15ms);
         ready = true;
         condition.signal ();
@@ -70,10 +70,10 @@ TEST (Condition, timedWait)
     bool ready = false;
     Condition condition;
     Mutex mutex;
-    ScopedLock lock (mutex);
+    ScopedLock <Mutex> lock (mutex);
     auto task = std::async (std::launch::async, [&] () {
         std::this_thread::sleep_for (10ms);
-        ScopedLock lk (mutex);
+        ScopedLock <Mutex> lk (mutex);
         std::this_thread::sleep_for (10ms);
         ready = true;
         condition.broadcast ();

@@ -371,7 +371,7 @@ namespace join
             for (;;)
             {
                 {
-                    ScopedLock lock (this->_server->_mutex);
+                    ScopedLock <Mutex> lock (this->_server->_mutex);
 
                     fd_set fdset = setfd;
                     int nset = ::select (fdmax + 1, &fdset, nullptr, nullptr, nullptr);

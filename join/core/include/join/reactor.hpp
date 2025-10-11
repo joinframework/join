@@ -166,7 +166,7 @@ namespace join
         std::thread::id _threadId;
 
         /// protection mutex.
-        Mutex _mutex;
+        RecursiveMutex _mutex;
 
         /// thread status event.
         Condition _threadStatus;

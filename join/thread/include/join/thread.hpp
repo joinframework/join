@@ -29,6 +29,7 @@
 #include <system_error>
 #include <functional>
 #include <memory>
+#include <thread>
 #include <atomic>
 
 // C.
