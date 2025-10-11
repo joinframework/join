@@ -67,7 +67,8 @@ void* Cache::get (const std::string &fileName, struct stat &sbuf)
             return it->second->addr;
         }
 
-        remove (fileName);
+        munmap (it->second->addr, it->second->size);
+        _entries.erase (it);
     }
 
     void* ptr = nullptr;
