@@ -36,6 +36,7 @@
 #include <string>
 
 // C.
+#include <semaphore.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -98,7 +99,7 @@ namespace join
          */
         constexpr int mode () const noexcept
         {
-            return O_CREAT | O_EXCL | O_WRONLY;
+            return O_CREAT | O_EXCL | O_RDWR;
         }
 
         /**
@@ -107,7 +108,7 @@ namespace join
          */
         constexpr int protection () const noexcept
         {
-            return PROT_WRITE;
+            return PROT_READ | PROT_WRITE;
         }
     };
 
@@ -212,7 +213,7 @@ namespace join
          */
         constexpr int mode () const noexcept
         {
-            return O_RDONLY;
+            return O_RDWR;
         }
 
         /**
@@ -221,7 +222,7 @@ namespace join
          */
         constexpr int protection () const noexcept
         {
-            return PROT_READ;
+            return PROT_READ | PROT_WRITE;
         }
     };
 
@@ -236,7 +237,8 @@ namespace join
          * @brief create instance.
          */
         BasicShm (off_t size = 4096) noexcept
-        : _userSize (size)
+        : _publisher (_policy.mode () & O_CREAT)
+        , _userSize (size)
         , _totalSize (size + sizeof (ShmSync))
         {
         }
@@ -264,10 +266,10 @@ namespace join
 
         /**
          * @brief open or create the shared memory segment.
-         * @param name shared memory object name (must start with '/').
+         * @param shmName shared memory object name (must start with '/').
          * @return 0 on success, -1 on failure.
          */
-        int open (const std::string& name)
+        int open (const std::string& shmName)
         {
             if (opened ())
             {
@@ -275,16 +277,41 @@ namespace join
                 return -1;
             }
 
-            _fd = ::shm_open (name.c_str (), _policy.mode () | O_CLOEXEC, 0640);
-            if (_fd == -1)
+            std::string semName = shmName + "_ready";
+            _sem = ::sem_open (semName.c_str (), O_CREAT, 0640, 0);
+            if (_sem == SEM_FAILED)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return -1;
             }
 
-            _name = name;
+            _semName = semName;
 
-            if ((_policy.mode () & O_CREAT) && (::ftruncate (_fd, _totalSize) == -1))
+            if (!_publisher)
+            {
+                // wait for the publisher to be ready.
+                if (::sem_wait (_sem) == -1)
+                {
+                    lastError = std::make_error_code (static_cast <std::errc> (errno));
+                    close ();
+                    return -1;
+                }
+
+                // ensure other subscribers can also open the shared memory.
+                ::sem_post (_sem);
+            }
+
+            _fd = ::shm_open (shmName.c_str (), _policy.mode () | O_CLOEXEC, 0640);
+            if (_fd == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                close ();
+                return -1;
+            }
+
+            _shmName = shmName;
+
+            if (_publisher && (::ftruncate (_fd, _totalSize) == -1))
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 close ();
@@ -302,11 +329,17 @@ namespace join
             _sync = static_cast <ShmSync*> (_ptr);
             _data = static_cast <char*> (_ptr) + sizeof (ShmSync);
 
-            if (_policy.mode () & O_CREAT)
+            if (_publisher)
             {
                 new (&_sync->_mutex) SharedMutex ();
                 new (&_sync->_condition) SharedCondition ();
                 new (&_sync->_signalCount) std::atomic_ulong (0);
+
+                // signal that the shared memory is ready.
+                ::sem_post (_sem);
+
+                // we are the semaphore owner.
+                _semOwner = true;
             }
 
             return 0;
@@ -319,7 +352,7 @@ namespace join
         {
             if ((_ptr != nullptr) && (_ptr != MAP_FAILED))
             {
-                if (_policy.mode () & O_CREAT)
+                if (_publisher)
                 {
                     _sync->_mutex.~SharedMutex ();
                     _sync->_condition.~SharedCondition ();
@@ -337,13 +370,28 @@ namespace join
                 ::close (_fd);
                 _fd = -1;
 
-                if (_policy.mode () & O_CREAT)
+                if (_publisher)
                 {
-                    ::shm_unlink (_name.c_str ());
+                    ::shm_unlink (_shmName.c_str ());
                 }
             }
 
-            _name.clear ();
+            _shmName.clear ();
+
+            if (_sem != nullptr && _sem != SEM_FAILED)
+            {
+                ::sem_close (_sem);
+                _sem = nullptr;
+
+                if (_publisher && _semOwner)
+                {
+                    ::sem_unlink (_semName.c_str ());
+                }
+
+                _semOwner = false;
+            }
+
+            _semName.clear ();
         }
 
         /**
@@ -417,6 +465,9 @@ namespace join
         /// policy defining behavior (publisher/subscriber).
         ShmPolicy _policy;
 
+        /// is publisher.
+        bool _publisher = false;
+
         /// pointer to mapped shared memory.
         void* _ptr = nullptr;
 
@@ -436,7 +487,16 @@ namespace join
         int _fd = -1;
 
         /// shared memory object name.
-        std::string _name;
+        std::string _shmName;
+
+        /// semaphore handle.
+        sem_t* _sem = nullptr;
+
+        /// semaphore name.
+        std::string _semName;
+
+        /// is semaphore owner.
+        bool _semOwner = false;
     };
 
     /**

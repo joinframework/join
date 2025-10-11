@@ -41,7 +41,6 @@ TEST (Shm, open)
     Shm::Publisher pub1, pub2 (-sizeof (join::ShmSync) - 1), pub3 (-sizeof (join::ShmSync));
     Shm::Subscriber sub1;
 
-    ASSERT_EQ (sub1.open (_name), -1);
     ASSERT_EQ (pub1.open (_name), 0) << join::lastError.message ();
     ASSERT_EQ (pub1.open (_name), -1);
     ASSERT_EQ (pub2.open (_name), -1);
@@ -87,8 +86,8 @@ TEST (Shm, notify)
     Thread th ([&] () {
         ASSERT_EQ (sub.wait (), -1);
         ASSERT_EQ (sub.timedWait (10ms), -1);
-        std::this_thread::sleep_for (5ms);
         ASSERT_EQ (sub.open (_name), 0) << join::lastError.message ();
+        std::this_thread::sleep_for (5ms);
         ASSERT_EQ (sub.wait (), 0) << join::lastError.message ();
         ASSERT_STREQ (static_cast <char*> (sub.get ()), "Ping");
         ASSERT_EQ (sub.timedWait (10ms), 0) << join::lastError.message ();
