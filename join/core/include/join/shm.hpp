@@ -85,10 +85,12 @@ namespace join
             }
 
             // fast path
-            sync->_signalCount.fetch_add (1, std::memory_order_release);
-
-            // slow path
-            sync->_condition.signal ();
+            auto prev = sync->_signalCount.fetch_add (1, std::memory_order_release);
+            if (prev == 0)
+            {
+                // slow path
+                sync->_condition.signal ();
+            }
 
             return 0;
         }
@@ -293,7 +295,7 @@ namespace join
                     return -1;
                 }
 
-                // ensure other subscribers can also open the shared memory.
+                // ensure next time we can also open the shared memory.
                 ::sem_post (_sem);
             }
 
