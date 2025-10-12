@@ -204,6 +204,56 @@ TEST (ShmRing, timedPop)
     cons.close ();
 }
 
+TEST (ShmRing, benchmark)
+{
+    const uint64_t N = 1000000;
+    char data[64] = {};
+
+    pid_t pid = fork ();
+    ASSERT_NE (pid, -1);
+
+    if (pid == 0)
+    {
+        ShmRing::Consumer cons (64, 1024);
+        ASSERT_EQ (cons.open (_name), 0) << join::lastError.message ();
+        for (uint64_t i = 0; i < N; ++i)
+        {
+            ASSERT_EQ (cons.pop (data), 0) << join::lastError.message ();
+        }
+        cons.close ();
+        _exit (0);
+    }
+    else
+    {
+        ShmRing::Producer prod (64, 1024);
+        ASSERT_EQ (prod.open (_name), 0) << join::lastError.message ();
+        for (uint64_t i = 0; i < 1024; ++i)
+        {
+            ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
+        }
+        auto t0 = std::chrono::high_resolution_clock::now ();
+        for (uint64_t i = 0; i < N; ++i)
+        {
+            while  (prod.full ()) { /*spin wait*/ }
+            ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
+        }
+        auto t1 = std::chrono::high_resolution_clock::now();
+
+        std::cout << "Benchmark results for " << N << " messages of 64 bytes:" << std::endl;
+        std::cout << "Total time:    " << std::chrono::duration_cast <std::chrono::milliseconds> (t1 - t0).count () << " ms" << std::endl;
+        std::cout << "Throughput:    " << std::fixed << std::setprecision (0) << N / std::chrono::duration <double> (t1 - t0).count () << " msg/s" << std::endl;
+        std::cout << "Latency:       " << std::chrono::duration_cast <std::chrono::nanoseconds> (t1 - t0).count () / double (N) << " ns" << std::endl;
+
+        ASSERT_EQ (prod.pending (), 1024);
+        prod.close ();
+
+        int status;
+        waitpid (pid, &status, 0);
+        ASSERT_TRUE (WIFEXITED (status));
+        ASSERT_EQ (WEXITSTATUS (status), 0);
+    }
+}
+
 /**
  * @brief main function.
  */

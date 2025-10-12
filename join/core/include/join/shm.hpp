@@ -85,12 +85,10 @@ namespace join
             }
 
             // fast path
-            auto prev = sync->_signalCount.fetch_add (1, std::memory_order_release);
-            if (prev == 0)
-            {
-                // slow path
-                sync->_condition.signal ();
-            }
+            sync->_signalCount.fetch_add (1, std::memory_order_release);
+
+            // slow path
+            sync->_condition.signal ();
 
             return 0;
         }
@@ -144,22 +142,15 @@ namespace join
             }
 
             // fast path (if already signaled)
-            auto expected = sync->_signalCount.load (std::memory_order_acquire);
-            if (expected > 0 && sync->_signalCount.compare_exchange_strong (expected, expected - 1, std::memory_order_acquire, std::memory_order_acquire))
+            if (sync->_signalCount.load (std::memory_order_acquire))
             {
+                sync->_signalCount.fetch_sub (1, std::memory_order_acq_rel);
                 return 0;
             }
 
             // slow path (wait)
             ScopedLock <SharedMutex> lock (sync->_mutex);
-
-            // re-check after locking the mutex
-            expected = sync->_signalCount.load (std::memory_order_relaxed);
-            if (expected == 0)
-            {
-                sync->_condition.wait (lock, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; });
-            }
-
+            sync->_condition.wait (lock, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; });
             sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
 
             return 0;
@@ -181,25 +172,18 @@ namespace join
             }
 
             // fast path (if already signaled)
-            auto expected = sync->_signalCount.load (std::memory_order_acquire);
-            if (expected > 0 && sync->_signalCount.compare_exchange_strong (expected, expected - 1, std::memory_order_acquire, std::memory_order_acquire))
+            if (sync->_signalCount.load (std::memory_order_acquire))
             {
+                sync->_signalCount.fetch_sub (1, std::memory_order_acq_rel);
                 return 0;
             }
 
             // slow path (wait)
             ScopedLock <SharedMutex> lock (sync->_mutex);
-            
-            // re-check after locking the mutex
-            expected = sync->_signalCount.load (std::memory_order_relaxed);
-            if (expected == 0)
+            if (!sync->_condition.timedWait (lock, rt, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; }))
             {
-                if (!sync->_condition.timedWait (lock, rt, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; }))
-                {
-                    return -1;
-                }
+                return -1;
             }
-
             sync->_signalCount.fetch_sub (1, std::memory_order_relaxed);
 
             return 0;
