@@ -32,7 +32,6 @@
 using namespace std::chrono_literals;
 
 using join::Shm;
-using join::Thread;
 
 const std::string _name = "/test_shm";
 
@@ -80,10 +79,12 @@ TEST (Shm, size)
 
 TEST (Shm, notify)
 {
-    Shm::Publisher pub (1024);
-    Shm::Subscriber sub (1024);
+    pid_t pid = fork ();
+    ASSERT_NE (pid, -1);
 
-    Thread th ([&] () {
+    if (pid == 0)
+    {
+        Shm::Subscriber sub (1024);
         ASSERT_EQ (sub.wait (), -1);
         ASSERT_EQ (sub.timedWait (10ms), -1);
         ASSERT_EQ (sub.open (_name), 0) << join::lastError.message ();
@@ -98,26 +99,32 @@ TEST (Shm, notify)
         ASSERT_EQ (sub.timedWait (10ms), 0) << join::lastError.message ();
         ASSERT_STREQ (static_cast <char*> (sub.get ()), "Pong");
         ASSERT_EQ (sub.timedWait (10ms), -1);
-    });
+        sub.close ();
+        _exit (0);
+    }
+    else
+    {
+        Shm::Publisher pub (1024);
+        ASSERT_EQ (pub.notify (), -1);
+        ASSERT_EQ (pub.open (_name), 0) << join::lastError.message ();
+        ::strcpy (static_cast <char *> (pub.get ()), "Ping");
+        ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
+        std::this_thread::sleep_for (10ms);
+        ::strcpy (static_cast <char *> (pub.get ()), "Pong");
+        ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
+        std::this_thread::sleep_for (10ms);
+        ::strcpy (static_cast <char *> (pub.get ()), "Ping");
+        ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
+        std::this_thread::sleep_for (10ms);
+        ::strcpy (static_cast <char *> (pub.get ()), "Pong");
+        ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
+        pub.close ();
 
-    ASSERT_EQ (pub.notify (), -1);
-    ASSERT_EQ (pub.open (_name), 0) << join::lastError.message ();
-    ::strcpy (static_cast <char *> (pub.get ()), "Ping");
-    ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
-    std::this_thread::sleep_for (10ms);
-    ::strcpy (static_cast <char *> (pub.get ()), "Pong");
-    ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
-    std::this_thread::sleep_for (10ms);
-    ::strcpy (static_cast <char *> (pub.get ()), "Ping");
-    ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
-    std::this_thread::sleep_for (10ms);
-    ::strcpy (static_cast <char *> (pub.get ()), "Pong");
-    ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
-
-    th.join ();
-
-    sub.close ();
-    pub.close ();
+        int status;
+        waitpid (pid, &status, 0);
+        ASSERT_TRUE (WIFEXITED (status));
+        ASSERT_EQ (WEXITSTATUS (status), 0);
+    }
 }
 
 /**
