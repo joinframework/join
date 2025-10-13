@@ -140,6 +140,7 @@ TEST (SharedSemaphore, tryWait)
     child = fork ();
     if (child == 0)
     {
+        std::this_thread::sleep_for (15ms);
         sem->post ();
         _exit (EXIT_SUCCESS);
     }
@@ -150,7 +151,9 @@ TEST (SharedSemaphore, tryWait)
         {
             goto cleanup;
         }
-        std::this_thread::sleep_for (10ms);
+        std::this_thread::sleep_for (5ms);
+        EXPECT_FALSE (sem->tryWait ());
+        std::this_thread::sleep_for (15ms);
         EXPECT_TRUE (sem->tryWait ()) << join::lastError.message ();
         int status = -1;
         waitpid (child, &status, 0);
@@ -200,6 +203,7 @@ TEST (SharedSemaphore, timedWait)
     child = fork ();
     if (child == 0)
     {
+        std::this_thread::sleep_for (10ms);
         sem->post ();
         _exit (EXIT_SUCCESS);
     }
@@ -210,6 +214,7 @@ TEST (SharedSemaphore, timedWait)
         {
             goto cleanup;
         }
+        EXPECT_FALSE (sem->timedWait (5ms));
         EXPECT_TRUE (sem->timedWait (10ms)) << join::lastError.message ();
         int status = -1;
         waitpid (child, &status, 0);
@@ -273,6 +278,8 @@ TEST (SharedSemaphore, value)
         EXPECT_EQ (sem->value (), 1);
         EXPECT_TRUE (sem->timedWait (10ms)) << join::lastError.message ();
         EXPECT_EQ (sem->value (), 0);
+        sem->post ();
+        EXPECT_EQ (sem->value (), 1);
         int status = -1;
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));

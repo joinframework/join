@@ -72,7 +72,6 @@ TEST (SharedMutex, lock)
     {
         mutex->lock ();
         std::this_thread::sleep_for (15ms);
-        mutex->unlock ();
         _exit (EXIT_SUCCESS);
     }
     else
@@ -138,7 +137,6 @@ TEST (SharedMutex, tryLock)
     {
         mutex->lock ();
         std::this_thread::sleep_for (15ms);
-        mutex->unlock ();
         _exit (EXIT_SUCCESS);
     }
     else
@@ -201,8 +199,10 @@ TEST (SharedMutex, scopedLock)
     child = fork ();
     if (child == 0)
     {
-        ScopedLock <SharedMutex> lock (*mutex);
-        std::this_thread::sleep_for (15ms);
+        {
+            ScopedLock <SharedMutex> lock (*mutex);
+            std::this_thread::sleep_for (15ms);
+        }
         _exit (EXIT_SUCCESS);
     }
     else

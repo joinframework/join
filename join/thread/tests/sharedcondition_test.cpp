@@ -167,7 +167,8 @@ TEST (SharedCondition, timedWait)
         }
         ScopedLock <SharedMutex> lock (sync->mutex);
         auto beg = std::chrono::high_resolution_clock::now ();
-        EXPECT_FALSE (sync->condition.timedWait (lock, 5ms, [&](){return sync->ready;}));
+        EXPECT_FALSE (sync->condition.timedWait (lock, 2ms));
+        EXPECT_FALSE (sync->condition.timedWait (lock, 2ms, [&](){return sync->ready;}));
         EXPECT_TRUE (sync->condition.timedWait (lock, 50ms, [&](){return sync->ready;})) << join::lastError.message ();
         auto end = std::chrono::high_resolution_clock::now ();
         EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);

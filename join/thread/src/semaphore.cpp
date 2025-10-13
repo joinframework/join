@@ -129,9 +129,13 @@ bool Semaphore::tryWait () noexcept
 int Semaphore::value () noexcept
 {
     int value = -1;
-    if (((_named) ? ::sem_getvalue (_named_handle, &value) : ::sem_getvalue (&_unnamed_handle, &value)) == -1)
+    if (_named)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        ::sem_getvalue (_named_handle, &value);
+    }
+    else
+    {
+        ::sem_getvalue (&_unnamed_handle, &value);
     }
     return value;
 }
@@ -196,9 +200,6 @@ bool SharedSemaphore::tryWait () noexcept
 int SharedSemaphore::value () noexcept
 {
     int value = -1;
-    if (::sem_getvalue (&_handle, &value) == -1)
-    {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
-    }
+    ::sem_getvalue (&_handle, &value);
     return value;
 }

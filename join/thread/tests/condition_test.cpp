@@ -56,7 +56,7 @@ TEST (Condition, wait)
         condition.signal ();
     });
     auto beg = std::chrono::high_resolution_clock::now ();
-    condition.wait (lock, [&ready](){return ready;});
+    condition.wait (lock, [&](){return ready;});
     auto end = std::chrono::high_resolution_clock::now ();
     EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
     task.wait ();
@@ -79,8 +79,9 @@ TEST (Condition, timedWait)
         condition.broadcast ();
     });
     auto beg = std::chrono::high_resolution_clock::now ();
-    EXPECT_FALSE (condition.timedWait (lock, 5ms, [&ready](){return ready;}));
-    EXPECT_TRUE (condition.timedWait (lock, 50ms, [&ready](){return ready;})) << join::lastError.message ();
+    EXPECT_FALSE (condition.timedWait (lock, 2ms));
+    EXPECT_FALSE (condition.timedWait (lock, 2ms, [&](){return ready;}));
+    EXPECT_TRUE (condition.timedWait (lock, 50ms, [&](){return ready;})) << join::lastError.message ();
     auto end = std::chrono::high_resolution_clock::now ();
     EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
     task.wait ();
