@@ -100,6 +100,7 @@ TEST (SharedCondition, wait)
         sync->condition.wait (lock, [&] () {return sync->ready;});
         auto end = std::chrono::high_resolution_clock::now ();
         EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+        sync->condition.signal ();
         int status = -1;
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));
@@ -172,6 +173,7 @@ TEST (SharedCondition, timedWait)
         EXPECT_TRUE (sync->condition.timedWait (lock, 50ms, [&](){return sync->ready;})) << join::lastError.message ();
         auto end = std::chrono::high_resolution_clock::now ();
         EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+        sync->condition.broadcast ();
         int status = -1;
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));
