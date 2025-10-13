@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 
+#define _XOPEN_SOURCE 700
+
 // libjoin.
 #include <join/condition.hpp>
 

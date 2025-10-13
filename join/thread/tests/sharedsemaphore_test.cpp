@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2021 Mathieu Rabine
+ * Copyright (c) 2025 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,8 +23,8 @@
  */
 
 // libjoin.
+#include <join/semaphore.hpp>
 #include <join/thread.hpp>
-#include <join/mutex.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -34,45 +34,51 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-using join::SharedMutex;
-using join::ScopedLock;
+using join::SharedSemaphore;
 
 using namespace std::chrono_literals;
 
-const std::string _name = "/test_mutex";
+const std::string _name = "/test_semaphore";
 
 /**
- * @brief test lock.
+ * @brief test create.
  */
-TEST (SharedMutex, lock)
+TEST (SharedSemaphore, create)
 {
-    SharedMutex* mutex = nullptr;
+    ASSERT_THROW (SharedSemaphore (size_t (SEM_VALUE_MAX) + 1), std::system_error);
+}
+
+/**
+ * @brief test wait.
+ */
+TEST (SharedSemaphore, wait)
+{
+    SharedSemaphore* sem = nullptr;
     void* shm = nullptr;
     pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
-    EXPECT_NE (::ftruncate (fd, sizeof (SharedMutex)), -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedSemaphore)), -1) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
-    shm = ::mmap (nullptr, sizeof (SharedMutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    shm = ::mmap (nullptr, sizeof (SharedSemaphore), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     EXPECT_NE (shm, nullptr) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
 
-    mutex = static_cast <SharedMutex*> (shm);
-    new (mutex) SharedMutex ();
+    sem = static_cast <SharedSemaphore*> (shm);
+    new (sem) SharedSemaphore ();
 
     child = fork ();
     if (child == 0)
     {
-        mutex->lock ();
-        std::this_thread::sleep_for (15ms);
-        mutex->unlock ();
+        std::this_thread::sleep_for (10ms);
+        sem->post ();
         _exit (EXIT_SUCCESS);
     }
     else
@@ -82,12 +88,10 @@ TEST (SharedMutex, lock)
         {
             goto cleanup;
         }
-        std::this_thread::sleep_for (5ms);
         auto beg = std::chrono::high_resolution_clock::now ();
-        mutex->lock ();
+        sem->wait ();
         auto end = std::chrono::high_resolution_clock::now ();
         EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
-        mutex->unlock ();
         int status = -1;
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));
@@ -97,8 +101,8 @@ TEST (SharedMutex, lock)
 cleanup:
     if ((shm != nullptr) && (shm != MAP_FAILED))
     {
-        mutex->~SharedMutex ();
-        EXPECT_NE (::munmap (shm, sizeof (SharedMutex)), -1) << strerror (errno);
+        sem->~SharedSemaphore ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedSemaphore)), -1) << strerror (errno);
     }
 
     if (fd != -1)
@@ -108,37 +112,35 @@ cleanup:
 }
 
 /**
- * @brief test tryLock.
+ * @brief test tryWait.
  */
-TEST (SharedMutex, tryLock)
+TEST (SharedSemaphore, tryWait)
 {
-    SharedMutex* mutex = nullptr;
+    SharedSemaphore* sem = nullptr;
     void* shm = nullptr;
     pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
-    EXPECT_NE (::ftruncate (fd, sizeof (SharedMutex)), -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedSemaphore)), -1) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
-    shm = ::mmap (nullptr, sizeof (SharedMutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    shm = ::mmap (nullptr, sizeof (SharedSemaphore), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     EXPECT_NE (shm, nullptr) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
 
-    mutex = static_cast <SharedMutex*> (shm);
-    new (mutex) SharedMutex ();
+    sem = static_cast <SharedSemaphore*> (shm);
+    new (sem) SharedSemaphore ();
 
     child = fork ();
     if (child == 0)
     {
-        mutex->lock ();
-        std::this_thread::sleep_for (15ms);
-        mutex->unlock ();
+        sem->post ();
         _exit (EXIT_SUCCESS);
     }
     else
@@ -148,11 +150,8 @@ TEST (SharedMutex, tryLock)
         {
             goto cleanup;
         }
-        std::this_thread::sleep_for (5ms);
-        EXPECT_FALSE (mutex->tryLock ());
-        std::this_thread::sleep_for (15ms);
-        EXPECT_TRUE (mutex->tryLock ());
-        mutex->unlock ();
+        std::this_thread::sleep_for (10ms);
+        EXPECT_TRUE (sem->tryWait ()) << join::lastError.message ();
         int status = -1;
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));
@@ -162,8 +161,8 @@ TEST (SharedMutex, tryLock)
 cleanup:
     if ((shm != nullptr) && (shm != MAP_FAILED))
     {
-        mutex->~SharedMutex ();
-        EXPECT_NE (::munmap (shm, sizeof (SharedMutex)), -1) << strerror (errno);
+        sem->~SharedSemaphore ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedSemaphore)), -1) << strerror (errno);
     }
 
     if (fd != -1)
@@ -173,36 +172,35 @@ cleanup:
 }
 
 /**
- * @brief test scoped lock.
+ * @brief test timedWait.
  */
-TEST (SharedMutex, scopedLock)
+TEST (SharedSemaphore, timedWait)
 {
-    SharedMutex* mutex = nullptr;
+    SharedSemaphore* sem = nullptr;
     void* shm = nullptr;
     pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
-    EXPECT_NE (::ftruncate (fd, sizeof (SharedMutex)), -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedSemaphore)), -1) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
-    shm = ::mmap (nullptr, sizeof (SharedMutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    shm = ::mmap (nullptr, sizeof (SharedSemaphore), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     EXPECT_NE (shm, nullptr) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
 
-    mutex = static_cast <SharedMutex*> (shm);
-    new (mutex) SharedMutex ();
+    sem = static_cast <SharedSemaphore*> (shm);
+    new (sem) SharedSemaphore ();
 
     child = fork ();
     if (child == 0)
     {
-        ScopedLock <SharedMutex> lock (*mutex);
-        std::this_thread::sleep_for (15ms);
+        sem->post ();
         _exit (EXIT_SUCCESS);
     }
     else
@@ -212,12 +210,7 @@ TEST (SharedMutex, scopedLock)
         {
             goto cleanup;
         }
-        std::this_thread::sleep_for (5ms);
-        auto beg = std::chrono::high_resolution_clock::now ();
-        mutex->lock ();
-        auto end = std::chrono::high_resolution_clock::now ();
-        EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
-        mutex->unlock ();
+        EXPECT_TRUE (sem->timedWait (10ms)) << join::lastError.message ();
         int status = -1;
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));
@@ -227,8 +220,70 @@ TEST (SharedMutex, scopedLock)
 cleanup:
     if ((shm != nullptr) && (shm != MAP_FAILED))
     {
-        mutex->~SharedMutex ();
-        EXPECT_NE (::munmap (shm, sizeof (SharedMutex)), -1) << strerror (errno);
+        sem->~SharedSemaphore ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedSemaphore)), -1) << strerror (errno);
+    }
+
+    if (fd != -1)
+    {
+        EXPECT_NE (::close (fd), -1) << strerror (errno);
+    }
+}
+
+/**
+ * @brief test value.
+ */
+TEST (SharedSemaphore, value)
+{
+    SharedSemaphore* sem = nullptr;
+    void* shm = nullptr;
+    pid_t child = -1;
+
+    int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
+    ASSERT_NE (fd, -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedSemaphore)), -1) << strerror (errno);
+    if (HasFailure ())
+    {
+        goto cleanup;
+    }
+    shm = ::mmap (nullptr, sizeof (SharedSemaphore), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    EXPECT_NE (shm, nullptr) << strerror (errno);
+    if (HasFailure ())
+    {
+        goto cleanup;
+    }
+
+    sem = static_cast <SharedSemaphore*> (shm);
+    new (sem) SharedSemaphore ();
+
+    child = fork ();
+    if (child == 0)
+    {
+        sem->post ();
+        _exit (EXIT_SUCCESS);
+    }
+    else
+    {
+        EXPECT_NE (child, -1) << strerror (errno);
+        if (HasFailure ())
+        {
+            goto cleanup;
+        }
+        std::this_thread::sleep_for (10ms);
+        EXPECT_EQ (sem->value (), 1);
+        EXPECT_TRUE (sem->timedWait (10ms)) << join::lastError.message ();
+        EXPECT_EQ (sem->value (), 0);
+        int status = -1;
+        waitpid (child, &status, 0);
+        EXPECT_TRUE (WIFEXITED (status));
+        EXPECT_EQ (WEXITSTATUS (status), 0);
+    }
+
+cleanup:
+    if ((shm != nullptr) && (shm != MAP_FAILED))
+    {
+        sem->~SharedSemaphore ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedSemaphore)), -1) << strerror (errno);
     }
 
     if (fd != -1)

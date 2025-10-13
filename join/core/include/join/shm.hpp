@@ -159,11 +159,11 @@ namespace join
         /**
          * @brief wait publisher notification until timeout expire.
          * @param sync synchronization primitives.
-         * @param rt relative timeout.
+         * @param timeout timeout.
          * @return 0 on success, -1 on failure.
          */
         template <class Rep, class Period>
-        int timedWait (ShmSync* sync, std::chrono::duration <Rep, Period> rt) const
+        int timedWait (ShmSync* sync, std::chrono::duration <Rep, Period> timeout) const
         {
             if (sync == nullptr)
             {
@@ -180,7 +180,7 @@ namespace join
 
             // slow path (wait)
             ScopedLock <SharedMutex> lock (sync->_mutex);
-            if (!sync->_condition.timedWait (lock, rt, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; }))
+            if (!sync->_condition.timedWait (lock, timeout, [&] () { return sync->_signalCount.load (std::memory_order_relaxed) > 0; }))
             {
                 return -1;
             }
@@ -407,13 +407,13 @@ namespace join
 
         /**
          * @brief wait peer notification event until timeout expire.
-         * @param rt relative timeout.
+         * @param timeout timeout.
          * @return 0 on success, -1 on failure.
          */
         template <class Rep, class Period, typename P = ShmPolicy, typename = typename std::enable_if <std::is_same <P, SubscriberPolicy>::value>::type>
-        int timedWait (std::chrono::duration <Rep, Period> rt) const
+        int timedWait (std::chrono::duration <Rep, Period> timeout) const
         {
-            return _policy.timedWait (_sync, rt);
+            return _policy.timedWait (_sync, timeout);
         }
 
         /**
@@ -663,11 +663,11 @@ namespace join
         /**
          * @brief pop element from ring buffer.
          * @param element pointer to output element.
-         * @param rt relative timeout.
+         * @param timeout timeout.
          * @return  0 on success, -1 otherwise.
          */
         template <class Rep, class Period, typename T = ShmType, typename = typename std::enable_if <std::is_same <T, Shm::Subscriber>::value>::type>
-        int timedPop (void* element, std::chrono::duration <Rep, Period> rt) noexcept
+        int timedPop (void* element, std::chrono::duration <Rep, Period> timeout) noexcept
         {
             if ((_header == nullptr) || (element == nullptr))
             {
@@ -679,7 +679,7 @@ namespace join
             // This will ensure that the internal signal count is decremented and that we only proceed if there is data to read.
             // If removed, internal counters may become inconsistent and lead to deadlocks.
             // Fast path is handled inside the timedWait() method.
-            if (_shm.timedWait (rt) == -1)
+            if (_shm.timedWait (timeout) == -1)
             {
                 return -1;
             }

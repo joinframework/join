@@ -26,8 +26,9 @@
 #define __JOIN_CONDITION_HPP__
 
 // libjoin.
-#include <join/error.hpp>
 #include <join/mutex.hpp>
+#include <join/error.hpp>
+#include <join/utils.hpp>
 
 // C++.
 #include <chrono>
@@ -113,16 +114,13 @@ namespace join
         /**
          * @brief wait on a condition until timeout expire.
          * @param lock mutex previously locked by the calling thread.
-         * @param rt relative timeout.
+         * @param timeout timeout.
          * @return true on success, false on timeout.
          */
         template <class Lock, class Rep, class Period>
-        bool timedWait (Lock& lock, std::chrono::duration <Rep, Period> rt)
+        bool timedWait (Lock& lock, std::chrono::duration <Rep, Period> timeout)
         {
-            auto tp = std::chrono::steady_clock::now () + rt;
-            auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);
-            auto ns = std::chrono::time_point_cast <std::chrono::nanoseconds> (tp) - std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
-            struct timespec ts = {secs.time_since_epoch ().count (), ns.count ()};
+            struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
             int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
             if (err != 0)
             {
@@ -135,17 +133,14 @@ namespace join
         /**
          * @brief wait on a condition with predicate until timeout expire.
          * @param lock mutex previously locked by the calling thread.
-         * @param rt relative timeout.
+         * @param timeout timeout.
          * @param pred predicate.
          * @return true on success, false on timeout.
          */
         template <class Lock, class Rep, class Period, class Predicate>
-        bool timedWait (Lock& lock, std::chrono::duration <Rep, Period> rt, Predicate pred)
+        bool timedWait (Lock& lock, std::chrono::duration <Rep, Period> timeout, Predicate pred)
         {
-            auto tp = std::chrono::steady_clock::now () + rt;
-            auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);
-            auto ns = std::chrono::time_point_cast <std::chrono::nanoseconds> (tp) - std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
-            struct timespec ts = {secs.time_since_epoch ().count (), ns.count ()};
+            struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
             while (!pred ())
             {
                 int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
@@ -155,6 +150,7 @@ namespace join
                     return pred ();
                 }
             }
+
             return true;
         }
 
@@ -238,39 +234,34 @@ namespace join
         /**
          * @brief wait on a condition until timeout expire.
          * @param lock mutex previously locked by the calling thread.
-         * @param rt relative timeout.
+         * @param timeout timeout.
          * @return true on success, false on timeout.
          */
         template <class Rep, class Period>
-        bool timedWait (ScopedLock <SharedMutex>& lock, std::chrono::duration <Rep, Period> rt)
+        bool timedWait (ScopedLock <SharedMutex>& lock, std::chrono::duration <Rep, Period> timeout)
         {
-            auto tp = std::chrono::steady_clock::now () + rt;
-            auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);
-            auto ns = std::chrono::time_point_cast <std::chrono::nanoseconds> (tp) - std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
-            struct timespec ts = {secs.time_since_epoch ().count (), ns.count ()};
+            struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
             int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
             if (err != 0)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (err));
                 return false;
             }
+
             return true;
         }
 
         /**
          * @brief wait on a condition with predicate until timeout expire.
          * @param lock mutex previously locked by the calling thread.
-         * @param rt relative timeout.
+         * @param timeout timeout.
          * @param pred predicate.
          * @return true on success, false on timeout.
          */
         template <class Rep, class Period, class Predicate>
-        bool timedWait (ScopedLock <SharedMutex>& lock, std::chrono::duration <Rep, Period> rt, Predicate pred)
+        bool timedWait (ScopedLock <SharedMutex>& lock, std::chrono::duration <Rep, Period> timeout, Predicate pred)
         {
-            auto tp = std::chrono::steady_clock::now () + rt;
-            auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);
-            auto ns = std::chrono::time_point_cast <std::chrono::nanoseconds> (tp) - std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
-            struct timespec ts = {secs.time_since_epoch ().count (), ns.count ()};
+            struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
             while (!pred ())
             {
                 int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
@@ -280,6 +271,7 @@ namespace join
                     return pred ();
                 }
             }
+
             return true;
         }
 

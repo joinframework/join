@@ -23,43 +23,101 @@
  */
 
 // libjoin.
-#include <join/error.hpp>
 #include <join/condition.hpp>
+#include <join/thread.hpp>
+#include <join/error.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
-// C++.
-#include <future>
-#include <thread>
+// C.
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
+using join::SharedCondition;
 using join::SharedMutex;
 using join::ScopedLock;
-using join::SharedCondition;
 
 using namespace std::chrono_literals;
+
+const std::string _name = "/test_condition";
+
+struct ConditionSync
+{
+    alignas (64) SharedMutex mutex;
+    SharedCondition condition;
+    alignas (64) bool ready;
+};
 
 /**
  * @brief test wait.
  */
 TEST (SharedCondition, wait)
 {
-    bool ready = false;
-    SharedCondition condition;
-    SharedMutex mutex;
-    ScopedLock <SharedMutex> lock (mutex);
-    auto task = std::async (std::launch::async, [&] () {
+    ConditionSync* sync = nullptr;
+    void* shm = nullptr;
+    pid_t child = -1;
+
+    int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
+    ASSERT_NE (fd, -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedMutex)), -1) << strerror (errno);
+    if (HasFailure ())
+    {
+        goto cleanup;
+    }
+    shm = ::mmap (nullptr, sizeof (SharedMutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    EXPECT_NE (shm, nullptr) << strerror (errno);
+    if (HasFailure ())
+    {
+        goto cleanup;
+    }
+
+    sync = static_cast <ConditionSync*> (shm);
+    new (&sync->condition) SharedCondition ();
+    new (&sync->mutex) SharedMutex ();
+    new (&sync->ready) bool (false);
+
+    child = fork ();
+    if (child == 0)
+    {
         std::this_thread::sleep_for (5ms);
-        ScopedLock <SharedMutex> lk (mutex);
+        ScopedLock <SharedMutex> lk (sync->mutex);
         std::this_thread::sleep_for (15ms);
-        ready = true;
-        condition.signal ();
-    });
-    auto beg = std::chrono::high_resolution_clock::now ();
-    condition.wait (lock, [&ready](){return ready;});
-    auto end = std::chrono::high_resolution_clock::now ();
-    EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
-    task.wait ();
+        sync->ready = true;
+        sync->condition.signal ();
+        _exit (EXIT_SUCCESS);
+    }
+    else
+    {
+        EXPECT_NE (child, -1) << strerror (errno);
+        if (HasFailure ())
+        {
+            goto cleanup;
+        }
+        ScopedLock <SharedMutex> lock (sync->mutex);
+        auto beg = std::chrono::high_resolution_clock::now ();
+        sync->condition.wait (lock, [&] () {return sync->ready;});
+        auto end = std::chrono::high_resolution_clock::now ();
+        EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+        int status = -1;
+        waitpid (child, &status, 0);
+        EXPECT_TRUE (WIFEXITED (status));
+        EXPECT_EQ (WEXITSTATUS (status), 0);
+    }
+
+cleanup:
+    if ((shm != nullptr) && (shm != MAP_FAILED))
+    {
+        sync->condition.~SharedCondition ();
+        sync->mutex.~SharedMutex ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedMutex)), -1) << strerror (errno);
+    }
+
+    if (fd != -1)
+    {
+        EXPECT_NE (::close (fd), -1) << strerror (errno);
+    }
 }
 
 /**
@@ -67,23 +125,70 @@ TEST (SharedCondition, wait)
  */
 TEST (SharedCondition, timedWait)
 {
-    bool ready = false;
-    SharedCondition condition;
-    SharedMutex mutex;
-    ScopedLock <SharedMutex> lock (mutex);
-    auto task = std::async (std::launch::async, [&] () {
+    ConditionSync* sync = nullptr;
+    void* shm = nullptr;
+    pid_t child = -1;
+
+    int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
+    ASSERT_NE (fd, -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedMutex)), -1) << strerror (errno);
+    if (HasFailure ())
+    {
+        goto cleanup;
+    }
+    shm = ::mmap (nullptr, sizeof (SharedMutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    EXPECT_NE (shm, nullptr) << strerror (errno);
+    if (HasFailure ())
+    {
+        goto cleanup;
+    }
+
+    sync = static_cast <ConditionSync*> (shm);
+    new (&sync->condition) SharedCondition ();
+    new (&sync->mutex) SharedMutex ();
+    new (&sync->ready) bool (false);
+
+    child = fork ();
+    if (child == 0)
+    {
         std::this_thread::sleep_for (10ms);
-        ScopedLock <SharedMutex> lk (mutex);
+        ScopedLock <SharedMutex> lk (sync->mutex);
         std::this_thread::sleep_for (10ms);
-        ready = true;
-        condition.broadcast ();
-    });
-    auto beg = std::chrono::high_resolution_clock::now ();
-    EXPECT_FALSE (condition.timedWait (lock, 5ms, [&ready](){return ready;}));
-    EXPECT_TRUE (condition.timedWait (lock, 50ms, [&ready](){return ready;})) << join::lastError.message ();
-    auto end = std::chrono::high_resolution_clock::now ();
-    EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
-    task.wait ();
+        sync->ready = true;
+        sync->condition.broadcast ();
+        _exit (EXIT_SUCCESS);
+    }
+    else
+    {
+        EXPECT_NE (child, -1) << strerror (errno);
+        if (HasFailure ())
+        {
+            goto cleanup;
+        }
+        ScopedLock <SharedMutex> lock (sync->mutex);
+        auto beg = std::chrono::high_resolution_clock::now ();
+        EXPECT_FALSE (sync->condition.timedWait (lock, 5ms, [&](){return sync->ready;}));
+        EXPECT_TRUE (sync->condition.timedWait (lock, 50ms, [&](){return sync->ready;})) << join::lastError.message ();
+        auto end = std::chrono::high_resolution_clock::now ();
+        EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+        int status = -1;
+        waitpid (child, &status, 0);
+        EXPECT_TRUE (WIFEXITED (status));
+        EXPECT_EQ (WEXITSTATUS (status), 0);
+    }
+
+cleanup:
+    if ((shm != nullptr) && (shm != MAP_FAILED))
+    {
+        sync->condition.~SharedCondition ();
+        sync->mutex.~SharedMutex ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedMutex)), -1) << strerror (errno);
+    }
+
+    if (fd != -1)
+    {
+        EXPECT_NE (::close (fd), -1) << strerror (errno);
+    }
 }
 
 /**

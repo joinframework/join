@@ -18,6 +18,14 @@ add_executable(condition.gtest condition_test.cpp)
 target_link_libraries(condition.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(condition.gtest)
 
+add_executable(semaphore.gtest semaphore_test.cpp)
+target_link_libraries(semaphore.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(semaphore.gtest)
+
+add_executable(sharedsemaphore.gtest sharedsemaphore_test.cpp)
+target_link_libraries(sharedsemaphore.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(sharedsemaphore.gtest)
+
 add_executable(sharedcondition.gtest sharedcondition_test.cpp)
 target_link_libraries(sharedcondition.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(sharedcondition.gtest)
