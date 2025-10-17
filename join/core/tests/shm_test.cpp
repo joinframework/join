@@ -79,51 +79,87 @@ TEST (Shm, size)
 
 TEST (Shm, notify)
 {
-    pid_t pid = fork ();
-    ASSERT_NE (pid, -1);
-
-    if (pid == 0)
+    pid_t child = fork ();
+    if (child == 0)
     {
         Shm::Subscriber sub (1024);
-        ASSERT_EQ (sub.wait (), -1);
-        ASSERT_EQ (sub.timedWait (10ms), -1);
-        ASSERT_EQ (sub.open (_name), 0) << join::lastError.message ();
-        std::this_thread::sleep_for (5ms);
-        ASSERT_EQ (sub.wait (), 0) << join::lastError.message ();
-        ASSERT_STREQ (static_cast <char*> (sub.get ()), "Ping");
-        ASSERT_EQ (sub.timedWait (10ms), 0) << join::lastError.message ();
-        ASSERT_STREQ (static_cast <char*> (sub.get ()), "Pong");
-        ASSERT_EQ (sub.wait (), 0) << join::lastError.message ();
-        ASSERT_STREQ (static_cast <char*> (sub.get ()), "Ping");
-        std::this_thread::sleep_for (10ms);
-        ASSERT_EQ (sub.timedWait (10ms), 0) << join::lastError.message ();
-        ASSERT_STREQ (static_cast <char*> (sub.get ()), "Pong");
-        ASSERT_EQ (sub.timedWait (10ms), -1);
+        sub.open (_name);
+        sub.timedWait (10ms);
+        sub.timedWait (10ms);
+        sub.timedWait (10ms);
+        sub.timedWait (10ms);
         sub.close ();
-        _exit (0);
+        _exit (EXIT_SUCCESS);
     }
     else
     {
+        EXPECT_NE (child, -1) << strerror (errno);
         Shm::Publisher pub (1024);
-        ASSERT_EQ (pub.notify (), -1);
-        ASSERT_EQ (pub.open (_name), 0) << join::lastError.message ();
+        EXPECT_EQ (pub.notify (), -1);
+        EXPECT_EQ (pub.open (_name), 0) << join::lastError.message ();
         ::strcpy (static_cast <char *> (pub.get ()), "Ping");
-        ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
-        std::this_thread::sleep_for (10ms);
+        EXPECT_EQ (pub.notify (), 0) << join::lastError.message ();
+        std::this_thread::sleep_for (5ms);
         ::strcpy (static_cast <char *> (pub.get ()), "Pong");
-        ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
-        std::this_thread::sleep_for (10ms);
+        EXPECT_EQ (pub.notify (), 0) << join::lastError.message ();
+        std::this_thread::sleep_for (5ms);
         ::strcpy (static_cast <char *> (pub.get ()), "Ping");
-        ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
-        std::this_thread::sleep_for (10ms);
+        EXPECT_EQ (pub.notify (), 0) << join::lastError.message ();
+        std::this_thread::sleep_for (5ms);
         ::strcpy (static_cast <char *> (pub.get ()), "Pong");
-        ASSERT_EQ (pub.notify (), 0) << join::lastError.message ();
+        EXPECT_EQ (pub.notify (), 0) << join::lastError.message ();
+        int status = -1;
+        waitpid (child, &status, 0);
+        EXPECT_TRUE (WIFEXITED (status));
+        EXPECT_EQ (WEXITSTATUS (status), 0);
         pub.close ();
+    }
+}
 
-        int status;
-        waitpid (pid, &status, 0);
-        ASSERT_TRUE (WIFEXITED (status));
-        ASSERT_EQ (WEXITSTATUS (status), 0);
+TEST (Shm, wait)
+{
+    pid_t child = fork ();
+    if (child == 0)
+    {
+        Shm::Publisher pub (1024);
+        pub.open (_name);
+        ::strcpy (static_cast <char *> (pub.get ()), "Ping");
+        pub.notify ();
+        std::this_thread::sleep_for (10ms);
+        ::strcpy (static_cast <char *> (pub.get ()), "Pong");
+        pub.notify ();
+        std::this_thread::sleep_for (10ms);
+        ::strcpy (static_cast <char *> (pub.get ()), "Ping");
+        pub.notify ();
+        std::this_thread::sleep_for (10ms);
+        ::strcpy (static_cast <char *> (pub.get ()), "Pong");
+        pub.notify ();
+        pub.close ();
+        _exit (EXIT_SUCCESS);
+    }
+    else
+    {
+        EXPECT_NE (child, -1) << strerror (errno);
+        Shm::Subscriber sub (1024);
+        EXPECT_EQ (sub.wait (), -1);
+        EXPECT_EQ (sub.timedWait (10ms), -1);
+        EXPECT_EQ (sub.open (_name), 0) << join::lastError.message ();
+        std::this_thread::sleep_for (5ms);
+        EXPECT_EQ (sub.wait (), 0) << join::lastError.message ();
+        EXPECT_STREQ (static_cast <char*> (sub.get ()), "Ping");
+        EXPECT_EQ (sub.timedWait (10ms), 0) << join::lastError.message ();
+        EXPECT_STREQ (static_cast <char*> (sub.get ()), "Pong");
+        EXPECT_EQ (sub.wait (), 0) << join::lastError.message ();
+        EXPECT_STREQ (static_cast <char*> (sub.get ()), "Ping");
+        std::this_thread::sleep_for (10ms);
+        EXPECT_EQ (sub.timedWait (10ms), 0) << join::lastError.message ();
+        EXPECT_STREQ (static_cast <char*> (sub.get ()), "Pong");
+        EXPECT_EQ (sub.timedWait (10ms), -1);
+        int status = -1;
+        waitpid (child, &status, 0);
+        EXPECT_TRUE (WIFEXITED (status));
+        EXPECT_EQ (WEXITSTATUS (status), 0);
+        sub.close ();
     }
 }
 
