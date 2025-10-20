@@ -32,6 +32,7 @@ set(PUBLIC_HEADERS
     core/include/join/reactor.hpp
     core/include/join/streambuf.hpp
     core/include/join/zstream.hpp
+    core/include/join/shared.hpp
     thread/include/join/mutex.hpp
     thread/include/join/condition.hpp
     thread/include/join/semaphore.hpp

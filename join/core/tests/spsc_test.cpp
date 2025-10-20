@@ -24,8 +24,8 @@
 
 // libjoin.
 #include <join/thread.hpp>
+#include <join/shared.hpp>
 #include <join/utils.hpp>
-#include <join/shm.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -35,38 +35,38 @@
 
 using namespace std::chrono_literals;
 
-using join::ShmRing;
+using join::Spsc;
 
 const std::string _name = "/test_shm";
 
-TEST (ShmRing, open)
+TEST (Spsc, open)
 {
-    ShmRing::Producer prod1 (64, 8);
-    ShmRing::Consumer cons1 (64, 8), cons2 (128, 16);
+    Spsc::Producer prod1 (_name, 64, 8);
+    Spsc::Consumer cons1 (_name, 64, 8), cons2 (_name, 128, 16);
 
     ASSERT_EQ (prod1.elementSize (), 64);
     ASSERT_EQ (prod1.capacity (), 8);
     ASSERT_FALSE (prod1.opened ());
     ASSERT_EQ (prod1.get (), nullptr);
-    ASSERT_EQ (prod1.open (_name), 0) << join::lastError.message ();
+    ASSERT_EQ (prod1.open (), 0) << join::lastError.message ();
     ASSERT_NE (prod1.get (), nullptr);
     ASSERT_TRUE (prod1.opened ());
-    ASSERT_EQ (prod1.open (_name), -1);
+    ASSERT_EQ (prod1.open (), -1);
     ASSERT_TRUE (prod1.opened ());
     ASSERT_EQ (cons1.elementSize (), 64);
     ASSERT_EQ (cons1.capacity (), 8);
     ASSERT_FALSE (cons1.opened ());
     ASSERT_EQ (cons1.get (), nullptr);
-    ASSERT_EQ (cons1.open (_name), 0) << join::lastError.message ();
+    ASSERT_EQ (cons1.open (), 0) << join::lastError.message ();
     ASSERT_NE (cons1.get (), nullptr);
     ASSERT_TRUE (cons1.opened ());
-    ASSERT_EQ (cons1.open (_name), -1);
+    ASSERT_EQ (cons1.open (), -1);
     ASSERT_TRUE (cons1.opened ());
     ASSERT_EQ (cons2.elementSize (), 128);
     ASSERT_EQ (cons2.capacity (), 16);
     ASSERT_FALSE (cons2.opened ());
     ASSERT_EQ (cons2.get (), nullptr);
-    ASSERT_EQ (cons2.open (_name), -1);
+    ASSERT_EQ (cons2.open (), -1);
     ASSERT_EQ (cons2.get (), nullptr);
     ASSERT_FALSE (cons2.opened ());
     prod1.close ();
@@ -75,152 +75,165 @@ TEST (ShmRing, open)
     ASSERT_FALSE (cons1.opened ());
 }
 
-TEST (ShmRing, push)
+TEST (Spsc, tryPush)
 {
-    ShmRing::Producer prod (64, 8);
+    Spsc::Producer prod (_name, 64, 8);
     char data[64] = {};
 
-    ASSERT_EQ (prod.capacity (), 8);
-    ASSERT_EQ (prod.available (), 0);
-    ASSERT_EQ (prod.pending (), 0);
-    ASSERT_EQ (prod.open (_name), 0) << join::lastError.message ();
+    ASSERT_EQ (prod.tryPush (data),-1);
+    ASSERT_EQ (prod.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (prod.tryPush (nullptr),-1);
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (prod.full ());
+    ASSERT_EQ (prod.tryPush (data), -1);
+    ASSERT_TRUE (prod.full ());
+    prod.close ();
+}
+
+TEST (Spsc, push)
+{
+    Spsc::Producer prod (_name, 64, 8);
+    char data[64] = {};
+
+    ASSERT_EQ (prod.push (data),-1);
+    ASSERT_EQ (prod.open (), 0) << join::lastError.message ();
     ASSERT_EQ (prod.push (nullptr),-1);
-    ASSERT_EQ (prod.capacity (), 8);
-    ASSERT_EQ (prod.available (), 8);
-    ASSERT_EQ (prod.pending (), 0);
     ASSERT_FALSE (prod.full ());
-    ASSERT_TRUE (prod.empty ());
     ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.available (), 7);
-    ASSERT_EQ (prod.pending (), 1);
     ASSERT_FALSE (prod.full ());
-    ASSERT_FALSE (prod.empty ());
     ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.available (), 6);
-    ASSERT_EQ (prod.pending (), 2);
     ASSERT_FALSE (prod.full ());
-    ASSERT_FALSE (prod.empty ());
     ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.available (), 5);
-    ASSERT_EQ (prod.pending (), 3);
     ASSERT_FALSE (prod.full ());
-    ASSERT_FALSE (prod.empty ());
     ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.available (), 4);
-    ASSERT_EQ (prod.pending (), 4);
     ASSERT_FALSE (prod.full ());
-    ASSERT_FALSE (prod.empty ());
     ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.available (), 3);
-    ASSERT_EQ (prod.pending (), 5);
     ASSERT_FALSE (prod.full ());
-    ASSERT_FALSE (prod.empty ());
     ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.available (), 2);
-    ASSERT_EQ (prod.pending (), 6);
     ASSERT_FALSE (prod.full ());
-    ASSERT_FALSE (prod.empty ());
     ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.available (), 1);
-    ASSERT_EQ (prod.pending (), 7);
     ASSERT_FALSE (prod.full ());
-    ASSERT_FALSE (prod.empty ());
     ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.available (), 0);
-    ASSERT_EQ (prod.pending (), 8);
     ASSERT_TRUE (prod.full ());
-    ASSERT_FALSE (prod.empty ());
-    ASSERT_EQ (prod.push (data), -1);
-    ASSERT_EQ (prod.available (), 0);
-    ASSERT_EQ (prod.pending (), 8);
-    ASSERT_TRUE (prod.full ());
-    ASSERT_FALSE (prod.empty ());
     prod.close ();
 }
 
-TEST (ShmRing, pop)
+TEST (Spsc, timedPush)
 {
-    ShmRing::Producer prod (64, 8);
-    ShmRing::Consumer cons (64, 8);
+    Spsc::Producer prod (_name, 64, 8);
     char data[64] = {};
 
-    ASSERT_EQ (prod.open (_name), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.open (_name), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
+    ASSERT_EQ (prod.timedPush (data, 5ms),-1);
+    ASSERT_EQ (prod.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (prod.timedPush (nullptr, 5ms),-1);
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
+    ASSERT_TRUE (prod.full ());
+    ASSERT_EQ (prod.timedPush (data, 5ms), -1);
+    ASSERT_TRUE (prod.full ());
+    prod.close ();
+}
+
+TEST (Spsc, tryPop)
+{
+    Spsc::Producer prod (_name, 64, 8);
+    Spsc::Consumer cons (_name, 64, 8);
+    char data[64] = {};
+
+    ASSERT_EQ (prod.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (cons.tryPop (data), -1);
+    ASSERT_EQ (cons.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (cons.tryPop (nullptr), -1);
+    ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (cons.empty ());
+    ASSERT_EQ (cons.tryPop (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.tryPop (data), -1);
+    cons.close ();
+    prod.close ();
+}
+
+TEST (Spsc, pop)
+{
+    Spsc::Producer prod (_name, 64, 8);
+    Spsc::Consumer cons (_name, 64, 8);
+    char data[64] = {};
+
+    ASSERT_EQ (prod.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (cons.pop (data), -1);
+    ASSERT_EQ (cons.open (), 0) << join::lastError.message ();
     ASSERT_EQ (cons.pop (nullptr), -1);
-    ASSERT_EQ (cons.available (), 6);
-    ASSERT_EQ (cons.pending (), 2);
+    ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (cons.empty ());
     ASSERT_EQ (cons.pop (data), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.available (), 7);
-    ASSERT_EQ (cons.pending (), 1);
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.available (), 2);
-    ASSERT_EQ (cons.pending (), 6);
-    ASSERT_EQ (cons.pop (data), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.pop (data), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.pop (data), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.pop (data), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.pop (data), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.pop (data), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.available (), 8);
-    ASSERT_EQ (cons.pending (), 0);
-    prod.close ();
+    ASSERT_TRUE (cons.empty ());
     cons.close ();
+    prod.close ();
 }
 
-TEST (ShmRing, timedPop)
+TEST (Spsc, timedPop)
 {
-    ShmRing::Producer prod (64, 8);
-    ShmRing::Consumer cons (64, 8);
+    Spsc::Producer prod (_name, 64, 8);
+    Spsc::Consumer cons (_name, 64, 8);
     char data[64] = {};
 
-    ASSERT_EQ (prod.open (_name), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.open (_name), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.timedPop (nullptr, 5ms), -1);
-    ASSERT_EQ (cons.available (), 6);
-    ASSERT_EQ (cons.pending (), 2);
-    ASSERT_EQ (cons.timedPop (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.available (), 7);
-    ASSERT_EQ (cons.pending (), 1);
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.available (), 2);
-    ASSERT_EQ (cons.pending (), 6);
-    ASSERT_EQ (cons.timedPop (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.timedPop (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.timedPop (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.timedPop (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.timedPop (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.timedPop (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_EQ (cons.available (), 8);
-    ASSERT_EQ (cons.pending (), 0);
+    ASSERT_EQ (prod.open (), 0) << join::lastError.message ();
     ASSERT_EQ (cons.timedPop (data, 5ms), -1);
-    prod.close ();
+    ASSERT_EQ (cons.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (cons.timedPop (nullptr, 5ms), -1);
+    ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (cons.empty ());
+    ASSERT_EQ (cons.timedPop (data, 5ms), 0) << join::lastError.message ();
+    ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.timedPop (data, 5ms), -1);
     cons.close ();
+    prod.close ();
 }
 
-TEST (ShmRing, benchmark)
+TEST (Spsc, benchmark)
 {
     const uint64_t numMessages = 1000000;
-    const uint64_t capacity = 1024;
-    const uint64_t elementSize = 256;
+    const uint64_t capacity = 4096;
+    const uint64_t elementSize = 4096;
     char data[elementSize] = {};
 
     pid_t child = fork ();
     if (child == 0)
     {
-        ShmRing::Producer prod (elementSize, capacity);
-        prod.open (_name);
+        Spsc::Producer prod (_name, elementSize, capacity);
+        prod.open ();
 
         // pre-fill the buffer ("fast path" benchmark).
         for (uint64_t i = 0; i < capacity; ++i)
@@ -254,8 +267,8 @@ TEST (ShmRing, benchmark)
         // let the producer prefill the buffer.
         std::this_thread::sleep_for (100ms);
 
-        ShmRing::Consumer cons (elementSize, capacity);
-        EXPECT_EQ (cons.open (_name), 0) << join::lastError.message ();
+        Spsc::Consumer cons (_name, elementSize, capacity);
+        EXPECT_EQ (cons.open (), 0) << join::lastError.message ();
         if (HasFailure ())
         {
             goto cleanup;
@@ -289,7 +302,7 @@ TEST (ShmRing, benchmark)
             }
         }
 
-        EXPECT_EQ (cons.pending(), 0);
+        EXPECT_TRUE (cons.empty ());
         cons.close ();
 
         // metrics
@@ -326,7 +339,7 @@ TEST (ShmRing, benchmark)
         }
         double avgTime = static_cast <double> (sumTime) / n;
 
-        std::cout << "\n=== ShmRing Benchmark Results ===" << std::endl;
+        std::cout << "\n=== SPSC Ring Buffer Benchmark Results ===" << std::endl;
         std::cout << "\nConfiguration:" << std::endl;
         std::cout << "  Messages:      " << numMessages << std::endl;
         std::cout << "  Message size:  " << elementSize << " bytes" << std::endl;
