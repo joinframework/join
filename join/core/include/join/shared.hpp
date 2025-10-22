@@ -147,11 +147,9 @@ namespace join
                 return -1;
             }
 
-            if (created && (::ftruncate(this->_fd, this->_totalSize) == -1))
+            if (created)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                this->close ();
-                return -1;
+                ::ftruncate (this->_fd, this->_totalSize);
             }
 
             this->_ptr = ::mmap (nullptr, this->_totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, this->_fd, 0);
