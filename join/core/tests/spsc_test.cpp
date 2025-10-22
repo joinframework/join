@@ -95,7 +95,6 @@ protected:
         }
         double avgTime = static_cast <double> (sumTime) / n;
 
-        std::cout << "\n=== SPSC Ring Buffer Benchmark Results ===" << std::endl;
         std::cout << "\nConfiguration:" << std::endl;
         std::cout << "  Messages:      " << num << std::endl;
         std::cout << "  Message size:  " << size << " bytes" << std::endl;
@@ -333,10 +332,20 @@ TEST_F (SpscBuffer, pushBenchmark)
     {
         Semaphore sem (_name);
         Spsc::Consumer cons (_name, size, capacity);
+
         sem.wait ();
         cons.open ();
 
         for (uint64_t i = 0; i < num; ++i)
+        {
+            while (cons.tryPop (data) == -1)
+            {
+                std::this_thread::yield ();
+            }
+        }
+
+        // empty pre-filled buffer.
+        for (uint64_t i = 0; i < capacity; ++i)
         {
             while (cons.tryPop (data) == -1)
             {
@@ -358,21 +367,123 @@ TEST_F (SpscBuffer, pushBenchmark)
         }
 
         Semaphore sem (_name);
+        std::vector <uint64_t> sendTimestamps;
+        sendTimestamps.reserve (num);
+
         Spsc::Producer prod (_name, size, capacity);
         EXPECT_EQ (prod.open (), 0) << join::lastError.message ();
         if (HasFailure ())
         {
             goto cleanup;
         }
+        // pre-fill the buffer.
+        for (uint64_t i = 0; i < capacity; ++i)
+        {
+            EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
+            if (HasFailure ())
+            {
+                goto cleanup;
+            }
+        }
         sem.post ();
-
-        std::vector <uint64_t> sendTimestamps;
-        sendTimestamps.reserve (num);
 
         auto beg = std::chrono::high_resolution_clock::now ();
         for (uint64_t i = 0; i < num; ++i)
         {
             EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
+            if (HasFailure ())
+            {
+                goto cleanup;
+            }
+            auto sendTime = std::chrono::high_resolution_clock::now ();
+            sendTimestamps.push_back (sendTime.time_since_epoch ().count ());
+        }
+        auto end = std::chrono::high_resolution_clock::now ();
+
+        sem.wait ();
+        prod.close ();
+
+        metrics (size, capacity, num, end - beg, sendTimestamps);
+    }
+
+cleanup:
+    int status;
+    waitpid (child, &status, 0);
+    ASSERT_TRUE (WIFEXITED (status));
+    ASSERT_EQ (WEXITSTATUS (status), 0);
+}
+
+TEST_F (SpscBuffer, timedPushBenchmark)
+{
+    const uint64_t num = 1000000;
+    const uint64_t capacity = 144;
+    const uint64_t size = 1472;
+    char data[size] = {};
+
+    pid_t child = fork ();
+    if (child == 0)
+    {
+        Semaphore sem (_name);
+        Spsc::Consumer cons (_name, size, capacity);
+
+        sem.wait ();
+        cons.open ();
+
+        for (uint64_t i = 0; i < num; ++i)
+        {
+            while (cons.tryPop (data) == -1)
+            {
+                std::this_thread::yield ();
+            }
+        }
+
+        // empty pre-filled buffer.
+        for (uint64_t i = 0; i < capacity; ++i)
+        {
+            while (cons.tryPop (data) == -1)
+            {
+                std::this_thread::yield ();
+            }
+        }
+
+        cons.close ();
+        sem.post ();
+
+        _exit (0);
+    }
+    else
+    {
+        EXPECT_NE (child, -1);
+        if (HasFailure ())
+        {
+            goto cleanup;
+        }
+
+        Semaphore sem (_name);
+        std::vector <uint64_t> sendTimestamps;
+        sendTimestamps.reserve (num);
+
+        Spsc::Producer prod (_name, size, capacity);
+        EXPECT_EQ (prod.open (), 0) << join::lastError.message ();
+        if (HasFailure ())
+        {
+            goto cleanup;
+        }
+        // pre-fill the buffer.
+        for (uint64_t i = 0; i < capacity; ++i)
+        {
+            EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
+            if (HasFailure ())
+            {
+                goto cleanup;
+            }
+        }
+        sem.post ();
+
+        auto beg = std::chrono::high_resolution_clock::now ();
+        for (uint64_t i = 0; i < num; ++i)
+        {
+            EXPECT_EQ (prod.timedPush (data, 10ms), 0) << join::lastError.message ();
             if (HasFailure ())
             {
                 goto cleanup;
@@ -432,6 +543,9 @@ TEST_F (SpscBuffer, popBenchmark)
         }
 
         Semaphore sem (_name);
+        std::vector <uint64_t> recvTimestamps;
+        recvTimestamps.reserve (num);
+
         Spsc::Consumer cons (_name, size, capacity);
         sem.wait ();
         EXPECT_EQ (cons.open (), 0) << join::lastError.message ();
@@ -440,13 +554,84 @@ TEST_F (SpscBuffer, popBenchmark)
             goto cleanup;
         }
 
-        std::vector <uint64_t> recvTimestamps;
-        recvTimestamps.reserve (num);
-
         auto beg = std::chrono::high_resolution_clock::now ();
         for (uint64_t i = 0; i < num; ++i)
         {
             EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
+            if (HasFailure ())
+            {
+                goto cleanup;
+            }
+            auto recvTime = std::chrono::high_resolution_clock::now ();
+            recvTimestamps.push_back (recvTime.time_since_epoch ().count ());
+        }
+        auto end = std::chrono::high_resolution_clock::now ();
+
+        cons.close ();
+        sem.post ();
+
+        metrics (size, capacity, num, end - beg, recvTimestamps);
+    }
+
+cleanup:
+    int status;
+    waitpid (child, &status, 0);
+    ASSERT_TRUE (WIFEXITED (status));
+    ASSERT_EQ (WEXITSTATUS (status), 0);
+}
+
+TEST_F (SpscBuffer, timedPopBenchmark)
+{
+    const uint64_t num = 1000000;
+    const uint64_t capacity = 144;
+    const uint64_t size = 1472;
+    char data[size] = {};
+
+    pid_t child = fork ();
+    if (child == 0)
+    {
+        Semaphore sem (_name);
+        Spsc::Producer prod (_name, size, capacity);
+        prod.open ();
+        sem.post ();
+
+        for (uint64_t i = 0; i < num; ++i)
+        {
+            while (prod.tryPush (data) == -1)
+            {
+                std::this_thread::yield ();
+            }
+        }
+
+        sem.wait ();
+        prod.close ();
+
+        _exit (0);
+    }
+    else
+    {
+        EXPECT_NE (child, -1);
+        if (HasFailure ())
+        {
+            goto cleanup;
+        }
+
+        Semaphore sem (_name);
+        std::vector <uint64_t> recvTimestamps;
+        recvTimestamps.reserve (num);
+
+        Spsc::Consumer cons (_name, size, capacity);
+        sem.wait ();
+        EXPECT_EQ (cons.open (), 0) << join::lastError.message ();
+        if (HasFailure ())
+        {
+            goto cleanup;
+        }
+
+        auto beg = std::chrono::high_resolution_clock::now ();
+        for (uint64_t i = 0; i < num; ++i)
+        {
+            EXPECT_EQ (cons.timedPop (data, 10ms), 0) << join::lastError.message ();
             if (HasFailure ())
             {
                 goto cleanup;
