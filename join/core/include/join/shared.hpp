@@ -871,7 +871,7 @@ namespace join
                     return -1;
                 }
             }
-            while (!segment->_sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire, std::memory_order_relaxed));
+            while (!segment->_sync._head.compare_exchange_weak (head, head + 1, std::memory_order_relaxed, std::memory_order_relaxed));
             auto slot = head % segment->_sync._capacity;
             std::memcpy (segment->_data + (slot * segment->_sync._elementSize), element, segment->_sync._elementSize);
             std::atomic_thread_fence (std::memory_order_release);
@@ -916,7 +916,7 @@ namespace join
                     return -1;
                 }
             }
-            while (!segment->_sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire, std::memory_order_relaxed));
+            while (!segment->_sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_relaxed, std::memory_order_relaxed));
             auto slot = tail % segment->_sync._capacity;
             std::memcpy (element, segment->_data + (slot * segment->_sync._elementSize), segment->_sync._elementSize);
             std::atomic_thread_fence (std::memory_order_release);
