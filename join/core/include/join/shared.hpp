@@ -820,26 +820,20 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-
-            for (;;)
+            uint64_t head, tail;
+            do
             {
-                uint64_t head, tail;
                 if (full (segment, head, tail))
                 {
                     lastError = std::make_error_code (static_cast <std::errc> (Errc::TemporaryError));
                     return -1;
                 }
-
-                if (segment->_sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire, std::memory_order_relaxed))
-                {
-                    auto slot = head % segment->_sync._capacity;
-                    std::memcpy (segment->_data + (slot * segment->_sync._elementSize), element, segment->_sync._elementSize);
-                    std::atomic_thread_fence (std::memory_order_release);
-                    segment->_sync._notEmpty.signal ();
-                    break;
-                }
             }
-
+            while (!segment->_sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire, std::memory_order_relaxed));
+            auto slot = head % segment->_sync._capacity;
+            std::memcpy (segment->_data + (slot * segment->_sync._elementSize), element, segment->_sync._elementSize);
+            std::atomic_thread_fence (std::memory_order_release);
+            segment->_sync._notEmpty.signal ();
             return 0;
         }
     };
@@ -871,25 +865,20 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-
-            for (;;)
+            uint64_t head, tail;
+            do
             {
-                uint64_t head, tail;
                 if (empty (segment, head, tail))
                 {
                     lastError = std::make_error_code (static_cast <std::errc> (Errc::TemporaryError));
                     return -1;
                 }
-                if (segment->_sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire, std::memory_order_relaxed))
-                {
-                    auto slot = tail % segment->_sync._capacity;
-                    std::memcpy (element, segment->_data + (slot * segment->_sync._elementSize), segment->_sync._elementSize);
-                    std::atomic_thread_fence (std::memory_order_release);
-                    segment->_sync._notFull.signal ();
-                    break;
-                }
             }
-
+            while (!segment->_sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire, std::memory_order_relaxed));
+            auto slot = tail % segment->_sync._capacity;
+            std::memcpy (element, segment->_data + (slot * segment->_sync._elementSize), segment->_sync._elementSize);
+            std::atomic_thread_fence (std::memory_order_release);
+            segment->_sync._notFull.signal ();
             return 0;
         }
     };

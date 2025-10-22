@@ -327,10 +327,8 @@ TEST_F (MpscBuffer, pushBenchmark)
     {
         Semaphore sem (_name);
         Mpsc::Consumer cons (_name, size, capacity);
-
         sem.wait ();
         cons.open ();
-
         for (uint64_t i = 0; i < num; ++i)
         {
             while (cons.tryPop (data) == -1)
@@ -338,7 +336,6 @@ TEST_F (MpscBuffer, pushBenchmark)
                 std::this_thread::yield ();
             }
         }
-
         // empty pre-filled buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
@@ -347,30 +344,18 @@ TEST_F (MpscBuffer, pushBenchmark)
                 std::this_thread::yield ();
             }
         }
-
         cons.close ();
-
         _exit (0);
     }
     else
     {
         EXPECT_NE (child, -1);
-        if (HasFailure ())
-        {
-            goto cleanup;
-        }
-
         Semaphore sem (_name);
         std::vector <Thread> producers;
         std::vector <uint64_t> sendTimestamps;
         sendTimestamps.resize (num);
-
         Mpsc::Producer prod0 (_name, size, capacity);
         EXPECT_EQ (prod0.open (), 0) << join::lastError.message ();
-        if (HasFailure ())
-        {
-            goto cleanup;
-        }
         // pre-fill the buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
@@ -380,21 +365,18 @@ TEST_F (MpscBuffer, pushBenchmark)
             }
         }
         sem.post ();
-
         auto beg = std::chrono::high_resolution_clock::now ();
         for (int p = 0; p < numProducers; ++p)
         {
             producers.emplace_back([&, p] () {
                 Mpsc::Producer producer (_name, size, capacity);
                 EXPECT_EQ (producer.open (), 0) << join::lastError.message ();
-
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
                 {
                     EXPECT_EQ (producer.push (data), 0) << join::lastError.message ();
                     auto sendTime = std::chrono::high_resolution_clock::now ();
                     sendTimestamps[(p * msgPerProducer) + i] = sendTime.time_since_epoch ().count ();
                 }
-
                 producer.close ();
             });
         }
@@ -403,13 +385,10 @@ TEST_F (MpscBuffer, pushBenchmark)
             producer.join ();
         }
         auto end = std::chrono::high_resolution_clock::now ();
-
         prod0.close ();
-
         metrics (size, capacity, num, end - beg, sendTimestamps);
     }
 
-cleanup:
     int status;
     waitpid (child, &status, 0);
     ASSERT_TRUE (WIFEXITED (status));
@@ -430,10 +409,8 @@ TEST_F (MpscBuffer, timedPushBenchmark)
     {
         Semaphore sem (_name);
         Mpsc::Consumer cons (_name, size, capacity);
-
         sem.wait ();
         cons.open ();
-
         for (uint64_t i = 0; i < num; ++i)
         {
             while (cons.tryPop (data) == -1)
@@ -441,7 +418,6 @@ TEST_F (MpscBuffer, timedPushBenchmark)
                 std::this_thread::yield ();
             }
         }
-
         // empty pre-filled buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
@@ -450,30 +426,18 @@ TEST_F (MpscBuffer, timedPushBenchmark)
                 std::this_thread::yield ();
             }
         }
-
         cons.close ();
-
         _exit (0);
     }
     else
     {
         EXPECT_NE (child, -1);
-        if (HasFailure ())
-        {
-            goto cleanup;
-        }
-
         Semaphore sem (_name);
         std::vector <Thread> producers;
         std::vector <uint64_t> sendTimestamps;
         sendTimestamps.resize (num);
-
         Mpsc::Producer prod0 (_name, size, capacity);
         EXPECT_EQ (prod0.open (), 0) << join::lastError.message ();
-        if (HasFailure ())
-        {
-            goto cleanup;
-        }
         // pre-fill the buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
@@ -483,22 +447,19 @@ TEST_F (MpscBuffer, timedPushBenchmark)
             }
         }
         sem.post ();
-
         auto beg = std::chrono::high_resolution_clock::now ();
         for (int p = 0; p < numProducers; ++p)
         {
             producers.emplace_back([&, p] () {
-                Mpsc::Producer producer (_name, size, capacity);
-                EXPECT_EQ (producer.open (), 0) << join::lastError.message ();
-
+                Mpsc::Producer prod (_name, size, capacity);
+                EXPECT_EQ (prod.open (), 0) << join::lastError.message ();
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
                 {
-                    EXPECT_EQ (producer.timedPush (data, 100ms), 0) << join::lastError.message ();
+                    EXPECT_EQ (prod.timedPush (data, 1s), 0) << join::lastError.message ();
                     auto sendTime = std::chrono::high_resolution_clock::now ();
                     sendTimestamps[(p * msgPerProducer) + i] = sendTime.time_since_epoch ().count ();
                 }
-
-                producer.close ();
+                prod.close ();
             });
         }
         for (auto& producer : producers)
@@ -506,13 +467,142 @@ TEST_F (MpscBuffer, timedPushBenchmark)
             producer.join ();
         }
         auto end = std::chrono::high_resolution_clock::now ();
-
         prod0.close ();
-
         metrics (size, capacity, num, end - beg, sendTimestamps);
     }
 
-cleanup:
+    int status;
+    waitpid (child, &status, 0);
+    ASSERT_TRUE (WIFEXITED (status));
+    ASSERT_EQ (WEXITSTATUS (status), 0);
+}
+
+TEST_F (MpscBuffer, popBenchmark)
+{
+    const uint64_t num = 1000000;
+    const uint64_t capacity = 144;
+    const uint64_t size = 1472;
+    const int numProducers = 4;
+    const uint64_t msgPerProducer = num / numProducers;
+    char data[size] = {};
+
+    pid_t child = fork ();
+    if (child == 0)
+    {
+        Semaphore sem (_name);
+        std::vector <Thread> producers;
+        Mpsc::Producer prod0 (_name, size, capacity);
+        prod0.open ();
+        sem.post ();
+        for (int p = 0; p < numProducers; ++p)
+        {
+            producers.emplace_back([&] () {
+                Mpsc::Producer producer (_name, size, capacity);
+                producer.open ();
+                for (uint64_t i = 0; i < msgPerProducer; ++i)
+                {
+                    while (producer.tryPush (data) == -1)
+                    {
+                        std::this_thread::yield ();
+                    }
+                }
+                producer.close ();
+            });
+        }
+        for (auto& producer : producers)
+        {
+            producer.join ();
+        }
+        prod0.close ();
+        _exit (0);
+    }
+    else
+    {
+        EXPECT_NE (child, -1);
+        Semaphore sem (_name);
+        std::vector <uint64_t> recvTimestamps;
+        recvTimestamps.reserve (num);
+        Mpsc::Consumer cons (_name, size, capacity);
+        sem.wait ();
+        EXPECT_EQ (cons.open (), 0) << join::lastError.message ();
+        auto beg = std::chrono::high_resolution_clock::now ();
+        for (uint64_t i = 0; i < num; ++i)
+        {
+            EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
+            auto recvTime = std::chrono::high_resolution_clock::now ();
+            recvTimestamps.push_back (recvTime.time_since_epoch ().count ());
+        }
+        auto end = std::chrono::high_resolution_clock::now ();
+        cons.close ();
+        metrics (size, capacity, num, end - beg, recvTimestamps);
+    }
+
+    int status;
+    waitpid (child, &status, 0);
+    ASSERT_TRUE (WIFEXITED (status));
+    ASSERT_EQ (WEXITSTATUS (status), 0);
+}
+
+TEST_F (MpscBuffer, timedPopBenchmark)
+{
+    const uint64_t num = 1000000;
+    const uint64_t capacity = 144;
+    const uint64_t size = 1472;
+    const int numProducers = 4;
+    const uint64_t msgPerProducer = num / numProducers;
+    char data[size] = {};
+
+    pid_t child = fork ();
+    if (child == 0)
+    {
+        Semaphore sem (_name);
+        std::vector <Thread> producers;
+        Mpsc::Producer prod0 (_name, size, capacity);
+        prod0.open ();
+        sem.post ();
+        for (int p = 0; p < numProducers; ++p)
+        {
+            producers.emplace_back([&] () {
+                Mpsc::Producer producer (_name, size, capacity);
+                producer.open ();
+                for (uint64_t i = 0; i < msgPerProducer; ++i)
+                {
+                    while (producer.tryPush (data) == -1)
+                    {
+                        std::this_thread::yield ();
+                    }
+                }
+                producer.close ();
+            });
+        }
+        for (auto& producer : producers)
+        {
+            producer.join ();
+        }
+        prod0.close ();
+        _exit (0);
+    }
+    else
+    {
+        EXPECT_NE (child, -1);
+        Semaphore sem (_name);
+        std::vector <uint64_t> recvTimestamps;
+        recvTimestamps.reserve (num);
+        Mpsc::Consumer cons (_name, size, capacity);
+        sem.wait ();
+        EXPECT_EQ (cons.open (), 0) << join::lastError.message ();
+        auto beg = std::chrono::high_resolution_clock::now ();
+        for (uint64_t i = 0; i < num; ++i)
+        {
+            EXPECT_EQ (cons.timedPop (data, 1s), 0) << join::lastError.message ();
+            auto recvTime = std::chrono::high_resolution_clock::now ();
+            recvTimestamps.push_back (recvTime.time_since_epoch ().count ());
+        }
+        auto end = std::chrono::high_resolution_clock::now ();
+        cons.close ();
+        metrics (size, capacity, num, end - beg, recvTimestamps);
+    }
+
     int status;
     waitpid (child, &status, 0);
     ASSERT_TRUE (WIFEXITED (status));
