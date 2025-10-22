@@ -763,6 +763,107 @@ namespace join
             return empty (segment, head, tail);
         }
     };
+
+    /**
+     * @brief multiple producer single consumer ring buffer policy.
+     */
+    class Mpsc : public Spsc
+    {
+    public:
+        using Producer = BasicProducer <Mpsc>;
+        using Consumer = BasicConsumer <Mpsc>;
+
+        /**
+         * @brief construct the multiple producer single consumer ring buffer policy by default.
+         */
+        constexpr Mpsc () noexcept = default;
+
+        /**
+         * @brief try to push element into the ring buffer (lock-free for multiple producers).
+         * @param segment shared memory segment.
+         * @param element pointer to element to push.
+         * @return 0 on success, -1 otherwise.
+         */
+        int tryPush (SharedSegment* segment, const void* element) const noexcept override
+        {
+            if ((segment == nullptr) || (element == nullptr))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            for (;;)
+            {
+                uint64_t head, tail;
+                if (full (segment, head, tail))
+                {
+                    lastError = std::make_error_code (static_cast <std::errc> (Errc::TemporaryError));
+                    return -1;
+                }
+
+                if (segment->_sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire, std::memory_order_relaxed))
+                {
+                    auto slot = head % segment->_sync._capacity;
+                    std::memcpy (segment->_data + (slot * segment->_sync._elementSize), element, segment->_sync._elementSize);
+                    std::atomic_thread_fence (std::memory_order_release);
+                    segment->_sync._notEmpty.signal ();
+                    break;
+                }
+            }
+
+            return 0;
+        }
+    };
+
+    /**
+     * @brief multiple producer multiple consumer ring buffer policy.
+     */
+    class Mpmc : public Mpsc
+    {
+    public:
+        using Producer = BasicProducer <Mpmc>;
+        using Consumer = BasicConsumer <Mpmc>;
+
+        /**
+         * @brief construct the multiple producer multiple consumer ring buffer policy by default.
+         */
+        constexpr Mpmc () noexcept = default;
+
+        /**
+         * @brief try to pop element from the ring buffer (lock-free for multiple consumers).
+         * @param segment shared memory segment.
+         * @param element pointer to output element.
+         * @return 0 on success, -1 otherwise.
+         */
+        int tryPop (SharedSegment* segment, void* element) const noexcept override
+        {
+            if ((segment == nullptr) || (element == nullptr))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            for (;;)
+            {
+                uint64_t head, tail;
+                if (empty (segment, head, tail))
+                {
+                    lastError = std::make_error_code (static_cast <std::errc> (Errc::TemporaryError));
+                    return -1;
+                }
+                if (segment->_sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire, std::memory_order_relaxed))
+                {
+                    auto slot = tail % segment->_sync._capacity;
+                    std::memcpy (element, segment->_data + (slot * segment->_sync._elementSize), segment->_sync._elementSize);
+                    std::atomic_thread_fence (std::memory_order_release);
+                    segment->_sync._notFull.signal ();
+                    break;
+                }
+            }
+
+            return 0;
+        }
+    };
 }
 
 #endif
