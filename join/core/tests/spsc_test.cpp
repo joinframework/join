@@ -186,14 +186,16 @@ TEST_F (SpscBuffer, tryPush)
     ASSERT_EQ (prod.open (), 0) << join::lastError.message ();
     ASSERT_EQ (prod.tryPush (nullptr),-1);
     ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.available (), 8);
     for (int i = 0; i < 8; ++i)
     {
         ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
         ASSERT_EQ (prod.full (), i == 7);
+        ASSERT_EQ (prod.available (), 7 - i);
     }
-    ASSERT_TRUE (prod.full ());
     ASSERT_EQ (prod.tryPush (data), -1);
     ASSERT_TRUE (prod.full ());
+    ASSERT_EQ (prod.available (), 0);
     prod.close ();
 }
 
@@ -202,26 +204,17 @@ TEST_F (SpscBuffer, push)
     Spsc::Producer prod (_name, 64, 8);
     char data[64] = {};
 
-    ASSERT_EQ (prod.push (data),-1);
+    ASSERT_EQ (prod.push (data), -1);
     ASSERT_EQ (prod.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.push (nullptr),-1);
+    ASSERT_EQ (prod.push (nullptr), -1);
     ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-    ASSERT_TRUE (prod.full ());
+    ASSERT_EQ (prod.available (), 8);
+    for (int i = 0; i < 8; ++i)
+    {
+        ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
+        ASSERT_EQ (prod.full (), i == 7);
+        ASSERT_EQ (prod.available (), 7 - i);
+    }
     prod.close ();
 }
 
@@ -230,28 +223,20 @@ TEST_F (SpscBuffer, timedPush)
     Spsc::Producer prod (_name, 64, 8);
     char data[64] = {};
 
-    ASSERT_EQ (prod.timedPush (data, 5ms),-1);
+    ASSERT_EQ (prod.timedPush (data, 5ms), -1);
     ASSERT_EQ (prod.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.timedPush (nullptr, 5ms),-1);
+    ASSERT_EQ (prod.timedPush (nullptr, 5ms), -1);
     ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
-    ASSERT_TRUE (prod.full ());
+    ASSERT_EQ (prod.available (), 8);
+    for (int i = 0; i < 8; ++i)
+    {
+        ASSERT_EQ (prod.timedPush (data, 5ms), 0) << join::lastError.message ();
+        ASSERT_EQ (prod.full (), i == 7);
+        ASSERT_EQ (prod.available (), 7 - i);
+    }
     ASSERT_EQ (prod.timedPush (data, 5ms), -1);
     ASSERT_TRUE (prod.full ());
+    ASSERT_EQ (prod.available (), 0);
     prod.close ();
 }
 
@@ -266,10 +251,13 @@ TEST_F (SpscBuffer, tryPop)
     ASSERT_EQ (cons.open (), 0) << join::lastError.message ();
     ASSERT_EQ (cons.tryPop (nullptr), -1);
     ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 0);
     ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
     ASSERT_FALSE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 1);
     ASSERT_EQ (cons.tryPop (data), 0) << join::lastError.message ();
     ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 0);
     ASSERT_EQ (cons.tryPop (data), -1);
     cons.close ();
     prod.close ();
@@ -286,10 +274,13 @@ TEST_F (SpscBuffer, pop)
     ASSERT_EQ (cons.open (), 0) << join::lastError.message ();
     ASSERT_EQ (cons.pop (nullptr), -1);
     ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 0);
     ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
     ASSERT_FALSE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 1);
     ASSERT_EQ (cons.pop (data), 0) << join::lastError.message ();
     ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 0);
     cons.close ();
     prod.close ();
 }
@@ -305,10 +296,13 @@ TEST_F (SpscBuffer, timedPop)
     ASSERT_EQ (cons.open (), 0) << join::lastError.message ();
     ASSERT_EQ (cons.timedPop (nullptr, 5ms), -1);
     ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 0);
     ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
     ASSERT_FALSE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 1);
     ASSERT_EQ (cons.timedPop (data, 5ms), 0) << join::lastError.message ();
     ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 0);
     ASSERT_EQ (cons.timedPop (data, 5ms), -1);
     cons.close ();
     prod.close ();

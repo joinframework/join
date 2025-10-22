@@ -379,6 +379,15 @@ namespace join
         }
 
         /**
+         * @brief get the number of available slots for writing.
+         * @return number of slots available in the ring buffer.
+         */
+        uint64_t available () const noexcept
+        {
+            return this->_policy.available (this->_segment);
+        }
+
+        /**
          * @brief check if the ring buffer is full.
          * @return true if full, false otherwise.
          */
@@ -486,6 +495,15 @@ namespace join
         int timedPop (void* element, std::chrono::duration <Rep, Period> timeout) noexcept
         {
             return this->_policy.timedPop (this->_segment, element, timeout);
+        }
+
+        /**
+         * @brief get the number of pending elements for reading.
+         * @return number of elements pending in the ring buffer.
+         */
+        uint64_t pending () const noexcept
+        {
+            return this->_policy.pending (this->_segment);
         }
 
         /**
@@ -743,6 +761,30 @@ namespace join
         }
 
         /**
+         * @brief get the number of pending elements for reading.
+         * @param segment shared memory segment.
+         * @return number of elements pending in the ring buffer.
+         */
+        uint64_t pending (SharedSegment* segment) const noexcept
+        {
+            auto head = segment->_sync._head.load (std::memory_order_acquire);
+            auto tail = segment->_sync._tail.load (std::memory_order_relaxed);
+            return head - tail;
+        }
+
+        /**
+         * @brief get the number of available slots for writing.
+         * @param segment shared memory segment.
+         * @return number of slots available in the ring buffer.
+         */
+        uint64_t available (SharedSegment* segment) const noexcept
+        {
+            auto tail = segment->_sync._tail.load (std::memory_order_acquire);
+            auto head = segment->_sync._head.load (std::memory_order_relaxed);
+            return segment->_sync._capacity - (head - tail);
+        }
+
+        /**
          * @brief check if the ring buffer is full.
          * @param segment shared memory segment.
          * @param head buffer head.
@@ -751,8 +793,8 @@ namespace join
          */
         bool full (SharedSegment* segment, uint64_t& head, uint64_t& tail) const noexcept
         {
-            head = segment->_sync._head.load (std::memory_order_relaxed);
             tail = segment->_sync._tail.load (std::memory_order_acquire);
+            head = segment->_sync._head.load (std::memory_order_relaxed);
             return (head - tail) == segment->_sync._capacity;
         }
 
@@ -776,8 +818,8 @@ namespace join
          */
         bool empty (SharedSegment* segment, uint64_t& head, uint64_t& tail) const noexcept
         {
-            tail = segment->_sync._tail.load (std::memory_order_relaxed);
             head = segment->_sync._head.load (std::memory_order_acquire);
+            tail = segment->_sync._tail.load (std::memory_order_relaxed);
             return (head - tail) == 0;
         }
 
