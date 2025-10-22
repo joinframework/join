@@ -207,6 +207,42 @@ TEST (Utils, benchmark)
 }
 
 /**
+ * @brief Test toTimespec.
+ */
+TEST (Utils, toTimespec)
+{
+    auto tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (1234));
+    timespec ts = join::toTimespec (tp);
+    EXPECT_EQ (ts.tv_sec, 1234);
+    EXPECT_EQ (ts.tv_nsec, 0);
+
+    tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (5) + std::chrono::nanoseconds (123456789));
+    ts = join::toTimespec (tp);
+    EXPECT_EQ (ts.tv_sec, 5);
+    EXPECT_EQ (ts.tv_nsec, 123456789);
+
+    tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (10) + std::chrono::nanoseconds (1500000000));
+    ts = join::toTimespec (tp);
+    EXPECT_EQ (ts.tv_sec, 11);
+    EXPECT_EQ (ts.tv_nsec, 500000000);
+
+    tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (10) - std::chrono::nanoseconds (200000000));
+    ts = join::toTimespec (tp);
+    EXPECT_EQ (ts.tv_sec, 9);
+    EXPECT_EQ (ts.tv_nsec, 800000000);
+
+    tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (10) - std::chrono::nanoseconds (1000000000));
+    ts = join::toTimespec (tp);
+    EXPECT_EQ (ts.tv_sec, 9);
+    EXPECT_EQ (ts.tv_nsec, 0);
+
+    tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (0));
+    ts = join::toTimespec (tp);
+    EXPECT_EQ (ts.tv_sec, 0);
+    EXPECT_EQ (ts.tv_nsec, 0);
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char **argv)

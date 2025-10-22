@@ -26,8 +26,9 @@
 #define __JOIN_CONDITION_HPP__
 
 // libjoin.
-#include <join/error.hpp>
 #include <join/mutex.hpp>
+#include <join/error.hpp>
+#include <join/utils.hpp>
 
 // C++.
 #include <chrono>
@@ -90,15 +91,19 @@ namespace join
          * @brief wait on a condition.
          * @param lock mutex previously locked by the calling thread.
          */
-        void wait (ScopedLock& lock);
+        template <class Lock>
+        void wait (Lock& lock)
+        {
+            pthread_cond_wait (&_handle, lock.mutex ()->handle ());
+        }
 
         /**
          * @brief wait on a condition with predicate.
          * @param lock mutex previously locked by the calling thread.
          * @param pred predicate.
          */
-        template <class Predicate>
-        void wait (ScopedLock& lock, Predicate pred)
+        template <class Lock, class Predicate>
+        void wait (Lock& lock, Predicate pred)
         {
             while (!pred ())
             {
@@ -109,17 +114,14 @@ namespace join
         /**
          * @brief wait on a condition until timeout expire.
          * @param lock mutex previously locked by the calling thread.
-         * @param rt relative timeout.
+         * @param timeout timeout.
          * @return true on success, false on timeout.
          */
-        template <class Rep, class Period>
-        bool timedWait (ScopedLock& lock, std::chrono::duration <Rep, Period> rt)
+        template <class Lock, class Rep, class Period>
+        bool timedWait (Lock& lock, std::chrono::duration <Rep, Period> timeout)
         {
-            auto tp = std::chrono::steady_clock::now () + rt;
-            auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);
-            auto ns = std::chrono::time_point_cast <std::chrono::nanoseconds> (tp) - std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
-            struct timespec ts = {secs.time_since_epoch ().count (), ns.count ()};
-            int err = pthread_cond_timedwait (&_handle, &lock._mutex._handle, &ts);
+            struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
+            int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
             if (err != 0)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (err));
@@ -131,33 +133,149 @@ namespace join
         /**
          * @brief wait on a condition with predicate until timeout expire.
          * @param lock mutex previously locked by the calling thread.
-         * @param rt relative timeout.
+         * @param timeout timeout.
          * @param pred predicate.
          * @return true on success, false on timeout.
          */
-        template <class Rep, class Period, class Predicate>
-        bool timedWait (ScopedLock& lock, std::chrono::duration <Rep, Period> rt, Predicate pred)
+        template <class Lock, class Rep, class Period, class Predicate>
+        bool timedWait (Lock& lock, std::chrono::duration <Rep, Period> timeout, Predicate pred)
         {
-            auto tp = std::chrono::steady_clock::now () + rt;
-            auto secs = std::chrono::time_point_cast <std::chrono::seconds> (tp);
-            auto ns = std::chrono::time_point_cast <std::chrono::nanoseconds> (tp) - std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
-            struct timespec ts = {secs.time_since_epoch ().count (), ns.count ()};
+            struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
             while (!pred ())
             {
-                int err = pthread_cond_timedwait (&_handle, &lock._mutex._handle, &ts);
+                int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
                 if (err != 0)
                 {
                     lastError = std::make_error_code (static_cast <std::errc> (err));
                     return pred ();
                 }
             }
+
             return true;
         }
 
     private:
-        /// condition attributes.
-        pthread_condattr_t _attr;
+        /// condition handle.
+        pthread_cond_t _handle;
+    };
 
+    /**
+     * @brief condition variable class for shared memory.
+     */
+    class SharedCondition
+    {
+    public:
+        /**
+         * @brief default constructor.
+         */
+        SharedCondition ();
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        SharedCondition (const SharedCondition& other) = delete;
+
+        /**
+         * @brief copy assignment.
+         * @param other other object to copy.
+         * @return a reference to the current object.
+         */
+        SharedCondition& operator= (const SharedCondition& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        SharedCondition (SharedCondition&& other) = delete;
+
+        /**
+         * @brief move assignment.
+         * @param other other object to move.
+         * @return a reference to the current object.
+         */
+        SharedCondition& operator= (SharedCondition&& other) = delete;
+
+        /**
+         * @brief destroys the mutex object.
+         */
+        ~SharedCondition ();
+
+        /**
+         * @brief unblocks one of the waiting threads.
+         */
+        void signal () noexcept;
+
+        /**
+         * @brief unblocks all threads currently waiting.
+         */
+        void broadcast () noexcept;
+
+        /**
+         * @brief wait on a condition.
+         * @param lock mutex previously locked by the calling thread.
+         */
+        void wait (ScopedLock <SharedMutex>& lock);
+
+        /**
+         * @brief wait on a condition with predicate.
+         * @param lock mutex previously locked by the calling thread.
+         * @param pred predicate.
+         */
+        template <class Predicate>
+        void wait (ScopedLock <SharedMutex>& lock, Predicate pred)
+        {
+            while (!pred ())
+            {
+                wait (lock);
+            }
+        }
+
+        /**
+         * @brief wait on a condition until timeout expire.
+         * @param lock mutex previously locked by the calling thread.
+         * @param timeout timeout.
+         * @return true on success, false on timeout.
+         */
+        template <class Rep, class Period>
+        bool timedWait (ScopedLock <SharedMutex>& lock, std::chrono::duration <Rep, Period> timeout)
+        {
+            struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
+            int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
+            if (err != 0)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (err));
+                return false;
+            }
+
+            return true;
+        }
+
+        /**
+         * @brief wait on a condition with predicate until timeout expire.
+         * @param lock mutex previously locked by the calling thread.
+         * @param timeout timeout.
+         * @param pred predicate.
+         * @return true on success, false on timeout.
+         */
+        template <class Rep, class Period, class Predicate>
+        bool timedWait (ScopedLock <SharedMutex>& lock, std::chrono::duration <Rep, Period> timeout, Predicate pred)
+        {
+            struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
+            while (!pred ())
+            {
+                int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
+                if (err != 0)
+                {
+                    lastError = std::make_error_code (static_cast <std::errc> (err));
+                    return pred ();
+                }
+            }
+
+            return true;
+        }
+
+    private:
         /// condition handle.
         pthread_cond_t _handle;
     };

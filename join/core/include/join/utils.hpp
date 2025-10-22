@@ -410,6 +410,24 @@ namespace join
         auto end = std::chrono::high_resolution_clock::now ();
         return std::chrono::duration_cast <std::chrono::milliseconds> (end - beg);
     }
+
+    /**
+     * @brief converts time_point to timespec.
+     * @param timePoint the time point to convert.
+     * @return timespec structure.
+     */
+    template <typename Clock, typename Duration>
+    struct timespec toTimespec (std::chrono::time_point <Clock, Duration> timePoint)
+    {
+        auto secs = std::chrono::time_point_cast <std::chrono::seconds> (timePoint);
+        auto ns   = std::chrono::time_point_cast <std::chrono::nanoseconds> (timePoint) -
+                    std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
+
+        auto scount = secs.time_since_epoch ().count ();
+        auto ncount = ns.count ();
+
+        return { .tv_sec = scount, .tv_nsec = ncount };
+    }
 }
 
 #endif

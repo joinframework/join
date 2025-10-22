@@ -68,7 +68,7 @@ protected:
     virtual void onReceive () override
     {
         {
-            ScopedLock lock (_mut);
+            ScopedLock <Mutex> lock (_mut);
             _server.readExactly (_event, _server.canRead ());
             EventHandler::onReceive ();
         }
@@ -85,7 +85,7 @@ protected:
         _server.close ();
 
         {
-            ScopedLock lock (_mut);
+            ScopedLock <Mutex> lock (_mut);
             _event = "onClose";
             EventHandler::onClose ();
         }
@@ -102,7 +102,7 @@ protected:
         _server.close ();
 
         {
-            ScopedLock lock (_mut);
+            ScopedLock <Mutex> lock (_mut);
             _event = "onError";
             EventHandler::onError ();
         }
@@ -239,7 +239,7 @@ TEST_F (ReactorTest, onReceive)
 
     // wait for the onReceive notification.
     {
-        ScopedLock lock (_mut);
+        ScopedLock <Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [this] () {return _event == "onReceive";}));
         _event.clear ();
     }
@@ -265,7 +265,7 @@ TEST_F (ReactorTest, onClose)
 
     // wait for the onClose notification.
     {
-        ScopedLock lock (_mut);
+        ScopedLock <Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [this] () {return _event == "onClose";}));
         _event.clear ();
     }
@@ -290,7 +290,7 @@ TEST_F (ReactorTest, onError)
 
     // wait for the onError notification.
     {
-        ScopedLock lock (_mut);
+        ScopedLock <Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [this] () {return _event == "onError";}));
         _event.clear ();
     }

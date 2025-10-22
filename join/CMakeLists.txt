@@ -32,8 +32,10 @@ set(PUBLIC_HEADERS
     core/include/join/reactor.hpp
     core/include/join/streambuf.hpp
     core/include/join/zstream.hpp
+    core/include/join/shared.hpp
     thread/include/join/mutex.hpp
     thread/include/join/condition.hpp
+    thread/include/join/semaphore.hpp
     thread/include/join/thread.hpp
     thread/include/join/threadpool.hpp
     crypto/include/join/openssl.hpp
@@ -74,6 +76,7 @@ set(SOURCES
     core/src/zstream.cpp
     thread/src/mutex.cpp
     thread/src/condition.cpp
+    thread/src/semaphore.cpp
     thread/src/thread.cpp
     thread/src/threadpool.cpp
     crypto/src/openssl.cpp

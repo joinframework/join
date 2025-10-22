@@ -84,7 +84,7 @@ InterfaceManager* InterfaceManager::instance ()
 // =========================================================================
 Interface::Ptr InterfaceManager::findByIndex (uint32_t interfaceIndex)
 {
-    ScopedLock lock (_ifMutex);
+    ScopedLock <Mutex> lock (_ifMutex);
 
     auto it = _interfaces.find (interfaceIndex);
     if (it == _interfaces.end ())
@@ -110,7 +110,7 @@ Interface::Ptr InterfaceManager::findByName (const std::string& interfaceName)
 // =========================================================================
 InterfaceList InterfaceManager::enumerate ()
 {
-    ScopedLock lock (_ifMutex);
+    ScopedLock <Mutex> lock (_ifMutex);
 
     InterfaceList ifaces;
 
@@ -137,7 +137,7 @@ int InterfaceManager::refresh (bool sync)
 // =========================================================================
 void InterfaceManager::addLinkListener (const LinkNotify& cb)
 {
-    ScopedLock lock (_linkMutex);
+    ScopedLock <Mutex> lock (_linkMutex);
     _linkListeners.push_back (cb);
 }
 
@@ -147,7 +147,7 @@ void InterfaceManager::addLinkListener (const LinkNotify& cb)
 // =========================================================================
 void InterfaceManager::removeLinkListener (const LinkNotify& cb)
 {
-    ScopedLock lock (_linkMutex);
+    ScopedLock <Mutex> lock (_linkMutex);
     auto it = std::remove_if (_linkListeners.begin(), _linkListeners.end(),
         [&] (const LinkNotify& existing) {
             return existing.target_type () == cb.target_type () &&
@@ -162,7 +162,7 @@ void InterfaceManager::removeLinkListener (const LinkNotify& cb)
 // =========================================================================
 void InterfaceManager::addAddressListener (const AddressNotify& cb)
 {
-    ScopedLock lock (_addressMutex);
+    ScopedLock <Mutex> lock (_addressMutex);
     _addressListeners.push_back (cb);
 }
 
@@ -172,7 +172,7 @@ void InterfaceManager::addAddressListener (const AddressNotify& cb)
 // =========================================================================
 void InterfaceManager::removeAddressListener (const AddressNotify& cb)
 {
-    ScopedLock lock (_addressMutex);
+    ScopedLock <Mutex> lock (_addressMutex);
     auto it = std::remove_if (_addressListeners.begin(), _addressListeners.end(),
         [&] (const AddressNotify& existing) {
             return existing.target_type () == cb.target_type () &&
@@ -187,7 +187,7 @@ void InterfaceManager::removeAddressListener (const AddressNotify& cb)
 // =========================================================================
 void InterfaceManager::addRouteListener (const RouteNotify& cb)
 {
-    ScopedLock lock (_routeMutex);
+    ScopedLock <Mutex> lock (_routeMutex);
     _routeListeners.push_back (cb);
 }
 
@@ -197,7 +197,7 @@ void InterfaceManager::addRouteListener (const RouteNotify& cb)
 // =========================================================================
 void InterfaceManager::removeRouteListener (const RouteNotify& cb)
 {
-    ScopedLock lock (_routeMutex);
+    ScopedLock <Mutex> lock (_routeMutex);
     auto it = std::remove_if (_routeListeners.begin(), _routeListeners.end(),
         [&] (const RouteNotify& existing) {
             return existing.target_type () == cb.target_type () &&
@@ -969,7 +969,7 @@ int InterfaceManager::dumpRoute (bool sync)
 // =========================================================================
 int InterfaceManager::sendRequest (struct nlmsghdr* nlh, bool sync)
 {
-    ScopedLock lock (_syncMutex);
+    ScopedLock <Mutex> lock (_syncMutex);
 
     if (write (reinterpret_cast <const char *> (nlh), nlh->nlmsg_len) == -1)
     {
@@ -988,7 +988,7 @@ int InterfaceManager::sendRequest (struct nlmsghdr* nlh, bool sync)
 //   CLASS     : InterfaceManager
 //   METHOD    : waitResponse
 // =========================================================================
-int InterfaceManager::waitResponse (ScopedLock& lock, uint32_t seq, uint32_t timeout)
+int InterfaceManager::waitResponse (ScopedLock <Mutex>& lock, uint32_t seq, uint32_t timeout)
 {
     auto inserted = _pending.emplace (seq, std::make_shared <PendingRequest> ());
     if (!inserted.second)
@@ -1090,7 +1090,7 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
     {
         info.flags |= ChangeType::Deleted;
         notifyLinkUpdate (info);
-        ScopedLock lock (_ifMutex);
+        ScopedLock <Mutex> lock (_ifMutex);
         _interfaces.erase (info.index);
         return;
     }
@@ -1354,7 +1354,7 @@ void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
 // =========================================================================
 void InterfaceManager::notifyRequest(uint32_t seq, int error)
 {
-    ScopedLock lock (_syncMutex);
+    ScopedLock <Mutex> lock (_syncMutex);
 
     auto it = _pending.find (seq);
     if (it != _pending.end ())
@@ -1370,7 +1370,7 @@ void InterfaceManager::notifyRequest(uint32_t seq, int error)
 // =========================================================================
 void InterfaceManager::notifyLinkUpdate (const LinkInfo& info)
 {
-    ScopedLock lock (_linkMutex);
+    ScopedLock <Mutex> lock (_linkMutex);
 
     for (auto& listener : _linkListeners) 
     {
@@ -1387,7 +1387,7 @@ void InterfaceManager::notifyLinkUpdate (const LinkInfo& info)
 // =========================================================================
 void InterfaceManager::notifyAddressUpdate (const AddressInfo& info)
 {
-    ScopedLock lock (_addressMutex);
+    ScopedLock <Mutex> lock (_addressMutex);
 
     for (auto& listener : _addressListeners) 
     {
@@ -1404,7 +1404,7 @@ void InterfaceManager::notifyAddressUpdate (const AddressInfo& info)
 // =========================================================================
 void InterfaceManager::notifyRouteUpdate (const RouteInfo& info)
 {
-    ScopedLock lock (_routeMutex);
+    ScopedLock <Mutex> lock (_routeMutex);
 
     for (auto& listener : _routeListeners) 
     {
@@ -1421,7 +1421,7 @@ void InterfaceManager::notifyRouteUpdate (const RouteInfo& info)
 // =========================================================================
 Interface::Ptr InterfaceManager::acquire (LinkInfo& info)
 {
-    ScopedLock lock (_ifMutex);
+    ScopedLock <Mutex> lock (_ifMutex);
 
     auto it = _interfaces.find (info.index);
     if (it != _interfaces.end ())
