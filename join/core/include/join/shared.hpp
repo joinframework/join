@@ -83,7 +83,7 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        BasicShared (const std::string& name, uint64_t elementSize, uint64_t capacity)
+        BasicShared (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
         : _name (name)
         , _elementSize (elementSize)
         , _capacity (capacity)
@@ -280,7 +280,7 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        BasicProducer (const std::string& name, uint64_t elementSize, uint64_t capacity)
+        BasicProducer (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
         : BasicShared <BufferPolicy> (name, elementSize, capacity)
         {
         }
@@ -395,7 +395,7 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        BasicConsumer (const std::string& name, uint64_t elementSize, uint64_t capacity)
+        BasicConsumer (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
         : BasicShared <BufferPolicy> (name, elementSize, capacity)
         {
         }
