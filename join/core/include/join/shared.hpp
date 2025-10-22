@@ -51,12 +51,12 @@ namespace join
     struct SharedSync
     {
         static constexpr uint64_t MAGIC = 0x9F7E3B2A8D5C4E1B; 
-        alignas (64) std::atomic_ulong _magic;
+        alignas (64) std::atomic_uint64_t _magic;
         alignas (64) SharedMutex _mutex;
         alignas (64) SharedCondition _notFull;
         alignas (64) SharedCondition _notEmpty;
-        alignas (64) std::atomic_ulong _head;
-        alignas (64) std::atomic_ulong _tail;
+        alignas (64) std::atomic_uint64_t _head;
+        alignas (64) std::atomic_uint64_t _tail;
         alignas (64) uint64_t _elementSize;
         alignas (64) uint64_t _capacity;
     };
@@ -176,7 +176,6 @@ namespace join
                 ::munmap (this->_ptr, this->_totalSize);
                 this->_data = nullptr;
                 this->_segment = nullptr;
-                this->_ptr = nullptr;
             }
 
             if (this->_fd != -1)
@@ -184,6 +183,8 @@ namespace join
                 ::close (this->_fd);
                 this->_fd = -1;
             }
+
+            this->_ptr = nullptr;
         }
 
         /**
@@ -330,8 +331,8 @@ namespace join
                 new (&this->_segment->_sync._notEmpty) SharedCondition ();
                 new (&this->_segment->_sync._elementSize) uint64_t (this->_elementSize);
                 new (&this->_segment->_sync._capacity) uint64_t (this->_capacity);
-                new (&this->_segment->_sync._head) std::atomic_ulong (0);
-                new (&this->_segment->_sync._tail) std::atomic_ulong (0);
+                new (&this->_segment->_sync._head) std::atomic_uint64_t (0);
+                new (&this->_segment->_sync._tail) std::atomic_uint64_t (0);
             }
 
             if ((this->_segment->_sync._elementSize != this->_elementSize) ||
@@ -375,6 +376,15 @@ namespace join
         int timedPush (const void* element, std::chrono::duration <Rep, Period> timeout) noexcept
         {
             return this->_policy.timedPush (this->_segment, element, timeout);
+        }
+
+        /**
+         * @brief get the number of available slots for writing.
+         * @return number of slots available in the ring buffer.
+         */
+        uint64_t available () const noexcept
+        {
+            return this->_policy.available (this->_segment);
         }
 
         /**
@@ -488,6 +498,15 @@ namespace join
         }
 
         /**
+         * @brief get the number of pending elements for reading.
+         * @return number of elements pending in the ring buffer.
+         */
+        uint64_t pending () const noexcept
+        {
+            return this->_policy.pending (this->_segment);
+        }
+
+        /**
          * @brief check if the ring buffer is empty.
          * @return true if empty, false otherwise.
          */
@@ -551,7 +570,7 @@ namespace join
                 return -1;
             }
             // fast path (brief spin wait).
-            constexpr int nspin = 100;
+            constexpr int nspin = 99;
             for (int i = 0; i < nspin; ++i)
             {
                 if (tryPush (segment, element) == 0)
@@ -562,8 +581,15 @@ namespace join
             }
             // slow path (block).
             ScopedLock <SharedMutex> lock (segment->_sync._mutex);
-            segment->_sync._notFull.wait (lock, [&] () { return !full (segment); });
-            return tryPush (segment, element);
+            while (tryPush (segment, element) == -1)
+            {
+                if (lastError != std::make_error_code (static_cast <std::errc> (Errc::TemporaryError)))
+                {
+                    return -1;
+                }
+                segment->_sync._notFull.wait (lock, [&] () { return !full (segment); });
+            }
+            return 0;
         }
 
         /**
@@ -583,7 +609,7 @@ namespace join
             }
             // fast path (brief spin wait).
             auto const deadline = std::chrono::steady_clock::now () + timeout;
-            constexpr int nspin = 100;
+            constexpr int nspin = 99;
             for (int i = 0; i < nspin; ++i)
             {
                 if (tryPush (segment, element) == 0)
@@ -599,17 +625,24 @@ namespace join
             }
             // slow path (block).
             ScopedLock <SharedMutex> lock (segment->_sync._mutex);
-            auto remaining = deadline - std::chrono::steady_clock::now ();
-            if (remaining <= std::chrono::steady_clock::duration::zero ())
+            while (tryPush (segment, element) == -1)
             {
-                lastError = make_error_code (Errc::TimedOut);
-                return -1;
+                if (lastError != std::make_error_code (static_cast <std::errc> (Errc::TemporaryError)))
+                {
+                    return -1;
+                }
+                auto remaining = deadline - std::chrono::steady_clock::now ();
+                if (remaining <= std::chrono::steady_clock::duration::zero ())
+                {
+                    lastError = make_error_code (Errc::TimedOut);
+                    return -1;
+                }
+                if (!segment->_sync._notFull.timedWait (lock, remaining, [&] () { return !full (segment); }))
+                {
+                    return -1;
+                }
             }
-            if (!segment->_sync._notFull.timedWait (lock, remaining, [&] () { return !full (segment); }))
-            {
-                return -1;
-            }
-            return tryPush (segment, element);
+            return 0;
         }
 
         /**
@@ -652,7 +685,7 @@ namespace join
                 return -1;
             }
             // fast path (brief spin wait).
-            constexpr int nspin = 100;
+            constexpr int nspin = 99;
             for (int i = 0; i < nspin; ++i)
             {
                 if (tryPop (segment, element) == 0)
@@ -663,8 +696,15 @@ namespace join
             }
             // slow path (block).
             ScopedLock <SharedMutex> lock (segment->_sync._mutex);
-            segment->_sync._notEmpty.wait (lock, [&] () { return !empty (segment); });
-            return tryPop (segment, element);
+            while (tryPop (segment, element) == -1)
+            {
+                if (lastError != std::make_error_code (static_cast <std::errc> (Errc::TemporaryError)))
+                {
+                    return -1;
+                }
+                segment->_sync._notEmpty.wait (lock, [&] () { return !empty (segment); });
+            }
+            return 0;
         }
 
         /**
@@ -684,7 +724,7 @@ namespace join
             }
             // fast path (brief spin wait).
             auto const deadline = std::chrono::steady_clock::now () + timeout;
-            constexpr int nspin = 100;
+            constexpr int nspin = 99;
             for (int i = 0; i < nspin; ++i)
             {
                 if (tryPop (segment, element) == 0)
@@ -700,17 +740,48 @@ namespace join
             }
             // slow path (block).
             ScopedLock <SharedMutex> lock (segment->_sync._mutex);
-            auto remaining = deadline - std::chrono::steady_clock::now ();
-            if (remaining <= std::chrono::steady_clock::duration::zero ())
+            while (tryPop (segment, element) == -1)
             {
-                lastError = make_error_code (Errc::TimedOut);
-                return -1;
+                if (lastError != std::make_error_code (static_cast <std::errc> (Errc::TemporaryError)))
+                {
+                    return -1;
+                }
+                auto remaining = deadline - std::chrono::steady_clock::now ();
+                if (remaining <= std::chrono::steady_clock::duration::zero ())
+                {
+                    lastError = make_error_code (Errc::TimedOut);
+                    return -1;
+                }
+                if (!segment->_sync._notEmpty.timedWait (lock, remaining, [&] () { return !empty (segment); }))
+                {
+                    return -1;
+                }
             }
-            if (!segment->_sync._notEmpty.timedWait (lock, remaining, [&] () { return !empty (segment); }))
-            {
-                return -1;
-            }
-            return tryPop (segment, element);
+            return 0;
+        }
+
+        /**
+         * @brief get the number of pending elements for reading.
+         * @param segment shared memory segment.
+         * @return number of elements pending in the ring buffer.
+         */
+        uint64_t pending (SharedSegment* segment) const noexcept
+        {
+            auto head = segment->_sync._head.load (std::memory_order_acquire);
+            auto tail = segment->_sync._tail.load (std::memory_order_relaxed);
+            return head - tail;
+        }
+
+        /**
+         * @brief get the number of available slots for writing.
+         * @param segment shared memory segment.
+         * @return number of slots available in the ring buffer.
+         */
+        uint64_t available (SharedSegment* segment) const noexcept
+        {
+            auto tail = segment->_sync._tail.load (std::memory_order_acquire);
+            auto head = segment->_sync._head.load (std::memory_order_relaxed);
+            return segment->_sync._capacity - (head - tail);
         }
 
         /**
@@ -722,8 +793,8 @@ namespace join
          */
         bool full (SharedSegment* segment, uint64_t& head, uint64_t& tail) const noexcept
         {
-            head = segment->_sync._head.load (std::memory_order_relaxed);
             tail = segment->_sync._tail.load (std::memory_order_acquire);
+            head = segment->_sync._head.load (std::memory_order_relaxed);
             return (head - tail) == segment->_sync._capacity;
         }
 
@@ -747,8 +818,8 @@ namespace join
          */
         bool empty (SharedSegment* segment, uint64_t& head, uint64_t& tail) const noexcept
         {
-            tail = segment->_sync._tail.load (std::memory_order_relaxed);
             head = segment->_sync._head.load (std::memory_order_acquire);
+            tail = segment->_sync._tail.load (std::memory_order_relaxed);
             return (head - tail) == 0;
         }
 
@@ -761,6 +832,96 @@ namespace join
         {
             uint64_t head, tail;
             return empty (segment, head, tail);
+        }
+    };
+
+    /**
+     * @brief multiple producer single consumer ring buffer policy.
+     */
+    class Mpsc : public Spsc
+    {
+    public:
+        using Producer = BasicProducer <Mpsc>;
+        using Consumer = BasicConsumer <Mpsc>;
+
+        /**
+         * @brief construct the multiple producer single consumer ring buffer policy by default.
+         */
+        constexpr Mpsc () noexcept = default;
+
+        /**
+         * @brief try to push element into the ring buffer (lock-free for multiple producers).
+         * @param segment shared memory segment.
+         * @param element pointer to element to push.
+         * @return 0 on success, -1 otherwise.
+         */
+        int tryPush (SharedSegment* segment, const void* element) const noexcept override
+        {
+            if ((segment == nullptr) || (element == nullptr))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+            uint64_t head, tail;
+            do
+            {
+                if (full (segment, head, tail))
+                {
+                    lastError = std::make_error_code (static_cast <std::errc> (Errc::TemporaryError));
+                    return -1;
+                }
+            }
+            while (!segment->_sync._head.compare_exchange_weak (head, head + 1, std::memory_order_relaxed, std::memory_order_relaxed));
+            auto slot = head % segment->_sync._capacity;
+            std::memcpy (segment->_data + (slot * segment->_sync._elementSize), element, segment->_sync._elementSize);
+            std::atomic_thread_fence (std::memory_order_release);
+            segment->_sync._notEmpty.signal ();
+            return 0;
+        }
+    };
+
+    /**
+     * @brief multiple producer multiple consumer ring buffer policy.
+     */
+    class Mpmc : public Mpsc
+    {
+    public:
+        using Producer = BasicProducer <Mpmc>;
+        using Consumer = BasicConsumer <Mpmc>;
+
+        /**
+         * @brief construct the multiple producer multiple consumer ring buffer policy by default.
+         */
+        constexpr Mpmc () noexcept = default;
+
+        /**
+         * @brief try to pop element from the ring buffer (lock-free for multiple consumers).
+         * @param segment shared memory segment.
+         * @param element pointer to output element.
+         * @return 0 on success, -1 otherwise.
+         */
+        int tryPop (SharedSegment* segment, void* element) const noexcept override
+        {
+            if ((segment == nullptr) || (element == nullptr))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+            uint64_t head, tail;
+            do
+            {
+                if (empty (segment, head, tail))
+                {
+                    lastError = std::make_error_code (static_cast <std::errc> (Errc::TemporaryError));
+                    return -1;
+                }
+            }
+            while (!segment->_sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_relaxed, std::memory_order_relaxed));
+            auto slot = tail % segment->_sync._capacity;
+            std::memcpy (element, segment->_data + (slot * segment->_sync._elementSize), segment->_sync._elementSize);
+            std::atomic_thread_fence (std::memory_order_release);
+            segment->_sync._notFull.signal ();
+            return 0;
         }
     };
 }

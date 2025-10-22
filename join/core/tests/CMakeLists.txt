@@ -49,3 +49,11 @@ gtest_discover_tests(monotonictimer.gtest)
 add_executable(spsc.gtest spsc_test.cpp)
 target_link_libraries(spsc.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(spsc.gtest)
+
+add_executable(mpsc.gtest mpsc_test.cpp)
+target_link_libraries(mpsc.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(mpsc.gtest)
+
+add_executable(mpmc.gtest mpmc_test.cpp)
+target_link_libraries(mpmc.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(mpmc.gtest)
