@@ -27,7 +27,6 @@
 
 // libjoin.
 #include <join/condition.hpp>
-#include <join/semaphore.hpp>
 #include <join/error.hpp>
 
 // C++.
@@ -51,13 +50,15 @@ namespace join
      */
     struct SharedSync
     {
+        static constexpr uint64_t MAGIC = 0x9F7E3B2A8D5C4E1B; 
+        alignas (64) std::atomic_ulong _magic;
         alignas (64) SharedMutex _mutex;
         alignas (64) SharedCondition _notFull;
         alignas (64) SharedCondition _notEmpty;
         alignas (64) std::atomic_ulong _head;
         alignas (64) std::atomic_ulong _tail;
-        uint64_t _elementSize;
-        uint64_t _capacity;
+        alignas (64) uint64_t _elementSize;
+        alignas (64) uint64_t _capacity;
     };
 
     /**
@@ -82,14 +83,23 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        BasicShared (const std::string& name, uint64_t elementSize, uint64_t capacity) noexcept
+        BasicShared (const std::string& name, uint64_t elementSize, uint64_t capacity)
         : _name (name)
         , _elementSize (elementSize)
         , _capacity (capacity)
-        , _userSize (_elementSize * _capacity)
-        , _totalSize (_userSize + sizeof (SharedSync))
-        , _sem (name)
         {
+            if ((_capacity != 0) && (_elementSize > (std::numeric_limits <uint64_t>::max () / _capacity)))
+            {
+                throw std::overflow_error ("total size will overflow");
+            }
+
+            _userSize = _elementSize * _capacity;
+            _totalSize = _userSize + sizeof(SharedSync);
+
+            if (_totalSize > static_cast <uint64_t> (std::numeric_limits <off_t>::max ()))
+            {
+                throw std::overflow_error ("total size will overflow");
+            }
         }
 
         /**
@@ -114,12 +124,62 @@ namespace join
          * @brief open or create the shared memory segment.
          * @return 0 on success, -1 on failure.
          */
-        virtual int open () = 0;
+        virtual int open ()
+        {
+            if (this->opened ())
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            this->_fd = ::shm_open (this->_name.c_str (), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
+            if (this->_fd == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                this->close ();
+                return -1;
+            }
+
+            if (::ftruncate (this->_fd, this->_totalSize) == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                this->close ();
+                return -1;
+            }
+
+            this->_ptr = ::mmap (nullptr, this->_totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, this->_fd, 0);
+            if (this->_ptr == MAP_FAILED)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                this->close ();
+                return -1;
+            }
+
+            this->_segment = static_cast <SharedSegment*> (this->_ptr);
+            this->_data = this->_segment->_data;
+
+            return 0;
+        }
 
         /**
          * @brief close the shared memory segment.
          */
-        virtual void close () noexcept = 0;
+        void close () noexcept 
+        {
+            if (this->opened ())
+            {
+                ::munmap (this->_ptr, this->_totalSize);
+                this->_data = nullptr;
+                this->_segment = nullptr;
+                this->_ptr = nullptr;
+            }
+
+            if (this->_fd != -1)
+            {
+                ::close (this->_fd);
+                this->_fd = -1;
+            }
+        }
 
         /**
          * @brief check if shared memory segment is opened.
@@ -127,7 +187,7 @@ namespace join
          */
         bool opened () const noexcept
         {
-            return (_ptr != nullptr) && (_ptr != MAP_FAILED);
+            return (this->_ptr != nullptr) && (this->_ptr != MAP_FAILED);
         }
 
         /**
@@ -136,7 +196,7 @@ namespace join
          */
         const void* get () const noexcept
         {
-            return _data;
+            return this->_data;
         }
 
         /**
@@ -145,7 +205,7 @@ namespace join
          */
         void* get () noexcept
         {
-            return _data;
+            return this->_data;
         }
 
         /**
@@ -154,7 +214,7 @@ namespace join
          */
         uint64_t elementSize () const noexcept
         {
-            return _elementSize;
+            return this->_elementSize;
         }
 
         /**
@@ -163,7 +223,7 @@ namespace join
          */
         uint64_t capacity () const noexcept
         {
-            return _capacity;
+            return this->_capacity;
         }
 
         /**
@@ -172,7 +232,7 @@ namespace join
          */
         uint64_t size () const noexcept
         {
-            return _userSize;
+            return this->_userSize;
         }
 
     protected:
@@ -205,9 +265,6 @@ namespace join
 
         /// shared memory segment user data.
         void* _data = nullptr;
-
-        /// bootstrap semaphore.
-        Semaphore _sem;
     };
 
     /**
@@ -223,7 +280,7 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        BasicProducer (const std::string& name, uint64_t elementSize, uint64_t capacity) noexcept
+        BasicProducer (const std::string& name, uint64_t elementSize, uint64_t capacity)
         : BasicShared <BufferPolicy> (name, elementSize, capacity)
         {
         }
@@ -255,75 +312,32 @@ namespace join
          */
         int open () override
         {
-            if (this->opened ())
+            if (BasicShared <BufferPolicy>::open () == -1)
             {
-                lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            this->_fd = ::shm_open (this->_name.c_str (), O_CREAT | O_EXCL | O_RDWR | O_CLOEXEC, 0644);
-            if (this->_fd == -1)
+            uint64_t expected = 0;
+            if (this->_segment->_sync._magic.compare_exchange_strong (expected, SharedSync::MAGIC, std::memory_order_acq_rel, std::memory_order_acquire))
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                close ();
-                return -1;
+                new (&this->_segment->_sync._mutex) SharedMutex ();
+                new (&this->_segment->_sync._notFull) SharedCondition ();
+                new (&this->_segment->_sync._notEmpty) SharedCondition ();
+                new (&this->_segment->_sync._elementSize) uint64_t (this->_elementSize);
+                new (&this->_segment->_sync._capacity) uint64_t (this->_capacity);
+                new (&this->_segment->_sync._head) std::atomic_ulong (0);
+                new (&this->_segment->_sync._tail) std::atomic_ulong (0);
             }
 
-            if (::ftruncate (this->_fd, this->_totalSize) == -1)
+            if ((this->_segment->_sync._elementSize != this->_elementSize) ||
+                (this->_segment->_sync._capacity != this->_capacity))
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                close ();
+                lastError = make_error_code (Errc::InvalidParam);
+                this->close ();
                 return -1;
             }
-
-            this->_ptr = ::mmap (nullptr, this->_totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, this->_fd, 0);
-            if (this->_ptr == MAP_FAILED)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                close ();
-                return -1;
-            }
-
-            this->_segment = static_cast <SharedSegment*> (this->_ptr);
-            this->_data = this->_segment->_data;
-
-            new (&this->_segment->_sync._mutex) SharedMutex ();
-            new (&this->_segment->_sync._notFull) SharedCondition ();
-            new (&this->_segment->_sync._notEmpty) SharedCondition ();
-            new (&this->_segment->_sync._head) std::atomic_ulong (0);
-            new (&this->_segment->_sync._tail) std::atomic_ulong (0);
-            new (&this->_segment->_sync._elementSize) uint64_t (this->_elementSize);
-            new (&this->_segment->_sync._capacity) uint64_t (this->_capacity);
-
-            this->_sem.post ();
 
             return 0;
-        }
-
-        /**
-         * @brief close the shared memory segment.
-         */
-        void close () noexcept override
-        {
-            if (this->opened ())
-            {
-                this->_segment->_sync._mutex.~SharedMutex ();
-                this->_segment->_sync._notFull.~SharedCondition ();
-                this->_segment->_sync._notEmpty.~SharedCondition ();
-                ::munmap (this->_ptr, this->_totalSize);
-                this->_data = nullptr;
-                this->_segment = nullptr;
-                this->_ptr = nullptr;
-            }
-
-            if (this->_fd != -1)
-            {
-                ::close (this->_fd);
-                this->_fd = -1;
-                ::shm_unlink (this->_name.c_str ());
-            }
-
-            this->_sem.tryWait ();
         }
 
         /**
@@ -381,7 +395,7 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        BasicConsumer (const std::string& name, uint64_t elementSize, uint64_t capacity) noexcept
+        BasicConsumer (const std::string& name, uint64_t elementSize, uint64_t capacity)
         : BasicShared <BufferPolicy> (name, elementSize, capacity)
         {
         }
@@ -404,7 +418,7 @@ namespace join
          */
         ~BasicConsumer ()
         {
-            close ();
+            this->close ();
         }
 
         /**
@@ -413,62 +427,27 @@ namespace join
          */
         int open () override
         {
-            if (this->opened ())
+            if (BasicShared <BufferPolicy>::open () == -1)
             {
-                lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            this->_sem.wait ();
-            this->_sem.post ();
-
-            this->_fd = ::shm_open (this->_name.c_str (), O_RDWR | O_CLOEXEC, 0644);
-            if (this->_fd == -1)
+            if (this->_segment->_sync._magic.load (std::memory_order_acquire) != SharedSync::MAGIC)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                close ();
+                lastError = make_error_code (Errc::TemporaryError);
+                this->close ();
                 return -1;
             }
 
-            this->_ptr = ::mmap (nullptr, this->_totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, this->_fd, 0);
-            if (this->_ptr == MAP_FAILED)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                close ();
-                return -1;
-            }
-
-            this->_segment = static_cast <SharedSegment*> (this->_ptr);
-            this->_data = this->_segment->_data;
-
-            if ((this->_segment->_sync._elementSize != this->_elementSize) || (this->_segment->_sync._capacity != this->_capacity))
+            if ((this->_segment->_sync._elementSize != this->_elementSize) || 
+                (this->_segment->_sync._capacity != this->_capacity))
             {
                 lastError = make_error_code (Errc::InvalidParam);
-                close ();
+                this->close ();
                 return -1;
             }
 
             return 0;
-        }
-
-        /**
-         * @brief close the shared memory segment.
-         */
-        void close () noexcept override
-        {
-            if (this->opened ())
-            {
-                ::munmap (this->_ptr, this->_totalSize);
-                this->_data = nullptr;
-                this->_segment = nullptr;
-                this->_ptr = nullptr;
-            }
-
-            if (this->_fd != -1)
-            {
-                ::close (this->_fd);
-                this->_fd = -1;
-            }
         }
 
         /**
@@ -533,7 +512,7 @@ namespace join
          * @param element pointer to element to push.
          * @return 0 on success, -1 otherwise.
          */
-        int tryPush (SharedSegment* segment, const void* element) const noexcept
+        virtual int tryPush (SharedSegment* segment, const void* element) const noexcept
         {
             if ((segment == nullptr) || (element == nullptr))
             {
@@ -566,12 +545,17 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-            // fast path.
-            if (tryPush (segment, element) == 0)
+            // fast path (brief spin wait).
+            constexpr int nspin = 100;
+            for (int i = 0; i < nspin; ++i)
             {
-                return 0;
+                if (tryPush (segment, element) == 0)
+                {
+                    return 0;
+                }
+                std::this_thread::yield ();
             }
-            // slow path.
+            // slow path (block).
             ScopedLock <SharedMutex> lock (segment->_sync._mutex);
             segment->_sync._notFull.wait (lock, [&] () { return !full (segment); });
             return tryPush (segment, element);
@@ -592,14 +576,31 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-            // fast path.
-            if (tryPush (segment, element) == 0)
+            // fast path (brief spin wait).
+            auto const deadline = std::chrono::steady_clock::now () + timeout;
+            constexpr int nspin = 100;
+            for (int i = 0; i < nspin; ++i)
             {
-                return 0;
+                if (tryPush (segment, element) == 0)
+                {
+                    return 0;
+                }
+                if (std::chrono::steady_clock::now () >= deadline)
+                {
+                    lastError = make_error_code (Errc::TimedOut);
+                    return -1;
+                }
+                std::this_thread::yield ();
             }
-            // slow path.
+            // slow path (block).
             ScopedLock <SharedMutex> lock (segment->_sync._mutex);
-            if (!segment->_sync._notFull.timedWait (lock, timeout, [&] () { return !full (segment); }))
+            auto remaining = deadline - std::chrono::steady_clock::now ();
+            if (remaining <= std::chrono::steady_clock::duration::zero ())
+            {
+                lastError = make_error_code (Errc::TimedOut);
+                return -1;
+            }
+            if (!segment->_sync._notFull.timedWait (lock, remaining, [&] () { return !full (segment); }))
             {
                 return -1;
             }
@@ -612,7 +613,7 @@ namespace join
          * @param element pointer to output element.
          * @return 0 on success, -1 otherwise.
          */
-        int tryPop (SharedSegment* segment, void* element) const noexcept
+        virtual int tryPop (SharedSegment* segment, void* element) const noexcept
         {
             if ((segment == nullptr) || (element == nullptr))
             {
@@ -645,12 +646,17 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-            // fast path.
-            if (tryPop (segment, element) == 0)
+            // fast path (brief spin wait).
+            constexpr int nspin = 100;
+            for (int i = 0; i < nspin; ++i)
             {
-                return 0;
+                if (tryPop (segment, element) == 0)
+                {
+                    return 0;
+                }
+                std::this_thread::yield ();
             }
-            // slow path.
+            // slow path (block).
             ScopedLock <SharedMutex> lock (segment->_sync._mutex);
             segment->_sync._notEmpty.wait (lock, [&] () { return !empty (segment); });
             return tryPop (segment, element);
@@ -671,14 +677,31 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-            // fast path.
-            if (tryPop (segment, element) == 0)
+            // fast path (brief spin wait).
+            auto const deadline = std::chrono::steady_clock::now () + timeout;
+            constexpr int nspin = 100;
+            for (int i = 0; i < nspin; ++i)
             {
-                return 0;
+                if (tryPop (segment, element) == 0)
+                {
+                    return 0;
+                }
+                if (std::chrono::steady_clock::now () >= deadline)
+                {
+                    lastError = make_error_code (Errc::TimedOut);
+                    return -1;
+                }
+                std::this_thread::yield ();
             }
-            // slow path.
+            // slow path (block).
             ScopedLock <SharedMutex> lock (segment->_sync._mutex);
-            if (!segment->_sync._notEmpty.timedWait (lock, timeout, [&] () { return !empty (segment); }))
+            auto remaining = deadline - std::chrono::steady_clock::now ();
+            if (remaining <= std::chrono::steady_clock::duration::zero ())
+            {
+                lastError = make_error_code (Errc::TimedOut);
+                return -1;
+            }
+            if (!segment->_sync._notEmpty.timedWait (lock, remaining, [&] () { return !empty (segment); }))
             {
                 return -1;
             }
