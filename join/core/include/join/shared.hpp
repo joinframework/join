@@ -132,7 +132,14 @@ namespace join
                 return -1;
             }
 
-            this->_fd = ::shm_open (this->_name.c_str (), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
+            bool created = true;
+            this->_fd = ::shm_open (this->_name.c_str (), O_CREAT | O_RDWR | O_EXCL | O_CLOEXEC, 0644);
+            if ((this->_fd == -1) && (errno == EEXIST))
+            {
+                created = false;
+                this->_fd = ::shm_open(this->_name.c_str(), O_RDWR | O_CLOEXEC, 0644);
+            }
+
             if (this->_fd == -1)
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
@@ -140,7 +147,7 @@ namespace join
                 return -1;
             }
 
-            if (::ftruncate (this->_fd, this->_totalSize) == -1)
+            if (created && (::ftruncate(this->_fd, this->_totalSize) == -1))
             {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 this->close ();
