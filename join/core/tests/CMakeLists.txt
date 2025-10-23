@@ -47,25 +47,25 @@ target_link_libraries(monotonictimer.gtest ${PROJECT_NAME} GTest::gtest_main pth
 gtest_discover_tests(monotonictimer.gtest)
 
 add_executable(spsc.gtest spsc_test.cpp)
-target_link_libraries(spsc.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+target_link_libraries(spsc.gtest ${PROJECT_NAME} GTest::gtest_main pthread rt)
 gtest_discover_tests(spsc.gtest)
 
 add_executable(mpsc.gtest mpsc_test.cpp)
-target_link_libraries(mpsc.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+target_link_libraries(mpsc.gtest ${PROJECT_NAME} GTest::gtest_main pthread rt)
 gtest_discover_tests(mpsc.gtest)
 
 add_executable(mpmc.gtest mpmc_test.cpp)
-target_link_libraries(mpmc.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+target_link_libraries(mpmc.gtest ${PROJECT_NAME} GTest::gtest_main pthread rt)
 gtest_discover_tests(mpmc.gtest)
 
 add_executable(spscendpoint.gtest spscendpoint_test.cpp)
-target_link_libraries(spscendpoint.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+target_link_libraries(spscendpoint.gtest ${PROJECT_NAME} GTest::gtest_main pthread rt)
 gtest_discover_tests(spscendpoint.gtest)
 
 add_executable(mpscendpoint.gtest spscendpoint_test.cpp)
-target_link_libraries(mpscendpoint.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+target_link_libraries(mpscendpoint.gtest ${PROJECT_NAME} GTest::gtest_main pthread rt)
 gtest_discover_tests(mpscendpoint.gtest)
 
 add_executable(mpmcendpoint.gtest spscendpoint_test.cpp)
-target_link_libraries(mpmcendpoint.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+target_link_libraries(mpmcendpoint.gtest ${PROJECT_NAME} GTest::gtest_main pthread rt)
 gtest_discover_tests(mpmcendpoint.gtest)

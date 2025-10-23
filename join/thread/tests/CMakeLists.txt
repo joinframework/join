@@ -11,7 +11,7 @@ target_link_libraries(recursivemutex.gtest ${PROJECT_NAME} GTest::gtest_main pth
 gtest_discover_tests(recursivemutex.gtest)
 
 add_executable(sharedmutex.gtest sharedmutex_test.cpp)
-target_link_libraries(sharedmutex.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+target_link_libraries(sharedmutex.gtest ${PROJECT_NAME} GTest::gtest_main pthread rt)
 gtest_discover_tests(sharedmutex.gtest)
 
 add_executable(condition.gtest condition_test.cpp)
@@ -19,7 +19,7 @@ target_link_libraries(condition.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(condition.gtest)
 
 add_executable(sharedcondition.gtest sharedcondition_test.cpp)
-target_link_libraries(sharedcondition.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+target_link_libraries(sharedcondition.gtest ${PROJECT_NAME} GTest::gtest_main pthread rt)
 gtest_discover_tests(sharedcondition.gtest)
 
 add_executable(semaphore.gtest semaphore_test.cpp)
@@ -27,7 +27,7 @@ target_link_libraries(semaphore.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(semaphore.gtest)
 
 add_executable(sharedsemaphore.gtest sharedsemaphore_test.cpp)
-target_link_libraries(sharedsemaphore.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+target_link_libraries(sharedsemaphore.gtest ${PROJECT_NAME} GTest::gtest_main pthread rt)
 gtest_discover_tests(sharedsemaphore.gtest)
 
 add_executable(thread.gtest thread_test.cpp)
