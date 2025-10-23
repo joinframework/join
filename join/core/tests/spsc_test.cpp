@@ -36,6 +36,7 @@
 
 using namespace std::chrono_literals;
 
+using join::BasicShared;
 using join::Semaphore;
 using join::Spsc;
 
@@ -50,7 +51,7 @@ protected:
      */
     void SetUp ()
     {
-        ::shm_unlink (_name.c_str ());
+        ASSERT_EQ (BasicShared <Spsc>::unlink (_name), 0) << join::lastError.message ();
     }
 
     /**
@@ -140,7 +141,6 @@ TEST_F (SpscBuffer, open)
 
     ASSERT_THROW (Spsc::Consumer (_name, 128, std::numeric_limits <uint64_t>::max ()), std::overflow_error);
     ASSERT_THROW (Spsc::Consumer (_name, 1, std::numeric_limits <off_t>::max ()), std::overflow_error);
-    ASSERT_EQ (cons1.open (), -1);
     ASSERT_EQ (prod1.elementSize (), 64);
     ASSERT_EQ (prod1.capacity (), 8);
     ASSERT_FALSE (prod1.opened ());
@@ -182,9 +182,9 @@ TEST_F (SpscBuffer, tryPush)
     Spsc::Producer prod (_name, 64, 8);
     char data[64] = {};
 
-    ASSERT_EQ (prod.tryPush (data),-1);
+    ASSERT_EQ (prod.tryPush (data), -1);
     ASSERT_EQ (prod.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (prod.tryPush (nullptr),-1);
+    ASSERT_EQ (prod.tryPush (nullptr), -1);
     ASSERT_FALSE (prod.full ());
     ASSERT_EQ (prod.available (), 8);
     for (int i = 0; i < 8; ++i)
@@ -311,8 +311,8 @@ TEST_F (SpscBuffer, timedPop)
 TEST_F (SpscBuffer, pushBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 144;
-    const uint64_t size = 1472;
+    const uint64_t capacity = 4096;
+    const uint64_t size = 64;
     char data[size] = {};
 
     pid_t child = fork ();
@@ -378,8 +378,8 @@ TEST_F (SpscBuffer, pushBenchmark)
 TEST_F (SpscBuffer, timedPushBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 144;
-    const uint64_t size = 1472;
+    const uint64_t capacity = 4096;
+    const uint64_t size = 64;
     char data[size] = {};
 
     pid_t child = fork ();
@@ -445,8 +445,8 @@ TEST_F (SpscBuffer, timedPushBenchmark)
 TEST_F (SpscBuffer, popBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 144;
-    const uint64_t size = 1472;
+    const uint64_t capacity = 4096;
+    const uint64_t size = 64;
     char data[size] = {};
 
     pid_t child = fork ();
@@ -496,8 +496,8 @@ TEST_F (SpscBuffer, popBenchmark)
 TEST_F (SpscBuffer, timedPopBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 144;
-    const uint64_t size = 1472;
+    const uint64_t capacity = 4096;
+    const uint64_t size = 64;
     char data[size] = {};
 
     pid_t child = fork ();

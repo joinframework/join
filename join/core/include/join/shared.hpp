@@ -31,12 +31,13 @@
 
 // C++.
 #include <utility>
-#include <chrono>
+#include <thread>
 #include <atomic>
+#include <chrono>
+#include <memory>
 #include <string>
 
 // C.
-#include <semaphore.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -73,7 +74,7 @@ namespace join
     /**
      * @brief shared memory base class.
      */
-    template <typename BufferPolicy>
+    template <typename Policy>
     class BasicShared
     {
     public:
@@ -124,7 +125,7 @@ namespace join
          * @brief open or create the shared memory segment.
          * @return 0 on success, -1 on failure.
          */
-        virtual int open ()
+        int open ()
         {
             if (this->opened ())
             {
@@ -147,9 +148,11 @@ namespace join
                 return -1;
             }
 
-            if (created)
+            if (created && (::ftruncate (this->_fd, this->_totalSize) == -1))
             {
-                ::ftruncate (this->_fd, this->_totalSize);
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                this->close ();
+                return -1;
             }
 
             this->_ptr = ::mmap (nullptr, this->_totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, this->_fd, 0);
@@ -162,6 +165,26 @@ namespace join
 
             this->_segment = static_cast <SharedSegment*> (this->_ptr);
             this->_data = this->_segment->_data;
+
+            uint64_t expected = 0;
+            if (this->_segment->_sync._magic.compare_exchange_strong (expected, SharedSync::MAGIC, std::memory_order_acq_rel, std::memory_order_acquire))
+            {
+                new (&this->_segment->_sync._mutex) SharedMutex ();
+                new (&this->_segment->_sync._notFull) SharedCondition ();
+                new (&this->_segment->_sync._notEmpty) SharedCondition ();
+                new (&this->_segment->_sync._elementSize) uint64_t (this->_elementSize);
+                new (&this->_segment->_sync._capacity) uint64_t (this->_capacity);
+                new (&this->_segment->_sync._head) std::atomic_uint64_t (0);
+                new (&this->_segment->_sync._tail) std::atomic_uint64_t (0);
+            }
+
+            if ((this->_segment->_sync._elementSize != this->_elementSize) ||
+                (this->_segment->_sync._capacity != this->_capacity))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                this->close ();
+                return -1;
+            }
 
             return 0;
         }
@@ -241,9 +264,63 @@ namespace join
             return this->_userSize;
         }
 
+        /**
+         * @brief destroy synchronization primitives and unlink the shared memory segment.
+         * @param name shared memory segment name.
+         * @return 0 on success, -1 on failure.
+         */
+        static int unlink (const std::string& name) noexcept
+        {
+            int fd = ::shm_open (name.c_str (), O_RDWR | O_CLOEXEC, 0644);
+            if (fd == -1)
+            {
+                if (errno == ENOENT)
+                {
+                    return 0;
+                }
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                return -1;
+            }
+
+            struct stat statbuf;
+            if (::fstat (fd, &statbuf) == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                ::close (fd);
+                return -1;
+            }
+
+            void* ptr = ::mmap (nullptr, statbuf.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            if (ptr == MAP_FAILED)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                ::close (fd);
+                return -1;
+            }
+
+            SharedSegment* segment = static_cast <SharedSegment*> (ptr);
+            if (segment->_sync._magic.load (std::memory_order_acquire) == SharedSync::MAGIC)
+            {
+                segment->_sync._mutex.~SharedMutex ();
+                segment->_sync._notFull.~SharedCondition ();
+                segment->_sync._notEmpty.~SharedCondition ();
+            }
+
+            ::munmap (ptr, statbuf.st_size);
+            ::close (fd);
+
+            if (::shm_unlink (name.c_str ()) == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                return -1;
+            }
+
+            return 0;
+        }
+
     protected:
-        /// ring buffer policy.
-        BufferPolicy _policy;
+        /// shared memory segment policy.
+        Policy _policy;
 
         /// shared memory segment name.
         std::string _name;
@@ -276,8 +353,8 @@ namespace join
     /**
      * @brief shared memory producer.
      */
-    template <typename BufferPolicy>
-    class BasicProducer : public BasicShared <BufferPolicy>
+    template <typename Policy>
+    class SharedProducer : public BasicShared <Policy>
     {
     public:
         /**
@@ -286,8 +363,8 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        BasicProducer (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
-        : BasicShared <BufferPolicy> (name, elementSize, capacity)
+        SharedProducer (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
+        : BasicShared <Policy> (name, elementSize, capacity)
         {
         }
 
@@ -295,55 +372,21 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicProducer (const BasicProducer& other) = delete;
+        SharedProducer (const SharedProducer& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicProducer& operator= (const BasicProducer& other) = delete;
+        SharedProducer& operator= (const SharedProducer& other) = delete;
 
         /**
          * @brief destroy the instance.
          */
-        ~BasicProducer ()
+        ~SharedProducer ()
         {
             this->close ();
-        }
-
-        /**
-         * @brief open or create the shared memory segment.
-         * @return 0 on success, -1 on failure.
-         */
-        int open () override
-        {
-            if (BasicShared <BufferPolicy>::open () == -1)
-            {
-                return -1;
-            }
-
-            uint64_t expected = 0;
-            if (this->_segment->_sync._magic.compare_exchange_strong (expected, SharedSync::MAGIC, std::memory_order_acq_rel, std::memory_order_acquire))
-            {
-                new (&this->_segment->_sync._mutex) SharedMutex ();
-                new (&this->_segment->_sync._notFull) SharedCondition ();
-                new (&this->_segment->_sync._notEmpty) SharedCondition ();
-                new (&this->_segment->_sync._elementSize) uint64_t (this->_elementSize);
-                new (&this->_segment->_sync._capacity) uint64_t (this->_capacity);
-                new (&this->_segment->_sync._head) std::atomic_uint64_t (0);
-                new (&this->_segment->_sync._tail) std::atomic_uint64_t (0);
-            }
-
-            if ((this->_segment->_sync._elementSize != this->_elementSize) ||
-                (this->_segment->_sync._capacity != this->_capacity))
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                this->close ();
-                return -1;
-            }
-
-            return 0;
         }
 
         /**
@@ -400,8 +443,8 @@ namespace join
     /**
      * @brief shared memory consumer.
      */
-    template <typename BufferPolicy>
-    class BasicConsumer : public BasicShared <BufferPolicy>
+    template <typename Policy>
+    class SharedConsumer : public BasicShared <Policy>
     {
     public:
         /**
@@ -410,8 +453,8 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        BasicConsumer (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
-        : BasicShared <BufferPolicy> (name, elementSize, capacity)
+        SharedConsumer (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
+        : BasicShared <Policy> (name, elementSize, capacity)
         {
         }
 
@@ -419,50 +462,21 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicConsumer (const BasicConsumer& other) = delete;
+        SharedConsumer (const SharedConsumer& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicConsumer& operator= (const BasicConsumer& other) = delete;
+        SharedConsumer& operator= (const SharedConsumer& other) = delete;
 
         /**
          * @brief destroy the instance.
          */
-        ~BasicConsumer ()
+        ~SharedConsumer ()
         {
             this->close ();
-        }
-
-        /**
-         * @brief open or create the shared memory segment.
-         * @return 0 on success, -1 on failure.
-         */
-        int open () override
-        {
-            if (BasicShared <BufferPolicy>::open () == -1)
-            {
-                return -1;
-            }
-
-            if (this->_segment->_sync._magic.load (std::memory_order_acquire) != SharedSync::MAGIC)
-            {
-                lastError = make_error_code (Errc::TemporaryError);
-                this->close ();
-                return -1;
-            }
-
-            if ((this->_segment->_sync._elementSize != this->_elementSize) || 
-                (this->_segment->_sync._capacity != this->_capacity))
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                this->close ();
-                return -1;
-            }
-
-            return 0;
         }
 
         /**
@@ -517,13 +531,273 @@ namespace join
     };
 
     /**
+     * @brief bidirectional shared memory communication endpoint.
+     */
+    template <typename OutboundPolicy, typename InboundPolicy>
+    class SharedEndpoint
+    {
+    public:
+        using Outbound = typename OutboundPolicy::Producer;
+        using Inbound  = typename InboundPolicy::Consumer;
+
+        /**
+         * @brief endpoint side identifier.
+         */
+        enum Side
+        {
+            A,      /**< side A acts as outbound producer and inbound consumer. */
+            B,      /**< side B acts as inbound producer and outbound consumer. */
+        };
+
+        /**
+         * @brief create instance.
+         * @param side role of this endpoint.
+         * @param name channel name.
+         * @param elementSize the size of each data element in the ring buffers.
+         * @param capacity the maximum number of elements the ring buffers can hold.
+         */
+        SharedEndpoint (Side side, const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
+        : _side (side)
+        , _name (name)
+        {
+            if (this->_side == Side::A)
+            {
+                this->_out = std::make_unique <Outbound> (this->_name + "_AB", elementSize, capacity);
+                this->_in  = std::make_unique <Inbound>  (this->_name + "_BA", elementSize, capacity);
+            }
+            else
+            {
+                this->_out = std::make_unique <Outbound> (this->_name + "_BA", elementSize, capacity);
+                this->_in  = std::make_unique <Inbound>  (this->_name + "_AB", elementSize, capacity);
+            }
+        }
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        SharedEndpoint (const SharedEndpoint& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to copy.
+         * @return assigned object.
+         */
+        SharedEndpoint& operator= (const SharedEndpoint& other) = delete;
+
+        /**
+         * @brief destroy the instance.
+         */
+        ~SharedEndpoint ()
+        {
+            this->close();
+        }
+
+        /**
+         * @brief open the channel endpoint.
+         * @return 0 on success, -1 on failure
+         */
+        int open ()
+        {
+            if (this->opened ())
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            if ((this->_out->open () == -1) || (this->_in->open () == -1))
+            {
+                this->close ();
+                return -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief close the channel endpoint.
+         */
+        void close ()
+        {
+            if (this->_out)
+            {
+                this->_out->close ();
+            }
+
+            if (this->_in)
+            {
+                this->_in->close ();
+            }
+        }
+
+        /**
+         * @brief heck if the endpoint is open.
+         * @return true if both outbound and inbound queues are opened.
+         */
+        bool opened () const
+        {
+            return this->_out && this->_out->opened () && this->_in && this->_in->opened ();
+        }
+
+        /**
+         * @brief try to send a message to the peer.
+         * @param element pointer to the element to send
+         * @return 0 on success, -1 on failure.
+         */
+        int trySend (const void* element)
+        {
+            return this->_out->tryPush (element);
+        }
+
+        /**
+         * @brief send a message to the peer.
+         * @param element pointer to the element to send
+         * @return 0 on success, -1 on failure.
+         */
+        int send (const void* element)
+        {
+            return this->_out->push (element);
+        }
+
+        /**
+         * @brief send a message to the peer with timeout.
+         * @param element pointer to the element to send
+         * @param timeout maximum time to wait
+         * @return 0 on success, -1 on failure.
+         */
+        template <class Rep, class Period>
+        int timedSend (const void* element, std::chrono::duration <Rep, Period> timeout)
+        {
+            return this->_out->timedPush (element, timeout);
+        }
+
+        /**
+         * @brief try to receive a message from the peer.
+         * @param element pointer to buffer for received element.
+         * @return 0 on success, -1 on failure.
+         */
+        int tryReceive (void* element)
+        {
+            return this->_in->tryPop (element);
+        }
+
+        /**
+         * @brief receive a message from the peer.
+         * @param element pointer to buffer for received element.
+         * @return 0 on success, -1 on failure.
+         */
+        int receive (void* element)
+        {
+            return this->_in->pop (element);
+        }
+
+        /**
+         * @brief receive a message from the peer with timeout.
+         * @param element pointer to buffer for received element.
+         * @param timeout maximum time to wait
+         * @return 0 on success, -1 on failure.
+         */
+        template <class Rep, class Period>
+        int timedReceive (void* element, std::chrono::duration <Rep, Period> timeout)
+        {
+            return this->_in->timedPop (element, timeout);
+        }
+
+        /**
+         * @brief get number of available slots for sending.
+         * @return number of free slots in the outbound queue.
+         */
+        uint64_t available () const
+        {
+            return this->_out->available ();
+        }
+
+        /**
+         * @brief check if outbound queue is full.
+         * @return true if cannot send without blocking.
+         */
+        bool full () const
+        {
+            return this->_out->full ();
+        }
+
+        /**
+         * @brief get number of pending messages.
+         * @return number of messages waiting in inbound queue.
+         */
+        uint64_t pending () const
+        {
+            return this->_in->pending ();
+        }
+
+        /**
+         * @brief check if inbound queue is empty.
+         * @return true if no messages available.
+         */
+        bool empty () const
+        {
+            return this->_in->empty ();
+        }
+
+        /**
+         * @brief get the side this endpoint represents.
+         * @return Side::A or Side::B.
+         */
+        Side side () const
+        {
+            return this->_side;
+        }
+
+        /**
+         * @brief get the channel name.
+         * @return channel name.
+         */
+        const std::string& name () const
+        {
+            return this->_name;
+        }
+
+        /**
+         * @brief get the element size.
+         * @return size of each message element in bytes.
+         */
+        uint64_t elementSize () const
+        {
+            return this->_in->elementSize ();
+        }
+
+        /**
+         * @brief get the buffer capacity.
+         * @return number of elements each buffer can hold.
+         */
+        uint64_t capacity () const
+        {
+            return this->_in->capacity ();
+        }
+
+    private:
+        /// side of this endpoint (A or B).
+        Side _side;
+
+        /// channel name.
+        std::string _name;
+
+        /// outbound channel.
+        std::unique_ptr <Outbound> _out;
+
+        /// inbound channel.
+        std::unique_ptr <Inbound> _in;
+    };
+
+    /**
      * @brief single producer single consumer ring buffer policy.
      */
     class Spsc
     {
     public:
-        using Producer = BasicProducer <Spsc>;
-        using Consumer = BasicConsumer <Spsc>;
+        using Producer = SharedProducer <Spsc>;
+        using Consumer = SharedConsumer <Spsc>;
+        using Endpoint = SharedEndpoint <Spsc, Spsc>;
 
         /**
          * @brief construct the single producer single consumer ring buffer policy by default.
@@ -841,8 +1115,9 @@ namespace join
     class Mpsc : public Spsc
     {
     public:
-        using Producer = BasicProducer <Mpsc>;
-        using Consumer = BasicConsumer <Mpsc>;
+        using Producer = SharedProducer <Mpsc>;
+        using Consumer = SharedConsumer <Mpsc>;
+        using Endpoint = SharedEndpoint <Mpsc, Mpsc>;
 
         /**
          * @brief construct the multiple producer single consumer ring buffer policy by default.
@@ -871,7 +1146,7 @@ namespace join
                     return -1;
                 }
             }
-            while (!segment->_sync._head.compare_exchange_weak (head, head + 1, std::memory_order_relaxed, std::memory_order_relaxed));
+            while (!segment->_sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire, std::memory_order_relaxed));
             auto slot = head % segment->_sync._capacity;
             std::memcpy (segment->_data + (slot * segment->_sync._elementSize), element, segment->_sync._elementSize);
             std::atomic_thread_fence (std::memory_order_release);
@@ -886,8 +1161,9 @@ namespace join
     class Mpmc : public Mpsc
     {
     public:
-        using Producer = BasicProducer <Mpmc>;
-        using Consumer = BasicConsumer <Mpmc>;
+        using Producer = SharedProducer <Mpmc>;
+        using Consumer = SharedConsumer <Mpmc>;
+        using Endpoint = SharedEndpoint <Mpmc, Mpmc>;
 
         /**
          * @brief construct the multiple producer multiple consumer ring buffer policy by default.
@@ -916,7 +1192,7 @@ namespace join
                     return -1;
                 }
             }
-            while (!segment->_sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_relaxed, std::memory_order_relaxed));
+            while (!segment->_sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire, std::memory_order_relaxed));
             auto slot = tail % segment->_sync._capacity;
             std::memcpy (element, segment->_data + (slot * segment->_sync._elementSize), segment->_sync._elementSize);
             std::atomic_thread_fence (std::memory_order_release);
