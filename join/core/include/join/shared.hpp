@@ -31,12 +31,13 @@
 
 // C++.
 #include <utility>
-#include <chrono>
+#include <thread>
 #include <atomic>
+#include <chrono>
+#include <memory>
 #include <string>
 
 // C.
-#include <semaphore.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -124,7 +125,7 @@ namespace join
          * @brief open or create the shared memory segment.
          * @return 0 on success, -1 on failure.
          */
-        virtual int open ()
+        int open ()
         {
             if (this->opened ())
             {
@@ -164,6 +165,26 @@ namespace join
 
             this->_segment = static_cast <SharedSegment*> (this->_ptr);
             this->_data = this->_segment->_data;
+
+            uint64_t expected = 0;
+            if (this->_segment->_sync._magic.compare_exchange_strong (expected, SharedSync::MAGIC, std::memory_order_acq_rel, std::memory_order_acquire))
+            {
+                new (&this->_segment->_sync._mutex) SharedMutex ();
+                new (&this->_segment->_sync._notFull) SharedCondition ();
+                new (&this->_segment->_sync._notEmpty) SharedCondition ();
+                new (&this->_segment->_sync._elementSize) uint64_t (this->_elementSize);
+                new (&this->_segment->_sync._capacity) uint64_t (this->_capacity);
+                new (&this->_segment->_sync._head) std::atomic_uint64_t (0);
+                new (&this->_segment->_sync._tail) std::atomic_uint64_t (0);
+            }
+
+            if ((this->_segment->_sync._elementSize != this->_elementSize) ||
+                (this->_segment->_sync._capacity != this->_capacity))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                this->close ();
+                return -1;
+            }
 
             return 0;
         }
@@ -369,40 +390,6 @@ namespace join
         }
 
         /**
-         * @brief open or create the shared memory segment.
-         * @return 0 on success, -1 on failure.
-         */
-        int open () override
-        {
-            if (BasicShared <Policy>::open () == -1)
-            {
-                return -1;
-            }
-
-            uint64_t expected = 0;
-            if (this->_segment->_sync._magic.compare_exchange_strong (expected, SharedSync::MAGIC, std::memory_order_acq_rel, std::memory_order_acquire))
-            {
-                new (&this->_segment->_sync._mutex) SharedMutex ();
-                new (&this->_segment->_sync._notFull) SharedCondition ();
-                new (&this->_segment->_sync._notEmpty) SharedCondition ();
-                new (&this->_segment->_sync._elementSize) uint64_t (this->_elementSize);
-                new (&this->_segment->_sync._capacity) uint64_t (this->_capacity);
-                new (&this->_segment->_sync._head) std::atomic_uint64_t (0);
-                new (&this->_segment->_sync._tail) std::atomic_uint64_t (0);
-            }
-
-            if ((this->_segment->_sync._elementSize != this->_elementSize) ||
-                (this->_segment->_sync._capacity != this->_capacity))
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                this->close ();
-                return -1;
-            }
-
-            return 0;
-        }
-
-        /**
          * @brief try to push element into ring buffer.
          * @param element pointer to element to push.
          * @return 0 on success, -1 otherwise.
@@ -490,35 +477,6 @@ namespace join
         ~SharedConsumer ()
         {
             this->close ();
-        }
-
-        /**
-         * @brief open or create the shared memory segment.
-         * @return 0 on success, -1 on failure.
-         */
-        int open () override
-        {
-            if (BasicShared <Policy>::open () == -1)
-            {
-                return -1;
-            }
-
-            if (this->_segment->_sync._magic.load (std::memory_order_acquire) != SharedSync::MAGIC)
-            {
-                lastError = make_error_code (Errc::TemporaryError);
-                this->close ();
-                return -1;
-            }
-
-            if ((this->_segment->_sync._elementSize != this->_elementSize) || 
-                (this->_segment->_sync._capacity != this->_capacity))
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                this->close ();
-                return -1;
-            }
-
-            return 0;
         }
 
         /**
@@ -647,13 +605,7 @@ namespace join
                 return -1;
             }
 
-            if (this->_out->open () == -1)
-            {
-                this->close ();
-                return -1;
-            }
-
-            if (this->_in->open () == -1)
+            if ((this->_out->open () == -1) || (this->_in->open () == -1))
             {
                 this->close ();
                 return -1;

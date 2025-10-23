@@ -142,7 +142,6 @@ TEST_F (MpmcBuffer, open)
 
     ASSERT_THROW (Mpmc::Consumer (_name, 128, std::numeric_limits <uint64_t>::max ()), std::overflow_error);
     ASSERT_THROW (Mpmc::Consumer (_name, 1, std::numeric_limits <off_t>::max ()), std::overflow_error);
-    ASSERT_EQ (cons1.open (), -1);
     ASSERT_EQ (prod1.elementSize (), 64);
     ASSERT_EQ (prod1.capacity (), 8);
     ASSERT_FALSE (prod1.opened ());
@@ -312,8 +311,8 @@ TEST_F (MpmcBuffer, timedPop)
 TEST_F (MpmcBuffer, pushBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 144;
-    const uint64_t size = 1472;
+    const uint64_t capacity = 4096;
+    const uint64_t size = 64;
     char data[size] = {};
 
     pid_t child = fork ();
@@ -409,8 +408,8 @@ TEST_F (MpmcBuffer, pushBenchmark)
 TEST_F (MpmcBuffer, timedPushBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 144;
-    const uint64_t size = 1472;
+    const uint64_t capacity = 4096;
+    const uint64_t size = 64;
     char data[size] = {};
 
     pid_t child = fork ();
@@ -506,8 +505,8 @@ TEST_F (MpmcBuffer, timedPushBenchmark)
 TEST_F (MpmcBuffer, popBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 144;
-    const uint64_t size = 1472;
+    const uint64_t capacity = 4096;
+    const uint64_t size = 64;
     char data[size] = {};
 
     pid_t child = fork ();
@@ -604,8 +603,8 @@ TEST_F (MpmcBuffer, popBenchmark)
 TEST_F (MpmcBuffer, timedPopBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 144;
-    const uint64_t size = 1472;
+    const uint64_t capacity = 4096;
+    const uint64_t size = 64;
     char data[size] = {};
 
     pid_t child = fork ();
