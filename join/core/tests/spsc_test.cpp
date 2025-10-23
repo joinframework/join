@@ -36,6 +36,7 @@
 
 using namespace std::chrono_literals;
 
+using join::BasicShared;
 using join::Semaphore;
 using join::Spsc;
 
@@ -50,7 +51,7 @@ protected:
      */
     void SetUp ()
     {
-        ::shm_unlink (_name.c_str ());
+        ASSERT_EQ (BasicShared <Spsc>::unlink (_name), 0) << join::lastError.message ();
     }
 
     /**
