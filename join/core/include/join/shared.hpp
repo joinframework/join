@@ -95,7 +95,7 @@ namespace join
             }
 
             _userSize = _elementSize * _capacity;
-            _totalSize = _userSize + sizeof(SharedSync);
+            _totalSize = _userSize + sizeof (SharedSync);
 
             if (_totalSize > static_cast <uint64_t> (std::numeric_limits <off_t>::max ()))
             {
@@ -410,7 +410,7 @@ namespace join
         }
 
         /**
-         * @brief try to push push element into the ring buffer until timeout expire.
+         * @brief try to push element into the ring buffer until timeout expire.
          * @param element pointer to element to push.
          * @param timeout timeout.
          * @return 0 on success, -1 otherwise.
@@ -841,7 +841,7 @@ namespace join
                 return -1;
             }
             // fast path (brief spin wait).
-            constexpr int nspin = 99;
+            constexpr int nspin = 100;
             for (int i = 0; i < nspin; ++i)
             {
                 if (tryPush (segment, element) == 0)
@@ -864,7 +864,7 @@ namespace join
         }
 
         /**
-         * @brief try to push push element into the ring buffer until timeout expire.
+         * @brief try to push element into the ring buffer until timeout expire.
          * @param segment shared memory segment.
          * @param element pointer to element to push.
          * @param timeout timeout.
@@ -880,7 +880,7 @@ namespace join
             }
             // fast path (brief spin wait).
             auto const deadline = std::chrono::steady_clock::now () + timeout;
-            constexpr int nspin = 99;
+            constexpr int nspin = 100;
             for (int i = 0; i < nspin; ++i)
             {
                 if (tryPush (segment, element) == 0)
@@ -956,7 +956,7 @@ namespace join
                 return -1;
             }
             // fast path (brief spin wait).
-            constexpr int nspin = 99;
+            constexpr int nspin = 100;
             for (int i = 0; i < nspin; ++i)
             {
                 if (tryPop (segment, element) == 0)
@@ -995,7 +995,7 @@ namespace join
             }
             // fast path (brief spin wait).
             auto const deadline = std::chrono::steady_clock::now () + timeout;
-            constexpr int nspin = 99;
+            constexpr int nspin = 100;
             for (int i = 0; i < nspin; ++i)
             {
                 if (tryPop (segment, element) == 0)
