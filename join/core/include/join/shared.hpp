@@ -119,7 +119,10 @@ namespace join
         /**
          * @brief destroy the instance.
          */
-        virtual ~BasicShared () = default;
+        virtual ~BasicShared ()
+        {
+            this->close ();
+        }
 
         /**
          * @brief open or create the shared memory segment.
@@ -384,10 +387,7 @@ namespace join
         /**
          * @brief destroy the instance.
          */
-        ~SharedProducer ()
-        {
-            this->close ();
-        }
+        ~SharedProducer () = default;
 
         /**
          * @brief try to push element into ring buffer.
@@ -474,10 +474,7 @@ namespace join
         /**
          * @brief destroy the instance.
          */
-        ~SharedConsumer ()
-        {
-            this->close ();
-        }
+        ~SharedConsumer () = default;
 
         /**
          * @brief try to pop element from the ring buffer.
@@ -640,7 +637,7 @@ namespace join
         }
 
         /**
-         * @brief try to send a message to the peer.
+         * @brief try to send a message to the peer (non blocking).
          * @param element pointer to the element to send
          * @return 0 on success, -1 on failure.
          */
@@ -650,7 +647,7 @@ namespace join
         }
 
         /**
-         * @brief send a message to the peer.
+         * @brief send a message to the peer (blocking).
          * @param element pointer to the element to send
          * @return 0 on success, -1 on failure.
          */
@@ -660,7 +657,7 @@ namespace join
         }
 
         /**
-         * @brief send a message to the peer with timeout.
+         * @brief send a message to the peer with timeout (blocking).
          * @param element pointer to the element to send
          * @param timeout maximum time to wait
          * @return 0 on success, -1 on failure.
@@ -672,7 +669,7 @@ namespace join
         }
 
         /**
-         * @brief try to receive a message from the peer.
+         * @brief try to receive a message from the peer (non blocking).
          * @param element pointer to buffer for received element.
          * @return 0 on success, -1 on failure.
          */
@@ -682,7 +679,7 @@ namespace join
         }
 
         /**
-         * @brief receive a message from the peer.
+         * @brief receive a message from the peer (blocking).
          * @param element pointer to buffer for received element.
          * @return 0 on success, -1 on failure.
          */
@@ -692,7 +689,7 @@ namespace join
         }
 
         /**
-         * @brief receive a message from the peer with timeout.
+         * @brief receive a message from the peer with timeout (blocking).
          * @param element pointer to buffer for received element.
          * @param timeout maximum time to wait
          * @return 0 on success, -1 on failure.
