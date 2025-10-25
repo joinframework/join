@@ -23,23 +23,37 @@
  */
 
 // libjoin.
+#include <join/semaphore.hpp>
 #include <join/shared.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <algorithm>
+
 using namespace std::chrono_literals;
 
 using join::BasicShared;
+using join::Semaphore;
 using join::Spsc;
 
 class SpscEndpoint : public ::testing::Test
 {
 protected:
     /**
-     * @brief sets up the test fixture.
+     * @brief set up the test fixture.
      */
     void SetUp ()
+    {
+        ASSERT_EQ (BasicShared <Spsc>::unlink (_name + "_AB"), 0) << join::lastError.message ();
+        ASSERT_EQ (BasicShared <Spsc>::unlink (_name + "_BA"), 0) << join::lastError.message ();
+    }
+
+    /**
+     * @brief tear down the test fixture.
+     */
+    void TearDown () override
     {
         ASSERT_EQ (BasicShared <Spsc>::unlink (_name + "_AB"), 0) << join::lastError.message ();
         ASSERT_EQ (BasicShared <Spsc>::unlink (_name + "_BA"), 0) << join::lastError.message ();
@@ -213,6 +227,90 @@ TEST_F (SpscEndpoint, timedReceive)
     ASSERT_EQ (endpointB.timedReceive (data, 5ms), -1);
     endpointB.close ();
     endpointA.close ();
+}
+
+TEST_F (SpscEndpoint, sendBenchmark)
+{
+    const uint64_t num = 1000000;
+    const uint64_t capacity = 144;
+
+    pid_t child = fork ();
+    if (child == 0)
+    {
+        Semaphore sem (_name);
+        Spsc::Endpoint endpoint (Spsc::Endpoint::A, _name, sizeof (uint64_t), capacity);
+        sem.wait ();
+        endpoint.open ();
+        for (uint64_t i = 0, j = 0; i < num; ++i)
+        {
+            endpoint.receive (&j);
+            endpoint.send (&i);
+        }
+        endpoint.close ();
+        _exit (0);
+    }
+    else
+    {
+        EXPECT_NE (child, -1);
+        Semaphore sem (_name);
+        Spsc::Endpoint endpoint (Spsc::Endpoint::B, _name, sizeof (uint64_t), capacity);
+        EXPECT_EQ (endpoint.open (), 0) << join::lastError.message ();
+        sem.post ();
+        for (uint64_t i = 0, j = 0; i < num; ++i)
+        {
+            EXPECT_EQ (endpoint.send (&i), 0) << join::lastError.message ();
+            EXPECT_EQ (endpoint.receive (&j), 0) << join::lastError.message ();
+            EXPECT_EQ (i, j);
+        }
+        endpoint.close ();
+    }
+
+    int status;
+    waitpid (child, &status, 0);
+    ASSERT_TRUE (WIFEXITED (status));
+    ASSERT_EQ (WEXITSTATUS (status), 0);
+}
+
+TEST_F (SpscEndpoint, timedSendBenchmark)
+{
+    const uint64_t num = 1000000;
+    const uint64_t capacity = 144;
+
+    pid_t child = fork ();
+    if (child == 0)
+    {
+        Semaphore sem (_name);
+        Spsc::Endpoint endpoint (Spsc::Endpoint::A, _name, sizeof (uint64_t), capacity);
+        sem.wait ();
+        endpoint.open ();
+        for (uint64_t i = 0, j = 0; i < num; ++i)
+        {
+            endpoint.receive (&j);
+            endpoint.send (&i);
+        }
+        endpoint.close ();
+        _exit (0);
+    }
+    else
+    {
+        EXPECT_NE (child, -1);
+        Semaphore sem (_name);
+        Spsc::Endpoint endpoint (Spsc::Endpoint::B, _name, sizeof (uint64_t), capacity);
+        EXPECT_EQ (endpoint.open (), 0) << join::lastError.message ();
+        sem.post ();
+        for (uint64_t i = 0, j = 0; i < num; ++i)
+        {
+            EXPECT_EQ (endpoint.timedSend (&i, 100ms), 0) << join::lastError.message ();
+            EXPECT_EQ (endpoint.timedReceive (&j, 100ms), 0) << join::lastError.message ();
+            EXPECT_EQ (i, j);
+        }
+        endpoint.close ();
+    }
+
+    int status;
+    waitpid (child, &status, 0);
+    ASSERT_TRUE (WIFEXITED (status));
+    ASSERT_EQ (WEXITSTATUS (status), 0);
 }
 
 /**

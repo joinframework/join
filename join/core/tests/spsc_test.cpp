@@ -47,85 +47,19 @@ class SpscBuffer : public ::testing::Test
 {
 protected:
     /**
-     * @brief sets up the test fixture.
+     * @brief set up the test fixture.
      */
-    void SetUp ()
+    void SetUp () override
     {
         ASSERT_EQ (BasicShared <Spsc>::unlink (_name), 0) << join::lastError.message ();
     }
 
     /**
-     * @brief print benchmark metrics.
-     * @param size element size.
-     * @param capacity capacity.
-     * @param num number of messages.
-     * @param duration benchmark duration.
-     * @param timestamps receive timestamps.
+     * @brief tear down the test fixture.
      */
-    void metrics (uint64_t size, uint64_t capacity, uint64_t num, std::chrono::nanoseconds duration, const std::vector <uint64_t>& timestamps)
+    void TearDown () override
     {
-        double durationSec = std::chrono::duration <double> (duration).count ();
-        double durationMs = std::chrono::duration <double, std::milli> (duration).count ();
-
-        double throughputMsg = num / durationSec;
-        double bandwidthMBps = (num * size) / (durationSec * 1024 * 1024);
-        double bandwidthGbps = (num * size * 8) / (durationSec * 1000 * 1000 * 1000);
-
-        std::vector <uint64_t> sortedTimestamps = timestamps;
-        std::sort (sortedTimestamps.begin (), sortedTimestamps.end ());
-
-        std::vector <uint64_t> interArrivalTimes;
-        interArrivalTimes.reserve (num - 1);
-
-        for (uint64_t i = 1; i < num; ++i)
-        {
-            interArrivalTimes.push_back (sortedTimestamps[i] - sortedTimestamps[i-1]);
-        }
-
-        std::sort (interArrivalTimes.begin (), interArrivalTimes.end ());
-
-        size_t n = interArrivalTimes.size ();
-        uint64_t minTime  = interArrivalTimes[0];
-        uint64_t maxTime  = interArrivalTimes[n - 1];
-        uint64_t p50Time  = interArrivalTimes[n * 50 / 100];
-        uint64_t p90Time  = interArrivalTimes[n * 90 / 100];
-        uint64_t p95Time  = interArrivalTimes[n * 95 / 100];
-        uint64_t p99Time  = interArrivalTimes[n * 99 / 100];
-        uint64_t p999Time = interArrivalTimes[n * 999 / 1000];
-
-        uint64_t sumTime = 0;
-        for (uint64_t t : interArrivalTimes)
-        {
-            sumTime += t;
-        }
-        double avgTime = static_cast <double> (sumTime) / n;
-
-        std::cout << "\nConfiguration:" << std::endl;
-        std::cout << "  Messages:      " << num << std::endl;
-        std::cout << "  Message size:  " << size << " bytes" << std::endl;
-        std::cout << "  Buffer size:   " << capacity << " slots" << std::endl;
-        std::cout << "  Total data:    " << std::fixed << std::setprecision(2) << (num * size) / (1024.0 * 1024.0) << " MB" << std::endl;
-        std::cout << "\nTiming:" << std::endl;
-        std::cout << "  Total time:    " << std::fixed << std::setprecision(3) << durationMs << " ms" << std::endl;
-        std::cout << "\nThroughput:" << std::endl;
-        std::cout << "  Messages/sec:  " << std::fixed << std::setprecision(0) << throughputMsg << " msg/s" << std::endl;
-        std::cout << "\nBandwidth:" << std::endl;
-        std::cout << "  " << std::fixed << std::setprecision(2) << bandwidthMBps << " MB/s" << std::endl;
-        std::cout << "  " << std::fixed << std::setprecision(2) << bandwidthGbps << " Gb/s" << std::endl;
-        std::cout << "\nInter Time (nanoseconds):" << std::endl;
-        std::cout << "  Minimum:       " << minTime << " ns" << std::endl;
-        std::cout << "  Average:       " << std::fixed << std::setprecision(2) << avgTime << " ns" << std::endl;
-        std::cout << "  Median (p50):  " << p50Time << " ns" << std::endl;
-        std::cout << "  p90:           " << p90Time << " ns" << std::endl;
-        std::cout << "  p95:           " << p95Time << " ns" << std::endl;
-        std::cout << "  p99:           " << p99Time << " ns" << std::endl;
-        std::cout << "  p99.9:         " << p999Time << " ns" << std::endl;
-        std::cout << "  Maximum:       " << maxTime << " ns" << std::endl;
-        std::cout << "\nInter Time (microseconds):" << std::endl;
-        std::cout << "  Average:       " << std::fixed << std::setprecision(2) << avgTime / 1000.0 << " μs" << std::endl;
-        std::cout << "  p50:           " << std::fixed << std::setprecision(2) << p50Time / 1000.0 << " μs" << std::endl;
-        std::cout << "  p99:           " << std::fixed << std::setprecision(2) << p99Time / 1000.0 << " μs" << std::endl;
-        std::cout << std::endl;
+        ASSERT_EQ (BasicShared <Spsc>::unlink (_name), 0) << join::lastError.message ();
     }
 
     /// shared memory segment name.
@@ -311,8 +245,8 @@ TEST_F (SpscBuffer, timedPop)
 TEST_F (SpscBuffer, pushBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 4096;
-    const uint64_t size = 64;
+    const uint64_t capacity = 144;
+    const uint64_t size = 1472;
     char data[size] = {};
 
     pid_t child = fork ();
@@ -344,8 +278,6 @@ TEST_F (SpscBuffer, pushBenchmark)
     {
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
-        std::vector <uint64_t> sendTimestamps;
-        sendTimestamps.reserve (num);
         Spsc::Producer prod (_name, size, capacity);
         EXPECT_EQ (prod.open (), 0) << join::lastError.message ();
         // pre-fill the buffer.
@@ -357,16 +289,11 @@ TEST_F (SpscBuffer, pushBenchmark)
             }
         }
         sem.post ();
-        auto beg = std::chrono::high_resolution_clock::now ();
         for (uint64_t i = 0; i < num; ++i)
         {
             EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
-            auto sendTime = std::chrono::high_resolution_clock::now ();
-            sendTimestamps.push_back (sendTime.time_since_epoch ().count ());
         }
-        auto end = std::chrono::high_resolution_clock::now ();
         prod.close ();
-        metrics (size, capacity, num, end - beg, sendTimestamps);
     }
 
     int status;
@@ -378,8 +305,8 @@ TEST_F (SpscBuffer, pushBenchmark)
 TEST_F (SpscBuffer, timedPushBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 4096;
-    const uint64_t size = 64;
+    const uint64_t capacity = 144;
+    const uint64_t size = 1472;
     char data[size] = {};
 
     pid_t child = fork ();
@@ -411,8 +338,6 @@ TEST_F (SpscBuffer, timedPushBenchmark)
     {
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
-        std::vector <uint64_t> sendTimestamps;
-        sendTimestamps.reserve (num);
         Spsc::Producer prod (_name, size, capacity);
         EXPECT_EQ (prod.open (), 0) << join::lastError.message ();
         // pre-fill the buffer.
@@ -424,16 +349,11 @@ TEST_F (SpscBuffer, timedPushBenchmark)
             }
         }
         sem.post ();
-        auto beg = std::chrono::high_resolution_clock::now ();
         for (uint64_t i = 0; i < num; ++i)
         {
             EXPECT_EQ (prod.timedPush (data, 1s), 0) << join::lastError.message ();
-            auto sendTime = std::chrono::high_resolution_clock::now ();
-            sendTimestamps.push_back (sendTime.time_since_epoch ().count ());
         }
-        auto end = std::chrono::high_resolution_clock::now ();
         prod.close ();
-        metrics (size, capacity, num, end - beg, sendTimestamps);
     }
 
     int status;
@@ -445,8 +365,8 @@ TEST_F (SpscBuffer, timedPushBenchmark)
 TEST_F (SpscBuffer, popBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 4096;
-    const uint64_t size = 64;
+    const uint64_t capacity = 144;
+    const uint64_t size = 1472;
     char data[size] = {};
 
     pid_t child = fork ();
@@ -470,21 +390,14 @@ TEST_F (SpscBuffer, popBenchmark)
     {
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
-        std::vector <uint64_t> recvTimestamps;
-        recvTimestamps.reserve (num);
         Spsc::Consumer cons (_name, size, capacity);
         sem.wait ();
         EXPECT_EQ (cons.open (), 0) << join::lastError.message ();
-        auto beg = std::chrono::high_resolution_clock::now ();
         for (uint64_t i = 0; i < num; ++i)
         {
             EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
-            auto recvTime = std::chrono::high_resolution_clock::now ();
-            recvTimestamps.push_back (recvTime.time_since_epoch ().count ());
         }
-        auto end = std::chrono::high_resolution_clock::now ();
         cons.close ();
-        metrics (size, capacity, num, end - beg, recvTimestamps);
     }
 
     int status;
@@ -496,8 +409,8 @@ TEST_F (SpscBuffer, popBenchmark)
 TEST_F (SpscBuffer, timedPopBenchmark)
 {
     const uint64_t num = 1000000;
-    const uint64_t capacity = 4096;
-    const uint64_t size = 64;
+    const uint64_t capacity = 144;
+    const uint64_t size = 1472;
     char data[size] = {};
 
     pid_t child = fork ();
@@ -521,21 +434,15 @@ TEST_F (SpscBuffer, timedPopBenchmark)
     {
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
-        std::vector <uint64_t> recvTimestamps;
-        recvTimestamps.reserve (num);
         Spsc::Consumer cons (_name, size, capacity);
         sem.wait ();
         EXPECT_EQ (cons.open (), 0) << join::lastError.message ();
-        auto beg = std::chrono::high_resolution_clock::now ();
         for (uint64_t i = 0; i < num; ++i)
         {
             EXPECT_EQ (cons.timedPop (data, 1s), 0) << join::lastError.message ();
-            auto recvTime = std::chrono::high_resolution_clock::now ();
-            recvTimestamps.push_back (recvTime.time_since_epoch ().count ());
         }
-        auto end = std::chrono::high_resolution_clock::now ();
+        
         cons.close ();
-        metrics (size, capacity, num, end - beg, recvTimestamps);
     }
 
     int status;
