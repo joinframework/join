@@ -587,7 +587,7 @@ namespace join
         }
 
         /**
-         * @brief heck if the endpoint is open.
+         * @brief check if the endpoint is open.
          * @return true if both outbound and inbound queues are opened.
          */
         bool opened () const
