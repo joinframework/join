@@ -69,19 +69,3 @@ gtest_discover_tests(mpscendpoint.gtest)
 add_executable(mpmcendpoint.gtest spscendpoint_test.cpp)
 target_link_libraries(mpmcendpoint.gtest ${PROJECT_NAME} GTest::gtest_main pthread rt)
 gtest_discover_tests(mpmcendpoint.gtest)
-
-set(CAP_TARGETS
-    spsc.gtest
-    mpsc.gtest
-    mpmc.gtest
-    spscendpoint.gtest
-    mpscendpoint.gtest
-    mpmcendpoint.gtest
-)
-
-foreach(test_target IN LISTS CAP_TARGETS)
-    add_custom_command(TARGET ${test_target} POST_BUILD
-        COMMAND sudo setcap cap_ipc_lock+ep $<TARGET_FILE:${test_target}>
-        COMMENT "Granting IPC lock capability to ${test_target}"
-    )
-endforeach()
