@@ -794,14 +794,9 @@ namespace join
          */
         int push (SharedSegment* segment, const void* element) const noexcept
         {
-            if ((segment == nullptr) || (element == nullptr))
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-            }
             while (tryPush (segment, element) == -1)
             {
-                if (lastError != make_error_code (Errc::TemporaryError))
+                if (lastError != Errc::TemporaryError)
                 {
                     return -1;
                 }
@@ -820,15 +815,10 @@ namespace join
         template <class Rep, class Period>
         int timedPush (SharedSegment* segment, const void* element, std::chrono::duration <Rep, Period> timeout) const noexcept
         {
-            if ((segment == nullptr) || (element == nullptr))
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-            }
             auto const deadline = std::chrono::steady_clock::now () + timeout;
             while (tryPush (segment, element) == -1)
             {
-                if (lastError != make_error_code (Errc::TemporaryError))
+                if (lastError != Errc::TemporaryError)
                 {
                     return -1;
                 }
@@ -876,14 +866,9 @@ namespace join
          */
         int pop (SharedSegment* segment, void* element) const noexcept
         {
-            if ((segment == nullptr) || (element == nullptr))
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-            }
             while (tryPop (segment, element) == -1)
             {
-                if (lastError != make_error_code (Errc::TemporaryError))
+                if (lastError != Errc::TemporaryError)
                 {
                     return -1;
                 }
@@ -902,15 +887,10 @@ namespace join
         template <class Rep, class Period>
         int timedPop (SharedSegment* segment, void* element, std::chrono::duration <Rep, Period> timeout) const noexcept
         {
-            if ((segment == nullptr) || (element == nullptr))
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-            }
             auto const deadline = std::chrono::steady_clock::now () + timeout;
             while (tryPop (segment, element) == -1)
             {
-                if (lastError != make_error_code (Errc::TemporaryError))
+                if (lastError != Errc::TemporaryError)
                 {
                     return -1;
                 }
