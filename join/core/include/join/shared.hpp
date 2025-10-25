@@ -26,7 +26,6 @@
 #define __JOIN_SHARED_HPP__
 
 // libjoin.
-#include <join/condition.hpp>
 #include <join/error.hpp>
 
 // C++.
@@ -53,9 +52,6 @@ namespace join
     {
         static constexpr uint64_t MAGIC = 0x9F7E3B2A8D5C4E1B; 
         alignas (64) std::atomic_uint64_t _magic;
-        alignas (64) SharedMutex _mutex;
-        alignas (64) SharedCondition _notFull;
-        alignas (64) SharedCondition _notEmpty;
         alignas (64) std::atomic_uint64_t _head;
         alignas (64) std::atomic_uint64_t _tail;
         alignas (64) uint64_t _elementSize;
@@ -172,9 +168,6 @@ namespace join
             uint64_t expected = 0;
             if (this->_segment->_sync._magic.compare_exchange_strong (expected, SharedSync::MAGIC, std::memory_order_acq_rel, std::memory_order_acquire))
             {
-                new (&this->_segment->_sync._mutex) SharedMutex ();
-                new (&this->_segment->_sync._notFull) SharedCondition ();
-                new (&this->_segment->_sync._notEmpty) SharedCondition ();
                 new (&this->_segment->_sync._elementSize) uint64_t (this->_elementSize);
                 new (&this->_segment->_sync._capacity) uint64_t (this->_capacity);
                 new (&this->_segment->_sync._head) std::atomic_uint64_t (0);
@@ -274,46 +267,12 @@ namespace join
          */
         static int unlink (const std::string& name) noexcept
         {
-            int fd = ::shm_open (name.c_str (), O_RDWR | O_CLOEXEC, 0644);
-            if (fd == -1)
+            if (::shm_unlink (name.c_str ()) == -1)
             {
                 if (errno == ENOENT)
                 {
                     return 0;
                 }
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return -1;
-            }
-
-            struct stat statbuf;
-            if (::fstat (fd, &statbuf) == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                ::close (fd);
-                return -1;
-            }
-
-            void* ptr = ::mmap (nullptr, statbuf.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-            if (ptr == MAP_FAILED)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                ::close (fd);
-                return -1;
-            }
-
-            SharedSegment* segment = static_cast <SharedSegment*> (ptr);
-            if (segment->_sync._magic.load (std::memory_order_acquire) == SharedSync::MAGIC)
-            {
-                segment->_sync._mutex.~SharedMutex ();
-                segment->_sync._notFull.~SharedCondition ();
-                segment->_sync._notEmpty.~SharedCondition ();
-            }
-
-            ::munmap (ptr, statbuf.st_size);
-            ::close (fd);
-
-            if (::shm_unlink (name.c_str ()) == -1)
-            {
                 lastError = std::make_error_code (static_cast <std::errc> (errno));
                 return -1;
             }
@@ -814,16 +773,16 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-            uint64_t head, tail;
-            if (full (segment, head, tail))
+            uint64_t tail = segment->_sync._tail.load (std::memory_order_acquire);
+            uint64_t head = segment->_sync._head.load (std::memory_order_relaxed);
+            if ((head - tail) == segment->_sync._capacity)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (Errc::TemporaryError));
+                lastError = make_error_code (Errc::TemporaryError);
                 return -1;
             }
             auto next = head % segment->_sync._capacity;
             std::memcpy (segment->_data + (next * segment->_sync._elementSize), element, segment->_sync._elementSize);
             segment->_sync._head.store (head + 1, std::memory_order_release);
-            segment->_sync._notEmpty.signal ();
             return 0;
         }
 
@@ -840,25 +799,13 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-            // fast path (brief spin wait).
-            constexpr int nspin = 100;
-            for (int i = 0; i < nspin; ++i)
-            {
-                if (tryPush (segment, element) == 0)
-                {
-                    return 0;
-                }
-                std::this_thread::yield ();
-            }
-            // slow path (block).
-            ScopedLock <SharedMutex> lock (segment->_sync._mutex);
             while (tryPush (segment, element) == -1)
             {
-                if (lastError != std::make_error_code (static_cast <std::errc> (Errc::TemporaryError)))
+                if (lastError != make_error_code (Errc::TemporaryError))
                 {
                     return -1;
                 }
-                segment->_sync._notFull.wait (lock, [&] () { return !full (segment); });
+                std::this_thread::yield ();
             }
             return 0;
         }
@@ -878,14 +825,12 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-            // fast path (brief spin wait).
             auto const deadline = std::chrono::steady_clock::now () + timeout;
-            constexpr int nspin = 100;
-            for (int i = 0; i < nspin; ++i)
+            while (tryPush (segment, element) == -1)
             {
-                if (tryPush (segment, element) == 0)
+                if (lastError != make_error_code (Errc::TemporaryError))
                 {
-                    return 0;
+                    return -1;
                 }
                 if (std::chrono::steady_clock::now () >= deadline)
                 {
@@ -893,25 +838,6 @@ namespace join
                     return -1;
                 }
                 std::this_thread::yield ();
-            }
-            // slow path (block).
-            ScopedLock <SharedMutex> lock (segment->_sync._mutex);
-            while (tryPush (segment, element) == -1)
-            {
-                if (lastError != std::make_error_code (static_cast <std::errc> (Errc::TemporaryError)))
-                {
-                    return -1;
-                }
-                auto remaining = deadline - std::chrono::steady_clock::now ();
-                if (remaining <= std::chrono::steady_clock::duration::zero ())
-                {
-                    lastError = make_error_code (Errc::TimedOut);
-                    return -1;
-                }
-                if (!segment->_sync._notFull.timedWait (lock, remaining, [&] () { return !full (segment); }))
-                {
-                    return -1;
-                }
             }
             return 0;
         }
@@ -929,16 +855,16 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-            uint64_t head, tail;
-            if (empty (segment, head, tail))
+            uint64_t head = segment->_sync._head.load (std::memory_order_acquire);
+            uint64_t tail = segment->_sync._tail.load (std::memory_order_relaxed);
+            if ((head - tail) == 0)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (Errc::TemporaryError));
+                lastError = make_error_code (Errc::TemporaryError);
                 return -1;
             }
             auto next = tail % segment->_sync._capacity;
             std::memcpy (element, segment->_data + (next * segment->_sync._elementSize), segment->_sync._elementSize);
             segment->_sync._tail.store (tail + 1, std::memory_order_release);
-            segment->_sync._notFull.signal ();
             return 0;
         }
 
@@ -955,25 +881,13 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-            // fast path (brief spin wait).
-            constexpr int nspin = 100;
-            for (int i = 0; i < nspin; ++i)
-            {
-                if (tryPop (segment, element) == 0)
-                {
-                    return 0;
-                }
-                std::this_thread::yield ();
-            }
-            // slow path (block).
-            ScopedLock <SharedMutex> lock (segment->_sync._mutex);
             while (tryPop (segment, element) == -1)
             {
-                if (lastError != std::make_error_code (static_cast <std::errc> (Errc::TemporaryError)))
+                if (lastError != make_error_code (Errc::TemporaryError))
                 {
                     return -1;
                 }
-                segment->_sync._notEmpty.wait (lock, [&] () { return !empty (segment); });
+                std::this_thread::yield ();
             }
             return 0;
         }
@@ -993,14 +907,12 @@ namespace join
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
             }
-            // fast path (brief spin wait).
             auto const deadline = std::chrono::steady_clock::now () + timeout;
-            constexpr int nspin = 100;
-            for (int i = 0; i < nspin; ++i)
+            while (tryPop (segment, element) == -1)
             {
-                if (tryPop (segment, element) == 0)
+                if (lastError != make_error_code (Errc::TemporaryError))
                 {
-                    return 0;
+                    return -1;
                 }
                 if (std::chrono::steady_clock::now () >= deadline)
                 {
@@ -1008,25 +920,6 @@ namespace join
                     return -1;
                 }
                 std::this_thread::yield ();
-            }
-            // slow path (block).
-            ScopedLock <SharedMutex> lock (segment->_sync._mutex);
-            while (tryPop (segment, element) == -1)
-            {
-                if (lastError != std::make_error_code (static_cast <std::errc> (Errc::TemporaryError)))
-                {
-                    return -1;
-                }
-                auto remaining = deadline - std::chrono::steady_clock::now ();
-                if (remaining <= std::chrono::steady_clock::duration::zero ())
-                {
-                    lastError = make_error_code (Errc::TimedOut);
-                    return -1;
-                }
-                if (!segment->_sync._notEmpty.timedWait (lock, remaining, [&] () { return !empty (segment); }))
-                {
-                    return -1;
-                }
             }
             return 0;
         }
@@ -1039,7 +932,7 @@ namespace join
         uint64_t pending (SharedSegment* segment) const noexcept
         {
             auto head = segment->_sync._head.load (std::memory_order_acquire);
-            auto tail = segment->_sync._tail.load (std::memory_order_relaxed);
+            auto tail = segment->_sync._tail.load (std::memory_order_acquire);
             return head - tail;
         }
 
@@ -1050,23 +943,9 @@ namespace join
          */
         uint64_t available (SharedSegment* segment) const noexcept
         {
+            auto head = segment->_sync._head.load (std::memory_order_acquire);
             auto tail = segment->_sync._tail.load (std::memory_order_acquire);
-            auto head = segment->_sync._head.load (std::memory_order_relaxed);
             return segment->_sync._capacity - (head - tail);
-        }
-
-        /**
-         * @brief check if the ring buffer is full.
-         * @param segment shared memory segment.
-         * @param head buffer head.
-         * @param tail buffer tail.
-         * @return true if full, false otherwise.
-         */
-        bool full (SharedSegment* segment, uint64_t& head, uint64_t& tail) const noexcept
-        {
-            tail = segment->_sync._tail.load (std::memory_order_acquire);
-            head = segment->_sync._head.load (std::memory_order_relaxed);
-            return (head - tail) == segment->_sync._capacity;
         }
 
         /**
@@ -1076,22 +955,9 @@ namespace join
          */
         bool full (SharedSegment* segment) const noexcept
         {
-            uint64_t head, tail;
-            return full (segment, head, tail);
-        }
-
-        /**
-         * @brief check if the ring buffer is empty.
-         * @param segment shared memory segment.
-         * @param head buffer head.
-         * @param tail buffer tail.
-         * @return true if empty, false otherwise.
-         */
-        bool empty (SharedSegment* segment, uint64_t& head, uint64_t& tail) const noexcept
-        {
-            head = segment->_sync._head.load (std::memory_order_acquire);
-            tail = segment->_sync._tail.load (std::memory_order_relaxed);
-            return (head - tail) == 0;
+            auto head = segment->_sync._head.load (std::memory_order_acquire);
+            auto tail = segment->_sync._tail.load (std::memory_order_acquire);
+            return (head - tail) == segment->_sync._capacity;
         }
 
         /**
@@ -1101,8 +967,9 @@ namespace join
          */
         bool empty (SharedSegment* segment) const noexcept
         {
-            uint64_t head, tail;
-            return empty (segment, head, tail);
+            auto head = segment->_sync._head.load (std::memory_order_acquire);
+            auto tail = segment->_sync._tail.load (std::memory_order_acquire);
+            return (head - tail) == 0;
         }
     };
 
@@ -1137,9 +1004,11 @@ namespace join
             uint64_t head, tail;
             do
             {
-                if (full (segment, head, tail))
+                tail = segment->_sync._tail.load (std::memory_order_acquire);
+                head = segment->_sync._head.load (std::memory_order_relaxed);
+                if ((head - tail) == segment->_sync._capacity)
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (Errc::TemporaryError));
+                    lastError = make_error_code (Errc::TemporaryError);
                     return -1;
                 }
             }
@@ -1147,7 +1016,6 @@ namespace join
             auto slot = head % segment->_sync._capacity;
             std::memcpy (segment->_data + (slot * segment->_sync._elementSize), element, segment->_sync._elementSize);
             std::atomic_thread_fence (std::memory_order_release);
-            segment->_sync._notEmpty.signal ();
             return 0;
         }
     };
@@ -1183,9 +1051,11 @@ namespace join
             uint64_t head, tail;
             do
             {
-                if (empty (segment, head, tail))
+                head = segment->_sync._head.load (std::memory_order_acquire);
+                tail = segment->_sync._tail.load (std::memory_order_relaxed);
+                if ((head - tail) == 0)
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (Errc::TemporaryError));
+                    lastError = make_error_code (Errc::TemporaryError);
                     return -1;
                 }
             }
@@ -1193,7 +1063,6 @@ namespace join
             auto slot = tail % segment->_sync._capacity;
             std::memcpy (element, segment->_data + (slot * segment->_sync._elementSize), segment->_sync._elementSize);
             std::atomic_thread_fence (std::memory_order_release);
-            segment->_sync._notFull.signal ();
             return 0;
         }
     };
