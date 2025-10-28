@@ -923,9 +923,7 @@ namespace join
          */
         uint64_t available (SharedSegment* segment) const noexcept
         {
-            auto head = segment->_sync._head.load (std::memory_order_acquire);
-            auto tail = segment->_sync._tail.load (std::memory_order_acquire);
-            return segment->_sync._capacity - (head - tail);
+            return segment->_sync._capacity - pending (segment);
         }
 
         /**
@@ -935,9 +933,7 @@ namespace join
          */
         bool full (SharedSegment* segment) const noexcept
         {
-            auto head = segment->_sync._head.load (std::memory_order_acquire);
-            auto tail = segment->_sync._tail.load (std::memory_order_acquire);
-            return (head - tail) == segment->_sync._capacity;
+            return pending (segment) == segment->_sync._capacity;
         }
 
         /**
@@ -947,9 +943,7 @@ namespace join
          */
         bool empty (SharedSegment* segment) const noexcept
         {
-            auto head = segment->_sync._head.load (std::memory_order_acquire);
-            auto tail = segment->_sync._tail.load (std::memory_order_acquire);
-            return (head - tail) == 0;
+            return pending (segment) == 0;
         }
     };
 
