@@ -34,7 +34,7 @@
 
 using namespace std::chrono_literals;
 
-using join::BasicShared;
+using join::BasicQueue;
 using join::Semaphore;
 using join::Spsc;
 
@@ -46,8 +46,8 @@ protected:
      */
     void SetUp ()
     {
-        ASSERT_EQ (BasicShared <Spsc>::unlink (_name + "_AB"), 0) << join::lastError.message ();
-        ASSERT_EQ (BasicShared <Spsc>::unlink (_name + "_BA"), 0) << join::lastError.message ();
+        ASSERT_EQ (BasicQueue <Spsc>::unlink (_name + "_AB"), 0) << join::lastError.message ();
+        ASSERT_EQ (BasicQueue <Spsc>::unlink (_name + "_BA"), 0) << join::lastError.message ();
     }
 
     /**
@@ -55,8 +55,8 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (BasicShared <Spsc>::unlink (_name + "_AB"), 0) << join::lastError.message ();
-        ASSERT_EQ (BasicShared <Spsc>::unlink (_name + "_BA"), 0) << join::lastError.message ();
+        ASSERT_EQ (BasicQueue <Spsc>::unlink (_name + "_AB"), 0) << join::lastError.message ();
+        ASSERT_EQ (BasicQueue <Spsc>::unlink (_name + "_BA"), 0) << join::lastError.message ();
     }
 
     static const std::string _name;

@@ -46,6 +46,193 @@
 namespace join
 {
     /**
+     * @brief shared memory class.
+     */
+    class SharedMemory
+    {
+    public:
+        /**
+         * @brief create instance.
+         * @param name shared memory name.
+         * @param size shared memory size.
+         */
+        SharedMemory (const std::string& name, uint64_t size)
+        : _name (name)
+        , _size (size)
+        {
+            if (_size > static_cast <uint64_t> (std::numeric_limits <off_t>::max ()))
+            {
+                throw std::overflow_error ("size will overflow");
+            }
+        }
+
+        /**
+         * @brief destroy the instance.
+         */
+        virtual ~SharedMemory ()
+        {
+            this->close ();
+        }
+
+        /**
+         * @brief open or create the shared memory.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int open ()
+        {
+            if (this->opened ())
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            bool created = true;
+            this->_fd = ::shm_open (this->_name.c_str (), O_CREAT | O_RDWR | O_EXCL | O_CLOEXEC, 0644);
+            if ((this->_fd == -1) && (errno == EEXIST))
+            {
+                created = false;
+                this->_fd = ::shm_open(this->_name.c_str(), O_RDWR | O_CLOEXEC, 0644);
+            }
+
+            if (this->_fd == -1)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                this->close ();
+                return -1;
+            }
+
+            if (created && (::ftruncate (this->_fd, this->_size) == -1))
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                this->close ();
+                return -1;
+            }
+
+            this->_ptr = ::mmap (nullptr, this->_size, PROT_READ | PROT_WRITE, MAP_SHARED, this->_fd, 0);
+            if (this->_ptr == MAP_FAILED)
+            {
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                this->close ();
+                return -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief check if shared memory is opened.
+         * @return true if opened, false otherwise.
+         */
+        bool opened () const noexcept
+        {
+            return (this->_ptr != nullptr) && (this->_ptr != MAP_FAILED);
+        }
+
+        /**
+         * @brief close the shared memory.
+         */
+        virtual void close () noexcept 
+        {
+            if (this->opened ())
+            {
+                ::munmap (this->_ptr, this->_size);
+            }
+
+            if (this->_fd != -1)
+            {
+                ::close (this->_fd);
+                this->_fd = -1;
+            }
+
+            this->_ptr = nullptr;
+        }
+
+        /**
+         * @brief get a const pointer to the shared memory at a given offset.
+         * @param offset byte offset from the start of the shared memory.
+         * @return pointer to the mapped memory at the specified offset, or nullptr if not opened.
+         * @throws std::out_of_range if offset is out of bounds.
+         */
+        virtual const void* get (uint64_t offset = 0) const
+        {
+            if (offset >= this->_size)
+            {
+                throw std::out_of_range ("offset out of bounds");
+            }
+
+            if (this->_ptr == nullptr)
+            {
+                return nullptr;
+            }
+
+            return static_cast <const char*> (this->_ptr) + offset;
+        }
+
+        /**
+         * @brief get a pointer to the shared memory at a given offset.
+         * @param offset byte offset from the start of the shared memory.
+         * @return pointer to the mapped memory at the specified offset, or nullptr if not opened.
+         * @throws std::out_of_range if offset is out of bounds.
+         */
+        virtual void* get (uint64_t offset = 0)
+        {
+            if (offset >= this->_size)
+            {
+                throw std::out_of_range ("offset out of bounds");
+            }
+
+            if (this->_ptr == nullptr)
+            {
+                return nullptr;
+            }
+
+            return static_cast <char*> (this->_ptr) + offset;
+        }
+
+        /**
+         * @brief get the size of the shared memory.
+         * @return shared memory size in bytes.
+         */
+        virtual uint64_t size () const noexcept
+        {
+            return this->_size;
+        }
+
+        /**
+         * @brief destroy synchronization primitives and unlink the shared memory segment.
+         * @param name shared memory segment name.
+         * @return 0 on success, -1 on failure.
+         */
+        static int unlink (const std::string& name) noexcept
+        {
+            if (::shm_unlink (name.c_str ()) == -1)
+            {
+                if (errno == ENOENT)
+                {
+                    return 0;
+                }
+                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                return -1;
+            }
+
+            return 0;
+        }
+
+    protected:
+        /// shared memory name.
+        std::string _name;
+
+        /// shared memory size.
+        uint64_t _size = 0;
+
+        /// pointer to mapped shared memory.
+        void* _ptr = nullptr;
+
+        /// shared memory file descriptor.
+        int _fd = -1;
+    };
+
+    /**
      * @brief synchronization primitives.
      */
     struct SharedSync
@@ -71,7 +258,7 @@ namespace join
      * @brief shared memory base class.
      */
     template <typename Policy>
-    class BasicShared
+    class BasicQueue : public SharedMemory
     {
     public:
         /**
@@ -80,42 +267,37 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        BasicShared (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
-        : _name (name)
+        BasicQueue (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
+        : SharedMemory (name, (elementSize * capacity) + sizeof (SharedSync))
         , _elementSize (elementSize)
         , _capacity (capacity)
         {
             if ((_capacity != 0) && (_elementSize > (std::numeric_limits <uint64_t>::max () / _capacity)))
             {
-                throw std::overflow_error ("total size will overflow");
+                throw std::overflow_error ("size will overflow");
             }
 
             _userSize = _elementSize * _capacity;
             _totalSize = _userSize + sizeof (SharedSync);
-
-            if (_totalSize > static_cast <uint64_t> (std::numeric_limits <off_t>::max ()))
-            {
-                throw std::overflow_error ("total size will overflow");
-            }
         }
 
         /**
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicShared (const BasicShared& other) = delete;
+        BasicQueue (const BasicQueue& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicShared& operator= (const BasicShared& other) = delete;
+        BasicQueue& operator= (const BasicQueue& other) = delete;
 
         /**
          * @brief destroy the instance.
          */
-        virtual ~BasicShared ()
+        virtual ~BasicQueue ()
         {
             this->close ();
         }
@@ -124,58 +306,34 @@ namespace join
          * @brief open or create the shared memory segment.
          * @return 0 on success, -1 on failure.
          */
-        int open ()
+        int open () override
         {
-            if (this->opened ())
+            if (SharedMemory::open () != 0)
             {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            bool created = true;
-            this->_fd = ::shm_open (this->_name.c_str (), O_CREAT | O_RDWR | O_EXCL | O_CLOEXEC, 0644);
-            if ((this->_fd == -1) && (errno == EEXIST))
-            {
-                created = false;
-                this->_fd = ::shm_open(this->_name.c_str(), O_RDWR | O_CLOEXEC, 0644);
-            }
-
-            if (this->_fd == -1)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                this->close ();
-                return -1;
-            }
-
-            if (created && (::ftruncate (this->_fd, this->_totalSize) == -1))
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                this->close ();
-                return -1;
-            }
-
-            this->_ptr = ::mmap (nullptr, this->_totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, this->_fd, 0);
-            if (this->_ptr == MAP_FAILED)
-            {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                this->close ();
                 return -1;
             }
 
             this->_segment = static_cast <SharedSegment*> (this->_ptr);
-            this->_data = this->_segment->_data;
 
             uint64_t expected = 0;
-            if (this->_segment->_sync._magic.compare_exchange_strong (expected, SharedSync::MAGIC, std::memory_order_acq_rel, std::memory_order_acquire))
+            if (this->_segment->_sync._magic.compare_exchange_strong (expected, 0xFFFFFFFFFFFFFFFF, std::memory_order_acquire, std::memory_order_acquire))
             {
-                new (&this->_segment->_sync._elementSize) uint64_t (this->_elementSize);
-                new (&this->_segment->_sync._capacity) uint64_t (this->_capacity);
                 new (&this->_segment->_sync._head) std::atomic_uint64_t (0);
                 new (&this->_segment->_sync._tail) std::atomic_uint64_t (0);
+                this->_segment->_sync._elementSize = this->_elementSize;
+                this->_segment->_sync._capacity = this->_capacity;
+
+                this->_segment->_sync._magic.store (SharedSync::MAGIC, std::memory_order_release);
+            }
+            else
+            {
+                while (this->_segment->_sync._magic.load (std::memory_order_acquire) != SharedSync::MAGIC)
+                {
+                    std::this_thread::yield ();
+                }
             }
 
-            if ((this->_segment->_sync._elementSize != this->_elementSize) ||
-                (this->_segment->_sync._capacity != this->_capacity))
+            if ((this->_segment->_sync._elementSize != this->_elementSize) || (this->_segment->_sync._capacity != this->_capacity))
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 this->close ();
@@ -188,49 +346,42 @@ namespace join
         /**
          * @brief close the shared memory segment.
          */
-        void close () noexcept 
+        void close () noexcept override
         {
-            if (this->opened ())
+            this->_segment = nullptr;
+            SharedMemory::close ();
+        }
+
+        /**
+         * @brief get a const pointer to the shared memory data region at a given offset.
+         * @param offset byte offset from the start of the data region.
+         * @return pointer to the data region at the specified offset, or nullptr if not opened.
+         * @throws std::out_of_range if offset is out of bounds.
+         */
+        const void* get (uint64_t offset = 0) const override
+        {
+            if (offset > this->_userSize)
             {
-                ::munmap (this->_ptr, this->_totalSize);
-                this->_data = nullptr;
-                this->_segment = nullptr;
+                throw std::out_of_range ("offset out of bounds");
             }
 
-            if (this->_fd != -1)
+            return SharedMemory::get (sizeof (SharedSync) + offset);
+        }
+
+        /**
+         * @brief get a pointer to the shared memory data region at a given offset.
+         * @param offset byte offset from the start of the data region.
+         * @return pointer to the data region at the specified offset, or nullptr if not opened.
+         * @throws std::out_of_range if offset is out of bounds.
+         */
+        void* get (uint64_t offset = 0) override
+        {
+            if (offset > this->_userSize)
             {
-                ::close (this->_fd);
-                this->_fd = -1;
+                throw std::out_of_range ("offset out of bounds");
             }
 
-            this->_ptr = nullptr;
-        }
-
-        /**
-         * @brief check if shared memory segment is opened.
-         * @return true if opened, false otherwise.
-         */
-        bool opened () const noexcept
-        {
-            return (this->_ptr != nullptr) && (this->_ptr != MAP_FAILED);
-        }
-
-        /**
-         * @brief get a const pointer to the shared memory.
-         * @return pointer to the mapped memory region.
-         */
-        const void* get () const noexcept
-        {
-            return this->_data;
-        }
-
-        /**
-         * @brief get a const pointer to the shared memory.
-         * @return pointer to the mapped memory region.
-         */
-        void* get () noexcept
-        {
-            return this->_data;
+            return SharedMemory::get (sizeof (SharedSync) + offset);
         }
 
         /**
@@ -255,37 +406,14 @@ namespace join
          * @brief get the size of the shared memory region.
          * @return shared memory size in bytes.
          */
-        uint64_t size () const noexcept
+        uint64_t size () const noexcept override
         {
             return this->_userSize;
-        }
-
-        /**
-         * @brief destroy synchronization primitives and unlink the shared memory segment.
-         * @param name shared memory segment name.
-         * @return 0 on success, -1 on failure.
-         */
-        static int unlink (const std::string& name) noexcept
-        {
-            if (::shm_unlink (name.c_str ()) == -1)
-            {
-                if (errno == ENOENT)
-                {
-                    return 0;
-                }
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
-                return -1;
-            }
-
-            return 0;
         }
 
     protected:
         /// shared memory segment policy.
         Policy _policy;
-
-        /// shared memory segment name.
-        std::string _name;
 
         /// shared memory segment element size.
         uint64_t _elementSize = 0;
@@ -293,30 +421,21 @@ namespace join
         /// shared memory segment capacity.
         uint64_t _capacity = 0;
 
-        /// user shared memory size.
-        uint64_t _userSize = 0;
-
         /// total shared memory size.
         uint64_t _totalSize = 0;
 
-        /// shared memory segment descriptor.
-        int _fd = -1;
-
-        /// pointer to mapped shared memory.
-        void* _ptr = nullptr;
+        /// user shared memory size.
+        uint64_t _userSize = 0;
 
         /// shared memory segment.
         SharedSegment* _segment = nullptr;
-
-        /// shared memory segment user data.
-        void* _data = nullptr;
     };
 
     /**
      * @brief shared memory producer.
      */
     template <typename Policy>
-    class SharedProducer : public BasicShared <Policy>
+    class BasicProducer : public BasicQueue <Policy>
     {
     public:
         /**
@@ -325,8 +444,8 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        SharedProducer (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
-        : BasicShared <Policy> (name, elementSize, capacity)
+        BasicProducer (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
+        : BasicQueue <Policy> (name, elementSize, capacity)
         {
         }
 
@@ -334,19 +453,19 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        SharedProducer (const SharedProducer& other) = delete;
+        BasicProducer (const BasicProducer& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        SharedProducer& operator= (const SharedProducer& other) = delete;
+        BasicProducer& operator= (const BasicProducer& other) = delete;
 
         /**
          * @brief destroy the instance.
          */
-        ~SharedProducer () = default;
+        ~BasicProducer () = default;
 
         /**
          * @brief try to push element into ring buffer.
@@ -403,7 +522,7 @@ namespace join
      * @brief shared memory consumer.
      */
     template <typename Policy>
-    class SharedConsumer : public BasicShared <Policy>
+    class BasicConsumer : public BasicQueue <Policy>
     {
     public:
         /**
@@ -412,8 +531,8 @@ namespace join
          * @param elementSize shared memory segment element size.
          * @param capacity shared memory segment capacity.
          */
-        SharedConsumer (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
-        : BasicShared <Policy> (name, elementSize, capacity)
+        BasicConsumer (const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
+        : BasicQueue <Policy> (name, elementSize, capacity)
         {
         }
 
@@ -421,19 +540,19 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        SharedConsumer (const SharedConsumer& other) = delete;
+        BasicConsumer (const BasicConsumer& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        SharedConsumer& operator= (const SharedConsumer& other) = delete;
+        BasicConsumer& operator= (const BasicConsumer& other) = delete;
 
         /**
          * @brief destroy the instance.
          */
-        ~SharedConsumer () = default;
+        ~BasicConsumer () = default;
 
         /**
          * @brief try to pop element from the ring buffer.
@@ -490,7 +609,7 @@ namespace join
      * @brief bidirectional shared memory communication endpoint.
      */
     template <typename OutboundPolicy, typename InboundPolicy>
-    class SharedEndpoint
+    class BasicEndpoint
     {
     public:
         using Outbound = typename OutboundPolicy::Producer;
@@ -512,7 +631,7 @@ namespace join
          * @param elementSize the size of each data element in the ring buffers.
          * @param capacity the maximum number of elements the ring buffers can hold.
          */
-        SharedEndpoint (Side side, const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
+        BasicEndpoint (Side side, const std::string& name, uint64_t elementSize = 1472, uint64_t capacity = 144)
         : _side (side)
         , _name (name)
         {
@@ -532,19 +651,19 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        SharedEndpoint (const SharedEndpoint& other) = delete;
+        BasicEndpoint (const BasicEndpoint& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to copy.
          * @return assigned object.
          */
-        SharedEndpoint& operator= (const SharedEndpoint& other) = delete;
+        BasicEndpoint& operator= (const BasicEndpoint& other) = delete;
 
         /**
          * @brief destroy the instance.
          */
-        ~SharedEndpoint ()
+        ~BasicEndpoint ()
         {
             this->close();
         }
@@ -751,9 +870,9 @@ namespace join
     class Spsc
     {
     public:
-        using Producer = SharedProducer <Spsc>;
-        using Consumer = SharedConsumer <Spsc>;
-        using Endpoint = SharedEndpoint <Spsc, Spsc>;
+        using Producer = BasicProducer <Spsc>;
+        using Consumer = BasicConsumer <Spsc>;
+        using Endpoint = BasicEndpoint <Spsc, Spsc>;
 
         /**
          * @brief construct the single producer single consumer ring buffer policy by default.
@@ -953,9 +1072,9 @@ namespace join
     class Mpsc : public Spsc
     {
     public:
-        using Producer = SharedProducer <Mpsc>;
-        using Consumer = SharedConsumer <Mpsc>;
-        using Endpoint = SharedEndpoint <Mpsc, Mpsc>;
+        using Producer = BasicProducer <Mpsc>;
+        using Consumer = BasicConsumer <Mpsc>;
+        using Endpoint = BasicEndpoint <Mpsc, Mpsc>;
 
         /**
          * @brief construct the multiple producer single consumer ring buffer policy by default.
@@ -1000,9 +1119,9 @@ namespace join
     class Mpmc : public Mpsc
     {
     public:
-        using Producer = SharedProducer <Mpmc>;
-        using Consumer = SharedConsumer <Mpmc>;
-        using Endpoint = SharedEndpoint <Mpmc, Mpmc>;
+        using Producer = BasicProducer <Mpmc>;
+        using Consumer = BasicConsumer <Mpmc>;
+        using Endpoint = BasicEndpoint <Mpmc, Mpmc>;
 
         /**
          * @brief construct the multiple producer multiple consumer ring buffer policy by default.
