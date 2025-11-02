@@ -67,15 +67,19 @@ const std::string SharedMem::_name = "/test_shm";
 TEST_F (SharedMem, open)
 {
     SharedMemory shm (_name, 1024);
+    const SharedMemory& cshm = shm;
 
     ASSERT_THROW (SharedMemory (_name, std::numeric_limits <uint64_t>::max ()), std::overflow_error);
     ASSERT_EQ (shm.size (), 1024);
     ASSERT_FALSE (shm.opened ());
     ASSERT_THROW (shm.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
+    ASSERT_THROW (cshm.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
     ASSERT_EQ (shm.get (), nullptr);
+    ASSERT_EQ (cshm.get (), nullptr);
     ASSERT_EQ (shm.open (), 0) << join::lastError.message ();
     ASSERT_EQ (shm.size (), 1024);
     ASSERT_NE (shm.get (), nullptr);
+    ASSERT_NE (cshm.get (), nullptr);
     ASSERT_TRUE (shm.opened ());
     ASSERT_EQ (shm.open (), -1);
     ASSERT_TRUE (shm.opened ());
