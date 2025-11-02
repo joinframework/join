@@ -155,14 +155,14 @@ namespace join
          */
         virtual const void* get (uint64_t offset = 0) const
         {
-            if (this->_ptr == nullptr)
-            {
-                return nullptr;
-            }
-
             if (offset >= this->_size)
             {
                 throw std::out_of_range ("offset out of bounds");
+            }
+
+            if (this->_ptr == nullptr)
+            {
+                return nullptr;
             }
 
             return static_cast <const char*> (this->_ptr) + offset;
@@ -176,14 +176,14 @@ namespace join
          */
         virtual void* get (uint64_t offset = 0)
         {
-            if (this->_ptr == nullptr)
-            {
-                return nullptr;
-            }
-
             if (offset >= this->_size)
             {
                 throw std::out_of_range ("offset out of bounds");
+            }
+
+            if (this->_ptr == nullptr)
+            {
+                return nullptr;
             }
 
             return static_cast <char*> (this->_ptr) + offset;

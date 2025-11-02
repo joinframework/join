@@ -80,6 +80,7 @@ TEST_F (MpscBuffer, open)
     ASSERT_EQ (prod1.capacity (), 8);
     ASSERT_FALSE (prod1.opened ());
     ASSERT_EQ (prod1.size (), 64 * 8);
+    ASSERT_THROW (prod1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
     ASSERT_EQ (prod1.get (), nullptr);
     ASSERT_EQ (prod1.open (), 0) << join::lastError.message ();
     ASSERT_EQ (prod1.size (), 64 * 8);
