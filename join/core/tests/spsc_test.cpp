@@ -36,7 +36,7 @@
 
 using namespace std::chrono_literals;
 
-using join::BasicShared;
+using join::BasicQueue;
 using join::Semaphore;
 using join::Spsc;
 
@@ -51,7 +51,7 @@ protected:
      */
     void SetUp () override
     {
-        ASSERT_EQ (BasicShared <Spsc>::unlink (_name), 0) << join::lastError.message ();
+        ASSERT_EQ (BasicQueue <Spsc>::unlink (_name), 0) << join::lastError.message ();
     }
 
     /**
@@ -59,7 +59,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (BasicShared <Spsc>::unlink (_name), 0) << join::lastError.message ();
+        ASSERT_EQ (BasicQueue <Spsc>::unlink (_name), 0) << join::lastError.message ();
     }
 
     /// shared memory segment name.
