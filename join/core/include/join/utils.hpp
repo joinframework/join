@@ -43,6 +43,9 @@
 #include <cstddef>
 #include <cstring>
 
+#define JOIN_LIKELY(x)   __builtin_expect(!!(x), 1)
+#define JOIN_UNLIKELY(x) __builtin_expect(!!(x), 0)
+
 #define OUT_ENUM(a) case a : return #a
 
 namespace join

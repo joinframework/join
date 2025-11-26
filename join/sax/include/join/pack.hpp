@@ -482,9 +482,9 @@ namespace join
         template <typename ViewType>
         int read (ViewType& document)
         {
-            if (JOIN_SAX_LIKELY (readValue (document) == 0))
+            if (JOIN_LIKELY (readValue (document) == 0))
             {
-                if (JOIN_SAX_LIKELY (document.peek () == std::char_traits <char>::eof ()))
+                if (JOIN_LIKELY (document.peek () == std::char_traits <char>::eof ()))
                 {
                     return 0;
                 }
@@ -613,14 +613,14 @@ namespace join
                 len = unpack <uint8_t> (document) & ~0x90;
             }
 
-            if (JOIN_SAX_UNLIKELY (startArray (len) == -1))
+            if (JOIN_UNLIKELY (startArray (len) == -1))
             {
                 return -1;
             }
 
             while (len)
             {
-                if (JOIN_SAX_UNLIKELY (readValue (document) == -1))
+                if (JOIN_UNLIKELY (readValue (document) == -1))
                 {
                     return -1;
                 }
@@ -654,19 +654,19 @@ namespace join
                 len = unpack <uint8_t> (document) & ~0x80;
             }
 
-            if (JOIN_SAX_UNLIKELY (startObject (len) == -1))
+            if (JOIN_UNLIKELY (startObject (len) == -1))
             {
                 return -1;
             }
 
             while (len)
             {
-                if (JOIN_SAX_UNLIKELY (readString (document, true) == -1))
+                if (JOIN_UNLIKELY (readString (document, true) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (readValue (document) == -1))
+                if (JOIN_UNLIKELY (readValue (document) == -1))
                 {
                     return -1;
                 }
@@ -708,7 +708,7 @@ namespace join
             std::string output;
             output.resize (len);
 
-            if (JOIN_SAX_UNLIKELY (document.read (&output[0], len) != len))
+            if (JOIN_UNLIKELY (document.read (&output[0], len) != len))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -743,7 +743,7 @@ namespace join
             std::string output;
             output.resize (len);
 
-            if (JOIN_SAX_UNLIKELY (document.read (&output[0], len) != len))
+            if (JOIN_UNLIKELY (document.read (&output[0], len) != len))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -814,7 +814,7 @@ namespace join
         static unpack (ViewType& document)
         {
             Type value;
-            if (JOIN_SAX_UNLIKELY (document.read (reinterpret_cast <char *> (&value), sizeof (value)) != sizeof (value)))
+            if (JOIN_UNLIKELY (document.read (reinterpret_cast <char *> (&value), sizeof (value)) != sizeof (value)))
             {
                 throw std::range_error ("not enough data to unpack");
             }
