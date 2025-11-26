@@ -28,6 +28,7 @@
 // libjoin.
 #include <join/error.hpp>
 #include <join/value.hpp>
+#include <join/utils.hpp>
 #include <join/view.hpp>
 
 // C++.
@@ -38,9 +39,6 @@
 
 // C.
 #include <cstddef>
-
-#define JOIN_SAX_LIKELY(x)   __builtin_expect(!!(x), 1)
-#define JOIN_SAX_UNLIKELY(x) __builtin_expect(!!(x), 0)
 
 namespace join
 {

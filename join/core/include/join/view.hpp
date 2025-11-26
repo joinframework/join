@@ -25,9 +25,12 @@
 #ifndef __JOIN_VIEW_HPP__
 #define __JOIN_VIEW_HPP__
 
+// libjoin.
+#include <join/utils.hpp>
+
 // C++.
-#include <stdexcept>
 #include <istream>
+#include <string>
 
 // C.
 #include <cstring>
@@ -46,19 +49,9 @@ namespace join
          * @param in input string.
          * @param count number of characters.
          */
-        StringView (const char* in, size_t count)
-        : _buf (in),
-          _len (count)
-        {
-        }
-
-        /**
-         * @brief default constructor.
-         * @param in input string.
-         */
-        StringView (const char * in)
-        : _buf (in),
-          _len (std::char_traits <char>::length (in))
+        constexpr StringView (const char * in, size_t count)
+        : _pos (in)
+        , _end (in ? in + count : in)
         {
         }
 
@@ -67,9 +60,19 @@ namespace join
          * @param first pointer to the first character of the string.
          * @param last pointer to the last character of the string.
          */
-        StringView (const char * first, const char * last)
-        : _buf (first),
-          _len (last - first)
+        constexpr StringView (const char * first, const char * last)
+        : _pos (first)
+        , _end (last)
+        {
+        }
+
+        /**
+         * @brief default constructor.
+         * @param in input string.
+         */
+        StringView (const char * in)
+        : _pos (in)
+        , _end (in ? in + std::char_traits <char>::length (in) : in)
         {
         }
 
@@ -77,42 +80,42 @@ namespace join
          * @brief copy constructor.
          * @param other object to copy.
          */
-        StringView (const StringView& other) = delete;
+        StringView (const StringView& other) = default;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        StringView& operator= (const StringView& other) = delete;
+        StringView& operator= (const StringView& other) = default;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        StringView (StringView&& other) = delete;
+        StringView (StringView&& other) = default;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        StringView& operator=(StringView&& other) = delete;
+        StringView& operator=(StringView&& other) = default;
 
         /**
          * @brief destroy instance.
          */
-        virtual ~StringView () = default;
+        ~StringView () = default;
 
         /**
          * @brief get character without extracting it.
          * @return extracted character.
          */
-        int peek () const noexcept
+        inline int peek () const noexcept
         {
-            if (_len)
+            if (JOIN_LIKELY (_pos < _end))
             {
-                return _buf[_pos];
+                return static_cast <unsigned char> (*_pos);
             }
             return std::char_traits <char>::eof ();
         }
@@ -121,12 +124,11 @@ namespace join
          * @brief extracts character.
          * @return extracted character.
          */
-        int get () noexcept
+        inline int get () noexcept
         {
-            if (_len)
+            if (JOIN_LIKELY (_pos < _end))
             {
-                --_len;
-                return _buf[_pos++];
+                return static_cast <unsigned char> (*_pos++);
             }
             return std::char_traits <char>::eof ();
         }
@@ -136,11 +138,10 @@ namespace join
          * @param expected expected character.
          * @return true if extracted, false otherwise.
          */
-        bool getIf (char expected) noexcept
+        inline bool getIf (char expected) noexcept
         {
-            if (_len && (_buf[_pos] == expected))
+            if (JOIN_LIKELY (_pos < _end) && (*_pos == expected))
             {
-                --_len;
                 ++_pos;
                 return true;
             }
@@ -148,45 +149,45 @@ namespace join
         }
 
         /**
-         * @brief extracts expected character (case insensitive).
+         * @brief extracts expected character (case insensitive, ASCII-only).
          * @param expected expected character.
          * @return true if extracted, false otherwise.
          */
-        bool getIfNoCase (char expected) noexcept
+        inline bool getIfNoCase (char expected) noexcept
         {
-            if (_len && (((_buf[_pos] ^ expected) == 0) ||
-                         ((_buf[_pos] ^ expected) == 32)))
+            if (JOIN_LIKELY (_pos < _end))
             {
-                --_len;
-                ++_pos;
-                return true;
+                const char c = *_pos;
+                if ((c | 32) == (expected | 32))
+                {
+                    ++_pos;
+                    return true;
+                }
             }
             return false;
         }
 
         /**
-         * @brief .
-         * @param buf .
-         * @param count .
+         * @brief read characters.
+         * @param buf output buffer.
+         * @param count number of characters to read.
+         * @return number of characters read.
          */
-        size_t read (char* buf, size_t count)
+        inline size_t read (char* buf, size_t count) noexcept
         {
-            count = std::min (_len, count);
-            ::memcpy (buf, &_buf[_pos], count);
-            _pos += count;
-            _len -= count;
-            return count;
+            const size_t available = _end - _pos;
+            const size_t nread = (count < available) ? count : available;
+            std::memcpy (buf, _pos, nread);
+            _pos += nread;
+            return nread;
         }
 
     private:
-        /// input buffer start pointer.
-        const char * _buf = nullptr;
-
-        /// string remaining size.
-        size_t _len = 0;
-
         /// current position.
-        size_t _pos = 0;
+        const char * _pos = nullptr;
+
+        /// end position.
+        const char * _end = nullptr;
     };
 
     /**
@@ -200,7 +201,7 @@ namespace join
          * @param in input stream.
          */
         StreamView (std::istream& in)
-        : _in (std::addressof (in))
+        : _in (in.rdbuf ())
         {
         }
 
@@ -233,24 +234,24 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~StreamView () = default;
+        ~StreamView () = default;
 
         /**
          * @brief get character without extracting it.
          * @return extracted character.
          */
-        int peek () const noexcept
+        inline int peek () const noexcept
         {
-            return _in->peek ();
+            return _in->sgetc ();
         }
 
         /**
          * @brief extracts character.
          * @return extracted character.
          */
-        int get () noexcept
+        inline int get () noexcept
         {
-            return _in->get ();
+            return _in->sbumpc ();
         }
 
         /**
@@ -258,46 +259,49 @@ namespace join
          * @param expected expected character.
          * @return true if extracted, false otherwise.
          */
-        bool getIf (char expected) noexcept
+        inline bool getIf (char expected) noexcept
         {
-            if (!_in->eof () && (static_cast <char> (_in->peek ()) == expected))
+            if (_in->sgetc () == static_cast <int> (static_cast <unsigned char> (expected)))
             {
-                _in->get ();
+                _in->sbumpc ();
                 return true;
             }
             return false;
         }
 
         /**
-         * @brief extracts expected character (case insensitive).
+         * @brief extracts expected character (case insensitive, ASCII-only).
          * @param expected expected character.
          * @return true if extracted, false otherwise.
          */
-        bool getIfNoCase (char expected) noexcept
+        inline bool getIfNoCase (char expected) noexcept
         {
-            if (!_in->eof () && (((static_cast <char> (_in->peek ()) ^ expected) == 0) ||
-                                 ((static_cast <char> (_in->peek ()) ^ expected) == 32)))
+            const int c = _in->sgetc ();
+            if (JOIN_LIKELY (c != std::char_traits <char>::eof ()))
             {
-                _in->get ();
-                return true;
+                if ((static_cast <char> (c) | 32) == (expected | 32))
+                {
+                    _in->sbumpc ();
+                    return true;
+                }
             }
             return false;
         }
 
         /**
-         * @brief .
-         * @param buf .
-         * @param count .
+         * @brief read characters.
+         * @param buf output buffer.
+         * @param count number of characters to read.
+         * @return number of characters read.
          */
-        size_t read (char* buf, size_t count)
+        inline size_t read (char* buf, size_t count) noexcept
         {
-            _in->read (buf, count);
-            return _in->gcount ();
+            return _in->sgetn (buf, count);
         }
 
     private:
-        /// input stream.
-        std::istream* _in;
+        /// input stream buffer.
+        std::streambuf* _in;
     };
 }
 

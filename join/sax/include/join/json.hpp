@@ -1063,7 +1063,7 @@ namespace join
         template <typename ViewType>
         int readNull (ViewType& document)
         {
-            if (JOIN_SAX_UNLIKELY ((document.get () != 'u') || (document.get () != 'l') || (document.get () != 'l')))
+            if (JOIN_UNLIKELY ((document.get () != 'u') || (document.get () != 'l') || (document.get () != 'l')))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -1080,7 +1080,7 @@ namespace join
         template <typename ViewType>
         int readTrue (ViewType& document)
         {
-            if (JOIN_SAX_UNLIKELY ((document.get () != 'r') || (document.get () != 'u') || (document.get () != 'e')))
+            if (JOIN_UNLIKELY ((document.get () != 'r') || (document.get () != 'u') || (document.get () != 'e')))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -1097,7 +1097,7 @@ namespace join
         template <typename ViewType>
         int readFalse (ViewType& document)
         {
-            if (JOIN_SAX_UNLIKELY ((document.get () != 'a') || (document.get () != 'l') || (document.get () != 's') || (document.get () != 'e')))
+            if (JOIN_UNLIKELY ((document.get () != 'a') || (document.get () != 'l') || (document.get () != 's') || (document.get () != 'e')))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -1114,13 +1114,13 @@ namespace join
         template <typename ViewType>
         int readInf (ViewType& document, bool negative)
         {
-            if (JOIN_SAX_UNLIKELY (!(document.getIfNoCase ('n') && document.getIfNoCase ('f'))))
+            if (JOIN_UNLIKELY (!(document.getIfNoCase ('n') && document.getIfNoCase ('f'))))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
             }
 
-            if (JOIN_SAX_UNLIKELY (document.getIfNoCase ('i') && !(document.getIfNoCase ('n') && document.getIfNoCase ('i') && document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
+            if (JOIN_UNLIKELY (document.getIfNoCase ('i') && !(document.getIfNoCase ('n') && document.getIfNoCase ('i') && document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -1137,7 +1137,7 @@ namespace join
         template <typename ViewType>
         int readNan (ViewType& document, bool negative)
         {
-            if (JOIN_SAX_UNLIKELY (!(document.getIfNoCase ('a') && document.getIfNoCase ('n'))))
+            if (JOIN_UNLIKELY (!(document.getIfNoCase ('a') && document.getIfNoCase ('n'))))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -1233,27 +1233,27 @@ namespace join
             bool isDouble = false;
             uint64_t u = 0;
 
-            if (JOIN_SAX_UNLIKELY (document.peek () == '0'))
+            if (JOIN_UNLIKELY (document.peek () == '0'))
             {
                 number.push_back (document.get ());
 
-                if (JOIN_SAX_UNLIKELY (isDigit (document.peek ())))
+                if (JOIN_UNLIKELY (isDigit (document.peek ())))
                 {
                     join::lastError = make_error_code (SaxErrc::InvalidValue);
                     return -1;
                 }
             }
-            else if (JOIN_SAX_LIKELY (isDigit (document.peek ())))
+            else if (JOIN_LIKELY (isDigit (document.peek ())))
             {
                 number.push_back (document.get ());
                 u = number.back () - '0';
                 ++digits;
 
-                while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
+                while (JOIN_LIKELY (isDigit (document.peek ())))
                 {
                     int digit = document.peek () - '0';
 
-                    if (JOIN_SAX_UNLIKELY (u > ((max64 - digit) / 10)))
+                    if (JOIN_UNLIKELY (u > ((max64 - digit) / 10)))
                     {
                         isDouble = true;
                         break;
@@ -1264,11 +1264,11 @@ namespace join
                     ++digits;
                 }
             }
-            else if (JOIN_SAX_LIKELY (document.getIfNoCase ('i')))
+            else if (JOIN_LIKELY (document.getIfNoCase ('i')))
             {
                 return readInf (document, negative);
             }
-            else if (JOIN_SAX_LIKELY (document.getIfNoCase ('n')))
+            else if (JOIN_LIKELY (document.getIfNoCase ('n')))
             {
                 return readNan (document, negative);
             }
@@ -1280,7 +1280,7 @@ namespace join
 
             if (isDouble)
             {
-                while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
+                while (JOIN_LIKELY (isDigit (document.peek ())))
                 {
                     number.push_back (document.get ());
                     u = (u * 10) + (number.back () - '0');
@@ -1294,11 +1294,11 @@ namespace join
                 number.push_back (document.get ());
                 isDouble = true;
 
-                while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
+                while (JOIN_LIKELY (isDigit (document.peek ())))
                 {
                     number.push_back (document.get ());
                     u = (u * 10) + (number.back () - '0');
-                    if (JOIN_SAX_LIKELY (u || digits))
+                    if (JOIN_LIKELY (u || digits))
                     {
                         ++digits;
                     }
@@ -1319,17 +1319,17 @@ namespace join
                     negExp = (number.back () == '-');
                 }
 
-                if (JOIN_SAX_LIKELY (isDigit (document.peek ())))
+                if (JOIN_LIKELY (isDigit (document.peek ())))
                 {
                     number.push_back (document.get ());
                     exponent = (number.back () - '0');
 
-                    while (JOIN_SAX_LIKELY (isDigit (document.peek ())))
+                    while (JOIN_LIKELY (isDigit (document.peek ())))
                     {
                         number.push_back (document.get ());
                         int digit = number.back () - '0';
 
-                        if (JOIN_SAX_LIKELY (exponent <= ((std::numeric_limits <int>::max () - digit) / 10)))
+                        if (JOIN_LIKELY (exponent <= ((std::numeric_limits <int>::max () - digit) / 10)))
                         {
                             exponent = (exponent * 10) + digit;
                         }
@@ -1351,7 +1351,7 @@ namespace join
             {
                 double d = 0.0;
 
-                if (JOIN_SAX_LIKELY (digits <= 19))
+                if (JOIN_LIKELY (digits <= 19))
                 {
                     if (strtodFast (u, exponent + frac, d))
                     {
@@ -1618,30 +1618,30 @@ namespace join
 
             for (;;)
             {
-                if (JOIN_SAX_UNLIKELY (document.getIf ('"')))
+                if (JOIN_UNLIKELY (document.getIf ('"')))
                 {
                     break;
                 }
-                else if (JOIN_SAX_UNLIKELY (static_cast <uint8_t> (document.peek ()) == '\\'))
+                else if (JOIN_UNLIKELY (static_cast <uint8_t> (document.peek ()) == '\\'))
                 {
                     if (readEscaped (document, output) == -1)
                     {
                         return -1;
                     }
                 }
-                /*else if (JOIN_SAX_UNLIKELY (static_cast <uint8_t> (document.peek ()) > 0x7F))
+                /*else if (JOIN_UNLIKELY (static_cast <uint8_t> (document.peek ()) > 0x7F))
                 {
                     if (readUtf8 (document, output) == -1)
                     {
                         return -1;
                     }
                 }*/
-                else if (JOIN_SAX_UNLIKELY (static_cast <uint8_t> (document.peek ()) < 0x20))
+                else if (JOIN_UNLIKELY (static_cast <uint8_t> (document.peek ()) < 0x20))
                 {
                     join::lastError = make_error_code (JsonErrc::IllegalCharacter);
                     return -1;
                 }
-                else if (JOIN_SAX_UNLIKELY (document.peek () == std::char_traits <char>::eof ()))
+                else if (JOIN_UNLIKELY (document.peek () == std::char_traits <char>::eof ()))
                 {
                     join::lastError = make_error_code (JsonErrc::EndOfFile);
                     return -1;
@@ -1663,12 +1663,12 @@ namespace join
         template <JsonReadMode ReadMode, typename ViewType>
         int readArray (ViewType& document)
         {
-            if (JOIN_SAX_UNLIKELY (startArray () == -1))
+            if (JOIN_UNLIKELY (startArray () == -1))
             {
                 return -1;
             }
 
-            if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+            if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
             {
                 return -1;
             }
@@ -1680,19 +1680,19 @@ namespace join
 
             for (;;)
             {
-                if (JOIN_SAX_UNLIKELY (readValue <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (readValue <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
                 if (document.getIf (','))
                 {
-                    if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
                     {
                         return -1;
                     }
@@ -1719,12 +1719,12 @@ namespace join
         template <JsonReadMode ReadMode, typename ViewType>
         int readObject (ViewType& document)
         {
-            if (JOIN_SAX_UNLIKELY (startObject () == -1))
+            if (JOIN_UNLIKELY (startObject () == -1))
             {
                 return -1;
             }
 
-            if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+            if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
             {
                 return -1;
             }
@@ -1736,46 +1736,46 @@ namespace join
 
             for (;;)
             {
-                if (JOIN_SAX_UNLIKELY (document.get () != '"'))
+                if (JOIN_UNLIKELY (document.get () != '"'))
                 {
                     join::lastError = make_error_code (JsonErrc::MissingQuote);
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (readString (document, true) == -1))
+                if (JOIN_UNLIKELY (readString (document, true) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (document.get () != ':'))
+                if (JOIN_UNLIKELY (document.get () != ':'))
                 {
                     join::lastError = make_error_code (JsonErrc::MissingColon);
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (readValue <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (readValue <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
                 if (document.getIf (','))
                 {
-                    if (JOIN_SAX_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
                     {
                         return -1;
                     }
@@ -1811,7 +1811,7 @@ namespace join
         template <typename ViewType>
         constexpr void skipWhitespaces (ViewType& document)
         {
-            while (JOIN_SAX_UNLIKELY (isWhitespace (document.peek ())))
+            while (JOIN_UNLIKELY (isWhitespace (document.peek ())))
             {
                 document.get ();
             }
@@ -1829,7 +1829,7 @@ namespace join
 
             if (ReadMode & JsonReadMode::ParseComments)
             {
-                while (JOIN_SAX_UNLIKELY (document.getIf ('/')))
+                while (JOIN_UNLIKELY (document.getIf ('/')))
                 {
                     if (document.getIf ('*'))
                     {
@@ -1838,7 +1838,7 @@ namespace join
                             // ignore comment.
                         }
                     }
-                    else if (JOIN_SAX_LIKELY (document.getIf ('/')))
+                    else if (JOIN_LIKELY (document.getIf ('/')))
                     {
                         while (document.get () != '\n')
                         {
