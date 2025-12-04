@@ -62,6 +62,8 @@ set(PUBLIC_HEADERS
     network/include/join/interface.hpp
     network/include/join/interfacemanager.hpp
     sax/include/join/diyfp.hpp
+    sax/include/join/atodpow.hpp
+    sax/include/join/dtoapow.hpp
     sax/include/join/dtoa.hpp
     sax/include/join/value.hpp
     sax/include/join/sax.hpp

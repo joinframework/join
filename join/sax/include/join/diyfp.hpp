@@ -31,6 +31,7 @@
 
 // C.
 #include <cstdint>
+#include <cstring>
 
 namespace join
 {
@@ -59,30 +60,16 @@ namespace join
         constexpr DiyFp& operator= (const DiyFp& other) noexcept = default;
 
         /**
-         * @brief create floating point using mantissa and exponent.
-         * @param mantissa mantissa.
-         * @param exponent exponent.
-         */
-        constexpr DiyFp (uint64_t mantissa, int exponent) noexcept
-        : _mantissa (mantissa),
-          _exponent (exponent)
-        {
-        }
-
-        /**
          * @brief create floating point using double.
          * @param value double value.
          */
-        constexpr DiyFp (double value) noexcept
+        explicit constexpr DiyFp (double value) noexcept
         {
-            union
-            {
-                double d;
-                uint64_t u;
-            } tmp = { .d = value };
+            uint64_t u64 = 0;
+            memcpy (&u64, &value, sizeof (double));
 
-            _mantissa = (tmp.u & _mantissaMask);
-            _exponent = (tmp.u & _exponentMask) >> _mantissaSize;
+            _mantissa = u64 & _mantissaMask;
+            _exponent = static_cast <int> ((u64 & _exponentMask) >> _mantissaSize);
 
             if (_exponent)
             {
@@ -96,24 +83,35 @@ namespace join
         }
 
         /**
+         * @brief create floating point using mantissa and exponent.
+         * @param mantissa mantissa.
+         * @param exponent exponent.
+         */
+        constexpr DiyFp (uint64_t mantissa, int exponent) noexcept
+        : _mantissa (mantissa),
+          _exponent (exponent)
+        {
+        }
+
+        /**
          * @brief destroy instance.
          */
-        virtual ~DiyFp () = default;
+        ~DiyFp () = default;
 
         /**
          * @brief normalize floating point.
          * @return a reference of the current object.
          */
-        constexpr DiyFp& normalize () noexcept
+        inline constexpr DiyFp& normalize () noexcept
         {
-            while ((_mantissa & _hiddenBit) == 0)
+            if (_mantissa == 0)
             {
-                _mantissa <<= 1;
-                --_exponent;
+                return *this;
             }
 
-            _mantissa <<= (_diyMantissaSize - _mantissaSize - 1);
-            _exponent -= (_diyMantissaSize - _mantissaSize - 1);
+            int shift = __builtin_clzll (_mantissa);
+            _mantissa <<= shift;
+            _exponent  -= shift;
 
             return *this;
         }
@@ -123,16 +121,21 @@ namespace join
          * @brief normalize boundary.
          * @return a reference of the current object.
          */
-        constexpr DiyFp& normalizeBoundary () noexcept
+        inline constexpr DiyFp& normalizeBoundary () noexcept
         {
-            while ((_mantissa & (_hiddenBit << 1)) == 0)
+            if (_mantissa != 0)
             {
-                _mantissa <<= 1;
-                --_exponent;
+                int shift = __builtin_clzll (_mantissa) - (64 - _mantissaSize - 2);
+                if (shift > 0)
+                {
+                    _mantissa <<= shift;
+                    _exponent  -= shift;
+                }
             }
 
-            _mantissa <<= (_diyMantissaSize - _mantissaSize - 2);
-            _exponent -= (_diyMantissaSize - _mantissaSize - 2);
+            constexpr int shift = _diyMantissaSize - _mantissaSize - 2;
+            _mantissa <<= shift;
+            _exponent  -= shift;
 
             return *this;
         }
@@ -148,18 +151,12 @@ namespace join
             plus._exponent = _exponent - 1;
             plus.normalizeBoundary ();
 
-            if (_mantissa == _hiddenBit)
-            {
-                minus._mantissa = (_mantissa << 2) - 1;
-                minus._exponent = _exponent - 2;
-            }
-            else
-            {
-                minus._mantissa = (_mantissa << 1) - 1;
-                minus._exponent = _exponent - 1;
-            }
+            const bool special = __builtin_expect (_mantissa == _hiddenBit, 0);
+            minus._mantissa = (_mantissa << (special ? 2 : 1)) - 1;
+            minus._exponent = _exponent - (special ? 2 : 1);
 
-            minus._mantissa <<= minus._exponent - plus._exponent;
+            const int diff = minus._exponent - plus._exponent;
+            minus._mantissa <<= diff;
             minus._exponent = plus._exponent;
         }
 
@@ -168,10 +165,9 @@ namespace join
          * @param rhs floating point.
          * @return a reference of the current object.
          */
-        constexpr DiyFp& operator-= (const DiyFp& rhs) noexcept
+        inline constexpr DiyFp& operator-= (const DiyFp& rhs) noexcept
         {
             _mantissa -= rhs._mantissa;
-
             return *this;
         }
 
@@ -180,8 +176,12 @@ namespace join
          * @param rhs floating point.
          * @return a reference of the current object.
          */
-        constexpr DiyFp& operator*= (const DiyFp& rhs) noexcept
+        inline constexpr DiyFp& operator*= (const DiyFp& rhs) noexcept
         {
+        #if defined(__SIZEOF_INT128__)
+            __uint128_t product = static_cast <__uint128_t> (_mantissa) * static_cast <__uint128_t> (rhs._mantissa);
+            _mantissa = static_cast <uint64_t> ((product >> 64) + ((product >> 63) & 1));
+        #else
             uint64_t M32 = 0xFFFFFFFFU;
 
             uint64_t a = _mantissa >> 32;
@@ -195,8 +195,8 @@ namespace join
             uint64_t bd = b * d;
 
             uint64_t tmp = (bd >> 32) + (ad & M32) + (bc & M32) + (1U << 31);
-
             _mantissa = ac + (ad >> 32) + (bc >> 32) + (tmp >> 32);
+        #endif
             _exponent += rhs._exponent + 64;
 
             return *this;
@@ -233,7 +233,7 @@ namespace join
      * @param rhs floating point.
      * @return a floating point from lhs minus rhs.
      */
-    inline DiyFp operator- (const DiyFp& lhs, const DiyFp& rhs)
+    inline constexpr DiyFp operator- (const DiyFp& lhs, const DiyFp& rhs)
     {
         return DiyFp (lhs) -= rhs;
     }
@@ -244,7 +244,7 @@ namespace join
      * @param rhs floating point.
      * @return a floating point from lhs multiplied by rhs.
      */
-    inline DiyFp operator* (const DiyFp& lhs, const DiyFp& rhs)
+    inline constexpr DiyFp operator* (const DiyFp& lhs, const DiyFp& rhs)
     {
         return DiyFp (lhs) *= rhs;
     }
