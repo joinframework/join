@@ -47,7 +47,7 @@ protected:
     /**
      * @brief Sets up the test fixture.
      */
-    void SetUp ()
+    void SetUp () override
     {
         ASSERT_EQ (_acceptor.create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
     }
@@ -55,7 +55,7 @@ protected:
     /**
      * @brief Tears down the test fixture.
      */
-    void TearDown ()
+    void TearDown () override
     {
         _server.close ();
         _client.close ();
@@ -240,7 +240,7 @@ TEST_F (ReactorTest, onReceive)
     // wait for the onReceive notification.
     {
         ScopedLock <Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [this] () {return _event == "onReceive";}));
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {return _event == "onReceive";}));
         _event.clear ();
     }
 
@@ -266,7 +266,7 @@ TEST_F (ReactorTest, onClose)
     // wait for the onClose notification.
     {
         ScopedLock <Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [this] () {return _event == "onClose";}));
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {return _event == "onClose";}));
         _event.clear ();
     }
 }
@@ -291,7 +291,7 @@ TEST_F (ReactorTest, onError)
     // wait for the onError notification.
     {
         ScopedLock <Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [this] () {return _event == "onError";}));
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {return _event == "onError";}));
         _event.clear ();
     }
 }

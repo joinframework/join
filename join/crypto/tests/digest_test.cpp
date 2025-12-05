@@ -107,37 +107,37 @@ TEST (Digest, finalize)
     digest.write (sample.data (), sample.size ());
     ASSERT_EQ (digest.finalize (), md5bin);
 
-    digest = std::move (Digest (Digest::Algorithm::SHA1));
+    digest = Digest (Digest::Algorithm::SHA1);
     digest << sample;
     ASSERT_EQ (digest.finalize (), sha1bin);
     digest.write (sample.data (), sample.size ());
     ASSERT_EQ (digest.finalize (), sha1bin);
 
-    digest = std::move (Digest (Digest::Algorithm::SHA224));
+    digest = Digest (Digest::Algorithm::SHA224);
     digest << sample;
     ASSERT_EQ (digest.finalize (), sha224bin);
     digest.write (sample.data (), sample.size ());
     ASSERT_EQ (digest.finalize (), sha224bin);
 
-    digest = std::move (Digest (Digest::Algorithm::SHA256));
+    digest = Digest (Digest::Algorithm::SHA256);
     digest << sample;
     ASSERT_EQ (digest.finalize (), sha256bin);
     digest.write (sample.data (), sample.size ());
     ASSERT_EQ (digest.finalize (), sha256bin);
 
-    digest = std::move (Digest (Digest::Algorithm::SHA384));
+    digest = Digest (Digest::Algorithm::SHA384);
     digest << sample;
     ASSERT_EQ (digest.finalize (), sha384bin);
     digest.write (sample.data (), sample.size ());
     ASSERT_EQ (digest.finalize (), sha384bin);
 
-    digest = std::move (Digest (Digest::Algorithm::SHA512));
+    digest = Digest (Digest::Algorithm::SHA512);
     digest << sample;
     ASSERT_EQ (digest.finalize (), sha512bin);
     digest.write (sample.data (), sample.size ());
     ASSERT_EQ (digest.finalize (), sha512bin);
 
-    digest = std::move (Digest (Digest::Algorithm::SM3));
+    digest = Digest (Digest::Algorithm::SM3);
     digest << sample;
     ASSERT_EQ (digest.finalize (), sm3bin);
     digest.write (sample.data (), sample.size ());

@@ -55,7 +55,7 @@ namespace join
         template <typename Type, size_t sz>
         struct _byteswap
         {
-            __inline__ Type operator() (Type val)
+            __inline__ Type operator() ([[maybe_unused]] Type val)
             {
                 throw std::out_of_range ("data size");
             }

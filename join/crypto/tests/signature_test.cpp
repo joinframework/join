@@ -197,31 +197,31 @@ TEST_F (SignatureTest, sign)
     sig.write (sample.data (), sample.size ());
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::MD5)) << join::lastError.message ();
 
-    sig = std::move (Signature (Digest::Algorithm::SHA1));
+    sig = Signature (Digest::Algorithm::SHA1);
     sig << sample;
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA1)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA1)) << join::lastError.message ();
 
-    sig = std::move (Signature (Digest::Algorithm::SHA224));
+    sig = Signature (Digest::Algorithm::SHA224);
     sig << sample;
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA224)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA224)) << join::lastError.message ();
 
-    sig = std::move (Signature (Digest::Algorithm::SHA256));
+    sig = Signature (Digest::Algorithm::SHA256);
     sig << sample;
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA256)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA256)) << join::lastError.message ();
 
-    sig = std::move (Signature (Digest::Algorithm::SHA384));
+    sig = Signature (Digest::Algorithm::SHA384);
     sig << sample;
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA384)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA384)) << join::lastError.message ();
 
-    sig = std::move (Signature (Digest::Algorithm::SHA512));
+    sig = Signature (Digest::Algorithm::SHA512);
     sig << sample;
     ASSERT_TRUE (Signature::verify (sample, sig.sign (rsaPriKeyPath), rsaPubKeyPath, Digest::Algorithm::SHA512)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
@@ -355,31 +355,31 @@ TEST_F (SignatureTest, verify)
     sig.write (sample.data (), sample.size ());
     ASSERT_TRUE (sig.verify (Base64::decode (rsa5sig), rsaPubKeyPath)) << join::lastError.message ();
 
-    sig = std::move (Signature (Digest::Algorithm::SHA1));
+    sig = Signature (Digest::Algorithm::SHA1);
     sig << sample;
     ASSERT_TRUE (sig.verify (Base64::decode (rsa1sig), rsaPubKeyPath)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
     ASSERT_TRUE (sig.verify (Base64::decode (rsa1sig), rsaPubKeyPath)) << join::lastError.message ();
 
-    sig = std::move (Signature (Digest::Algorithm::SHA224));
+    sig = Signature (Digest::Algorithm::SHA224);
     sig << sample;
     ASSERT_TRUE (sig.verify (Base64::decode (rsa224sig), rsaPubKeyPath)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
     ASSERT_TRUE (sig.verify (Base64::decode (rsa224sig), rsaPubKeyPath)) << join::lastError.message ();
 
-    sig = std::move (Signature (Digest::Algorithm::SHA256));
+    sig = Signature (Digest::Algorithm::SHA256);
     sig << sample;
     ASSERT_TRUE (sig.verify (Base64::decode (rsa256sig), rsaPubKeyPath)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
     ASSERT_TRUE (sig.verify (Base64::decode (rsa256sig), rsaPubKeyPath)) << join::lastError.message ();
 
-    sig = std::move (Signature (Digest::Algorithm::SHA384));
+    sig = Signature (Digest::Algorithm::SHA384);
     sig << sample;
     ASSERT_TRUE (sig.verify (Base64::decode (rsa384sig), rsaPubKeyPath)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());
     ASSERT_TRUE (sig.verify (Base64::decode (rsa384sig), rsaPubKeyPath)) << join::lastError.message ();
 
-    sig = std::move (Signature (Digest::Algorithm::SHA512));
+    sig = Signature (Digest::Algorithm::SHA512);
     sig << sample;
     ASSERT_TRUE (sig.verify (Base64::decode (rsa512sig), rsaPubKeyPath)) << join::lastError.message ();
     sig.write (sample.data (), sample.size ());

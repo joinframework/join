@@ -50,7 +50,7 @@ protected:
     /**
      * @brief set up the test fixture.
      */
-    void SetUp ()
+    void SetUp () override
     {
         ASSERT_EQ (BasicQueue <Mpmc>::unlink (_name), 0) << join::lastError.message ();
     }
@@ -314,7 +314,7 @@ TEST_F (MpmcBuffer, pushBenchmark)
         sem.post ();
         for (int p = 0; p < numProducers; ++p)
         {
-            producers.emplace_back([&, p] () {
+            producers.emplace_back([&] () {
                 Mpmc::Producer prod (_name, size, capacity);
                 EXPECT_EQ (prod.open (), 0) << join::lastError.message ();
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
@@ -406,7 +406,7 @@ TEST_F (MpmcBuffer, timedPushBenchmark)
         sem.post ();
         for (int p = 0; p < numProducers; ++p)
         {
-            producers.emplace_back([&, p] () {
+            producers.emplace_back([&] () {
                 Mpmc::Producer prod (_name, size, capacity);
                 EXPECT_EQ (prod.open (), 0) << join::lastError.message ();
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
@@ -488,7 +488,7 @@ TEST_F (MpmcBuffer, popBenchmark)
         EXPECT_EQ (cons0.open (), 0) << join::lastError.message ();
         for (int p = 0; p < numConsumers; ++p)
         {
-            consumers.emplace_back([&, p] () {
+            consumers.emplace_back([&] () {
                 Mpmc::Consumer cons (_name, size, capacity);
                 EXPECT_EQ (cons.open (), 0) << join::lastError.message ();
                 for (uint64_t i = 0; i < msgPerConsumer; ++i)
@@ -578,7 +578,7 @@ TEST_F (MpmcBuffer, timedPopBenchmark)
         EXPECT_EQ (cons0.open (), 0) << join::lastError.message ();
         for (int p = 0; p < numConsumers; ++p)
         {
-            consumers.emplace_back([&, p] () {
+            consumers.emplace_back([&] () {
                 Mpmc::Consumer cons (_name, size, capacity);
                 EXPECT_EQ (cons.open (), 0) << join::lastError.message ();
                 for (uint64_t i = 0; i < msgPerConsumer; ++i)

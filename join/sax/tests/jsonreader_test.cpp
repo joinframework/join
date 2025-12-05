@@ -807,6 +807,14 @@ TEST (JsonReader, dbl)
     EXPECT_EQ (value[0].getDouble (), -1E-10);
 
     stream.clear ();
+    stream.str ("[1e-200]");
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    EXPECT_EQ (value[0].getDouble (), 1e-200);
+
+    stream.clear ();
     stream.str ("[1.234E+10]");
     ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());

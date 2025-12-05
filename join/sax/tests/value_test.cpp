@@ -107,7 +107,7 @@ TEST (Value, create)
     Value stringValue ("foo");
     ASSERT_TRUE (stringValue.isString ());
 
-    Value arrayValue (Array ({1}));
+    Value arrayValue (Array {1});
     ASSERT_TRUE (arrayValue.isArray ());
 
     Value objectValue (Object ({{"i", 1}}));
@@ -201,7 +201,7 @@ TEST (Value, copy)
     Value stringValue (value);
     ASSERT_TRUE (stringValue.isString ());
 
-    value = Array ({1});
+    value = Array {1};
     Value arrayValue (value);
     ASSERT_TRUE (arrayValue.isArray ());
 
@@ -297,7 +297,7 @@ TEST (Value, move)
     Value stringValue (std::move (value));
     ASSERT_TRUE (stringValue.isString ());
 
-    value = Array ({1});
+    value = Array {1};
     Value arrayValue (std::move (value));
     ASSERT_TRUE (arrayValue.isArray ());
 
@@ -523,7 +523,7 @@ TEST (Value, isNull)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isNull ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isNull ());
 
     value = Object ({{"i", 1}});
@@ -619,7 +619,7 @@ TEST (Value, isBool)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isBool ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isBool ());
 
     value = Object ({{"i", 1}});
@@ -715,7 +715,7 @@ TEST (Value, isTrue)
     value = "127.0.0.1";
     ASSERT_THROW (value.isTrue (), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.isTrue (), std::bad_cast);
 
     value = Object ({{"i", 1}});
@@ -811,7 +811,7 @@ TEST (Value, isFalse)
     value = "127.0.0.1";
     ASSERT_THROW (value.isFalse (), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.isFalse (), std::bad_cast);
 
     value = Object ({{"i", 1}});
@@ -907,7 +907,7 @@ TEST (Value, isNumber)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isNumber ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isNumber ());
 
     value = Object ({{"i", 1}});
@@ -1003,7 +1003,7 @@ TEST (Value, isInt8)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt8 ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isInt8 ());
 
     value = Object ({{"i", 1}});
@@ -1099,7 +1099,7 @@ TEST (Value, isUint8)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint8 ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isUint8 ());
 
     value = Object ({{"i", 1}});
@@ -1195,7 +1195,7 @@ TEST (Value, isInt16)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt16 ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isInt16 ());
 
     value = Object ({{"i", 1}});
@@ -1291,7 +1291,7 @@ TEST (Value, isUint16)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint16 ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isUint16 ());
 
     value = Object ({{"i", 1}});
@@ -1387,7 +1387,7 @@ TEST (Value, isInt)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isInt ());
 
     value = Object ({{"i", 1}});
@@ -1483,7 +1483,7 @@ TEST (Value, isUint)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isUint ());
 
     value = Object ({{"i", 1}});
@@ -1579,7 +1579,7 @@ TEST (Value, isInt64)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt64 ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isInt64 ());
 
     value = Object ({{"i", 1}});
@@ -1675,7 +1675,7 @@ TEST (Value, isUint64)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint64 ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isUint64 ());
 
     value = Object ({{"i", 1}});
@@ -1771,7 +1771,7 @@ TEST (Value, isFloat)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isFloat ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isFloat ());
 
     value = Object ({{"i", 1}});
@@ -1867,7 +1867,7 @@ TEST (Value, isDouble)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isDouble ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isDouble ());
 
     value = Object ({{"i", 1}});
@@ -1963,7 +1963,7 @@ TEST (Value, isString)
     value = "127.0.0.1";
     ASSERT_TRUE (value.isString ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isString ());
 
     value = Object ({{"i", 1}});
@@ -2059,7 +2059,7 @@ TEST (Value, isArray)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isArray ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_TRUE (value.isArray ());
 
     value = Object ({{"i", 1}});
@@ -2155,7 +2155,7 @@ TEST (Value, isObject)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isObject ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.isObject ());
 
     value = Object ({{"i", 1}});
@@ -2233,7 +2233,7 @@ TEST (Value, set)
 
     value.set <Array, Array::value_type> ({1});
     ASSERT_TRUE (value.is <Array> ());
-    ASSERT_EQ (value.get <Array> (), Array ({1}));
+    ASSERT_EQ (value.get <Array> (), Array {1});
 
     value.set <Object, Object::value_type> ({{"i", 1}});
     ASSERT_TRUE (value.is <Object> ());
@@ -2470,29 +2470,29 @@ TEST (Value, getBool)
     ASSERT_TRUE (value.getBool ());
     ASSERT_TRUE (static_cast <bool> (value));
 
+    bool tmp = false; (void) tmp;
+
     value = "";
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW (static_cast <bool> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW (static_cast <bool> (value), std::bad_cast);
-
+    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW (static_cast <bool> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW (static_cast <bool> (value), std::bad_cast);
-
-    value = Array ({1});
+    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
+    value = Array {1};
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW (static_cast <bool> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW (static_cast <bool> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
 }
 
 /**
@@ -2500,21 +2500,24 @@ TEST (Value, getBool)
  */
 TEST (Value, getInt8)
 {
+    int8_t tmp = 0;
+    (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_EQ (value.getInt8 (), std::numeric_limits <int8_t>::min ());
@@ -2530,15 +2533,15 @@ TEST (Value, getInt8)
 
     value = std::numeric_limits <uint8_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int16_t>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
-
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    
     value = std::numeric_limits <int16_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint16_t>::min ();
     ASSERT_EQ (value.getInt8 (), std::numeric_limits <uint16_t>::min ());
@@ -2546,11 +2549,11 @@ TEST (Value, getInt8)
 
     value = std::numeric_limits <uint16_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int32_t>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = int32_t (12);
     ASSERT_EQ (value.getInt8 (), 12);
@@ -2558,7 +2561,7 @@ TEST (Value, getInt8)
 
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint32_t>::min ();
     ASSERT_EQ (value.getInt8 (), std::numeric_limits <uint32_t>::min ());
@@ -2566,11 +2569,11 @@ TEST (Value, getInt8)
 
     value = std::numeric_limits <uint32_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int64_t>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getInt8 (), 12);
@@ -2578,7 +2581,7 @@ TEST (Value, getInt8)
 
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint64_t>::min ();
     ASSERT_EQ (value.getInt8 (), std::numeric_limits <uint64_t>::min ());
@@ -2586,19 +2589,19 @@ TEST (Value, getInt8)
 
     value = std::numeric_limits <uint64_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getInt8 (), 12);
@@ -2606,31 +2609,31 @@ TEST (Value, getInt8)
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
 }
 
 /**
@@ -2638,25 +2641,28 @@ TEST (Value, getInt8)
  */
 TEST (Value, getUint8)
 {
+    uint8_t tmp = 0;
+    (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::max ();
     ASSERT_EQ (value.getUint8 (), std::numeric_limits <int8_t>::max ());
@@ -2672,11 +2678,11 @@ TEST (Value, getUint8)
 
     value = std::numeric_limits <int16_t>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int16_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint16_t>::min ();
     ASSERT_EQ (value.getUint8 (), std::numeric_limits <uint16_t>::min ());
@@ -2684,11 +2690,11 @@ TEST (Value, getUint8)
 
     value = std::numeric_limits <uint16_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int32_t>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = int32_t (12);
     ASSERT_EQ (value.getUint8 (), 12);
@@ -2696,7 +2702,7 @@ TEST (Value, getUint8)
 
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint32_t>::min ();
     ASSERT_EQ (value.getUint8 (), std::numeric_limits <uint32_t>::min ());
@@ -2704,11 +2710,11 @@ TEST (Value, getUint8)
 
     value = std::numeric_limits <uint32_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int64_t>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getUint8 (), 12);
@@ -2716,7 +2722,7 @@ TEST (Value, getUint8)
 
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint64_t>::min ();
     ASSERT_EQ (value.getUint8 (), std::numeric_limits <uint64_t>::min ());
@@ -2724,19 +2730,19 @@ TEST (Value, getUint8)
 
     value = std::numeric_limits <uint64_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getUint8 (), 12);
@@ -2744,31 +2750,31 @@ TEST (Value, getUint8)
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint8_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
 }
 
 /**
@@ -2776,21 +2782,24 @@ TEST (Value, getUint8)
  */
 TEST (Value, getInt16)
 {
+    int16_t tmp = 0;
+    (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_EQ (value.getInt16 (), std::numeric_limits <int8_t>::min ());
@@ -2822,11 +2831,11 @@ TEST (Value, getInt16)
 
     value = std::numeric_limits <uint16_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int32_t>::min ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = int32_t (12);
     ASSERT_EQ (value.getInt16 (), 12);
@@ -2834,7 +2843,7 @@ TEST (Value, getInt16)
 
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint32_t>::min ();
     ASSERT_EQ (value.getInt16 (), std::numeric_limits <uint32_t>::min ());
@@ -2842,11 +2851,11 @@ TEST (Value, getInt16)
 
     value = std::numeric_limits <uint32_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int64_t>::min ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getInt16 (), 12);
@@ -2854,7 +2863,7 @@ TEST (Value, getInt16)
 
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint64_t>::min ();
     ASSERT_EQ (value.getInt16 (), std::numeric_limits <uint64_t>::min ());
@@ -2862,19 +2871,19 @@ TEST (Value, getInt16)
 
     value = std::numeric_limits <uint64_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::min ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getInt16 (), 12);
@@ -2882,31 +2891,31 @@ TEST (Value, getInt16)
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
 }
 
 /**
@@ -2914,25 +2923,28 @@ TEST (Value, getInt16)
  */
 TEST (Value, getUint16)
 {
+    uint16_t tmp = 0;
+    (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::max ();
     ASSERT_EQ (value.getUint16 (), std::numeric_limits <int8_t>::max ());
@@ -2948,7 +2960,7 @@ TEST (Value, getUint16)
 
     value = std::numeric_limits <int16_t>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int16_t>::max ();
     ASSERT_EQ (value.getUint16 (), std::numeric_limits <int16_t>::max ());
@@ -2964,7 +2976,7 @@ TEST (Value, getUint16)
 
     value = std::numeric_limits <int32_t>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = int32_t (12);
     ASSERT_EQ (value.getUint16 (), 12);
@@ -2972,7 +2984,7 @@ TEST (Value, getUint16)
 
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint32_t>::min ();
     ASSERT_EQ (value.getUint16 (), std::numeric_limits <uint32_t>::min ());
@@ -2980,11 +2992,11 @@ TEST (Value, getUint16)
 
     value = std::numeric_limits <uint32_t>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int64_t>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getUint16 (), 12);
@@ -2992,7 +3004,7 @@ TEST (Value, getUint16)
 
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint64_t>::min ();
     ASSERT_EQ (value.getUint16 (), std::numeric_limits <uint64_t>::min ());
@@ -3000,19 +3012,19 @@ TEST (Value, getUint16)
 
     value = std::numeric_limits <uint64_t>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getUint16 (), 12);
@@ -3020,31 +3032,31 @@ TEST (Value, getUint16)
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint16_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
 }
 
 /**
@@ -3052,21 +3064,24 @@ TEST (Value, getUint16)
  */
 TEST (Value, getInt)
 {
+    int32_t tmp = 0;
+    (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_EQ (value.getInt (), std::numeric_limits <int8_t>::min ());
@@ -3114,11 +3129,11 @@ TEST (Value, getInt)
 
     value = std::numeric_limits <uint32_t>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int64_t>::min ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getInt (), 12);
@@ -3126,7 +3141,7 @@ TEST (Value, getInt)
 
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint64_t>::min ();
     ASSERT_EQ (value.getInt (), std::numeric_limits <uint64_t>::min ());
@@ -3134,19 +3149,19 @@ TEST (Value, getInt)
 
     value = std::numeric_limits <uint64_t>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::min ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getInt (), 12);
@@ -3154,31 +3169,31 @@ TEST (Value, getInt)
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW (static_cast <int32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
 }
 
 /**
@@ -3186,25 +3201,28 @@ TEST (Value, getInt)
  */
 TEST (Value, getUint)
 {
+    uint32_t tmp = 0;
+    (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::max ();
     ASSERT_EQ (value.getUint (), std::numeric_limits <int8_t>::max ());
@@ -3220,7 +3238,7 @@ TEST (Value, getUint)
 
     value = std::numeric_limits <int16_t>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int16_t>::max ();
     ASSERT_EQ (value.getUint (), std::numeric_limits <int16_t>::max ());
@@ -3236,7 +3254,7 @@ TEST (Value, getUint)
 
     value = std::numeric_limits <int32_t>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_EQ (value.getUint (), std::numeric_limits <int32_t>::max ());
@@ -3252,7 +3270,7 @@ TEST (Value, getUint)
 
     value = std::numeric_limits <int64_t>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getUint (), 12);
@@ -3260,7 +3278,7 @@ TEST (Value, getUint)
 
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint64_t>::min ();
     ASSERT_EQ (value.getUint (), std::numeric_limits <uint64_t>::min ());
@@ -3268,19 +3286,19 @@ TEST (Value, getUint)
 
     value = std::numeric_limits <uint64_t>::max ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::max ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getUint (), 12);
@@ -3288,31 +3306,31 @@ TEST (Value, getUint)
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint32_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
 }
 
 /**
@@ -3320,21 +3338,24 @@ TEST (Value, getUint)
  */
 TEST (Value, getInt64)
 {
+    int64_t tmp = 0;
+    (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_EQ (value.getInt64 (), std::numeric_limits <int8_t>::min ());
@@ -3398,19 +3419,19 @@ TEST (Value, getInt64)
 
     value = std::numeric_limits <uint64_t>::max ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::min ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::max ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getInt64 (), 12);
@@ -3418,31 +3439,31 @@ TEST (Value, getInt64)
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <int64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
 }
 
 /**
@@ -3450,25 +3471,28 @@ TEST (Value, getInt64)
  */
 TEST (Value, getUint64)
 {
+    uint64_t tmp = 0;
+    (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::max ();
     ASSERT_EQ (value.getUint64 (), std::numeric_limits <int8_t>::max ());
@@ -3484,7 +3508,7 @@ TEST (Value, getUint64)
 
     value = std::numeric_limits <int16_t>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int16_t>::max ();
     ASSERT_EQ (value.getUint64 (), std::numeric_limits <int16_t>::max ());
@@ -3500,7 +3524,7 @@ TEST (Value, getUint64)
 
     value = std::numeric_limits <int32_t>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_EQ (value.getUint64 (), std::numeric_limits <int32_t>::max ());
@@ -3516,7 +3540,7 @@ TEST (Value, getUint64)
 
     value = std::numeric_limits <int64_t>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_EQ (value.getUint64 (), std::numeric_limits <int64_t>::max ());
@@ -3532,15 +3556,15 @@ TEST (Value, getUint64)
 
     value = std::numeric_limits <float>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::max ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getUint64 (), 12);
@@ -3548,31 +3572,31 @@ TEST (Value, getUint64)
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW (static_cast <uint64_t> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
 }
 
 /**
@@ -3580,21 +3604,23 @@ TEST (Value, getUint64)
  */
 TEST (Value, getFloat)
 {
+    float tmp = 0.0f; (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW (static_cast <float> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW (static_cast <float> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW (static_cast <float> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW (static_cast <float> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_EQ (value.getFloat (), std::numeric_limits <int8_t>::min ());
@@ -3678,27 +3704,27 @@ TEST (Value, getFloat)
 
     value = "";
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW (static_cast <float> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW (static_cast <float> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW (static_cast <float> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW (static_cast <float> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW (static_cast <float> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW (static_cast <float> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
 }
 
 /**
@@ -3706,21 +3732,23 @@ TEST (Value, getFloat)
  */
 TEST (Value, getDouble)
 {
+    double tmp = 0.0; (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW (static_cast <double> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW (static_cast <double> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW (static_cast <double> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW (static_cast <double> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_EQ (value.getDouble (), std::numeric_limits <int8_t>::min ());
@@ -3804,27 +3832,27 @@ TEST (Value, getDouble)
 
     value = "";
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW (static_cast <double> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW (static_cast <double> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW (static_cast <double> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW (static_cast <double> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW (static_cast <double> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW (static_cast <double> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
 }
 
 /**
@@ -3832,101 +3860,104 @@ TEST (Value, getDouble)
  */
 TEST (Value, getString)
 {
+    const char * tmp = nullptr;
+    (void) tmp;
+
     Value value;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <int8_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint8_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint8_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <int16_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <int16_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint16_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint16_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <int32_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <int32_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint32_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint32_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <int64_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <int64_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint64_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <uint64_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <float>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <double>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = std::numeric_limits <double>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = "";
     ASSERT_EQ (value.getString (), "");
@@ -3944,13 +3975,13 @@ TEST (Value, getString)
     ASSERT_STREQ (value.getString ().c_str (), "127.0.0.1");
     ASSERT_STREQ (static_cast <const char *> (value), "127.0.0.1");
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW (static_cast <const char *> (value), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
 }
 
 /**
@@ -4042,7 +4073,7 @@ TEST (Value, getArray)
     value = "127.0.0.1";
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_NO_THROW (value.getArray ());
 
     value = Object ({{"i", 1}});
@@ -4138,7 +4169,7 @@ TEST (Value, getObject)
     value = "127.0.0.1";
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
     value = Object ({{"i", 1}});
@@ -4549,7 +4580,7 @@ TEST (Value, size)
     value = "127.0.0.1";
     ASSERT_EQ (value.size (), 9);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_EQ (value.size (), 1);
 
     value = Object ({{"i", 1}});
@@ -4644,7 +4675,7 @@ TEST (Value, reserve)
     value = "127.0.0.1";
     ASSERT_NO_THROW (value.reserve (12));
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_NO_THROW (value.reserve (12));
 
     value = Object ({{"i", 1}});
@@ -4748,7 +4779,7 @@ TEST (Value, clear)
     ASSERT_NO_THROW (value.clear ());
     ASSERT_TRUE (value.empty ());
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_FALSE (value.empty ());
     ASSERT_NO_THROW (value.clear ());
     ASSERT_TRUE (value.empty ());
@@ -4848,7 +4879,7 @@ TEST (Value, insert)
     value = "127.0.0.1";
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
     value = Object ({{"i", 1}});
@@ -4944,7 +4975,7 @@ TEST (Value, erase)
     value = "127.0.0.1";
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
     value = Object ({{"i", 1}});
@@ -5041,7 +5072,7 @@ TEST (Value, pushBack)
     value = "127.0.0.1";
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_NO_THROW (value.pushBack (1));
 
     value = Object ({{"i", 1}});
@@ -5137,7 +5168,7 @@ TEST (Value, popBack)
     value = "127.0.0.1";
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_NO_THROW (value.popBack ());
 
     value = Object ({{"i", 1}});
@@ -5265,7 +5296,7 @@ TEST (Value, contains)
     ASSERT_FALSE (value.contains (0));
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = Array ({1});
+    value = Array {1};
     ASSERT_TRUE (value.contains (0));
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
@@ -5285,7 +5316,7 @@ TEST (Value, swap)
 {
     Value value = nullptr;
 
-    Value other = Array ({1});
+    Value other = Array {1};
     ASSERT_TRUE (value.isNull ());
     ASSERT_TRUE (other.isArray ());
     value.swap (other);
@@ -5348,7 +5379,7 @@ TEST (Value, swap)
     ASSERT_TRUE (value.isString ());
     ASSERT_TRUE (other.isDouble ());
 
-    other = Array ({1});
+    other = Array {1};
     ASSERT_TRUE (value.isString ());
     ASSERT_TRUE (other.isArray ());
     value.swap (other);
@@ -5562,7 +5593,7 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits <double>::min ());
     ASSERT_FALSE (value == std::numeric_limits <double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array ({1}));
+    ASSERT_FALSE (value == Array {1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
     value.set <bool> (true);
@@ -5580,7 +5611,7 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits <double>::min ());
     ASSERT_FALSE (value == std::numeric_limits <double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array ({1}));
+    ASSERT_FALSE (value == Array {1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -5598,7 +5629,7 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits <double>::min ());
     ASSERT_FALSE (value == std::numeric_limits <double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array ({1}));
+    ASSERT_FALSE (value == Array {1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
     value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
@@ -5616,7 +5647,7 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits <double>::min ());
     ASSERT_FALSE (value == std::numeric_limits <double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array ({1}));
+    ASSERT_FALSE (value == Array {1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
     value.set <int64_t> (std::numeric_limits <int64_t>::min ());
@@ -5634,7 +5665,7 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits <double>::min ());
     ASSERT_FALSE (value == std::numeric_limits <double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array ({1}));
+    ASSERT_FALSE (value == Array {1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
     value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
@@ -5652,7 +5683,7 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits <double>::min ());
     ASSERT_FALSE (value == std::numeric_limits <double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array ({1}));
+    ASSERT_FALSE (value == Array {1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -5670,7 +5701,7 @@ TEST (Value, equal)
     ASSERT_TRUE  (value == std::numeric_limits <double>::min ());
     ASSERT_FALSE (value == std::numeric_limits <double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array ({1}));
+    ASSERT_FALSE (value == Array {1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
     value.set <std::string> ("foo");
@@ -5689,7 +5720,7 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value == "foo");
     ASSERT_FALSE (value == "bar");
-    ASSERT_FALSE (value == Array ({1}));
+    ASSERT_FALSE (value == Array {1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
     value.set <Array, Array::value_type> ({1});
@@ -5707,7 +5738,7 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits <double>::min ());
     ASSERT_FALSE (value == std::numeric_limits <double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_TRUE  (value == Array ({1}));
+    ASSERT_TRUE  (value == Array {1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -5725,7 +5756,7 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits <double>::min ());
     ASSERT_FALSE (value == std::numeric_limits <double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array ({1}));
+    ASSERT_FALSE (value == Array {1});
     ASSERT_TRUE  (value == Object ({{"i", 1}}));
 
     value.set <std::nullptr_t> (nullptr);
@@ -5743,7 +5774,7 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits <double>::min () == value);
     ASSERT_FALSE (std::numeric_limits <double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array ({1}) == value);
+    ASSERT_FALSE (Array {1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
     value.set <bool> (true);
@@ -5761,7 +5792,7 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits <double>::min () == value);
     ASSERT_FALSE (std::numeric_limits <double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array ({1}) == value);
+    ASSERT_FALSE (Array {1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -5779,7 +5810,7 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits <double>::min () == value);
     ASSERT_FALSE (std::numeric_limits <double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array ({1}) == value);
+    ASSERT_FALSE (Array {1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
     value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
@@ -5797,7 +5828,7 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits <double>::min () == value);
     ASSERT_FALSE (std::numeric_limits <double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array ({1}) == value);
+    ASSERT_FALSE (Array {1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
     value.set <int64_t> (std::numeric_limits <int64_t>::min ());
@@ -5815,7 +5846,7 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits <double>::min () == value);
     ASSERT_FALSE (std::numeric_limits <double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array ({1}) == value);
+    ASSERT_FALSE (Array {1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
     value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
@@ -5833,7 +5864,7 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits <double>::min () == value);
     ASSERT_FALSE (std::numeric_limits <double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array ({1}) == value);
+    ASSERT_FALSE (Array {1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -5851,7 +5882,7 @@ TEST (Value, equal)
     ASSERT_TRUE  (std::numeric_limits <double>::min () == value);
     ASSERT_FALSE (std::numeric_limits <double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array ({1}) == value);
+    ASSERT_FALSE (Array {1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
     value.set <std::string> ("foo");
@@ -5870,7 +5901,7 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits <double>::max () == value);
     ASSERT_TRUE  ("foo" == value);
     ASSERT_FALSE ("bar" == value);
-    ASSERT_FALSE (Array ({1}) == value);
+    ASSERT_FALSE (Array {1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
     value.set <Array, Array::value_type> ({1});
@@ -5888,7 +5919,7 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits <double>::min () == value);
     ASSERT_FALSE (std::numeric_limits <double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_TRUE  (Array ({1}) == value);
+    ASSERT_TRUE  (Array {1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -5906,7 +5937,7 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits <double>::min () == value);
     ASSERT_FALSE (std::numeric_limits <double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array ({1}) == value);
+    ASSERT_FALSE (Array {1} == value);
     ASSERT_TRUE  (Object ({{"i", 1}}) == value);
 }
 
@@ -5932,7 +5963,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array ({1}));
+    ASSERT_TRUE  (value != Array {1});
     ASSERT_TRUE  (value != Object ({{"i", 1}}));
 
     value.set <bool> (true);
@@ -5950,7 +5981,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array ({1}));
+    ASSERT_TRUE  (value != Array {1});
     ASSERT_TRUE  (value != Object ({{"i", 1}}));
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -5968,7 +5999,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array ({1}));
+    ASSERT_TRUE  (value != Array {1});
     ASSERT_TRUE  (value != Object ({{"i", 1}}));
 
     value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
@@ -5986,7 +6017,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array ({1}));
+    ASSERT_TRUE  (value != Array {1});
     ASSERT_TRUE  (value != Object ({{"i", 1}}));
 
     value.set <int64_t> (std::numeric_limits <int64_t>::min ());
@@ -6004,7 +6035,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array ({1}));
+    ASSERT_TRUE  (value != Array {1});
     ASSERT_TRUE  (value != Object ({{"i", 1}}));
 
     value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
@@ -6022,7 +6053,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array ({1}));
+    ASSERT_TRUE  (value != Array {1});
     ASSERT_TRUE  (value != Object ({{"i", 1}}));
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -6040,7 +6071,7 @@ TEST (Value, notEqual)
     ASSERT_FALSE (value != std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array ({1}));
+    ASSERT_TRUE  (value != Array {1});
     ASSERT_TRUE  (value != Object ({{"i", 1}}));
 
     value.set <std::string> ("foo");
@@ -6058,7 +6089,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
     ASSERT_FALSE (value != "foo");
-    ASSERT_TRUE  (value != Array ({1}));
+    ASSERT_TRUE  (value != Array {1});
     ASSERT_TRUE  (value != Object ({{"i", 1}}));
 
     value.set <Array, Array::value_type> ({1});
@@ -6076,7 +6107,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value != "foo");
-    ASSERT_FALSE (value != Array ({1}));
+    ASSERT_FALSE (value != Array {1});
     ASSERT_TRUE  (value != Object ({{"i", 1}}));
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -6094,7 +6125,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array ({1}));
+    ASSERT_TRUE  (value != Array {1});
     ASSERT_FALSE (value != Object ({{"i", 1}}));
 
     value.set <std::nullptr_t> (nullptr);
@@ -6112,7 +6143,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
     ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array ({1}) != value);
+    ASSERT_TRUE  (Array {1} != value);
     ASSERT_TRUE  (Object ({{"i", 1}}) != value);
 
     value.set <bool> (true);
@@ -6130,7 +6161,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
     ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array ({1}) != value);
+    ASSERT_TRUE  (Array {1} != value);
     ASSERT_TRUE  (Object ({{"i", 1}}) != value);
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -6148,7 +6179,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
     ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array ({1}) != value);
+    ASSERT_TRUE  (Array {1} != value);
     ASSERT_TRUE  (Object ({{"i", 1}}) != value);
 
     value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
@@ -6166,7 +6197,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
     ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array ({1}) != value);
+    ASSERT_TRUE  (Array {1} != value);
     ASSERT_TRUE  (Object ({{"i", 1}}) != value);
 
     value.set <int64_t> (std::numeric_limits <int64_t>::min ());
@@ -6184,7 +6215,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
     ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array ({1}) != value);
+    ASSERT_TRUE  (Array {1} != value);
     ASSERT_TRUE  (Object ({{"i", 1}}) != value);
 
     value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
@@ -6202,7 +6233,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
     ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array ({1}) != value);
+    ASSERT_TRUE  (Array {1} != value);
     ASSERT_TRUE  (Object ({{"i", 1}}) != value);
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -6220,7 +6251,7 @@ TEST (Value, notEqual)
     ASSERT_FALSE (std::numeric_limits <double>::min () != value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
     ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array ({1}) != value);
+    ASSERT_TRUE  (Array {1} != value);
     ASSERT_TRUE  (Object ({{"i", 1}}) != value);
 
     value.set <std::string> ("foo");
@@ -6239,7 +6270,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
     ASSERT_FALSE ("foo" != value);
     ASSERT_TRUE  ("bar" != value);
-    ASSERT_TRUE  (Array ({1}) != value);
+    ASSERT_TRUE  (Array {1} != value);
     ASSERT_TRUE  (Object ({{"i", 1}}) != value);
 
     value.set <Array, Array::value_type> ({1});
@@ -6257,7 +6288,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
     ASSERT_TRUE  ("foo" != value);
-    ASSERT_FALSE (Array ({1}) != value);
+    ASSERT_FALSE (Array {1} != value);
     ASSERT_TRUE  (Object ({{"i", 1}}) != value);
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -6275,7 +6306,7 @@ TEST (Value, notEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
     ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array ({1}) != value);
+    ASSERT_TRUE  (Array {1} != value);
     ASSERT_FALSE (Object ({{"i", 1}}) != value);
 }
 
@@ -6301,7 +6332,7 @@ TEST (Value, lower)
     ASSERT_TRUE  (value < std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value < std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value < "foo");
-    ASSERT_TRUE  (value < Array ({1}));
+    ASSERT_TRUE  (value < Array {1});
     ASSERT_TRUE  (value < Object ({{"i", 1}}));
 
     value.set <bool> (true);
@@ -6319,7 +6350,7 @@ TEST (Value, lower)
     ASSERT_TRUE  (value < std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value < std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value < "foo");
-    ASSERT_TRUE  (value < Array ({1}));
+    ASSERT_TRUE  (value < Array {1});
     ASSERT_TRUE  (value < Object ({{"i", 1}}));
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -6337,7 +6368,7 @@ TEST (Value, lower)
     ASSERT_TRUE  (value < std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value < std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value < "foo");
-    ASSERT_TRUE  (value < Array ({1}));
+    ASSERT_TRUE  (value < Array {1});
     ASSERT_TRUE  (value < Object ({{"i", 1}}));
 
     value.set <int64_t> (std::numeric_limits <int64_t>::max ());
@@ -6355,7 +6386,7 @@ TEST (Value, lower)
     ASSERT_FALSE (value < std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value < std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value < "foo");
-    ASSERT_TRUE  (value < Array ({1}));
+    ASSERT_TRUE  (value < Array {1});
     ASSERT_TRUE  (value < Object ({{"i", 1}}));
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -6373,7 +6404,7 @@ TEST (Value, lower)
     ASSERT_FALSE (value < std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value < std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value < "foo");
-    ASSERT_TRUE  (value < Array ({1}));
+    ASSERT_TRUE  (value < Array {1});
     ASSERT_TRUE  (value < Object ({{"i", 1}}));
 
     value.set <std::string> ("foo");
@@ -6391,7 +6422,7 @@ TEST (Value, lower)
     ASSERT_FALSE (value < std::numeric_limits <double>::min ());
     ASSERT_FALSE (value < std::numeric_limits <double>::max ());
     ASSERT_FALSE (value < "foo");
-    ASSERT_TRUE  (value < Array ({1}));
+    ASSERT_TRUE  (value < Array {1});
     ASSERT_TRUE  (value < Object ({{"i", 1}}));
 
     value.set <Array, Array::value_type> ({1});
@@ -6409,7 +6440,7 @@ TEST (Value, lower)
     ASSERT_FALSE (value < std::numeric_limits <double>::min ());
     ASSERT_FALSE (value < std::numeric_limits <double>::max ());
     ASSERT_FALSE (value < "foo");
-    ASSERT_FALSE (value < Array ({1}));
+    ASSERT_FALSE (value < Array {1});
     ASSERT_TRUE  (value < Object ({{"i", 1}}));
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -6427,7 +6458,7 @@ TEST (Value, lower)
     ASSERT_FALSE (value < std::numeric_limits <double>::min ());
     ASSERT_FALSE (value < std::numeric_limits <double>::max ());
     ASSERT_FALSE (value < "foo");
-    ASSERT_FALSE (value < Array ({1}));
+    ASSERT_FALSE (value < Array {1});
     ASSERT_FALSE (value < Object ({{"i", 1}}));
 
     value.set <std::nullptr_t> (nullptr);
@@ -6445,7 +6476,7 @@ TEST (Value, lower)
     ASSERT_FALSE (std::numeric_limits <double>::min () < value);
     ASSERT_FALSE (std::numeric_limits <double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array ({1}) < value);
+    ASSERT_FALSE (Array {1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
     value.set <bool> (true);
@@ -6463,7 +6494,7 @@ TEST (Value, lower)
     ASSERT_FALSE (std::numeric_limits <double>::min () < value);
     ASSERT_FALSE (std::numeric_limits <double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array ({1}) < value);
+    ASSERT_FALSE (Array {1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -6481,7 +6512,7 @@ TEST (Value, lower)
     ASSERT_FALSE (std::numeric_limits <double>::min () < value);
     ASSERT_FALSE (std::numeric_limits <double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array ({1}) < value);
+    ASSERT_FALSE (Array {1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
     value.set <int64_t> (std::numeric_limits <int64_t>::max ());
@@ -6499,7 +6530,7 @@ TEST (Value, lower)
     ASSERT_TRUE  (std::numeric_limits <double>::min () < value);
     ASSERT_FALSE (std::numeric_limits <double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array ({1}) < value);
+    ASSERT_FALSE (Array {1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -6517,7 +6548,7 @@ TEST (Value, lower)
     ASSERT_FALSE (std::numeric_limits <double>::min () < value);
     ASSERT_FALSE (std::numeric_limits <double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array ({1}) < value);
+    ASSERT_FALSE (Array {1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
     value.set <std::string> ("foo");
@@ -6535,7 +6566,7 @@ TEST (Value, lower)
     ASSERT_TRUE  (std::numeric_limits <double>::min () < value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array ({1}) < value);
+    ASSERT_FALSE (Array {1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
     value.set <Array, Array::value_type> ({1});
@@ -6553,7 +6584,7 @@ TEST (Value, lower)
     ASSERT_TRUE  (std::numeric_limits <double>::min () < value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () < value);
     ASSERT_TRUE  ("foo" < value);
-    ASSERT_FALSE (Array ({1}) < value);
+    ASSERT_FALSE (Array {1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -6571,7 +6602,7 @@ TEST (Value, lower)
     ASSERT_TRUE  (std::numeric_limits <double>::min () < value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () < value);
     ASSERT_TRUE  ("foo" < value);
-    ASSERT_TRUE  (Array ({1}) < value);
+    ASSERT_TRUE  (Array {1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 }
 
@@ -6597,7 +6628,7 @@ TEST (Value, greater)
     ASSERT_FALSE (value > std::numeric_limits <double>::min ());
     ASSERT_FALSE (value > std::numeric_limits <double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array ({1}));
+    ASSERT_FALSE (value > Array {1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
     value.set <bool> (true);
@@ -6615,7 +6646,7 @@ TEST (Value, greater)
     ASSERT_FALSE (value > std::numeric_limits <double>::min ());
     ASSERT_FALSE (value > std::numeric_limits <double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array ({1}));
+    ASSERT_FALSE (value > Array {1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -6633,7 +6664,7 @@ TEST (Value, greater)
     ASSERT_FALSE (value > std::numeric_limits <double>::min ());
     ASSERT_FALSE (value > std::numeric_limits <double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array ({1}));
+    ASSERT_FALSE (value > Array {1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
     value.set <int64_t> (std::numeric_limits <int64_t>::max ());
@@ -6651,7 +6682,7 @@ TEST (Value, greater)
     ASSERT_TRUE  (value > std::numeric_limits <double>::min ());
     ASSERT_FALSE (value > std::numeric_limits <double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array ({1}));
+    ASSERT_FALSE (value > Array {1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -6669,7 +6700,7 @@ TEST (Value, greater)
     ASSERT_FALSE (value > std::numeric_limits <double>::min ());
     ASSERT_FALSE (value > std::numeric_limits <double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array ({1}));
+    ASSERT_FALSE (value > Array {1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
     value.set <std::string> ("foo");
@@ -6687,7 +6718,7 @@ TEST (Value, greater)
     ASSERT_TRUE  (value > std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value > std::numeric_limits <double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array ({1}));
+    ASSERT_FALSE (value > Array {1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
     value.set <Array, Array::value_type> ({1});
@@ -6705,7 +6736,7 @@ TEST (Value, greater)
     ASSERT_TRUE  (value > std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value > std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value > "foo");
-    ASSERT_FALSE (value > Array ({1}));
+    ASSERT_FALSE (value > Array {1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -6723,7 +6754,7 @@ TEST (Value, greater)
     ASSERT_TRUE  (value > std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value > std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value > "foo");
-    ASSERT_TRUE  (value > Array ({1}));
+    ASSERT_TRUE  (value > Array {1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
     value.set <std::nullptr_t> (nullptr);
@@ -6741,7 +6772,7 @@ TEST (Value, greater)
     ASSERT_TRUE  (std::numeric_limits <double>::min () > value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () > value);
     ASSERT_TRUE  ("foo" > value);
-    ASSERT_TRUE  (Array ({1}) > value);
+    ASSERT_TRUE  (Array {1} > value);
     ASSERT_TRUE  (Object ({{"i", 1}}) > value);
 
     value.set <bool> (true);
@@ -6759,7 +6790,7 @@ TEST (Value, greater)
     ASSERT_TRUE  (std::numeric_limits <double>::min () > value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () > value);
     ASSERT_TRUE  ("foo" > value);
-    ASSERT_TRUE  (Array ({1}) > value);
+    ASSERT_TRUE  (Array {1} > value);
     ASSERT_TRUE  (Object ({{"i", 1}}) > value);
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -6777,7 +6808,7 @@ TEST (Value, greater)
     ASSERT_TRUE  (std::numeric_limits <double>::min () > value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () > value);
     ASSERT_TRUE  ("foo" > value);
-    ASSERT_TRUE  (Array ({1}) > value);
+    ASSERT_TRUE  (Array {1} > value);
     ASSERT_TRUE  (Object ({{"i", 1}}) > value);
 
     value.set <int64_t> (std::numeric_limits <int64_t>::max ());
@@ -6795,7 +6826,7 @@ TEST (Value, greater)
     ASSERT_FALSE (std::numeric_limits <double>::min () > value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () > value);
     ASSERT_TRUE  ("foo" > value);
-    ASSERT_TRUE  (Array ({1}) > value);
+    ASSERT_TRUE  (Array {1} > value);
     ASSERT_TRUE  (Object ({{"i", 1}}) > value);
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -6813,7 +6844,7 @@ TEST (Value, greater)
     ASSERT_FALSE (std::numeric_limits <double>::min () > value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () > value);
     ASSERT_TRUE  ("foo" > value);
-    ASSERT_TRUE  (Array ({1}) > value);
+    ASSERT_TRUE  (Array {1} > value);
     ASSERT_TRUE  (Object ({{"i", 1}}) > value);
 
     value.set <std::string> ("foo");
@@ -6831,7 +6862,7 @@ TEST (Value, greater)
     ASSERT_FALSE (std::numeric_limits <double>::min () > value);
     ASSERT_FALSE (std::numeric_limits <double>::max () > value);
     ASSERT_FALSE ("foo" > value);
-    ASSERT_TRUE  (Array ({1}) > value);
+    ASSERT_TRUE  (Array {1} > value);
     ASSERT_TRUE  (Object ({{"i", 1}}) > value);
 
     value.set <Array, Array::value_type> ({1});
@@ -6849,7 +6880,7 @@ TEST (Value, greater)
     ASSERT_FALSE (std::numeric_limits <double>::min () > value);
     ASSERT_FALSE (std::numeric_limits <double>::max () > value);
     ASSERT_FALSE ("foo" > value);
-    ASSERT_FALSE (Array ({1}) > value);
+    ASSERT_FALSE (Array {1} > value);
     ASSERT_TRUE  (Object ({{"i", 1}}) > value);
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -6867,7 +6898,7 @@ TEST (Value, greater)
     ASSERT_FALSE (std::numeric_limits <double>::min () > value);
     ASSERT_FALSE (std::numeric_limits <double>::max () > value);
     ASSERT_FALSE ("foo" > value);
-    ASSERT_FALSE (Array ({1}) > value);
+    ASSERT_FALSE (Array {1} > value);
     ASSERT_FALSE (Object ({{"i", 1}}) > value);
 }
 
@@ -6893,7 +6924,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (value <= std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array ({1}));
+    ASSERT_TRUE  (value <= Array {1});
     ASSERT_TRUE  (value <= Object ({{"i", 1}}));
 
     value.set <bool> (true);
@@ -6911,7 +6942,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (value <= std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array ({1}));
+    ASSERT_TRUE  (value <= Array {1});
     ASSERT_TRUE  (value <= Object ({{"i", 1}}));
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -6929,7 +6960,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (value <= std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array ({1}));
+    ASSERT_TRUE  (value <= Array {1});
     ASSERT_TRUE  (value <= Object ({{"i", 1}}));
 
     value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
@@ -6947,7 +6978,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (value <= std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array ({1}));
+    ASSERT_TRUE  (value <= Array {1});
     ASSERT_TRUE  (value <= Object ({{"i", 1}}));
 
     value.set <int64_t> (std::numeric_limits <int64_t>::min ());
@@ -6965,7 +6996,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (value <= std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array ({1}));
+    ASSERT_TRUE  (value <= Array {1});
     ASSERT_TRUE  (value <= Object ({{"i", 1}}));
 
     value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
@@ -6983,7 +7014,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (value <= std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array ({1}));
+    ASSERT_TRUE  (value <= Array {1});
     ASSERT_TRUE  (value <= Object ({{"i", 1}}));
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -7001,7 +7032,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (value <= std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array ({1}));
+    ASSERT_TRUE  (value <= Array {1});
     ASSERT_TRUE  (value <= Object ({{"i", 1}}));
 
     value.set <std::string> ("foo");
@@ -7019,7 +7050,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (value <= std::numeric_limits <double>::min ());
     ASSERT_FALSE (value <= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array ({1}));
+    ASSERT_TRUE  (value <= Array {1});
     ASSERT_TRUE  (value <= Object ({{"i", 1}}));
 
     value.set <Array, Array::value_type> ({1});
@@ -7037,7 +7068,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (value <= std::numeric_limits <double>::min ());
     ASSERT_FALSE (value <= std::numeric_limits <double>::max ());
     ASSERT_FALSE (value <= "foo");
-    ASSERT_TRUE  (value <= Array ({1}));
+    ASSERT_TRUE  (value <= Array {1});
     ASSERT_TRUE  (value <= Object ({{"i", 1}}));
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -7055,7 +7086,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (value <= std::numeric_limits <double>::min ());
     ASSERT_FALSE (value <= std::numeric_limits <double>::max ());
     ASSERT_FALSE (value <= "foo");
-    ASSERT_FALSE (value <= Array ({1}));
+    ASSERT_FALSE (value <= Array {1});
     ASSERT_TRUE  (value <= Object ({{"i", 1}}));
 
     value.set <std::nullptr_t> (nullptr);
@@ -7074,7 +7105,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (std::numeric_limits <double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array ({1}) <= value);
+    ASSERT_FALSE (Array {1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
     value.set <bool> (true);
@@ -7092,7 +7123,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (std::numeric_limits <double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array ({1}) <= value);
+    ASSERT_FALSE (Array {1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -7110,7 +7141,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (std::numeric_limits <double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array ({1}) <= value);
+    ASSERT_FALSE (Array {1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
     value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
@@ -7128,7 +7159,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array ({1}) <= value);
+    ASSERT_FALSE (Array {1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
     value.set <int64_t> (std::numeric_limits <int64_t>::min ());
@@ -7146,7 +7177,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (std::numeric_limits <double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array ({1}) <= value);
+    ASSERT_FALSE (Array {1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
     value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
@@ -7164,7 +7195,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array ({1}) <= value);
+    ASSERT_FALSE (Array {1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -7182,7 +7213,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array ({1}) <= value);
+    ASSERT_FALSE (Array {1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
     value.set <std::string> ("foo");
@@ -7200,7 +7231,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () <= value);
     ASSERT_TRUE  ("foo" <= value);
-    ASSERT_FALSE (Array ({1}) <= value);
+    ASSERT_FALSE (Array {1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
     value.set <Array, Array::value_type> ({1});
@@ -7218,7 +7249,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () <= value);
     ASSERT_TRUE  ("foo" <= value);
-    ASSERT_TRUE  (Array ({1}) <= value);
+    ASSERT_TRUE  (Array {1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -7236,7 +7267,7 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () <= value);
     ASSERT_TRUE  ("foo" <= value);
-    ASSERT_TRUE  (Array ({1}) <= value);
+    ASSERT_TRUE  (Array {1} <= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) <= value);
 }
 
@@ -7262,7 +7293,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (value >= std::numeric_limits <double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array ({1}));
+    ASSERT_FALSE (value >= Array {1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
     value.set <bool> (true);
@@ -7280,7 +7311,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (value >= std::numeric_limits <double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array ({1}));
+    ASSERT_FALSE (value >= Array {1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -7298,7 +7329,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (value >= std::numeric_limits <double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array ({1}));
+    ASSERT_FALSE (value >= Array {1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
     value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
@@ -7316,7 +7347,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array ({1}));
+    ASSERT_FALSE (value >= Array {1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
     value.set <int64_t> (std::numeric_limits <int64_t>::min ());
@@ -7334,7 +7365,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (value >= std::numeric_limits <double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array ({1}));
+    ASSERT_FALSE (value >= Array {1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
     value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
@@ -7352,7 +7383,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array ({1}));
+    ASSERT_FALSE (value >= Array {1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -7370,7 +7401,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array ({1}));
+    ASSERT_FALSE (value >= Array {1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
     value.set <std::string> ("foo");
@@ -7388,7 +7419,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value >= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value >= "foo");
-    ASSERT_FALSE (value >= Array ({1}));
+    ASSERT_FALSE (value >= Array {1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
     value.set <Array, Array::value_type> ({1});
@@ -7406,7 +7437,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value >= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value >= "foo");
-    ASSERT_TRUE  (value >= Array ({1}));
+    ASSERT_TRUE  (value >= Array {1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -7424,7 +7455,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
     ASSERT_TRUE  (value >= std::numeric_limits <double>::max ());
     ASSERT_TRUE  (value >= "foo");
-    ASSERT_TRUE  (value >= Array ({1}));
+    ASSERT_TRUE  (value >= Array {1});
     ASSERT_TRUE  (value >= Object ({{"i", 1}}));
 
     value.set <std::nullptr_t> (nullptr);
@@ -7442,7 +7473,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () >= value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
     ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array ({1}) >= value);
+    ASSERT_TRUE  (Array {1} >= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
 
     value.set <bool> (true);
@@ -7460,7 +7491,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () >= value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
     ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array ({1}) >= value);
+    ASSERT_TRUE  (Array {1} >= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
 
     value.set <int32_t> (std::numeric_limits <int32_t>::min ());
@@ -7478,7 +7509,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () >= value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
     ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array ({1}) >= value);
+    ASSERT_TRUE  (Array {1} >= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
 
     value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
@@ -7496,7 +7527,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (std::numeric_limits <double>::min () >= value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
     ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array ({1}) >= value);
+    ASSERT_TRUE  (Array {1} >= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
 
     value.set <int64_t> (std::numeric_limits <int64_t>::min ());
@@ -7514,7 +7545,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () >= value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
     ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array ({1}) >= value);
+    ASSERT_TRUE  (Array {1} >= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
 
     value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
@@ -7532,7 +7563,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (std::numeric_limits <double>::min () >= value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
     ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array ({1}) >= value);
+    ASSERT_TRUE  (Array {1} >= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
 
     value.set <double> (std::numeric_limits <double>::min ());
@@ -7550,7 +7581,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE  (std::numeric_limits <double>::min () >= value);
     ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
     ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array ({1}) >= value);
+    ASSERT_TRUE  (Array {1} >= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
 
     value.set <std::string> ("foo");
@@ -7568,7 +7599,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (std::numeric_limits <double>::min () >= value);
     ASSERT_FALSE (std::numeric_limits <double>::max () >= value);
     ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array ({1}) >= value);
+    ASSERT_TRUE  (Array {1} >= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
 
     value.set <Array, Array::value_type> ({1});
@@ -7586,7 +7617,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (std::numeric_limits <double>::min () >= value);
     ASSERT_FALSE (std::numeric_limits <double>::max () >= value);
     ASSERT_FALSE ("foo" >= value);
-    ASSERT_TRUE  (Array ({1}) >= value);
+    ASSERT_TRUE  (Array {1} >= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
 
     value.set <Object, Object::value_type> ({{"i", 1}});
@@ -7604,7 +7635,7 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (std::numeric_limits <double>::min () >= value);
     ASSERT_FALSE (std::numeric_limits <double>::max () >= value);
     ASSERT_FALSE ("foo" >= value);
-    ASSERT_FALSE (Array ({1}) >= value);
+    ASSERT_FALSE (Array {1} >= value);
     ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
 }
 

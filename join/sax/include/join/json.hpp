@@ -26,6 +26,7 @@
 #define __JOIN_JSON_HPP__
 
 // libjoin.
+#include <join/atodpow.hpp>
 #include <join/dtoa.hpp>
 #include <join/sax.hpp>
 
@@ -1147,6 +1148,52 @@ namespace join
         }
 
         /**
+         * @brief multiply 192 bits unsigned integer by 64 bits unsigned integer.
+         * @param hi high 64 bits of the 128-bit multiplicand.
+         * @param lo low 64 bits of the 128-bit multiplicand.
+         * @param significand 64-bit multiplier.
+         * @param high high 64 bits of the 192-bit result.
+         * @param middle middle 64 bits of the 192-bit result.
+         * @param low low 64 bits of the 192-bit result.
+         */
+        inline void umul192 (uint64_t hi, uint64_t lo, uint64_t significand, uint64_t& high, uint64_t& middle, uint64_t& low) noexcept
+        {
+        #if defined(__SIZEOF_INT128__)
+            __uint128_t h = static_cast <__uint128_t> (hi) * significand;
+            __uint128_t l = static_cast <__uint128_t> (lo) * significand;
+            __uint128_t s = h + (l >> 64);
+
+            high = static_cast <uint64_t> (s >> 64);
+            middle = static_cast <uint64_t> (s);
+            low = static_cast <uint64_t> (l);
+        #else
+            uint64_t hi_hi, hi_lo, lo_hi, lo_lo;
+
+            uint64_t m_lo = static_cast <uint32_t> (significand);
+            uint64_t m_hi = significand >> 32;
+            uint64_t p0 = (hi & 0xFFFFFFFF) * m_lo;
+            uint64_t p1 = (hi >> 32) * m_lo;
+            uint64_t p2 = (hi & 0xFFFFFFFF) * m_hi;
+            uint64_t p3 = (hi >> 32) * m_hi;
+            uint64_t carry = (p0 >> 32) + (p1 & 0xFFFFFFFF) + (p2 & 0xFFFFFFFF);
+            hi_lo = (carry << 32) | (p0 & 0xFFFFFFFF);
+            hi_hi = (carry >> 32) + (p1 >> 32) + (p2 >> 32) + p3;
+
+            p0 = (lo & 0xFFFFFFFF) * m_lo;
+            p1 = (lo >> 32) * m_lo;
+            p2 = (lo & 0xFFFFFFFF) * m_hi;
+            p3 = (lo >> 32) * m_hi;
+            carry = (p0 >> 32) + (p1 & 0xFFFFFFFF) + (p2 & 0xFFFFFFFF);
+            lo_lo = (carry << 32) | (p0 & 0xFFFFFFFF);
+            lo_hi = (carry >> 32) + (p1 >> 32) + (p2 >> 32) + p3;
+
+            low = lo_lo;
+            middle = hi_lo + lo_hi;
+            high = hi_hi + (middle < hi_lo ? 1 : 0);
+        #endif
+        }
+
+        /**
          * @brief convert double using fast path.
          * @param significand significand digits.
          * @param exponent exponent.
@@ -1163,32 +1210,79 @@ namespace join
 
             value = static_cast <double> (significand);
 
-            if ((exponent > 22) && (exponent < (22 + 16)))
+            if (JOIN_UNLIKELY ((exponent > 22) && (exponent < (22 + 16))))
             {
                 value *= pow10[exponent - 22];
                 exponent = 22;
             }
 
-            if ((exponent >= -22) && (exponent <= 22) && (value <= 9007199254740991.0))
+            if (JOIN_LIKELY ((exponent >= -22) && (exponent <= 22) && (value <= 9007199254740991.0)))
             {
-                if (exponent < 0)
-                {
-                    value /= pow10[-exponent];
-                }
-                else
-                {
-                    value *= pow10[exponent];
-                }
-
+                value = (exponent < 0) ? (value / pow10[-exponent]) : (value * pow10[exponent]);
                 return true;
             }
 
-            if (value == 0.0)
+            if (JOIN_UNLIKELY (value == 0.0))
             {
                 return true;
             }
 
-            return false;
+            if (JOIN_UNLIKELY (exponent < -325 || exponent > 308))
+            {
+                return false;
+            }
+
+            uint64_t high, middle, low;
+            const details::Power& power = details::atodpow[exponent + 325];
+            umul192 (power.hi, power.lo, significand, high, middle, low);
+            int64_t exp = ((exponent * 217706) >> 16) + 1087;
+
+            int lz;
+            if (high != 0)
+            {
+                lz = __builtin_clzll (high);
+                exp -= lz;
+            }
+            else if (middle != 0)
+            {
+                lz = __builtin_clzll (middle);
+                exp -= lz + 64;
+            }
+            else
+            {
+                return false;
+            }
+
+            if (JOIN_UNLIKELY (exp <= 0 || exp >= 2047))
+            {
+                return false;
+            }
+
+            if (high == 0)
+            {
+                high = middle << lz;
+                middle = 0;
+            }
+            else if (lz != 0)
+            {
+                high = (high << lz) | (middle >> (64 - lz));
+                middle <<= lz;
+            }
+
+            middle |= (low != 0);
+
+            uint64_t mant = (high >> 11) & 0xFFFFFFFFFFFFF;
+            uint64_t bits = (static_cast <uint64_t> (exp) << 52) | mant;
+            uint64_t frac = high & 0x7FF;
+
+            bool roundUp = ((frac >  0x400) |
+                           ((frac == 0x400) && ((middle != 0) || (mant & 1))) |
+                           ((frac == 0x3FF) && ((middle != 0))));
+
+            bits += roundUp;
+            std::memcpy (&value, &bits, sizeof (double));
+
+            return true;
         }
 
         /**
@@ -1801,7 +1895,7 @@ namespace join
          */
         constexpr bool isWhitespace (char c)
         {
-            return ((c == ' ') || (c == '\n') || (c == '\r') || (c == '\t'));
+            return (c == ' ') | (c == '\t') | (c == '\n') | (c == '\r');
         }
 
         /**
@@ -1863,9 +1957,9 @@ namespace join
          * @param c character to check.
          * @return true if plain text, false otherwise.
          */
-        constexpr bool isPlainText (uint8_t c)
+        inline constexpr bool isPlainText (uint8_t c) noexcept
         {
-            return (c >= 0x20) && (c <= 0x7F) && (c != 0x5C) && (c != 0x22);
+            return ((c - 0x20u) <= 0x5Fu) && (c != 0x5C) && (c != 0x22);
         }
 
         /**
@@ -1873,9 +1967,9 @@ namespace join
          * @param c character to check.
          * @return true if upper case alphanumeric character, false otherwise.
          */
-        constexpr bool isUpperAlpha (char c)
+        inline constexpr bool isUpperAlpha (char c) noexcept
         {
-            return (c >= 'A') && (c <= 'F');
+            return static_cast <unsigned char> (c - 'A') <= 5u;
         }
 
         /**
@@ -1883,9 +1977,9 @@ namespace join
          * @param c character to check.
          * @return true if lower case alphanumeric character, false otherwise.
          */
-        constexpr bool isLowerAlpha (char c)
+        inline constexpr bool isLowerAlpha (char c) noexcept
         {
-            return (c >= 'a') && (c <= 'f');
+            return static_cast <unsigned char> (c - 'a') <= 5u;
         }
 
         /**
@@ -1893,9 +1987,9 @@ namespace join
          * @param c character to check.
          * @return true if digit, false otherwise.
          */
-        constexpr bool isDigit (char c)
+        inline constexpr bool isDigit (char c) noexcept
         {
-            return (c >= '0') && (c <= '9');
+            return static_cast <unsigned char> (c - '0') <= 9u;
         }
 
         /**
@@ -1903,9 +1997,9 @@ namespace join
          * @param c character to check.
          * @return true if sign, false otherwise.
          */
-        constexpr bool isSign (char c)
+        inline constexpr bool isSign (char c) noexcept
         {
-            return (c == '+') || (c == '-');
+            return ((c ^ '+') & (c ^ '-')) == 0;
         }
 
         /**
@@ -1913,9 +2007,9 @@ namespace join
          * @param c character to check.
          * @return true if exponent, false otherwise.
          */
-        constexpr bool isExponent (char c)
+        inline constexpr bool isExponent (char c) noexcept
         {
-            return (c == 'e') || (c == 'E');
+            return (c | 0x20) == 'e';
         }
 
         /**
@@ -1923,9 +2017,9 @@ namespace join
          * @param c character to check.
          * @return true if dot, false otherwise.
          */
-        constexpr bool isDot (char c)
+        inline constexpr bool isDot (char c) noexcept
         {
-            return (c == '.');
+            return c == '.';
         }
     };
 }
