@@ -44,7 +44,7 @@ protected:
     /**
      * @brief set up the test fixture.
      */
-    void SetUp ()
+    void SetUp () override
     {
         ASSERT_EQ (BasicQueue <Spsc>::unlink (_name + "_AB"), 0) << join::lastError.message ();
         ASSERT_EQ (BasicQueue <Spsc>::unlink (_name + "_BA"), 0) << join::lastError.message ();

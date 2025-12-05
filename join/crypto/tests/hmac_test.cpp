@@ -113,37 +113,37 @@ TEST (Hmac, finalize)
     hmac.write (sample.data (), sample.size ());
     ASSERT_EQ (hmac.finalize (), md5bin);
 
-    hmac = std::move (Hmac (Digest::Algorithm::SHA1, key));
+    hmac = Hmac (Digest::Algorithm::SHA1, key);
     hmac << sample;
     ASSERT_EQ (hmac.finalize (), sha1bin);
     hmac.write (sample.data (), sample.size ());
     ASSERT_EQ (hmac.finalize (), sha1bin);
 
-    hmac = std::move (Hmac (Digest::Algorithm::SHA224, key));
+    hmac = Hmac (Digest::Algorithm::SHA224, key);
     hmac << sample;
     ASSERT_EQ (hmac.finalize (), sha224bin);
     hmac.write (sample.data (), sample.size ());
     ASSERT_EQ (hmac.finalize (), sha224bin);
 
-    hmac = std::move (Hmac (Digest::Algorithm::SHA256, key));
+    hmac = Hmac (Digest::Algorithm::SHA256, key);
     hmac << sample;
     ASSERT_EQ (hmac.finalize (), sha256bin);
     hmac.write (sample.data (), sample.size ());
     ASSERT_EQ (hmac.finalize (), sha256bin);
 
-    hmac = std::move (Hmac (Digest::Algorithm::SHA384, key));
+    hmac = Hmac (Digest::Algorithm::SHA384, key);
     hmac << sample;
     ASSERT_EQ (hmac.finalize (), sha384bin);
     hmac.write (sample.data (), sample.size ());
     ASSERT_EQ (hmac.finalize (), sha384bin);
 
-    hmac = std::move (Hmac (Digest::Algorithm::SHA512, key));
+    hmac = Hmac (Digest::Algorithm::SHA512, key);
     hmac << sample;
     ASSERT_EQ (hmac.finalize (), sha512bin);
     hmac.write (sample.data (), sample.size ());
     ASSERT_EQ (hmac.finalize (), sha512bin);
 
-    hmac = std::move (Hmac (Digest::Algorithm::SM3, key));
+    hmac = Hmac (Digest::Algorithm::SM3, key);
     hmac << sample;
     ASSERT_EQ (hmac.finalize (), sm3bin);
     hmac.write (sample.data (), sample.size ());

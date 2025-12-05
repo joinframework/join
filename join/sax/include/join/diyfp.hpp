@@ -63,7 +63,7 @@ namespace join
          * @brief create floating point using double.
          * @param value double value.
          */
-        explicit constexpr DiyFp (double value) noexcept
+        explicit DiyFp (double value) noexcept
         {
             uint64_t u64 = 0;
             memcpy (&u64, &value, sizeof (double));

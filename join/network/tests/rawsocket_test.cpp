@@ -84,7 +84,7 @@ protected:
     /**
      * @brief Sets up the test fixture.
      */
-    void SetUp ()
+    void SetUp () override
     {
         ASSERT_EQ (this->bind (_interface), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
@@ -93,7 +93,7 @@ protected:
     /**
      * @brief Tears down the test fixture.
      */
-    void TearDown ()
+    void TearDown () override
     {
         ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
         this->close ();

@@ -122,7 +122,7 @@ namespace join
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        constexpr Value& operator= (const Value& other) = default;
+        Value& operator= (const Value& other) = default;
 
         /**
          * @brief move constructor.
@@ -135,7 +135,7 @@ namespace join
          * @param other object to move.
          * @return a reference of the current object.
          */
-        constexpr Value& operator= (Value&& other) = default;
+        Value& operator= (Value&& other) = default;
 
         /**
          * @brief destroy the Value instance.

@@ -50,7 +50,7 @@ protected:
     /**
      * @brief set up the test fixture.
      */
-    void SetUp ()
+    void SetUp () override
     {
         ASSERT_EQ (BasicQueue <Mpsc>::unlink (_name), 0) << join::lastError.message ();
     }
@@ -299,7 +299,7 @@ TEST_F (MpscBuffer, pushBenchmark)
         sem.post ();
         for (int p = 0; p < numProducers; ++p)
         {
-            producers.emplace_back([&, p] () {
+            producers.emplace_back([&] () {
                 Mpsc::Producer prod (_name, size, capacity);
                 EXPECT_EQ (prod.open (), 0) << join::lastError.message ();
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
@@ -374,7 +374,7 @@ TEST_F (MpscBuffer, timedPushBenchmark)
         sem.post ();
         for (int p = 0; p < numProducers; ++p)
         {
-            producers.emplace_back([&, p] () {
+            producers.emplace_back([&] () {
                 Mpsc::Producer prod (_name, size, capacity);
                 EXPECT_EQ (prod.open (), 0) << join::lastError.message ();
                 for (uint64_t i = 0; i < msgPerProducer; ++i)

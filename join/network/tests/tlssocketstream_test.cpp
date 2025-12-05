@@ -185,7 +185,7 @@ protected:
     /**
      * @brief Sets up the test fixture.
      */
-    void SetUp ()
+    void SetUp () override
     {
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
@@ -197,7 +197,7 @@ protected:
     /**
      * @brief Tears down the test fixture.
      */
-    void TearDown ()
+    void TearDown () override
     {
         ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
         this->close ();
