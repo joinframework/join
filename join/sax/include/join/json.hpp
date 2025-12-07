@@ -559,7 +559,7 @@ namespace join
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0,
                 '\\',
                 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -612,7 +612,7 @@ namespace join
                     {
                         char hex[7];
                         append ("\\u", 2);
-                        snprintf (hex, sizeof(hex), "%04x", uint16_t(codepoint));
+                        snprintf (hex, sizeof (hex), "%04x", uint16_t (codepoint));
                         append (hex, 4);
                     }
                     else
@@ -621,13 +621,15 @@ namespace join
                         char hex[5];
 
                         append ("\\u", 2);
-                        snprintf(hex, sizeof(hex), "%04x", uint16_t(0xD800 + ((codepoint >> 10) & 0x3FF)));
-                        append(hex, 4);
+                        snprintf (hex, sizeof (hex), "%04x", uint16_t (0xD800 + ((codepoint >> 10) & 0x3FF)));
+                        append (hex, 4);
 
-                        append("\\u", 2);
-                        snprintf(hex, sizeof(hex), "%04x", uint16_t(0xDC00 + (codepoint & 0x3FF)));
-                        append(hex, 4);
+                        append ("\\u", 2);
+                        snprintf (hex, sizeof (hex), "%04x", uint16_t (0xDC00 + (codepoint & 0x3FF)));
+                        append (hex, 4);
                     }
+
+                    ++cur;
                 }
                 else
                 {
