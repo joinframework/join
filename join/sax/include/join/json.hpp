@@ -1637,52 +1637,28 @@ namespace join
         template <typename ViewType>
         int readEscaped (ViewType& document, std::string& output)
         {
-            if (!document.getIf ('\\'))
+            if (JOIN_UNLIKELY (!document.getIf ('\\')))
             {
                 join::lastError = make_error_code (JsonErrc::InvalidEscaping);
                 return -1;
             }
 
-            if (document.getIf ('"'))
+            int ch = document.get ();
+            switch (ch)
             {
-                output.push_back ('"');
-            }
-            else if (document.getIf ('\\'))
-            {
-                output.push_back ('\\');
-            }
-            else if (document.getIf ('b'))
-            {
-                output.push_back ('\b');
-            }
-            else if (document.getIf ('f'))
-            {
-                output.push_back ('\f');
-            }
-            else if (document.getIf ('n'))
-            {
-                output.push_back ('\n');
-            }
-            else if (document.getIf ('r'))
-            {
-                output.push_back ('\r');
-            }
-            else if (document.getIf ('t'))
-            {
-                output.push_back ('\t');
-            }
-            else if (document.getIf ('/'))
-            {
-                output.push_back ('/');
-            }
-            else if (document.getIf ('u'))
-            {
-                return readUnicode (document, output);
-            }
-            else
-            {
-                join::lastError = make_error_code (JsonErrc::InvalidEscaping);
-                return -1;
+                case '"':  output.push_back ('"');  break;
+                case '\\': output.push_back ('\\'); break;
+                case '/':  output.push_back ('/');  break;
+                case 'b':  output.push_back ('\b'); break;
+                case 'f':  output.push_back ('\f'); break;
+                case 'n':  output.push_back ('\n'); break;
+                case 'r':  output.push_back ('\r'); break;
+                case 't':  output.push_back ('\t'); break;
+                case 'u': 
+                    return readUnicode (document, output);
+                default:
+                    join::lastError = make_error_code (JsonErrc::InvalidEscaping);
+                    return -1;
             }
 
             return 0;
