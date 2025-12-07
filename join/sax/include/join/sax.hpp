@@ -541,33 +541,31 @@ namespace join
         virtual int startArray (uint32_t size = 0) override
         {
             Array array;
-            // reserve at least 2.
-            array.reserve ((size) ? size : 2);
+            array.reserve (size ? size : 16);
 
-            if (_stack.empty ())
+            if (JOIN_UNLIKELY (_stack.empty ()))
             {
                 _root = std::move (array);
                 _stack.push (&_root);
+                return 0;
+            }
+
+            if (JOIN_UNLIKELY (_stack.size () >= _maxdepth))
+            {
+                join::lastError = make_error_code (SaxErrc::StackOverflow);
+                return -1;
+            }
+
+            Value::Ptr parent = _stack.top ();
+
+            if (parent->is <Value::ObjectValue> ())
+            {
+                _stack.push (&parent->insert (Member (_curkey, std::move (array))));
+                _curkey.clear ();
             }
             else
             {
-                if (_stack.size () >= _maxdepth)
-                {
-                    join::lastError = make_error_code (SaxErrc::StackOverflow);
-                    return -1;
-                }
-
-                Value::Ptr parent = _stack.top ();
-
-                if (parent->is <Value::ObjectValue> ())
-                {
-                    _stack.push (&parent->insert (Member (_curkey, std::move (array))));
-                    _curkey.clear ();
-                }
-                else
-                {
-                    _stack.push (&parent->pushBack (std::move (array)));
-                }
+                _stack.push (&parent->pushBack (std::move (array)));
             }
 
             return 0;
@@ -595,33 +593,31 @@ namespace join
         virtual int startObject (uint32_t size = 0) override
         {
             Object object;
-            // reserve at least 2.
-            object.reserve ((size) ? size : 2);
+            object.reserve (size ? size : 16);
 
-            if (_stack.empty ())
+            if (JOIN_UNLIKELY (_stack.empty ()))
             {
                 _root = std::move (object);
                 _stack.push (&_root);
+                return 0;
+            }
+
+            if (JOIN_UNLIKELY (_stack.size () >= _maxdepth))
+            {
+                join::lastError = make_error_code (SaxErrc::StackOverflow);
+                return -1;
+            }
+
+            Value::Ptr parent = _stack.top ();
+
+            if (parent->is <Value::ObjectValue> ())
+            {
+                _stack.push (&parent->insert (Member (_curkey, std::move (object))));
+                _curkey.clear ();
             }
             else
             {
-                if (_stack.size () >= _maxdepth)
-                {
-                    join::lastError = make_error_code (SaxErrc::StackOverflow);
-                    return -1;
-                }
-
-                Value::Ptr parent = _stack.top ();
-
-                if (parent->is <Value::ObjectValue> ())
-                {
-                    _stack.push (&parent->insert (Member (_curkey, std::move (object))));
-                    _curkey.clear ();
-                }
-                else
-                {
-                    _stack.push (&parent->pushBack (std::move (object)));
-                }
+                _stack.push (&parent->pushBack (std::move (object)));
             }
 
             return 0;
@@ -659,7 +655,7 @@ namespace join
          */
         virtual int setValue (Value&& value)
         {
-            if (_stack.empty ())
+            if (JOIN_UNLIKELY (_stack.empty ()))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidParent);
                 return -1;
