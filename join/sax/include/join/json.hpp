@@ -601,6 +601,7 @@ namespace join
                 if (action == 'u')
                 {
                     uint32_t codepoint = 0;
+                    char hex[5];
 
                     if (utf8Codepoint (cur, end, codepoint) == -1)
                     {
@@ -610,7 +611,6 @@ namespace join
 
                     if (codepoint <= 0xFFFF)
                     {
-                        char hex[7];
                         append ("\\u", 2);
                         snprintf (hex, sizeof (hex), "%04x", uint16_t (codepoint));
                         append (hex, 4);
@@ -618,25 +618,21 @@ namespace join
                     else
                     {
                         codepoint -= 0x10000;
-                        char hex[5];
-
                         append ("\\u", 2);
                         snprintf (hex, sizeof (hex), "%04x", uint16_t (0xD800 + ((codepoint >> 10) & 0x3FF)));
                         append (hex, 4);
-
                         append ("\\u", 2);
                         snprintf (hex, sizeof (hex), "%04x", uint16_t (0xDC00 + (codepoint & 0x3FF)));
                         append (hex, 4);
                     }
-
-                    ++cur;
                 }
                 else
                 {
                     char escapeSeq[2] = {'\\', static_cast <char> (action)};
                     append (escapeSeq, 2);
-                    ++cur;
                 }
+
+                ++cur;
             }
 
             return 0;
