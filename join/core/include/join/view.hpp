@@ -50,7 +50,8 @@ namespace join
          * @param count number of characters.
          */
         constexpr StringView (const char * in, size_t count)
-        : _pos (in)
+        : _cur (in)
+        , _beg (in)
         , _end (in ? in + count : in)
         {
         }
@@ -61,7 +62,8 @@ namespace join
          * @param last pointer to the last character of the string.
          */
         constexpr StringView (const char * first, const char * last)
-        : _pos (first)
+        : _cur (first)
+        , _beg (first)
         , _end (last)
         {
         }
@@ -71,7 +73,8 @@ namespace join
          * @param in input string.
          */
         StringView (const char * in)
-        : _pos (in)
+        : _cur (in)
+        , _beg (in)
         , _end (in ? in + std::char_traits <char>::length (in) : in)
         {
         }
@@ -113,9 +116,9 @@ namespace join
          */
         inline int peek () const noexcept
         {
-            if (JOIN_LIKELY (_pos < _end))
+            if (JOIN_LIKELY (_cur < _end))
             {
-                return static_cast <unsigned char> (*_pos);
+                return static_cast <unsigned char> (*_cur);
             }
             return std::char_traits <char>::eof ();
         }
@@ -126,9 +129,9 @@ namespace join
          */
         inline int get () noexcept
         {
-            if (JOIN_LIKELY (_pos < _end))
+            if (JOIN_LIKELY (_cur < _end))
             {
-                return static_cast <unsigned char> (*_pos++);
+                return static_cast <unsigned char> (*_cur++);
             }
             return std::char_traits <char>::eof ();
         }
@@ -140,9 +143,9 @@ namespace join
          */
         inline bool getIf (char expected) noexcept
         {
-            if (JOIN_LIKELY (_pos < _end) && (*_pos == expected))
+            if (JOIN_LIKELY (_cur < _end) && (*_cur == expected))
             {
-                ++_pos;
+                ++_cur;
                 return true;
             }
             return false;
@@ -155,12 +158,12 @@ namespace join
          */
         inline bool getIfNoCase (char expected) noexcept
         {
-            if (JOIN_LIKELY (_pos < _end))
+            if (JOIN_LIKELY (_cur < _end))
             {
-                const char c = *_pos;
+                const char c = *_cur;
                 if ((c | 32) == (expected | 32))
                 {
-                    ++_pos;
+                    ++_cur;
                     return true;
                 }
             }
@@ -175,18 +178,46 @@ namespace join
          */
         inline size_t read (char* buf, size_t count) noexcept
         {
-            const size_t available = _end - _pos;
+            const size_t available = _end - _cur;
             const size_t nread = (count < available) ? count : available;
-            std::memcpy (buf, _pos, nread);
-            _pos += nread;
+            std::memcpy (buf, _cur, nread);
+            _cur += nread;
             return nread;
+        }
+
+        /**
+         * @brief get input position indicator.
+         * @return offset from the beginning.
+         */
+        inline size_t tell () const noexcept
+        {
+            return static_cast <size_t> (_cur - _beg);
+        }
+
+        /**
+         * @brief rewind the view.
+         * @param n number of characters to rewind.
+         */
+        inline void rewind (size_t n) noexcept
+        {
+            if (n > static_cast <size_t> (_cur - _beg))
+            {
+                _cur = _beg;
+            }
+            else
+            {
+                _cur -= n;
+            }
         }
 
     private:
         /// current position.
-        const char * _pos = nullptr;
+        const char * _cur = nullptr;
 
-        /// end position.
+        /// beginning position.
+        const char * _beg = nullptr;
+
+        /// ending position.
         const char * _end = nullptr;
     };
 
@@ -297,6 +328,40 @@ namespace join
         inline size_t read (char* buf, size_t count) noexcept
         {
             return _in->sgetn (buf, count);
+        }
+
+        /**
+         * @brief get input position indicator.
+         * @return offset from the beginning.
+         */
+        inline size_t tell () const noexcept
+        {
+            return _in->pubseekoff (0, std::ios::cur, std::ios::in);
+        }
+
+        /**
+         * @brief rewind the view.
+         * @param n number of characters to rewind.
+         */
+        inline void rewind (size_t n) noexcept
+        {
+            std::streampos pos = tell ();
+
+            if (pos == std::streampos (std::streamoff (-1)))
+            {
+                // TODO: stream is not seekable do buffering.
+                return;
+            }
+
+            std::streamoff off = static_cast <std::streamoff> (n);
+            if (off > pos)
+            {
+                _in->pubseekpos (0, std::ios::in);
+            }
+            else
+            {
+                _in->pubseekoff (-off, std::ios::cur, std::ios::in);
+            }
         }
 
     private:

@@ -673,6 +673,12 @@ namespace join
             {0xe3d8f9e563a198e5, 0x58180fddd97723a6},
             {0x8e679c2f5e44ff8f, 0x570f09eaa7ea7648},
         };
+
+        constexpr double pow10[] = {
+            1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10,
+            1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21,
+            1e22
+        };
     }
 }
 

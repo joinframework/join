@@ -244,8 +244,8 @@ namespace join
          * @param document document to create.
          */
         StreamWriter (std::ostream& document)
-        : SaxHandler (),
-          _outstream (document)
+        : SaxHandler ()
+        , _out (document.rdbuf ())
         {
         }
 
@@ -358,22 +358,22 @@ namespace join
          * @param data data to append to output stream.
          * @param size data size.
          */
-        void append (const char* data, uint32_t size)
+        inline void append (const char* data, uint32_t size) noexcept
         {
-            _outstream.write (data, size);
+            _out->sputn (data, size);
         }
 
         /**
          * @brief append data to stream and update data size.
          * @param data data to append to stream.
          */
-        void append (char data)
+        inline void append (char data) noexcept
         {
-            _outstream.put (data);
+            _out->sputc (data);
         }
 
         /// output stream.
-        std::ostream& _outstream;
+        std::streambuf* _out;
     };
 
     /**
@@ -387,8 +387,8 @@ namespace join
          * @param root Value to write.
          */
         StreamReader (Value& root)
-        : SaxHandler (),
-          _root (root)
+        : SaxHandler ()
+        , _root (root)
         {
         }
 
@@ -561,7 +561,6 @@ namespace join
             if (parent->is <Value::ObjectValue> ())
             {
                 _stack.push (&parent->insert (Member (_curkey, std::move (array))));
-                _curkey.clear ();
             }
             else
             {
@@ -593,7 +592,7 @@ namespace join
         virtual int startObject (uint32_t size = 0) override
         {
             Object object;
-            object.reserve (size ? size : 16);
+            object.reserve (size ? size : 2);
 
             if (JOIN_UNLIKELY (_stack.empty ()))
             {
@@ -613,7 +612,6 @@ namespace join
             if (parent->is <Value::ObjectValue> ())
             {
                 _stack.push (&parent->insert (Member (_curkey, std::move (object))));
-                _curkey.clear ();
             }
             else
             {
@@ -666,7 +664,6 @@ namespace join
             if (parent->is <Value::ObjectValue> ())
             {
                 parent->insert (Member (_curkey, std::move (value)));
-                _curkey.clear ();
             }
             else
             {
