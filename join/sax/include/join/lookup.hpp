@@ -48,37 +48,37 @@ namespace join
 
         struct EscapeTable
         {
-            uint8_t table[256];
-            constexpr EscapeTable () : table {}
+            uint8_t data[256];
+            constexpr EscapeTable () : data {}
             {
-                for (int i = 0; i < 256; ++i) { table[i] = 0; }
-                for (int i = 0; i < 32; ++i)  { table[i] = 'u'; }
-                table['\b'] = 'b';
-                table['\t'] = 't';
-                table['\n'] = 'n';
-                table['\f'] = 'f';
-                table['\r'] = 'r';
-                table['"']  = '"';
-                table['\\'] = '\\';
+                for (int i = 0; i < 256; ++i) { data[i] = 0; }
+                for (int i = 0; i < 32; ++i)  { data[i] = 'u'; }
+                data['\b'] = 'b';
+                data['\t'] = 't';
+                data['\n'] = 'n';
+                data['\f'] = 'f';
+                data['\r'] = 'r';
+                data['"']  = '"';
+                data['\\'] = '\\';
             }
+            constexpr const uint8_t& operator[] (size_t i) const { return data[i]; }
         };
-        static constexpr EscapeTable escapeGen;
-        static constexpr const uint8_t* escapeLookup = escapeGen.table;
+        constexpr EscapeTable escapeLookup {};
 
         struct WhitespaceTable
         {
-            uint8_t table[256];
-            constexpr WhitespaceTable () : table {}
+            uint8_t data[256];
+            constexpr WhitespaceTable () : data {}
             {
-                for (int i = 0; i < 256; ++i) { table[i] = 0; }
-                table['\t'] = 1;
-                table['\n'] = 1;
-                table['\r'] = 1;
-                table[' ']  = 1;
+                for (int i = 0; i < 256; ++i) { data[i] = 0; }
+                data['\t'] = 1;
+                data['\n'] = 1;
+                data['\r'] = 1;
+                data[' ']  = 1;
             }
+            constexpr const uint8_t& operator[] (size_t i) const { return data[i]; }
         };
-        static constexpr WhitespaceTable whitespaceGen;
-        static constexpr const uint8_t* whitespaceLookup = whitespaceGen.table;
+        constexpr WhitespaceTable whitespaceLookup {};
     }
 }
 

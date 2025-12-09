@@ -79,21 +79,21 @@ namespace join
      * @brief get error category.
      * @return the created std::error_category object.
      */
-    const std::error_category& jsonCategory ();
+    const std::error_category& jsonCategory () noexcept;
 
     /**
      * @brief create an std::error_code object.
      * @param code error code number.
      * @return the created std::error_code object.
      */
-    std::error_code make_error_code (JsonErrc code);
+    std::error_code make_error_code (JsonErrc code) noexcept;
 
     /**
      * @brief create an std::error_condition object.
      * @param code error code number.
      * @return the created std::error_condition object.
      */
-    std::error_condition make_error_condition (JsonErrc code);
+    std::error_condition make_error_condition (JsonErrc code) noexcept;
 
     /**
      * @brief JSON writer class.
@@ -415,7 +415,7 @@ namespace join
          * @brief write 64 bits unsigned integer value.
          * @param value 64 bits unsigned integer value to write.
          */
-        virtual void writeUint64 (uint64_t value) noexcept
+        virtual void writeUint64 (uint64_t value)
         {
             if (value == 0)
             {
@@ -452,7 +452,7 @@ namespace join
          * @brief write real value.
          * @param value real value to write.
          */
-        virtual void writeDouble (double value) noexcept
+        virtual void writeDouble (double value)
         {
             char buf[25];
             char* end = join::dtoa (buf, value);
@@ -466,7 +466,7 @@ namespace join
          * @param codepoint calculated UTF8 codepoint.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int utf8Codepoint (std::string::const_iterator& cur, std::string::const_iterator& end, uint32_t& codepoint) noexcept
+        virtual int utf8Codepoint (std::string::const_iterator& cur, std::string::const_iterator& end, uint32_t& codepoint)
         {
             uint8_t u0 = static_cast <uint8_t> (*cur);
             if (u0 < 0x80)
@@ -535,7 +535,7 @@ namespace join
          * @param value string value to escape.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int writeEscaped(const std::string& value) noexcept
+        virtual int writeEscaped(const std::string& value)
         {
             auto cur = value.cbegin ();
             auto end = value.cend ();
@@ -826,7 +826,7 @@ namespace join
      * @param b other bitset.
      * @return bitset result of binary AND on JsonReadMode.
      */
-    inline constexpr JsonReadMode operator& (JsonReadMode a, JsonReadMode b) noexcept
+    constexpr JsonReadMode operator& (JsonReadMode a, JsonReadMode b) noexcept
     { return JsonReadMode (static_cast <int> (a) & static_cast <int> (b)); }
 
     /**
@@ -835,7 +835,7 @@ namespace join
      * @param b other bitset.
      * @return bitset result of binary OR on JsonReadMode.
      */
-    inline constexpr JsonReadMode operator| (JsonReadMode a, JsonReadMode b) noexcept
+    constexpr JsonReadMode operator| (JsonReadMode a, JsonReadMode b) noexcept
     { return JsonReadMode (static_cast <int> (a) | static_cast <int> (b)); }
 
     /**
@@ -844,7 +844,7 @@ namespace join
      * @param b other bitset.
      * @return bitset result of binary AND on JsonReadMode.
      */
-    inline constexpr const JsonReadMode& operator&= (JsonReadMode& a, JsonReadMode b) noexcept
+    constexpr const JsonReadMode& operator&= (JsonReadMode& a, JsonReadMode b) noexcept
     { return a = a & b; }
 
     /**
@@ -853,7 +853,7 @@ namespace join
      * @param b other bitset.
      * @return bitset result of binary OR.
      */
-    inline constexpr const JsonReadMode& operator|= (JsonReadMode& a, JsonReadMode b) noexcept
+    constexpr const JsonReadMode& operator|= (JsonReadMode& a, JsonReadMode b) noexcept
     { return a = a | b; }
 
     /**
@@ -1013,9 +1013,9 @@ namespace join
                 return 0;
             }
 
-            skipWhitespaces (document);
+            skipWhitespaces <ReadMode> (document);
 
-            if (document.peek () != std::char_traits<char>::eof ())
+            if (document.peek () != std::char_traits <char>::eof ())
             {
                 join::lastError = make_error_code (SaxErrc::ExtraData);
                 return -1;
@@ -1032,7 +1032,7 @@ namespace join
         template <JsonReadMode ReadMode, typename ViewType>
         int readValue (ViewType& document)
         {
-            if (skipComments <ReadMode> (document) != 0)
+            if (skipWhitespaces <ReadMode> (document) != 0)
             {
                 return -1;
             }
@@ -1207,19 +1207,25 @@ namespace join
          * @param value converted value.
          * @return true on success, false otherwise.
          */
-        inline bool strtodFast (uint64_t significand, int64_t exponent, double &value) noexcept
+        inline bool strtodFast (uint64_t significand, int64_t exponent, double &value)
         {
+            constexpr double pow10[] = {
+                1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10,
+                1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21,
+                1e22
+            };
+
             value = static_cast <double> (significand);
 
             if (JOIN_UNLIKELY ((exponent > 22) && (exponent < (22 + 16))))
             {
-                value *= details::pow10[exponent - 22];
+                value *= pow10[exponent - 22];
                 exponent = 22;
             }
 
             if (JOIN_LIKELY ((exponent >= -22) && (exponent <= 22) && (value <= 9007199254740991.0)))
             {
-                value = (exponent < 0) ? (value / details::pow10[-exponent]) : (value * details::pow10[exponent]);
+                value = (exponent < 0) ? (value / pow10[-exponent]) : (value * pow10[exponent]);
                 return true;
             }
 
@@ -1306,7 +1312,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        int readNumber (ViewType& document) noexcept
+        int readNumber (ViewType& document)
         {
             size_t beg = document.tell ();
             bool negative = document.getIf ('-');
@@ -1463,7 +1469,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        inline int readHex (ViewType& document, uint32_t& u) noexcept
+        inline int readHex (ViewType& document, uint32_t& u)
         {
             for (int i = 0; i < 4; ++i)
             {
@@ -1498,7 +1504,7 @@ namespace join
          * @param codepoint unicode codepoint to encode.
          * @param output parse output string.
          */
-        inline void encodeUtf8 (uint32_t codepoint, std::string& output) noexcept
+        inline void encodeUtf8 (uint32_t codepoint, std::string& output)
         {
             if (codepoint < 0x80)
             {
@@ -1537,7 +1543,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        inline int readUnicode (ViewType& document, std::string& output) noexcept
+        inline int readUnicode (ViewType& document, std::string& output)
         {
             uint32_t u = 0;
 
@@ -1595,14 +1601,8 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        inline int readEscaped (ViewType& document, std::string& output) noexcept
+        inline int readEscaped (ViewType& document, std::string& output)
         {
-            if (JOIN_UNLIKELY (!document.getIf ('\\')))
-            {
-                join::lastError = make_error_code (JsonErrc::InvalidEscaping);
-                return -1;
-            }
-
             int ch = document.get ();
             switch (ch)
             {
@@ -1684,7 +1684,6 @@ namespace join
         int readString (ViewType& document, bool isKey = false)
         {
             thread_local std::string output;
-
             output.clear ();
             output.reserve (64);
 
@@ -1692,11 +1691,12 @@ namespace join
 
             for (;;)
             {
-                size_t bufIdx = 0;
+                size_t offset = 0;
+                int ch;
 
-                while (bufIdx < 256)
+                while (offset < 256)
                 {
-                    int ch = document.peek ();
+                    ch = document.peek ();
                     if (JOIN_UNLIKELY (ch == std::char_traits <char>::eof ()))
                     {
                         join::lastError = make_error_code (JsonErrc::EndOfFile);
@@ -1704,52 +1704,43 @@ namespace join
                     }
 
                     uint8_t uch = static_cast <uint8_t> (ch);
-                    if (JOIN_UNLIKELY (uch < 0x20 || uch == 0x22 || uch == 0x5C))
+                    if (uch < 0x20 || uch == 0x22 || uch == 0x5C)
                     {
                         break;
                     }
+
                     document.get ();
-                    buffer[bufIdx++] = static_cast <char> (ch);
+                    buffer[offset++] = static_cast <char> (ch);
                 }
 
-                if (bufIdx > 0)
+                if (offset > 0)
                 {
-                    output.append (buffer, bufIdx);
+                    output.append (buffer, offset);
                 }
-
-                int ch = document.peek ();
 
                 if (JOIN_LIKELY (ch == '"'))
                 {
                     document.get ();
                     break;
                 }
-                else if (JOIN_UNLIKELY (ch == '\\'))
+
+                if (JOIN_UNLIKELY (ch == '\\'))
                 {
+                    document.get ();
                     if (readEscaped (document, output) == -1)
                     {
                         return -1;
                     }
+                    continue;
                 }
-                /*else if (JOIN_UNLIKELY (static_cast <uint8_t> (ch) > 0x7F))
-                {
-                    if (readUtf8 (document, output) == -1)
-                    {
-                        return -1;
-                    }
-                }*/
-                else if (JOIN_UNLIKELY (ch < 0x20))
+
+                if (JOIN_UNLIKELY (ch < 0x20))
                 {
                     join::lastError = make_error_code (JsonErrc::IllegalCharacter);
                     return -1;
                 }
-                else if (JOIN_UNLIKELY (ch == std::char_traits <char>::eof ()))
-                {
-                    join::lastError = make_error_code (JsonErrc::EndOfFile);
-                    return -1;
-                }
             }
-            
+
             return isKey ? setKey (output) : setString (output);
         }
 
@@ -1766,7 +1757,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
+            if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
             {
                 return -1;
             }
@@ -1783,32 +1774,31 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
                 int ch = document.peek ();
 
-                if (JOIN_LIKELY (ch == ',' || ch == ']'))
+                if (JOIN_LIKELY (ch == ','))
                 {
                     document.get ();
-
-                    if (ch == ']')
-                    {
-                        break;
-                    }
-
-                    if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
                     {
                         return -1;
                     }
+                    continue;
                 }
-                else
+
+                if (JOIN_LIKELY (ch == ']'))
                 {
-                    join::lastError = make_error_code (JsonErrc::MissingComma);
-                    return -1;
+                    document.get ();
+                    break;
                 }
+
+                join::lastError = make_error_code (JsonErrc::MissingComma);
+                return -1;
             }
 
             return stopArray ();
@@ -1827,7 +1817,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
+            if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
             {
                 return -1;
             }
@@ -1850,7 +1840,7 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
@@ -1861,7 +1851,7 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
@@ -1871,99 +1861,85 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
                 int ch = document.peek ();
 
-                if (JOIN_LIKELY (ch == ',' || ch == '}'))
+                if (JOIN_LIKELY (ch == ','))
                 {
                     document.get ();
-
-                    if (ch == '}')
-                    {
-                        break;
-                    }
-
-                    if (JOIN_UNLIKELY (skipComments <ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
                     {
                         return -1;
                     }
+                    continue;
                 }
-                else
+
+                if (JOIN_LIKELY (ch == '}'))
                 {
-                    join::lastError = make_error_code (JsonErrc::MissingComma);
-                    return -1;
+                    document.get ();
+                    break;
                 }
+
+                join::lastError = make_error_code (JsonErrc::MissingComma);
+                return -1;
             }
 
             return stopObject ();
         }
 
         /**
-         * @brief check if whitespace.
-         * @param c character to check.
-         * @return true if whitespace, false otherwise.
-         */
-        inline constexpr bool isWhitespace (char c) noexcept
-        {
-            return details::whitespaceLookup[static_cast <unsigned char> (c)];
-        }
-
-        /**
          * @brief skip whitespaces.
-         * @param document document to parse.
-         */
-        template <typename ViewType>
-        inline constexpr void skipWhitespaces (ViewType& document) noexcept
-        {
-            while (isWhitespace (document.peek ()))
-            {
-                document.get ();
-            }
-        }
-
-        /**
-         * @brief skip comments.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode, typename ViewType>
-        inline constexpr int skipComments (ViewType& document) noexcept
+        inline int skipWhitespaces (ViewType& document)
         {
-            if (!(ReadMode & JsonReadMode::ParseComments))
+            for (;;)
             {
-                skipWhitespaces (document);
-                return 0;
-            }
+                unsigned char c = document.peek ();
 
-            skipWhitespaces (document);
+                if (!details::whitespaceLookup[c])
+                {
+                    break;
+                }
 
-            while (JOIN_UNLIKELY (document.getIf ('/')))
-            {
+                do
+                {
+                    document.get ();
+                    c = document.peek ();
+                }
+                while (details::whitespaceLookup[c]);
+
+                if (!(ReadMode & JsonReadMode::ParseComments))
+                {
+                    break;
+                }
+
+                if (c != '/')
+                {
+                    break;
+                }
+
+                document.get ();
+
                 if (document.getIf ('*'))
                 {
-                    while ((document.get () != '*') || (document.get () != '/'))
-                    {
-                        // ignore comment.
-                    }
+                    while ((document.get () != '*') || !document.getIf ('/'));
                 }
-                else if (JOIN_LIKELY (document.getIf ('/')))
+                else if (document.getIf ('/'))
                 {
-                    while (document.get () != '\n')
-                    {
-                        // ignore comment.
-                    }
+                    while (document.get () != '\n');
                 }
                 else
                 {
                     join::lastError = make_error_code (JsonErrc::InvalidComment);
                     return -1;
                 }
-
-                skipWhitespaces (document);
             }
 
             return 0;
@@ -1974,7 +1950,7 @@ namespace join
          * @param c character to check.
          * @return true if upper case alphanumeric character, false otherwise.
          */
-        inline constexpr bool isUpperAlpha (char c) noexcept
+        constexpr bool isUpperAlpha (char c) noexcept
         {
             return static_cast <unsigned char> (c - 'A') <= 5u;
         }
@@ -1984,7 +1960,7 @@ namespace join
          * @param c character to check.
          * @return true if lower case alphanumeric character, false otherwise.
          */
-        inline constexpr bool isLowerAlpha (char c) noexcept
+        constexpr bool isLowerAlpha (char c) noexcept
         {
             return static_cast <unsigned char> (c - 'a') <= 5u;
         }
@@ -1994,7 +1970,7 @@ namespace join
          * @param c character to check.
          * @return true if digit, false otherwise.
          */
-        inline constexpr bool isDigit (char c) noexcept
+        constexpr bool isDigit (char c) noexcept
         {
             return static_cast <unsigned char> (c - '0') <= 9u;
         }
@@ -2004,7 +1980,7 @@ namespace join
          * @param c character to check.
          * @return true if sign, false otherwise.
          */
-        inline constexpr bool isSign (char c) noexcept
+        constexpr bool isSign (char c) noexcept
         {
             return ((c ^ '+') & (c ^ '-')) == 0;
         }

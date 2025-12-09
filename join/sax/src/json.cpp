@@ -74,7 +74,7 @@ std::string JsonCategory::message (int code) const
 //   CLASS     :
 //   METHOD    : jsonCategory
 // =========================================================================
-const std::error_category& join::jsonCategory ()
+const std::error_category& join::jsonCategory () noexcept
 {
     static JsonCategory instance;
     return instance;
@@ -84,7 +84,7 @@ const std::error_category& join::jsonCategory ()
 //   CLASS     :
 //   METHOD    : make_error_code
 // =========================================================================
-std::error_code join::make_error_code (JsonErrc code)
+std::error_code join::make_error_code (JsonErrc code) noexcept
 {
     return std::error_code (static_cast <int> (code), jsonCategory ());
 }
@@ -93,7 +93,7 @@ std::error_code join::make_error_code (JsonErrc code)
 //   CLASS     :
 //   METHOD    : make_error_condition
 // =========================================================================
-std::error_condition join::make_error_condition (JsonErrc code)
+std::error_condition join::make_error_condition (JsonErrc code) noexcept
 {
     return std::error_condition (static_cast <int> (code), jsonCategory ());
 }

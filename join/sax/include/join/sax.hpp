@@ -80,21 +80,21 @@ namespace join
      * @brief get error category.
      * @return the created std::error_category object.
      */
-    const std::error_category& saxCategory ();
+    const std::error_category& saxCategory () noexcept;
 
     /**
      * @brief create an std::error_code object.
      * @param code error code number.
      * @return the created std::error_code object.
      */
-    std::error_code make_error_code (SaxErrc code);
+    std::error_code make_error_code (SaxErrc code) noexcept;
 
     /**
      * @brief create an std::error_condition object.
      * @param code error code number.
      * @return the created std::error_condition object.
      */
-    std::error_condition make_error_condition (SaxErrc code);
+    std::error_condition make_error_condition (SaxErrc code) noexcept;
 
     /**
      * @brief SAX API interface class.
@@ -541,7 +541,7 @@ namespace join
         virtual int startArray (uint32_t size = 0) override
         {
             Array array;
-            array.reserve (size ? size : 16);
+            array.reserve (size ? size : 8);
 
             if (JOIN_UNLIKELY (_stack.empty ()))
             {
@@ -558,9 +558,9 @@ namespace join
 
             Value::Ptr parent = _stack.top ();
 
-            if (parent->is <Value::ObjectValue> ())
+            if (parent->index () == Value::ObjectValue)
             {
-                _stack.push (&parent->insert (Member (_curkey, std::move (array))));
+                _stack.push (&parent->insert ({std::move (_curkey), std::move (array)}));
             }
             else
             {
@@ -576,7 +576,7 @@ namespace join
          */
         virtual int stopArray () override
         {
-            if (_stack.size ())
+            if (JOIN_LIKELY (_stack.size ()))
             {
                 _stack.pop ();
             }
@@ -592,7 +592,7 @@ namespace join
         virtual int startObject (uint32_t size = 0) override
         {
             Object object;
-            object.reserve (size ? size : 2);
+            object.reserve (size ? size : 8);
 
             if (JOIN_UNLIKELY (_stack.empty ()))
             {
@@ -609,9 +609,9 @@ namespace join
 
             Value::Ptr parent = _stack.top ();
 
-            if (parent->is <Value::ObjectValue> ())
+            if (parent->index () == Value::ObjectValue)
             {
-                _stack.push (&parent->insert (Member (_curkey, std::move (object))));
+                _stack.push (&parent->insert ({std::move (_curkey), std::move (object)}));
             }
             else
             {
@@ -638,7 +638,7 @@ namespace join
          */
         virtual int stopObject () override
         {
-            if (_stack.size ())
+            if (JOIN_LIKELY (_stack.size ()))
             {
                 _stack.pop ();
             }
@@ -661,9 +661,9 @@ namespace join
 
             Value::Ptr parent = _stack.top ();
 
-            if (parent->is <Value::ObjectValue> ())
+            if (parent->index () == Value::ObjectValue)
             {
-                parent->insert (Member (_curkey, std::move (value)));
+                parent->insert ({std::move (_curkey), std::move (value)});
             }
             else
             {
