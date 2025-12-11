@@ -38,6 +38,18 @@
 
 namespace join
 {
+    struct LocaleDelete
+    {
+        constexpr LocaleDelete () noexcept = default;
+
+        void operator () (locale_t loc) noexcept
+        {
+            freelocale (loc);
+        }
+    };
+
+    using LocalePtr = std::unique_ptr <std::remove_pointer_t <locale_t>, LocaleDelete>;
+
     /**
      * @brief JSON error codes.
      */
@@ -797,18 +809,6 @@ namespace join
         }
     };
 
-    struct LocaleDelete
-    {
-        constexpr LocaleDelete () noexcept = default;
-
-        void operator () (locale_t loc) noexcept
-        {
-            freelocale (loc);
-        }
-    };
-
-    using LocalePtr = std::unique_ptr <std::remove_pointer_t <locale_t>, LocaleDelete>;
-
     /**
      * @brief JSON deserialization mode.
      */
@@ -903,7 +903,7 @@ namespace join
         virtual ~JsonReader () = default;
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param document document to parse.
          * @param length The length of the document to parse.
          * @return 0 on success, -1 otherwise.
@@ -916,7 +916,7 @@ namespace join
         }
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param document document to parse.
          * @param length The length of the document to parse.
          * @return 0 on success, -1 otherwise.
@@ -927,7 +927,7 @@ namespace join
         }
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param first The first character of the document to parse.
          * @param last The last character of the document to parse.
          * @return 0 on success, -1 otherwise.
@@ -940,7 +940,7 @@ namespace join
         }
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param first The first character of the document to parse.
          * @param last The last character of the document to parse.
          * @return 0 on success, -1 otherwise.
@@ -951,8 +951,8 @@ namespace join
         }
 
         /**
-         * @brief Deserialize a document.
-         * @param document document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode = JsonReadMode::None>
@@ -963,8 +963,8 @@ namespace join
         }
 
         /**
-         * @brief Deserialize a document.
-         * @param document document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
         int deserialize (const std::string& document) override
@@ -973,20 +973,64 @@ namespace join
         }
 
         /**
-         * @brief Parse a document.
-         * @param document document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode = JsonReadMode::None>
+        int deserialize (std::istringstream& document)
+        {
+            StreamView <true> in (document);
+            return read <ReadMode> (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::istringstream& document) override
+        {
+            return deserialize <> (document);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode = JsonReadMode::None>
+        int deserialize (std::ifstream& document)
+        {
+            StreamView <true> in (document);
+            return read <ReadMode> (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::ifstream& document) override
+        {
+            return deserialize <> (document);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode = JsonReadMode::None>
         int deserialize (std::istream& document)
         {
-            StreamView in (document);
+            StreamView <false> in (document);
             return read <ReadMode> (in);
         }
 
         /**
-         * @brief Parse a document.
-         * @param document document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
         int deserialize (std::istream& document) override
@@ -1314,8 +1358,9 @@ namespace join
         template <typename ViewType>
         int readNumber (ViewType& document)
         {
-            size_t beg = document.tell ();
-            bool negative = document.getIf ('-');
+            BufferingView <ViewType> view (document);
+
+            bool negative = view.getIf ('-');
 
             uint64_t max64 = std::numeric_limits <uint64_t>::max ();
             if (negative)
@@ -1327,22 +1372,22 @@ namespace join
             bool isDouble = false;
             uint64_t u = 0;
 
-            if (JOIN_UNLIKELY (document.getIf ('0')))
+            if (JOIN_UNLIKELY (view.getIf ('0')))
             {
-                if (JOIN_UNLIKELY (isDigit (document.peek ())))
+                if (JOIN_UNLIKELY (isDigit (view.peek ())))
                 {
                     join::lastError = make_error_code (SaxErrc::InvalidValue);
                     return -1;
                 }
             }
-            else if (JOIN_LIKELY (isDigit (document.peek ())))
+            else if (JOIN_LIKELY (isDigit (view.peek ())))
             {
-                u = document.get () - '0';
+                u = view.get () - '0';
                 ++digits;
 
-                while (JOIN_LIKELY (isDigit (document.peek ())))
+                while (JOIN_LIKELY (isDigit (view.peek ())))
                 {
-                    int digit = document.peek () - '0';
+                    int digit = view.peek () - '0';
 
                     if (JOIN_UNLIKELY (u > ((max64 - digit) / 10)))
                     {
@@ -1350,7 +1395,7 @@ namespace join
                         break;
                     }
 
-                    u = (u * 10) + (document.get () - '0');
+                    u = (u * 10) + (view.get () - '0');
                     ++digits;
                 }
             }
@@ -1370,21 +1415,21 @@ namespace join
 
             if (isDouble)
             {
-                while (JOIN_LIKELY (isDigit (document.peek ())))
+                while (JOIN_LIKELY (isDigit (view.peek ())))
                 {
-                    u = (u * 10) + (document.get () - '0');
+                    u = (u * 10) + (view.get () - '0');
                     ++digits;
                 }
             }
 
             int64_t frac = 0;
-            if (document.getIf ('.'))
+            if (view.getIf ('.'))
             {
                 isDouble = true;
 
-                while (JOIN_LIKELY (isDigit (document.peek ())))
+                while (JOIN_LIKELY (isDigit (view.peek ())))
                 {
-                    u = (u * 10) + (document.get () - '0');
+                    u = (u * 10) + (view.get () - '0');
                     if (JOIN_LIKELY (u || digits))
                     {
                         ++digits;
@@ -1394,23 +1439,23 @@ namespace join
             }
 
             int64_t exponent = 0;
-            if (document.getIf ('e') || document.getIf ('E'))
+            if (view.getIf ('e') || view.getIf ('E'))
             {
                 isDouble = true;
 
                 bool negExp = false;
-                if (isSign (document.peek ()))
+                if (isSign (view.peek ()))
                 {
-                    negExp = (document.get () == '-');
+                    negExp = (view.get () == '-');
                 }
 
-                if (JOIN_LIKELY (isDigit (document.peek ())))
+                if (JOIN_LIKELY (isDigit (view.peek ())))
                 {
-                    exponent = (document.get () - '0');
+                    exponent = (view.get () - '0');
 
-                    while (JOIN_LIKELY (isDigit (document.peek ())))
+                    while (JOIN_LIKELY (isDigit (view.peek ())))
                     {
-                        int digit = document.get () - '0';
+                        int digit = view.get () - '0';
 
                         if (JOIN_LIKELY (exponent <= ((std::numeric_limits <int>::max () - digit) / 10)))
                         {
@@ -1444,13 +1489,8 @@ namespace join
                 }
             }
 
-            size_t len = document.tell () - beg;
-
             std::string number;
-            number.resize (len);
-
-            document.rewind (len);
-            document.read (&number[0], len);
+            view.snapshot (number);
 
             double d = 0.0;
             if (strtodSlow (number, d))
@@ -1733,6 +1773,15 @@ namespace join
                     }
                     continue;
                 }
+
+                /*if (JOIN_UNLIKELY (static_cast <uint8_t> (ch) > 0x7F))
+                {
+                    if (readUtf8 (document, output) == -1)
+                    {
+                        return -1;
+                    }
+                    continue;
+                }*/
 
                 if (JOIN_UNLIKELY (ch < 0x20))
                 {

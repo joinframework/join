@@ -34,6 +34,8 @@
 // C++.
 #include <system_error>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <stack>
 
@@ -424,15 +426,15 @@ namespace join
         virtual ~StreamReader () = default;
 
         /**
-         * @brief Deserialize a document.
-         * @param document document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @param length The length of the document to parse.
          * @return 0 on success, -1 otherwise.
          */
         virtual int deserialize (const char* document, size_t length) = 0;
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param first The first character of the document to parse.
          * @param last The last character of the document to parse.
          * @return 0 on success, -1 otherwise.
@@ -440,15 +442,29 @@ namespace join
         virtual int deserialize (const char* first, const char* last) = 0;
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
         virtual int deserialize (const std::string& document) = 0;
 
         /**
-         * @brief Parse a document.
-         * @param document document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int deserialize (std::istringstream& document) = 0;
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int deserialize (std::ifstream& document) = 0;
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
         virtual int deserialize (std::istream& document) = 0;

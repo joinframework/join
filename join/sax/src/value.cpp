@@ -66,6 +66,24 @@ int Value::jsonRead (const std::string& document)
 //   CLASS     : Value
 //   METHOD    : jsonRead
 // =========================================================================
+int Value::jsonRead (std::istringstream& document)
+{
+    return deserialize <JsonReader> (document);
+}
+
+// =========================================================================
+//   CLASS     : Value
+//   METHOD    : jsonRead
+// =========================================================================
+int Value::jsonRead (std::ifstream& document)
+{
+    return deserialize <JsonReader> (document);
+}
+
+// =========================================================================
+//   CLASS     : Value
+//   METHOD    : jsonRead
+// =========================================================================
 int Value::jsonRead (std::istream& document)
 {
     return deserialize <JsonReader> (document);
@@ -113,6 +131,24 @@ int Value::packRead (const char* first, const char* last)
 //   METHOD    : packRead
 // =========================================================================
 int Value::packRead (const std::string& document)
+{
+    return deserialize <PackReader> (document);
+}
+
+// =========================================================================
+//   CLASS     : Value
+//   METHOD    : packRead
+// =========================================================================
+int Value::packRead (std::istringstream& document)
+{
+    return deserialize <PackReader> (document);
+}
+
+// =========================================================================
+//   CLASS     : Value
+//   METHOD    : packRead
+// =========================================================================
+int Value::packRead (std::ifstream& document)
 {
     return deserialize <PackReader> (document);
 }

@@ -463,13 +463,35 @@ namespace join
         }
 
         /**
-         * @brief parse a document.
-         * @param document document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::istringstream& document) override
+        {
+            StreamView <true> in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::ifstream& document) override
+        {
+            StreamView <true> in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
         int deserialize (std::istream& document) override
         {
-            StreamView in (document);
+            StreamView <true> in (document);
             return read (in);
         }
 

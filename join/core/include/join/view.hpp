@@ -31,6 +31,7 @@
 // C++.
 #include <istream>
 #include <string>
+#include <vector>
 
 // C.
 #include <cstring>
@@ -44,6 +45,8 @@ namespace join
     class StringView
     {
     public:
+        using ViewPos = const char*;
+
         /**
          * @brief default constructor.
          * @param in input string.
@@ -171,6 +174,61 @@ namespace join
         }
 
         /**
+         * @brief extracts character and appends to buffer.
+         * @param buffer output string buffer.
+         * @return extracted character or eof.
+         */
+        template <typename Buffer>
+        inline int append (Buffer& buffer)
+        {
+            if (JOIN_LIKELY (_cur < _end))
+            {
+                const char c = *_cur++;
+                buffer.push_back (c);
+                return static_cast <unsigned char> (c);
+            }
+            return std::char_traits <char>::eof ();
+        }
+
+        /**
+         * @brief extracts expected character and appends to buffer.
+         * @param expected expected character.
+         * @param buffer output string buffer.
+         * @return true if extracted and appended, false otherwise.
+         */
+        template <typename Buffer>
+        inline bool appendIf (char expected, Buffer& buffer)
+        {
+            if (JOIN_LIKELY (_cur < _end) && (*_cur == expected))
+            {
+                buffer.push_back (*_cur++);
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * @brief extracts expected character (case insensitive, ASCII-only) and appends to buffer.
+         * @param expected expected character.
+         * @param buffer output string buffer.
+         * @return true if extracted and appended, false otherwise.
+         */
+        template <typename Buffer>
+        inline bool appendIfNoCase (char expected, Buffer& buffer)
+        {
+            if (JOIN_LIKELY (_cur < _end))
+            {
+                const char c = *_cur;
+                if ((c | 32) == (expected | 32))
+                {
+                    buffer.push_back (*_cur++);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
          * @brief read characters.
          * @param buf output buffer.
          * @param count number of characters to read.
@@ -187,26 +245,30 @@ namespace join
 
         /**
          * @brief get input position indicator.
-         * @return offset from the beginning.
+         * @return current position.
          */
-        inline size_t tell () const noexcept
+        inline ViewPos tell () const noexcept
         {
-            return static_cast <size_t> (_cur - _beg);
+            return _cur;
         }
 
         /**
-         * @brief rewind the view.
-         * @param n number of characters to rewind.
+         * @brief seek to the specified position.
+         * @param pos position to seek to.
          */
-        inline void rewind (size_t n) noexcept
+        inline void seek (ViewPos pos) noexcept
         {
-            if (n > static_cast <size_t> (_cur - _beg))
+            if (JOIN_LIKELY (pos >= _beg && pos <= _end))
+            {
+                _cur = pos;
+            }
+            else if (pos < _beg)
             {
                 _cur = _beg;
             }
             else
             {
-                _cur -= n;
+                _cur = _end;
             }
         }
 
@@ -224,9 +286,12 @@ namespace join
     /**
      * @brief stream view.
      */
+    template <bool Seekable = true>
     class StreamView
     {
     public:
+        using ViewPos = std::streampos;
+
         /**
          * @brief default constructor.
          * @param in input stream.
@@ -320,6 +385,60 @@ namespace join
         }
 
         /**
+         * @brief extracts character and appends to buffer.
+         * @param buffer output string buffer.
+         * @return extracted character or eof.
+         */
+        template <typename Buffer>
+        inline int append (Buffer& buffer)
+        {
+            const int c = _in->sbumpc ();
+            if (JOIN_LIKELY (c != std::char_traits <char>::eof ()))
+            {
+                buffer.push_back (static_cast <char> (c));
+            }
+            return c;
+        }
+
+        /**
+         * @brief extracts expected character and appends to buffer.
+         * @param expected expected character.
+         * @param buffer output string buffer.
+         * @return true if extracted and appended, false otherwise.
+         */
+        template <typename Buffer>
+        inline bool appendIf (char expected, Buffer& buffer)
+        {
+            if (_in->sgetc () == static_cast <int> (static_cast <unsigned char> (expected)))
+            {
+                buffer.push_back (static_cast <char> (_in->sbumpc ()));
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * @brief extracts expected character (case insensitive, ASCII-only) and appends to buffer.
+         * @param expected expected character.
+         * @param buffer output string buffer.
+         * @return true if extracted and appended, false otherwise.
+         */
+        template <typename Buffer>
+        inline bool appendIfNoCase (char expected, Buffer& buffer)
+        {
+            const int c = _in->sgetc ();
+            if (JOIN_LIKELY (c != std::char_traits <char>::eof ()))
+            {
+                if ((static_cast <char> (c) | 32) == (expected | 32))
+                {
+                    buffer.push_back (static_cast <char> (_in->sbumpc ()));
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
          * @brief read characters.
          * @param buf output buffer.
          * @param count number of characters to read.
@@ -332,41 +451,229 @@ namespace join
 
         /**
          * @brief get input position indicator.
-         * @return offset from the beginning.
+         * @return current position.
          */
-        inline size_t tell () const noexcept
+        template <bool S = Seekable>
+        inline typename std::enable_if <S, ViewPos>::type tell () const noexcept
         {
             return _in->pubseekoff (0, std::ios::cur, std::ios::in);
         }
 
         /**
-         * @brief rewind the view.
-         * @param n number of characters to rewind.
+         * @brief seek to the specified position.
+         * @param pos position to seek to.
          */
-        inline void rewind (size_t n) noexcept
+        template <bool S = Seekable>
+        inline typename std::enable_if <S, void>::type seek (ViewPos pos) noexcept
         {
-            std::streampos pos = tell ();
-
-            if (pos == std::streampos (std::streamoff (-1)))
-            {
-                // TODO: stream is not seekable do buffering.
-                return;
-            }
-
-            std::streamoff off = static_cast <std::streamoff> (n);
-            if (off > pos)
-            {
-                _in->pubseekpos (0, std::ios::in);
-            }
-            else
-            {
-                _in->pubseekoff (-off, std::ios::cur, std::ios::in);
-            }
+            _in->pubseekpos (pos, std::ios::in);
         }
 
     private:
         /// input stream buffer.
         std::streambuf* _in;
+    };
+
+    /**
+     * @brief trait to determine if a view type is seekable.
+     * @tparam ViewType view type to check.
+     */
+    template <typename ViewType>
+    struct is_seekable : std::false_type {};
+
+    /**
+     * @brief specialization for StringView (seekable).
+     */
+    template <>
+    struct is_seekable <StringView> : std::true_type {};
+
+    /**
+     * @brief specialization for seekable StreamView.
+     */
+    template <>
+    struct is_seekable <StreamView <true>> : std::true_type {};
+
+    /**
+     * @brief specialization for non-seekable StreamView.
+     */
+    template <>
+    struct is_seekable <StreamView <false>> : std::false_type {};
+
+    /**
+     * @brief buffering view adapter
+     */
+    template <typename ViewType, bool Seekable = is_seekable <ViewType>::value>
+    class BufferingView;
+
+    /**
+     * @brief buffering view specialization for seekable view.
+     */
+    template <typename ViewType>
+    class BufferingView <ViewType, true>
+    {
+    public:
+        /**
+         * @brief default constructor.
+         * @param view view.
+         */
+        explicit BufferingView (ViewType& view)
+        : _view (view)
+        , _beg (view.tell ())
+        {
+        }
+
+        /**
+         * @brief get character without extracting it.
+         * @return extracted character.
+         */
+        inline int peek () const noexcept
+        {
+            return _view.peek ();
+        }
+
+        /**
+         * @brief extracts character.
+         * @return extracted character.
+         */
+        inline int get () noexcept
+        {
+            return _view.get ();
+        }
+
+        /**
+         * @brief extracts expected character.
+         * @param expected expected character.
+         * @return true if extracted, false otherwise.
+         */
+        inline bool getIf (char c) noexcept
+        {
+            return _view.getIf (c);
+        }
+
+        /**
+         * @brief extracts expected character (case insensitive, ASCII-only).
+         * @param expected expected character.
+         * @return true if extracted, false otherwise.
+         */
+        inline bool getIfNoCase (char c) noexcept
+        {
+            return _view.getIfNoCase (c);
+        }
+
+        /**
+         * @brief get snapshot.
+         * @param out destination.
+         */
+        inline void snapshot (std::string& out)
+        {
+            size_t len = _view.tell () - _beg;
+            out.resize (len);
+
+            _view.seek (_beg);
+            _view.read (&out[0], len);
+        }
+
+        /**
+         * @brief consume buffered data.
+         * @param out destination.
+         */
+        inline void consume (std::string& out)
+        {
+            snapshot (out);
+            _beg = _view.tell ();
+        }
+
+    private:
+        /// underlying view.
+        ViewType& _view;
+
+        /// start position.
+        typename ViewType::ViewPos _beg;
+    };
+
+    /**
+     * @brief buffering view specialization for non-seekable view.
+     */
+    template <typename ViewType>
+    class BufferingView <ViewType, false>
+    {
+    public:
+        /**
+         * @brief default constructor.
+         * @param view view.
+         */
+        explicit BufferingView (ViewType& view)
+        : _view (view)
+        {
+            static thread_local std::vector <char> buffer;
+            buffer.clear ();
+            buffer.reserve (32);
+            _buf = &buffer;
+        }
+
+        /**
+         * @brief get character without extracting it.
+         * @return extracted character.
+         */
+        inline int peek () const noexcept
+        {
+            return _view.peek ();
+        }
+
+        /**
+         * @brief extracts character.
+         * @return extracted character.
+         */
+        inline int get () noexcept
+        {
+            return _view.append (*_buf);
+        }
+
+        /**
+         * @brief extracts expected character.
+         * @param expected expected character.
+         * @return true if extracted, false otherwise.
+         */
+        inline bool getIf (char c) noexcept
+        {
+            return _view.appendIf (c, *_buf);
+        }
+
+        /**
+         * @brief extracts expected character (case insensitive, ASCII-only).
+         * @param expected expected character.
+         * @return true if extracted, false otherwise.
+         */
+        inline bool getIfNoCase (char c) noexcept
+        {
+            return _view.appendIfNoCase (c, *_buf);
+        }
+
+        /**
+         * @brief get snapshot.
+         * @param out destination.
+         */
+        inline void snapshot (std::string& out)
+        {
+            out.assign (_buf->data (), _buf->size ());
+        }
+
+        /**
+         * @brief consume buffered data.
+         * @param out destination.
+         */
+        inline void consume (std::string& out)
+        {
+            snapshot (out);
+            _buf->clear ();
+        }
+
+    private:
+        /// underlying view.
+        ViewType& _view;
+
+        /// buffer for consumed data.
+        std::vector <char>* _buf = nullptr;
     };
 }
 

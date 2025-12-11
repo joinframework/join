@@ -148,60 +148,12 @@ TEST (StringView, read)
 }
 
 /**
- * @brief tell test.
- */
-TEST (StringView, tell)
-{
-    StringView view ("hello world");
-
-    ASSERT_EQ (view.tell (), 0);
-    ASSERT_EQ (view.get (), 'h');
-    ASSERT_EQ (view.tell (), 1);
-    ASSERT_EQ (view.get (), 'e');
-    ASSERT_EQ (view.tell (), 2);
-    ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.tell (), 3);
-    ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.tell (), 4);
-    ASSERT_EQ (view.get (), 'o');
-    ASSERT_EQ (view.tell (), 5);
-    ASSERT_EQ (view.get (), ' ');
-    ASSERT_EQ (view.tell (), 6);
-    ASSERT_EQ (view.get (), 'w');
-    ASSERT_EQ (view.tell (), 7);
-    ASSERT_EQ (view.get (), 'o');
-    ASSERT_EQ (view.tell (), 8);
-    ASSERT_EQ (view.get (), 'r');
-    ASSERT_EQ (view.tell (), 9);
-    ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.tell (), 10);
-    ASSERT_EQ (view.get (), 'd');
-    ASSERT_EQ (view.tell (), 11);
-}
-
-
-/**
- * @brief rewind test.
- */
-TEST (StringView, rewind)
-{
-    StringView view ("hello world");
-
-    ASSERT_EQ (view.get (), 'h');
-    ASSERT_EQ (view.get (), 'e');
-    ASSERT_EQ (view.get (), 'l');
-    view.rewind (2);
-    ASSERT_EQ (view.get (), 'e');
-    ASSERT_EQ (view.get (), 'l');
-}
-
-/**
  * @brief create test.
  */
 TEST (StreamView, create)
 {
     std::stringstream msg ("hello world");
-    StreamView view (msg);
+    StreamView <true> view (msg);
 
     ASSERT_NE (view.peek (), std::char_traits <char>::eof ());
 }
@@ -212,7 +164,7 @@ TEST (StreamView, create)
 TEST (StreamView, peek)
 {
     std::stringstream msg ("hello world");
-    StreamView view (msg);
+    StreamView <true> view (msg);
 
     ASSERT_EQ (view.peek (), 'h');
     ASSERT_EQ (view.get (), 'h');
@@ -245,7 +197,7 @@ TEST (StreamView, peek)
 TEST (StreamView, get)
 {
     std::stringstream msg ("hello world");
-    StreamView view (msg);
+    StreamView <true> view (msg);
 
     ASSERT_EQ (view.get (), 'h');
     ASSERT_EQ (view.get (), 'e');
@@ -267,7 +219,7 @@ TEST (StreamView, get)
 TEST (StreamView, getIf)
 {
     std::stringstream msg ("hello world");
-    StreamView view (msg);
+    StreamView <true> view (msg);
 
     ASSERT_FALSE (view.getIf ('X'));
     ASSERT_FALSE (view.getIf ('x'));
@@ -283,7 +235,7 @@ TEST (StreamView, getIf)
 TEST (StreamView, getIfNoCase)
 {
     std::stringstream msg ("hello world");
-    StreamView view (msg);
+    StreamView <true> view (msg);
 
     ASSERT_FALSE (view.getIfNoCase ('x'));
     ASSERT_FALSE (view.getIfNoCase ('X'));
@@ -299,61 +251,12 @@ TEST (StreamView, getIfNoCase)
 TEST (StreamView, read)
 {
     std::stringstream msg ("hello world");
-    StreamView view (msg);
+    StreamView <true> view (msg);
     char buf[8] = {};
 
     ASSERT_EQ (view.read (buf, 5), 5);
     ASSERT_EQ (view.read (buf, 8), 6);
     ASSERT_EQ (view.read (buf, 8), 0);
-}
-
-/**
- * @brief tell test.
- */
-TEST (StreamView, tell)
-{
-    std::stringstream msg ("hello world");
-    StreamView view (msg);
-
-    ASSERT_EQ (view.tell (), 0);
-    ASSERT_EQ (view.get (), 'h');
-    ASSERT_EQ (view.tell (), 1);
-    ASSERT_EQ (view.get (), 'e');
-    ASSERT_EQ (view.tell (), 2);
-    ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.tell (), 3);
-    ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.tell (), 4);
-    ASSERT_EQ (view.get (), 'o');
-    ASSERT_EQ (view.tell (), 5);
-    ASSERT_EQ (view.get (), ' ');
-    ASSERT_EQ (view.tell (), 6);
-    ASSERT_EQ (view.get (), 'w');
-    ASSERT_EQ (view.tell (), 7);
-    ASSERT_EQ (view.get (), 'o');
-    ASSERT_EQ (view.tell (), 8);
-    ASSERT_EQ (view.get (), 'r');
-    ASSERT_EQ (view.tell (), 9);
-    ASSERT_EQ (view.get (), 'l');
-    ASSERT_EQ (view.tell (), 10);
-    ASSERT_EQ (view.get (), 'd');
-    ASSERT_EQ (view.tell (), 11);
-}
-
-/**
- * @brief rewind test.
- */
-TEST (StreamView, rewind)
-{
-    std::stringstream msg ("hello world");
-    StreamView view (msg);
-
-    ASSERT_EQ (view.get (), 'h');
-    ASSERT_EQ (view.get (), 'e');
-    ASSERT_EQ (view.get (), 'l');
-    view.rewind (2);
-    ASSERT_EQ (view.get (), 'e');
-    ASSERT_EQ (view.get (), 'l');
 }
 
 /**
