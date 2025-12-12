@@ -36,6 +36,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <memory>
 #include <string>
 #include <stack>
 
@@ -248,6 +249,7 @@ namespace join
         StreamWriter (std::ostream& document)
         : SaxHandler ()
         , _out (document.rdbuf ())
+        , _buffer (new char[_bufferSize])
         {
         }
 
@@ -287,6 +289,19 @@ namespace join
          */
         virtual int serialize (const Value& value)
         {
+            int ret = setValue (value);
+            flush ();
+            return ret;
+        }
+
+    protected:
+        /**
+         * @brief set value.
+         * @param value Value to write.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setValue (const Value& value)
+        {
             switch (value.index ())
             {
                 case Value::Boolean:
@@ -321,7 +336,6 @@ namespace join
             }
         }
 
-    protected:
         /**
          * @brief set array value.
          * @param value array value to set.
@@ -332,7 +346,7 @@ namespace join
             startArray (array.size ());
             for (auto const& element : array)
             {
-                serialize (element);
+                setValue (element);
             }
             stopArray ();
             return 0;
@@ -349,33 +363,141 @@ namespace join
             for (auto const& member : object)
             {
                 setKey (member.first);
-                serialize (member.second);
+                setValue (member.second);
             }
             stopObject ();
             return 0;
         }
 
         /**
-         * @brief append data to output stream and update data size.
+         * @brief append character to output stream in batch.
+         * @param data data to append to output stream.
+         */
+        inline void append (char data) noexcept
+        {
+            if (JOIN_UNLIKELY (_pos >= _bufferSize))
+            {
+                flush ();
+            }
+            _buffer[_pos++] = data;
+        }
+
+        /**
+         * @brief append 2-character literal to output stream in batch.
+         * @param data data to append to output stream.
+         */
+        inline void append2 (const char* data) noexcept
+        {
+            if (JOIN_UNLIKELY (_pos + 2 > _bufferSize))
+            {
+                flush ();
+            }
+            char* dest = _buffer.get () + _pos;
+            dest[0] = data[0];
+            dest[1] = data[1];
+            _pos += 2;
+        }
+
+        /**
+         * @brief append 3-character literal to output stream in batch.
+         * @param data data to append to output stream.
+         */
+        inline void append3 (const char* data) noexcept
+        {
+            if (JOIN_UNLIKELY (_pos + 3 > _bufferSize))
+            {
+                flush ();
+            }
+            char* dest = _buffer.get () + _pos;
+            dest[0] = data[0];
+            dest[1] = data[1];
+            dest[2] = data[2];
+            _pos += 3;
+        }
+
+        /**
+         * @brief append 4-character literal to output stream in batch.
+         * @param data data to append to output stream.
+         */
+        inline void append4 (const char* data) noexcept
+        {
+            if (JOIN_UNLIKELY (_pos + 4 > _bufferSize))
+            {
+                flush ();
+            }
+            char* dest = _buffer.get () + _pos;
+            dest[0] = data[0];
+            dest[1] = data[1];
+            dest[2] = data[2];
+            dest[3] = data[3];
+            _pos += 4;
+        }
+
+        /**
+         * @brief append 5-character literal to output stream in batch.
+         * @param data data to append to output stream.
+         */
+        inline void append5 (const char* data) noexcept
+        {
+            if (JOIN_UNLIKELY (_pos + 5 > _bufferSize))
+            {
+                flush ();
+            }
+            char* dest = _buffer.get () + _pos;
+            dest[0] = data[0];
+            dest[1] = data[1];
+            dest[2] = data[2];
+            dest[3] = data[3];
+            dest[4] = data[4];
+            _pos += 5;
+        }
+
+        /**
+         * @brief append characters to output stream in batch.
          * @param data data to append to output stream.
          * @param size data size.
          */
         inline void append (const char* data, uint32_t size) noexcept
         {
-            _out->sputn (data, size);
+            if (JOIN_UNLIKELY (_pos + size > _bufferSize))
+            {
+                flush ();
+                if (JOIN_UNLIKELY (size > _bufferSize))
+                {
+                    _out->sputn (data, size);
+                    return;
+                }
+            }
+
+            std::copy_n (data, size, _buffer.get () + _pos);
+            _pos += size;
         }
 
+    public:
         /**
-         * @brief append data to stream and update data size.
-         * @param data data to append to stream.
+         * @brief flush batch buffer.
          */
-        inline void append (char data) noexcept
+        void flush ()
         {
-            _out->sputc (data);
+            if (JOIN_LIKELY (_pos > 0))
+            {
+                _out->sputn (_buffer.get (), _pos);
+                _pos = 0;
+            }
         }
 
-        /// output stream.
+    protected:
+        /// underlying output stream.
         std::streambuf* _out;
+
+        /// batch buffer size.
+        static constexpr size_t _bufferSize = 8192;
+
+        /// batch buffer.
+        std::unique_ptr <char[]> _buffer;
+
+        /// batch buffer position.
+        size_t _pos = 0;
     };
 
     /**

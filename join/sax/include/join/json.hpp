@@ -162,7 +162,7 @@ namespace join
         virtual int setNull () override
         {
             array ();
-            append ("null", 4);
+            append4 ("null");
             _first = false;
             return 0;
         }
@@ -175,7 +175,14 @@ namespace join
         virtual int setBool (bool value) override
         {
             array ();
-            append (value ? "true" : "false", value ? 4 : 5);
+            if (value)
+            {
+                append4 ("true");
+            }
+            else
+            {
+                append5 ("false");
+            }
             _first = false;
             return 0;
         }
@@ -251,11 +258,25 @@ namespace join
             }
             else if (frac != 0)
             {
-                append (neg ? "-NaN" : "NaN", neg ? 4 : 3);
+                if (neg)
+                {
+                    append4 ("-NaN");
+                }
+                else
+                {
+                    append3 ("NaN");
+                }
             }
             else
             {
-                append (neg ? "-Inf" : "Inf", neg ? 4 : 3);
+                if (neg)
+                {
+                    append4 ("-Inf");
+                }
+                else
+                {
+                    append3 ("Inf");
+                }
             }
             _first = false;
             return 0;
@@ -586,25 +607,25 @@ namespace join
 
                     if (codepoint <= 0xFFFF)
                     {
-                        append ("\\u", 2);
+                        append2 ("\\u");
                         snprintf (hex, sizeof (hex), "%04x", uint16_t (codepoint));
-                        append (hex, 4);
+                        append4 (hex);
                     }
                     else
                     {
                         codepoint -= 0x10000;
-                        append ("\\u", 2);
+                        append2 ("\\u");
                         snprintf (hex, sizeof (hex), "%04x", uint16_t (0xD800 + ((codepoint >> 10) & 0x3FF)));
-                        append (hex, 4);
-                        append ("\\u", 2);
+                        append4 (hex);
+                        append2 ("\\u");
                         snprintf (hex, sizeof (hex), "%04x", uint16_t (0xDC00 + (codepoint & 0x3FF)));
-                        append (hex, 4);
+                        append4 (hex);
                     }
                 }
                 else
                 {
                     char escapeSeq[2] = {'\\', static_cast <char> (esc)};
-                    append (escapeSeq, 2);
+                    append2 (escapeSeq);
                 }
 
                 ++cur;
@@ -758,7 +779,7 @@ namespace join
             }
             else
             {
-                append ("null", 4);
+                append4 ("null");
             }
             _first = false;
             return 0;
@@ -784,7 +805,7 @@ namespace join
             for (auto const& member : members)
             {
                 setKey (member->first);
-                serialize (member->second);
+                setValue (member->second);
             }
             stopObject ();
             return 0;
@@ -1727,46 +1748,23 @@ namespace join
             output.clear ();
             output.reserve (64);
 
-            char buffer[256];
-
             for (;;)
             {
-                size_t offset = 0;
-                int ch;
-
-                while (offset < 256)
+                int ch = document.get ();
+                
+                if (JOIN_UNLIKELY (ch == std::char_traits <char>::eof ()))
                 {
-                    ch = document.peek ();
-                    if (JOIN_UNLIKELY (ch == std::char_traits <char>::eof ()))
-                    {
-                        join::lastError = make_error_code (JsonErrc::EndOfFile);
-                        return -1;
-                    }
-
-                    uint8_t uch = static_cast <uint8_t> (ch);
-                    if (uch < 0x20 || uch == 0x22 || uch == 0x5C)
-                    {
-                        break;
-                    }
-
-                    document.get ();
-                    buffer[offset++] = static_cast <char> (ch);
+                    join::lastError = make_error_code (JsonErrc::EndOfFile);
+                    return -1;
                 }
 
-                if (offset > 0)
+                if (ch == '"')
                 {
-                    output.append (buffer, offset);
-                }
-
-                if (JOIN_LIKELY (ch == '"'))
-                {
-                    document.get ();
                     break;
                 }
 
                 if (JOIN_UNLIKELY (ch == '\\'))
                 {
-                    document.get ();
                     if (readEscaped (document, output) == -1)
                     {
                         return -1;
@@ -1788,6 +1786,8 @@ namespace join
                     join::lastError = make_error_code (JsonErrc::IllegalCharacter);
                     return -1;
                 }
+
+                output.push_back (static_cast <char> (ch));
             }
 
             return isKey ? setKey (output) : setString (output);
@@ -1828,11 +1828,10 @@ namespace join
                     return -1;
                 }
 
-                int ch = document.peek ();
+                int ch = document.get ();
 
                 if (JOIN_LIKELY (ch == ','))
                 {
-                    document.get ();
                     if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
                     {
                         return -1;
@@ -1842,7 +1841,6 @@ namespace join
 
                 if (JOIN_LIKELY (ch == ']'))
                 {
-                    document.get ();
                     break;
                 }
 
@@ -1915,11 +1913,10 @@ namespace join
                     return -1;
                 }
 
-                int ch = document.peek ();
+                int ch = document.get ();
 
                 if (JOIN_LIKELY (ch == ','))
                 {
-                    document.get ();
                     if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
                     {
                         return -1;
@@ -1929,7 +1926,6 @@ namespace join
 
                 if (JOIN_LIKELY (ch == '}'))
                 {
-                    document.get ();
                     break;
                 }
 
@@ -1950,26 +1946,20 @@ namespace join
         {
             for (;;)
             {
-                unsigned char c = document.peek ();
+                int c = document.peek();
 
-                if (!details::whitespaceLookup[c])
+                if (JOIN_LIKELY (c > ' ' && c != '/'))
                 {
-                    break;
+                    return 0;
                 }
 
-                do
+                while (details::whitespaceLookup[static_cast <unsigned char> (c)])
                 {
-                    document.get ();
-                    c = document.peek ();
-                }
-                while (details::whitespaceLookup[c]);
-
-                if (!(ReadMode & JsonReadMode::ParseComments))
-                {
-                    break;
+                    document.get();
+                    c = document.peek();
                 }
 
-                if (c != '/')
+                if (!(ReadMode & JsonReadMode::ParseComments) || c != '/')
                 {
                     break;
                 }
