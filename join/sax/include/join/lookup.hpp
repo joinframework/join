@@ -46,10 +46,10 @@ namespace join
             "90919293949596979899"
         };
 
-        struct EscapeTable
+        struct UnescapedTable
         {
             uint8_t data[256];
-            constexpr EscapeTable () : data {}
+            constexpr UnescapedTable () : data {}
             {
                 for (int i = 0; i < 256; ++i) { data[i] = 0; }
                 for (int i = 0; i < 32; ++i)  { data[i] = 'u'; }
@@ -63,7 +63,22 @@ namespace join
             }
             constexpr const uint8_t& operator[] (size_t i) const { return data[i]; }
         };
-        constexpr EscapeTable escapeLookup {};
+        constexpr UnescapedTable unescapedLookup {};
+
+        struct EscapedTable
+        {
+            uint8_t data[256];
+            constexpr EscapedTable () : data {}
+            {
+                for (int i = 0; i < 256; ++i)  { data[i] = 0; }
+                for (int i = 0; i < 0x20; ++i) { data[i] = 1; }
+
+                data['"']  = 1;
+                data['\\'] = 1;
+            }
+            constexpr const uint8_t& operator[] (size_t i) const { return data[i]; }
+        };
+        constexpr EscapedTable escapedLookup {};
 
         struct WhitespaceTable
         {

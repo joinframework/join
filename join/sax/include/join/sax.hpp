@@ -249,7 +249,6 @@ namespace join
         StreamWriter (std::ostream& document)
         : SaxHandler ()
         , _out (document.rdbuf ())
-        , _buffer (new char[_bufferSize])
         {
         }
 
@@ -289,9 +288,7 @@ namespace join
          */
         virtual int serialize (const Value& value)
         {
-            int ret = setValue (value);
-            flush ();
-            return ret;
+            return  setValue (value);
         }
 
     protected:
@@ -375,11 +372,7 @@ namespace join
          */
         inline void append (char data) noexcept
         {
-            if (JOIN_UNLIKELY (_pos >= _bufferSize))
-            {
-                flush ();
-            }
-            _buffer[_pos++] = data;
+            _out->sputc (data);
         }
 
         /**
@@ -388,14 +381,8 @@ namespace join
          */
         inline void append2 (const char* data) noexcept
         {
-            if (JOIN_UNLIKELY (_pos + 2 > _bufferSize))
-            {
-                flush ();
-            }
-            char* dest = _buffer.get () + _pos;
-            dest[0] = data[0];
-            dest[1] = data[1];
-            _pos += 2;
+            _out->sputc (data[0]);
+            _out->sputc (data[1]);
         }
 
         /**
@@ -404,15 +391,9 @@ namespace join
          */
         inline void append3 (const char* data) noexcept
         {
-            if (JOIN_UNLIKELY (_pos + 3 > _bufferSize))
-            {
-                flush ();
-            }
-            char* dest = _buffer.get () + _pos;
-            dest[0] = data[0];
-            dest[1] = data[1];
-            dest[2] = data[2];
-            _pos += 3;
+            _out->sputc (data[0]);
+            _out->sputc (data[1]);
+            _out->sputc (data[2]);
         }
 
         /**
@@ -421,16 +402,10 @@ namespace join
          */
         inline void append4 (const char* data) noexcept
         {
-            if (JOIN_UNLIKELY (_pos + 4 > _bufferSize))
-            {
-                flush ();
-            }
-            char* dest = _buffer.get () + _pos;
-            dest[0] = data[0];
-            dest[1] = data[1];
-            dest[2] = data[2];
-            dest[3] = data[3];
-            _pos += 4;
+            _out->sputc (data[0]);
+            _out->sputc (data[1]);
+            _out->sputc (data[2]);
+            _out->sputc (data[3]);
         }
 
         /**
@@ -439,17 +414,11 @@ namespace join
          */
         inline void append5 (const char* data) noexcept
         {
-            if (JOIN_UNLIKELY (_pos + 5 > _bufferSize))
-            {
-                flush ();
-            }
-            char* dest = _buffer.get () + _pos;
-            dest[0] = data[0];
-            dest[1] = data[1];
-            dest[2] = data[2];
-            dest[3] = data[3];
-            dest[4] = data[4];
-            _pos += 5;
+            _out->sputc (data[0]);
+            _out->sputc (data[1]);
+            _out->sputc (data[2]);
+            _out->sputc (data[3]);
+            _out->sputc (data[4]);
         }
 
         /**
@@ -459,45 +428,12 @@ namespace join
          */
         inline void append (const char* data, uint32_t size) noexcept
         {
-            if (JOIN_UNLIKELY (_pos + size > _bufferSize))
-            {
-                flush ();
-                if (JOIN_UNLIKELY (size > _bufferSize))
-                {
-                    _out->sputn (data, size);
-                    return;
-                }
-            }
-
-            std::copy_n (data, size, _buffer.get () + _pos);
-            _pos += size;
-        }
-
-    public:
-        /**
-         * @brief flush batch buffer.
-         */
-        void flush ()
-        {
-            if (JOIN_LIKELY (_pos > 0))
-            {
-                _out->sputn (_buffer.get (), _pos);
-                _pos = 0;
-            }
+            _out->sputn (data, size);
         }
 
     protected:
         /// underlying output stream.
         std::streambuf* _out;
-
-        /// batch buffer size.
-        static constexpr size_t _bufferSize = 8192;
-
-        /// batch buffer.
-        std::unique_ptr <char[]> _buffer;
-
-        /// batch buffer position.
-        size_t _pos = 0;
     };
 
     /**

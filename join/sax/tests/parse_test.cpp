@@ -53,8 +53,12 @@ TEST (Parse, citm_catalog)
     std::ifstream fs ("data/citm_catalog.json");
     ASSERT_TRUE (fs.is_open ());
 
+    std::stringstream buffer;
+    buffer << fs.rdbuf ();
+    std::string json = buffer.str ();
+
     Value value;
-    ASSERT_EQ (value.jsonRead (fs), 0) << join::lastError.message ();
+    ASSERT_EQ (value.jsonRead (json), 0) << join::lastError.message ();
 }
 
 /**

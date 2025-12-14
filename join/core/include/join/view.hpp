@@ -244,6 +244,41 @@ namespace join
         }
 
         /**
+         * @brief read characters until predicate returns true.
+         * @param pred predicate function.
+         * @param buf output buffer.
+         * @return number of characters read.
+         */
+        template <typename Predicate>
+        inline size_t readUntil (std::string& out, Predicate pred)
+        {
+            const char* start = _cur;
+            while (_cur < _end && !pred (*_cur))
+            {
+                ++_cur;
+            }
+            const size_t nread = _cur - start;
+            out.append (start, nread);
+            return nread;
+        }
+
+        /**
+         * @brief consume characters until predicate returns true.
+         * @param pred predicate function.
+         * @return number of characters consumed.
+         */
+        template <typename Predicate>
+        inline size_t consumeUntil (Predicate pred) noexcept
+        {
+            const char* start = _cur;
+            while (_cur < _end && !pred (*_cur))
+            {
+                ++_cur;
+            }
+            return _cur - start;
+        }
+
+        /**
          * @brief get input position indicator.
          * @return current position.
          */
@@ -447,6 +482,54 @@ namespace join
         inline size_t read (char* buf, size_t count) noexcept
         {
             return _in->sgetn (buf, count);
+        }
+
+        /**
+         * @brief read characters until predicate returns true.
+         * @param pred predicate function.
+         * @param buf output buffer.
+         * @return number of characters read.
+         */
+        template <typename Predicate>
+        inline size_t readUntil (std::string& out, Predicate pred)
+        {
+            size_t nread = 0;
+            int c;
+            while ((c = _in->sgetc ()) != std::char_traits <char>::eof ())
+            {
+                const char ch = static_cast <char> (c);
+                if (pred (ch))
+                {
+                    break;
+                }
+                out.push_back (ch);
+                _in->sbumpc ();
+                ++nread;
+            }
+            return nread;
+        }
+
+        /**
+         * @brief consume characters until predicate returns true.
+         * @param pred predicate function.
+         * @return number of characters consumed.
+         */
+        template <typename Predicate>
+        inline size_t consumeUntil (Predicate pred) noexcept
+        {
+            size_t nread = 0;
+            int c;
+            while ((c = _in->sgetc ()) != std::char_traits <char>::eof ())
+            {
+                const char ch = static_cast <char> (c);
+                if (pred (ch))
+                {
+                    break;
+                }
+                _in->sbumpc ();
+                ++nread;
+            }
+            return nread;
         }
 
         /**

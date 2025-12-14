@@ -44,7 +44,6 @@ TEST (JsonWriter, setNull)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setNull (), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "null");
 }
 
@@ -58,12 +57,10 @@ TEST (JsonWriter, setBool)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setBool (true), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (),"true");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setBool (false), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "false");
 }
 
@@ -77,17 +74,14 @@ TEST (JsonWriter, setInt)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setInt (std::numeric_limits <int32_t>::min ()), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "-2147483648");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setInt (-32768), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "-32768");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setInt (1234567890), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "1234567890");
 }
 
@@ -101,12 +95,10 @@ TEST (JsonWriter, setUint)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setUint (0), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "0");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setUint (1234567890), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "1234567890");
 }
 
@@ -120,17 +112,14 @@ TEST (JsonWriter, setInt64)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setInt64 (std::numeric_limits <int64_t>::min ()), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "-9223372036854775808");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setInt64 (-32768), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "-32768");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setInt64 (1234567890), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "1234567890");
 }
 
@@ -144,12 +133,10 @@ TEST (JsonWriter, setUint64)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setUint64 (0), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "0");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setUint64 (1234567890), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "1234567890");
 }
 
@@ -163,42 +150,34 @@ TEST (JsonWriter, setDouble)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setDouble (98.6), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "98.6");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setDouble (1.0), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "1.0");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setDouble (-9876.54321), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "-9876.54321");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setDouble (1.23456789e-13), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "1.23456789e-13");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setDouble (-std::numeric_limits <double>::infinity ()), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "-Inf");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits <double>::infinity ()), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "Inf");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setDouble (-std::numeric_limits <double>::quiet_NaN ()), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "-NaN");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits <double>::quiet_NaN ()), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "NaN");
 }
 
@@ -212,12 +191,10 @@ TEST (JsonWriter, setString)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setString ("foo"), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "\"foo\"");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setString ("\"\\\b\f\n\r\t\x19"), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\"");
 }
 
@@ -232,7 +209,6 @@ TEST (JsonWriter, startArray)
     stream.str ("");
     EXPECT_EQ (jsonWriter.startArray (), 0);
     EXPECT_EQ (jsonWriter.stopArray (), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "[]");
 
     stream.str ("");
@@ -240,7 +216,6 @@ TEST (JsonWriter, startArray)
     EXPECT_EQ (jsonWriter.setInt (1), 0);
     EXPECT_EQ (jsonWriter.setInt (2), 0);
     EXPECT_EQ (jsonWriter.stopArray (), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "[\n  1,\n  2\n]");
 }
 
@@ -255,7 +230,6 @@ TEST (JsonWriter, startObject)
     stream.str ("");
     EXPECT_EQ (jsonWriter.startObject (), 0);
     EXPECT_EQ (jsonWriter.stopObject (), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "{}");
 
     stream.str ("");
@@ -265,7 +239,6 @@ TEST (JsonWriter, startObject)
     EXPECT_EQ (jsonWriter.setKey ("fuzz"), 0);
     EXPECT_EQ (jsonWriter.setString ("bazz"), 0);
     EXPECT_EQ (jsonWriter.stopObject (), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "{\n  \"foo\": \"bar\",\n  \"fuzz\": \"bazz\"\n}");
 }
 
@@ -279,12 +252,10 @@ TEST (JsonWriter, setKey)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setKey ("foo"), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "\"foo\":");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setKey ("\"\\\b\f\n\r\t\x19"), 0);
-    jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\":");
 }
 

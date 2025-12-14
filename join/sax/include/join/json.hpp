@@ -577,7 +577,7 @@ namespace join
             {
                 auto beg = cur;
 
-                while (cur != end && details::escapeLookup[static_cast <uint8_t> (*cur)] == 0)
+                while (cur != end && details::unescapedLookup[static_cast <uint8_t> (*cur)] == 0)
                 {
                     ++cur;
                 }
@@ -593,7 +593,7 @@ namespace join
                 }
 
                 uint8_t ch = static_cast <uint8_t> (*cur);
-                uint8_t esc = details::escapeLookup[ch];
+                uint8_t esc = details::unescapedLookup[ch];
                 if (esc == 'u')
                 {
                     uint32_t codepoint = 0;
@@ -1068,6 +1068,11 @@ namespace join
         template <JsonReadMode ReadMode, typename ViewType>
         int read (ViewType& document)
         {
+            if (skipWhitespaces <ReadMode> (document) != 0)
+            {
+                return -1;
+            }
+
             if (readValue <ReadMode> (document) != 0)
             {
                 return -1;
@@ -1078,7 +1083,10 @@ namespace join
                 return 0;
             }
 
-            skipWhitespaces <ReadMode> (document);
+            if (skipWhitespaces <ReadMode> (document) != 0)
+            {
+                return -1;
+            }
 
             if (document.peek () != std::char_traits <char>::eof ())
             {
@@ -1097,11 +1105,6 @@ namespace join
         template <JsonReadMode ReadMode, typename ViewType>
         int readValue (ViewType& document)
         {
-            if (skipWhitespaces <ReadMode> (document) != 0)
-            {
-                return -1;
-            }
-
             int ch = document.peek ();
             switch (ch)
             {
@@ -1750,21 +1753,21 @@ namespace join
 
             for (;;)
             {
-                int ch = document.get ();
-                
-                if (JOIN_UNLIKELY (ch == std::char_traits <char>::eof ()))
-                {
-                    join::lastError = make_error_code (JsonErrc::EndOfFile);
-                    return -1;
-                }
+                document.readUntil (output, [](char c){
+                    return details::escapedLookup[static_cast <uint8_t> (c)];
+                });
+
+                int ch = document.peek ();
 
                 if (ch == '"')
                 {
+                    document.get ();
                     break;
                 }
 
-                if (JOIN_UNLIKELY (ch == '\\'))
+                if (ch == '\\')
                 {
+                    document.get ();
                     if (readEscaped (document, output) == -1)
                     {
                         return -1;
@@ -1772,7 +1775,7 @@ namespace join
                     continue;
                 }
 
-                /*if (JOIN_UNLIKELY (static_cast <uint8_t> (ch) > 0x7F))
+                /*if (static_cast <uint8_t> (ch) > 0x7F)
                 {
                     if (readUtf8 (document, output) == -1)
                     {
@@ -1781,13 +1784,11 @@ namespace join
                     continue;
                 }*/
 
-                if (JOIN_UNLIKELY (ch < 0x20))
+                if (ch < 0x20)
                 {
                     join::lastError = make_error_code (JsonErrc::IllegalCharacter);
                     return -1;
                 }
-
-                output.push_back (static_cast <char> (ch));
             }
 
             return isKey ? setKey (output) : setString (output);
@@ -1946,18 +1947,11 @@ namespace join
         {
             for (;;)
             {
-                int c = document.peek();
+                document.consumeUntil ([](char c){
+                    return !details::whitespaceLookup[static_cast <unsigned char> (c)];
+                });
 
-                if (JOIN_LIKELY (c > ' ' && c != '/'))
-                {
-                    return 0;
-                }
-
-                while (details::whitespaceLookup[static_cast <unsigned char> (c)])
-                {
-                    document.get();
-                    c = document.peek();
-                }
+                int c = document.peek ();
 
                 if (!(ReadMode & JsonReadMode::ParseComments) || c != '/')
                 {
