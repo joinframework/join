@@ -66,6 +66,15 @@ int Value::jsonRead (const std::string& document)
 //   CLASS     : Value
 //   METHOD    : jsonRead
 // =========================================================================
+int Value::jsonRead (std::stringstream& document)
+{
+    return deserialize <JsonReader> (document);
+}
+
+// =========================================================================
+//   CLASS     : Value
+//   METHOD    : jsonRead
+// =========================================================================
 int Value::jsonRead (std::istringstream& document)
 {
     return deserialize <JsonReader> (document);
@@ -75,7 +84,25 @@ int Value::jsonRead (std::istringstream& document)
 //   CLASS     : Value
 //   METHOD    : jsonRead
 // =========================================================================
+int Value::jsonRead (std::fstream& document)
+{
+    return deserialize <JsonReader> (document);
+}
+
+// =========================================================================
+//   CLASS     : Value
+//   METHOD    : jsonRead
+// =========================================================================
 int Value::jsonRead (std::ifstream& document)
+{
+    return deserialize <JsonReader> (document);
+}
+
+// =========================================================================
+//   CLASS     : Value
+//   METHOD    : jsonRead
+// =========================================================================
+int Value::jsonRead (std::iostream& document)
 {
     return deserialize <JsonReader> (document);
 }
@@ -139,6 +166,15 @@ int Value::packRead (const std::string& document)
 //   CLASS     : Value
 //   METHOD    : packRead
 // =========================================================================
+int Value::packRead (std::stringstream& document)
+{
+    return deserialize <PackReader> (document);
+}
+
+// =========================================================================
+//   CLASS     : Value
+//   METHOD    : packRead
+// =========================================================================
 int Value::packRead (std::istringstream& document)
 {
     return deserialize <PackReader> (document);
@@ -148,7 +184,25 @@ int Value::packRead (std::istringstream& document)
 //   CLASS     : Value
 //   METHOD    : packRead
 // =========================================================================
+int Value::packRead (std::fstream& document)
+{
+    return deserialize <PackReader> (document);
+}
+
+// =========================================================================
+//   CLASS     : Value
+//   METHOD    : packRead
+// =========================================================================
 int Value::packRead (std::ifstream& document)
+{
+    return deserialize <PackReader> (document);
+}
+
+// =========================================================================
+//   CLASS     : Value
+//   METHOD    : packRead
+// =========================================================================
+int Value::packRead (std::iostream& document)
 {
     return deserialize <PackReader> (document);
 }

@@ -31,7 +31,9 @@
 
 // C++.
 #include <functional>
-#include <ostream>
+#include <iostream>
+#include <sstream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <limits>
@@ -1412,6 +1414,18 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename Reader>
+        int deserialize (std::stringstream& document)
+        {
+            Reader reader (*this);
+            return reader.deserialize (document);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Reader>
         int deserialize (std::istringstream& document)
         {
             Reader reader (*this);
@@ -1424,7 +1438,31 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename Reader>
+        int deserialize (std::fstream& document)
+        {
+            Reader reader (*this);
+            return reader.deserialize (document);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Reader>
         int deserialize (std::ifstream& document)
+        {
+            Reader reader (*this);
+            return reader.deserialize (document);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Reader>
+        int deserialize (std::iostream& document)
         {
             Reader reader (*this);
             return reader.deserialize (document);
@@ -1482,6 +1520,13 @@ namespace join
          * @param document json document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
+        int jsonRead (std::stringstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
         int jsonRead (std::istringstream& document);
 
         /**
@@ -1489,7 +1534,21 @@ namespace join
          * @param document json document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
+        int jsonRead (std::fstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
         int jsonRead (std::ifstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::iostream& document);
 
         /**
          * @brief deserialize a json document.
@@ -1540,6 +1599,13 @@ namespace join
          * @param document msgpack document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
+        int packRead (std::stringstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
         int packRead (std::istringstream& document);
 
         /**
@@ -1547,7 +1613,21 @@ namespace join
          * @param document msgpack document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
+        int packRead (std::fstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
         int packRead (std::ifstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::iostream& document);
 
         /**
          * @brief deserialize a msgpack document.

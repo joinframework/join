@@ -467,7 +467,29 @@ namespace join
          * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
+        int deserialize (std::stringstream& document) override
+        {
+            StreamView <true> in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
         int deserialize (std::istringstream& document) override
+        {
+            StreamView <true> in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::fstream& document) override
         {
             StreamView <true> in (document);
             return read (in);
@@ -489,9 +511,20 @@ namespace join
          * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
+        int deserialize (std::iostream& document) override
+        {
+            StreamView <false> in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
         int deserialize (std::istream& document) override
         {
-            StreamView <true> in (document);
+            StreamView <false> in (document);
             return read (in);
         }
 

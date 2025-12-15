@@ -511,6 +511,13 @@ namespace join
          * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
+        virtual int deserialize (std::stringstream& document) = 0;
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
         virtual int deserialize (std::istringstream& document) = 0;
 
         /**
@@ -518,7 +525,21 @@ namespace join
          * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
+        virtual int deserialize (std::fstream& document) = 0;
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
         virtual int deserialize (std::ifstream& document) = 0;
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int deserialize (std::iostream& document) = 0;
 
         /**
          * @brief deserialize a document.

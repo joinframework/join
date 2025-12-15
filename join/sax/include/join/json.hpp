@@ -999,6 +999,28 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode = JsonReadMode::None>
+        int deserialize (std::stringstream& document)
+        {
+            StreamView <true> in (document);
+            return read <ReadMode> (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::stringstream& document) override
+        {
+            return deserialize <> (document);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode = JsonReadMode::None>
         int deserialize (std::istringstream& document)
         {
             StreamView <true> in (document);
@@ -1021,6 +1043,28 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode = JsonReadMode::None>
+        int deserialize (std::fstream& document)
+        {
+            StreamView <true> in (document);
+            return read <ReadMode> (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::fstream& document) override
+        {
+            return deserialize <> (document);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode = JsonReadMode::None>
         int deserialize (std::ifstream& document)
         {
             StreamView <true> in (document);
@@ -1033,6 +1077,28 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         int deserialize (std::ifstream& document) override
+        {
+            return deserialize <> (document);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode = JsonReadMode::None>
+        int deserialize (std::iostream& document)
+        {
+            StreamView <false> in (document);
+            return read <ReadMode> (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::iostream& document) override
         {
             return deserialize <> (document);
         }
