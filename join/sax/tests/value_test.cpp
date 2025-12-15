@@ -5491,7 +5491,7 @@ TEST (Value, packRead)
     ASSERT_EQ (value[4], 1.23456789e-13);
     fstream.close ();
 
-    std::fstream ifstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
+    std::ifstream ifstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
     ASSERT_NE (value.packRead (ifstream), -1) << join::lastError.message();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
@@ -5522,7 +5522,7 @@ TEST (Value, packRead)
     ASSERT_EQ (value[4], 1.23456789e-13);
 
     std::stringbuf isbuf (str);
-    std::iostream istream (&isbuf);
+    std::istream istream (&isbuf);
     ASSERT_NE (value.packRead (istream), -1) << join::lastError.message();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
@@ -5681,7 +5681,7 @@ TEST (Value, jsonRead)
     ASSERT_EQ (value[4], 1.23456789e-13);
 
     std::stringbuf isbuf (str);
-    std::iostream istream (&isbuf);
+    std::istream istream (&isbuf);
     ASSERT_NE (value.jsonRead (istream), -1) << join::lastError.message();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
