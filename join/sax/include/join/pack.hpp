@@ -469,7 +469,7 @@ namespace join
          */
         int deserialize (std::stringstream& document) override
         {
-            StreamView <true> in (document);
+            StringStreamView in (document);
             return read (in);
         }
 
@@ -480,7 +480,7 @@ namespace join
          */
         int deserialize (std::istringstream& document) override
         {
-            StreamView <true> in (document);
+            StringStreamView in (document);
             return read (in);
         }
 
@@ -491,7 +491,7 @@ namespace join
          */
         int deserialize (std::fstream& document) override
         {
-            StreamView <true> in (document);
+            FileStreamView in (document);
             return read (in);
         }
 
@@ -502,7 +502,7 @@ namespace join
          */
         int deserialize (std::ifstream& document) override
         {
-            StreamView <true> in (document);
+            FileStreamView in (document);
             return read (in);
         }
 
@@ -513,7 +513,7 @@ namespace join
          */
         int deserialize (std::iostream& document) override
         {
-            StreamView <false> in (document);
+            StreamView in (document);
             return read (in);
         }
 
@@ -524,7 +524,7 @@ namespace join
          */
         int deserialize (std::istream& document) override
         {
-            StreamView <false> in (document);
+            StreamView in (document);
             return read (in);
         }
 

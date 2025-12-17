@@ -22,9 +22,13 @@ add_executable(variant.gtest variant_test.cpp)
 target_link_libraries(variant.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(variant.gtest)
 
-add_executable(view.gtest view_test.cpp)
-target_link_libraries(view.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
-gtest_discover_tests(view.gtest)
+add_executable(stringview.gtest stringview_test.cpp)
+target_link_libraries(stringview.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(stringview.gtest)
+
+add_executable(streamview.gtest streamview_test.cpp)
+target_link_libraries(streamview.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(streamview.gtest)
 
 add_executable(cache.gtest cache_test.cpp)
 target_link_libraries(cache.gtest ${PROJECT_NAME} GTest::gtest_main pthread)

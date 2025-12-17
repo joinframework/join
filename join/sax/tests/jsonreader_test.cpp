@@ -495,6 +495,12 @@ TEST (JsonReader, pass)
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["\"\b\f\n\r\t`1~!@#$%^&*()_+-=[]{}|;:',./<>?"].isString ());
     ASSERT_EQ (value["\"\b\f\n\r\t`1~!@#$%^&*()_+-=[]{}|;:',./<>?"], "A key can be any string");
+
+    stream.clear ();
+    stream.str ("{}   extra");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::StopParsingOnDone> (stream), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isObject ());
+    ASSERT_TRUE (value.empty ());
 }
 
 /**
@@ -614,6 +620,10 @@ TEST (JsonReader, fail)
     ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
 
     stream.clear ();
+    stream.str ("{\"Missing quote: null}");
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
+
+    stream.clear ();
     stream.str ("{\"Double colon\":: null}");
     ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
 
@@ -667,6 +677,10 @@ TEST (JsonReader, fail)
 
     stream.clear ();
     stream.str ("[\"Mismatch\"}");
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
+
+    stream.clear ();
+    stream.str ("{}   extra");
     ASSERT_EQ (value.deserialize <JsonReader> (stream), -1);
 }
 
@@ -1296,6 +1310,14 @@ TEST (JsonReader, str)
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "\xF0\x9D\x84\x9E");
+
+    stream.clear ();
+    stream.str ("[\"\\/\"]");
+    ASSERT_EQ (value.deserialize <JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isString ());
+    EXPECT_STREQ (value[0].getString ().c_str (), "/");
 }
 
 /**
@@ -1340,6 +1362,10 @@ TEST (JsonReader, comments)
 
     stream.clear ();
     stream.str ("{    \"a\":1,    / this is an invalid comment\"b\":2\n}");
+    ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
+
+    stream.clear ();
+    stream.str ("{}   / invalid extra comment");
     ASSERT_EQ (JsonReader (value).deserialize <JsonReadMode::ParseComments> (stream), -1);
 
     stream.clear ();

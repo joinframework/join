@@ -174,61 +174,6 @@ namespace join
         }
 
         /**
-         * @brief extracts character and appends to buffer.
-         * @param buffer output string buffer.
-         * @return extracted character or eof.
-         */
-        template <typename Buffer>
-        inline int append (Buffer& buffer)
-        {
-            if (JOIN_LIKELY (_cur < _end))
-            {
-                const char c = *_cur++;
-                buffer.push_back (c);
-                return static_cast <unsigned char> (c);
-            }
-            return std::char_traits <char>::eof ();
-        }
-
-        /**
-         * @brief extracts expected character and appends to buffer.
-         * @param expected expected character.
-         * @param buffer output string buffer.
-         * @return true if extracted and appended, false otherwise.
-         */
-        template <typename Buffer>
-        inline bool appendIf (char expected, Buffer& buffer)
-        {
-            if (JOIN_LIKELY (_cur < _end) && (*_cur == expected))
-            {
-                buffer.push_back (*_cur++);
-                return true;
-            }
-            return false;
-        }
-
-        /**
-         * @brief extracts expected character (case insensitive, ASCII-only) and appends to buffer.
-         * @param expected expected character.
-         * @param buffer output string buffer.
-         * @return true if extracted and appended, false otherwise.
-         */
-        template <typename Buffer>
-        inline bool appendIfNoCase (char expected, Buffer& buffer)
-        {
-            if (JOIN_LIKELY (_cur < _end))
-            {
-                const char c = *_cur;
-                if ((c | 32) == (expected | 32))
-                {
-                    buffer.push_back (*_cur++);
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        /**
          * @brief read characters.
          * @param buf output buffer.
          * @param count number of characters to read.
@@ -244,9 +189,32 @@ namespace join
         }
 
         /**
+         * @brief read characters until delimiter.
+         * @param out output string.
+         * @param delim delimiter character.
+         * @return number of characters read.
+         */
+        inline size_t readUntil (std::string& out, char delim)
+        {
+            const char* start = _cur;
+            const char* pos = static_cast <const char*> (std::memchr (_cur, delim, _end - _cur));
+            if (pos)
+            {
+                out.append (_cur, pos - _cur);
+                _cur = pos;
+            }
+            else
+            {
+                out.append (_cur, _end - _cur);
+                _cur = _end;
+            }
+            return _cur - start;
+        }
+
+        /**
          * @brief read characters until predicate returns true.
          * @param pred predicate function.
-         * @param buf output buffer.
+         * @param out output buffer.
          * @return number of characters read.
          */
         template <typename Predicate>
@@ -260,6 +228,26 @@ namespace join
             const size_t nread = _cur - start;
             out.append (start, nread);
             return nread;
+        }
+
+        /**
+         * @brief consume characters until delimiter.
+         * @param delim delimiter character.
+         * @return number of characters consumed.
+         */
+        inline size_t consumeUntil (char delim) noexcept
+        {
+            const char* start = _cur;
+            const char* pos = static_cast <const char*> (std::memchr (_cur, delim, _end - _cur));
+            if (pos)
+            {
+                _cur = pos;
+            }
+            else
+            {
+                _cur = _end;
+            }
+            return _cur - start;
         }
 
         /**
@@ -319,10 +307,10 @@ namespace join
     };
 
     /**
-     * @brief stream view.
+     * @brief basic stream view.
      */
     template <bool Seekable = true>
-    class StreamView
+    class BasicStreamView
     {
     public:
         using ViewPos = std::streampos;
@@ -331,7 +319,7 @@ namespace join
          * @brief default constructor.
          * @param in input stream.
          */
-        StreamView (std::istream& in)
+        BasicStreamView (std::istream& in)
         : _in (in.rdbuf ())
         {
         }
@@ -340,32 +328,32 @@ namespace join
          * @brief copy constructor.
          * @param other object to copy.
          */
-        StreamView (const StreamView& other) = delete;
+        BasicStreamView (const BasicStreamView& other) = delete;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        StreamView& operator= (const StreamView& other) = delete;
+        BasicStreamView& operator= (const BasicStreamView& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        StreamView (StreamView&& other) = delete;
+        BasicStreamView (BasicStreamView&& other) = delete;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        StreamView& operator=(StreamView&& other) = delete;
+        BasicStreamView& operator=(BasicStreamView&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        ~StreamView () = default;
+        ~BasicStreamView () = default;
 
         /**
          * @brief get character without extracting it.
@@ -420,60 +408,6 @@ namespace join
         }
 
         /**
-         * @brief extracts character and appends to buffer.
-         * @param buffer output string buffer.
-         * @return extracted character or eof.
-         */
-        template <typename Buffer>
-        inline int append (Buffer& buffer)
-        {
-            const int c = _in->sbumpc ();
-            if (JOIN_LIKELY (c != std::char_traits <char>::eof ()))
-            {
-                buffer.push_back (static_cast <char> (c));
-            }
-            return c;
-        }
-
-        /**
-         * @brief extracts expected character and appends to buffer.
-         * @param expected expected character.
-         * @param buffer output string buffer.
-         * @return true if extracted and appended, false otherwise.
-         */
-        template <typename Buffer>
-        inline bool appendIf (char expected, Buffer& buffer)
-        {
-            if (_in->sgetc () == static_cast <int> (static_cast <unsigned char> (expected)))
-            {
-                buffer.push_back (static_cast <char> (_in->sbumpc ()));
-                return true;
-            }
-            return false;
-        }
-
-        /**
-         * @brief extracts expected character (case insensitive, ASCII-only) and appends to buffer.
-         * @param expected expected character.
-         * @param buffer output string buffer.
-         * @return true if extracted and appended, false otherwise.
-         */
-        template <typename Buffer>
-        inline bool appendIfNoCase (char expected, Buffer& buffer)
-        {
-            const int c = _in->sgetc ();
-            if (JOIN_LIKELY (c != std::char_traits <char>::eof ()))
-            {
-                if ((static_cast <char> (c) | 32) == (expected | 32))
-                {
-                    buffer.push_back (static_cast <char> (_in->sbumpc ()));
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        /**
          * @brief read characters.
          * @param buf output buffer.
          * @param count number of characters to read.
@@ -485,9 +419,33 @@ namespace join
         }
 
         /**
+         * @brief read characters until delimiter.
+         * @param out output string.
+         * @param delim delimiter character.
+         * @return number of characters read.
+         */
+        inline size_t readUntil (std::string& out, char delim)
+        {
+            size_t nread = 0;
+            int c;
+            while ((c = _in->sgetc ()) != std::char_traits <char>::eof ())
+            {
+                const char ch = static_cast <char> (c);
+                if (ch == delim)
+                {
+                    break;
+                }
+                out.push_back (ch);
+                _in->sbumpc ();
+                ++nread;
+            }
+            return nread;
+        }
+
+        /**
          * @brief read characters until predicate returns true.
          * @param pred predicate function.
-         * @param buf output buffer.
+         * @param out output string.
          * @return number of characters read.
          */
         template <typename Predicate>
@@ -503,6 +461,28 @@ namespace join
                     break;
                 }
                 out.push_back (ch);
+                _in->sbumpc ();
+                ++nread;
+            }
+            return nread;
+        }
+
+        /**
+         * @brief consume characters until delimiter.
+         * @param delim delimiter character.
+         * @return number of characters consumed.
+         */
+        inline size_t consumeUntil (char delim) noexcept
+        {
+            size_t nread = 0;
+            int c;
+            while ((c = _in->sgetc ()) != std::char_traits <char>::eof ())
+            {
+                const char ch = static_cast <char> (c);
+                if (ch == delim)
+                {
+                    break;
+                }
                 _in->sbumpc ();
                 ++nread;
             }
@@ -558,6 +538,21 @@ namespace join
     };
 
     /**
+     * @brief string stream view (seekable).
+     */
+    using StringStreamView = BasicStreamView <true>;
+
+    /**
+     * @brief file stream view (seekable).
+     */
+    using FileStreamView = BasicStreamView <true>;
+
+    /**
+     * @brief stream view (non-seekable, for pipes/network streams).
+     */
+    using StreamView = BasicStreamView <false>;
+
+    /**
      * @brief trait to determine if a view type is seekable.
      * @tparam ViewType view type to check.
      */
@@ -571,16 +566,10 @@ namespace join
     struct is_seekable <StringView> : std::true_type {};
 
     /**
-     * @brief specialization for seekable StreamView.
+     * @brief specialization for seekable view.
      */
     template <>
-    struct is_seekable <StreamView <true>> : std::true_type {};
-
-    /**
-     * @brief specialization for non-seekable StreamView.
-     */
-    template <>
-    struct is_seekable <StreamView <false>> : std::false_type {};
+    struct is_seekable <BasicStreamView <true>> : std::true_type {};
 
     /**
      * @brief buffering view adapter
@@ -628,9 +617,9 @@ namespace join
          * @param expected expected character.
          * @return true if extracted, false otherwise.
          */
-        inline bool getIf (char c) noexcept
+        inline bool getIf (char expected) noexcept
         {
-            return _view.getIf (c);
+            return _view.getIf (expected);
         }
 
         /**
@@ -638,9 +627,9 @@ namespace join
          * @param expected expected character.
          * @return true if extracted, false otherwise.
          */
-        inline bool getIfNoCase (char c) noexcept
+        inline bool getIfNoCase (char expected) noexcept
         {
-            return _view.getIfNoCase (c);
+            return _view.getIfNoCase (expected);
         }
 
         /**
@@ -709,7 +698,12 @@ namespace join
          */
         inline int get () noexcept
         {
-            return _view.append (*_buf);
+            const int c = _view.get ();
+            if (JOIN_LIKELY (c != std::char_traits <char>::eof ()))
+            {
+                _buf->push_back (static_cast <char> (c));
+            }
+            return c;
         }
 
         /**
@@ -717,9 +711,14 @@ namespace join
          * @param expected expected character.
          * @return true if extracted, false otherwise.
          */
-        inline bool getIf (char c) noexcept
+        inline bool getIf (char expected) noexcept
         {
-            return _view.appendIf (c, *_buf);
+            if (_view.peek () == static_cast <int> (static_cast <unsigned char> (expected)))
+            {
+                _buf->push_back (static_cast <char> (_view.get ()));
+                return true;
+            }
+            return false;
         }
 
         /**
@@ -727,9 +726,18 @@ namespace join
          * @param expected expected character.
          * @return true if extracted, false otherwise.
          */
-        inline bool getIfNoCase (char c) noexcept
+        inline bool getIfNoCase (char expected) noexcept
         {
-            return _view.appendIfNoCase (c, *_buf);
+            const int c = _view.peek ();
+            if (JOIN_LIKELY (c != std::char_traits <char>::eof ()))
+            {
+                if ((static_cast <char> (c) | 32) == (expected | 32))
+                {
+                    _buf->push_back (static_cast <char> (_view.get ()));
+                    return true;
+                }
+            }
+            return false;
         }
 
         /**

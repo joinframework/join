@@ -1001,7 +1001,7 @@ namespace join
         template <JsonReadMode ReadMode = JsonReadMode::None>
         int deserialize (std::stringstream& document)
         {
-            StreamView <true> in (document);
+            StringStreamView in (document);
             return read <ReadMode> (in);
         }
 
@@ -1023,7 +1023,7 @@ namespace join
         template <JsonReadMode ReadMode = JsonReadMode::None>
         int deserialize (std::istringstream& document)
         {
-            StreamView <true> in (document);
+            StringStreamView in (document);
             return read <ReadMode> (in);
         }
 
@@ -1045,7 +1045,7 @@ namespace join
         template <JsonReadMode ReadMode = JsonReadMode::None>
         int deserialize (std::fstream& document)
         {
-            StreamView <true> in (document);
+            FileStreamView in (document);
             return read <ReadMode> (in);
         }
 
@@ -1067,7 +1067,7 @@ namespace join
         template <JsonReadMode ReadMode = JsonReadMode::None>
         int deserialize (std::ifstream& document)
         {
-            StreamView <true> in (document);
+            FileStreamView in (document);
             return read <ReadMode> (in);
         }
 
@@ -1089,7 +1089,7 @@ namespace join
         template <JsonReadMode ReadMode = JsonReadMode::None>
         int deserialize (std::iostream& document)
         {
-            StreamView <false> in (document);
+            StreamView in (document);
             return read <ReadMode> (in);
         }
 
@@ -1111,7 +1111,7 @@ namespace join
         template <JsonReadMode ReadMode = JsonReadMode::None>
         int deserialize (std::istream& document)
         {
-            StreamView <false> in (document);
+            StreamView in (document);
             return read <ReadMode> (in);
         }
 
@@ -1384,15 +1384,15 @@ namespace join
                 lz = __builtin_clzll (high);
                 exp -= lz;
             }
-            else if (middle != 0)
+            else /*if (middle != 0)*/
             {
                 lz = __builtin_clzll (middle);
                 exp -= lz + 64;
             }
-            else
-            {
-                return false;
-            }
+            // else
+            // {
+            //     return false;
+            // }
 
             if (JOIN_UNLIKELY (exp <= 0 || exp >= 2047))
             {
