@@ -160,6 +160,9 @@ TEST (StringView, readUntil)
     buf.clear ();
     ASSERT_EQ (view.readUntil (buf, [] (char c) { return c == 'r'; }), 2);
     ASSERT_EQ (buf, "wo");
+
+    ASSERT_EQ (view.readUntil (buf, 'z'), 3);
+    ASSERT_EQ (buf, "world");
 }
 
 /**
@@ -172,8 +175,11 @@ TEST (StringView, consumeUntil)
     ASSERT_EQ (view.consumeUntil ('o'), 4);
     ASSERT_EQ (view.peek (), 'o');
 
-    ASSERT_EQ (view.consumeUntil ([] (char c) { return c == 'd'; }), 6);
-    ASSERT_EQ (view.peek (), 'd');
+    ASSERT_EQ (view.consumeUntil ([] (char c) { return c == 'r'; }), 4);
+    ASSERT_EQ (view.peek (), 'r');
+
+    ASSERT_EQ (view.consumeUntil ('z'), 3);
+    ASSERT_EQ (view.peek (), std::char_traits <char>::eof ());
 }
 
 /**
