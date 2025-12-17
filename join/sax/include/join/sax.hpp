@@ -34,6 +34,9 @@
 // C++.
 #include <system_error>
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <memory>
 #include <string>
 #include <stack>
 
@@ -80,21 +83,21 @@ namespace join
      * @brief get error category.
      * @return the created std::error_category object.
      */
-    const std::error_category& saxCategory ();
+    const std::error_category& saxCategory () noexcept;
 
     /**
      * @brief create an std::error_code object.
      * @param code error code number.
      * @return the created std::error_code object.
      */
-    std::error_code make_error_code (SaxErrc code);
+    std::error_code make_error_code (SaxErrc code) noexcept;
 
     /**
      * @brief create an std::error_condition object.
      * @param code error code number.
      * @return the created std::error_condition object.
      */
-    std::error_condition make_error_condition (SaxErrc code);
+    std::error_condition make_error_condition (SaxErrc code) noexcept;
 
     /**
      * @brief SAX API interface class.
@@ -244,8 +247,8 @@ namespace join
          * @param document document to create.
          */
         StreamWriter (std::ostream& document)
-        : SaxHandler (),
-          _outstream (document)
+        : SaxHandler ()
+        , _out (document.rdbuf ())
         {
         }
 
@@ -285,6 +288,17 @@ namespace join
          */
         virtual int serialize (const Value& value)
         {
+            return  setValue (value);
+        }
+
+    protected:
+        /**
+         * @brief set value.
+         * @param value Value to write.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setValue (const Value& value)
+        {
             switch (value.index ())
             {
                 case Value::Boolean:
@@ -319,7 +333,6 @@ namespace join
             }
         }
 
-    protected:
         /**
          * @brief set array value.
          * @param value array value to set.
@@ -330,7 +343,7 @@ namespace join
             startArray (array.size ());
             for (auto const& element : array)
             {
-                serialize (element);
+                setValue (element);
             }
             stopArray ();
             return 0;
@@ -347,33 +360,80 @@ namespace join
             for (auto const& member : object)
             {
                 setKey (member.first);
-                serialize (member.second);
+                setValue (member.second);
             }
             stopObject ();
             return 0;
         }
 
         /**
-         * @brief append data to output stream and update data size.
+         * @brief append character to output stream in batch.
          * @param data data to append to output stream.
-         * @param size data size.
          */
-        void append (const char* data, uint32_t size)
+        inline void append (char data) noexcept
         {
-            _outstream.write (data, size);
+            _out->sputc (data);
         }
 
         /**
-         * @brief append data to stream and update data size.
-         * @param data data to append to stream.
+         * @brief append 2-character literal to output stream in batch.
+         * @param data data to append to output stream.
          */
-        void append (char data)
+        inline void append2 (const char* data) noexcept
         {
-            _outstream.put (data);
+            _out->sputc (data[0]);
+            _out->sputc (data[1]);
         }
 
-        /// output stream.
-        std::ostream& _outstream;
+        /**
+         * @brief append 3-character literal to output stream in batch.
+         * @param data data to append to output stream.
+         */
+        inline void append3 (const char* data) noexcept
+        {
+            _out->sputc (data[0]);
+            _out->sputc (data[1]);
+            _out->sputc (data[2]);
+        }
+
+        /**
+         * @brief append 4-character literal to output stream in batch.
+         * @param data data to append to output stream.
+         */
+        inline void append4 (const char* data) noexcept
+        {
+            _out->sputc (data[0]);
+            _out->sputc (data[1]);
+            _out->sputc (data[2]);
+            _out->sputc (data[3]);
+        }
+
+        /**
+         * @brief append 5-character literal to output stream in batch.
+         * @param data data to append to output stream.
+         */
+        inline void append5 (const char* data) noexcept
+        {
+            _out->sputc (data[0]);
+            _out->sputc (data[1]);
+            _out->sputc (data[2]);
+            _out->sputc (data[3]);
+            _out->sputc (data[4]);
+        }
+
+        /**
+         * @brief append characters to output stream in batch.
+         * @param data data to append to output stream.
+         * @param size data size.
+         */
+        inline void append (const char* data, uint32_t size) noexcept
+        {
+            _out->sputn (data, size);
+        }
+
+    protected:
+        /// underlying output stream.
+        std::streambuf* _out;
     };
 
     /**
@@ -387,8 +447,8 @@ namespace join
          * @param root Value to write.
          */
         StreamReader (Value& root)
-        : SaxHandler (),
-          _root (root)
+        : SaxHandler ()
+        , _root (root)
         {
         }
 
@@ -424,15 +484,15 @@ namespace join
         virtual ~StreamReader () = default;
 
         /**
-         * @brief Deserialize a document.
-         * @param document document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @param length The length of the document to parse.
          * @return 0 on success, -1 otherwise.
          */
         virtual int deserialize (const char* document, size_t length) = 0;
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param first The first character of the document to parse.
          * @param last The last character of the document to parse.
          * @return 0 on success, -1 otherwise.
@@ -440,15 +500,50 @@ namespace join
         virtual int deserialize (const char* first, const char* last) = 0;
 
         /**
-         * @brief Deserialize a document.
+         * @brief deserialize a document.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
         virtual int deserialize (const std::string& document) = 0;
 
         /**
-         * @brief Parse a document.
-         * @param document document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int deserialize (std::stringstream& document) = 0;
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int deserialize (std::istringstream& document) = 0;
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int deserialize (std::fstream& document) = 0;
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int deserialize (std::ifstream& document) = 0;
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int deserialize (std::iostream& document) = 0;
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
         virtual int deserialize (std::istream& document) = 0;
@@ -541,7 +636,7 @@ namespace join
         virtual int startArray (uint32_t size = 0) override
         {
             Array array;
-            array.reserve (size ? size : 16);
+            array.reserve (size ? size : 8);
 
             if (JOIN_UNLIKELY (_stack.empty ()))
             {
@@ -558,10 +653,9 @@ namespace join
 
             Value::Ptr parent = _stack.top ();
 
-            if (parent->is <Value::ObjectValue> ())
+            if (parent->index () == Value::ObjectValue)
             {
-                _stack.push (&parent->insert (Member (_curkey, std::move (array))));
-                _curkey.clear ();
+                _stack.push (&parent->insert ({std::move (_curkey), std::move (array)}));
             }
             else
             {
@@ -577,7 +671,7 @@ namespace join
          */
         virtual int stopArray () override
         {
-            if (_stack.size ())
+            if (JOIN_LIKELY (_stack.size ()))
             {
                 _stack.pop ();
             }
@@ -593,7 +687,7 @@ namespace join
         virtual int startObject (uint32_t size = 0) override
         {
             Object object;
-            object.reserve (size ? size : 16);
+            object.reserve (size ? size : 8);
 
             if (JOIN_UNLIKELY (_stack.empty ()))
             {
@@ -610,10 +704,9 @@ namespace join
 
             Value::Ptr parent = _stack.top ();
 
-            if (parent->is <Value::ObjectValue> ())
+            if (parent->index () == Value::ObjectValue)
             {
-                _stack.push (&parent->insert (Member (_curkey, std::move (object))));
-                _curkey.clear ();
+                _stack.push (&parent->insert ({std::move (_curkey), std::move (object)}));
             }
             else
             {
@@ -640,7 +733,7 @@ namespace join
          */
         virtual int stopObject () override
         {
-            if (_stack.size ())
+            if (JOIN_LIKELY (_stack.size ()))
             {
                 _stack.pop ();
             }
@@ -663,10 +756,9 @@ namespace join
 
             Value::Ptr parent = _stack.top ();
 
-            if (parent->is <Value::ObjectValue> ())
+            if (parent->index () == Value::ObjectValue)
             {
-                parent->insert (Member (_curkey, std::move (value)));
-                _curkey.clear ();
+                parent->insert ({std::move (_curkey), std::move (value)});
             }
             else
             {

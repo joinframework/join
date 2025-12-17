@@ -62,7 +62,7 @@ std::string SaxCategory::message (int code) const
 //   CLASS     :
 //   METHOD    : saxCategory
 // =========================================================================
-const std::error_category& join::saxCategory ()
+const std::error_category& join::saxCategory () noexcept
 {
     static SaxCategory instance;
     return instance;
@@ -72,7 +72,7 @@ const std::error_category& join::saxCategory ()
 //   CLASS     :
 //   METHOD    : make_error_code
 // =========================================================================
-std::error_code join::make_error_code (SaxErrc code)
+std::error_code join::make_error_code (SaxErrc code) noexcept
 {
     return std::error_code (static_cast <int> (code), saxCategory ());
 }
@@ -81,7 +81,7 @@ std::error_code join::make_error_code (SaxErrc code)
 //   CLASS     :
 //   METHOD    : make_error_condition
 // =========================================================================
-std::error_condition join::make_error_condition (SaxErrc code)
+std::error_condition join::make_error_condition (SaxErrc code) noexcept
 {
     return std::error_condition (static_cast <int> (code), saxCategory ());
 }

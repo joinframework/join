@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.22.1)
 
 find_package(GTest REQUIRED)
 
@@ -41,3 +41,9 @@ gtest_discover_tests(jsoncanonicalizer.gtest)
 add_executable(roundtrip.gtest roundtrip_test.cpp)
 target_link_libraries(roundtrip.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(roundtrip.gtest)
+
+add_executable(parse.gtest parse_test.cpp)
+target_link_libraries(parse.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(parse.gtest)
+
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

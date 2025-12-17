@@ -5404,6 +5404,7 @@ TEST (Value, packRead)
     std::string str ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73',
                       '\x74', '\xcb', '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a',
                       '\x68', '\x5d'});
+
     ASSERT_NE (value.packRead (str), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
@@ -5443,8 +5444,86 @@ TEST (Value, packRead)
     ASSERT_TRUE (value[4].isDouble ());
     ASSERT_EQ (value[4], 1.23456789e-13);
 
-    std::stringstream stream (str);
-    ASSERT_NE (value.packRead (stream), -1) << join::lastError.message ();
+    std::stringstream sstream (str);
+    ASSERT_NE (value.packRead (sstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::istringstream isstream (str);
+    ASSERT_NE (value.packRead (isstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::ofstream out ("/tmp/fstream.pack", std::ios::binary);
+    out << str;
+    out.close ();
+
+    std::fstream fstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
+    ASSERT_NE (value.packRead (fstream), -1) << join::lastError.message();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    fstream.close ();
+
+    std::ifstream ifstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
+    ASSERT_NE (value.packRead (ifstream), -1) << join::lastError.message();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    ifstream.close ();
+
+    std::stringbuf iosbuf (str, std::ios::in);
+    std::iostream iostream (&iosbuf);
+    ASSERT_NE (value.packRead (iostream), -1) << join::lastError.message();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringbuf isbuf (str);
+    std::istream istream (&isbuf);
+    ASSERT_NE (value.packRead (istream), -1) << join::lastError.message();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);
@@ -5524,8 +5603,86 @@ TEST (Value, jsonRead)
     ASSERT_TRUE (value[4].isDouble ());
     ASSERT_EQ (value[4], 1.23456789e-13);
 
-    std::stringstream stream (str);
-    ASSERT_NE (value.jsonRead (stream), -1) << join::lastError.message ();
+    std::stringstream sstream (str);
+    ASSERT_NE (value.jsonRead (sstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::istringstream isstream (str);
+    ASSERT_NE (value.jsonRead (isstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::ofstream out ("/tmp/fstream.json");
+    out << str;
+    out.close();
+
+    std::fstream fstream ("/tmp/fstream.json", std::ios::in);
+    ASSERT_NE (value.jsonRead (fstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    fstream.close ();
+
+    std::ifstream ifstream ("/tmp/fstream.json");
+    ASSERT_NE (value.jsonRead (ifstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    ifstream.close ();
+
+    std::stringbuf iosbuf (str, std::ios::in);
+    std::iostream iostream (&iosbuf);
+    ASSERT_NE (value.jsonRead (iostream), -1) << join::lastError.message();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringbuf isbuf (str);
+    std::istream istream (&isbuf);
+    ASSERT_NE (value.jsonRead (istream), -1) << join::lastError.message();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);

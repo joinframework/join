@@ -463,8 +463,63 @@ namespace join
         }
 
         /**
-         * @brief parse a document.
-         * @param document document to parse.
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::stringstream& document) override
+        {
+            StringStreamView in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::istringstream& document) override
+        {
+            StringStreamView in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::fstream& document) override
+        {
+            FileStreamView in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::ifstream& document) override
+        {
+            FileStreamView in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int deserialize (std::iostream& document) override
+        {
+            StreamView in (document);
+            return read (in);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
         int deserialize (std::istream& document) override
