@@ -222,11 +222,15 @@ TEST (StringView, seek)
     StringView view ("hello world");
 
     ASSERT_EQ (view.get (), 'h');
+    view.seek (view.tell () - 10000);
+    ASSERT_EQ (view.get (), 'h');
     ASSERT_EQ (view.get (), 'e');
     ASSERT_EQ (view.get (), 'l');
     view.seek (view.tell () - 2);
     ASSERT_EQ (view.get (), 'e');
     ASSERT_EQ (view.get (), 'l');
+    view.seek (view.tell () + 10000);
+    ASSERT_EQ (view.get (), std::char_traits <char>::eof ());
 }
 
 /**
