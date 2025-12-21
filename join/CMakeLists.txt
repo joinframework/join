@@ -1,23 +1,22 @@
 cmake_minimum_required(VERSION 3.22.1)
 
 find_package(OpenSSL REQUIRED)
-
 find_package(ZLIB REQUIRED)
 
 set(PRIVATE_HEADER_DIRS
     core/src
-    thread/src
     crypto/src
-    network/src
-    sax/src
+    data/src
+    fabric/src
+    services/src
 )
 
 set(PUBLIC_HEADER_DIRS
     core/include
-    thread/include
     crypto/include
-    network/include
-    sax/include
+    data/include
+    fabric/include
+    services/include
 )
 
 set(PUBLIC_HEADERS
@@ -31,75 +30,75 @@ set(PUBLIC_HEADERS
     core/include/join/cache.hpp
     core/include/join/reactor.hpp
     core/include/join/streambuf.hpp
-    core/include/join/zstream.hpp
     core/include/join/shared.hpp
-    thread/include/join/mutex.hpp
-    thread/include/join/condition.hpp
-    thread/include/join/semaphore.hpp
-    thread/include/join/thread.hpp
-    thread/include/join/threadpool.hpp
-    crypto/include/join/openssl.hpp
+    core/include/join/mutex.hpp
+    core/include/join/condition.hpp
+    core/include/join/semaphore.hpp
+    core/include/join/thread.hpp
+    core/include/join/threadpool.hpp
+    core/include/join/macaddress.hpp
+    core/include/join/ipaddress.hpp
+    core/include/join/endpoint.hpp
+    core/include/join/protocol.hpp
+    core/include/join/socket.hpp
+    core/include/join/socketstream.hpp
+    core/include/join/acceptor.hpp
+    core/include/join/openssl.hpp
     crypto/include/join/base64.hpp
     crypto/include/join/digest.hpp
     crypto/include/join/hmac.hpp
     crypto/include/join/tlskey.hpp
     crypto/include/join/signature.hpp
-    network/include/join/macaddress.hpp
-    network/include/join/ipaddress.hpp
-    network/include/join/endpoint.hpp
-    network/include/join/protocol.hpp
-    network/include/join/resolver.hpp
-    network/include/join/socket.hpp
-    network/include/join/socketstream.hpp
-    network/include/join/acceptor.hpp
-    network/include/join/arp.hpp
-    network/include/join/chunkstream.hpp
-    network/include/join/httpmessage.hpp
-    network/include/join/httpclient.hpp
-    network/include/join/httpserver.hpp
-    network/include/join/mailmessage.hpp
-    network/include/join/smtpclient.hpp
-    network/include/join/interface.hpp
-    network/include/join/interfacemanager.hpp
-    sax/include/join/diyfp.hpp
-    sax/include/join/atodpow.hpp
-    sax/include/join/dtoapow.hpp
-    sax/include/join/dtoa.hpp
-    sax/include/join/value.hpp
-    sax/include/join/sax.hpp
-    sax/include/join/pack.hpp
-    sax/include/join/json.hpp
+    data/include/join/diyfp.hpp
+    data/include/join/atodpow.hpp
+    data/include/join/dtoapow.hpp
+    data/include/join/dtoa.hpp
+    data/include/join/value.hpp
+    data/include/join/sax.hpp
+    data/include/join/pack.hpp
+    data/include/join/json.hpp
+    data/include/join/zstream.hpp
+    fabric/include/join/resolver.hpp
+    fabric/include/join/arp.hpp
+    fabric/include/join/interface.hpp
+    fabric/include/join/interfacemanager.hpp
+    services/include/join/chunkstream.hpp
+    services/include/join/httpmessage.hpp
+    services/include/join/httpclient.hpp
+    services/include/join/httpserver.hpp
+    services/include/join/mailmessage.hpp
+    services/include/join/smtpclient.hpp
 )
 
 set(SOURCES
     core/src/error.cpp
     core/src/cache.cpp
     core/src/reactor.cpp
-    core/src/zstream.cpp
-    thread/src/mutex.cpp
-    thread/src/condition.cpp
-    thread/src/semaphore.cpp
-    thread/src/thread.cpp
-    thread/src/threadpool.cpp
-    crypto/src/openssl.cpp
+    core/src/mutex.cpp
+    core/src/condition.cpp
+    core/src/semaphore.cpp
+    core/src/thread.cpp
+    core/src/threadpool.cpp
+    core/src/openssl.cpp
+    core/src/macaddress.cpp
+    core/src/ipaddress.cpp
+    core/src/socket.cpp
     crypto/src/base64.cpp
     crypto/src/digest.cpp
     crypto/src/hmac.cpp
     crypto/src/tlskey.cpp
     crypto/src/signature.cpp
-    network/src/macaddress.cpp
-    network/src/ipaddress.cpp
-    network/src/resolver.cpp
-    network/src/socket.cpp
-    network/src/arp.cpp
-    network/src/chunkstream.cpp
-    network/src/httpmessage.cpp
-    network/src/mailmessage.cpp
-    network/src/interface.cpp
-    network/src/interfacemanager.cpp
-    sax/src/value.cpp
-    sax/src/sax.cpp
-    sax/src/json.cpp
+    data/src/value.cpp
+    data/src/sax.cpp
+    data/src/json.cpp
+    data/src/zstream.cpp
+    fabric/src/resolver.cpp
+    fabric/src/arp.cpp
+    fabric/src/interface.cpp
+    fabric/src/interfacemanager.cpp
+    services/src/chunkstream.cpp
+    services/src/httpmessage.cpp
+    services/src/mailmessage.cpp
 )
 
 add_library(${PROJECT_NAME} ${SOURCES})
@@ -121,7 +120,7 @@ configure_file(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION lib/pkgconfig)
 
 add_subdirectory(core)
-add_subdirectory(thread)
 add_subdirectory(crypto)
-add_subdirectory(network)
-add_subdirectory(sax)
+add_subdirectory(data)
+add_subdirectory(fabric)
+add_subdirectory(services)

@@ -47,3 +47,7 @@ target_link_libraries(parse.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
 gtest_discover_tests(parse.gtest)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+add_executable(zstream.gtest zstream_test.cpp)
+target_link_libraries(zstream.gtest ${PROJECT_NAME} GTest::gtest_main pthread)
+gtest_discover_tests(zstream.gtest)
