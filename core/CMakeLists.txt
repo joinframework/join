@@ -1,0 +1,75 @@
+cmake_minimum_required(VERSION 3.22.1)
+
+find_package(OpenSSL REQUIRED)
+
+set(PRIVATE_HEADER_DIRS
+    src
+)
+
+set(PUBLIC_HEADER_DIRS
+    include
+)
+
+set(PUBLIC_HEADERS
+    include/join/version.hpp
+    include/join/error.hpp
+    include/join/utils.hpp
+    include/join/filesystem.hpp
+    include/join/traits.hpp
+    include/join/variant.hpp
+    include/join/view.hpp
+    include/join/cache.hpp
+    include/join/reactor.hpp
+    include/join/streambuf.hpp
+    include/join/shared.hpp
+    include/join/mutex.hpp
+    include/join/condition.hpp
+    include/join/semaphore.hpp
+    include/join/thread.hpp
+    include/join/threadpool.hpp
+    include/join/macaddress.hpp
+    include/join/ipaddress.hpp
+    include/join/endpoint.hpp
+    include/join/protocol.hpp
+    include/join/socket.hpp
+    include/join/socketstream.hpp
+    include/join/acceptor.hpp
+    include/join/openssl.hpp
+)
+
+set(SOURCES
+    src/error.cpp
+    src/cache.cpp
+    src/reactor.cpp
+    src/mutex.cpp
+    src/condition.cpp
+    src/semaphore.cpp
+    src/thread.cpp
+    src/threadpool.cpp
+    src/openssl.cpp
+    src/macaddress.cpp
+    src/ipaddress.cpp
+    src/socket.cpp
+)
+
+add_library(${JOIN_CORE} ${SOURCES})
+set_target_properties(${JOIN_CORE} PROPERTIES VERSION ${JOIN_VERSION} SOVERSION ${JOIN_VERSION_MAJOR})
+set_target_properties(${JOIN_CORE} PROPERTIES PUBLIC_HEADER "${PUBLIC_HEADERS}")
+
+target_include_directories(${JOIN_CORE} PUBLIC  ${PUBLIC_HEADER_DIRS})
+target_include_directories(${JOIN_CORE} PRIVATE ${PRIVATE_HEADER_DIRS})
+
+target_link_libraries(${JOIN_CORE} OpenSSL::SSL OpenSSL::Crypto pthread)
+
+install(TARGETS ${JOIN_CORE}
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    PUBLIC_HEADER DESTINATION include/join
+)
+
+configure_file(${JOIN_CORE}.pc.in ${JOIN_CORE}.pc @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${JOIN_CORE}.pc DESTINATION lib/pkgconfig)
+
+if(JOIN_ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()

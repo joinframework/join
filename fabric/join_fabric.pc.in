@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: join fabric
+Description: join fabric
+Version: @JOIN_VERSION@
+Libs: -L${libdir} -ljoin_fabric
+Libs.private: -ljoin_core -lssl -lcrypto -lpthread
+Cflags: -I${includedir}
