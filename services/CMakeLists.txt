@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.22.1)
 
+find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 
@@ -33,7 +34,7 @@ set_target_properties(${JOIN_SERVICES} PROPERTIES PUBLIC_HEADER "${PUBLIC_HEADER
 target_include_directories(${JOIN_SERVICES} PUBLIC  ${PUBLIC_HEADER_DIRS})
 target_include_directories(${JOIN_SERVICES} PRIVATE ${PRIVATE_HEADER_DIRS})
 
-target_link_libraries(${JOIN_SERVICES} ${JOIN_CRYPTO} ${JOIN_DATA} ${JOIN_FABRIC} ${JOIN_CORE} OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB pthread)
+target_link_libraries(${JOIN_SERVICES} ${JOIN_CRYPTO} ${JOIN_DATA} ${JOIN_FABRIC} ${JOIN_CORE} OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB Threads::Threads)
 
 install(TARGETS ${JOIN_SERVICES}
     LIBRARY DESTINATION lib

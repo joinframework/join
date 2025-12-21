@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.22.1)
 
+find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 set(PRIVATE_HEADER_DIRS
@@ -59,7 +60,7 @@ set_target_properties(${JOIN_CORE} PROPERTIES PUBLIC_HEADER "${PUBLIC_HEADERS}")
 target_include_directories(${JOIN_CORE} PUBLIC  ${PUBLIC_HEADER_DIRS})
 target_include_directories(${JOIN_CORE} PRIVATE ${PRIVATE_HEADER_DIRS})
 
-target_link_libraries(${JOIN_CORE} OpenSSL::SSL OpenSSL::Crypto pthread)
+target_link_libraries(${JOIN_CORE} OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
 
 install(TARGETS ${JOIN_CORE}
     LIBRARY DESTINATION lib
