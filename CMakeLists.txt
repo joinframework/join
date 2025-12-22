@@ -20,18 +20,19 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 add_compile_options(
-    -fstack-protector-strong
-    -Wformat
-    -Wformat-security
     -Wall
     -Wextra
     -Werror
+    -Wformat
+    -Wformat-security
+    -fstack-protector-strong
     -Wno-address-of-packed-member
 )
 
 add_link_options(
     -Wl,--as-needed
-    -Wl,-z,relro,-z,now
+    -Wl,-z,relro
+    -Wl,-z,now
 )
 
 set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG -O0 -g")
@@ -89,3 +90,28 @@ endif()
 if(JOIN_ENABLE_SERVICES)
     add_subdirectory(services)
 endif()
+
+include(CMakePackageConfigHelpers)
+
+install(EXPORT joinTargets
+    NAMESPACE join::
+    DESTINATION lib/cmake/join
+)
+
+configure_package_config_file(
+    ${PROJECT_SOURCE_DIR}/cmake/joinConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/joinConfig.cmake
+    INSTALL_DESTINATION lib/cmake/join
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/joinConfigVersion.cmake
+    VERSION ${JOIN_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/joinConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/joinConfigVersion.cmake
+    DESTINATION lib/cmake/join
+)

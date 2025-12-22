@@ -54,18 +54,31 @@ set(SOURCES
 )
 
 add_library(${JOIN_CORE} ${SOURCES})
-set_target_properties(${JOIN_CORE} PROPERTIES VERSION ${JOIN_VERSION} SOVERSION ${JOIN_VERSION_MAJOR})
-set_target_properties(${JOIN_CORE} PROPERTIES PUBLIC_HEADER "${PUBLIC_HEADERS}")
+add_library(join::core ALIAS ${JOIN_CORE})
 
-target_include_directories(${JOIN_CORE} PUBLIC  ${PUBLIC_HEADER_DIRS})
-target_include_directories(${JOIN_CORE} PRIVATE ${PRIVATE_HEADER_DIRS})
+set_target_properties(${JOIN_CORE} PROPERTIES
+    VERSION ${JOIN_VERSION}
+    SOVERSION ${JOIN_VERSION_MAJOR}
+)
 
-target_link_libraries(${JOIN_CORE} OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+target_include_directories(${JOIN_CORE}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(${JOIN_CORE}
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    Threads::Threads
+)
 
 install(TARGETS ${JOIN_CORE}
+    EXPORT joinTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
-    PUBLIC_HEADER DESTINATION include/join
 )
 
 configure_file(${JOIN_CORE}.pc.in ${JOIN_CORE}.pc @ONLY)

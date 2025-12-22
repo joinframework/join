@@ -26,18 +26,32 @@ set(SOURCES
 )
 
 add_library(${JOIN_FABRIC} ${SOURCES})
-set_target_properties(${JOIN_FABRIC} PROPERTIES VERSION ${JOIN_VERSION} SOVERSION ${JOIN_VERSION_MAJOR})
-set_target_properties(${JOIN_FABRIC} PROPERTIES PUBLIC_HEADER "${PUBLIC_HEADERS}")
+add_library(join::fabric ALIAS ${JOIN_FABRIC})
 
-target_include_directories(${JOIN_FABRIC} PUBLIC  ${PUBLIC_HEADER_DIRS})
-target_include_directories(${JOIN_FABRIC} PRIVATE ${PRIVATE_HEADER_DIRS})
+set_target_properties(${JOIN_FABRIC} PROPERTIES
+    VERSION ${JOIN_VERSION}
+    SOVERSION ${JOIN_VERSION_MAJOR}
+)
 
-target_link_libraries(${JOIN_FABRIC} ${JOIN_CORE} OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+target_include_directories(${JOIN_FABRIC}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(${JOIN_FABRIC}
+    ${JOIN_CORE}
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    Threads::Threads
+)
 
 install(TARGETS ${JOIN_FABRIC}
+    EXPORT joinTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
-    PUBLIC_HEADER DESTINATION include/join
 )
 
 configure_file(${JOIN_FABRIC}.pc.in ${JOIN_FABRIC}.pc @ONLY)

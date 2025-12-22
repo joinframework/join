@@ -28,18 +28,36 @@ set(SOURCES
 )
 
 add_library(${JOIN_SERVICES} ${SOURCES})
-set_target_properties(${JOIN_SERVICES} PROPERTIES VERSION ${JOIN_VERSION} SOVERSION ${JOIN_VERSION_MAJOR})
-set_target_properties(${JOIN_SERVICES} PROPERTIES PUBLIC_HEADER "${PUBLIC_HEADERS}")
+add_library(join::services ALIAS ${JOIN_SERVICES})
 
-target_include_directories(${JOIN_SERVICES} PUBLIC  ${PUBLIC_HEADER_DIRS})
-target_include_directories(${JOIN_SERVICES} PRIVATE ${PRIVATE_HEADER_DIRS})
+set_target_properties(${JOIN_SERVICES} PROPERTIES
+    VERSION ${JOIN_VERSION}
+    SOVERSION ${JOIN_VERSION_MAJOR}
+)
 
-target_link_libraries(${JOIN_SERVICES} ${JOIN_CRYPTO} ${JOIN_DATA} ${JOIN_FABRIC} ${JOIN_CORE} OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB Threads::Threads)
+target_include_directories(${JOIN_SERVICES}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(${JOIN_SERVICES}
+    ${JOIN_FABRIC}
+    ${JOIN_DATA}
+    ${JOIN_CRYPTO}
+    ${JOIN_CORE}
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    ZLIB::ZLIB
+    Threads::Threads
+)
 
 install(TARGETS ${JOIN_SERVICES}
+    EXPORT joinTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
-    PUBLIC_HEADER DESTINATION include/join
 )
 
 configure_file(${JOIN_SERVICES}.pc.in ${JOIN_SERVICES}.pc @ONLY)

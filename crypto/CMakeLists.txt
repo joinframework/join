@@ -28,18 +28,32 @@ set(SOURCES
 )
 
 add_library(${JOIN_CRYPTO} ${SOURCES})
-set_target_properties(${JOIN_CRYPTO} PROPERTIES VERSION ${JOIN_VERSION} SOVERSION ${JOIN_VERSION_MAJOR})
-set_target_properties(${JOIN_CRYPTO} PROPERTIES PUBLIC_HEADER "${PUBLIC_HEADERS}")
+add_library(join::crypto ALIAS ${JOIN_CRYPTO})
 
-target_include_directories(${JOIN_CRYPTO} PUBLIC  ${PUBLIC_HEADER_DIRS})
-target_include_directories(${JOIN_CRYPTO} PRIVATE ${PRIVATE_HEADER_DIRS})
+set_target_properties(${JOIN_CRYPTO} PROPERTIES
+    VERSION ${JOIN_VERSION}
+    SOVERSION ${JOIN_VERSION_MAJOR}
+)
 
-target_link_libraries(${JOIN_CRYPTO} ${JOIN_CORE} OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+target_include_directories(${JOIN_CRYPTO}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(${JOIN_CRYPTO}
+    ${JOIN_CORE}
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    Threads::Threads
+)
 
 install(TARGETS ${JOIN_CRYPTO}
+    EXPORT joinTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
-    PUBLIC_HEADER DESTINATION include/join
 )
 
 configure_file(${JOIN_CRYPTO}.pc.in ${JOIN_CRYPTO}.pc @ONLY)
