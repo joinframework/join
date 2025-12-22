@@ -1,4 +1,5 @@
 # join
+### High-Performance Modular Networking for the Linux Ecosystem
 
 [![Test Status](https://github.com/joinframework/join/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/joinframework/join/actions?query=workflow%3Atest+branch%3Amain)
 [![Security Status](https://github.com/joinframework/join/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/joinframework/join/actions?query=workflow%3Asecurity+branch%3Amain)
@@ -18,7 +19,7 @@ concurrency, serialization, cryptography, and Linux network fabric management.
 
 ---
 
-## Design Goals
+## 🚀 Design Goals
 
 - Linux-native networking (sockets, netlink, raw sockets)
 - Event-driven and reactor-based architecture
@@ -29,111 +30,7 @@ concurrency, serialization, cryptography, and Linux network fabric management.
 
 ---
 
-## Architecture Overview
-
-join is split into independent libraries that can be built and linked separately.
-
-### `join_core` (mandatory)
-
-The foundation of the framework. All other modules depend on `join_core`.
-
-Provides:
-- Socket abstractions (TCP, UDP, Unix, raw, TLS)
-- TLS support via OpenSSL
-- Event reactor
-- Threading primitives and thread pools
-- Mutexes, conditions, semaphores
-- Timers (monotonic and real-time)
-- Lock-free queues (SPSC, MPSC, MPMC)
-- IP and MAC address utilities
-- Endpoint and protocol helpers
-- Core utilities and type traits
-
-### `join_crypto` (optional)
-
-Cryptographic utilities built on top of OpenSSL:
-- Base64 encoding/decoding
-- Digest and HMAC
-- Signatures
-- TLS key helpers
-
-### `join_data` (optional)
-
-Data formats and streaming:
-- High-performance JSON parser and writer
-- SAX-style parsing API
-- MessagePack support
-- Zero-copy views and buffers
-- Streaming compression (zlib)
-
-### `join_fabric` (optional)
-
-Linux network fabric management:
-- Network interface abstraction
-- Netlink-based interface manager
-- ARP client
-- Address and name resolution
-- Interface state monitoring
-
-### `join_services` (optional)
-
-Application-level protocols:
-- HTTP client and server
-- Chunked transfer encoding
-- SMTP client
-- Mail message handling
-
----
-
-## Dependencies
-
-```bash
-sudo apt install libssl-dev zlib1g-dev libgtest-dev libgmock-dev
-```
-
-> OpenSSL is required by `join-core` as TLS support is part of the core runtime.
-
----
-
-## Build Configuration
-
-```bash
-cmake -B build \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DJOIN_ENABLE_CRYPTO=ON \
-  -DJOIN_ENABLE_DATA=ON \
-  -DJOIN_ENABLE_FABRIC=ON \
-  -DJOIN_ENABLE_SERVICES=ON \
-  -DJOIN_ENABLE_TESTS=ON
-```
-
----
-
-## Build
-
-```bash
-cmake --build build
-```
-
----
-
-## Run Tests
-
-```bash
-ctest --test-dir build --output-on-failure
-```
-
----
-
-## Documentation
-
-API documentation is generated using **Doxygen** and published via GitHub Pages:
-
-https://joinframework.github.io/join/
-
----
-
-## Project Scope
+## ✨ Why join?
 
 join focuses on providing **robust, efficient building blocks** for:
 - network runtimes
@@ -144,6 +41,69 @@ join focuses on providing **robust, efficient building blocks** for:
 
 ---
 
-## License
+## 🏗 Modular Architecture
 
-join is licensed under the **MIT License**.
+The framework is a collection of specialized modules that build upon one another:
+
+| Module | Purpose | Highlights |
+| :--- | :--- | :--- |
+| **`join_core`** | **Foundation** | Epoll Reactor, TCP/UDP/TLS, Unix Sockets, Thread Pools, Mutexes. |
+| **`join_fabric`**| **Network Control** | Netlink Interface Manager, ARP client, DNS Resolver. |
+| **`join_crypto`**| **Security** | OpenSSL Wrappers, HMAC, Digital Signatures, Base64. |
+| **`join_data`** | **Serialization** | High-perf JSON (DOM/SAX), MessagePack, Zlib Streams. |
+| **`join_services`**| **Protocols** | HTTP/1.1 (Client/Server), SMTP, Mail Parsing. |
+
+---
+
+## 🛠️ Build & Integration
+
+### Prerequisites
+Ensure you have `OpenSSL`, `Zlib`, and `GTest` (for testing) installed on your system:
+```bash
+sudo apt install libssl-dev zlib1g-dev libgtest-dev libgmock-dev
+```
+> OpenSSL is required by `join-core` as TLS support is part of the core runtime.
+
+### Build from Source
+```bash
+git clone https://github.com/joinframework/join.git
+cd join
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DJOIN_ENABLE_TESTS=ON
+cmake --build build
+```
+
+### Run Tests
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+---
+
+## 📦 Integration
+
+**join** exports standard CMake targets. To use it in your project:
+
+```cmake
+find_package(join REQUIRED)
+
+target_link_libraries(your_app PRIVATE 
+    join::core 
+    join::fabric 
+    join::services
+)
+```
+
+---
+
+## 📊 Quality & Performance
+
+Every commit is validated against an extensive test suite to ensure stability in concurrent environments:
+* **180+ Unit Tests** covering networking, concurrency, and data parsing.
+* **Memory Safety:** Regular validation with AddressSanitizer and Valgrind.
+* **Security:** Continuous scanning via Codacy and GitHub Security workflows.
+
+---
+
+## 📖 Documentation
+* **API Reference:** [Explore the Doxygen Docs](https://joinframework.github.io/join/index.html)
+* **License:** Licensed under the [MIT License](LICENSE).
