@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: join_crypto
+Description: Join C++ library - Cryptographic utilities
+Version: @JOIN_VERSION@
+Requires: join_core
+Libs: -L${libdir} -ljoin_crypto
+Cflags: -I${includedir}

@@ -1,4 +1,5 @@
 # join
+### High-Performance Modular Networking for the Linux Ecosystem
 
 [![Test Status](https://github.com/joinframework/join/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/joinframework/join/actions?query=workflow%3Atest+branch%3Amain)
 [![Security Status](https://github.com/joinframework/join/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/joinframework/join/actions?query=workflow%3Asecurity+branch%3Amain)
@@ -10,43 +11,99 @@
 [![GitHub Releases](https://img.shields.io/github/release/joinframework/join.svg)](https://github.com/joinframework/join/releases/latest)
 [![GitHub License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/joinframework/join/blob/main/LICENSE)
 
-**join** is a lightweight C++ network framework library
+**join** is a **modular C++ network runtime framework for Linux**, designed for
+**low-latency**, **high-throughput**, and **system-level networking**.
 
-## Dependencies
+It provides a set of composable libraries covering networking primitives,
+concurrency, serialization, cryptography, and Linux network fabric management.
 
-To install join framework dependencies do this:
+---
+
+## 🚀 Design Goals
+
+- Linux-native networking (sockets, netlink, raw sockets)
+- Event-driven and reactor-based architecture
+- Predictable latency and high throughput
+- Strong separation of concerns via modular libraries
+- High test coverage and correctness-first design
+- Suitable for infrastructure, control-plane, and runtime components
+
+---
+
+## ✨ Why join?
+
+join focuses on providing **robust, efficient building blocks** for:
+- network runtimes
+- system services
+- control planes
+- high-performance servers
+- infrastructure tooling
+
+---
+
+## 🏗 Modular Architecture
+
+The framework is a collection of specialized modules that build upon one another:
+
+| Module | Purpose | Highlights |
+| :--- | :--- | :--- |
+| **`join_core`** | **Foundation** | Epoll Reactor, TCP/UDP/TLS, Unix Sockets, Thread Pools, Mutexes. |
+| **`join_fabric`**| **Network Control** | Netlink Interface Manager, ARP client, DNS Resolver. |
+| **`join_crypto`**| **Security** | OpenSSL Wrappers, HMAC, Digital Signatures, Base64. |
+| **`join_data`** | **Serialization** | High-perf JSON (DOM/SAX), MessagePack, Zlib Streams. |
+| **`join_services`**| **Protocols** | HTTP/1.1 (Client/Server), SMTP, Mail Parsing. |
+
+---
+
+## 🛠️ Build & Integration
+
+### Prerequisites
+Ensure you have `OpenSSL`, `Zlib`, and `GTest` (for testing) installed on your system:
 ```bash
-sudo apt update && sudo apt install libssl-dev zlib1g-dev libgtest-dev libgmock-dev
+sudo apt install libssl-dev zlib1g-dev libgtest-dev libgmock-dev
 ```
+> OpenSSL is required by `join-core` as TLS support is part of the core runtime.
 
-## Download
-
-To download the latest source do this:
+### Build from Source
 ```bash
 git clone https://github.com/joinframework/join.git
+cd join
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DJOIN_ENABLE_TESTS=ON
+cmake --build build
 ```
 
-## Configuration
-
-To configure **join** with test and coverage enabled do this:
+### Run Tests
 ```bash
-cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
+ctest --test-dir build --output-on-failure
 ```
 
-## Build
+---
 
-To build **join** do this:
-```bash
-cmake --build build --config Debug
+## 📦 Integration
+
+**join** exports standard CMake targets. To use it in your project:
+
+```cmake
+find_package(join REQUIRED)
+
+target_link_libraries(your_app PRIVATE 
+    join::core 
+    join::fabric 
+    join::services
+)
 ```
 
-## Tests
+---
 
-To test **join** do this:
-```bash
-ctest --test-dir build --output-on-failure -C Debug
-```
+## 📊 Quality & Performance
 
-## License
+Every commit is validated against an extensive test suite to ensure stability in concurrent environments:
+* **180+ Unit Tests** covering networking, concurrency, and data parsing.
+* **Memory Safety:** Regular validation with AddressSanitizer and Valgrind.
+* **Security:** Continuous scanning via Codacy and GitHub Security workflows.
 
-[MIT](https://choosealicense.com/licenses/mit/)
+---
+
+## 📖 Documentation
+* **API Reference:** [Explore the Doxygen Docs](https://joinframework.github.io/join/index.html)
+* **License:** Licensed under the [MIT License](LICENSE).

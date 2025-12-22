@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: join_services
+Description: Join C++ library - High-level services (HTTP, SMTP)
+Version: @JOIN_VERSION@
+Requires: join_fabric join_data join_crypto join_core
+Libs: -L${libdir} -ljoin_services
+Cflags: -I${includedir}

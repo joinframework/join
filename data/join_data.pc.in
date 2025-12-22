@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: join_data
+Description: Join C++ library - JSON, serialization and compression
+Version: @JOIN_VERSION@
+Requires: join_core zlib
+Libs: -L${libdir} -ljoin_data
+Cflags: -I${includedir}

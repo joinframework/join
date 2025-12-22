@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: join_fabric
+Description: Join C++ library - Network fabric (ARP, DNS, interfaces)
+Version: @JOIN_VERSION@
+Requires: join_core
+Libs: -L${libdir} -ljoin_fabric
+Cflags: -I${includedir}
