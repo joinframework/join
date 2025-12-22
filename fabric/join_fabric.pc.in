@@ -3,9 +3,9 @@ exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
 
-Name: join fabric
-Description: join fabric
+Name: join_fabric
+Description: Join C++ library - Network fabric (ARP, DNS, interfaces)
 Version: @JOIN_VERSION@
+Requires: join_core
 Libs: -L${libdir} -ljoin_fabric
-Libs.private: -ljoin_core -lssl -lcrypto -lpthread
 Cflags: -I${includedir}

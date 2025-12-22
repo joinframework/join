@@ -1,16 +1,5 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-find_package(Threads REQUIRED)
-find_package(OpenSSL REQUIRED)
-
-set(PRIVATE_HEADER_DIRS
-    src
-)
-
-set(PUBLIC_HEADER_DIRS
-    include
-)
-
 set(PUBLIC_HEADERS
     include/join/version.hpp
     include/join/error.hpp
@@ -59,6 +48,7 @@ add_library(join::core ALIAS ${JOIN_CORE})
 set_target_properties(${JOIN_CORE} PROPERTIES
     VERSION ${JOIN_VERSION}
     SOVERSION ${JOIN_VERSION_MAJOR}
+    PUBLIC_HEADER "${PUBLIC_HEADERS}"
 )
 
 target_include_directories(${JOIN_CORE}
@@ -70,15 +60,17 @@ target_include_directories(${JOIN_CORE}
 )
 
 target_link_libraries(${JOIN_CORE}
-    OpenSSL::SSL
-    OpenSSL::Crypto
-    Threads::Threads
+    PUBLIC
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        Threads::Threads
 )
 
 install(TARGETS ${JOIN_CORE}
     EXPORT joinTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
+    PUBLIC_HEADER DESTINATION include/join
 )
 
 configure_file(${JOIN_CORE}.pc.in ${JOIN_CORE}.pc @ONLY)

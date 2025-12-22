@@ -3,9 +3,10 @@ exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
 
-Name: join core
-Description: join core
+Name: join_core
+Description: Join C++ library - Core networking and threading components
 Version: @JOIN_VERSION@
+Requires: openssl libcrypto
 Libs: -L${libdir} -ljoin_core
-Libs.private: -lssl -lcrypto -lpthread
+Libs.private: -lpthread
 Cflags: -I${includedir}

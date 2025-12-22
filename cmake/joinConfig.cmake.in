@@ -1,3 +1,125 @@
 @PACKAGE_INIT@
 
-include("${CMAKE_CURRENT_LIST_DIR}/joinTargets.cmake")
+# Find dependencies
+include(CMakeFindDependencyMacro)
+
+find_dependency(Threads)
+find_dependency(OpenSSL)
+
+# Define available components
+set(join_KNOWN_COMPONENTS core crypto data fabric services)
+
+# Check if any components were requested
+if(NOT join_FIND_COMPONENTS)
+    # If no components specified, use all available components
+    set(join_FIND_COMPONENTS ${join_KNOWN_COMPONENTS})
+endif()
+
+# Validate requested components
+foreach(comp ${join_FIND_COMPONENTS})
+    if(NOT comp IN_LIST join_KNOWN_COMPONENTS)
+        set(join_FOUND FALSE)
+        set(join_NOT_FOUND_MESSAGE "Unknown component: ${comp}. Available components: ${join_KNOWN_COMPONENTS}")
+        return()
+    endif()
+endforeach()
+
+# Find ZLIB only if data component is requested and was enabled
+if("data" IN_LIST join_FIND_COMPONENTS AND @JOIN_ENABLE_DATA@)
+    find_dependency(ZLIB)
+endif()
+
+# Include targets file (this defines join::join_core, join::join_crypto, etc.)
+# This must be done BEFORE checking components
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/joinTargets.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/joinTargets.cmake")
+    
+    # Create user-friendly aliases (join::core instead of join::join_core)
+    if(TARGET join::join_core AND NOT TARGET join::core)
+        add_library(join::core ALIAS join::join_core)
+    endif()
+    if(TARGET join::join_crypto AND NOT TARGET join::crypto)
+        add_library(join::crypto ALIAS join::join_crypto)
+    endif()
+    if(TARGET join::join_data AND NOT TARGET join::data)
+        add_library(join::data ALIAS join::join_data)
+    endif()
+    if(TARGET join::join_fabric AND NOT TARGET join::fabric)
+        add_library(join::fabric ALIAS join::join_fabric)
+    endif()
+    if(TARGET join::join_services AND NOT TARGET join::services)
+        add_library(join::services ALIAS join::join_services)
+    endif()
+else()
+    set(join_FOUND FALSE)
+    set(join_NOT_FOUND_MESSAGE "joinTargets.cmake not found")
+    return()
+endif()
+
+# Check if requested components were built and targets exist
+set(_join_missing_components "")
+
+foreach(comp ${join_FIND_COMPONENTS})
+    string(TOUPPER ${comp} comp_upper)
+    
+    # Check if component target exists
+    if(NOT TARGET join::${comp})
+        # Check if component was enabled during build
+        if(comp STREQUAL "core")
+            # Core should always exist
+            list(APPEND _join_missing_components ${comp})
+            set(join_${comp}_FOUND FALSE)
+        elseif(comp STREQUAL "crypto" AND NOT @JOIN_ENABLE_CRYPTO@)
+            list(APPEND _join_missing_components ${comp})
+            set(join_${comp}_FOUND FALSE)
+        elseif(comp STREQUAL "data" AND NOT @JOIN_ENABLE_DATA@)
+            list(APPEND _join_missing_components ${comp})
+            set(join_${comp}_FOUND FALSE)
+        elseif(comp STREQUAL "fabric" AND NOT @JOIN_ENABLE_FABRIC@)
+            list(APPEND _join_missing_components ${comp})
+            set(join_${comp}_FOUND FALSE)
+        elseif(comp STREQUAL "services" AND NOT @JOIN_ENABLE_SERVICES@)
+            list(APPEND _join_missing_components ${comp})
+            set(join_${comp}_FOUND FALSE)
+        else()
+            # Target should exist but doesn't
+            list(APPEND _join_missing_components ${comp})
+            set(join_${comp}_FOUND FALSE)
+        endif()
+    else()
+        # Target exists
+        set(join_${comp}_FOUND TRUE)
+    endif()
+endforeach()
+
+# Handle missing components
+if(_join_missing_components)
+    if(join_FIND_REQUIRED)
+        set(join_FOUND FALSE)
+        set(join_NOT_FOUND_MESSAGE "Could not find required components: ${_join_missing_components}. Check that they were enabled during build.")
+        return()
+    else()
+        message(WARNING "Could not find optional components: ${_join_missing_components}")
+    endif()
+endif()
+
+# Provide legacy variables for compatibility
+set(JOIN_LIBRARIES)
+set(JOIN_INCLUDE_DIRS)
+
+foreach(comp ${join_FIND_COMPONENTS})
+    if(TARGET join::${comp})
+        list(APPEND JOIN_LIBRARIES join::${comp})
+        get_target_property(_inc join::${comp} INTERFACE_INCLUDE_DIRECTORIES)
+        if(_inc)
+            list(APPEND JOIN_INCLUDE_DIRS ${_inc})
+        endif()
+    endif()
+endforeach()
+
+# Remove duplicates
+if(JOIN_INCLUDE_DIRS)
+    list(REMOVE_DUPLICATES JOIN_INCLUDE_DIRS)
+endif()
+
+check_required_components(join)

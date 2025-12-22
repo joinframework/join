@@ -1,16 +1,6 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-find_package(Threads REQUIRED)
-find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
-
-set(PRIVATE_HEADER_DIRS
-    src
-)
-
-set(PUBLIC_HEADER_DIRS
-    include
-)
 
 set(PUBLIC_HEADERS
     include/join/chunkstream.hpp
@@ -33,6 +23,7 @@ add_library(join::services ALIAS ${JOIN_SERVICES})
 set_target_properties(${JOIN_SERVICES} PROPERTIES
     VERSION ${JOIN_VERSION}
     SOVERSION ${JOIN_VERSION_MAJOR}
+    PUBLIC_HEADER "${PUBLIC_HEADERS}"
 )
 
 target_include_directories(${JOIN_SERVICES}
@@ -44,20 +35,18 @@ target_include_directories(${JOIN_SERVICES}
 )
 
 target_link_libraries(${JOIN_SERVICES}
-    ${JOIN_FABRIC}
-    ${JOIN_DATA}
-    ${JOIN_CRYPTO}
-    ${JOIN_CORE}
-    OpenSSL::SSL
-    OpenSSL::Crypto
-    ZLIB::ZLIB
-    Threads::Threads
+    PUBLIC
+        ${JOIN_FABRIC}
+        ${JOIN_DATA}
+        ${JOIN_CRYPTO}
+        ${JOIN_CORE}
 )
 
 install(TARGETS ${JOIN_SERVICES}
     EXPORT joinTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
+    PUBLIC_HEADER DESTINATION include/join
 )
 
 configure_file(${JOIN_SERVICES}.pc.in ${JOIN_SERVICES}.pc @ONLY)
