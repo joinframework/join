@@ -2,11 +2,13 @@
 
 [![Test Status](https://github.com/joinframework/join/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/joinframework/join/actions?query=workflow%3Atest+branch%3Amain)
 [![Security Status](https://github.com/joinframework/join/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/joinframework/join/actions?query=workflow%3Asecurity+branch%3Amain)
-[![Codacy](https://app.codacy.com/project/badge/Grade/c2eda80c815e43748d10b9bde0be7087)](https://app.codacy.com/gh/joinframework/join/dashboard)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/c2eda80c815e43748d10b9bde0be7087)](https://app.codacy.com/gh/joinframework/join/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/c2eda80c815e43748d10b9bde0be7087)](https://app.codacy.com/gh/joinframework/join/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 [![Codecov](https://codecov.io/gh/joinframework/join/branch/main/graph/badge.svg)](https://codecov.io/gh/joinframework/join)
+[![Coveralls](https://coveralls.io/repos/github/joinframework/join/badge.svg?branch=main)](https://coveralls.io/github/joinframework/join?branch=main)
 [![Doxygen](https://img.shields.io/badge/docs-doxygen-blue.svg)](https://joinframework.github.io/join/index.html)
-[![Release](https://img.shields.io/github/release/joinframework/join.svg)](https://github.com/joinframework/join/releases/latest)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![GitHub Releases](https://img.shields.io/github/release/joinframework/join.svg)](https://github.com/joinframework/join/releases/latest)
+[![GitHub License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/joinframework/join/blob/main/LICENSE)
 
 **join** is a **modular C++ network runtime framework for Linux**, designed for
 **low-latency**, **high-throughput**, and **system-level networking**.
