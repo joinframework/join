@@ -47,11 +47,11 @@ The framework is a collection of specialized modules that build upon one another
 
 | Module | Purpose | Highlights |
 | :--- | :--- | :--- |
-| **`join_core`** | **Foundation** | Epoll Reactor, TCP/UDP/TLS, Unix Sockets, Thread Pools, Mutexes. |
-| **`join_fabric`**| **Network Control** | Netlink Interface Manager, ARP client, DNS Resolver. |
-| **`join_crypto`**| **Security** | OpenSSL Wrappers, HMAC, Digital Signatures, Base64. |
-| **`join_data`** | **Serialization** | High-perf JSON (DOM/SAX), MessagePack, Zlib Streams. |
-| **`join_services`**| **Protocols** | HTTP/1.1 (Client/Server), SMTP, Mail Parsing. |
+| **`core`** | **Foundation** | Epoll Reactor, TCP/UDP/TLS, Unix Sockets, Thread Pools, Mutexes. |
+| **`fabric`**| **Network Control** | Netlink Interface Manager, ARP client, DNS Resolver. |
+| **`crypto`**| **Security** | OpenSSL Wrappers, HMAC, Digital Signatures, Base64. |
+| **`data`** | **Serialization** | High-perf JSON (DOM/SAX), MessagePack, Zlib Streams. |
+| **`services`**| **Protocols** | HTTP/1.1 (Client/Server), SMTP, Mail Parsing. |
 
 ---
 
@@ -98,8 +98,7 @@ target_link_libraries(your_app PRIVATE
 ## 📊 Quality & Performance
 
 Every commit is validated against an extensive test suite to ensure stability in concurrent environments:
-* **180+ Unit Tests** covering networking, concurrency, and data parsing.
-* **Memory Safety:** Regular validation with AddressSanitizer and Valgrind.
+* **1000+ Unit Tests** covering networking, concurrency, and data parsing.
 * **Security:** Continuous scanning via Codacy and GitHub Security workflows.
 
 ---
