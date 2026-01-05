@@ -1921,11 +1921,6 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
-                {
-                    return -1;
-                }
-
                 int ch = document.get ();
 
                 if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast <unsigned char> (ch)]))

@@ -5563,7 +5563,7 @@ TEST (Value, jsonRead)
 {
     Value value;
 
-    std::string str = "[1 , null , true , \"test\" , 1.23456789e-13]";
+    std::string str = "[1,null,true,\"test\",1.23456789e-13]";
     ASSERT_NE (value.jsonRead (str), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
