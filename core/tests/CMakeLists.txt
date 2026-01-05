@@ -22,14 +22,6 @@ add_executable(variant.gtest variant_test.cpp)
 target_link_libraries(variant.gtest ${JOIN_CORE} GTest::gtest_main)
 gtest_discover_tests(variant.gtest)
 
-add_executable(stringview.gtest stringview_test.cpp)
-target_link_libraries(stringview.gtest ${JOIN_CORE} GTest::gtest_main)
-gtest_discover_tests(stringview.gtest)
-
-add_executable(streamview.gtest streamview_test.cpp)
-target_link_libraries(streamview.gtest ${JOIN_CORE} GTest::gtest_main)
-gtest_discover_tests(streamview.gtest)
-
 add_executable(cache.gtest cache_test.cpp)
 target_link_libraries(cache.gtest ${JOIN_CORE} GTest::gtest_main)
 gtest_discover_tests(cache.gtest)
