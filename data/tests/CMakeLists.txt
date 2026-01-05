@@ -6,6 +6,14 @@ add_executable(dtoa.gtest dtoa_test.cpp)
 target_link_libraries(dtoa.gtest ${JOIN_DATA} GTest::gtest_main)
 gtest_discover_tests(dtoa.gtest)
 
+add_executable(stringview.gtest stringview_test.cpp)
+target_link_libraries(stringview.gtest ${JOIN_DATA} GTest::gtest_main)
+gtest_discover_tests(stringview.gtest)
+
+add_executable(streamview.gtest streamview_test.cpp)
+target_link_libraries(streamview.gtest ${JOIN_DATA} GTest::gtest_main)
+gtest_discover_tests(streamview.gtest)
+
 add_executable(value.gtest value_test.cpp)
 target_link_libraries(value.gtest ${JOIN_DATA} GTest::gtest_main)
 gtest_discover_tests(value.gtest)

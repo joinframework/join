@@ -147,39 +147,58 @@ TEST (StringView, read)
 }
 
 /**
- * @brief readUntil test.
+ * @brief readUntilEscaped test.
  */
-TEST (StringView, readUntil)
+TEST (StringView, readUntilEscaped)
 {
-    StringView view ("hello world");
-    std::string buf;
+    StringView view ("hello\"world");
+    std::string out;
 
-    ASSERT_EQ (view.readUntil (buf, 'w'), 6);
-    ASSERT_EQ (buf, "hello ");
-
-    buf.clear ();
-    ASSERT_EQ (view.readUntil (buf, [] (char c) { return c == 'r'; }), 2);
-    ASSERT_EQ (buf, "wo");
-
-    ASSERT_EQ (view.readUntil (buf, 'z'), 3);
-    ASSERT_EQ (buf, "world");
+    view.readUntilEscaped (out);
+    ASSERT_EQ (out, "hello");
+    ASSERT_EQ (view.peek (), '"');
 }
 
 /**
- * @brief consumeUntil test.
+ * @brief skipWhitespaces test.
  */
-TEST (StringView, consumeUntil)
+TEST (StringView, skipWhitespaces)
 {
-    StringView view ("hello world");
+    StringView view ("   hello");
 
-    ASSERT_EQ (view.consumeUntil ('o'), 4);
-    ASSERT_EQ (view.peek (), 'o');
+    view.skipWhitespaces ();
+    ASSERT_EQ (view.peek (), 'h');
+}
 
-    ASSERT_EQ (view.consumeUntil ([] (char c) { return c == 'r'; }), 4);
-    ASSERT_EQ (view.peek (), 'r');
+/**
+ * @brief skipWhitespacesAndComments test.
+ */
+TEST (StringView, skipWhitespacesAndComments)
+{
+    StringView view ("   // comment\nhello");
+    ASSERT_EQ (view.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (view.peek (), 'h');
 
-    ASSERT_EQ (view.consumeUntil ('z'), 3);
+    view = "   /* comment */hello";
+    ASSERT_EQ (view.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (view.peek (), 'h');
+
+    view = "// comment";
+    ASSERT_EQ (view.skipWhitespacesAndComments (), 0);
     ASSERT_EQ (view.peek (), std::char_traits <char>::eof ());
+
+    view = "/* comment */";
+    ASSERT_EQ (view.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (view.peek (), std::char_traits <char>::eof ());
+
+    view = "/";
+    ASSERT_EQ (view.skipWhitespacesAndComments (), -1);
+
+    view = "/*";
+    ASSERT_EQ (view.skipWhitespacesAndComments (), -1);
+
+    view = "/!";
+    ASSERT_EQ (view.skipWhitespacesAndComments (), -1);
 }
 
 /**

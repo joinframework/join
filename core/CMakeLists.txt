@@ -7,7 +7,6 @@ set(PUBLIC_HEADERS
     include/join/filesystem.hpp
     include/join/traits.hpp
     include/join/variant.hpp
-    include/join/view.hpp
     include/join/cache.hpp
     include/join/reactor.hpp
     include/join/streambuf.hpp

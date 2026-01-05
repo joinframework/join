@@ -27,7 +27,6 @@
 
 // libjoin.
 #include <join/atodpow.hpp>
-#include <join/lookup.hpp>
 #include <join/dtoa.hpp>
 #include <join/sax.hpp>
 
@@ -38,6 +37,41 @@
 
 namespace join
 {
+    namespace details
+    {
+        constexpr char digitPairs[201] = {
+            "00010203040506070809"
+            "10111213141516171819"
+            "20212223242526272829"
+            "30313233343536373839"
+            "40414243444546474849"
+            "50515253545556575859"
+            "60616263646566676869"
+            "70717273747576777879"
+            "80818283848586878889"
+            "90919293949596979899"
+        };
+
+        struct UnescapedTable
+        {
+            uint8_t data[256];
+
+            constexpr UnescapedTable () : data {}
+            {
+                for (int i = 0; i < 32; ++i)  { data[i] = 'u'; }
+                data['\b'] = 'b';
+                data['\t'] = 't';
+                data['\n'] = 'n';
+                data['\f'] = 'f';
+                data['\r'] = 'r';
+                data['"']  = '"';
+                data['\\'] = '\\';
+            }
+        };
+
+        constexpr UnescapedTable unescapedLookup {};
+    }
+
     struct LocaleDelete
     {
         constexpr LocaleDelete () noexcept = default;
@@ -577,7 +611,7 @@ namespace join
             {
                 auto beg = cur;
 
-                while (cur != end && details::unescapedLookup[static_cast <uint8_t> (*cur)] == 0)
+                while (cur != end && details::unescapedLookup.data[static_cast <uint8_t> (*cur)] == 0)
                 {
                     ++cur;
                 }
@@ -593,7 +627,7 @@ namespace join
                 }
 
                 uint8_t ch = static_cast <uint8_t> (*cur);
-                uint8_t esc = details::unescapedLookup[ch];
+                uint8_t esc = details::unescapedLookup.data[ch];
                 if (esc == 'u')
                 {
                     uint32_t codepoint = 0;
@@ -1819,10 +1853,7 @@ namespace join
 
             for (;;)
             {
-                document.readUntil (output, [](char c){
-                    return details::escapedLookup[static_cast <uint8_t> (c)];
-                });
-
+                document.readUntilEscaped (output);
                 int ch = document.peek ();
 
                 if (ch == '"')
@@ -1890,12 +1921,16 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
-                {
-                    return -1;
-                }
-
                 int ch = document.get ();
+
+                if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast <unsigned char> (ch)]))
+                {
+                    if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+                    {
+                        return -1;
+                    }
+                    ch = document.get ();
+                }
 
                 if (JOIN_LIKELY (ch == ','))
                 {
@@ -1954,9 +1989,12 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+                if (document.peek () != ':')
                 {
-                    return -1;
+                    if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+                    {
+                        return -1;
+                    }
                 }
 
                 if (JOIN_UNLIKELY (document.get () != ':'))
@@ -1975,12 +2013,16 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
-                {
-                    return -1;
-                }
-
                 int ch = document.get ();
+
+                if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast <unsigned char> (ch)]))
+                {
+                    if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+                    {
+                        return -1;
+                    }
+                    ch = document.get ();
+                }
 
                 if (JOIN_LIKELY (ch == ','))
                 {
@@ -2009,39 +2051,22 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode, typename ViewType>
-        inline int skipWhitespaces (ViewType& document)
+        inline typename std::enable_if <!(ReadMode & JsonReadMode::ParseComments), int>::type
+        skipWhitespaces (ViewType& document)
         {
-            for (;;)
-            {
-                document.consumeUntil ([](char c){
-                    return !details::whitespaceLookup[static_cast <unsigned char> (c)];
-                });
+            return document.skipWhitespaces ();
+        }
 
-                int c = document.peek ();
-
-                if (!(ReadMode & JsonReadMode::ParseComments) || c != '/')
-                {
-                    break;
-                }
-
-                document.get ();
-
-                if (document.getIf ('*'))
-                {
-                    while ((document.get () != '*') || !document.getIf ('/'));
-                }
-                else if (document.getIf ('/'))
-                {
-                    while (document.get () != '\n');
-                }
-                else
-                {
-                    join::lastError = make_error_code (JsonErrc::InvalidComment);
-                    return -1;
-                }
-            }
-
-            return 0;
+        /**
+         * @brief skip whitespaces with comment parsing.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode, typename ViewType>
+        inline typename std::enable_if <(ReadMode & JsonReadMode::ParseComments), int>::type
+        skipWhitespaces (ViewType& document)
+        {
+            return document.skipWhitespacesAndComments ();
         }
 
         /**

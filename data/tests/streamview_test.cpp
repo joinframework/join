@@ -146,41 +146,74 @@ TEST (StreamView, read)
 }
 
 /**
- * @brief readUntil test.
+ * @brief readUntilEscaped test.
  */
-TEST (StreamView, readUntil)
+TEST (StreamView, readUntilEscaped)
 {
-    std::stringstream msg ("hello world");
+    std::stringstream msg ("hello\"world");
     StringStreamView view (msg);
-    std::string buf;
+    std::string out;
 
-    ASSERT_EQ (view.readUntil (buf, 'w'), 6);
-    ASSERT_EQ (buf, "hello ");
-
-    buf.clear ();
-    ASSERT_EQ (view.readUntil (buf, [] (char c) { return c == 'r'; }), 2);
-    ASSERT_EQ (buf, "wo");
-
-    ASSERT_EQ (view.readUntil (buf, 'z'), 3);
-    ASSERT_EQ (buf, "world");
+    view.readUntilEscaped (out);
+    ASSERT_EQ (out, "hello");
+    ASSERT_EQ (view.peek (), '"');
 }
 
 /**
- * @brief consumeUntil test.
+ * @brief skipWhitespaces test.
  */
-TEST (StreamView, consumeUntil)
+TEST (StreamView, skipWhitespaces)
 {
-    std::stringstream msg ("hello world");
+    std::stringstream msg ("   hello");
     StringStreamView view (msg);
+    std::string out;
 
-    ASSERT_EQ (view.consumeUntil ('o'), 4);
-    ASSERT_EQ (view.peek (), 'o');
+    view.skipWhitespaces ();
+    ASSERT_EQ (view.peek (), 'h');
+}
 
-    ASSERT_EQ (view.consumeUntil ([] (char c) { return c == 'r'; }), 4);
-    ASSERT_EQ (view.peek (), 'r');
+/**
+ * @brief skipWhitespacesAndComments test.
+ */
+TEST (StreamView, skipWhitespacesAndComments)
+{
+    std::stringstream msg ("   // comment\nhello");
+    StringStreamView view1 (msg);
+    ASSERT_EQ (view1.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (view1.peek (), 'h');
 
-    ASSERT_EQ (view.consumeUntil ('z'), 3);
-    ASSERT_EQ (view.peek (), std::char_traits <char>::eof ());
+    msg.str ("   /* comment */hello");
+    msg.clear ();
+    StringStreamView view2 (msg);
+    ASSERT_EQ (view2.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (view2.peek (), 'h');
+
+    msg.str ("// comment");
+    msg.clear ();
+    StringStreamView view3 (msg);
+    ASSERT_EQ (view3.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (view3.peek (), std::char_traits <char>::eof ());
+
+    msg.str ("/* comment */");
+    msg.clear ();
+    StringStreamView view4 (msg);
+    ASSERT_EQ (view4.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (view4.peek (), std::char_traits <char>::eof ());
+
+    msg.str ("/");
+    msg.clear ();
+    StringStreamView view5 (msg);
+    ASSERT_EQ (view5.skipWhitespacesAndComments (), -1);
+
+    msg.str ("/*");
+    msg.clear ();
+    StringStreamView view6 (msg);
+    ASSERT_EQ (view6.skipWhitespacesAndComments (), -1);
+
+    msg.str ("/!");
+    msg.clear ();
+    StringStreamView view7 (msg);
+    ASSERT_EQ (view7.skipWhitespacesAndComments (), -1);
 }
 
 /**

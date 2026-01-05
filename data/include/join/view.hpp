@@ -39,6 +39,38 @@
 
 namespace join
 {
+    namespace details
+    {
+        struct alignas(64) EscapedTable
+        {
+            uint8_t data[256];
+
+            constexpr EscapedTable () : data {}
+            {
+                for (unsigned i = 0; i < 0x20; ++i) { data[i] = 1; }
+                data['"']  = 1;
+                data['\\'] = 1;
+            }
+        };
+
+        constexpr EscapedTable escapedLookup {};
+
+        struct alignas(64) WhitespaceTable
+        {
+            uint8_t data[256];
+
+            constexpr WhitespaceTable () : data {}
+            {
+                data['\t'] = 1;
+                data['\n'] = 1;
+                data['\r'] = 1;
+                data[' ']  = 1;
+            }
+        };
+
+        constexpr WhitespaceTable whitespaceLookup {};
+    }
+
     /**
      * @brief string view.
      */
@@ -189,81 +221,103 @@ namespace join
         }
 
         /**
-         * @brief read characters until delimiter.
-         * @param out output string.
-         * @param delim delimiter character.
-         * @return number of characters read.
-         */
-        inline size_t readUntil (std::string& out, char delim)
-        {
-            const char* start = _cur;
-            const char* pos = static_cast <const char*> (std::memchr (_cur, delim, _end - _cur));
-            if (pos)
-            {
-                out.append (_cur, pos - _cur);
-                _cur = pos;
-            }
-            else
-            {
-                out.append (_cur, _end - _cur);
-                _cur = _end;
-            }
-            return _cur - start;
-        }
-
-        /**
-         * @brief read characters until predicate returns true.
-         * @param pred predicate function.
+         * @brief read characters until escaped.
          * @param out output buffer.
-         * @return number of characters read.
          */
-        template <typename Predicate>
-        inline size_t readUntil (std::string& out, Predicate pred)
+        inline void readUntilEscaped (std::string& out) noexcept
         {
-            const char* start = _cur;
-            while (_cur < _end && !pred (*_cur))
+            const char* beg = _cur;
+            const char* cur = _cur;
+            const char* end = _end;
+
+            while (cur < end && !details::escapedLookup.data[static_cast <unsigned char> (*cur)])
             {
-                ++_cur;
+                ++cur;
             }
-            const size_t nread = _cur - start;
-            out.append (start, nread);
-            return nread;
+
+            out.append (beg, static_cast <size_t> (cur - beg));
+            _cur = cur;
         }
 
         /**
-         * @brief consume characters until delimiter.
-         * @param delim delimiter character.
-         * @return number of characters consumed.
+         * @brief skip whitespaces.
+         * @return 0 on success, -1 otherwise.
          */
-        inline size_t consumeUntil (char delim) noexcept
+        inline int skipWhitespaces () noexcept
         {
-            const char* start = _cur;
-            const char* pos = static_cast <const char*> (std::memchr (_cur, delim, _end - _cur));
-            if (pos)
+            const char* cur = _cur;
+            const char* end = _end;
+
+            while (cur < end && details::whitespaceLookup.data[static_cast <unsigned char> (*cur)])
             {
-                _cur = pos;
+                ++cur;
             }
-            else
-            {
-                _cur = _end;
-            }
-            return _cur - start;
+
+            _cur = cur;
+
+            return 0;
         }
 
         /**
-         * @brief consume characters until predicate returns true.
-         * @param pred predicate function.
-         * @return number of characters consumed.
+         * @brief skip whitespaces and comments.
+         * @return 0 on success, -1 otherwise.
          */
-        template <typename Predicate>
-        inline size_t consumeUntil (Predicate pred) noexcept
+        inline int skipWhitespacesAndComments () noexcept
         {
-            const char* start = _cur;
-            while (_cur < _end && !pred (*_cur))
+            const char* cur = _cur;
+            const char* end = _end;
+
+            while (cur < end)
             {
-                ++_cur;
+                while (cur < end && details::whitespaceLookup.data[static_cast <unsigned char> (*cur)])
+                {
+                    ++cur;
+                }
+
+                if (cur >= end || *cur != '/')
+                {
+                    break;
+                }
+
+                if (++cur >= end)
+                {
+                    return -1;
+                }
+
+                if (*cur == '*')
+                {
+                    ++cur;
+                    bool closed = false;
+                    while (cur < end)
+                    {
+                        if (*cur == '*' && (cur + 1 < end) && *(cur + 1) == '/')
+                        {
+                            cur += 2;
+                            closed = true;
+                            break;
+                        }
+                        ++cur;
+                    }
+                    if (!closed)
+                    {
+                        return -1;
+                    }
+                }
+                else if (*cur == '/')
+                {
+                    ++cur;
+                    const char* p = static_cast <const char*> (memchr (cur, '\n', end - cur));
+                    cur = p ? p : end;
+                }
+                else
+                {
+                    return -1;
+                }
             }
-            return _cur - start;
+
+            _cur = cur;
+
+            return 0;
         }
 
         /**
@@ -419,97 +473,97 @@ namespace join
         }
 
         /**
-         * @brief read characters until delimiter.
-         * @param out output string.
-         * @param delim delimiter character.
-         * @return number of characters read.
+         * @brief read characters until escaped.
+         * @param out output buffer.
          */
-        inline size_t readUntil (std::string& out, char delim)
+        inline void readUntilEscaped (std::string& out) noexcept
         {
-            size_t nread = 0;
             int c;
-            while ((c = _in->sgetc ()) != std::char_traits <char>::eof ())
+            while ((c = _in->sgetc ()) != std::char_traits <char>::eof () && !details::escapedLookup.data[static_cast <unsigned char> (c)])
             {
-                const char ch = static_cast <char> (c);
-                if (ch == delim)
-                {
-                    break;
-                }
-                out.push_back (ch);
+                out.push_back (static_cast <char> (c));
                 _in->sbumpc ();
-                ++nread;
             }
-            return nread;
         }
 
         /**
-         * @brief read characters until predicate returns true.
-         * @param pred predicate function.
-         * @param out output string.
-         * @return number of characters read.
+         * @brief skip whitespaces.
+         * @return 0 on success, -1 otherwise.
          */
-        template <typename Predicate>
-        inline size_t readUntil (std::string& out, Predicate pred)
+        inline int skipWhitespaces () noexcept
         {
-            size_t nread = 0;
             int c;
-            while ((c = _in->sgetc ()) != std::char_traits <char>::eof ())
+            while ((c = _in->sgetc ()) != std::char_traits <char>::eof () && details::whitespaceLookup.data[static_cast <unsigned char> (c)])
             {
-                const char ch = static_cast <char> (c);
-                if (pred (ch))
-                {
-                    break;
-                }
-                out.push_back (ch);
                 _in->sbumpc ();
-                ++nread;
             }
-            return nread;
+
+            return 0;
         }
 
         /**
-         * @brief consume characters until delimiter.
-         * @param delim delimiter character.
-         * @return number of characters consumed.
+         * @brief skip whitespaces and comments.
+         * @return 0 on success, -1 otherwise.
          */
-        inline size_t consumeUntil (char delim) noexcept
+        inline int skipWhitespacesAndComments () noexcept
         {
-            size_t nread = 0;
             int c;
-            while ((c = _in->sgetc ()) != std::char_traits <char>::eof ())
-            {
-                const char ch = static_cast <char> (c);
-                if (ch == delim)
-                {
-                    break;
-                }
-                _in->sbumpc ();
-                ++nread;
-            }
-            return nread;
-        }
 
-        /**
-         * @brief consume characters until predicate returns true.
-         * @param pred predicate function.
-         * @return number of characters consumed.
-         */
-        template <typename Predicate>
-        inline size_t consumeUntil (Predicate pred) noexcept
-        {
-            size_t nread = 0;
-            int c;
             while ((c = _in->sgetc ()) != std::char_traits <char>::eof ())
             {
-                const char ch = static_cast <char> (c);
-                if (pred (ch))
+                while ((c = _in->sgetc ()) != std::char_traits <char>::eof () && details::whitespaceLookup.data[static_cast <unsigned char> (c)])
+                {
+                    _in->sbumpc ();
+                }
+
+                if (c != '/')
                 {
                     break;
                 }
+
                 _in->sbumpc ();
-                ++nread;
+                c = _in->sgetc ();
+
+                if (c == std::char_traits <char>::eof ())
+                {
+                    return -1;
+                }
+
+                if (c == '*')
+                {
+                    _in->sbumpc ();
+                    bool closed = false;
+
+                    while ((c = _in->sbumpc ()) != std::char_traits <char>::eof ())
+                    {
+                        if (c == '*' && _in->sgetc () == '/')
+                        {
+                            _in->sbumpc ();
+                            closed = true;
+                            break;
+                        }
+                    }
+
+                    if (!closed)
+                    {
+                        return -1;
+                    }
+                }
+                else if (c == '/')
+                {
+                    _in->sbumpc ();
+
+                    while ((c = _in->sbumpc ()) != std::char_traits <char>::eof () && c != '\n')
+                    {
+                    }
+                }
+                else
+                {
+                    return -1;
+                }
             }
-            return nread;
+
+            return 0;
         }
 
         /**
