@@ -187,8 +187,8 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
         ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
@@ -1009,11 +1009,11 @@ TEST_F (TlsSocket, setCipher)
 
     ASSERT_EQ (tlsSocket.setCipher ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsSocket.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher (join::defaultCipher), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connectEncrypted ({_hostv4, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher (join::defaultCipher), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher (join::defaultCipher), 0) << join::lastError.message ();
     tlsSocket.close ();
 }
 
@@ -1026,11 +1026,11 @@ TEST_F (TlsSocket, setCipher_1_3)
 
     ASSERT_EQ (tlsSocket.setCipher_1_3 ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connectEncrypted ({_hostv4, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     tlsSocket.close ();
 }
 

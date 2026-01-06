@@ -7,9 +7,7 @@ set(PUBLIC_HEADERS
     include/join/filesystem.hpp
     include/join/traits.hpp
     include/join/variant.hpp
-    include/join/cache.hpp
     include/join/reactor.hpp
-    include/join/streambuf.hpp
     include/join/shared.hpp
     include/join/mutex.hpp
     include/join/condition.hpp
@@ -28,7 +26,6 @@ set(PUBLIC_HEADERS
 
 set(SOURCES
     src/error.cpp
-    src/cache.cpp
     src/reactor.cpp
     src/mutex.cpp
     src/condition.cpp

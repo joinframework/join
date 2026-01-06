@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.22.1)
 
 find_package(GTest REQUIRED)
 
+add_executable(cache.gtest cache_test.cpp)
+target_link_libraries(cache.gtest ${JOIN_SERVICES} GTest::gtest_main)
+gtest_discover_tests(cache.gtest)
+
 add_executable(chunkstream.gtest chunkstream_test.cpp)
 target_link_libraries(chunkstream.gtest ${JOIN_SERVICES} GTest::gtest_main)
 gtest_discover_tests(chunkstream.gtest)

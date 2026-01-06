@@ -281,16 +281,14 @@ namespace join
     void initializeOpenSSL ();
 
     // default cipher.
-    const std::string _defaultCipher = "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:EECDH+ECDSA+CHACHA20:EECDH+aRSA+CHACHA20:EECDH+ECDSA+AESCCM:"
-                                       "EDH+DSS+AESGCM:EDH+aRSA+CHACHA20:EDH+aRSA+AESCCM:-AESCCM8:EECDH+ECDSA+AESCCM8:EDH+aRSA+AESCCM8";
+    extern const std::string defaultCipher;
 
     // default cipher.
-    const std::string _defaultCipher_1_3 = "TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:"
-                                           "TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256";
+    extern const std::string defaultCipher_1_3;
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
     // default curve.
-    const std::string _defaultCurve = "prime256v1";
+    extern const std::string defaultCurve;
 #endif
 }
 

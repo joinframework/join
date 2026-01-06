@@ -190,9 +190,9 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
     #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-        ASSERT_EQ (this->setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     #endif
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
@@ -440,7 +440,7 @@ TEST_F (SmtpsClient, setCipher)
     Smtps::Client client (_host, _port);
     ASSERT_EQ (client.setCipher ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
 }
 
 /**
@@ -451,7 +451,7 @@ TEST_F (SmtpsClient, setCipher_1_3)
     Smtps::Client client (_host, _port);
     ASSERT_EQ (client.setCipher_1_3 ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 }
 
 /**

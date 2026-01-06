@@ -1590,10 +1590,10 @@ namespace join
             SSL_CTX_set_verify (this->_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
 
             // set default TLSv1.2 and below cipher suites.
-            SSL_CTX_set_cipher_list (this->_tlsContext.get (), join::_defaultCipher.c_str ());
+            SSL_CTX_set_cipher_list (this->_tlsContext.get (), join::defaultCipher.c_str ());
 
             // set default TLSv1.3 cipher suites.
-            SSL_CTX_set_ciphersuites (this->_tlsContext.get (), join::_defaultCipher_1_3.c_str ());
+            SSL_CTX_set_ciphersuites (this->_tlsContext.get (), join::defaultCipher_1_3.c_str ());
         }
 
         /**

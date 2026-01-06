@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22.1)
 find_package(ZLIB REQUIRED)
 
 set(PUBLIC_HEADERS
+    include/join/cache.hpp
     include/join/chunkstream.hpp
     include/join/httpmessage.hpp
     include/join/httpclient.hpp
@@ -12,6 +13,7 @@ set(PUBLIC_HEADERS
 )
 
 set(SOURCES
+    src/cache.cpp
     src/chunkstream.cpp
     src/httpmessage.cpp
     src/mailmessage.cpp

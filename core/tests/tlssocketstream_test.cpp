@@ -187,8 +187,8 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
         ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
         ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
     }
@@ -624,13 +624,13 @@ TEST_F (TlsSocketStream, setCipher)
     Tls::Stream tlsStream;
     ASSERT_EQ (tlsStream.setCipher ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsStream.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher (join::defaultCipher), 0) << join::lastError.message ();
     tlsStream.connectEncrypted ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_EQ (tlsStream.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher (join::defaultCipher), 0) << join::lastError.message ();
     tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_EQ (tlsStream.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher (join::defaultCipher), 0) << join::lastError.message ();
     tlsStream.close ();
 }
 
@@ -642,13 +642,13 @@ TEST_F (TlsSocketStream, setCipher_1_3)
     Tls::Stream tlsStream;
     ASSERT_EQ (tlsStream.setCipher_1_3 ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (tlsStream.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     tlsStream.connectEncrypted ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_EQ (tlsStream.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_EQ (tlsStream.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsStream.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     tlsStream.close ();
 }
 

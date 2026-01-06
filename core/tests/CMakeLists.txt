@@ -22,10 +22,6 @@ add_executable(variant.gtest variant_test.cpp)
 target_link_libraries(variant.gtest ${JOIN_CORE} GTest::gtest_main)
 gtest_discover_tests(variant.gtest)
 
-add_executable(cache.gtest cache_test.cpp)
-target_link_libraries(cache.gtest ${JOIN_CORE} GTest::gtest_main)
-gtest_discover_tests(cache.gtest)
-
 add_executable(reactor.gtest reactor_test.cpp)
 target_link_libraries(reactor.gtest ${JOIN_CORE} GTest::gtest_main)
 gtest_discover_tests(reactor.gtest)

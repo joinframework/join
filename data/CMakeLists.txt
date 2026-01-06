@@ -12,6 +12,7 @@ set(PUBLIC_HEADERS
     include/join/sax.hpp
     include/join/pack.hpp
     include/join/json.hpp
+    include/join/streambuf.hpp
     include/join/zstream.hpp
 )
 

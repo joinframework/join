@@ -175,8 +175,8 @@ protected:
         ASSERT_EQ (this->keepAliveTimeout (), seconds (_timeout));
         ASSERT_EQ (this->keepAliveMax (), _max);
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
+        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
         this->addAlias ("/", "", _sampleFile);
         this->addAlias ("/authorized/", "file", _sampleFile, accessHandler);
         this->addDocumentRoot ("/", "*");
@@ -436,8 +436,8 @@ TEST_F (HttpsTest, keepAliveTimeout)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     ASSERT_EQ (client.keepAliveTimeout (), seconds::zero ());
 
     HttpRequest request;
@@ -474,8 +474,8 @@ TEST_F (HttpsTest, keepAliveMax)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     ASSERT_EQ (client.keepAliveMax (), -1);
 
     HttpRequest request;
@@ -512,8 +512,8 @@ TEST_F (HttpsTest, badRequest)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.path ("\r\n");
@@ -542,8 +542,8 @@ TEST_F (HttpsTest, invalidMethod)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.method (HttpMethod (100));
@@ -563,8 +563,8 @@ TEST_F (HttpsTest, headerTooLarge)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.header ("User-Agent", std::string (8192, 'a'));
@@ -584,8 +584,8 @@ TEST_F (HttpsTest, notFound)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.path ("/invalid/path");
@@ -619,8 +619,8 @@ TEST_F (HttpsTest, notModified)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.header ("If-Modified-Since", modifTime.str ());
@@ -640,8 +640,8 @@ TEST_F (HttpsTest, redirect)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.path ("/redirect/file");
@@ -680,8 +680,8 @@ TEST_F (HttpsTest, serverError)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.path ("/exec/null");
@@ -704,8 +704,8 @@ TEST_F (HttpsTest, unauthorized)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.path ("/authorized/file");
@@ -759,8 +759,8 @@ TEST_F (HttpsTest, head)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.method (HttpMethod::Head);
@@ -794,8 +794,8 @@ TEST_F (HttpsTest, get)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.method (HttpMethod::Get);
@@ -856,8 +856,8 @@ TEST_F (HttpsTest, post)
     Https::Client client (_host, _port);
     client.setVerify (true, 1);
     ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::_defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::_defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 
     HttpRequest request;
     request.method (HttpMethod::Post);
