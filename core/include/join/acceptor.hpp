@@ -327,10 +327,10 @@ namespace join
             SSL_CTX_set_verify (_tlsContext.get (), SSL_VERIFY_NONE, nullptr);
 
             // set default TLSv1.2 and below cipher suites.
-            SSL_CTX_set_cipher_list (_tlsContext.get (), join::_defaultCipher.c_str ());
+            SSL_CTX_set_cipher_list (_tlsContext.get (), join::defaultCipher.c_str ());
 
             // set default TLSv1.3 cipher suites.
-            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::_defaultCipher_1_3.c_str ());
+            SSL_CTX_set_ciphersuites (_tlsContext.get (), join::defaultCipher_1_3.c_str ());
 
             // disallow client-side renegotiation.
             SSL_CTX_set_options (_tlsContext.get (), SSL_OP_NO_RENEGOTIATION);
@@ -340,7 +340,7 @@ namespace join
             SSL_CTX_set_dh_auto (_tlsContext.get (), 1);
 
             // Set elliptic curve Diffie-Hellman key.
-            SSL_CTX_set1_groups_list (_tlsContext.get (), join::_defaultCurve.c_str ());
+            SSL_CTX_set1_groups_list (_tlsContext.get (), join::defaultCurve.c_str ());
         #else
             // Set Diffie-Hellman key.
             join::DhKeyPtr dh (getDh2236 ());
