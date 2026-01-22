@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.22.1)
 
 set(PUBLIC_HEADERS
     include/join/resolver.hpp
+    include/join/dnsclient.hpp
     include/join/arp.hpp
     include/join/interface.hpp
     include/join/interfacemanager.hpp
