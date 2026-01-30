@@ -99,13 +99,13 @@ include(CMakePackageConfigHelpers)
 
 install(EXPORT joinTargets
     NAMESPACE join::
-    DESTINATION lib/cmake/join
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
 configure_package_config_file(
     ${PROJECT_SOURCE_DIR}/cmake/joinConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/joinConfig.cmake
-    INSTALL_DESTINATION lib/cmake/join
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
 write_basic_package_version_file(
@@ -117,5 +117,5 @@ write_basic_package_version_file(
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/joinConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/joinConfigVersion.cmake
-    DESTINATION lib/cmake/join
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
