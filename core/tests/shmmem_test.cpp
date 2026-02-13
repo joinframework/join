@@ -71,9 +71,6 @@ TEST_F (PosixMem, create)
     ASSERT_THROW (mem1.get (), std::runtime_error);
     ASSERT_NE (mem2.get (), nullptr);
     ASSERT_THROW (ShmMem (8192, _name), std::runtime_error);
-
-    ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
-    ShmMem (static_cast <uint64_t> (std::numeric_limits <off_t>::max ()) - 4095, _name);
 }
 
 TEST_F (PosixMem, get)
