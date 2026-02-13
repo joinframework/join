@@ -8,7 +8,8 @@ set(PUBLIC_HEADERS
     include/join/traits.hpp
     include/join/variant.hpp
     include/join/reactor.hpp
-    include/join/shared.hpp
+    include/join/memory.hpp
+    include/join/queue.hpp
     include/join/mutex.hpp
     include/join/condition.hpp
     include/join/semaphore.hpp

@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2025 Mathieu Rabine
+ * Copyright (c) 2026 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,23 +23,17 @@
  */
 
 // libjoin.
-#include <join/shared.hpp>
-#include <join/utils.hpp>
+#include <join/memory.hpp>
 
-// Libraries.
+// libraries.
 #include <gtest/gtest.h>
 
-// C++.
-#include <algorithm>
-
-using namespace std::chrono_literals;
-
-using join::SharedMemory;
+using join::ShmMem;
 
 /**
- * @brief class used to test the single producer single consumer ring buffer.
+ * @brief class used to test the posix shared memory provider.
  */
-class SharedMem : public ::testing::Test
+class PosixMem : public ::testing::Test
 {
 protected:
     /**
@@ -47,7 +41,7 @@ protected:
      */
     void SetUp () override
     {
-        ASSERT_EQ (SharedMemory::unlink (_name), 0) << join::lastError.message ();
+        ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
     }
 
     /**
@@ -55,36 +49,38 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (SharedMemory::unlink (_name), 0) << join::lastError.message ();
+        ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
     }
 
-    /// shared memory segment name.
+    /// shared memory name.
     static const std::string _name;
 };
 
-const std::string SharedMem::_name = "/test_shm";
+const std::string PosixMem::_name = "/test_shm";
 
-TEST_F (SharedMem, open)
+TEST_F (PosixMem, create)
 {
-    SharedMemory shm (_name, 1024);
-    const SharedMemory& cshm = shm;
+    ASSERT_THROW (ShmMem (0, _name), std::system_error);
+    ASSERT_THROW (ShmMem (1024, ""), std::system_error);
+    ASSERT_THROW (ShmMem (std::numeric_limits <uint64_t>::max (), _name), std::system_error);
+}
 
-    ASSERT_THROW (SharedMemory (_name, std::numeric_limits <uint64_t>::max ()), std::overflow_error);
-    ASSERT_EQ (shm.size (), 1024);
-    ASSERT_FALSE (shm.opened ());
-    ASSERT_THROW (shm.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
-    ASSERT_THROW (cshm.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
-    ASSERT_EQ (shm.get (), nullptr);
-    ASSERT_EQ (cshm.get (), nullptr);
-    ASSERT_EQ (shm.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (shm.size (), 1024);
-    ASSERT_NE (shm.get (), nullptr);
-    ASSERT_NE (cshm.get (), nullptr);
-    ASSERT_TRUE (shm.opened ());
-    ASSERT_EQ (shm.open (), -1);
-    ASSERT_TRUE (shm.opened ());
-    shm.close ();
-    ASSERT_FALSE (shm.opened ());
+TEST_F (PosixMem, get)
+{
+    ShmMem mem1 (1024, _name);
+    const ShmMem& cmem1 = mem1;
+
+    EXPECT_THROW (mem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
+    EXPECT_THROW (cmem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
+
+    ASSERT_NE (mem1.get (), nullptr);
+    ASSERT_NE (cmem1.get (), nullptr);
+
+    ShmMem mem2 (1024, _name);
+    mem2 = std::move (mem1);
+
+    EXPECT_THROW (mem1.get (), std::runtime_error);
+    EXPECT_THROW (cmem1.get (), std::runtime_error);
 }
 
 /**
