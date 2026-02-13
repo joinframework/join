@@ -44,7 +44,7 @@ const char* ErrorCategory::name () const noexcept
 //   CLASS     : ErrorCategory
 //   METHOD    : name
 // =========================================================================
-std::string ErrorCategory::message (int code) const
+std::string ErrorCategory::message (int code) const noexcept
 {
     switch (static_cast <Errc> (code))
     {
@@ -138,10 +138,19 @@ bool ErrorCategory::equivalent (const std::error_code& code, int condition) cons
 }
 
 // =========================================================================
+//   CLASS     : ErrorCategory
+//   METHOD    : equivalent
+// =========================================================================
+bool ErrorCategory::equivalent (int code, const std::error_condition& condition) const noexcept
+{
+    return *this == condition.category () && static_cast <int> (condition.value ()) == code;
+}
+
+// =========================================================================
 //   CLASS     :
 //   METHOD    : getErrorCategory
 // =========================================================================
-const std::error_category& join::getErrorCategory ()
+const std::error_category& join::getErrorCategory () noexcept
 {
     static ErrorCategory instance;
     return instance;
@@ -151,7 +160,7 @@ const std::error_category& join::getErrorCategory ()
 //   CLASS     :
 //   METHOD    : make_error_code
 // =========================================================================
-std::error_code join::make_error_code (join::Errc code)
+std::error_code join::make_error_code (join::Errc code) noexcept
 {
     return std::error_code (static_cast <int> (code), getErrorCategory ());
 }
@@ -160,7 +169,7 @@ std::error_code join::make_error_code (join::Errc code)
 //   CLASS     :
 //   METHOD    : make_error_condition
 // =========================================================================
-std::error_condition join::make_error_condition (join::Errc code)
+std::error_condition join::make_error_condition (join::Errc code) noexcept
 {
     return std::error_condition (static_cast <int> (code), getErrorCategory ());
 }
