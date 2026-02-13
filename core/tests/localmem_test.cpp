@@ -59,7 +59,6 @@ TEST (LocalMem, get)
  */
 int main (int argc, char **argv)
 {
-    ::mlockall (MCL_CURRENT | MCL_FUTURE);
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }
