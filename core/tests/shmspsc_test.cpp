@@ -65,71 +65,79 @@ const std::string ShmSpsc::_name = "/test_spsc_shm";
 
 TEST_F (ShmSpsc, tryPush)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (512, _name);
+    ShmMem::Spsc::Queue <uint64_t> prod1 (512, _name);
     uint64_t data = 0;
 
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.available (), 512);
+    ShmMem::Spsc::Queue <uint64_t> prod2 (std::move (prod1));
+    ASSERT_EQ (prod1.tryPush (data), -1);
+    ASSERT_FALSE (prod2.full ());
+    ASSERT_EQ (prod2.available (), 512);
     for (int i = 0; i < 512; ++i)
     {
-        ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
-        ASSERT_EQ (prod.full (), i == 511);
-        ASSERT_EQ (prod.available (), 511 - i);
+        ASSERT_EQ (prod2.tryPush (data), 0) << join::lastError.message ();
+        ASSERT_EQ (prod2.full (), i == 511);
+        ASSERT_EQ (prod2.available (), 511 - i);
     }
-    ASSERT_EQ (prod.tryPush (data), -1);
-    ASSERT_TRUE (prod.full ());
-    ASSERT_EQ (prod.available (), 0);
+    ASSERT_EQ (prod2.tryPush (data), -1);
+    ASSERT_TRUE (prod2.full ());
+    ASSERT_EQ (prod2.available (), 0);
 }
 
 TEST_F (ShmSpsc, push)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (512, _name);
+    ShmMem::Spsc::Queue <uint64_t> prod1 (512, _name);
     uint64_t data = 0;
 
-    ASSERT_FALSE (prod.full ());
-    ASSERT_EQ (prod.available (), 512);
+    ShmMem::Spsc::Queue <uint64_t> prod2 (std::move (prod1));
+    ASSERT_EQ (prod1.push (data), -1);
+    ASSERT_FALSE (prod2.full ());
+    ASSERT_EQ (prod2.available (), 512);
     for (int i = 0; i < 512; ++i)
     {
-        ASSERT_EQ (prod.push (data), 0) << join::lastError.message ();
-        ASSERT_EQ (prod.full (), i == 511);
-        ASSERT_EQ (prod.available (), 511 - i);
+        ASSERT_EQ (prod2.push (data), 0) << join::lastError.message ();
+        ASSERT_EQ (prod2.full (), i == 511);
+        ASSERT_EQ (prod2.available (), 511 - i);
     }
-    ASSERT_TRUE (prod.full ());
-    ASSERT_EQ (prod.available (), 0);
+    ASSERT_TRUE (prod2.full ());
+    ASSERT_EQ (prod2.available (), 0);
 }
 
 TEST_F (ShmSpsc, tryPop)
 {
     ShmMem::Spsc::Queue <uint64_t> prod (512, _name);
-    ShmMem::Spsc::Queue <uint64_t> cons (512, _name);
+    ShmMem::Spsc::Queue <uint64_t> cons1 (512, _name);
     uint64_t data = 0;
 
-    ASSERT_EQ (cons.tryPop (data), -1);
-    ASSERT_TRUE (cons.empty ());
-    ASSERT_EQ (cons.pending (), 0);
+    ShmMem::Spsc::Queue <uint64_t> cons2 (std::move (cons1));
+    ASSERT_EQ (cons1.tryPop (data), -1);
+    ASSERT_EQ (cons2.tryPop (data), -1);
+    ASSERT_TRUE (cons2.empty ());
+    ASSERT_EQ (cons2.pending (), 0);
     ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (cons.empty ());
-    ASSERT_EQ (cons.pending (), 1);
-    ASSERT_EQ (cons.tryPop (data), 0) << join::lastError.message ();
-    ASSERT_TRUE (cons.empty ());
-    ASSERT_EQ (cons.pending (), 0);
-    ASSERT_EQ (cons.tryPop (data), -1);
+    ASSERT_FALSE (cons2.empty ());
+    ASSERT_EQ (cons2.pending (), 1);
+    ASSERT_EQ (cons2.tryPop (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (cons2.empty ());
+    ASSERT_EQ (cons2.pending (), 0);
+    ASSERT_EQ (cons2.tryPop (data), -1);
 }
 
 TEST_F (ShmSpsc, pop)
 {
     ShmMem::Spsc::Queue <uint64_t> prod (512, _name);
-    ShmMem::Spsc::Queue <uint64_t> cons (512, _name);
+    ShmMem::Spsc::Queue <uint64_t> cons1 (512, _name);
     uint64_t data = 0;
 
-    ASSERT_TRUE (cons.empty ());
-    ASSERT_EQ (cons.pending (), 0);
+    ShmMem::Spsc::Queue <uint64_t> cons2 (std::move (cons1));
+    ASSERT_EQ (cons1.pop (data), -1);
+    ASSERT_TRUE (cons2.empty ());
+    ASSERT_EQ (cons2.pending (), 0);
     ASSERT_EQ (prod.tryPush (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (cons.empty ());
-    ASSERT_EQ (cons.pending (), 1);
-    ASSERT_EQ (cons.pop (data), 0) << join::lastError.message ();
-    ASSERT_TRUE (cons.empty ());
-    ASSERT_EQ (cons.pending (), 0);
+    ASSERT_FALSE (cons2.empty ());
+    ASSERT_EQ (cons2.pending (), 1);
+    ASSERT_EQ (cons2.pop (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (cons2.empty ());
+    ASSERT_EQ (cons2.pending (), 0);
 }
 
 TEST_F (ShmSpsc, pushBenchmark)

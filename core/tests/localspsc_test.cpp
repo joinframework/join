@@ -34,69 +34,77 @@ using join::Thread;
 
 TEST (LocalSpsc, tryPush)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (512);
+    LocalMem::Spsc::Queue <uint64_t> queue1 (512);
     uint64_t data = 0;
 
-    ASSERT_FALSE (queue.full ());
-    ASSERT_EQ (queue.available (), 512);
+    LocalMem::Spsc::Queue <uint64_t> queue2 (std::move (queue1));
+    ASSERT_EQ (queue1.tryPush (data), -1);
+    ASSERT_FALSE (queue2.full ());
+    ASSERT_EQ (queue2.available (), 512);
     for (int i = 0; i < 512; ++i)
     {
-        ASSERT_EQ (queue.tryPush (data), 0) << join::lastError.message ();
-        ASSERT_EQ (queue.full (), i == 511);
-        ASSERT_EQ (queue.available (), 511 - i);
+        ASSERT_EQ (queue2.tryPush (data), 0) << join::lastError.message ();
+        ASSERT_EQ (queue2.full (), i == 511);
+        ASSERT_EQ (queue2.available (), 511 - i);
     }
-    ASSERT_EQ (queue.tryPush (data), -1);
-    ASSERT_TRUE (queue.full ());
-    ASSERT_EQ (queue.available (), 0);
+    ASSERT_EQ (queue2.tryPush (data), -1);
+    ASSERT_TRUE (queue2.full ());
+    ASSERT_EQ (queue2.available (), 0);
 }
 
 TEST (LocalSpsc, push)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (512);
+    LocalMem::Spsc::Queue <uint64_t> queue1 (512);
     uint64_t data = 0;
 
-    ASSERT_FALSE (queue.full ());
-    ASSERT_EQ (queue.available (), 512);
+    LocalMem::Spsc::Queue <uint64_t> queue2 (std::move (queue1));
+    ASSERT_EQ (queue1.push (data), -1);
+    ASSERT_FALSE (queue2.full ());
+    ASSERT_EQ (queue2.available (), 512);
     for (int i = 0; i < 512; ++i)
     {
-        ASSERT_EQ (queue.push (data), 0) << join::lastError.message ();
-        ASSERT_EQ (queue.full (), i == 511);
-        ASSERT_EQ (queue.available (), 511 - i);
+        ASSERT_EQ (queue2.push (data), 0) << join::lastError.message ();
+        ASSERT_EQ (queue2.full (), i == 511);
+        ASSERT_EQ (queue2.available (), 511 - i);
     }
-    ASSERT_TRUE (queue.full ());
-    ASSERT_EQ (queue.available (), 0);
+    ASSERT_TRUE (queue2.full ());
+    ASSERT_EQ (queue2.available (), 0);
 }
 
 TEST (LocalSpsc, tryPop)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (512);
+    LocalMem::Spsc::Queue <uint64_t> queue1 (512);
     uint64_t data = 0;
 
-    ASSERT_EQ (queue.tryPop (data), -1);
-    ASSERT_TRUE (queue.empty ());
-    ASSERT_EQ (queue.pending (), 0);
-    ASSERT_EQ (queue.tryPush (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (queue.empty ());
-    ASSERT_EQ (queue.pending (), 1);
-    ASSERT_EQ (queue.tryPop (data), 0) << join::lastError.message ();
-    ASSERT_TRUE (queue.empty ());
-    ASSERT_EQ (queue.pending (), 0);
-    ASSERT_EQ (queue.tryPop (data), -1);
+    LocalMem::Spsc::Queue <uint64_t> queue2 (std::move (queue1));
+    ASSERT_EQ (queue1.tryPop (data), -1);
+    ASSERT_EQ (queue2.tryPop (data), -1);
+    ASSERT_TRUE (queue2.empty ());
+    ASSERT_EQ (queue2.pending (), 0);
+    ASSERT_EQ (queue2.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue2.empty ());
+    ASSERT_EQ (queue2.pending (), 1);
+    ASSERT_EQ (queue2.tryPop (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue2.empty ());
+    ASSERT_EQ (queue2.pending (), 0);
+    ASSERT_EQ (queue2.tryPop (data), -1);
 }
 
 TEST (LocalSpsc, pop)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (512);
+    LocalMem::Spsc::Queue <uint64_t> queue1 (512);
     uint64_t data = 0;
 
-    ASSERT_TRUE (queue.empty ());
-    ASSERT_EQ (queue.pending (), 0);
-    ASSERT_EQ (queue.tryPush (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (queue.empty ());
-    ASSERT_EQ (queue.pending (), 1);
-    ASSERT_EQ (queue.pop (data), 0) << join::lastError.message ();
-    ASSERT_TRUE (queue.empty ());
-    ASSERT_EQ (queue.pending (), 0);
+    LocalMem::Spsc::Queue <uint64_t> queue2 (std::move (queue1));
+    ASSERT_EQ (queue1.pop (data), -1);
+    ASSERT_TRUE (queue2.empty ());
+    ASSERT_EQ (queue2.pending (), 0);
+    ASSERT_EQ (queue2.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue2.empty ());
+    ASSERT_EQ (queue2.pending (), 1);
+    ASSERT_EQ (queue2.pop (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue2.empty ());
+    ASSERT_EQ (queue2.pending (), 0);
 }
 
 TEST (LocalSpsc, pushBenchmark)

@@ -61,13 +61,24 @@ const std::string PosixMem::_name = "/test_shm";
 TEST_F (PosixMem, create)
 {
     ASSERT_THROW (ShmMem (0, _name), std::system_error);
-    ASSERT_THROW (ShmMem (1024, ""), std::system_error);
-    ASSERT_THROW (ShmMem (std::numeric_limits <uint64_t>::max (), _name), std::system_error);
+    ASSERT_THROW (ShmMem (4096, ""), std::system_error);
+    ASSERT_THROW (ShmMem (static_cast <uint64_t> (std::numeric_limits <off_t>::max ()) + 1, _name), std::overflow_error);
+
+    ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
+    ShmMem mem1 (4096, _name);
+    ASSERT_NE (mem1.get (), nullptr);
+    ShmMem mem2 (std::move (mem1));
+    ASSERT_THROW (mem1.get (), std::runtime_error);
+    ASSERT_NE (mem2.get (), nullptr);
+    ASSERT_THROW (ShmMem (8192, _name), std::runtime_error);
+
+    ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
+    ShmMem (static_cast <uint64_t> (std::numeric_limits <off_t>::max ()) - 4095, _name);
 }
 
 TEST_F (PosixMem, get)
 {
-    ShmMem mem1 (1024, _name);
+    ShmMem mem1 (4096, _name);
     const ShmMem& cmem1 = mem1;
 
     EXPECT_THROW (mem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
@@ -76,7 +87,7 @@ TEST_F (PosixMem, get)
     ASSERT_NE (mem1.get (), nullptr);
     ASSERT_NE (cmem1.get (), nullptr);
 
-    ShmMem mem2 (1024, _name);
+    ShmMem mem2 (4096, _name);
     mem2 = std::move (mem1);
 
     EXPECT_THROW (mem1.get (), std::runtime_error);
