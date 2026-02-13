@@ -60,17 +60,40 @@ namespace join
     {
     public:
         /**
+         * @brief Create instance.
+         */
+        constexpr ErrorCategory () noexcept = default;
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        ErrorCategory (const ErrorCategory&) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to copy.
+         * @return this.
+         */
+        ErrorCategory& operator= (const ErrorCategory&) = delete;
+
+        /**
+         * @brief Destoy instance.
+         */
+        virtual ~ErrorCategory () = default;
+
+        /**
          * @brief Get error category name.
          * @return Error category name.
          */
-        virtual const char* name () const noexcept;
+        virtual const char* name () const noexcept override;
 
         /**
          * @brief Translate error code to human readable error string.
          * @param code error code.
          * @return Human readable error string.
          */
-        virtual std::string message (int code) const;
+        virtual std::string message (int code) const noexcept override;
 
         /**
          * @brief find equivalent from Errc to system error code.
@@ -78,28 +101,36 @@ namespace join
          * @param condition Errc.
          * @return true if equivalent, false otherwise.
          */
-        virtual bool equivalent (const std::error_code& code, int condition) const noexcept;
+        virtual bool equivalent (const std::error_code& code, int condition) const noexcept override;
+
+        /**
+         * @brief find equivalent from Errc to system error code.
+         * @param code System error code.
+         * @param condition error condition.
+         * @return true if equivalent, false otherwise.
+         */
+        virtual bool equivalent (int code, const std::error_condition& condition) const noexcept override;
     };
 
     /**
      * @brief Get error category.
      * @return the created std::error_category object.
      */
-    const std::error_category& getErrorCategory ();
+    const std::error_category& getErrorCategory () noexcept;
 
     /**
      * @brief Create an std::error_code object.
      * @param code Error code number.
      * @return The created std::error_code object.
      */
-    std::error_code make_error_code (join::Errc code);
+    std::error_code make_error_code (join::Errc code) noexcept;
 
     /**
      * @brief Create an std::error_condition object.
      * @param code Error code number.
      * @return The created std::error_condition object.
      */
-    std::error_condition make_error_condition (join::Errc code);
+    std::error_condition make_error_condition (join::Errc code) noexcept;
 }
 
 namespace std

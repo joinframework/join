@@ -96,14 +96,15 @@ namespace join
     template <typename Type, typename Backend, typename SyncPolicy>
     class BasicQueue
     {
-        static_assert (std::is_trivially_copyable <Type>::value, "queue type must be trivially copyable");
+        static_assert (std::is_trivially_copyable <Type>::value, "type must be trivially copyable");
+        static_assert (std::is_trivially_destructible <Type>::value, "type must be trivially destructible");
 
     public:
         using ValueType = Type;
 
         /**
          * @brief create instance.
-         * @param capacity .
+         * @param capacity queue capacity.
          * @param args backend args.
          */
         template <typename... Args>
@@ -371,7 +372,7 @@ namespace join
             uint64_t head = sync._head.load (std::memory_order_relaxed);
             uint64_t tail = sync._tail.load (std::memory_order_acquire);
 
-            if ((head - tail) == sync._capacity)
+            if (JOIN_UNLIKELY ((head - tail) == sync._capacity))
             {
                 lastError = make_error_code (Errc::TemporaryError);
                 return -1;
@@ -401,7 +402,7 @@ namespace join
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
             uint64_t head = sync._head.load (std::memory_order_acquire);
 
-            if (head == tail)
+            if (JOIN_UNLIKELY (head == tail))
             {
                 lastError = make_error_code (Errc::TemporaryError);
                 return -1;
@@ -446,21 +447,21 @@ namespace join
 
                 if (seq == head)
                 {
-                    if (sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire))
+                    if (JOIN_LIKELY (sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire)))
                     {
                         slot->data = element;
                         slot->_seq.store (head + 1, std::memory_order_release);
                         return 0;
                     }
                 }
-                else if (seq < head)
+                else if (JOIN_UNLIKELY (seq < head))
                 {
                     lastError = make_error_code (Errc::TemporaryError);
                     return -1;
                 } 
                 else
                 {
-                    head = sync._head.load(std::memory_order_relaxed);
+                    head = sync._head.load (std::memory_order_relaxed);
                 }
             }
         }
@@ -484,15 +485,15 @@ namespace join
             auto* slot = &segment->_elements[tail & sync._mask];
             uint64_t seq = slot->_seq.load (std::memory_order_acquire);
 
-            if (seq != tail + 1) 
+            if (JOIN_UNLIKELY (seq != tail + 1))
             {
                 lastError = make_error_code (Errc::TemporaryError);
                 return -1;
             }
-            
+
+            slot->_seq.store (tail + sync._capacity, std::memory_order_release);
             element = slot->data;
             sync._tail.store (tail + 1, std::memory_order_release);
-            slot->_seq.store (tail + sync._capacity, std::memory_order_release);
 
             return 0;
         }
@@ -541,14 +542,16 @@ namespace join
 
                 if (seq == (tail + 1))
                 {
-                    if (sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire))
+                    Type temp = slot->data;
+
+                    if (JOIN_LIKELY (sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire)))
                     {
-                        element = slot->data;
+                        element = temp;
                         slot->_seq.store (tail + sync._capacity, std::memory_order_release);
                         return 0;
                     }
                 }
-                else if (seq < (tail + 1))
+                else if (JOIN_UNLIKELY (seq < (tail + 1)))
                 {
                     lastError = make_error_code (Errc::TemporaryError);
                     return -1;

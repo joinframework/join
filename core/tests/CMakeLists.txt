@@ -47,6 +47,21 @@ target_link_libraries(localmem.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME localmem.gtest COMMAND localmem.gtest)
 install(TARGETS localmem.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(localspsc.gtest localspsc_test.cpp)
+target_link_libraries(localspsc.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME localspsc.gtest COMMAND localspsc.gtest)
+install(TARGETS localspsc.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(localmpsc.gtest localmpsc_test.cpp)
+target_link_libraries(localmpsc.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME localmpsc.gtest COMMAND localmpsc.gtest)
+install(TARGETS localmpsc.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(localmpmc.gtest localmpmc_test.cpp)
+target_link_libraries(localmpmc.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME localmpmc.gtest COMMAND localmpmc.gtest)
+install(TARGETS localmpmc.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(shmmem.gtest shmmem_test.cpp)
 target_link_libraries(shmmem.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME shmmem.gtest COMMAND shmmem.gtest)
