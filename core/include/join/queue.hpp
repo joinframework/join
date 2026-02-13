@@ -273,6 +273,10 @@ namespace join
          */
         uint64_t pending () const noexcept
         {
+            if (_segment == nullptr)
+            {
+                return 0;
+            }
             auto head = _segment->_sync._head.load (std::memory_order_acquire);
             auto tail = _segment->_sync._tail.load (std::memory_order_acquire);
             return head - tail;
@@ -284,6 +288,10 @@ namespace join
          */
         uint64_t available () const noexcept
         {
+            if (_segment == nullptr)
+            {
+                return 0;
+            }
             return _segment->_sync._capacity - pending ();
         }
 
@@ -293,6 +301,10 @@ namespace join
          */
         bool full () const noexcept
         {
+            if (_segment == nullptr)
+            {
+                return false;
+            }
             return pending () == _segment->_sync._capacity;
         }
 
@@ -302,6 +314,10 @@ namespace join
          */
         bool empty () const noexcept
         {
+            if (_segment == nullptr)
+            {
+                return true;
+            }
             return pending () == 0;
         }
 

@@ -249,6 +249,70 @@ TEST (LocalMpmc, popBenchmark)
     }
 }
 
+TEST (LocalMpmc, pending)
+{
+    LocalMem::Mpmc::Queue <uint64_t> queue1 (0);
+    uint64_t data = 0;
+
+    ASSERT_EQ (queue1.pending (), 0);
+    ASSERT_EQ (queue1.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_EQ (queue1.pending (), 1);
+
+    LocalMem::Mpmc::Queue <uint64_t> queue2 (0);
+    queue2 = std::move (queue1);
+
+    ASSERT_EQ (queue1.pending (), 0);
+    ASSERT_EQ (queue2.pending (), 1);
+}
+
+TEST (LocalMpmc, available)
+{
+    LocalMem::Mpmc::Queue <uint64_t> queue1 (0);
+    uint64_t data = 0;
+
+    ASSERT_EQ (queue1.available (), 1);
+    ASSERT_EQ (queue1.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_EQ (queue1.available (), 0);
+
+    LocalMem::Mpmc::Queue <uint64_t> queue2 (0);
+    queue2 = std::move (queue1);
+
+    ASSERT_EQ (queue1.available (), 0);
+    ASSERT_EQ (queue2.available (), 0);
+}
+
+TEST (LocalMpmc, full)
+{
+    LocalMem::Mpmc::Queue <uint64_t> queue1 (0);
+    uint64_t data = 0;
+
+    ASSERT_FALSE (queue1.full ());
+    ASSERT_EQ (queue1.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue1.full ());
+
+    LocalMem::Mpmc::Queue <uint64_t> queue2 (0);
+    queue2 = std::move (queue1);
+
+    ASSERT_FALSE (queue1.full ());
+    ASSERT_TRUE (queue2.full ());
+}
+
+TEST (LocalMpmc, empty)
+{
+    LocalMem::Mpmc::Queue <uint64_t> queue1 (0);
+    uint64_t data = 0;
+
+    ASSERT_TRUE (queue1.empty ());
+    ASSERT_EQ (queue1.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue1.empty ());
+
+    LocalMem::Mpmc::Queue <uint64_t> queue2 (0);
+    queue2 = std::move (queue1);
+
+    ASSERT_TRUE (queue1.empty ());
+    ASSERT_FALSE (queue2.empty ());
+}
+
 /**
  * @brief main function.
  */

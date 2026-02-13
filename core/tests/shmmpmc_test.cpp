@@ -62,6 +62,12 @@ protected:
 
 const std::string ShmMpmc::_name = "/test_mpmc_shm";
 
+TEST_F (ShmMpmc, create)
+{
+    ShmMem::Mpmc::Queue <uint64_t> prod1 (0, _name);
+    ASSERT_THROW (ShmMem::Mpmc::Queue <uint64_t> (2, _name), std::runtime_error);
+}
+
 TEST_F (ShmMpmc, tryPush)
 {
     ShmMem::Mpmc::Queue <uint64_t> prod1 (512, _name);
@@ -299,6 +305,70 @@ TEST_F (ShmMpmc, popBenchmark)
     waitpid (child, &status, 0);
     ASSERT_TRUE (WIFEXITED (status));
     ASSERT_EQ (WEXITSTATUS (status), 0);
+}
+
+TEST_F (ShmMpmc, pending)
+{
+    ShmMem::Mpmc::Queue <uint64_t> prod1 (0, _name);
+    uint64_t data = 0;
+
+    ASSERT_EQ (prod1.pending (), 0);
+    ASSERT_EQ (prod1.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_EQ (prod1.pending (), 1);
+
+    ShmMem::Mpmc::Queue <uint64_t> prod2 (0, _name);
+    prod2 = std::move (prod1);
+
+    ASSERT_EQ (prod1.pending (), 0);
+    ASSERT_EQ (prod2.pending (), 1);
+}
+
+TEST_F (ShmMpmc, available)
+{
+    ShmMem::Mpmc::Queue <uint64_t> prod1 (0, _name);
+    uint64_t data = 0;
+
+    ASSERT_EQ (prod1.available (), 1);
+    ASSERT_EQ (prod1.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_EQ (prod1.available (), 0);
+
+    ShmMem::Mpmc::Queue <uint64_t> prod2 (0, _name);
+    prod2 = std::move (prod1);
+
+    ASSERT_EQ (prod1.available (), 0);
+    ASSERT_EQ (prod2.available (), 0);
+}
+
+TEST_F (ShmMpmc, full)
+{
+    ShmMem::Mpmc::Queue <uint64_t> prod1 (0, _name);
+    uint64_t data = 0;
+
+    ASSERT_FALSE (prod1.full ());
+    ASSERT_EQ (prod1.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (prod1.full ());
+
+    ShmMem::Mpmc::Queue <uint64_t> prod2 (0, _name);
+    prod2 = std::move (prod1);
+
+    ASSERT_FALSE (prod1.full ());
+    ASSERT_TRUE (prod2.full ());
+}
+
+TEST_F (ShmMpmc, empty)
+{
+    ShmMem::Mpmc::Queue <uint64_t> prod1 (0, _name);
+    uint64_t data = 0;
+
+    ASSERT_TRUE (prod1.empty ());
+    ASSERT_EQ (prod1.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod1.empty ());
+
+    ShmMem::Mpmc::Queue <uint64_t> prod2 (0, _name);
+    prod2 = std::move (prod1);
+
+    ASSERT_TRUE (prod1.empty ());
+    ASSERT_FALSE (prod2.empty ());
 }
 
 /**

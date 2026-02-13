@@ -28,6 +28,8 @@
 // libraries.
 #include <gtest/gtest.h>
 
+#include "limits.h"
+
 using join::ShmMem;
 
 /**
@@ -60,6 +62,8 @@ const std::string PosixMem::_name = "/test_shm";
 
 TEST_F (PosixMem, create)
 {
+    ASSERT_EQ (ShmMem::unlink (std::string (_POSIX_PATH_MAX + 1, 'x')), -1);
+
     ASSERT_THROW (ShmMem (0, _name), std::system_error);
     ASSERT_THROW (ShmMem (4096, ""), std::system_error);
     ASSERT_THROW (ShmMem (static_cast <uint64_t> (std::numeric_limits <off_t>::max ()) + 1, _name), std::overflow_error);
