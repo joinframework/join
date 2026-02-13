@@ -26,11 +26,11 @@
 #define __JOIN_REACTOR_HPP__
 
 // libjoin.
-#include <join/condition.hpp>
+#include <join/thread.hpp>
+#include <join/queue.hpp>
 
 // C++.
-#include <thread>
-#include <vector>
+#include <array>
 
 // C.
 #include <sys/epoll.h>
@@ -47,6 +47,32 @@ namespace join
          * @brief create instance.
          */
         EventHandler () = default;
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        EventHandler (const EventHandler& other) = default;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to copy.
+         * @return current object.
+         */
+        EventHandler& operator= (const EventHandler& other) = default;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        EventHandler (EventHandler&& other) noexcept = default;
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to move.
+         * @return current object.
+         */
+        EventHandler& operator= (EventHandler&& other) noexcept = default;
 
         /**
          * @brief destroy instance.
@@ -106,17 +132,17 @@ namespace join
         Reactor (const Reactor& other) = delete;
 
         /**
-         * @brief move constructor.
-         * @param other other object to move.
-         */
-        Reactor (Reactor&& other) = delete;
-
-        /**
          * @brief copy assignment operator.
          * @param other other object to copy.
          * @return current object.
          */
         Reactor& operator= (const Reactor& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        Reactor (Reactor&& other) = delete;
 
         /**
          * @brief move assignment operator.
@@ -128,33 +154,39 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        ~Reactor ();
+        ~Reactor () noexcept;
 
         /**
          * @brief add handler to reactor.
          * @param handler handler pointer.
          * @return 0 on success, -1 on failure.
          */
-        int addHandler (EventHandler* handler);
+        int addHandler (EventHandler* handler) noexcept;
 
         /**
          * @brief delete handler from reactor.
          * @param handler handler pointer.
          * @return 0 on success, -1 on failure.
          */
-        int delHandler (EventHandler* handler);
+        int delHandler (EventHandler* handler) noexcept;
 
         /**
          * @brief create the Reactor instance.
          * @return Reactor instance pointer.
          */
-        static Reactor* instance ();
+        static Reactor* instance () noexcept;
 
-    protected:
+    private:
         /**
          * @brief dispatch events received.
          */
         void dispatch ();
+
+        /**
+         * @brief notify dispatcher thread.
+         * @return 0 on success, -1 on failure.
+         */
+        int notify () noexcept;
 
         /// eventfd descriptor.
         int _eventfd = -1;
@@ -162,20 +194,21 @@ namespace join
         /// epoll descriptor.
         int _epoll = -1;
 
-        /// thread id.
-        std::thread::id _threadId;
+        /**
+         * @brief Command for reactor dispatcher.
+         */
+        struct Command
+        {
+            enum class Type  { Add, Del, Stop };
+            Type type;
+            EventHandler* handler;
+        };
 
-        /// protection mutex.
-        RecursiveMutex _mutex;
+        /// command queue
+        LocalMem::Mpsc::Queue <Command> _cmdQueue;
 
-        /// thread status event.
-        Condition _threadStatus;
-
-        /// status.
-        bool _running = false;
-
-        /// number of handlers.
-        int _num = 0;
+        /// dispatcher thread.
+        Thread _thread;
     };
 }
 

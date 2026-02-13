@@ -27,13 +27,11 @@
 
 // C++.
 #include <functional>
-#include <thread>
 
 // C.
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-using join::ScopedLock;
 using join::EventHandler;
 using join::Reactor;
 
@@ -42,13 +40,16 @@ using join::Reactor;
 //   METHOD    : Reactor
 // =========================================================================
 Reactor::Reactor ()
-: _eventfd (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
-  _epoll (epoll_create1 (EPOLL_CLOEXEC))
+: _eventfd (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
+, _epoll (epoll_create1 (EPOLL_CLOEXEC))
+, _cmdQueue (1024)
 {
     struct epoll_event ev {};
     ev.events = EPOLLIN;
     ev.data.ptr = nullptr;
     epoll_ctl (_epoll, EPOLL_CTL_ADD, _eventfd, &ev);
+
+    _thread = Thread (std::bind (&Reactor::dispatch, this));
 }
 
 // =========================================================================
@@ -57,14 +58,12 @@ Reactor::Reactor ()
 // =========================================================================
 Reactor::~Reactor ()
 {
-    ScopedLock <RecursiveMutex> lock (_mutex);
-
-    if (_running)
+    if (_cmdQueue.push ({Command::Type::Stop, nullptr}) == 0)
     {
-        uint64_t value = 1;
-        [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
-        _threadStatus.wait (lock, [this] () { return !_running; });
+        notify ();
     }
+
+    _thread.join ();
 
     ::close (_epoll);
     ::close (_eventfd);
@@ -74,7 +73,7 @@ Reactor::~Reactor ()
 //   CLASS     : Reactor
 //   METHOD    : addHandler
 // =========================================================================
-int Reactor::addHandler (EventHandler* handler)
+int Reactor::addHandler (EventHandler* handler) noexcept
 {
     if (handler == nullptr)
     {
@@ -82,42 +81,25 @@ int Reactor::addHandler (EventHandler* handler)
         return -1;
     }
 
-    struct epoll_event ev {};
-    ev.events = EPOLLIN | EPOLLRDHUP;
-    ev.data.ptr = handler;
-
-    if (epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev) == -1)
+    if (handler->handle () < 0)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
+    if (_cmdQueue.push ({Command::Type::Add, handler}) == -1)
     {
-        ScopedLock <RecursiveMutex> lock (_mutex);
-
-        if (++_num == 1)
-        {
-            // first handler, start dispatcher thread.
-            std::thread th (std::bind (&Reactor::dispatch, this));
-            _threadId = th.get_id ();
-            th.detach ();
-        }
-
-        // wait until dispatcher is running,
-        // unless we're the dispatcher thread itself.
-        _threadStatus.wait (lock, [this] () {
-            return (std::this_thread::get_id () == _threadId) || _running; 
-        });
+        return -1;
     }
 
-    return 0;
+    return notify ();
 }
 
 // =========================================================================
 //   CLASS     : Reactor
 //   METHOD    : delHandler
 // =========================================================================
-int Reactor::delHandler (EventHandler* handler)
+int Reactor::delHandler (EventHandler* handler) noexcept
 {
     if (handler == nullptr)
     {
@@ -125,37 +107,25 @@ int Reactor::delHandler (EventHandler* handler)
         return -1;
     }
 
-    if (epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->handle (), nullptr) == -1)
+    if (handler->handle () < 0)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
+    if (_cmdQueue.push ({Command::Type::Del, handler}) == -1)
     {
-        ScopedLock <RecursiveMutex> lock (_mutex);
-
-        if (--_num == 0)
-        {
-            // last handler, stop dispatcher thread.
-            uint64_t value = 1;
-            [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
-
-            // wait until dispatcher has stopped,
-            // unless we're the dispatcher thread itself.
-            _threadStatus.wait (lock, [this] () {
-                return (std::this_thread::get_id () == _threadId) || !_running;
-            });
-        }
+        return -1;
     }
 
-    return 0;
+    return notify ();
 }
 
 // =========================================================================
 //   CLASS     : Reactor
 //   METHOD    : instance
 // =========================================================================
-Reactor* Reactor::instance ()
+Reactor* Reactor::instance () noexcept
 {
     static Reactor reactor;
     return &reactor;
@@ -167,20 +137,11 @@ Reactor* Reactor::instance ()
 // =========================================================================
 void Reactor::dispatch ()
 {
-    {
-        ScopedLock <RecursiveMutex> lock (_mutex);
-        _running = true;
-        _threadStatus.broadcast ();
-    }
+    std::array <struct epoll_event, 1024> ev;
 
-    std::vector <struct epoll_event> ev (256);
-    bool stop = false;
-
-    while (!stop)
+    for (;;)
     {
         int nset = epoll_wait (_epoll, ev.data (), ev.size (), -1);
-
-        ScopedLock <RecursiveMutex> lock (_mutex);
 
         for (int n = 0; n < nset; ++n)
         {
@@ -188,33 +149,74 @@ void Reactor::dispatch ()
             {
                 uint64_t value;
                 [[maybe_unused]] ssize_t bytes = ::read (_eventfd, &value, sizeof (uint64_t));
-                stop = true;
-                break;
-            }
 
-            if (ev[n].events & EPOLLERR)
-            {
-                 reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onError ();
-            }
-            else if ((ev[n].events & EPOLLRDHUP) || (ev[n].events & EPOLLHUP))
-            {
-                 reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onClose ();
-            }
-            else if (ev[n].events & EPOLLIN)
-            {
-                 reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onReceive ();
-            }
-        }
+                Command cmd;
+                while (_cmdQueue.tryPop (cmd) == 0)
+                {
+                    switch (cmd.type)
+                    {
+                        case Command::Type::Add:
+                        {
+                            struct epoll_event ev {};
+                            ev.events = EPOLLIN | EPOLLRDHUP;
+                            ev.data.ptr = cmd.handler;
+                            epoll_ctl (_epoll, EPOLL_CTL_ADD, cmd.handler->handle (), &ev);
+                            break;
+                        }
 
-        if (nset == static_cast <int> (ev.size ()))
-        {
-            ev.resize (ev.size () * 2);
+                        case Command::Type::Del:
+                        {
+                            epoll_ctl (_epoll, EPOLL_CTL_DEL, cmd.handler->handle (), nullptr);
+                            break;
+                        }
+
+                        case Command::Type::Stop:
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                try
+                {
+                    if (ev[n].events & EPOLLERR)
+                    {
+                        reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onError ();
+                    }
+                    else if ((ev[n].events & EPOLLRDHUP) || (ev[n].events & EPOLLHUP))
+                    {
+                        reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onClose ();
+                    }
+                    else if (ev[n].events & EPOLLIN)
+                    {
+                        reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onReceive ();
+                    }
+                }
+                catch (...)
+                {
+                    // ignore exceptions from user handlers
+                }
+            }
         }
     }
+}
 
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : notify
+// =========================================================================
+int Reactor::notify () noexcept
+{
+    uint64_t value = 1;
+    ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
+
+    if (bytes != sizeof (uint64_t))
     {
-        ScopedLock <RecursiveMutex> lock (_mutex);
-        _running = false;
-        _threadStatus.broadcast ();
+        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        return -1;
     }
+
+    return 0;
 }
