@@ -160,16 +160,18 @@ namespace join
         /**
          * @brief add handler to reactor.
          * @param handler handler pointer.
+         * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addHandler (EventHandler* handler) noexcept;
+        int addHandler (EventHandler* handler, bool sync = false) noexcept;
 
         /**
          * @brief delete handler from reactor.
          * @param handler handler pointer.
+         * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int delHandler (EventHandler* handler) noexcept;
+        int delHandler (EventHandler* handler, bool sync = true) noexcept;
 
         /**
          * @brief create the Reactor instance.
@@ -200,25 +202,40 @@ namespace join
             CommandType type;
             EventHandler* handler;
             std::atomic <bool>* done;
+            std::atomic <int>* errc;
         };
 
         /**
          * @brief register handler with epoll.
          * @param handler handler pointer.
+         * @return 0 on success, -1 on failure.
          */
-        void registerHandler (EventHandler* handler);
+        int registerHandler (EventHandler* handler) noexcept;
 
         /**
          * @brief unregister handler from epoll.
          * @param handler handler pointer.
+         * @return 0 on success, -1 on failure.
          */
-        void unregisterHandler (EventHandler* handler);
+        int unregisterHandler (EventHandler* handler) noexcept;
 
         /**
-         * @brief process all pending commands from queue.
-         * @return true if stop command received, false otherwise.
+         * @brief write command to queue and wake dispatcher.
+         * @param cmd command to write.
+         * @return 0 on success, -1 on failure.
          */
-        bool processCommands ();
+        int writeCommand (const Command& cmd) noexcept;
+
+        /**
+         * @brief process a single command.
+         * @param cmd command to process.
+         */
+        void processCommand (const Command& cmd);
+
+        /**
+         * @brief read and process all pending commands from queue.
+         */
+        void  readCommands ();
 
         /**
          * @brief dispatch a single event to its handler.
@@ -230,11 +247,6 @@ namespace join
          * @brief main event loop running in dispatcher thread.
          */
         void eventLoop ();
-
-        /**
-         * @brief notify dispatcher thread.
-         */
-        void wakeDispatcher () noexcept;
 
         /**
          * @brief check if handler is active.
@@ -257,6 +269,9 @@ namespace join
 
         /// deleted handlers.
         std::vector <EventHandler*> _deleted;
+
+        /// running flag for dispatcher thread.
+        std::atomic <bool> _running {true};
     };
 }
 
