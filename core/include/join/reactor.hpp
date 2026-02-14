@@ -30,6 +30,7 @@
 #include <join/queue.hpp>
 
 // C++.
+#include <vector>
 #include <array>
 
 // C.
@@ -177,38 +178,85 @@ namespace join
         static Reactor* instance () noexcept;
 
     private:
-        /**
-         * @brief dispatch events received.
-         */
-        void dispatch ();
+        /// deleted handlers reserve size.
+        static constexpr size_t _deletedReserve = 64;
+
+        /// queue size.
+        static constexpr size_t _queueSize = 1024;
+
+        /// max events
+        static constexpr size_t _maxEvents = 1024;
 
         /**
-         * @brief notify dispatcher thread.
-         * @return 0 on success, -1 on failure.
+         * @brief Command type for reactor dispatcher.
          */
-        int notify () noexcept;
-
-        /// eventfd descriptor.
-        int _eventfd = -1;
-
-        /// epoll descriptor.
-        int _epoll = -1;
+        enum class CommandType { Add, Del, Stop };
 
         /**
          * @brief Command for reactor dispatcher.
          */
-        struct Command
+        struct alignas (64) Command
         {
-            enum class Type  { Add, Del, Stop };
-            Type type;
+            CommandType type;
             EventHandler* handler;
+            std::atomic <bool>* done;
         };
 
+        /**
+         * @brief register handler with epoll.
+         * @param handler handler pointer.
+         */
+        void registerHandler (EventHandler* handler);
+
+        /**
+         * @brief unregister handler from epoll.
+         * @param handler handler pointer.
+         */
+        void unregisterHandler (EventHandler* handler);
+
+        /**
+         * @brief process all pending commands from queue.
+         * @return true if stop command received, false otherwise.
+         */
+        bool processCommands ();
+
+        /**
+         * @brief dispatch a single event to its handler.
+         * @param event epoll event.
+         */
+        void dispatchEvent (const epoll_event& event);
+
+        /**
+         * @brief main event loop running in dispatcher thread.
+         */
+        void eventLoop ();
+
+        /**
+         * @brief notify dispatcher thread.
+         */
+        void wakeDispatcher () noexcept;
+
+        /**
+         * @brief check if handler has been deleted.
+         * @param handler handler pointer.
+         * @return true if handler has been deleted, false otherwise.
+         */
+        bool isDeleted (EventHandler* handler) const noexcept;
+
+        /// eventfd descriptor.
+        int _wakeup = -1;
+
+        /// epoll descriptor.
+        int _epoll = -1;
+
         /// command queue
-        LocalMem::Mpsc::Queue <Command> _cmdQueue;
+        LocalMem::Mpsc::Queue <Command> _commands;
 
         /// dispatcher thread.
-        Thread _thread;
+        Thread _dispatcher;
+
+        /// deleted handlers.
+        std::vector <EventHandler*> _deleted;
     };
 }
 

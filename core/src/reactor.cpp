@@ -24,14 +24,17 @@
 
 // libjoin.
 #include <join/reactor.hpp>
+#include <join/backoff.hpp>
 
 // C++.
 #include <functional>
+#include <algorithm>
 
 // C.
 #include <sys/eventfd.h>
 #include <unistd.h>
 
+using join::Backoff;
 using join::EventHandler;
 using join::Reactor;
 
@@ -40,16 +43,18 @@ using join::Reactor;
 //   METHOD    : Reactor
 // =========================================================================
 Reactor::Reactor ()
-: _eventfd (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
+: _wakeup (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
 , _epoll (epoll_create1 (EPOLL_CLOEXEC))
-, _cmdQueue (1024)
+, _commands (_queueSize)
 {
+    _deleted.reserve (_deletedReserve);
+
     struct epoll_event ev {};
     ev.events = EPOLLIN;
     ev.data.ptr = nullptr;
-    epoll_ctl (_epoll, EPOLL_CTL_ADD, _eventfd, &ev);
+    epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev);
 
-    _thread = Thread (std::bind (&Reactor::dispatch, this));
+    _dispatcher = Thread (std::bind (&Reactor::eventLoop, this));
 }
 
 // =========================================================================
@@ -58,15 +63,15 @@ Reactor::Reactor ()
 // =========================================================================
 Reactor::~Reactor ()
 {
-    if (_cmdQueue.push ({Command::Type::Stop, nullptr}) == 0)
+    if (_commands.push ({ CommandType::Stop, nullptr, nullptr }) == 0)
     {
-        notify ();
+        wakeDispatcher ();
     }
 
-    _thread.join ();
+    _dispatcher.join ();
 
     ::close (_epoll);
-    ::close (_eventfd);
+    ::close (_wakeup);
 }
 
 // =========================================================================
@@ -87,12 +92,14 @@ int Reactor::addHandler (EventHandler* handler) noexcept
         return -1;
     }
 
-    if (_cmdQueue.push ({Command::Type::Add, handler}) == -1)
+    if (_commands.push ({ CommandType::Add, handler, nullptr }) == -1)
     {
         return -1;
     }
 
-    return notify ();
+    wakeDispatcher ();
+
+    return 0;
 }
 
 // =========================================================================
@@ -113,12 +120,28 @@ int Reactor::delHandler (EventHandler* handler) noexcept
         return -1;
     }
 
-    if (_cmdQueue.push ({Command::Type::Del, handler}) == -1)
+    if (_dispatcher.id () == pthread_self ())
+    {
+        unregisterHandler (handler);
+        return 0;
+    }
+
+    std::atomic <bool> done {false};
+
+    if (_commands.push ({ CommandType::Del, handler, &done }) == -1)
     {
         return -1;
     }
 
-    return notify ();
+    wakeDispatcher ();
+
+    Backoff backoff;
+    while (!done.load (std::memory_order_acquire))
+    {
+        backoff ();
+    }
+
+    return 0;
 }
 
 // =========================================================================
@@ -133,90 +156,146 @@ Reactor* Reactor::instance () noexcept
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : dispatch
+//   METHOD    : registerHandler
 // =========================================================================
-void Reactor::dispatch ()
+void Reactor::registerHandler (EventHandler* handler)
 {
-    std::array <struct epoll_event, 1024> ev;
-
-    for (;;)
+    auto it = std::find (_deleted.begin (), _deleted.end (), handler);
+    if (it != _deleted.end ())
     {
-        int nset = epoll_wait (_epoll, ev.data (), ev.size (), -1);
+        _deleted.erase (it);
+    }
+    struct epoll_event ev {};
+    ev.events = EPOLLIN | EPOLLRDHUP;
+    ev.data.ptr = handler;
+    epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev);
+}
 
-        for (int n = 0; n < nset; ++n)
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : unregisterHandler
+// =========================================================================
+void Reactor::unregisterHandler (EventHandler* handler)
+{
+    epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->handle (), nullptr);
+    _deleted.push_back (handler);
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : processCommands
+// =========================================================================
+bool Reactor::processCommands ()
+{
+    uint64_t count;
+    [[maybe_unused]] ssize_t bytesRead = ::read (_wakeup, &count, sizeof (count));
+
+    Command cmd;
+    while (_commands.tryPop (cmd) == 0)
+    {
+        switch (cmd.type)
         {
-            if (ev[n].data.ptr == nullptr)
-            {
-                uint64_t value;
-                [[maybe_unused]] ssize_t bytes = ::read (_eventfd, &value, sizeof (uint64_t));
+            case CommandType::Add:
+                registerHandler (cmd.handler);
+                break;
 
-                Command cmd;
-                while (_cmdQueue.tryPop (cmd) == 0)
-                {
-                    switch (cmd.type)
-                    {
-                        case Command::Type::Add:
-                        {
-                            struct epoll_event ev {};
-                            ev.events = EPOLLIN | EPOLLRDHUP;
-                            ev.data.ptr = cmd.handler;
-                            epoll_ctl (_epoll, EPOLL_CTL_ADD, cmd.handler->handle (), &ev);
-                            break;
-                        }
+            case CommandType::Del:
+                unregisterHandler (cmd.handler);
+                break;
 
-                        case Command::Type::Del:
-                        {
-                            epoll_ctl (_epoll, EPOLL_CTL_DEL, cmd.handler->handle (), nullptr);
-                            break;
-                        }
-
-                        case Command::Type::Stop:
-                        {
-                            return;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                try
-                {
-                    if (ev[n].events & EPOLLERR)
-                    {
-                        reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onError ();
-                    }
-                    else if ((ev[n].events & EPOLLRDHUP) || (ev[n].events & EPOLLHUP))
-                    {
-                        reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onClose ();
-                    }
-                    else if (ev[n].events & EPOLLIN)
-                    {
-                        reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onReceive ();
-                    }
-                }
-                catch (...)
-                {
-                    // ignore exceptions from user handlers
-                }
-            }
+            case CommandType::Stop:
+                return true;
         }
+
+        if (cmd.done)
+        {
+            cmd.done->store (true, std::memory_order_release);
+        }
+    }
+
+    return false;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : dispatchEvent
+// =========================================================================
+void Reactor::dispatchEvent (const epoll_event& event)
+{
+    EventHandler* handler = static_cast <EventHandler*> (event.data.ptr);
+
+    if (isDeleted (handler))
+    {
+        return;
+    }
+
+    try
+    {
+        if (event.events & EPOLLERR)
+        {
+            handler->onError ();
+        }
+        else if (event.events & (EPOLLRDHUP | EPOLLHUP))
+        {
+            handler->onClose ();
+        }
+        else if (event.events & EPOLLIN)
+        {
+            handler->onReceive ();
+        }
+    }
+    catch (...)
+    {
+        // Ignore exceptions from user handlers
     }
 }
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : notify
+//   METHOD    : eventLoop
 // =========================================================================
-int Reactor::notify () noexcept
+void Reactor::eventLoop ()
+{
+    std::array <epoll_event, _maxEvents> events;
+
+    for (;;)
+    {
+        int eventCount = epoll_wait (_epoll, events.data (), events.size (), -1);
+
+        for (int i = 0; i < eventCount; ++i)
+        {
+            if (events[i].data.ptr == nullptr)
+            {
+                if (processCommands ())
+                {
+                    return;
+                }
+            }
+            else
+            {
+                dispatchEvent (events[i]);
+            }
+        }
+
+        _deleted.clear ();
+    }
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : wakeDispatcher
+// =========================================================================
+void Reactor::wakeDispatcher () noexcept
 {
     uint64_t value = 1;
-    ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
+    [[maybe_unused]] ssize_t bytes = ::write (_wakeup, &value, sizeof (uint64_t));
+}
 
-    if (bytes != sizeof (uint64_t))
-    {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
-        return -1;
-    }
-
-    return 0;
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : isDeleted
+// =========================================================================
+bool Reactor::isDeleted (EventHandler* handler) const noexcept
+{
+    return std::find (_deleted.begin (), _deleted.end (), handler) != _deleted.end ();
 }
