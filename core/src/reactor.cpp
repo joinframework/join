@@ -189,8 +189,8 @@ bool Reactor::processCommands ()
 {
     uint64_t count;
     [[maybe_unused]] ssize_t bytesRead = ::read (_wakeup, &count, sizeof (count));
-
     Command cmd;
+
     while (_commands.tryPop (cmd) == 0)
     {
         switch (cmd.type)
@@ -229,24 +229,17 @@ void Reactor::dispatchEvent (const epoll_event& event)
         return;
     }
 
-    try
+    if (event.events & EPOLLERR)
     {
-        if (event.events & EPOLLERR)
-        {
-            handler->onError ();
-        }
-        else if (event.events & (EPOLLRDHUP | EPOLLHUP))
-        {
-            handler->onClose ();
-        }
-        else if (event.events & EPOLLIN)
-        {
-            handler->onReceive ();
-        }
+        handler->onError ();
     }
-    catch (...)
+    else if (event.events & (EPOLLRDHUP | EPOLLHUP))
     {
-        // Ignore exceptions from user handlers
+        handler->onClose ();
+    }
+    else if (event.events & EPOLLIN)
+    {
+        handler->onReceive ();
     }
 }
 
