@@ -237,11 +237,11 @@ namespace join
         void wakeDispatcher () noexcept;
 
         /**
-         * @brief check if handler has been deleted.
+         * @brief check if handler is active.
          * @param handler handler pointer.
-         * @return true if handler has been deleted, false otherwise.
+         * @return true if handler is active, false otherwise.
          */
-        bool isDeleted (EventHandler* handler) const noexcept;
+        bool isActive (EventHandler* handler) const noexcept;
 
         /// eventfd descriptor.
         int _wakeup = -1;

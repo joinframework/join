@@ -160,11 +160,7 @@ Reactor* Reactor::instance () noexcept
 // =========================================================================
 void Reactor::registerHandler (EventHandler* handler)
 {
-    auto it = std::find (_deleted.begin (), _deleted.end (), handler);
-    if (it != _deleted.end ())
-    {
-        _deleted.erase (it);
-    }
+    _deleted.erase (std::remove (_deleted.begin (), _deleted.end (), handler), _deleted.end ());
     struct epoll_event ev {};
     ev.events = EPOLLIN | EPOLLRDHUP;
     ev.data.ptr = handler;
@@ -224,22 +220,20 @@ void Reactor::dispatchEvent (const epoll_event& event)
 {
     EventHandler* handler = static_cast <EventHandler*> (event.data.ptr);
 
-    if (isDeleted (handler))
+    if (isActive (handler))
     {
-        return;
-    }
-
-    if (event.events & EPOLLERR)
-    {
-        handler->onError ();
-    }
-    else if (event.events & (EPOLLRDHUP | EPOLLHUP))
-    {
-        handler->onClose ();
-    }
-    else if (event.events & EPOLLIN)
-    {
-        handler->onReceive ();
+        if (event.events & EPOLLERR)
+        {
+            handler->onError ();
+        }
+        else if (event.events & (EPOLLRDHUP | EPOLLHUP))
+        {
+            handler->onClose ();
+        }
+        else if (event.events & EPOLLIN)
+        {
+            handler->onReceive ();
+        }
     }
 }
 
@@ -286,9 +280,9 @@ void Reactor::wakeDispatcher () noexcept
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : isDeleted
+//   METHOD    : isActive
 // =========================================================================
-bool Reactor::isDeleted (EventHandler* handler) const noexcept
+bool Reactor::isActive (EventHandler* handler) const noexcept
 {
-    return std::find (_deleted.begin (), _deleted.end (), handler) != _deleted.end ();
+    return std::find (_deleted.begin (), _deleted.end (), handler) == _deleted.end ();
 }

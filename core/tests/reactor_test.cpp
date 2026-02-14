@@ -185,6 +185,9 @@ TEST_F (ReactorTest, addHandler)
 
     // add handler.
     ASSERT_EQ (reactor.addHandler (this), 0) << join::lastError.message ();
+
+    // delete handler
+    ASSERT_EQ (reactor.delHandler (this), 0) << join::lastError.message ();
 }
 
 /**
