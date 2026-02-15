@@ -59,7 +59,7 @@ InterfaceManager::InterfaceManager()
 // =========================================================================
 InterfaceManager::~InterfaceManager ()
 {
-    Reactor::instance ()->delHandler (this);
+    Reactor::instance ()->delHandler (this, true);
     close ();
 }
 

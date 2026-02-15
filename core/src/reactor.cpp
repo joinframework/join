@@ -24,16 +24,18 @@
 
 // libjoin.
 #include <join/reactor.hpp>
+#include <join/backoff.hpp>
 
 // C++.
 #include <functional>
-#include <thread>
+#include <algorithm>
 
 // C.
 #include <sys/eventfd.h>
 #include <unistd.h>
+#include <sched.h>
 
-using join::ScopedLock;
+using join::Backoff;
 using join::EventHandler;
 using join::Reactor;
 
@@ -41,14 +43,52 @@ using join::Reactor;
 //   CLASS     : Reactor
 //   METHOD    : Reactor
 // =========================================================================
-Reactor::Reactor ()
-: _eventfd (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
-  _epoll (epoll_create1 (EPOLL_CLOEXEC))
+Reactor::Reactor (int core, int priority)
+: _wakeup (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
+, _epoll (epoll_create1 (EPOLL_CLOEXEC))
+, _commands (_queueSize)
+, _core (core)
+, _priority (priority)
 {
+    if (_wakeup == -1)
+    {
+        throw std::system_error (errno, std::system_category (), "eventfd failed");
+    }
+
+    if (_epoll == -1)
+    {
+        int err = errno;
+        ::close (_wakeup);
+        throw std::system_error (err, std::system_category (), "epoll_create1 failed");
+    }
+
+    _deleted.reserve (_deletedReserve);
+
     struct epoll_event ev {};
     ev.events = EPOLLIN;
     ev.data.ptr = nullptr;
-    epoll_ctl (_epoll, EPOLL_CTL_ADD, _eventfd, &ev);
+
+    if (epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev) == -1)
+    {
+        int err = errno;
+        ::close (_epoll);
+        ::close (_wakeup);
+        throw std::system_error (err, std::system_category (), "epoll_ctl failed");
+    }
+
+    _dispatcher = Thread ([this] () {
+        if (_core >= 0)
+        {
+            setAffinity (pthread_self (), _core);
+        }
+
+        if (_priority > 0)
+        {
+            setPriority (pthread_self (), _priority);
+        }
+
+        eventLoop ();
+    });
 }
 
 // =========================================================================
@@ -57,57 +97,60 @@ Reactor::Reactor ()
 // =========================================================================
 Reactor::~Reactor ()
 {
-    ScopedLock <RecursiveMutex> lock (_mutex);
-
-    if (_running)
-    {
-        uint64_t value = 1;
-        [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
-        _threadStatus.wait (lock, [this] () { return !_running; });
-    }
+    _running.store (false, std::memory_order_release);
+    writeCommand ({CommandType::Stop, nullptr, nullptr, nullptr});
+    _dispatcher.join ();
 
     ::close (_epoll);
-    ::close (_eventfd);
+    ::close (_wakeup);
 }
 
 // =========================================================================
 //   CLASS     : Reactor
 //   METHOD    : addHandler
 // =========================================================================
-int Reactor::addHandler (EventHandler* handler)
+int Reactor::addHandler (EventHandler* handler, bool sync) noexcept
 {
-    if (handler == nullptr)
+    if (JOIN_UNLIKELY (handler == nullptr))
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 
-    struct epoll_event ev {};
-    ev.events = EPOLLIN | EPOLLRDHUP;
-    ev.data.ptr = handler;
-
-    if (epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev) == -1)
+    if (JOIN_UNLIKELY (handler->handle () < 0))
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
-    {
-        ScopedLock <RecursiveMutex> lock (_mutex);
+    std::atomic <bool> done {false}, *pdone = nullptr;
+    std::atomic <int> errc {0}, *perrc = nullptr;
 
-        if (++_num == 1)
+    if (JOIN_UNLIKELY (sync))
+    {
+        pdone = &done;
+        perrc = &errc;
+    }
+
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Add, handler, pdone, perrc}) == -1))
+    {
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY (sync))
+    {
+        Backoff backoff;
+        while (!done.load (std::memory_order_acquire))
         {
-            // first handler, start dispatcher thread.
-            std::thread th (std::bind (&Reactor::dispatch, this));
-            _threadId = th.get_id ();
-            th.detach ();
+            backoff ();
         }
 
-        // wait until dispatcher is running,
-        // unless we're the dispatcher thread itself.
-        _threadStatus.wait (lock, [this] () {
-            return (std::this_thread::get_id () == _threadId) || _running; 
-        });
+        int err = errc.load (std::memory_order_acquire);
+        if (JOIN_UNLIKELY (err != 0))
+        {
+            lastError = std::make_error_code (static_cast <std::errc> (err));
+            return -1;
+        }
     }
 
     return 0;
@@ -117,34 +160,52 @@ int Reactor::addHandler (EventHandler* handler)
 //   CLASS     : Reactor
 //   METHOD    : delHandler
 // =========================================================================
-int Reactor::delHandler (EventHandler* handler)
+int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
 {
-    if (handler == nullptr)
+    if (JOIN_UNLIKELY (handler == nullptr))
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 
-    if (epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->handle (), nullptr) == -1)
+    if (JOIN_UNLIKELY (handler->handle () < 0))
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
+    if (JOIN_UNLIKELY (_dispatcher.id () == pthread_self ()))
     {
-        ScopedLock <RecursiveMutex> lock (_mutex);
+        return unregisterHandler (handler);
+    }
 
-        if (--_num == 0)
+    std::atomic <bool> done {false}, *pdone = nullptr;
+    std::atomic <int> errc {0}, *perrc = nullptr;
+
+    if (JOIN_UNLIKELY (sync))
+    {
+        pdone = &done;
+        perrc = &errc;
+    }
+
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Del, handler, pdone, perrc}) == -1))
+    {
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY (sync))
+    {
+        Backoff backoff;
+        while (!done.load (std::memory_order_acquire))
         {
-            // last handler, stop dispatcher thread.
-            uint64_t value = 1;
-            [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
+            backoff ();
+        }
 
-            // wait until dispatcher has stopped,
-            // unless we're the dispatcher thread itself.
-            _threadStatus.wait (lock, [this] () {
-                return (std::this_thread::get_id () == _threadId) || !_running;
-            });
+        int err = errc.load (std::memory_order_acquire);
+        if (JOIN_UNLIKELY (err != 0))
+        {
+            lastError = std::make_error_code (static_cast <std::errc> (err));
+            return -1;
         }
     }
 
@@ -153,9 +214,57 @@ int Reactor::delHandler (EventHandler* handler)
 
 // =========================================================================
 //   CLASS     : Reactor
+//   METHOD    : setAffinity
+// =========================================================================
+int Reactor::setAffinity (int core)
+{
+    if (setAffinity (_dispatcher.id (), core) == -1)
+    {
+        return -1;
+    }
+
+    _core = core;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : getAffinity
+// =========================================================================
+int Reactor::getAffinity () const noexcept
+{
+    return _core;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : setPriority
+// =========================================================================
+int Reactor::setPriority (int priority)
+{
+    if (setPriority (_dispatcher.id (), priority) == -1)
+    {
+        return -1;
+    }
+
+    _priority = priority;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : getPriority
+// =========================================================================
+int Reactor::getPriority () const noexcept
+{
+    return _priority;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
 //   METHOD    : instance
 // =========================================================================
-Reactor* Reactor::instance ()
+Reactor* Reactor::instance () noexcept
 {
     static Reactor reactor;
     return &reactor;
@@ -163,58 +272,252 @@ Reactor* Reactor::instance ()
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : dispatch
+//   METHOD    : setAffinity
 // =========================================================================
-void Reactor::dispatch ()
+int Reactor::setAffinity (pthread_t id, int core)
 {
+    if (core < -1)
     {
-        ScopedLock <RecursiveMutex> lock (_mutex);
-        _running = true;
-        _threadStatus.broadcast ();
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
     }
 
-    std::vector <struct epoll_event> ev (256);
-    bool stop = false;
-
-    while (!stop)
+    int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
+    if (ncpu == -1)
     {
-        int nset = epoll_wait (_epoll, ev.data (), ev.size (), -1);
+        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        return -1;
+    }
 
-        ScopedLock <RecursiveMutex> lock (_mutex);
+    if (core >= ncpu)
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
 
-        for (int n = 0; n < nset; ++n)
+    cpu_set_t cpuset;
+    CPU_ZERO (&cpuset);
+
+    if (core == -1)
+    {
+        for (int i = 0; i < ncpu; ++i)
         {
-            if (ev[n].data.ptr == nullptr)
-            {
-                uint64_t value;
-                [[maybe_unused]] ssize_t bytes = ::read (_eventfd, &value, sizeof (uint64_t));
-                stop = true;
-                break;
-            }
+            CPU_SET (i, &cpuset);
+        }
+    }
+    else
+    {
+        CPU_SET (core, &cpuset);
+    }
 
-            if (ev[n].events & EPOLLERR)
+    int res = pthread_setaffinity_np (id, sizeof (cpu_set_t), &cpuset);
+    if (res != 0)
+    {
+        lastError = std::make_error_code (static_cast <std::errc> (res));
+        return -1;
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : setPriority
+// =========================================================================
+int Reactor::setPriority (pthread_t id, int priority)
+{
+    if (priority < 0 || priority > 99)
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
+
+    struct sched_param param {};
+    param.sched_priority = priority;
+
+    if (priority == 0)
+    {
+        int res = pthread_setschedparam (id, SCHED_OTHER, &param);
+        if (res != 0)
+        {
+            lastError = std::make_error_code (static_cast <std::errc> (res));
+            return -1;
+        }
+    }
+    else
+    {
+        int res = pthread_setschedparam (id, SCHED_FIFO, &param);
+        if (res != 0)
+        {
+            lastError = std::make_error_code (static_cast <std::errc> (res));
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : registerHandler
+// =========================================================================
+int Reactor::registerHandler (EventHandler* handler) noexcept
+{
+    _deleted.erase (std::remove (_deleted.begin (), _deleted.end (), handler), _deleted.end ());
+
+    struct epoll_event ev {};
+    ev.events = EPOLLIN | EPOLLRDHUP;
+    ev.data.ptr = handler;
+
+    if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev) == -1))
+    {
+        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : unregisterHandler
+// =========================================================================
+int Reactor::unregisterHandler (EventHandler* handler) noexcept
+{
+    if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->handle (), nullptr) == -1))
+    {
+        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        _deleted.push_back (handler);
+        return -1;
+    }
+
+    _deleted.push_back (handler);
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : writeCommand
+// =========================================================================
+int Reactor::writeCommand (const Command& cmd) noexcept
+{
+    if (_commands.push (cmd) == -1)
+    {
+        return -1;
+    }
+
+    uint64_t value = 1;
+    [[maybe_unused]] ssize_t bytes = ::write (_wakeup, &value, sizeof (uint64_t));
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : processCommand
+// =========================================================================
+void  Reactor::processCommand (const Command& cmd)
+{
+    int err = 0;
+
+    switch (cmd.type)
+    {
+        case CommandType::Add:
+            err = registerHandler (cmd.handler);
+            break;
+
+        case CommandType::Del:
+            err = unregisterHandler (cmd.handler);
+            break;
+
+        case CommandType::Stop:
+            break;
+    }
+
+    if (JOIN_UNLIKELY (cmd.done))
+    {
+        if (cmd.errc && (err != 0))
+        {
+            cmd.errc->store (lastError.value (), std::memory_order_release);
+        }
+        cmd.done->store (true, std::memory_order_release);
+    }
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : readCommands
+// =========================================================================
+void Reactor::readCommands ()
+{
+    uint64_t count;
+    [[maybe_unused]] ssize_t bytesRead = ::read (_wakeup, &count, sizeof (count));
+
+    Command cmd;
+    while (_commands.tryPop (cmd) == 0)
+    {
+        processCommand (cmd);
+    }
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : dispatchEvent
+// =========================================================================
+void Reactor::dispatchEvent (const epoll_event& event)
+{
+    EventHandler* handler = static_cast <EventHandler*> (event.data.ptr);
+
+    if (JOIN_LIKELY (isActive (handler)))
+    {
+        if (JOIN_UNLIKELY (event.events & EPOLLERR))
+        {
+            handler->onError ();
+        }
+        else if (JOIN_UNLIKELY (event.events & (EPOLLRDHUP | EPOLLHUP)))
+        {
+            handler->onClose ();
+        }
+        else if (JOIN_LIKELY (event.events & EPOLLIN))
+        {
+            handler->onReceive ();
+        }
+    }
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : eventLoop
+// =========================================================================
+void Reactor::eventLoop ()
+{
+    std::array <epoll_event, _maxEvents> events;
+
+    while (_running.load (std::memory_order_acquire))
+    {
+        int eventCount = epoll_wait (_epoll, events.data (), events.size (), -1);
+
+        for (int i = 0; i < eventCount; ++i)
+        {
+            if (JOIN_UNLIKELY (events[i].data.ptr == nullptr))
             {
-                 reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onError ();
+                readCommands ();
             }
-            else if ((ev[n].events & EPOLLRDHUP) || (ev[n].events & EPOLLHUP))
+            else
             {
-                 reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onClose ();
-            }
-            else if (ev[n].events & EPOLLIN)
-            {
-                 reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onReceive ();
+                dispatchEvent (events[i]);
             }
         }
 
-        if (nset == static_cast <int> (ev.size ()))
-        {
-            ev.resize (ev.size () * 2);
-        }
+        _deleted.clear ();
     }
+}
 
-    {
-        ScopedLock <RecursiveMutex> lock (_mutex);
-        _running = false;
-        _threadStatus.broadcast ();
-    }
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : isActive
+// =========================================================================
+bool Reactor::isActive (EventHandler* handler) const noexcept
+{
+    return std::find (_deleted.begin (), _deleted.end (), handler) == _deleted.end ();
 }

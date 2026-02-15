@@ -186,9 +186,8 @@ TEST_F (ReactorTest, addHandler)
     // add handler.
     ASSERT_EQ (reactor.addHandler (this), 0) << join::lastError.message ();
 
-    // test already in use.
-    ASSERT_EQ (reactor.addHandler (this), -1);
-    ASSERT_EQ (join::lastError, std::errc::file_exists) << join::lastError.message ();
+    // delete handler
+    ASSERT_EQ (reactor.delHandler (this, true), 0) << join::lastError.message ();
 }
 
 /**
@@ -214,11 +213,7 @@ TEST_F (ReactorTest, delHandler)
     ASSERT_EQ (reactor.addHandler (this), 0) << join::lastError.message ();
 
     // delete handler
-    ASSERT_EQ (reactor.delHandler (this), 0) << join::lastError.message ();
-
-    // test already deleted.
-    ASSERT_EQ (reactor.delHandler (this), -1);
-    ASSERT_EQ (join::lastError, std::errc::no_such_file_or_directory);
+    ASSERT_EQ (reactor.delHandler (this, true), 0) << join::lastError.message ();
 }
 
 /**
@@ -244,7 +239,7 @@ TEST_F (ReactorTest, onReceive)
     }
 
     // delete handler.
-    ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (Reactor::instance ()->delHandler (this, true), 0) << join::lastError.message ();
 }
 
 /**

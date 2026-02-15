@@ -56,8 +56,8 @@ namespace join
          */
         template <class Function, class... Args>
         explicit Invoker (Function&& func, Args&&... args)
-        : _func (std::bind (std::forward <Function> (func), std::forward <Args> (args)...)),
-          _done (false)
+        : _func (std::bind (std::forward <Function> (func), std::forward <Args> (args)...))
+        , _done (false)
         {
             pthread_attr_init (&_attr);
             pthread_create (&_handle, &_attr, _routine, this);
@@ -98,7 +98,7 @@ namespace join
     private:
         /**
          * @brief get the handle of the thread of execution.
-         * @retunr thread of execution handle.
+         * @return thread of execution handle.
          */
         pthread_t handle ();
 
@@ -206,6 +206,12 @@ namespace join
          * @return true if thread was joined, false if running thread didn't finished its execution.
          */
         bool tryJoin ();
+
+        /**
+         * @brief get thread id.
+         * @return thread id.
+         */
+        pthread_t id () const noexcept;
 
         /**
          * @brief cancel the running thread if any.
