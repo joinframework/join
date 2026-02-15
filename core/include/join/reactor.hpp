@@ -111,8 +111,33 @@ namespace join
             // do nothing.
         }
 
+    private:
+        /**
+         * @brief set reactor index for pool assignment.
+         * @param index reactor index.
+         */
+        void reactorIndex (int index) noexcept
+        {
+            _reactorIndex = index;
+        }
+
+        /**
+         * @brief get assigned reactor index.
+         * @return reactor index (-1 if not assigned).
+         */
+        int reactorIndex () const noexcept
+        {
+            return _reactorIndex;
+        }
+
+        /// index of the assigned reactor
+        int _reactorIndex = -1;
+
         /// friendship with reactor.
         friend class Reactor;
+
+        /// friendship with reactor pool.
+        friend class ReactorPool;
     };
 
     /**
