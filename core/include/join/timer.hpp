@@ -127,7 +127,7 @@ namespace join
          */
         virtual ~BasicTimer ()
         {
-            Reactor::instance ()->delHandler (this);
+            Reactor::instance ()->delHandler (this, true);
             cancel ();
             if (_handle != -1)
             {

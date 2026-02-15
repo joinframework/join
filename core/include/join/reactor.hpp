@@ -123,8 +123,10 @@ namespace join
     public:
         /**
          * @brief default constructor.
+         * @param core CPU core id.
+         * @param priority thread priority.
          */
-        Reactor ();
+        Reactor (int core = -1, int priority = 0);
 
         /**
          * @brief copy constructor.
@@ -171,7 +173,33 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int delHandler (EventHandler* handler, bool sync = true) noexcept;
+        int delHandler (EventHandler* handler, bool sync = false) noexcept;
+
+        /**
+         * @brief set dispatcher thread CPU affinity.
+         * @param core CPU core ID (-1 to disable pinning).
+         * @return 0 on success, -1 on failure.
+         */
+        int setAffinity (int core);
+
+        /**
+         * @brief get current dispatcher affinity.
+         * @return core ID or -1 if not pinned.
+         */
+        int getAffinity () const noexcept;
+
+        /**
+         * @brief set dispatcher thread real-time priority.
+         * @param priority priority (0 = normal, 1-99 = SCHED_FIFO).
+         * @return 0 on success, -1 on failure.
+         */
+        int setPriority (int priority);
+
+        /**
+         * @brief get current dispatcher priority.
+         * @return priority.
+         */
+        int getPriority () const noexcept;
 
         /**
          * @brief create the Reactor instance.
@@ -204,6 +232,22 @@ namespace join
             std::atomic <bool>* done;
             std::atomic <int>* errc;
         };
+
+        /**
+         * @brief set dispatcher thread CPU affinity.
+         * @param id thread id.
+         * @param core CPU core ID (-1 to disable pinning).
+         * @return 0 on success, -1 on failure.
+         */
+        static int setAffinity (pthread_t id, int core);
+
+        /**
+         * @brief set dispatcher thread real-time priority.
+         * @param id thread id.
+         * @param priority priority (0 = normal, 1-99 = SCHED_FIFO).
+         * @return 0 on success, -1 on failure.
+         */
+        static int setPriority (pthread_t id, int priority);
 
         /**
          * @brief register handler with epoll.
@@ -263,6 +307,12 @@ namespace join
 
         /// command queue
         LocalMem::Mpsc::Queue <Command> _commands;
+
+        /// CPU core id.
+        int _core = -1;
+
+        /// dispatcher thread priority.
+        int _priority = 0;
 
         /// dispatcher thread.
         Thread _dispatcher;

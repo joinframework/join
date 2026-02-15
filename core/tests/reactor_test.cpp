@@ -187,7 +187,7 @@ TEST_F (ReactorTest, addHandler)
     ASSERT_EQ (reactor.addHandler (this), 0) << join::lastError.message ();
 
     // delete handler
-    ASSERT_EQ (reactor.delHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (reactor.delHandler (this, true), 0) << join::lastError.message ();
 }
 
 /**
@@ -213,7 +213,7 @@ TEST_F (ReactorTest, delHandler)
     ASSERT_EQ (reactor.addHandler (this), 0) << join::lastError.message ();
 
     // delete handler
-    ASSERT_EQ (reactor.delHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (reactor.delHandler (this, true), 0) << join::lastError.message ();
 }
 
 /**
@@ -239,7 +239,7 @@ TEST_F (ReactorTest, onReceive)
     }
 
     // delete handler.
-    ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (Reactor::instance ()->delHandler (this, true), 0) << join::lastError.message ();
 }
 
 /**

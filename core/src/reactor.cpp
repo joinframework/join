@@ -33,6 +33,7 @@
 // C.
 #include <sys/eventfd.h>
 #include <unistd.h>
+#include <sched.h>
 
 using join::Backoff;
 using join::EventHandler;
@@ -42,19 +43,52 @@ using join::Reactor;
 //   CLASS     : Reactor
 //   METHOD    : Reactor
 // =========================================================================
-Reactor::Reactor ()
+Reactor::Reactor (int core, int priority)
 : _wakeup (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
 , _epoll (epoll_create1 (EPOLL_CLOEXEC))
 , _commands (_queueSize)
+, _core (core)
+, _priority (priority)
 {
+    if (_wakeup == -1)
+    {
+        throw std::system_error (errno, std::system_category (), "eventfd failed");
+    }
+
+    if (_epoll == -1)
+    {
+        int err = errno;
+        ::close (_wakeup);
+        throw std::system_error (err, std::system_category (), "epoll_create1 failed");
+    }
+
     _deleted.reserve (_deletedReserve);
 
     struct epoll_event ev {};
     ev.events = EPOLLIN;
     ev.data.ptr = nullptr;
-    epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev);
 
-    _dispatcher = Thread (std::bind (&Reactor::eventLoop, this));
+    if (epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev) == -1)
+    {
+        int err = errno;
+        ::close (_epoll);
+        ::close (_wakeup);
+        throw std::system_error (err, std::system_category (), "epoll_ctl failed");
+    }
+
+    _dispatcher = Thread ([this] () {
+        if (_core >= 0)
+        {
+            setAffinity (pthread_self (), _core);
+        }
+
+        if (_priority > 0)
+        {
+            setPriority (pthread_self (), _priority);
+        }
+
+        eventLoop ();
+    });
 }
 
 // =========================================================================
@@ -180,12 +214,147 @@ int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
 
 // =========================================================================
 //   CLASS     : Reactor
+//   METHOD    : setAffinity
+// =========================================================================
+int Reactor::setAffinity (int core)
+{
+    if (setAffinity (_dispatcher.id (), core) == -1)
+    {
+        return -1;
+    }
+
+    _core = core;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : getAffinity
+// =========================================================================
+int Reactor::getAffinity () const noexcept
+{
+    return _core;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : setPriority
+// =========================================================================
+int Reactor::setPriority (int priority)
+{
+    if (setPriority (_dispatcher.id (), priority) == -1)
+    {
+        return -1;
+    }
+
+    _priority = priority;
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : getPriority
+// =========================================================================
+int Reactor::getPriority () const noexcept
+{
+    return _priority;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
 //   METHOD    : instance
 // =========================================================================
 Reactor* Reactor::instance () noexcept
 {
     static Reactor reactor;
     return &reactor;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : setAffinity
+// =========================================================================
+int Reactor::setAffinity (pthread_t id, int core)
+{
+    if (core < -1)
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
+
+    int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
+    if (ncpu == -1)
+    {
+        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        return -1;
+    }
+
+    if (core >= ncpu)
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
+
+    cpu_set_t cpuset;
+    CPU_ZERO (&cpuset);
+
+    if (core == -1)
+    {
+        for (int i = 0; i < ncpu; ++i)
+        {
+            CPU_SET (i, &cpuset);
+        }
+    }
+    else
+    {
+        CPU_SET (core, &cpuset);
+    }
+
+    int res = pthread_setaffinity_np (id, sizeof (cpu_set_t), &cpuset);
+    if (res != 0)
+    {
+        lastError = std::make_error_code (static_cast <std::errc> (res));
+        return -1;
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : setPriority
+// =========================================================================
+int Reactor::setPriority (pthread_t id, int priority)
+{
+    if (priority < 0 || priority > 99)
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
+
+    struct sched_param param {};
+    param.sched_priority = priority;
+
+    if (priority == 0)
+    {
+        int res = pthread_setschedparam (id, SCHED_OTHER, &param);
+        if (res != 0)
+        {
+            lastError = std::make_error_code (static_cast <std::errc> (res));
+            return -1;
+        }
+    }
+    else
+    {
+        int res = pthread_setschedparam (id, SCHED_FIFO, &param);
+        if (res != 0)
+        {
+            lastError = std::make_error_code (static_cast <std::errc> (res));
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 // =========================================================================
