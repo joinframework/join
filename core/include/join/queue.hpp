@@ -277,8 +277,8 @@ namespace join
             {
                 return 0;
             }
+            auto tail = _segment->_sync._tail.load (std::memory_order_relaxed);
             auto head = _segment->_sync._head.load (std::memory_order_acquire);
-            auto tail = _segment->_sync._tail.load (std::memory_order_acquire);
             return head - tail;
         }
 
@@ -455,6 +455,7 @@ namespace join
 
             auto& sync = segment->_sync;
             uint64_t head = sync._head.load (std::memory_order_relaxed);
+            Backoff backoff;
 
             for (;;)
             {
@@ -463,7 +464,7 @@ namespace join
 
                 if (seq == head)
                 {
-                    if (JOIN_LIKELY (sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire)))
+                    if (JOIN_LIKELY (sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire, std::memory_order_relaxed)))
                     {
                         slot->data = element;
                         slot->_seq.store (head + 1, std::memory_order_release);
@@ -477,6 +478,7 @@ namespace join
                 } 
                 else
                 {
+                    backoff ();
                     head = sync._head.load (std::memory_order_relaxed);
                 }
             }
@@ -550,6 +552,7 @@ namespace join
 
             auto& sync = segment->_sync;
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
+            Backoff backoff;
 
             for (;;)
             {
@@ -560,7 +563,7 @@ namespace join
                 {
                     Type temp = slot->data;
 
-                    if (JOIN_LIKELY (sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire)))
+                    if (JOIN_LIKELY (sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire, std::memory_order_relaxed)))
                     {
                         element = temp;
                         slot->_seq.store (tail + sync._capacity, std::memory_order_release);
@@ -574,6 +577,7 @@ namespace join
                 }
                 else
                 {
+                    backoff ();
                     tail = sync._tail.load (std::memory_order_relaxed);
                 }
             }
