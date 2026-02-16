@@ -32,7 +32,7 @@ using join::LocalMem;
 
 TEST (LocalMem, create)
 {
-    ASSERT_THROW (LocalMem (0), std::system_error);
+    ASSERT_THROW (LocalMem (0, 0), std::system_error);
     ASSERT_THROW (LocalMem (std::numeric_limits <uint64_t>::max ()), std::system_error);
 
     LocalMem mem1 (4096, 0);
