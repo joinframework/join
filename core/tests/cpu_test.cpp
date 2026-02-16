@@ -55,6 +55,14 @@ TEST (CpuTopology, nodes)
 }
 
 /**
+ * @brief test dump.
+ */
+TEST (CpuTopology, dump)
+{
+    ASSERT_NO_THROW (CpuTopology::instance ()->dump ());
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char **argv)
