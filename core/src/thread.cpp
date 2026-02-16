@@ -65,7 +65,7 @@ void * Invoker::_routine (void * context)
 void * Invoker::routine (void)
 {
     _func ();
-    _done = true;
+    _done.store (true, std::memory_order_release);
     return nullptr;
 }
 
@@ -113,7 +113,7 @@ bool Thread::joinable () const noexcept
 // =========================================================================
 bool Thread::running () const noexcept
 {
-    return (joinable () && !_invoker->_done);
+    return (joinable () && !_invoker->_done.load (std::memory_order_acquire));
 }
 
 // =========================================================================
@@ -163,4 +163,17 @@ void Thread::cancel ()
 void Thread::swap (Thread& other)
 {
     std::swap (_invoker, other._invoker);
+}
+
+// =========================================================================
+//   CLASS     : Thread
+//   METHOD    : handle
+// =========================================================================
+pthread_t Thread::handle () const
+{
+    if (!_invoker)
+    {
+        throw std::logic_error ("Thread::handle() called on non-joinable thread");
+    }
+    return _invoker->handle ();
 }
