@@ -23,41 +23,43 @@
  */
 
 // libjoin.
-#include <join/memory.hpp>
+#include <join/cpu.hpp>
 
-// libraries.
+// Libraries.
 #include <gtest/gtest.h>
 
-using join::LocalMem;
+using join::LogicalCpu;
+using join::PhysicalCore;
+using join::NumaNode;
+using join::CpuTopology;
 
-TEST (LocalMem, create)
+/**
+ * @brief test cores.
+ */
+TEST (CpuTopology, cores)
 {
-    ASSERT_THROW (LocalMem (0, 0), std::system_error);
-    ASSERT_THROW (LocalMem (std::numeric_limits <uint64_t>::max ()), std::system_error);
+    ASSERT_GE (CpuTopology::instance ()->cores ().size (), 1);
 
-    LocalMem mem1 (4096, 0);
-    ASSERT_NE (mem1.get (), nullptr);
-    LocalMem mem2 (std::move (mem1));
-    ASSERT_THROW (mem1.get (), std::runtime_error);
-    ASSERT_NE (mem2.get (), nullptr);
+    for (const auto& core : CpuTopology::instance ()->cores ())
+    {
+        ASSERT_GE (core.primaryThread (), 0);
+    }
 }
 
-TEST (LocalMem, get)
+/**
+ * @brief test nodes.
+ */
+TEST (CpuTopology, nodes)
 {
-    LocalMem mem1 (4096, 0);
-    const LocalMem& cmem1 = mem1;
+    ASSERT_GE (CpuTopology::instance ()->nodes ().size (), 1);
+}
 
-    EXPECT_THROW (mem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
-    EXPECT_THROW (cmem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
-
-    ASSERT_NE (mem1.get (), nullptr);
-    ASSERT_NE (cmem1.get (), nullptr);
-
-    LocalMem mem2 (4096, 0);
-    mem2 = std::move (mem1);
-
-    EXPECT_THROW (mem1.get (), std::runtime_error);
-    EXPECT_THROW (cmem1.get (), std::runtime_error);
+/**
+ * @brief test dump.
+ */
+TEST (CpuTopology, dump)
+{
+    ASSERT_NO_THROW (CpuTopology::instance ()->dump ());
 }
 
 /**
@@ -65,6 +67,6 @@ TEST (LocalMem, get)
  */
 int main (int argc, char **argv)
 {
-    testing::InitGoogleTest (&argc, argv);
-    return RUN_ALL_TESTS ();
+   testing::InitGoogleTest (&argc, argv);
+   return RUN_ALL_TESTS ();
 }

@@ -39,6 +39,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <numaif.h>
+#include <numa.h>
 #include <fcntl.h>
 #include <cstdint>
 
@@ -63,15 +65,16 @@ namespace join
         /**
          * @brief allocates a local anonymous memory segment.
          * @param size allocation size in bytes.
+         * @param numa NUMA node ID, or -1 for default policy.
          * @throw std::system_error if mmap fails.
          */
-        explicit LocalMem (uint64_t size)
+        explicit LocalMem (uint64_t size, int numa = -1)
         { 
             long sc = sysconf (_SC_PAGESIZE);
             uint64_t pageSize = (sc > 0) ? static_cast <uint64_t> (sc) : 4096;
             _size = (size + pageSize - 1) & ~(pageSize - 1);
 
-            create ();
+            create (numa);
         }
 
         /**
@@ -172,9 +175,10 @@ namespace join
     private:
         /**
          * @brief create the memory.
+         * @param numa NUMA node ID, or -1 for default policy.
          * @throw std::system_error if mmap fails.
          */
-        void create ()
+        void create (int numa)
         {
             _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
             if ((_ptr == MAP_FAILED) && ((errno == ENOMEM) || (errno == EINVAL)))
@@ -186,6 +190,13 @@ namespace join
             if (_ptr == MAP_FAILED)
             {
                 throw std::system_error (errno, std::generic_category (), "mmap failed");
+            }
+
+            // apply NUMA policy if requested - not critical if it fails
+            if (numa >= 0)
+            {
+                unsigned long mask = (1UL << numa);
+                ::mbind (_ptr, _size, MPOL_BIND, &mask, sizeof (mask) * 8, MPOL_MF_STRICT);
             }
 
             // pin the memory to RAM - not critical if it fails
@@ -228,9 +239,10 @@ namespace join
          * @brief creates or opens a named shared memory segment.
          * @param size shared memory size in bytes.
          * @param name shared memory unique name.
+         * @param numa NUMA node ID, or -1 for default policy.
          * @throw std::system_error if mmap fails.
          */
-        explicit ShmMem (uint64_t size, const std::string& name)
+        explicit ShmMem (uint64_t size, const std::string& name, int numa = 1)
         : _name (name)
         {
             long sc = sysconf (_SC_PAGESIZE);
@@ -242,7 +254,7 @@ namespace join
                 throw std::overflow_error ("size will overflow");
             }
 
-            create ();
+            create (numa);
         }
 
         /**
@@ -369,9 +381,10 @@ namespace join
     private:
         /**
          * @brief create the posix shared memory.
+         * @param numa NUMA node ID, or -1 for default policy.
          * @throw std::system_error if mmap fails.
          */
-        void create ()
+        void create (int numa)
         {
             bool created = true;
 
@@ -426,6 +439,13 @@ namespace join
                 int err = errno;
                 ::close (_fd);
                 throw std::system_error (err, std::generic_category (), "mmap failed");
+            }
+
+            // apply NUMA policy if requested - not critical if it fails
+            if (numa >= 0)
+            {
+                unsigned long mask = (1UL << numa);
+                ::mbind (_ptr, _size, MPOL_BIND, &mask, sizeof (mask) * 8, MPOL_MF_STRICT);
             }
 
             // pin the memory to RAM - not critical if it fails
