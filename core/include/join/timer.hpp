@@ -81,7 +81,7 @@ namespace join
         , _oneShot (other._oneShot)
         , _handle (other._handle)
         {
-            Reactor::instance ()->delHandler (&other, true);
+            Reactor::instance ()->delHandler (&other);
 
             other._callback = nullptr;
             other._ns = std::chrono::nanoseconds::zero ();
@@ -98,7 +98,7 @@ namespace join
          */
         BasicTimer& operator= (BasicTimer&& other) noexcept
         {
-            Reactor::instance ()->delHandler (this, true);
+            Reactor::instance ()->delHandler (this);
             cancel ();
             if (_handle != -1)
             {
@@ -110,7 +110,7 @@ namespace join
             _oneShot = other._oneShot;
             _handle = other._handle;
 
-            Reactor::instance ()->delHandler (&other, true);
+            Reactor::instance ()->delHandler (&other);
 
             other._callback = nullptr;
             other._ns = std::chrono::nanoseconds::zero ();
@@ -127,7 +127,7 @@ namespace join
          */
         virtual ~BasicTimer ()
         {
-            Reactor::instance ()->delHandler (this, true);
+            Reactor::instance ()->delHandler (this);
             cancel ();
             if (_handle != -1)
             {

@@ -34,6 +34,7 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 #include <sched.h>
+#include <numa.h>
 
 using join::Backoff;
 using join::EventHandler;
@@ -43,12 +44,12 @@ using join::Reactor;
 //   CLASS     : Reactor
 //   METHOD    : Reactor
 // =========================================================================
-Reactor::Reactor (int core, int priority)
+Reactor::Reactor (int affi, int prio)
 : _wakeup (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
 , _epoll (epoll_create1 (EPOLL_CLOEXEC))
-, _commands (_queueSize)
-, _core (core)
-, _priority (priority)
+, _commands (_queueSize, (affi >= 0) ? numa_node_of_cpu (affi) : -1)
+, _affinity (affi)
+, _priority (prio)
 {
     if (_wakeup == -1)
     {
@@ -77,14 +78,14 @@ Reactor::Reactor (int core, int priority)
     }
 
     _dispatcher = Thread ([this] () {
-        if (_core >= 0)
+        if (_affinity >= 0)
         {
-            setAffinity (pthread_self (), _core);
+            affinity (pthread_self (), _affinity);
         }
 
         if (_priority > 0)
         {
-            setPriority (pthread_self (), _priority);
+            priority (pthread_self (), _priority);
         }
 
         eventLoop ();
@@ -214,48 +215,48 @@ int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : setAffinity
+//   METHOD    : affinity
 // =========================================================================
-int Reactor::setAffinity (int core)
+int Reactor::affinity (int core)
 {
-    if (setAffinity (_dispatcher.id (), core) == -1)
+    if (affinity (_dispatcher.id (), core) == -1)
     {
         return -1;
     }
 
-    _core = core;
+    _affinity = core;
     return 0;
 }
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : getAffinity
+//   METHOD    : affinity
 // =========================================================================
-int Reactor::getAffinity () const noexcept
+int Reactor::affinity () const noexcept
 {
-    return _core;
+    return _affinity;
 }
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : setPriority
+//   METHOD    : priority
 // =========================================================================
-int Reactor::setPriority (int priority)
+int Reactor::priority (int prio)
 {
-    if (setPriority (_dispatcher.id (), priority) == -1)
+    if (priority (_dispatcher.id (), prio) == -1)
     {
         return -1;
     }
 
-    _priority = priority;
+    _priority = prio;
     return 0;
 }
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : getPriority
+//   METHOD    : priority
 // =========================================================================
-int Reactor::getPriority () const noexcept
+int Reactor::priority () const noexcept
 {
     return _priority;
 }
@@ -272,9 +273,9 @@ Reactor* Reactor::instance () noexcept
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : setAffinity
+//   METHOD    : affinity
 // =========================================================================
-int Reactor::setAffinity (pthread_t id, int core)
+int Reactor::affinity (pthread_t id, int core)
 {
     if (core < -1)
     {
@@ -322,20 +323,20 @@ int Reactor::setAffinity (pthread_t id, int core)
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : setPriority
+//   METHOD    : priority
 // =========================================================================
-int Reactor::setPriority (pthread_t id, int priority)
+int Reactor::priority (pthread_t id, int prio)
 {
-    if (priority < 0 || priority > 99)
+    if (prio < 0 || prio > 99)
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 
     struct sched_param param {};
-    param.sched_priority = priority;
+    param.sched_priority = prio;
 
-    if (priority == 0)
+    if (prio == 0)
     {
         int res = pthread_setschedparam (id, SCHED_OTHER, &param);
         if (res != 0)

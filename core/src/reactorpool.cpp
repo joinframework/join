@@ -24,6 +24,7 @@
 
 // libjoin.
 #include <join/reactorpool.hpp>
+#include <join/cpu.hpp>
 
 // C.
 #include <unistd.h>
@@ -37,17 +38,23 @@ using join::ReactorPool;
 // =========================================================================
 ReactorPool::ReactorPool ()
 {
-    int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
-    if (ncpu <= 0)
+    const auto& cores = CpuTopology::instance ()->cores ();
+
+    if (cores.empty ())
     {
-        ncpu = 1;
+        _reactors.emplace_back (std::make_unique <Reactor> ());
+        return;
     }
 
-    _reactors.reserve (ncpu);
+    _reactors.reserve (cores.size ());
 
-    for (int core = 0; core < ncpu; ++core)
+    for (const auto& core : cores)
     {
-        _reactors.emplace_back (std::make_unique <Reactor> (core));
+        int primary = core.primaryThread ();
+        if (primary != -1)
+        {
+            _reactors.emplace_back (std::make_unique <Reactor> (primary));
+        }
     }
 }
 

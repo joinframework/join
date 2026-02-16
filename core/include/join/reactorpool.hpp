@@ -56,7 +56,7 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addHandler (EventHandler* handler, bool sync = false) noexcept;
+        int addHandler (EventHandler* handler, bool sync = true) noexcept;
 
         /**
          * @brief delete handler from reactor.
@@ -64,7 +64,7 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int delHandler (EventHandler* handler, bool sync = false) noexcept;
+        int delHandler (EventHandler* handler, bool sync = true) noexcept;
 
         /**
          * @brief create the ReactorPool instance.
