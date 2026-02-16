@@ -145,10 +145,11 @@ TEST (Thread, swap)
  */
 TEST (Thread, handle)
 {
-    Thread th ([](){std::this_thread::sleep_for (10ms);});;
-    EXPECT_TRUE (th.joinable ());
-    EXPECT_NO_THROW (th.handle ());
-    th.join ();
+    Thread th1, th2 ([](){std::this_thread::sleep_for (10ms);});
+    EXPECT_THROW (th1.handle (), std::logic_error);
+    EXPECT_TRUE (th2.joinable ());
+    EXPECT_NO_THROW (th2.handle ());
+    th2.join ();
 }
 
 /**
