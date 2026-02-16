@@ -141,6 +141,17 @@ TEST (Thread, swap)
 }
 
 /**
+ * @brief test handle.
+ */
+TEST (Thread, handle)
+{
+    Thread th ([](){std::this_thread::sleep_for (10ms);});;
+    EXPECT_TRUE (th.joinable ());
+    EXPECT_NO_THROW (th.handle ());
+    th.join ();
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char **argv)
