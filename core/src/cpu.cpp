@@ -176,89 +176,87 @@ void CpuTopology::detect ()
     std::map <int, size_t> nodeMap;
 
     DIR* dir = opendir ("/sys/devices/system/cpu");
-    if (!dir)
+    if (dir)
     {
-        return;
-    }
-
-    struct dirent* entry;
-    while ((entry = readdir (dir)))
-    {
-        if (std::strncmp (entry->d_name, "cpu", 3) != 0)
+        struct dirent* entry;
+        while ((entry = readdir (dir)))
         {
-            continue;
-        }
-
-        char* end;
-        long cpuId = std::strtol (entry->d_name + 3, &end, 10);
-        if (*end != '\0')
-        {
-            continue;
-        }
-
-        std::string cpuPath = "/sys/devices/system/cpu/";
-        cpuPath += entry->d_name;
-
-        int coreId = readInt (cpuPath + "/topology/core_id");
-        int socket = readInt (cpuPath + "/topology/physical_package_id");
-        int numa = findNuma (cpuPath);
-
-        auto coreKey = std::make_tuple (socket, coreId, numa);
-        size_t coreIndex;
-
-        auto coreIt = coreMap.find (coreKey);
-        if (coreIt == coreMap.end ())
-        {
-            coreIndex = _cores.size ();
-            _cores.push_back ({coreId, socket, numa, {}});
-            coreMap[coreKey] = coreIndex;
-
-            size_t nodeIndex;
-            auto nodeIt = nodeMap.find (numa);
-            if (nodeIt == nodeMap.end ())
+            if (std::strncmp (entry->d_name, "cpu", 3) != 0)
             {
-                nodeIndex = _nodes.size ();
-                _nodes.push_back ({numa, {}});
-                nodeMap[numa] = nodeIndex;
+                continue;
+            }
+
+            char* end;
+            long cpuId = std::strtol (entry->d_name + 3, &end, 10);
+            if (*end != '\0')
+            {
+                continue;
+            }
+
+            std::string cpuPath = "/sys/devices/system/cpu/";
+            cpuPath += entry->d_name;
+
+            int coreId = readInt (cpuPath + "/topology/core_id");
+            int socket = readInt (cpuPath + "/topology/physical_package_id");
+            int numa = findNuma (cpuPath);
+
+            auto coreKey = std::make_tuple (socket, coreId, numa);
+            size_t coreIndex;
+
+            auto coreIt = coreMap.find (coreKey);
+            if (coreIt == coreMap.end ())
+            {
+                coreIndex = _cores.size ();
+                _cores.push_back ({coreId, socket, numa, {}});
+                coreMap[coreKey] = coreIndex;
+
+                size_t nodeIndex;
+                auto nodeIt = nodeMap.find (numa);
+                if (nodeIt == nodeMap.end ())
+                {
+                    nodeIndex = _nodes.size ();
+                    _nodes.push_back ({numa, {}});
+                    nodeMap[numa] = nodeIndex;
+                }
+                else
+                {
+                    nodeIndex = nodeIt->second;
+                }
+
+                _nodes[nodeIndex].cores.push_back (coreId);
             }
             else
             {
-                nodeIndex = nodeIt->second;
+                coreIndex = coreIt->second;
             }
 
-            _nodes[nodeIndex].cores.push_back (coreId);
-        }
-        else
-        {
-            coreIndex = coreIt->second;
+            _cores[coreIndex].threads.push_back ({
+                static_cast <int> (cpuId),
+                coreId,
+                socket,
+                numa
+            });
         }
 
-        _cores[coreIndex].threads.push_back ({
-            static_cast <int> (cpuId),
-            coreId,
-            socket,
-            numa
-        });
-    }
-
-    std::sort (_cores.begin (), _cores.end (), [] (const PhysicalCore& a, const PhysicalCore& b) {
-        if (a.socket != b.socket)
-        {
-            return a.socket < b.socket;
-        }
-        return a.id < b.id;
-    });
-
-    for (auto& core : _cores)
-    {
-        std::sort (core.threads.begin (), core.threads.end (), [] (const LogicalCpu& a, const LogicalCpu& b) {
+        std::sort (_cores.begin (), _cores.end (), [] (const PhysicalCore& a, const PhysicalCore& b) {
+            if (a.socket != b.socket)
+            {
+                return a.socket < b.socket;
+            }
             return a.id < b.id;
         });
+
+        for (auto& core : _cores)
+        {
+            std::sort (core.threads.begin (), core.threads.end (), [] (const LogicalCpu& a, const LogicalCpu& b) {
+                return a.id < b.id;
+            });
+        }
+
+        std::sort (_nodes.begin (), _nodes.end (), [] (const NumaNode& a, const NumaNode& b) {
+            return a.id < b.id;
+        });
+
+        closedir (dir);
     }
-
-    std::sort (_nodes.begin (), _nodes.end (), [] (const NumaNode& a, const NumaNode& b) {
-        return a.id < b.id;
-    });
-
-    closedir (dir);
 }
