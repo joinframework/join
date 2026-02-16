@@ -175,7 +175,7 @@ int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
         return -1;
     }
 
-    if (JOIN_UNLIKELY (_dispatcher.id () == pthread_self ()))
+    if (JOIN_UNLIKELY (_dispatcher.handle () == pthread_self ()))
     {
         return unregisterHandler (handler);
     }
@@ -219,7 +219,7 @@ int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
 // =========================================================================
 int Reactor::affinity (int core)
 {
-    if (affinity (_dispatcher.id (), core) == -1)
+    if (affinity (_dispatcher.handle (), core) == -1)
     {
         return -1;
     }
@@ -243,7 +243,7 @@ int Reactor::affinity () const noexcept
 // =========================================================================
 int Reactor::priority (int prio)
 {
-    if (priority (_dispatcher.id (), prio) == -1)
+    if (priority (_dispatcher.handle (), prio) == -1)
     {
         return -1;
     }

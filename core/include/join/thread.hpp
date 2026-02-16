@@ -208,12 +208,6 @@ namespace join
         bool tryJoin ();
 
         /**
-         * @brief get thread id.
-         * @return thread id.
-         */
-        pthread_t id () const noexcept;
-
-        /**
          * @brief cancel the running thread if any.
          */
         void cancel ();
