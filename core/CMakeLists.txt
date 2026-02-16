@@ -26,6 +26,7 @@ set(PUBLIC_HEADERS
     include/join/socketstream.hpp
     include/join/acceptor.hpp
     include/join/openssl.hpp
+    include/join/cpu.hpp
 )
 
 set(SOURCES
@@ -40,6 +41,7 @@ set(SOURCES
     src/macaddress.cpp
     src/ipaddress.cpp
     src/socket.cpp
+    src/cpu.cpp
 )
 
 add_library(${JOIN_CORE} ${SOURCES})

@@ -221,3 +221,8 @@ add_executable(openssl.gtest openssl_test.cpp)
 target_link_libraries(openssl.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME openssl.gtest COMMAND openssl.gtest)
 install(TARGETS openssl.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(cpu.gtest cpu_test.cpp)
+target_link_libraries(cpu.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME cpu.gtest COMMAND cpu.gtest)
+install(TARGETS cpu.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
