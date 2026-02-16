@@ -224,6 +224,12 @@ namespace join
          */
         void swap (Thread& other);
 
+        /**
+         * @brief get the handle of the thread of execution.
+         * @retunr thread of execution handle.
+         */
+        pthread_t handle () const;
+
     private:
         /// current thread informations.
         std::unique_ptr <Invoker> _invoker;
