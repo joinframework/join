@@ -35,7 +35,7 @@ TEST (LocalMem, create)
     ASSERT_THROW (LocalMem (0), std::system_error);
     ASSERT_THROW (LocalMem (std::numeric_limits <uint64_t>::max ()), std::system_error);
 
-    LocalMem mem1 (4096);
+    LocalMem mem1 (4096, 0);
     ASSERT_NE (mem1.get (), nullptr);
     LocalMem mem2 (std::move (mem1));
     ASSERT_THROW (mem1.get (), std::runtime_error);
@@ -44,7 +44,7 @@ TEST (LocalMem, create)
 
 TEST (LocalMem, get)
 {
-    LocalMem mem1 (4096);
+    LocalMem mem1 (4096, 0);
     const LocalMem& cmem1 = mem1;
 
     EXPECT_THROW (mem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
@@ -53,7 +53,7 @@ TEST (LocalMem, get)
     ASSERT_NE (mem1.get (), nullptr);
     ASSERT_NE (cmem1.get (), nullptr);
 
-    LocalMem mem2 (4096);
+    LocalMem mem2 (4096, 0);
     mem2 = std::move (mem1);
 
     EXPECT_THROW (mem1.get (), std::runtime_error);
