@@ -28,6 +28,9 @@
 // C++.
 #include <string>
 
+// C.
+#include <sys/stat.h>
+
 namespace join
 {
     /**
@@ -156,6 +159,17 @@ namespace join
             mime = "application/octet-stream";
 
         return mime;
+    }
+
+    /**
+     * @brief check if the file specified exists.
+     * @param filepath Path to the file to examine.
+     * @return true if file exists, false otherwise.
+     */
+    __inline__ bool exists (const std::string& filepath)
+    {
+        struct stat status;
+        return stat (filepath.c_str (), &status) == 0;
     }
 }
 
