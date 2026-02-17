@@ -53,6 +53,54 @@ namespace join
     template <typename, typename> struct Mpmc;
 
     /**
+     * @brief bind memory to a NUMA node.
+     * @param ptr memory pointer.
+     * @param size memory size.
+     * @param numa NUMA node ID.
+     * @return 0 on success, -1 on failure.
+     */
+    inline int mbind (void* ptr, size_t size, int numa)
+    {
+        if (ptr == nullptr || numa < 0)
+        {
+            lastError = make_error_code (Errc::InvalidParam);
+            return -1;
+        }
+
+        unsigned long mask = (1UL << numa);
+        if (::mbind (ptr, size, MPOL_BIND, &mask, sizeof (mask) * 8, MPOL_MF_STRICT) == -1)
+        {
+            lastError = std::error_code (errno, std::generic_category ());
+            return -1;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief lock memory in RAM.
+     * @param ptr memory pointer.
+     * @param size memory size.
+     * @return 0 on success, -1 on failure.
+     */
+    inline int mlock (void* ptr, size_t size)
+    {
+        if (ptr == nullptr)
+        {
+            lastError = make_error_code (Errc::InvalidParam);
+            return -1;
+        }
+
+        if (::mlock (ptr, size) == -1)
+        {
+            lastError = std::error_code (errno, std::generic_category ());
+            return -1;
+        }
+
+        return 0;
+    }
+
+    /**
      * @brief local anonymous memory provider.
      */
     class LocalMem
@@ -65,16 +113,15 @@ namespace join
         /**
          * @brief allocates a local anonymous memory segment.
          * @param size allocation size in bytes.
-         * @param numa NUMA node ID, or -1 for default policy.
          * @throw std::system_error if mmap fails.
          */
-        explicit LocalMem (uint64_t size, int numa = -1)
+        explicit LocalMem (uint64_t size)
         { 
             long sc = sysconf (_SC_PAGESIZE);
             uint64_t pageSize = (sc > 0) ? static_cast <uint64_t> (sc) : 4096;
             _size = (size + pageSize - 1) & ~(pageSize - 1);
 
-            create (numa);
+            create ();
         }
 
         /**
@@ -172,13 +219,31 @@ namespace join
             return static_cast <char*> (_ptr) + offset;
         }
 
+        /**
+         * @brief bind memory to a NUMA node.
+         * @param numa NUMA node ID.
+         * @return 0 on success, -1 on failure.
+         */
+        int mbind (int numa)
+        {
+            return join::mbind (_ptr, _size, numa);
+        }
+
+        /**
+         * @brief lock memory in RAM.
+         * @return 0 on success, -1 on failure.
+         */
+        int mlock ()
+        {
+            return join::mlock (_ptr, _size);
+        }
+
     private:
         /**
          * @brief create the memory.
-         * @param numa NUMA node ID, or -1 for default policy.
          * @throw std::system_error if mmap fails.
          */
-        void create (int numa)
+        void create ()
         {
             _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
             if ((_ptr == MAP_FAILED) && ((errno == ENOMEM) || (errno == EINVAL)))
@@ -191,16 +256,6 @@ namespace join
             {
                 throw std::system_error (errno, std::generic_category (), "mmap failed");
             }
-
-            // apply NUMA policy if requested - not critical if it fails
-            if (numa >= 0)
-            {
-                unsigned long mask = (1UL << numa);
-                ::mbind (_ptr, _size, MPOL_BIND, &mask, sizeof (mask) * 8, MPOL_MF_STRICT);
-            }
-
-            // pin the memory to RAM - not critical if it fails
-            ::mlock (_ptr, _size);
         }
 
         /**
@@ -239,10 +294,9 @@ namespace join
          * @brief creates or opens a named shared memory segment.
          * @param size shared memory size in bytes.
          * @param name shared memory unique name.
-         * @param numa NUMA node ID, or -1 for default policy.
          * @throw std::system_error if mmap fails.
          */
-        explicit ShmMem (uint64_t size, const std::string& name, int numa = 1)
+        explicit ShmMem (uint64_t size, const std::string& name)
         : _name (name)
         {
             long sc = sysconf (_SC_PAGESIZE);
@@ -254,7 +308,7 @@ namespace join
                 throw std::overflow_error ("size will overflow");
             }
 
-            create (numa);
+            create ();
         }
 
         /**
@@ -359,6 +413,25 @@ namespace join
         }
 
         /**
+         * @brief bind memory to a NUMA node.
+         * @param numa NUMA node ID.
+         * @return 0 on success, -1 on failure.
+         */
+        int mbind (int numa)
+        {
+            return join::mbind (_ptr, _size, numa);
+        }
+
+        /**
+         * @brief lock memory in RAM.
+         * @return 0 on success, -1 on failure.
+         */
+        int mlock ()
+        {
+            return join::mlock (_ptr, _size);
+        }
+
+        /**
          * @brief destroy synchronization primitives and unlink the shared memory segment.
          * @param name shared memory segment name.
          * @return 0 on success, -1 on failure.
@@ -371,7 +444,7 @@ namespace join
                 {
                     return 0;
                 }
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -381,10 +454,9 @@ namespace join
     private:
         /**
          * @brief create the posix shared memory.
-         * @param numa NUMA node ID, or -1 for default policy.
          * @throw std::system_error if mmap fails.
          */
-        void create (int numa)
+        void create ()
         {
             bool created = true;
 
@@ -440,16 +512,6 @@ namespace join
                 ::close (_fd);
                 throw std::system_error (err, std::generic_category (), "mmap failed");
             }
-
-            // apply NUMA policy if requested - not critical if it fails
-            if (numa >= 0)
-            {
-                unsigned long mask = (1UL << numa);
-                ::mbind (_ptr, _size, MPOL_BIND, &mask, sizeof (mask) * 8, MPOL_MF_STRICT);
-            }
-
-            // pin the memory to RAM - not critical if it fails
-            ::mlock (_ptr, _size);
         }
 
         /**

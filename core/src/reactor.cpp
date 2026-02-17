@@ -88,7 +88,7 @@ int Reactor::addHandler (EventHandler* handler)
 
     if (epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev) == -1)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::error_code (errno, std::generic_category ());
         return -1;
     }
 
@@ -127,7 +127,7 @@ int Reactor::delHandler (EventHandler* handler)
 
     if (epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->handle (), nullptr) == -1)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::error_code (errno, std::generic_category ());
         return -1;
     }
 

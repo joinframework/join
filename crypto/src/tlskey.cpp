@@ -134,7 +134,7 @@ TlsKey::Handle TlsKey::readKey (const std::string& path, Type keyType)
     FILE* fp = fopen (path.c_str (), "r");
     if (fp == nullptr)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::error_code (errno, std::generic_category ());
         return nullptr;
     }
     Handle pkey = (keyType == Public) ? PEM_read_PUBKEY (fp, nullptr, nullptr, nullptr)

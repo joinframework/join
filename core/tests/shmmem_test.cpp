@@ -28,7 +28,9 @@
 // libraries.
 #include <gtest/gtest.h>
 
-#include "limits.h"
+// C.
+#include <sys/resource.h>
+#include <climits>
 
 using join::ShmMem;
 
@@ -43,6 +45,7 @@ protected:
      */
     void SetUp () override
     {
+        getrlimit (RLIMIT_MEMLOCK, &_old);
         ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
     }
 
@@ -52,10 +55,14 @@ protected:
     void TearDown () override
     {
         ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
+        setrlimit (RLIMIT_MEMLOCK, &_old);
     }
 
     /// shared memory name.
     static const std::string _name;
+
+    /// rlimit.
+    rlimit _old {};
 };
 
 const std::string PosixMem::_name = "/test_shm";
@@ -64,12 +71,12 @@ TEST_F (PosixMem, create)
 {
     ASSERT_EQ (ShmMem::unlink (std::string (_POSIX_PATH_MAX + 1, 'x')), -1);
 
-    ASSERT_THROW (ShmMem (0, _name, 0), std::system_error);
+    ASSERT_THROW (ShmMem (0, _name), std::system_error);
     ASSERT_THROW (ShmMem (4096, ""), std::system_error);
     ASSERT_THROW (ShmMem (static_cast <uint64_t> (std::numeric_limits <off_t>::max ()) + 1, _name), std::overflow_error);
 
     ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
-    ShmMem mem1 (4096, _name, 0);
+    ShmMem mem1 (4096, _name);
     ASSERT_NE (mem1.get (), nullptr);
     ShmMem mem2 (std::move (mem1));
     ASSERT_THROW (mem1.get (), std::runtime_error);
@@ -79,7 +86,7 @@ TEST_F (PosixMem, create)
 
 TEST_F (PosixMem, get)
 {
-    ShmMem mem1 (4096, _name, 0);
+    ShmMem mem1 (4096, _name);
     const ShmMem& cmem1 = mem1;
 
     EXPECT_THROW (mem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
@@ -88,11 +95,31 @@ TEST_F (PosixMem, get)
     ASSERT_NE (mem1.get (), nullptr);
     ASSERT_NE (cmem1.get (), nullptr);
 
-    ShmMem mem2 (4096, _name, 0);
+    ShmMem mem2 (4096, _name);
     mem2 = std::move (mem1);
 
     EXPECT_THROW (mem1.get (), std::runtime_error);
     EXPECT_THROW (cmem1.get (), std::runtime_error);
+}
+
+TEST_F (PosixMem, mbind)
+{
+    ShmMem mem (4096, _name);
+
+    ASSERT_EQ (mem.mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (join::mbind (nullptr, 4096, 0), -1);
+    ASSERT_EQ (join::mbind (mem.get (), 4096, 9999), -1);
+}
+
+TEST_F (PosixMem, mlock)
+{
+    ShmMem mem (4096, _name);
+
+    ASSERT_EQ (mem.mlock (), 0) << join::lastError.message ();
+    ASSERT_EQ (join::mlock (nullptr, 4096), -1);
+    rlimit zero {0, 0};
+    setrlimit (RLIMIT_MEMLOCK, &zero);
+    EXPECT_EQ (join::mlock (mem.get (), 8192), -1);
 }
 
 /**
