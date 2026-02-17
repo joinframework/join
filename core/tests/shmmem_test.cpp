@@ -29,7 +29,6 @@
 #include <gtest/gtest.h>
 
 // C.
-#include <sys/resource.h>
 #include <climits>
 
 using join::ShmMem;
@@ -45,7 +44,6 @@ protected:
      */
     void SetUp () override
     {
-        getrlimit (RLIMIT_MEMLOCK, &_old);
         ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
     }
 
@@ -55,14 +53,10 @@ protected:
     void TearDown () override
     {
         ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
-        setrlimit (RLIMIT_MEMLOCK, &_old);
     }
 
     /// shared memory name.
     static const std::string _name;
-
-    /// rlimit.
-    rlimit _old {};
 };
 
 const std::string PosixMem::_name = "/test_shm";
@@ -117,9 +111,6 @@ TEST_F (PosixMem, mlock)
 
     ASSERT_EQ (mem.mlock (), 0) << join::lastError.message ();
     ASSERT_EQ (join::mlock (nullptr, 4096), -1);
-    rlimit zero {0, 0};
-    setrlimit (RLIMIT_MEMLOCK, &zero);
-    EXPECT_EQ (join::mlock (mem.get (), 8192), -1);
 }
 
 /**

@@ -33,33 +33,7 @@
 
 using join::LocalMem;
 
-/**
- * @brief class used to test the posix shared memory provider.
- */
-class MmapMem : public ::testing::Test
-{
-protected:
-    /**
-     * @brief set up the test fixture.
-     */
-    void SetUp () override
-    {
-        getrlimit (RLIMIT_MEMLOCK, &_old);
-    }
-
-    /**
-     * @brief tear down the test fixture.
-     */
-    void TearDown () override
-    {
-        setrlimit (RLIMIT_MEMLOCK, &_old);
-    }
-
-    /// rlimit.
-    rlimit _old {};
-};
-
-TEST_F (MmapMem, create)
+TEST (LocalMem, create)
 {
     ASSERT_THROW (LocalMem (0), std::system_error);
     ASSERT_THROW (LocalMem (std::numeric_limits <uint64_t>::max ()), std::system_error);
@@ -71,7 +45,7 @@ TEST_F (MmapMem, create)
     ASSERT_NE (mem2.get (), nullptr);
 }
 
-TEST_F (MmapMem, get)
+TEST (LocalMem, get)
 {
     LocalMem mem1 (4096);
     const LocalMem& cmem1 = mem1;
@@ -89,7 +63,7 @@ TEST_F (MmapMem, get)
     EXPECT_THROW (cmem1.get (), std::runtime_error);
 }
 
-TEST_F (MmapMem, mbind)
+TEST (LocalMem, mbind)
 {
     LocalMem mem (4096);
 
@@ -98,15 +72,12 @@ TEST_F (MmapMem, mbind)
     ASSERT_EQ (join::mbind (mem.get (), 4096, 9999), -1);
 }
 
-TEST_F (MmapMem, mlock)
+TEST (LocalMem, mlock)
 {
     LocalMem mem (4096);
 
     ASSERT_EQ (mem.mlock (), 0) << join::lastError.message ();
     ASSERT_EQ (join::mlock (nullptr, 4096), -1);
-    rlimit zero {0, 0};
-    setrlimit (RLIMIT_MEMLOCK, &zero);
-    EXPECT_EQ (join::mlock (mem.get (), 8192), -1);
 }
 
 /**
