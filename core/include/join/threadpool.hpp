@@ -28,10 +28,10 @@
 // libjoin.
 #include <join/condition.hpp>
 #include <join/thread.hpp>
+#include <join/cpu.hpp>
 
 // C++.
 #include <functional>
-#include <thread>
 #include <memory>
 #include <atomic>
 #include <vector>
@@ -47,17 +47,44 @@ namespace join
      */
     class WorkerThread
     {
-    public:
+    private:
         /**
          * @brief create worker thread.
          * @param pool thread pool.
          */
         WorkerThread (ThreadPool& pool);
 
+    public:
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        WorkerThread (const WorkerThread& other) = delete;
+
+        /**
+         * @brief copy assignment.
+         * @param other other object to copy.
+         * @return a reference to the current object.
+         */
+        WorkerThread& operator= (const WorkerThread& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        WorkerThread (WorkerThread&& other) = delete;
+
+        /**
+         * @brief move assignment.
+         * @param other other object to move.
+         * @return a reference to the current object.
+         */
+        WorkerThread& operator= (WorkerThread&& other) = delete;
+
         /**
          * @brief destroy worker thread.
          */
-        ~WorkerThread ();
+        ~WorkerThread () noexcept;
 
     private:
         /**
@@ -70,6 +97,9 @@ namespace join
 
         /// thread.
         Thread _thread;
+
+        /// friendship with ThreadPool.
+        friend class ThreadPool;
     };
 
     /**
@@ -82,15 +112,43 @@ namespace join
          * @brief create thread pool.
          * @param workers number of worker threads.
          */
-        ThreadPool (int workers = std::max (int (std::thread::hardware_concurrency ()), 1));
+        ThreadPool (int workers = int (CpuTopology::instance ()->cores ().size ()));
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        ThreadPool (const ThreadPool& other) = delete;
+
+        /**
+         * @brief copy assignment.
+         * @param other other object to copy.
+         * @return a reference to the current object.
+         */
+        ThreadPool& operator= (const ThreadPool& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        ThreadPool (ThreadPool&& other) = delete;
+
+        /**
+         * @brief move assignment.
+         * @param other other object to move.
+         * @return a reference to the current object.
+         */
+        ThreadPool& operator= (ThreadPool&& other) = delete;
 
         /**
          * @brief destroy thread pool.
          */
-        ~ThreadPool ();
+        ~ThreadPool () noexcept;
 
         /**
          * @brief push a job to the work queue.
+         * @param func callable to execute.
+         * @param args arguments to pass to the callable.
          */
         template <class Function, class... Args>
         void push (Function&& func, Args&&... args)
@@ -103,7 +161,7 @@ namespace join
         /**
          * @brief return thread pool size.
          */
-        size_t size ();
+        size_t size () const noexcept;
 
     private:
         /// worker threads.
@@ -139,7 +197,7 @@ namespace join
         if (count)
         {
             // determine number of threads and tasks per thread to run.
-            int concurrency = std::max (int (std::thread::hardware_concurrency ()), 1);
+            int concurrency = int (CpuTopology::instance ()->cores ().size ());
             // no need to create more threads than tasks.
             concurrency     = std::min (concurrency, count);
             int elements    = count / concurrency;
@@ -177,7 +235,7 @@ namespace join
     }
 
     /**
-     * @brief parrallel for each loop.
+     * @brief parallel for each loop.
      * @param first first iterator.
      * @param last last iterator.
      * @param function function to execute in parallel.
