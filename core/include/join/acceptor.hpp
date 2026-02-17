@@ -113,7 +113,7 @@ namespace join
             this->_handle = ::socket (endpoint.protocol ().family (), endpoint.protocol ().type () | SOCK_CLOEXEC, endpoint.protocol ().protocol ());
             if (this->_handle == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 this->close ();
                 return -1;
             }
@@ -124,7 +124,7 @@ namespace join
 
                 if (::setsockopt (this->_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1)
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
+                    lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
                 }
@@ -140,7 +140,7 @@ namespace join
 
                 if (::setsockopt (this->_handle, SOL_SOCKET, SO_REUSEADDR, &on, sizeof (on)) == -1)
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
+                    lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
                 }
@@ -148,7 +148,7 @@ namespace join
 
             if ((::bind (this->_handle, endpoint.addr (), endpoint.length ()) == -1) || (::listen (this->_handle, SOMAXCONN) == -1))
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 this->close ();
                 return -1;
             }
@@ -185,7 +185,7 @@ namespace join
             sock._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
             if (sock._handle == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return sock;
             }
 
@@ -223,7 +223,7 @@ namespace join
 
             if (::getsockname (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len) == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return {};
             }
 
@@ -411,7 +411,7 @@ namespace join
             sock._handle = ::accept (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
             if (sock._handle == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return sock;
             }
 

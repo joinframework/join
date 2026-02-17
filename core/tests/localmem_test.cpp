@@ -28,14 +28,17 @@
 // libraries.
 #include <gtest/gtest.h>
 
+// C.
+#include <sys/resource.h>
+
 using join::LocalMem;
 
 TEST (LocalMem, create)
 {
-    ASSERT_THROW (LocalMem (0, 0), std::system_error);
+    ASSERT_THROW (LocalMem (0), std::system_error);
     ASSERT_THROW (LocalMem (std::numeric_limits <uint64_t>::max ()), std::system_error);
 
-    LocalMem mem1 (4096, 0);
+    LocalMem mem1 (4096);
     ASSERT_NE (mem1.get (), nullptr);
     LocalMem mem2 (std::move (mem1));
     ASSERT_THROW (mem1.get (), std::runtime_error);
@@ -44,7 +47,7 @@ TEST (LocalMem, create)
 
 TEST (LocalMem, get)
 {
-    LocalMem mem1 (4096, 0);
+    LocalMem mem1 (4096);
     const LocalMem& cmem1 = mem1;
 
     EXPECT_THROW (mem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
@@ -53,11 +56,28 @@ TEST (LocalMem, get)
     ASSERT_NE (mem1.get (), nullptr);
     ASSERT_NE (cmem1.get (), nullptr);
 
-    LocalMem mem2 (4096, 0);
+    LocalMem mem2 (4096);
     mem2 = std::move (mem1);
 
     EXPECT_THROW (mem1.get (), std::runtime_error);
     EXPECT_THROW (cmem1.get (), std::runtime_error);
+}
+
+TEST (LocalMem, mbind)
+{
+    LocalMem mem (4096);
+
+    ASSERT_EQ (mem.mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (join::mbind (nullptr, 4096, 0), -1);
+    ASSERT_EQ (join::mbind (mem.get (), 4096, 9999), -1);
+}
+
+TEST (LocalMem, mlock)
+{
+    LocalMem mem (4096);
+
+    ASSERT_EQ (mem.mlock (), 0) << join::lastError.message ();
+    ASSERT_EQ (join::mlock (nullptr, 4096), -1);
 }
 
 /**

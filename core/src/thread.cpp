@@ -136,10 +136,10 @@ int Thread::affinity (pthread_t handle, int core)
         CPU_SET (core, &cpuset);
     }
 
-    int res = pthread_setaffinity_np (handle, sizeof (cpu_set_t), &cpuset);
-    if (res != 0)
+    int err = pthread_setaffinity_np (handle, sizeof (cpu_set_t), &cpuset);
+    if (err != 0)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (res));
+        lastError = std::error_code (err, std::generic_category ());
         return -1;
     }
 
@@ -189,19 +189,19 @@ int Thread::priority (pthread_t handle, int prio)
 
     if (prio == 0)
     {
-        int res = pthread_setschedparam (handle, SCHED_OTHER, &param);
-        if (res != 0)
+        int err = pthread_setschedparam (handle, SCHED_OTHER, &param);
+        if (err != 0)
         {
-            lastError = std::make_error_code (static_cast <std::errc> (res));
+            lastError = std::error_code (err, std::generic_category ());
             return -1;
         }
     }
     else
     {
-        int res = pthread_setschedparam (handle, SCHED_FIFO, &param);
-        if (res != 0)
+        int err = pthread_setschedparam (handle, SCHED_FIFO, &param);
+        if (err != 0)
         {
-            lastError = std::make_error_code (static_cast <std::errc> (res));
+            lastError = std::error_code (err, std::generic_category ());
             return -1;
         }
     }

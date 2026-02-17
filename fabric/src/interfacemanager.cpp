@@ -1008,7 +1008,7 @@ int InterfaceManager::waitResponse (ScopedLock <Mutex>& lock, uint32_t seq, uint
     if (inserted.first->second->error != 0)
     {
         _pending.erase (inserted.first);
-        lastError = std::make_error_code (static_cast <std::errc> (inserted.first->second->error));
+        lastError = std::error_code (inserted.first->second->error, std::generic_category ());
         return -1;
     }
 

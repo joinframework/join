@@ -70,7 +70,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary AND on ChangeType.
      */
-    __inline__ ChangeType operator& (ChangeType __a, ChangeType __b)
+    inline ChangeType operator& (ChangeType __a, ChangeType __b)
     { return ChangeType (static_cast <int> (__a) & static_cast <int> (__b)); }
 
     /**
@@ -79,7 +79,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary OR on ChangeType.
      */
-    __inline__ ChangeType operator| (ChangeType __a, ChangeType __b)
+    inline ChangeType operator| (ChangeType __a, ChangeType __b)
     { return ChangeType (static_cast <int> (__a) | static_cast <int> (__b)); }
 
     /**
@@ -88,7 +88,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary XOR on ChangeType.
      */
-    __inline__ ChangeType operator^ (ChangeType __a, ChangeType __b)
+    inline ChangeType operator^ (ChangeType __a, ChangeType __b)
     { return ChangeType (static_cast <int> (__a) ^ static_cast <int> (__b)); }
 
     /**
@@ -96,7 +96,7 @@ namespace join
      * @param __a bitset.
      * @return bitset result of binary NOT on ChangeType.
      */
-    __inline__ ChangeType operator~ (ChangeType __a)
+    inline ChangeType operator~ (ChangeType __a)
     { return ChangeType (~static_cast <int> (__a)); }
 
     /**
@@ -105,7 +105,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary AND on ChangeType.
      */
-    __inline__ const ChangeType& operator&= (ChangeType& __a, ChangeType __b)
+    inline const ChangeType& operator&= (ChangeType& __a, ChangeType __b)
     { return __a = __a & __b; }
 
     /**
@@ -114,7 +114,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary OR.
      */
-    __inline__ const ChangeType& operator|= (ChangeType& __a, ChangeType __b)
+    inline const ChangeType& operator|= (ChangeType& __a, ChangeType __b)
     { return __a = __a | __b; }
 
     /**
@@ -123,7 +123,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary XOR on ChangeType.
      */
-    __inline__ const ChangeType& operator^= (ChangeType& __a, ChangeType __b)
+    inline const ChangeType& operator^= (ChangeType& __a, ChangeType __b)
     { return __a = __a ^ __b; }
 
     /**

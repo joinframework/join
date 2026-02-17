@@ -123,7 +123,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary AND on HttpMethod.
      */
-    __inline__ HttpMethod operator& (HttpMethod __a, HttpMethod __b)
+    inline HttpMethod operator& (HttpMethod __a, HttpMethod __b)
     { return HttpMethod (static_cast <int> (__a) & static_cast <int> (__b)); }
 
     /**
@@ -132,7 +132,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary OR on HttpMethod.
      */
-    __inline__ HttpMethod operator| (HttpMethod __a, HttpMethod __b)
+    inline HttpMethod operator| (HttpMethod __a, HttpMethod __b)
     { return HttpMethod (static_cast <int> (__a) | static_cast <int> (__b)); }
 
     /**
@@ -141,7 +141,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary XOR on HttpMethod.
      */
-    __inline__ HttpMethod operator^ (HttpMethod __a, HttpMethod __b)
+    inline HttpMethod operator^ (HttpMethod __a, HttpMethod __b)
     { return HttpMethod (static_cast <int> (__a) ^ static_cast <int> (__b)); }
 
     /**
@@ -149,7 +149,7 @@ namespace join
      * @param __a bitset.
      * @return bitset result of binary NOT on HttpMethod.
      */
-    __inline__ HttpMethod operator~ (HttpMethod __a)
+    inline HttpMethod operator~ (HttpMethod __a)
     { return HttpMethod (~static_cast <int> (__a)); }
 
     /**
@@ -158,7 +158,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary AND on HttpMethod.
      */
-    __inline__ const HttpMethod& operator&= (HttpMethod& __a, HttpMethod __b)
+    inline const HttpMethod& operator&= (HttpMethod& __a, HttpMethod __b)
     { return __a = __a & __b; }
 
     /**
@@ -167,7 +167,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary OR.
      */
-    __inline__ const HttpMethod& operator|= (HttpMethod& __a, HttpMethod __b)
+    inline const HttpMethod& operator|= (HttpMethod& __a, HttpMethod __b)
     { return __a = __a | __b; }
 
     /**
@@ -176,7 +176,7 @@ namespace join
      * @param __b other bitset.
      * @return bitset result of binary XOR on HttpMethod.
      */
-    __inline__ const HttpMethod& operator^= (HttpMethod& __a, HttpMethod __b)
+    inline const HttpMethod& operator^= (HttpMethod& __a, HttpMethod __b)
     { return __a = __a ^ __b; }
 
     /**

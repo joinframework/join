@@ -55,7 +55,7 @@ namespace join
         template <typename Type, size_t sz>
         struct _byteswap
         {
-            __inline__ Type operator() ([[maybe_unused]] Type val)
+            inline Type operator() ([[maybe_unused]] Type val)
             {
                 throw std::out_of_range ("data size");
             }
@@ -64,7 +64,7 @@ namespace join
         template <typename Type>
         struct _byteswap <Type, 1>
         {
-            __inline__ Type operator() (Type val)
+            inline Type operator() (Type val)
             {
                 return val;
             }
@@ -73,7 +73,7 @@ namespace join
         template <typename Type>
         struct _byteswap <Type, 2>
         {
-            __inline__ Type operator() (Type val)
+            inline Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -86,7 +86,7 @@ namespace join
         template <typename Type>
         struct _byteswap <Type, 4>
         {
-            __inline__ Type operator() (Type val)
+            inline Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -102,7 +102,7 @@ namespace join
         template <typename Type>
         struct _byteswap <Type, 8>
         {
-            __inline__ Type operator() (Type val)
+            inline Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -122,7 +122,7 @@ namespace join
         template <>
         struct _byteswap <float, 4>
         {
-            __inline__ float operator() (float val)
+            inline float operator() (float val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -137,7 +137,7 @@ namespace join
         template<>
         struct _byteswap <double, 8>
         {
-            __inline__ double operator() (double val)
+            inline double operator() (double val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
@@ -152,7 +152,7 @@ namespace join
         template <class Type>
         struct _swap
         {
-            __inline__ Type operator() (Type val)
+            inline Type operator() (Type val)
             {
                 return _byteswap <Type, sizeof (Type)> ()(val);
             }
@@ -173,7 +173,7 @@ namespace join
      * @return the swapped value.
      */
     template <class Type>
-    __inline__ Type& swap (Type& val)
+    inline Type& swap (Type& val)
     {
         val = details::_swap <Type> ()(val);
         return val;
@@ -185,7 +185,7 @@ namespace join
      * @param b string to compare to.
      * @return true if equals, false otharwise.
      */
-    __inline__ bool compareNoCase (const std::string& a, const std::string& b)
+    inline bool compareNoCase (const std::string& a, const std::string& b)
     {
         return ((a.size () == b.size ()) && 
             std::equal (a.begin (), a.end (), b.begin (), [] (char c1, char c2) {return std::toupper (c1) == std::toupper (c2);}));
@@ -196,7 +196,7 @@ namespace join
      * @param s string to trim.
      * @return trimed string.
      */
-    __inline__ std::string& trimLeft (std::string& s)
+    inline std::string& trimLeft (std::string& s)
     {
         return s.erase (0, s.find_first_not_of ("\f\t\v\r\n "));
     }
@@ -206,7 +206,7 @@ namespace join
      * @param s string to trim.
      * @return trimed string.
      */
-    __inline__ std::string& trimRight (std::string& s)
+    inline std::string& trimRight (std::string& s)
     {
         return s.erase (s.find_last_not_of (" \f\t\v\r\n") + 1);
     }
@@ -216,7 +216,7 @@ namespace join
      * @param s string to trim.
      * @return trimed string.
      */
-    __inline__ std::string& trim (std::string& s)
+    inline std::string& trim (std::string& s)
     {
         return trimLeft (trimRight (s));
     }
@@ -228,7 +228,7 @@ namespace join
      * @param by string to put instead of the "toReplace" substring.
      * @return a reference to the string.
      */
-    __inline__ std::string& replaceAll (std::string& str, const std::string &toReplace, const std::string &by)
+    inline std::string& replaceAll (std::string& str, const std::string &toReplace, const std::string &by)
     {
         size_t pos = 0;
 
@@ -247,7 +247,7 @@ namespace join
      * @param delim delimiter.
      * @return list of tokens.
      */
-    __inline__ std::vector <std::string> split (const std::string& in, const std::string& delim)
+    inline std::vector <std::string> split (const std::string& in, const std::string& delim)
     {
         std::vector <std::string> tokens;
         if (in.size ())
@@ -271,7 +271,7 @@ namespace join
      * @param delim delimiter.
      * @return list of tokens.
      */
-    __inline__ std::vector <std::string> rsplit (const std::string& in, const std::string& delim)
+    inline std::vector <std::string> rsplit (const std::string& in, const std::string& delim)
     {
         std::vector <std::string> tokens;
         if (in.size ())
@@ -296,7 +296,7 @@ namespace join
      * @param max max characters to read.
      * @return true on success, false on error.
      */
-    __inline__ bool getline (std::istream& in, std::string& line, std::streamsize max = 1024)
+    inline bool getline (std::istream& in, std::string& line, std::streamsize max = 1024)
     {
         line.clear ();
 
@@ -333,7 +333,7 @@ namespace join
      * @param max max characters to read.
      * @return true on success, false on error.
      */
-    __inline__ bool getline (std::streambuf& in, std::string& line, std::streamsize max = 1024)
+    inline bool getline (std::streambuf& in, std::string& line, std::streamsize max = 1024)
     {
         std::istream istream (&in);
         return getline (istream, line, max);
@@ -344,7 +344,7 @@ namespace join
      * @param data data to dump.
      * @param size number of data bytes.
      */
-    __inline__ void dump (const void* data, unsigned long size, std::ostream& out = std::cout)
+    inline void dump (const void* data, unsigned long size, std::ostream& out = std::cout)
     {
         const uint8_t *buf = reinterpret_cast <const uint8_t *> (data);
 
