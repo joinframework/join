@@ -25,6 +25,7 @@
 // libjoin.
 #include <join/threadpool.hpp>
 #include <join/utils.hpp>
+#include <join/cpu.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -34,17 +35,19 @@
 
 using namespace std::chrono_literals;
 
+using join::CpuTopology;
 using join::ThreadPool;
 
-size_t nthread = std::thread::hardware_concurrency () + 1;
+size_t nthread = CpuTopology::instance ()->cores ().size ();
 
 /**
  * @brief test size.
  */
 TEST (ThreadPool, size)
 {
-    ThreadPool pool (8);
-    ASSERT_EQ (pool.size (), 8);
+    ThreadPool pool;
+    ASSERT_EQ (pool.size (), nthread);
+    ASSERT_THROW (ThreadPool (0), std::invalid_argument);
 }
 
 /**
@@ -52,15 +55,15 @@ TEST (ThreadPool, size)
  */
 TEST (ThreadPool, push)
 {
-    auto elapsed = join::benchmark ([]
+    std::atomic <int> count {0};
     {
         ThreadPool pool;
         for (size_t i = 0; i < pool.size (); ++i)
         {
-            pool.push (usleep, 20000);
+            pool.push ([&count] { ++count; });
         }
-    });
-    ASSERT_GE (elapsed, 20ms);
+    }
+    ASSERT_EQ (count, nthread);
 }
 
 /**

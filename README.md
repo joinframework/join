@@ -62,7 +62,7 @@ The framework is a collection of specialized modules that build upon one another
 
 | Module | Purpose | Highlights |
 | :--- | :--- | :--- |
-| **`core`** | **Foundation** | Epoll Reactor, TCP/UDP/TLS, Unix Sockets, NUMA-aware Memory, Thread Pools, Mutexes. |
+| **`core`** | **Foundation** | Epoll Reactor, TCP/UDP/TLS, Unix Sockets, Thread Pools, Mutexes. |
 | **`fabric`**| **Network Control** | Netlink Interface Manager, ARP client, DNS Resolver. |
 | **`crypto`**| **Security** | OpenSSL Wrappers, HMAC, Digital Signatures, Base64. |
 | **`data`** | **Serialization** | High-perf JSON (DOM/SAX), MessagePack, Zlib Streams. |

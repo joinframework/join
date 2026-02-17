@@ -24,30 +24,13 @@
 
 // libjoin.
 #include <join/thread.hpp>
+#include <join/error.hpp>
 
 // C.
 #include <signal.h>
 
 using join::Invoker;
 using join::Thread;
-
-// =========================================================================
-//   CLASS     : Invoker
-//   METHOD    : ~Invoker
-// =========================================================================
-Invoker::~Invoker ()
-{
-    pthread_attr_destroy (&_attr);
-}
-
-// =========================================================================
-//   CLASS     : Invoker
-//   METHOD    : handle
-// =========================================================================
-pthread_t Invoker::handle ()
-{
-    return _handle;
-}
 
 // =========================================================================
 //   CLASS     : Invoker
@@ -75,7 +58,11 @@ void * Invoker::routine (void)
 // =========================================================================
 Thread::Thread (Thread&& other) noexcept
 : _invoker (std::move (other._invoker))
+, _core (other._core)
+, _priority (other._priority)
 {
+    other._core = -1;
+    other._priority = 0;
 }
 
 // =========================================================================
@@ -85,7 +72,14 @@ Thread::Thread (Thread&& other) noexcept
 Thread& Thread::operator= (Thread&& other) noexcept
 {
     cancel ();
+
     _invoker = std::move (other._invoker);
+    _core = other._core;
+    _priority = other._priority;
+
+    other._core = -1;
+    other._priority = 0;
+
     return *this;
 }
 
@@ -96,6 +90,132 @@ Thread& Thread::operator= (Thread&& other) noexcept
 Thread::~Thread ()
 {
     cancel ();
+}
+
+// =========================================================================
+//   CLASS     : Thread
+//   METHOD    : affinity
+// =========================================================================
+int Thread::affinity (int core)
+{
+    if (!joinable ())
+    {
+        lastError = std::make_error_code (std::errc::no_such_process);
+        return -1;
+    }
+
+    if (affinity (_invoker->_handle, core) == -1)
+    {
+        return -1;
+    }
+
+    _core = (core < 0) ? -1 : core;
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Thread
+//   METHOD    : affinity
+// =========================================================================
+int Thread::affinity (pthread_t handle, int core)
+{
+    cpu_set_t cpuset;
+    CPU_ZERO (&cpuset);
+
+    if (core < 0)
+    {
+        int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
+        for (int i = 0; i < ncpu; ++i)
+        {
+            CPU_SET (i, &cpuset);
+        }
+    }
+    else
+    {
+        CPU_SET (core, &cpuset);
+    }
+
+    int res = pthread_setaffinity_np (handle, sizeof (cpu_set_t), &cpuset);
+    if (res != 0)
+    {
+        lastError = std::make_error_code (static_cast <std::errc> (res));
+        return -1;
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Thread
+//   METHOD    : affinity
+// =========================================================================
+int Thread::affinity () const noexcept
+{
+    return _core;
+}
+
+// =========================================================================
+//   CLASS     : Thread
+//   METHOD    : priority
+// =========================================================================
+int Thread::priority (int prio)
+{
+    if (!joinable ())
+    {
+        lastError = std::make_error_code (std::errc::no_such_process);
+        return -1;
+    }
+
+    if (priority (_invoker->_handle, prio) == -1)
+    {
+        return -1;
+    }
+
+    _priority = prio;
+
+    return 0;
+}
+
+
+// =========================================================================
+//   CLASS     : Thread
+//   METHOD    : priority
+// =========================================================================
+int Thread::priority (pthread_t handle, int prio)
+{
+    struct sched_param param {};
+    param.sched_priority = prio;
+
+    if (prio == 0)
+    {
+        int res = pthread_setschedparam (handle, SCHED_OTHER, &param);
+        if (res != 0)
+        {
+            lastError = std::make_error_code (static_cast <std::errc> (res));
+            return -1;
+        }
+    }
+    else
+    {
+        int res = pthread_setschedparam (handle, SCHED_FIFO, &param);
+        if (res != 0)
+        {
+            lastError = std::make_error_code (static_cast <std::errc> (res));
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Thread
+//   METHOD    : priority
+// =========================================================================
+int Thread::priority () const noexcept
+{
+    return _priority;
 }
 
 // =========================================================================
@@ -120,11 +240,11 @@ bool Thread::running () const noexcept
 //   CLASS     : Thread
 //   METHOD    : join
 // =========================================================================
-void Thread::join ()
+void Thread::join () noexcept
 {
     if (joinable ())
     {
-        pthread_join (_invoker->handle (), nullptr);
+        pthread_join (_invoker->_handle, nullptr);
         _invoker.reset ();
     }
 }
@@ -133,7 +253,7 @@ void Thread::join ()
 //   CLASS     : Thread
 //   METHOD    : tryJoin
 // =========================================================================
-bool Thread::tryJoin ()
+bool Thread::tryJoin () noexcept 
 {
     if (running ())
     {
@@ -147,11 +267,11 @@ bool Thread::tryJoin ()
 //   CLASS     : Thread
 //   METHOD    : cancel
 // =========================================================================
-void Thread::cancel ()
+void Thread::cancel () noexcept
 {
     if (running ())
     {
-        pthread_cancel (_invoker->handle ());
+        pthread_cancel (_invoker->_handle);
     }
     join ();
 }
@@ -160,20 +280,18 @@ void Thread::cancel ()
 //   CLASS     : Thread
 //   METHOD    : swap
 // =========================================================================
-void Thread::swap (Thread& other)
+void Thread::swap (Thread& other) noexcept
 {
     std::swap (_invoker, other._invoker);
+    std::swap (_core, other._core);
+    std::swap (_priority, other._priority);
 }
 
 // =========================================================================
 //   CLASS     : Thread
 //   METHOD    : handle
 // =========================================================================
-pthread_t Thread::handle () const
+pthread_t Thread::handle () const noexcept
 {
-    if (!_invoker)
-    {
-        throw std::logic_error ("Thread::handle() called on non-joinable thread");
-    }
-    return _invoker->handle ();
+    return joinable () ? _invoker->_handle : pthread_t {};
 }

@@ -33,8 +33,8 @@ using join::ThreadPool;
 //   METHOD    : WorkerThread
 // =========================================================================
 WorkerThread::WorkerThread (ThreadPool& pool)
-: _pool (std::addressof (pool)),
-  _thread ([this] () {work ();})
+: _pool (std::addressof (pool))
+, _thread ([this] {work ();})
 {
 }
 
@@ -42,7 +42,7 @@ WorkerThread::WorkerThread (ThreadPool& pool)
 //   CLASS     : WorkerThread
 //   METHOD    : ~WorkerThread
 // =========================================================================
-WorkerThread::~WorkerThread ()
+WorkerThread::~WorkerThread () noexcept
 {
     _thread.join ();
 }
@@ -58,8 +58,8 @@ void WorkerThread::work ()
         std::function <void ()> func;
         {
             ScopedLock <Mutex> lock (_pool->_mutex);
-            _pool->_condition.wait (lock, [&] () {return _pool->_stop || !_pool->_jobs.empty ();});
-            if (_pool->_stop && _pool->_jobs.empty ())
+            _pool->_condition.wait (lock, [&] () { return _pool->_stop.load (std::memory_order_relaxed) || !_pool->_jobs.empty (); });
+            if (_pool->_stop.load (std::memory_order_relaxed) && _pool->_jobs.empty ())
             {
                 return;
             }
@@ -77,7 +77,14 @@ void WorkerThread::work ()
 ThreadPool::ThreadPool (int workers)
 : _stop (false)
 {
-    for (int nworkers = 0; nworkers < workers; ++nworkers)
+    if (workers <= 0)
+    {
+        throw std::invalid_argument ("invalid number of workers");
+    }
+
+    _workers.reserve (workers);
+
+    for (int i = 0; i < workers; ++i)
     {
         _workers.emplace_back (new WorkerThread (*this));
     }
@@ -87,9 +94,9 @@ ThreadPool::ThreadPool (int workers)
 //   CLASS     : ThreadPool
 //   METHOD    : ~ThreadPool
 // =========================================================================
-ThreadPool::~ThreadPool ()
+ThreadPool::~ThreadPool () noexcept
 {
-    _stop = true;
+    _stop.store (true, std::memory_order_relaxed);
     _condition.broadcast ();
     _workers.clear ();
 }
@@ -98,8 +105,7 @@ ThreadPool::~ThreadPool ()
 //   CLASS     : ThreadPool
 //   METHOD    : size
 // =========================================================================
-size_t ThreadPool::size ()
+size_t ThreadPool::size () const noexcept
 {
-    ScopedLock <Mutex> lock (_mutex);
     return _workers.size ();
 }
