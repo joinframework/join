@@ -43,7 +43,7 @@ namespace join
      * @param bin bytes array.
      * @return converted bytes array string.
      */
-    __inline__ std::string bin2hex (const BytesArray& bin)
+    inline std::string bin2hex (const BytesArray& bin)
     {
         std::stringstream oss;
         for (size_t i = 0; i < bin.size (); ++i)

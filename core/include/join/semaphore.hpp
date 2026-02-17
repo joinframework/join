@@ -106,7 +106,7 @@ namespace join
             struct timespec ts = toTimespec (std::chrono::system_clock::now () + timeout);
             if (((_named) ? ::sem_timedwait (_named_handle, &ts) : ::sem_timedwait (&_unnamed_handle, &ts)) == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return false;
             }
 
@@ -187,7 +187,7 @@ namespace join
             struct timespec ts = toTimespec (std::chrono::system_clock::now () + timeout);
             if (sem_timedwait (&_handle, &ts) == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return false;
             }
 

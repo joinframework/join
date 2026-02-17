@@ -124,7 +124,7 @@ namespace join
             int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
             if (err != 0)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (err));
+                lastError = std::error_code (err, std::generic_category ());
                 return false;
             }
             return true;
@@ -146,7 +146,7 @@ namespace join
                 int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
                 if (err != 0)
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (err));
+                    lastError = std::error_code (err, std::generic_category ());
                     return pred ();
                 }
             }
@@ -244,7 +244,7 @@ namespace join
             int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
             if (err != 0)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (err));
+                lastError = std::error_code (err, std::generic_category ());
                 return false;
             }
 
@@ -267,7 +267,7 @@ namespace join
                 int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
                 if (err != 0)
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (err));
+                    lastError = std::error_code (err, std::generic_category ());
                     return pred ();
                 }
             }

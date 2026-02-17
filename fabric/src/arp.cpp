@@ -227,7 +227,7 @@ int Arp::add (const MacAddress& mac, const IpAddress& ip)
         }
     }
 
-    lastError = std::make_error_code (static_cast <std::errc> (errno));
+    lastError = std::error_code (errno, std::generic_category ());
     return -1;
 }
 
@@ -278,7 +278,7 @@ MacAddress Arp::cache (const IpAddress& ip)
         }
     }
 
-    lastError = std::make_error_code (static_cast <std::errc> (errno));
+    lastError = std::error_code (errno, std::generic_category ());
     return {};
 }
 

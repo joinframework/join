@@ -206,7 +206,7 @@ namespace join
 
             if (this->_handle == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 this->close ();
                 return -1;
             }
@@ -261,7 +261,7 @@ namespace join
 
             if (::bind (this->_handle, endpoint.addr (), endpoint.length ()) == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -279,7 +279,7 @@ namespace join
             // check if data can be read in the socket internal buffer.
             if (::ioctl (this->_handle, FIONREAD, &available) == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -321,7 +321,7 @@ namespace join
             {
                 if (size == -1)
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
+                    lastError = std::error_code (errno, std::generic_category ());
                 }
                 else
                 {
@@ -366,7 +366,7 @@ namespace join
             int result = ::sendmsg (this->_handle, &message, 0);
             if (result == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -458,7 +458,7 @@ namespace join
             int result = ::setsockopt (this->_handle, optlevel, optname, &value, sizeof (value));
             if (result == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -599,7 +599,7 @@ namespace join
                     {
                         errno = EBADF;
                     }
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
+                    lastError = std::error_code (errno, std::generic_category ());
                 }
                 else
                 {
@@ -734,7 +734,7 @@ namespace join
             {
                 if ((protocol.family () == AF_INET6) && (::setsockopt (this->_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1))
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
+                    lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
                 }
@@ -744,7 +744,7 @@ namespace join
             {
                 if ((protocol.family () == AF_INET) && (::setsockopt (this->_handle, IPPROTO_IP, IP_HDRINCL, &off, sizeof (off)) == -1))
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
+                    lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
                 }
@@ -783,7 +783,7 @@ namespace join
             int result = setsockopt (this->_handle, SOL_SOCKET, SO_BINDTODEVICE, device.c_str (), device.size ());
             if (result == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -815,7 +815,7 @@ namespace join
 
             if (result == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 if (lastError != std::errc::operation_in_progress)
                 {
                     this->close ();
@@ -846,7 +846,7 @@ namespace join
                 {
                     if (errno != EAFNOSUPPORT)
                     {
-                        lastError = std::make_error_code (static_cast <std::errc> (errno));
+                        lastError = std::error_code (errno, std::generic_category ());
                         return -1;
                     }
                 }
@@ -895,7 +895,7 @@ namespace join
             {
                 if (size == -1)
                 {
-                    lastError = std::make_error_code (static_cast <std::errc> (errno));
+                    lastError = std::error_code (errno, std::generic_category ());
                 }
                 else
                 {
@@ -942,7 +942,7 @@ namespace join
             int result = ::sendto (this->_handle, data, maxSize, 0, endpoint.addr (), endpoint.length ());
             if (result < 0)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -1039,7 +1039,7 @@ namespace join
             int result = ::setsockopt (this->_handle, optlevel, optname, &value, sizeof (value));
             if (result == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -1095,7 +1095,7 @@ namespace join
 
             if (result == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -1429,7 +1429,7 @@ namespace join
             int result = ::setsockopt (this->_handle, optlevel, optname, &value, sizeof (value));
             if (result == -1)
             {
-                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -1826,7 +1826,7 @@ namespace join
                                         this->_state = State::Disconnected;
                                         break;
                                     default:
-                                        lastError = std::make_error_code (static_cast <std::errc> (errno));
+                                        lastError = std::error_code (errno, std::generic_category ());
                                         break;
                                 }
                                 break;
@@ -1941,7 +1941,7 @@ namespace join
                                     this->_state = State::Disconnected;
                                     break;
                                 default:
-                                    lastError = std::make_error_code (static_cast <std::errc> (errno));
+                                    lastError = std::error_code (errno, std::generic_category ());
                                     break;
                             }
                             break;
@@ -2021,7 +2021,7 @@ namespace join
                                     this->_state = State::Disconnected;
                                     break;
                                 default:
-                                    lastError = std::make_error_code (static_cast <std::errc> (errno));
+                                    lastError = std::error_code (errno, std::generic_category ());
                                     break;
                             }
                             break;
@@ -2219,7 +2219,7 @@ namespace join
                                 this->_state = State::Disconnected;
                                 break;
                             default:
-                                lastError = std::make_error_code (static_cast <std::errc> (errno));
+                                lastError = std::error_code (errno, std::generic_category ());
                                 break;
                         }
                         break;
