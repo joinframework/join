@@ -44,12 +44,10 @@ using join::Reactor;
 //   CLASS     : Reactor
 //   METHOD    : Reactor
 // =========================================================================
-Reactor::Reactor (int affi, int prio)
+Reactor::Reactor ()
 : _wakeup (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
 , _epoll (epoll_create1 (EPOLL_CLOEXEC))
-, _commands (_queueSize, (affi >= 0) ? numa_node_of_cpu (affi) : -1)
-, _affinity (affi)
-, _priority (prio)
+, _commands (_queueSize)
 {
     if (_wakeup == -1)
     {
@@ -77,19 +75,7 @@ Reactor::Reactor (int affi, int prio)
         throw std::system_error (err, std::system_category (), "epoll_ctl failed");
     }
 
-    _dispatcher = Thread ([this] () {
-        if (_affinity >= 0)
-        {
-            affinity (pthread_self (), _affinity);
-        }
-
-        if (_priority > 0)
-        {
-            priority (pthread_self (), _priority);
-        }
-
-        eventLoop ();
-    });
+    _dispatcher = Thread ([this] () { eventLoop (); });
 }
 
 // =========================================================================
@@ -220,147 +206,12 @@ int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : affinity
-// =========================================================================
-int Reactor::affinity (int core)
-{
-    if (affinity (_dispatcher.handle (), core) == -1)
-    {
-        return -1;
-    }
-
-    _affinity = core;
-    return 0;
-}
-
-// =========================================================================
-//   CLASS     : Reactor
-//   METHOD    : affinity
-// =========================================================================
-int Reactor::affinity () const noexcept
-{
-    return _affinity;
-}
-
-// =========================================================================
-//   CLASS     : Reactor
-//   METHOD    : priority
-// =========================================================================
-int Reactor::priority (int prio)
-{
-    if (priority (_dispatcher.handle (), prio) == -1)
-    {
-        return -1;
-    }
-
-    _priority = prio;
-    return 0;
-}
-
-// =========================================================================
-//   CLASS     : Reactor
-//   METHOD    : priority
-// =========================================================================
-int Reactor::priority () const noexcept
-{
-    return _priority;
-}
-
-// =========================================================================
-//   CLASS     : Reactor
 //   METHOD    : instance
 // =========================================================================
 Reactor* Reactor::instance () noexcept
 {
     static Reactor reactor;
     return &reactor;
-}
-
-// =========================================================================
-//   CLASS     : Reactor
-//   METHOD    : affinity
-// =========================================================================
-int Reactor::affinity (pthread_t id, int core)
-{
-    if (core < -1)
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
-    if (ncpu == -1)
-    {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
-        return -1;
-    }
-
-    if (core >= ncpu)
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    cpu_set_t cpuset;
-    CPU_ZERO (&cpuset);
-
-    if (core == -1)
-    {
-        for (int i = 0; i < ncpu; ++i)
-        {
-            CPU_SET (i, &cpuset);
-        }
-    }
-    else
-    {
-        CPU_SET (core, &cpuset);
-    }
-
-    int res = pthread_setaffinity_np (id, sizeof (cpu_set_t), &cpuset);
-    if (res != 0)
-    {
-        lastError = std::make_error_code (static_cast <std::errc> (res));
-        return -1;
-    }
-
-    return 0;
-}
-
-// =========================================================================
-//   CLASS     : Reactor
-//   METHOD    : priority
-// =========================================================================
-int Reactor::priority (pthread_t id, int prio)
-{
-    if (prio < 0 || prio > 99)
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    struct sched_param param {};
-    param.sched_priority = prio;
-
-    if (prio == 0)
-    {
-        int res = pthread_setschedparam (id, SCHED_OTHER, &param);
-        if (res != 0)
-        {
-            lastError = std::make_error_code (static_cast <std::errc> (res));
-            return -1;
-        }
-    }
-    else
-    {
-        int res = pthread_setschedparam (id, SCHED_FIFO, &param);
-        if (res != 0)
-        {
-            lastError = std::make_error_code (static_cast <std::errc> (res));
-            return -1;
-        }
-    }
-
-    return 0;
 }
 
 // =========================================================================

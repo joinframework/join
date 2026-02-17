@@ -111,33 +111,8 @@ namespace join
             // do nothing.
         }
 
-    private:
-        /**
-         * @brief set reactor index for pool assignment.
-         * @param index reactor index.
-         */
-        void reactorIndex (int index) noexcept
-        {
-            _reactorIndex = index;
-        }
-
-        /**
-         * @brief get assigned reactor index.
-         * @return reactor index (-1 if not assigned).
-         */
-        int reactorIndex () const noexcept
-        {
-            return _reactorIndex;
-        }
-
-        /// index of the assigned reactor
-        int _reactorIndex = -1;
-
         /// friendship with reactor.
         friend class Reactor;
-
-        /// friendship with reactor pool.
-        friend class ReactorPool;
     };
 
     /**
@@ -148,10 +123,8 @@ namespace join
     public:
         /**
          * @brief default constructor.
-         * @param affi CPU affinity.
-         * @param prio thread priority.
          */
-        Reactor (int affi = -1, int prio = 0);
+        Reactor ();
 
         /**
          * @brief copy constructor.
@@ -201,32 +174,6 @@ namespace join
         int delHandler (EventHandler* handler, bool sync = true) noexcept;
 
         /**
-         * @brief set dispatcher thread CPU affinity.
-         * @param affi CPU affinity (-1 to disable pinning).
-         * @return 0 on success, -1 on failure.
-         */
-        int affinity (int affi);
-
-        /**
-         * @brief get current dispatcher affinity.
-         * @return core ID or -1 if not pinned.
-         */
-        int affinity () const noexcept;
-
-        /**
-         * @brief set dispatcher thread real-time priority.
-         * @param prio thread priority (0 = normal, 1-99 = SCHED_FIFO).
-         * @return 0 on success, -1 on failure.
-         */
-        int priority (int prio);
-
-        /**
-         * @brief get current dispatcher priority.
-         * @return priority.
-         */
-        int priority () const noexcept;
-
-        /**
          * @brief create the Reactor instance.
          * @return Reactor instance pointer.
          */
@@ -257,22 +204,6 @@ namespace join
             std::atomic <bool>* done;
             std::atomic <int>* errc;
         };
-
-        /**
-         * @brief set dispatcher thread CPU affinity.
-         * @param id thread id.
-         * @param affi CPU affinity (-1 to disable pinning).
-         * @return 0 on success, -1 on failure.
-         */
-        static int affinity (pthread_t id, int affi);
-
-        /**
-         * @brief set dispatcher thread real-time priority.
-         * @param id thread id.
-         * @param prio thread priority (0 = normal, 1-99 = SCHED_FIFO).
-         * @return 0 on success, -1 on failure.
-         */
-        static int priority (pthread_t id, int prio);
 
         /**
          * @brief register handler with epoll.
@@ -332,12 +263,6 @@ namespace join
 
         /// command queue
         LocalMem::Mpsc::Queue <Command> _commands;
-
-        /// CPU affinity.
-        int _affinity = -1;
-
-        /// dispatcher thread priority.
-        int _priority = 0;
 
         /// dispatcher thread.
         Thread _dispatcher;
