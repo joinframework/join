@@ -124,6 +124,11 @@ int Reactor::addHandler (EventHandler* handler, bool sync) noexcept
         return -1;
     }
 
+    if (JOIN_UNLIKELY (_dispatcher.handle () == pthread_self ()))
+    {
+        return registerHandler (handler);
+    }
+
     std::atomic <bool> done {false}, *pdone = nullptr;
     std::atomic <int> errc {0}, *perrc = nullptr;
 

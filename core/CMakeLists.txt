@@ -11,7 +11,6 @@ set(PUBLIC_HEADERS
     include/join/traits.hpp
     include/join/variant.hpp
     include/join/reactor.hpp
-    include/join/reactorpool.hpp
     include/join/memory.hpp
     include/join/queue.hpp
     include/join/mutex.hpp
@@ -33,7 +32,6 @@ set(PUBLIC_HEADERS
 set(SOURCES
     src/error.cpp
     src/reactor.cpp
-    src/reactorpool.cpp
     src/mutex.cpp
     src/condition.cpp
     src/semaphore.cpp
