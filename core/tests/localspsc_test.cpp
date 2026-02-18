@@ -262,6 +262,17 @@ TEST (LocalSpsc, empty)
     ASSERT_FALSE (queue2.empty ());
 }
 
+TEST (LocalSpsc, memory)
+{
+    LocalMem::Spsc::Queue <uint64_t> queue (0);
+    ASSERT_NE (queue.memory ().get (), nullptr);
+    ASSERT_EQ (queue.memory ().mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (queue.memory ().mlock (), 0) << join::lastError.message ();
+
+    const LocalMem::Spsc::Queue <uint64_t>& cqueue = queue;
+    ASSERT_NE (cqueue.memory ().get (), nullptr);
+}
+
 /**
  * @brief main function.
  */

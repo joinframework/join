@@ -321,6 +321,24 @@ namespace join
             return pending () == 0;
         }
 
+        /**
+         * @brief get reference to underlying memory backend.
+         * @return reference to backend.
+         */
+        Backend& memory () noexcept
+        {
+            return _backend;
+        }
+
+        /**
+         * @brief get const reference to underlying memory backend.
+         * @return const reference to backend.
+         */
+        const Backend& memory () const noexcept
+        {
+            return _backend;
+        }
+
     protected:
         /**
          * @brief round up to next power of 2.

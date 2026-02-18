@@ -329,6 +329,17 @@ TEST_F (ShmMpsc, empty)
     ASSERT_FALSE (prod2.empty ());
 }
 
+TEST_F (ShmMpsc, memory)
+{
+    ShmMem::Mpsc::Queue <uint64_t> queue (0, _name);
+    ASSERT_NE (queue.memory ().get (), nullptr);
+    ASSERT_EQ (queue.memory ().mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (queue.memory ().mlock (), 0) << join::lastError.message ();
+
+    const ShmMem::Mpsc::Queue <uint64_t>& cqueue = queue;
+    ASSERT_NE (cqueue.memory ().get (), nullptr);
+}
+
 /**
  * @brief main function.
  */
