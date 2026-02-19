@@ -83,6 +83,8 @@ protected:
     virtual void onClose () override
     {
         ReactorThread::reactor ()->delHandler (this);
+        ReactorThread::reactor ()->addHandler (this);
+        ReactorThread::reactor ()->delHandler (this);
         _server.close ();
 
         {
@@ -99,6 +101,8 @@ protected:
      */
     virtual void onError () override
     {
+        ReactorThread::reactor ()->delHandler (this);
+        ReactorThread::reactor ()->addHandler (this);
         ReactorThread::reactor ()->delHandler (this);
         _server.close ();
 
@@ -219,6 +223,26 @@ TEST_F (ReactorTest, delHandler)
 }
 
 /**
+ * @brief Test delHandler.
+ */
+TEST_F (ReactorTest, mbind)
+{
+    Reactor reactor;
+
+    ASSERT_EQ (reactor.mbind (0), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test delHandler.
+ */
+TEST_F (ReactorTest, mlock)
+{
+    Reactor reactor;
+
+    ASSERT_EQ (reactor.mlock (), 0) << join::lastError.message ();
+}
+
+/**
  * @brief Test onReceive.
  */
 TEST_F (ReactorTest, onReceive)
@@ -226,6 +250,15 @@ TEST_F (ReactorTest, onReceive)
     // connect socket.
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    // tun thread
+    ASSERT_EQ (ReactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::affinity (), 0);
+    ASSERT_EQ (ReactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::priority (), 1);
+    ASSERT_EQ (ReactorThread::mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add handler.
     ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
@@ -253,6 +286,15 @@ TEST_F (ReactorTest, onClose)
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
+    // tun thread
+    ASSERT_EQ (ReactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::affinity (), 0);
+    ASSERT_EQ (ReactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::priority (), 1);
+    ASSERT_EQ (ReactorThread::mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
+
     // add handler.
     ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
 
@@ -275,6 +317,15 @@ TEST_F (ReactorTest, onError)
     // connect socket.
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    // tun thread
+    ASSERT_EQ (ReactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::affinity (), 0);
+    ASSERT_EQ (ReactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::priority (), 1);
+    ASSERT_EQ (ReactorThread::mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add handler.
     ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
