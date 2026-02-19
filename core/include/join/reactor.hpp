@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/thread.hpp>
+#include <join/queue.hpp>
 
 // C++.
 #include <atomic>
@@ -131,17 +132,17 @@ namespace join
         Reactor (const Reactor& other) = delete;
 
         /**
-         * @brief move constructor.
-         * @param other other object to move.
-         */
-        Reactor (Reactor&& other) = delete;
-
-        /**
          * @brief copy assignment operator.
          * @param other other object to copy.
          * @return current object.
          */
         Reactor& operator= (const Reactor& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        Reactor (Reactor&& other) = delete;
 
         /**
          * @brief move assignment operator.
@@ -158,16 +159,18 @@ namespace join
         /**
          * @brief add handler to reactor.
          * @param handler handler pointer.
+         * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addHandler (EventHandler* handler) noexcept;
+        int addHandler (EventHandler* handler, bool sync = true) noexcept;
 
         /**
          * @brief delete handler from reactor.
          * @param handler handler pointer.
+         * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int delHandler (EventHandler* handler) noexcept;
+        int delHandler (EventHandler* handler, bool sync = true) noexcept;
 
         /**
          * @brief run the event loop (blocking).
@@ -176,12 +179,35 @@ namespace join
 
         /**
          * @brief stop the event loop.
+         * @param sync wait for loop termination if true.
          */
-        void stop () noexcept;
+        void stop (bool sync = true) noexcept;
 
-    protected:
+    private:
+        /// deleted handlers reserve size.
+        static constexpr size_t _deletedReserve = 64;
+
+        /// queue size.
+        static constexpr size_t _queueSize = 1024;
+
         /// max events
         static constexpr size_t _maxEvents = 1024;
+
+        /**
+         * @brief Command type for reactor dispatcher.
+         */
+        enum class CommandType { Add, Del, Stop };
+
+        /**
+         * @brief Command for reactor dispatcher.
+         */
+        struct alignas (64) Command
+        {
+            CommandType type;
+            EventHandler* handler;
+            std::atomic <bool>* done;
+            std::atomic <int>* errc;
+        };
 
         /**
          * @brief register handler with epoll.
@@ -198,6 +224,24 @@ namespace join
         int unregisterHandler (EventHandler* handler) noexcept;
 
         /**
+         * @brief write command to queue and wake dispatcher.
+         * @param cmd command to write.
+         * @return 0 on success, -1 on failure.
+         */
+        int writeCommand (const Command& cmd) noexcept;
+
+        /**
+         * @brief process a single command.
+         * @param cmd command to process.
+         */
+        void processCommand (const Command& cmd);
+
+        /**
+         * @brief read and process all pending commands from queue.
+         */
+        void  readCommands ();
+
+        /**
          * @brief dispatch a single event to its handler.
          * @param event epoll event.
          */
@@ -208,17 +252,30 @@ namespace join
          */
         void eventLoop ();
 
+        /**
+         * @brief check if handler is active.
+         * @param handler handler pointer.
+         * @return true if handler is active, false otherwise.
+         */
+        bool isActive (EventHandler* handler) const noexcept;
+
         /// eventfd descriptor.
         int _wakeup = -1;
 
         /// epoll descriptor.
         int _epoll = -1;
 
-        /// thread id.
-        std::atomic <pthread_t> _threadId {0};
+        /// command queue
+        LocalMem::Mpsc::Queue <Command> _commands;
 
-        /// running flag.
+        /// deleted handlers.
+        std::vector <EventHandler*> _deleted;
+
+        /// running flag for dispatcher thread.
         std::atomic <bool> _running {false};
+
+        /// event loop thread ID.
+        std::atomic <pthread_t> _threadId {0};
     };
 
     /**
