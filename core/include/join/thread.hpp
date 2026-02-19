@@ -55,7 +55,22 @@ namespace join
          */
         template <class Function, class... Args>
         explicit Invoker (Function&& func, Args&&... args)
+        : Invoker (-1, 0, std::forward<Function>(func), std::forward<Args>(args)...)
+        {
+        }
+
+        /**
+         * @brief creates a new thread of execution.
+         * @param core thread core affinity (-1 no pinning).
+         * @param prio thread priority (0 = SCHED_OTHER, 1-99 = SCHED_FIFO).
+         * @param func callable object to execute in the new thread of execution.
+         * @param args... arguments to pass to the callable object to execute.
+         */
+        template <class Function, class... Args>
+        explicit Invoker (int core, int prio, Function&& func, Args&&... args)
         : _func (std::bind (std::forward <Function> (func), std::forward <Args> (args)...))
+        , _core (core)
+        , _priority (prio)
         , _done (false)
         {
             pthread_create (&_handle, nullptr, _routine, this);
@@ -105,13 +120,19 @@ namespace join
          * @brief thread routine.
          * @return thread return statement.
          */
-        void * routine (void);
+        void * routine ();
 
         /// user function to execute.
         std::function <void ()> _func;
 
         /// thread handle.
         pthread_t _handle;
+
+        /// thread core affinity.
+        int _core = -1;
+
+        /// thread priority.
+        int _priority = 0;
 
         /// completed flag.
         std::atomic_bool _done;
@@ -138,7 +159,20 @@ namespace join
          */
         template <class Function, class... Args>
         explicit Thread (Function&& func, Args&&... args)
-        : _invoker (new Invoker (std::forward <Function> (func), std::forward <Args> (args)...))
+        : Thread (-1, 0, std::forward <Function> (func), std::forward <Args> (args)...)
+        {
+        }
+
+        /**
+         * @brief creates a new thread object associated with a thread of execution.
+         * @param core thread core affinity (-1 no pinning).
+         * @param prio thread priority (0 = SCHED_OTHER, 1-99 = SCHED_FIFO).
+         * @param func callable object to execute in the new thread.
+         * @param args... arguments to pass to the new function.
+         */
+        template <class Function, class... Args>
+        explicit Thread (int core, int prio, Function&& func, Args&&... args)
+        : _invoker (new Invoker (core, prio, std::forward <Function> (func), std::forward <Args> (args)...))
         {
         }
 
@@ -258,13 +292,6 @@ namespace join
     private:
         /// current thread informations.
         std::unique_ptr <Invoker> _invoker;
-
-        /// thread core affinity.
-        int _core = -1;
-
-        /// thread priority.
-        int _priority = 0;
-
     };
 }
 

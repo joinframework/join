@@ -44,13 +44,19 @@ using join::InterfaceManager;
 //   CLASS     : InterfaceManager
 //   METHOD    : InterfaceManager
 // =========================================================================
-InterfaceManager::InterfaceManager()
+InterfaceManager::InterfaceManager (Reactor* reactor)
 : _buffer (std::make_unique <char []> (_bufferSize))
 , _seq (0)
+, _reactor (reactor)
 {
     open (Netlink::rt ());
     bind (RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE);
-    Reactor::instance ()->addHandler (this);
+    if (_reactor == nullptr)
+    {
+        _reactor = ReactorThread::reactor ();
+    }
+    _reactor->addHandler (this);
+    refresh (true);
 }
 
 // =========================================================================
@@ -59,24 +65,8 @@ InterfaceManager::InterfaceManager()
 // =========================================================================
 InterfaceManager::~InterfaceManager ()
 {
-    Reactor::instance ()->delHandler (this);
+    _reactor->delHandler (this);
     close ();
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : instance
-// =========================================================================
-InterfaceManager* InterfaceManager::instance ()
-{
-    static std::once_flag initialized;
-    static InterfaceManager manager;
-
-    std::call_once (initialized, [] () {
-        manager.refresh (true);
-    });
-
-    return &manager;
 }
 
 // =========================================================================
@@ -152,7 +142,7 @@ void InterfaceManager::removeLinkListener (const LinkNotify& cb)
     auto it = std::remove_if (_linkListeners.begin(), _linkListeners.end(),
         [&] (const LinkNotify& existing) {
             return existing.target_type () == cb.target_type () &&
-                   existing.target <void (int)> () == cb.target <void (int)> ();
+                   existing.target <void (const LinkInfo&)> () == cb.target <void (const LinkInfo&)> ();
         });
     _linkListeners.erase (it, _linkListeners.end ());
 }
@@ -177,7 +167,7 @@ void InterfaceManager::removeAddressListener (const AddressNotify& cb)
     auto it = std::remove_if (_addressListeners.begin(), _addressListeners.end(),
         [&] (const AddressNotify& existing) {
             return existing.target_type () == cb.target_type () &&
-                   existing.target <void (int)> () == cb.target <void (int)> ();
+                   existing.target <void (const AddressInfo&)> () == cb.target <void (const AddressInfo&)> ();
         });
     _addressListeners.erase (it, _addressListeners.end ());
 }
@@ -202,7 +192,7 @@ void InterfaceManager::removeRouteListener (const RouteNotify& cb)
     auto it = std::remove_if (_routeListeners.begin(), _routeListeners.end(),
         [&] (const RouteNotify& existing) {
             return existing.target_type () == cb.target_type () &&
-                   existing.target <void (int)> () == cb.target <void (int)> ();
+                   existing.target <void (const RouteInfo&)> () == cb.target <void (const RouteInfo&)> ();
         });
     _routeListeners.erase (it, _routeListeners.end ());
 }
@@ -1007,8 +997,9 @@ int InterfaceManager::waitResponse (ScopedLock <Mutex>& lock, uint32_t seq, uint
 
     if (inserted.first->second->error != 0)
     {
+        int err = inserted.first->second->error;
         _pending.erase (inserted.first);
-        lastError = std::error_code (inserted.first->second->error, std::generic_category ());
+        lastError = std::error_code (err, std::generic_category ());
         return -1;
     }
 
@@ -1098,52 +1089,52 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
 
     Interface::Ptr iface = acquire (info);
 
-    iface->_mutex.lock ();
-
-    if ((iface->_flags & IFF_UP) != (ifi->ifi_flags & IFF_UP))
     {
-        info.flags |= ChangeType::AdminStateChanged;
-    }
+        ScopedLock <Mutex> lock (iface->_mutex);
 
-    if ((iface->_flags & IFF_RUNNING) != (ifi->ifi_flags & IFF_RUNNING))
-    {
-        info.flags |= ChangeType::OperStateChanged;
-    }
-
-    iface->_flags = ifi->ifi_flags;
-
-    while (RTA_OK (rta, len))
-    {
-        switch (rta->rta_type)
+        if ((iface->_flags & IFF_UP) != (ifi->ifi_flags & IFF_UP))
         {
-            case IFLA_ADDRESS:
-                info.flags |= updateValue (iface->_mac, MacAddress (reinterpret_cast <uint8_t *> (RTA_DATA (rta)), IFHWADDRLEN), ChangeType::MacChanged);
-                break;
-
-            case IFLA_IFNAME:
-                info.flags |= updateValue (iface->_name, std::string (reinterpret_cast <char *> (RTA_DATA (rta))), ChangeType::NameChanged);
-                break;
-
-            case IFLA_MTU:
-                info.flags |= updateValue (iface->_mtu, *reinterpret_cast <uint32_t *> (RTA_DATA (rta)), ChangeType::MtuChanged);
-                break;
-
-            case IFLA_LINKINFO:
-                onLinkInfoMessage (iface, rta, info.flags);
-                break;
-
-            case IFLA_MASTER:
-                info.flags |= updateValue (iface->_master, *reinterpret_cast <uint32_t *> (RTA_DATA (rta)), ChangeType::MasterChanged);
-                break;
-
-            default:
-                break;
+            info.flags |= ChangeType::AdminStateChanged;
         }
 
-        rta = RTA_NEXT (rta, len);
-    }
+        if ((iface->_flags & IFF_RUNNING) != (ifi->ifi_flags & IFF_RUNNING))
+        {
+            info.flags |= ChangeType::OperStateChanged;
+        }
 
-    iface->_mutex.unlock ();
+        iface->_flags = ifi->ifi_flags;
+
+        while (RTA_OK (rta, len))
+        {
+            switch (rta->rta_type)
+            {
+                case IFLA_ADDRESS:
+                    info.flags |= updateValue (iface->_mac, MacAddress (reinterpret_cast <uint8_t *> (RTA_DATA (rta)), IFHWADDRLEN), ChangeType::MacChanged);
+                    break;
+
+                case IFLA_IFNAME:
+                    info.flags |= updateValue (iface->_name, std::string (reinterpret_cast <char *> (RTA_DATA (rta))), ChangeType::NameChanged);
+                    break;
+
+                case IFLA_MTU:
+                    info.flags |= updateValue (iface->_mtu, *reinterpret_cast <uint32_t *> (RTA_DATA (rta)), ChangeType::MtuChanged);
+                    break;
+
+                case IFLA_LINKINFO:
+                    onLinkInfoMessage (iface, rta, info.flags);
+                    break;
+
+                case IFLA_MASTER:
+                    info.flags |= updateValue (iface->_master, *reinterpret_cast <uint32_t *> (RTA_DATA (rta)), ChangeType::MasterChanged);
+                    break;
+
+                default:
+                    break;
+            }
+
+            rta = RTA_NEXT (rta, len);
+        }
+    }
 
     notifyLinkUpdate (info);
 }
