@@ -239,6 +239,24 @@ void Reactor::stop (bool sync) noexcept
 
 // =========================================================================
 //   CLASS     : Reactor
+//   METHOD    : mbind
+// =========================================================================
+int Reactor::mbind (int numa)
+{
+    return _commands.mbind (numa);
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : mlock
+// =========================================================================
+int Reactor::mlock ()
+{
+    return _commands.mlock ();
+}
+
+// =========================================================================
+//   CLASS     : Reactor
 //   METHOD    : registerHandler
 // =========================================================================
 int Reactor::registerHandler (EventHandler* handler) noexcept
@@ -454,6 +472,24 @@ int ReactorThread::priority ()
 pthread_t ReactorThread::handle ()
 {
     return instance ()._dispatcher.handle ();
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : mbind
+// =========================================================================
+int ReactorThread::mbind (int numa)
+{
+    return instance ()._reactor.mbind (numa);
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : mlock
+// =========================================================================
+int ReactorThread::mlock ()
+{
+    return instance ()._reactor.mlock ();
 }
 
 // =========================================================================

@@ -183,6 +183,19 @@ namespace join
          */
         void stop (bool sync = true) noexcept;
 
+        /**
+         * @brief bind command queue memory to a NUMA node.
+         * @param numa NUMA node ID.
+         * @return 0 on success, -1 on failure.
+         */
+        int mbind (int numa);
+
+        /**
+         * @brief lock command queue memory in RAM.
+         * @return 0 on success, -1 on failure.
+         */
+        int mlock ();
+
     private:
         /// deleted handlers reserve size.
         static constexpr size_t _deletedReserve = 64;
@@ -321,6 +334,19 @@ namespace join
          * @return reactor thread handle.
          */
         static pthread_t handle ();
+
+        /**
+         * @brief bind command queue memory to a NUMA node.
+         * @param numa NUMA node ID.
+         * @return 0 on success, -1 on failure.
+         */
+        static int mbind (int numa);
+
+        /**
+         * @brief lock command queue memory in RAM.
+         * @return 0 on success, -1 on failure.
+         */
+        static int mlock ();
 
     private:
         /**
