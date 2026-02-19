@@ -35,6 +35,7 @@ using join::Mutex;
 using join::Condition;
 using join::ScopedLock;
 using join::Reactor;
+using join::ReactorThread;
 using join::Tcp;
 
 /**
@@ -80,7 +81,7 @@ protected:
      */
     virtual void onClose () override
     {
-        Reactor::instance ()->delHandler (this);
+        ReactorThread::reactor ()->delHandler (this);
         _server.close ();
 
         {
@@ -97,7 +98,7 @@ protected:
      */
     virtual void onError () override
     {
-        Reactor::instance ()->delHandler (this);
+        ReactorThread::reactor ()->delHandler (this);
         _server.close ();
 
         {
@@ -155,14 +156,6 @@ const int     ReactorTest::_timeout = 1000;
 Condition     ReactorTest::_cond;
 Mutex         ReactorTest::_mut;
 std::string   ReactorTest::_event;
-
-/**
- * @brief Test instance.
- */
-TEST_F (ReactorTest, instance)
-{
-    ASSERT_NE (Reactor::instance (), nullptr);
-}
 
 /**
  * @brief Test addHandler.
@@ -231,7 +224,7 @@ TEST_F (ReactorTest, onReceive)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
 
     // write random data.
     ASSERT_EQ (_client.writeExactly ("onReceive", strlen ("onReceive"), _timeout), 0) << join::lastError.message ();
@@ -244,7 +237,7 @@ TEST_F (ReactorTest, onReceive)
     }
 
     // delete handler.
-    ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ()->delHandler (this), 0) << join::lastError.message ();
 }
 
 /**
@@ -257,7 +250,7 @@ TEST_F (ReactorTest, onClose)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
 
     // close immediately.
     _client.close ();
@@ -280,7 +273,7 @@ TEST_F (ReactorTest, onError)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
 
     // reset connection.
     struct linger sl { .l_onoff = 1, .l_linger = 0 };

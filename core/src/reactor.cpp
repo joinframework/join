@@ -24,31 +24,48 @@
 
 // libjoin.
 #include <join/reactor.hpp>
+#include <join/backoff.hpp>
+#include <join/utils.hpp>
 
 // C++.
-#include <functional>
-#include <thread>
+#include <array>
 
 // C.
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-using join::ScopedLock;
+using join::Backoff;
 using join::EventHandler;
 using join::Reactor;
+using join::ReactorThread;
 
 // =========================================================================
 //   CLASS     : Reactor
 //   METHOD    : Reactor
 // =========================================================================
 Reactor::Reactor ()
-: _eventfd (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
+: _wakeup (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC)),
   _epoll (epoll_create1 (EPOLL_CLOEXEC))
 {
+    if ((_wakeup == -1) || (_epoll == -1))
+    {
+        int err = errno;
+        ::close (_wakeup);
+        ::close (_epoll);
+        throw std::system_error (err, std::system_category (), "eventfd / epoll failed");
+    }
+
     struct epoll_event ev {};
     ev.events = EPOLLIN;
     ev.data.ptr = nullptr;
-    epoll_ctl (_epoll, EPOLL_CTL_ADD, _eventfd, &ev);
+
+    if (epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev) == -1)
+    {
+        int err = errno;
+        ::close (_epoll);
+        ::close (_wakeup);
+        throw std::system_error (err, std::system_category (), "epoll_ctl failed");
+    }
 }
 
 // =========================================================================
@@ -57,57 +74,27 @@ Reactor::Reactor ()
 // =========================================================================
 Reactor::~Reactor ()
 {
-    ScopedLock <RecursiveMutex> lock (_mutex);
-
-    if (_running)
-    {
-        uint64_t value = 1;
-        [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
-        _threadStatus.wait (lock, [this] () { return !_running; });
-    }
+    stop ();
 
     ::close (_epoll);
-    ::close (_eventfd);
+    ::close (_wakeup);
 }
 
 // =========================================================================
 //   CLASS     : Reactor
 //   METHOD    : addHandler
 // =========================================================================
-int Reactor::addHandler (EventHandler* handler)
+int Reactor::addHandler (EventHandler* handler) noexcept
 {
-    if (handler == nullptr)
+    if (JOIN_UNLIKELY (handler == nullptr))
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 
-    struct epoll_event ev {};
-    ev.events = EPOLLIN | EPOLLRDHUP;
-    ev.data.ptr = handler;
-
-    if (epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev) == -1)
+    if (JOIN_UNLIKELY (registerHandler (handler) == -1))
     {
-        lastError = std::error_code (errno, std::generic_category ());
         return -1;
-    }
-
-    {
-        ScopedLock <RecursiveMutex> lock (_mutex);
-
-        if (++_num == 1)
-        {
-            // first handler, start dispatcher thread.
-            std::thread th (std::bind (&Reactor::dispatch, this));
-            _threadId = th.get_id ();
-            th.detach ();
-        }
-
-        // wait until dispatcher is running,
-        // unless we're the dispatcher thread itself.
-        _threadStatus.wait (lock, [this] () {
-            return (std::this_thread::get_id () == _threadId) || _running; 
-        });
     }
 
     return 0;
@@ -117,35 +104,17 @@ int Reactor::addHandler (EventHandler* handler)
 //   CLASS     : Reactor
 //   METHOD    : delHandler
 // =========================================================================
-int Reactor::delHandler (EventHandler* handler)
+int Reactor::delHandler (EventHandler* handler) noexcept
 {
-    if (handler == nullptr)
+    if (JOIN_UNLIKELY (handler == nullptr))
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 
-    if (epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->handle (), nullptr) == -1)
+    if (JOIN_UNLIKELY (unregisterHandler (handler) == -1))
     {
-        lastError = std::error_code (errno, std::generic_category ());
         return -1;
-    }
-
-    {
-        ScopedLock <RecursiveMutex> lock (_mutex);
-
-        if (--_num == 0)
-        {
-            // last handler, stop dispatcher thread.
-            uint64_t value = 1;
-            [[maybe_unused]] ssize_t bytes = ::write (_eventfd, &value, sizeof (uint64_t));
-
-            // wait until dispatcher has stopped,
-            // unless we're the dispatcher thread itself.
-            _threadStatus.wait (lock, [this] () {
-                return (std::this_thread::get_id () == _threadId) || !_running;
-            });
-        }
     }
 
     return 0;
@@ -153,68 +122,204 @@ int Reactor::delHandler (EventHandler* handler)
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : instance
+//   METHOD    : run
 // =========================================================================
-Reactor* Reactor::instance ()
+void Reactor::run ()
 {
-    static Reactor reactor;
-    return &reactor;
+    _threadId.store (pthread_self (), std::memory_order_release);
+
+    _running.store (true, std::memory_order_release);
+    eventLoop ();
+
+    _threadId.store (0, std::memory_order_release);
 }
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : dispatch
+//   METHOD    : stop
 // =========================================================================
-void Reactor::dispatch ()
+void Reactor::stop () noexcept
 {
+    _running.store (false, std::memory_order_release);
+
+    if (_threadId.load (std::memory_order_acquire) == pthread_self ())
     {
-        ScopedLock <RecursiveMutex> lock (_mutex);
-        _running = true;
-        _threadStatus.broadcast ();
+        return;
     }
 
-    std::vector <struct epoll_event> ev (256);
-    bool stop = false;
+    uint64_t value = 1;
+    [[maybe_unused]] ssize_t bytes = ::write (_wakeup, &value, sizeof (uint64_t));
 
-    while (!stop)
+    Backoff backoff;
+    while (_threadId.load (std::memory_order_acquire) != 0)
     {
-        int nset = epoll_wait (_epoll, ev.data (), ev.size (), -1);
+        backoff ();
+    }
+}
 
-        ScopedLock <RecursiveMutex> lock (_mutex);
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : registerHandler
+// =========================================================================
+int Reactor::registerHandler (EventHandler* handler) noexcept
+{
+    struct epoll_event ev {};
+    ev.events = EPOLLIN | EPOLLRDHUP;
+    ev.data.ptr = handler;
 
-        for (int n = 0; n < nset; ++n)
+    if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev) == -1))
+    {
+        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : unregisterHandler
+// =========================================================================
+int Reactor::unregisterHandler (EventHandler* handler) noexcept
+{
+    if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->handle (), nullptr) == -1))
+    {
+        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : dispatchEvent
+// =========================================================================
+void Reactor::dispatchEvent (const epoll_event& event)
+{
+    EventHandler* handler = static_cast <EventHandler*> (event.data.ptr);
+
+    if (JOIN_UNLIKELY (event.events & EPOLLERR))
+    {
+        handler->onError ();
+    }
+    else if (JOIN_UNLIKELY (event.events & (EPOLLRDHUP | EPOLLHUP)))
+    {
+        handler->onClose ();
+    }
+    else if (JOIN_LIKELY (event.events & EPOLLIN))
+    {
+        handler->onReceive ();
+    }
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : eventLoop
+// =========================================================================
+void Reactor::eventLoop ()
+{
+    std::array <epoll_event, _maxEvents> events;
+
+    while (_running.load (std::memory_order_acquire))
+    {
+        int eventCount = epoll_wait (_epoll, events.data (), events.size (), -1);
+
+        for (int i = 0; i < eventCount; ++i)
         {
-            if (ev[n].data.ptr == nullptr)
+            if (JOIN_UNLIKELY (events[i].data.ptr == nullptr))
             {
                 uint64_t value;
-                [[maybe_unused]] ssize_t bytes = ::read (_eventfd, &value, sizeof (uint64_t));
-                stop = true;
+                [[maybe_unused]] ssize_t bytes = ::read (_wakeup, &value, sizeof (uint64_t));
                 break;
             }
-
-            if (ev[n].events & EPOLLERR)
+            else
             {
-                 reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onError ();
-            }
-            else if ((ev[n].events & EPOLLRDHUP) || (ev[n].events & EPOLLHUP))
-            {
-                 reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onClose ();
-            }
-            else if (ev[n].events & EPOLLIN)
-            {
-                 reinterpret_cast <EventHandler*> (ev[n].data.ptr)->onReceive ();
+                dispatchEvent (events[i]);
             }
         }
-
-        if (nset == static_cast <int> (ev.size ()))
-        {
-            ev.resize (ev.size () * 2);
-        }
     }
+}
 
-    {
-        ScopedLock <RecursiveMutex> lock (_mutex);
-        _running = false;
-        _threadStatus.broadcast ();
-    }
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : reactor
+// =========================================================================
+Reactor* ReactorThread::reactor ()
+{
+    return &instance ()._reactor;
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : affinity
+// =========================================================================
+int ReactorThread::affinity (int core)
+{
+    return instance ()._dispatcher.affinity (core);
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : affinity
+// =========================================================================
+int ReactorThread::affinity ()
+{
+    return instance ()._dispatcher.affinity ();
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : priority
+// =========================================================================
+int ReactorThread::priority (int prio)
+{
+    return instance ()._dispatcher.priority (prio);
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : priority
+// =========================================================================
+int ReactorThread::priority ()
+{
+    return instance ()._dispatcher.priority ();
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : handle
+// =========================================================================
+pthread_t ReactorThread::handle ()
+{
+    return instance ()._dispatcher.handle ();
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : instance
+// =========================================================================
+ReactorThread& ReactorThread::instance ()
+{
+    static ReactorThread reactorThread;
+    return reactorThread;
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : ReactorThread
+// =========================================================================
+ReactorThread::ReactorThread ()
+{
+    _dispatcher = Thread ([this] () {_reactor.run ();});
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : ~ReactorThread
+// =========================================================================
+ReactorThread::~ReactorThread ()
+{
+    _reactor.stop ();
+    _dispatcher.join ();
 }

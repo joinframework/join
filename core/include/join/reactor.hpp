@@ -26,11 +26,10 @@
 #define __JOIN_REACTOR_HPP__
 
 // libjoin.
-#include <join/condition.hpp>
+#include <join/thread.hpp>
 
 // C++.
-#include <thread>
-#include <vector>
+#include <atomic>
 
 // C.
 #include <sys/epoll.h>
@@ -47,6 +46,32 @@ namespace join
          * @brief create instance.
          */
         EventHandler () = default;
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        EventHandler (const EventHandler& other) = default;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to copy.
+         * @return current object.
+         */
+        EventHandler& operator= (const EventHandler& other) = default;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        EventHandler (EventHandler&& other) = default;
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to move.
+         * @return current object.
+         */
+        EventHandler& operator= (EventHandler&& other) = default;
 
         /**
          * @brief destroy instance.
@@ -128,54 +153,166 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        ~Reactor ();
+        ~Reactor () noexcept;
 
         /**
          * @brief add handler to reactor.
          * @param handler handler pointer.
          * @return 0 on success, -1 on failure.
          */
-        int addHandler (EventHandler* handler);
+        int addHandler (EventHandler* handler) noexcept;
 
         /**
          * @brief delete handler from reactor.
          * @param handler handler pointer.
          * @return 0 on success, -1 on failure.
          */
-        int delHandler (EventHandler* handler);
+        int delHandler (EventHandler* handler) noexcept;
 
         /**
-         * @brief create the Reactor instance.
-         * @return Reactor instance pointer.
+         * @brief run the event loop (blocking).
          */
-        static Reactor* instance ();
+        void run ();
+
+        /**
+         * @brief stop the event loop.
+         */
+        void stop () noexcept;
 
     protected:
+        /// max events
+        static constexpr size_t _maxEvents = 1024;
+
         /**
-         * @brief dispatch events received.
+         * @brief register handler with epoll.
+         * @param handler handler pointer.
+         * @return 0 on success, -1 on failure.
          */
-        void dispatch ();
+        int registerHandler (EventHandler* handler) noexcept;
+
+        /**
+         * @brief unregister handler from epoll.
+         * @param handler handler pointer.
+         * @return 0 on success, -1 on failure.
+         */
+        int unregisterHandler (EventHandler* handler) noexcept;
+
+        /**
+         * @brief dispatch a single event to its handler.
+         * @param event epoll event.
+         */
+        void dispatchEvent (const epoll_event& event);
+
+        /**
+         * @brief main event loop running in dispatcher thread.
+         */
+        void eventLoop ();
 
         /// eventfd descriptor.
-        int _eventfd = -1;
+        int _wakeup = -1;
 
         /// epoll descriptor.
         int _epoll = -1;
 
         /// thread id.
-        std::thread::id _threadId;
+        std::atomic <pthread_t> _threadId {0};
 
-        /// protection mutex.
-        RecursiveMutex _mutex;
+        /// running flag.
+        std::atomic <bool> _running {false};
+    };
 
-        /// thread status event.
-        Condition _threadStatus;
+    /**
+     * @brief Convenience class that owns a Reactor running on a dedicated background thread.
+     */
+    class ReactorThread
+    {
+    public:
+        /**
+         * @brief get the global Reactor instance.
+         * @return reference to the singleton Reactor.
+         */
+        static Reactor* reactor ();
 
-        /// status.
-        bool _running = false;
+        /**
+         * @brief set reactor thread affinity.
+         * @param core thread core affinity (-1 to disable pinning).
+         * @return 0 on success, -1 on failure.
+         */
+        static int affinity (int core);
 
-        /// number of handlers.
-        int _num = 0;
+        /**
+         * @brief get reactor thread affinity.
+         * @return affinity or -1 if not pinned.
+         */
+        static int affinity ();
+
+        /**
+         * @brief set reactor thread priority.
+         * @param prio thread priority (0 = SCHED_OTHER, 1-99 = SCHED_FIFO).
+         * @return 0 on success, -1 on failure.
+         */
+        static int priority (int prio);
+
+        /**
+         * @brief get reactor thread priority.
+         * @return priority.
+         */
+        static int priority ();
+
+        /**
+         * @brief get the handle of the reactor thread.
+         * @return reactor thread handle.
+         */
+        static pthread_t handle ();
+
+    private:
+        /**
+         * @brief get the singleton ReactorThread instance.
+         * @return reference to the singleton ReactorThread.
+         */
+        static ReactorThread& instance ();
+
+        /**
+         * @brief construct the ReactorThread and start the event loop thread.
+         */
+        ReactorThread ();
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        ReactorThread (const ReactorThread& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to copy.
+         * @return current object.
+         */
+        ReactorThread& operator= (const ReactorThread& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        ReactorThread (ReactorThread&& other) noexcept = delete;
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to move.
+         * @return current object.
+         */
+        ReactorThread& operator= (ReactorThread&& other) noexcept = delete;
+
+        /**
+         * @brief destroy the ReactorThread and cleanly shut down the event loop.
+         */
+        ~ReactorThread ();
+
+        /// Reactor instance.
+        Reactor _reactor;
+
+        /// Background thread.
+        Thread _dispatcher;
     };
 }
 

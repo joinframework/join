@@ -34,77 +34,69 @@ using join::Thread;
 
 TEST (LocalMpsc, tryPush)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue1 (512);
+    LocalMem::Mpsc::Queue <uint64_t> queue (512);
     uint64_t data = 0;
 
-    LocalMem::Mpsc::Queue <uint64_t> queue2 (std::move (queue1));
-    ASSERT_EQ (queue1.tryPush (data), -1);
-    ASSERT_FALSE (queue2.full ());
-    ASSERT_EQ (queue2.available (), 512);
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.available (), 512);
     for (int i = 0; i < 512; ++i)
     {
-        ASSERT_EQ (queue2.tryPush (data), 0) << join::lastError.message ();
-        ASSERT_EQ (queue2.full (), i == 511);
-        ASSERT_EQ (queue2.available (), 511 - i);
+        ASSERT_EQ (queue.tryPush (data), 0) << join::lastError.message ();
+        ASSERT_EQ (queue.full (), i == 511);
+        ASSERT_EQ (queue.available (), 511 - i);
     }
-    ASSERT_EQ (queue2.tryPush (data), -1);
-    ASSERT_TRUE (queue2.full ());
-    ASSERT_EQ (queue2.available (), 0);
+    ASSERT_EQ (queue.tryPush (data), -1);
+    ASSERT_TRUE (queue.full ());
+    ASSERT_EQ (queue.available (), 0);
 }
 
 TEST (LocalMpsc, push)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue1 (512);
+    LocalMem::Mpsc::Queue <uint64_t> queue (512);
     uint64_t data = 0;
 
-    LocalMem::Mpsc::Queue <uint64_t> queue2 (std::move (queue1));
-    ASSERT_EQ (queue1.push (data), -1);
-    ASSERT_FALSE (queue2.full ());
-    ASSERT_EQ (queue2.available (), 512);
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.available (), 512);
     for (int i = 0; i < 512; ++i)
     {
-        ASSERT_EQ (queue2.push (data), 0) << join::lastError.message ();
-        ASSERT_EQ (queue2.full (), i == 511);
-        ASSERT_EQ (queue2.available (), 511 - i);
+        ASSERT_EQ (queue.push (data), 0) << join::lastError.message ();
+        ASSERT_EQ (queue.full (), i == 511);
+        ASSERT_EQ (queue.available (), 511 - i);
     }
-    ASSERT_TRUE (queue2.full ());
-    ASSERT_EQ (queue2.available (), 0);
+    ASSERT_TRUE (queue.full ());
+    ASSERT_EQ (queue.available (), 0);
 }
 
 TEST (LocalMpsc, tryPop)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue1 (512);
+    LocalMem::Mpsc::Queue <uint64_t> queue (512);
     uint64_t data = 0;
 
-    LocalMem::Mpsc::Queue <uint64_t> queue2 (std::move (queue1));
-    ASSERT_EQ (queue1.tryPop (data), -1);
-    ASSERT_EQ (queue2.tryPop (data), -1);
-    ASSERT_TRUE (queue2.empty ());
-    ASSERT_EQ (queue2.pending (), 0);
-    ASSERT_EQ (queue2.tryPush (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (queue2.empty ());
-    ASSERT_EQ (queue2.pending (), 1);
-    ASSERT_EQ (queue2.tryPop (data), 0) << join::lastError.message ();
-    ASSERT_TRUE (queue2.empty ());
-    ASSERT_EQ (queue2.pending (), 0);
-    ASSERT_EQ (queue2.tryPop (data), -1);
+    ASSERT_EQ (queue.tryPop (data), -1);
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 1);
+    ASSERT_EQ (queue.tryPop (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPop (data), -1);
 }
 
 TEST (LocalMpsc, pop)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue1 (512);
+    LocalMem::Mpsc::Queue <uint64_t> queue (512);
     uint64_t data = 0;
 
-    LocalMem::Mpsc::Queue <uint64_t> queue2 (std::move (queue1));
-    ASSERT_EQ (queue1.pop (data), -1);
-    ASSERT_TRUE (queue2.empty ());
-    ASSERT_EQ (queue2.pending (), 0);
-    ASSERT_EQ (queue2.tryPush (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (queue2.empty ());
-    ASSERT_EQ (queue2.pending (), 1);
-    ASSERT_EQ (queue2.pop (data), 0) << join::lastError.message ();
-    ASSERT_TRUE (queue2.empty ());
-    ASSERT_EQ (queue2.pending (), 0);
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 1);
+    ASSERT_EQ (queue.pop (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
 }
 
 TEST (LocalMpsc, pushBenchmark)
@@ -211,77 +203,54 @@ TEST (LocalMpsc, popBenchmark)
 
 TEST (LocalMpsc, pending)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue1 (0);
+    LocalMem::Mpsc::Queue <uint64_t> queue (0);
     uint64_t data = 0;
 
-    ASSERT_EQ (queue1.pending (), 0);
-    ASSERT_EQ (queue1.tryPush (data), 0) << join::lastError.message ();
-    ASSERT_EQ (queue1.pending (), 1);
-
-    LocalMem::Mpsc::Queue <uint64_t> queue2 (0);
-    queue2 = std::move (queue1);
-
-    ASSERT_EQ (queue1.pending (), 0);
-    ASSERT_EQ (queue2.pending (), 1);
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_EQ (queue.pending (), 1);
 }
 
 TEST (LocalMpsc, available)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue1 (0);
+    LocalMem::Mpsc::Queue <uint64_t> queue (0);
     uint64_t data = 0;
 
-    ASSERT_EQ (queue1.available (), 1);
-    ASSERT_EQ (queue1.tryPush (data), 0) << join::lastError.message ();
-    ASSERT_EQ (queue1.available (), 0);
-
-    LocalMem::Mpsc::Queue <uint64_t> queue2 (0);
-    queue2 = std::move (queue1);
-
-    ASSERT_EQ (queue1.available (), 0);
-    ASSERT_EQ (queue2.available (), 0);
+    ASSERT_EQ (queue.available (), 1);
+    ASSERT_EQ (queue.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_EQ (queue.available (), 0);
 }
 
 TEST (LocalMpsc, full)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue1 (0);
+    LocalMem::Mpsc::Queue <uint64_t> queue (0);
     uint64_t data = 0;
 
-    ASSERT_FALSE (queue1.full ());
-    ASSERT_EQ (queue1.tryPush (data), 0) << join::lastError.message ();
-    ASSERT_TRUE (queue1.full ());
-
-    LocalMem::Mpsc::Queue <uint64_t> queue2 (0);
-    queue2 = std::move (queue1);
-
-    ASSERT_FALSE (queue1.full ());
-    ASSERT_TRUE (queue2.full ());
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue.full ());
 }
 
 TEST (LocalMpsc, empty)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue1 (0);
+    LocalMem::Mpsc::Queue <uint64_t> queue (0);
     uint64_t data = 0;
 
-    ASSERT_TRUE (queue1.empty ());
-    ASSERT_EQ (queue1.tryPush (data), 0) << join::lastError.message ();
-    ASSERT_FALSE (queue1.empty ());
-
-    LocalMem::Mpsc::Queue <uint64_t> queue2 (0);
-    queue2 = std::move (queue1);
-
-    ASSERT_TRUE (queue1.empty ());
-    ASSERT_FALSE (queue2.empty ());
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.tryPush (data), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
 }
 
-TEST (LocalMpsc, memory)
+TEST (LocalMpsc, mlock)
 {
     LocalMem::Mpsc::Queue <uint64_t> queue (0);
-    ASSERT_NE (queue.memory ().get (), nullptr);
-    ASSERT_EQ (queue.memory ().mbind (0), 0) << join::lastError.message ();
-    ASSERT_EQ (queue.memory ().mlock (), 0) << join::lastError.message ();
+    ASSERT_EQ (queue.mlock (), 0) << join::lastError.message ();
+}
 
-    const LocalMem::Mpsc::Queue <uint64_t>& cqueue = queue;
-    ASSERT_NE (cqueue.memory ().get (), nullptr);
+TEST (LocalMpsc, mbind)
+{
+    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    ASSERT_EQ (queue.mbind (0), 0) << join::lastError.message ();
 }
 
 /**

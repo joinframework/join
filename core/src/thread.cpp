@@ -38,17 +38,34 @@ using join::Thread;
 // =========================================================================
 void * Invoker::_routine (void * context)
 {
-    return (static_cast <Invoker *> (context))->routine ();
+    Invoker* self = static_cast <Invoker*> (context);
+
+    if (self->_core != -1)
+    {
+        Thread::affinity (pthread_self (), self->_core);
+    }
+
+    if (self->_priority > 0)
+    {
+        Thread::priority (pthread_self (), self->_priority);
+    }
+
+    return self->routine ();
 }
 
 // =========================================================================
 //   CLASS     : Invoker
 //   METHOD    : routine
 // =========================================================================
-void * Invoker::routine (void)
+void * Invoker::routine ()
 {
-    _func ();
+    if (_func) 
+    {
+        _func ();
+    }
+
     _done.store (true, std::memory_order_release);
+
     return nullptr;
 }
 
@@ -58,11 +75,7 @@ void * Invoker::routine (void)
 // =========================================================================
 Thread::Thread (Thread&& other) noexcept
 : _invoker (std::move (other._invoker))
-, _core (other._core)
-, _priority (other._priority)
 {
-    other._core = -1;
-    other._priority = 0;
 }
 
 // =========================================================================
@@ -72,14 +85,7 @@ Thread::Thread (Thread&& other) noexcept
 Thread& Thread::operator= (Thread&& other) noexcept
 {
     cancel ();
-
     _invoker = std::move (other._invoker);
-    _core = other._core;
-    _priority = other._priority;
-
-    other._core = -1;
-    other._priority = 0;
-
     return *this;
 }
 
@@ -109,7 +115,7 @@ int Thread::affinity (int core)
         return -1;
     }
 
-    _core = (core < 0) ? -1 : core;
+    _invoker->_core = (core < 0) ? -1 : core;
 
     return 0;
 }
@@ -152,7 +158,7 @@ int Thread::affinity (pthread_t handle, int core)
 // =========================================================================
 int Thread::affinity () const noexcept
 {
-    return _core;
+    return _invoker ? _invoker->_core : -1;
 }
 
 // =========================================================================
@@ -172,7 +178,7 @@ int Thread::priority (int prio)
         return -1;
     }
 
-    _priority = prio;
+    _invoker->_priority = prio;
 
     return 0;
 }
@@ -215,7 +221,7 @@ int Thread::priority (pthread_t handle, int prio)
 // =========================================================================
 int Thread::priority () const noexcept
 {
-    return _priority;
+    return _invoker ? _invoker->_priority : 0;
 }
 
 // =========================================================================
@@ -283,8 +289,6 @@ void Thread::cancel () noexcept
 void Thread::swap (Thread& other) noexcept
 {
     std::swap (_invoker, other._invoker);
-    std::swap (_core, other._core);
-    std::swap (_priority, other._priority);
 }
 
 // =========================================================================

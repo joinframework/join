@@ -51,11 +51,23 @@ namespace join
     public:
         /**
          * @brief create instance.
+         * @param reactor event loop reactor.
          */
-        BasicTimer ()
-        : _handle (timerfd_create (_policy.type (), TFD_NONBLOCK))
+        BasicTimer (Reactor* reactor = nullptr)
+        : _handle (timerfd_create (_policy.type (), TFD_NONBLOCK | TFD_CLOEXEC))
+        , _reactor (reactor)
         {
-            Reactor::instance ()->addHandler (this);
+            if (_handle == -1)
+            {
+                throw std::system_error (errno, std::system_category (), "timerfd_create failed");
+            }
+
+            if (_reactor == nullptr)
+            {
+                _reactor = ReactorThread::reactor ();
+            }
+
+            _reactor->addHandler (this);
         }
 
         /**
@@ -75,60 +87,21 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicTimer (BasicTimer&& other) noexcept
-        : _callback (std::move (other._callback))
-        , _ns (other._ns)
-        , _oneShot (other._oneShot)
-        , _handle (other._handle)
-        {
-            Reactor::instance ()->delHandler (&other);
-
-            other._callback = nullptr;
-            other._ns = std::chrono::nanoseconds::zero ();
-            other._oneShot = true;
-            other._handle = -1;
-
-            Reactor::instance ()->addHandler (this);
-        }
+        BasicTimer (BasicTimer&& other) = delete;
 
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicTimer& operator= (BasicTimer&& other) noexcept
-        {
-            Reactor::instance ()->delHandler (this);
-            cancel ();
-            if (_handle != -1)
-            {
-                close (_handle);
-            }
-
-            _callback = std::move (other._callback);
-            _ns = other._ns;
-            _oneShot = other._oneShot;
-            _handle = other._handle;
-
-            Reactor::instance ()->delHandler (&other);
-
-            other._callback = nullptr;
-            other._ns = std::chrono::nanoseconds::zero ();
-            other._oneShot = true;
-            other._handle = -1;
-
-            Reactor::instance ()->addHandler (this);
-
-            return *this;
-        }
+        BasicTimer& operator= (BasicTimer&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
         virtual ~BasicTimer ()
         {
-            Reactor::instance ()->delHandler (this);
-            cancel ();
+            _reactor->delHandler (this);
             if (_handle != -1)
             {
                 close (_handle);
@@ -320,6 +293,9 @@ namespace join
 
         /// timer handle.
         int _handle = -1;
+
+        /// event loop reactor.
+        Reactor* _reactor;
     };
 
     /**
