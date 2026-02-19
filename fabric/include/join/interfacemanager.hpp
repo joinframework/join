@@ -156,16 +156,16 @@ namespace join
      */
     class InterfaceManager : private Netlink::Socket
     {
-    private:
-        /**
-         * @brief create instance.
-         */
-        InterfaceManager ();
-
     public:
         using LinkNotify    = std::function <void (const LinkInfo& info)>;
         using AddressNotify = std::function <void (const AddressInfo& info)>;
         using RouteNotify   = std::function <void (const RouteInfo& info)>;
+
+        /**
+         * @brief create instance.
+         * @param reactor event loop reactor.
+         */
+        InterfaceManager (Reactor* reactor = nullptr);
 
         /**
          * @brief create instance by copy.
@@ -197,12 +197,6 @@ namespace join
          * @brief destroy instance.
          */
         ~InterfaceManager ();
-
-        /**
-         * @brief create the InterfaceManager instance.
-         * @return InterfaceManager instance pointer.
-         */
-        static InterfaceManager* instance ();
 
         /**
          * @brief find interface by index.
@@ -654,6 +648,9 @@ namespace join
 
         /// protection mutex.
         Mutex _routeMutex;
+
+        /// event loop reactor.
+        Reactor* _reactor;
 
         // friendship with interface.
         friend class Interface;

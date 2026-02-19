@@ -35,7 +35,7 @@
 
 using join::Errc;
 using join::Resolver;
-using join::Reactor;
+using join::ReactorThread;
 using join::MailMessage;
 using join::Smtps;
 using join::Tls;
@@ -195,7 +195,7 @@ protected:
         ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     #endif
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
     }
 
     /**
@@ -203,7 +203,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->delHandler (this), 0) << join::lastError.message ();
         this->close ();
     }
 

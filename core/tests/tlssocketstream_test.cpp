@@ -34,7 +34,7 @@
 
 using join::Errc;
 using join::IpAddress;
-using join::Reactor;
+using join::ReactorThread;
 using join::Tls;
 
 /**
@@ -190,7 +190,7 @@ protected:
         ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
         ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
     }
 
     /**
@@ -198,7 +198,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->delHandler (this), 0) << join::lastError.message ();
         this->close ();
     }
 

@@ -43,6 +43,7 @@ TEST (Thread, defaultConstruct)
 {
     Thread th;
     EXPECT_FALSE (th.joinable ());
+    th.join ();
 }
 
 /**
@@ -88,26 +89,24 @@ TEST (Thread, affinity)
     ASSERT_EQ (th.affinity (), -1);
     ASSERT_EQ (th.affinity (0), -1);
 
-    th = Thread ([] { std::this_thread::sleep_for (std::chrono::seconds (1)); });
+    th = Thread (0, 0, [] { std::this_thread::sleep_for (std::chrono::seconds (1)); });
+    ASSERT_EQ (th.affinity (), 0);
+    th.cancel ();
 
+    th = Thread ([] { std::this_thread::sleep_for (std::chrono::seconds (1)); });
     int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
     ASSERT_EQ (th.affinity (ncpu), -1);
-
     ASSERT_EQ (th.affinity (0), 0) << join::lastError.message ();
     ASSERT_EQ (th.affinity (), 0);
-
     ASSERT_EQ (th.affinity (-1), 0) << join::lastError.message ();
     ASSERT_EQ (th.affinity (), -1);
-
     ASSERT_EQ (th.affinity (-2), 0) << join::lastError.message ();
     ASSERT_EQ (th.affinity (), -1);
-
     for (int i = 0; i < ncpu; ++i)
     {
         ASSERT_EQ (th.affinity (i), 0) << join::lastError.message ();
         ASSERT_EQ (th.affinity (), i);
     }
-
     th.cancel ();
 
     ASSERT_EQ (th.affinity (0), -1);
@@ -122,25 +121,23 @@ TEST (Thread, priority)
     ASSERT_EQ (th.priority (), 0);
     ASSERT_EQ (th.priority (0), -1);
 
+    th = Thread (-1, 1, [] { std::this_thread::sleep_for (std::chrono::seconds (1)); });
+    ASSERT_EQ (th.priority (), 1);
+    th.cancel ();
+
     th = Thread ([] { std::this_thread::sleep_for (std::chrono::seconds (1)); });
     ASSERT_EQ (th.priority (-1), -1);
     ASSERT_EQ (th.priority (100), -1);
-
     ASSERT_EQ (th.priority (0), 0) << join::lastError.message ();
     ASSERT_EQ (th.priority (), 0);
-
     ASSERT_EQ (th.priority (1), 0) << join::lastError.message ();
     ASSERT_EQ (th.priority (), 1);
-
     ASSERT_EQ (th.priority (50), 0) << join::lastError.message ();
     ASSERT_EQ (th.priority (), 50);
-
     ASSERT_EQ (th.priority (99), 0) << join::lastError.message ();
     ASSERT_EQ (th.priority (), 99);
-
     ASSERT_EQ (th.priority (0), 0) << join::lastError.message ();
     ASSERT_EQ (th.priority (), 0);
-
     th.cancel ();
 
     ASSERT_EQ (th.priority (0), -1);

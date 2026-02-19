@@ -30,8 +30,7 @@
 #include <join/queue.hpp>
 
 // C++.
-#include <vector>
-#include <array>
+#include <atomic>
 
 // C.
 #include <sys/epoll.h>
@@ -66,14 +65,14 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        EventHandler (EventHandler&& other) noexcept = default;
+        EventHandler (EventHandler&& other) = default;
 
         /**
          * @brief move assignment operator.
          * @param other other object to move.
          * @return current object.
          */
-        EventHandler& operator= (EventHandler&& other) noexcept = default;
+        EventHandler& operator= (EventHandler&& other) = default;
 
         /**
          * @brief destroy instance.
@@ -174,10 +173,28 @@ namespace join
         int delHandler (EventHandler* handler, bool sync = true) noexcept;
 
         /**
-         * @brief create the Reactor instance.
-         * @return Reactor instance pointer.
+         * @brief run the event loop (blocking).
          */
-        static Reactor* instance () noexcept;
+        void run ();
+
+        /**
+         * @brief stop the event loop.
+         * @param sync wait for loop termination if true.
+         */
+        void stop (bool sync = true) noexcept;
+
+        /**
+         * @brief bind command queue memory to a NUMA node.
+         * @param numa NUMA node ID.
+         * @return 0 on success, -1 on failure.
+         */
+        int mbind (int numa);
+
+        /**
+         * @brief lock command queue memory in RAM.
+         * @return 0 on success, -1 on failure.
+         */
+        int mlock ();
 
     private:
         /// deleted handlers reserve size.
@@ -264,14 +281,121 @@ namespace join
         /// command queue
         LocalMem::Mpsc::Queue <Command> _commands;
 
-        /// dispatcher thread.
-        Thread _dispatcher;
-
         /// deleted handlers.
         std::vector <EventHandler*> _deleted;
 
         /// running flag for dispatcher thread.
-        std::atomic <bool> _running {true};
+        std::atomic <bool> _running {false};
+
+        /// event loop thread ID.
+        std::atomic <pthread_t> _threadId {0};
+    };
+
+    /**
+     * @brief Convenience class that owns a Reactor running on a dedicated background thread.
+     */
+    class ReactorThread
+    {
+    public:
+        /**
+         * @brief get the global Reactor instance.
+         * @return reference to the singleton Reactor.
+         */
+        static Reactor* reactor ();
+
+        /**
+         * @brief set reactor thread affinity.
+         * @param core thread core affinity (-1 to disable pinning).
+         * @return 0 on success, -1 on failure.
+         */
+        static int affinity (int core);
+
+        /**
+         * @brief get reactor thread affinity.
+         * @return affinity or -1 if not pinned.
+         */
+        static int affinity ();
+
+        /**
+         * @brief set reactor thread priority.
+         * @param prio thread priority (0 = SCHED_OTHER, 1-99 = SCHED_FIFO).
+         * @return 0 on success, -1 on failure.
+         */
+        static int priority (int prio);
+
+        /**
+         * @brief get reactor thread priority.
+         * @return priority.
+         */
+        static int priority ();
+
+        /**
+         * @brief get the handle of the reactor thread.
+         * @return reactor thread handle.
+         */
+        static pthread_t handle ();
+
+        /**
+         * @brief bind command queue memory to a NUMA node.
+         * @param numa NUMA node ID.
+         * @return 0 on success, -1 on failure.
+         */
+        static int mbind (int numa);
+
+        /**
+         * @brief lock command queue memory in RAM.
+         * @return 0 on success, -1 on failure.
+         */
+        static int mlock ();
+
+    private:
+        /**
+         * @brief get the singleton ReactorThread instance.
+         * @return reference to the singleton ReactorThread.
+         */
+        static ReactorThread& instance ();
+
+        /**
+         * @brief construct the ReactorThread and start the event loop thread.
+         */
+        ReactorThread ();
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        ReactorThread (const ReactorThread& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to copy.
+         * @return current object.
+         */
+        ReactorThread& operator= (const ReactorThread& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        ReactorThread (ReactorThread&& other) noexcept = delete;
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to move.
+         * @return current object.
+         */
+        ReactorThread& operator= (ReactorThread&& other) noexcept = delete;
+
+        /**
+         * @brief destroy the ReactorThread and cleanly shut down the event loop.
+         */
+        ~ReactorThread ();
+
+        /// Reactor instance.
+        Reactor _reactor;
+
+        /// Background thread.
+        Thread _dispatcher;
     };
 }
 

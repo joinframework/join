@@ -27,8 +27,7 @@
 #include <join/backoff.hpp>
 
 // C++.
-#include <functional>
-#include <algorithm>
+#include <array>
 
 // C.
 #include <sys/eventfd.h>
@@ -39,6 +38,7 @@
 using join::Backoff;
 using join::EventHandler;
 using join::Reactor;
+using join::ReactorThread;
 
 // =========================================================================
 //   CLASS     : Reactor
@@ -74,8 +74,6 @@ Reactor::Reactor ()
         ::close (_wakeup);
         throw std::system_error (err, std::system_category (), "epoll_ctl failed");
     }
-
-    _dispatcher = Thread ([this] () { eventLoop (); });
 }
 
 // =========================================================================
@@ -84,9 +82,7 @@ Reactor::Reactor ()
 // =========================================================================
 Reactor::~Reactor ()
 {
-    _running.store (false, std::memory_order_release);
-    writeCommand ({CommandType::Stop, nullptr, nullptr, nullptr});
-    _dispatcher.join ();
+    stop ();
 
     ::close (_epoll);
     ::close (_wakeup);
@@ -110,7 +106,7 @@ int Reactor::addHandler (EventHandler* handler, bool sync) noexcept
         return -1;
     }
 
-    if (JOIN_UNLIKELY (_dispatcher.handle () == pthread_self ()))
+    if (_threadId.load (std::memory_order_acquire) == pthread_self ())
     {
         return registerHandler (handler);
     }
@@ -166,7 +162,7 @@ int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
         return -1;
     }
 
-    if (JOIN_UNLIKELY (_dispatcher.handle () == pthread_self ()))
+    if (_threadId.load (std::memory_order_acquire) == pthread_self ())
     {
         return unregisterHandler (handler);
     }
@@ -206,12 +202,59 @@ int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
 
 // =========================================================================
 //   CLASS     : Reactor
-//   METHOD    : instance
+//   METHOD    : run
 // =========================================================================
-Reactor* Reactor::instance () noexcept
+void Reactor::run ()
 {
-    static Reactor reactor;
-    return &reactor;
+    _threadId.store (pthread_self (), std::memory_order_release);
+
+    _running.store (true, std::memory_order_release);
+    eventLoop ();
+
+    _threadId.store (0, std::memory_order_release);
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : stop
+// =========================================================================
+void Reactor::stop (bool sync) noexcept
+{
+    _running.store (false, std::memory_order_release);
+
+    if (_threadId.load (std::memory_order_acquire) == pthread_self ())
+    {
+        return;
+    }
+
+    writeCommand ({CommandType::Stop, nullptr, nullptr, nullptr});
+
+    if (JOIN_UNLIKELY (sync))
+    {
+        Backoff backoff;
+        while (_threadId.load (std::memory_order_acquire) != 0)
+        {
+            backoff ();
+        }
+    }
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : mbind
+// =========================================================================
+int Reactor::mbind (int numa)
+{
+    return _commands.mbind (numa);
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : mlock
+// =========================================================================
+int Reactor::mlock ()
+{
+    return _commands.mlock ();
 }
 
 // =========================================================================
@@ -377,4 +420,105 @@ void Reactor::eventLoop ()
 bool Reactor::isActive (EventHandler* handler) const noexcept
 {
     return std::find (_deleted.begin (), _deleted.end (), handler) == _deleted.end ();
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : reactor
+// =========================================================================
+Reactor* ReactorThread::reactor ()
+{
+    return &instance ()._reactor;
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : affinity
+// =========================================================================
+int ReactorThread::affinity (int core)
+{
+    return instance ()._dispatcher.affinity (core);
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : affinity
+// =========================================================================
+int ReactorThread::affinity ()
+{
+    return instance ()._dispatcher.affinity ();
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : priority
+// =========================================================================
+int ReactorThread::priority (int prio)
+{
+    return instance ()._dispatcher.priority (prio);
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : priority
+// =========================================================================
+int ReactorThread::priority ()
+{
+    return instance ()._dispatcher.priority ();
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : handle
+// =========================================================================
+pthread_t ReactorThread::handle ()
+{
+    return instance ()._dispatcher.handle ();
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : mbind
+// =========================================================================
+int ReactorThread::mbind (int numa)
+{
+    return instance ()._reactor.mbind (numa);
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : mlock
+// =========================================================================
+int ReactorThread::mlock ()
+{
+    return instance ()._reactor.mlock ();
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : instance
+// =========================================================================
+ReactorThread& ReactorThread::instance ()
+{
+    static ReactorThread reactorThread;
+    return reactorThread;
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : ReactorThread
+// =========================================================================
+ReactorThread::ReactorThread ()
+{
+    _dispatcher = Thread ([this] () {_reactor.run ();});
+}
+
+// =========================================================================
+//   CLASS     : ReactorThread
+//   METHOD    : ~ReactorThread
+// =========================================================================
+ReactorThread::~ReactorThread ()
+{
+    _reactor.stop ();
+    _dispatcher.join ();
 }

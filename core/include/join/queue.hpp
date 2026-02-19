@@ -162,41 +162,14 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicQueue (BasicQueue&& other) noexcept
-        : _capacity (other._capacity)
-        , _elementSize (other._elementSize)
-        , _totalSize (other._totalSize)
-        , _backend (std::move (other._backend))
-        , _policy (std::move (other._policy))
-        , _segment (other._segment)
-        {
-            other._capacity = 0;
-            other._elementSize = 0;
-            other._totalSize = 0;
-            other._segment = nullptr;
-        }
+        BasicQueue (BasicQueue&& other) = delete;
 
         /**
          * @brief move assignment operator.
          * @param other other object to move.
          * @return this.
          */
-        BasicQueue& operator= (BasicQueue&& other) noexcept
-        {
-            _capacity = other._capacity;
-            _elementSize = other._elementSize;
-            _totalSize = other._totalSize;
-            _backend = std::move (other._backend);
-            _policy = std::move (other._policy);
-            _segment = other._segment;
-
-            other._capacity = 0;
-            other._elementSize = 0;
-            other._totalSize = 0;
-            other._segment = nullptr;
-
-            return *this;
-        }
+        BasicQueue& operator= (BasicQueue&& other) = delete;
 
         /**
          * @brief destroy queue instance.
@@ -273,7 +246,7 @@ namespace join
          */
         uint64_t pending () const noexcept
         {
-            if (_segment == nullptr)
+            if (JOIN_UNLIKELY (_segment == nullptr))
             {
                 return 0;
             }
@@ -288,7 +261,7 @@ namespace join
          */
         uint64_t available () const noexcept
         {
-            if (_segment == nullptr)
+            if (JOIN_UNLIKELY (_segment == nullptr))
             {
                 return 0;
             }
@@ -301,7 +274,7 @@ namespace join
          */
         bool full () const noexcept
         {
-            if (_segment == nullptr)
+            if (JOIN_UNLIKELY (_segment == nullptr))
             {
                 return false;
             }
@@ -314,7 +287,7 @@ namespace join
          */
         bool empty () const noexcept
         {
-            if (_segment == nullptr)
+            if (JOIN_UNLIKELY (_segment == nullptr))
             {
                 return true;
             }
@@ -322,21 +295,22 @@ namespace join
         }
 
         /**
-         * @brief get reference to underlying memory backend.
-         * @return reference to backend.
+         * @brief bind memory to a NUMA node.
+         * @param numa NUMA node ID.
+         * @return 0 on success, -1 on failure.
          */
-        Backend& memory () noexcept
+        int mbind (int numa)
         {
-            return _backend;
+            return _backend.mbind (numa);
         }
 
         /**
-         * @brief get const reference to underlying memory backend.
-         * @return const reference to backend.
+         * @brief lock memory in RAM.
+         * @return 0 on success, -1 on failure.
          */
-        const Backend& memory () const noexcept
+        int mlock ()
         {
-            return _backend;
+            return _backend.mlock ();
         }
 
     protected:

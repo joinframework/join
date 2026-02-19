@@ -29,6 +29,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <thread>
+
 using join::lastError;
 using join::Interface;
 using join::InterfaceManager;
@@ -122,23 +125,25 @@ public:
  */
 TEST_F (InterfaceTest, index)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_EQ (lo->index (), if_nametoindex ("lo"));
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_EQ (vl->index (), if_nametoindex ("dummy0.10"));
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_EQ (dm->index (), if_nametoindex ("dummy0"));
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_EQ (ve->index (), if_nametoindex ("veth0"));
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_EQ (br->index (), if_nametoindex ("br0"));
 }
@@ -148,23 +153,25 @@ TEST_F (InterfaceTest, index)
  */
 TEST_F (InterfaceTest, name)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_EQ (lo->name (), "lo");
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_EQ (vl->name (), "dummy0.10");
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_EQ (dm->name (), "dummy0");
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_EQ (ve->name (), "veth0");
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_EQ (br->name (), "br0");
 }
@@ -174,23 +181,25 @@ TEST_F (InterfaceTest, name)
  */
 TEST_F (InterfaceTest, mtu)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_EQ (lo->mtu (), 65536);
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_EQ (vl->mtu (), 1500);
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_EQ (dm->mtu (), 1500);
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_EQ (ve->mtu (), 1500);
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_EQ (br->mtu (), 1500);
     ASSERT_EQ (br->mtu (2000, true), 0) << lastError.message ();
@@ -202,23 +211,25 @@ TEST_F (InterfaceTest, mtu)
  */
 TEST_F (InterfaceTest, kind)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_EQ (lo->kind (), "");
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_EQ (vl->kind (), "vlan");
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_EQ (dm->kind (), "dummy");
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_EQ (ve->kind (), "veth");
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_EQ (br->kind (), "bridge");
 }
@@ -228,29 +239,31 @@ TEST_F (InterfaceTest, kind)
  */
 TEST_F (InterfaceTest, mac)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_EQ (lo->mac (), "00:00:00:00:00:00");
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_EQ (vl->mac (), "aa:66:d6:26:e5:59");
     ASSERT_EQ (vl->mac ("aa:66:d6:26:e5:60", true), 0) << lastError.message ();
     ASSERT_EQ (vl->mac (), "aa:66:d6:26:e5:60");
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_EQ (dm->mac (), "aa:66:d6:26:e4:59");
     ASSERT_EQ (vl->mac ("aa:66:d6:26:e4:60", true), 0) << lastError.message ();
     ASSERT_EQ (vl->mac (), "aa:66:d6:26:e4:60");
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_EQ (ve->mac (), "4e:ed:ed:ee:59:db");
     ASSERT_EQ (ve->mac ("4e:ed:ed:ee:59:bd", true), 0) << lastError.message ();
     ASSERT_EQ (ve->mac (), "4e:ed:ed:ee:59:bd");
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_EQ (br->mac (), "4e:ed:ed:ee:59:da");
     ASSERT_EQ (br->mac ("4e:ed:ed:ee:59:dd", true), 0) << lastError.message ();
@@ -262,7 +275,9 @@ TEST_F (InterfaceTest, mac)
  */
 TEST_F (InterfaceTest, addAddress)
 {
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    InterfaceManager mgr;
+
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
 
     ASSERT_FALSE (dm->hasAddress ("192.168.31.100"));
@@ -275,7 +290,7 @@ TEST_F (InterfaceTest, addAddress)
     ASSERT_TRUE (dm->hasAddress ("2001:db8:abcd:12::8"));
     ASSERT_EQ (dm->removeAddress ({"2001:db8:abcd:12::8", 64, {}}), 0) << lastError.message ();
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
 
     ASSERT_FALSE (ve->hasAddress ("192.168.200.100"));
@@ -288,7 +303,7 @@ TEST_F (InterfaceTest, addAddress)
     ASSERT_TRUE (ve->hasAddress ("2001:db8:abcd:12::1"));
     ASSERT_EQ (ve->removeAddress ({"2001:db8:abcd:12::1", 64, {}}), 0) << lastError.message ();
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
 
     ASSERT_FALSE (ve->hasAddress ("192.168.33.100"));
@@ -307,23 +322,25 @@ TEST_F (InterfaceTest, addAddress)
  */
 TEST_F (InterfaceTest, addressList)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->addressList ().empty ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_FALSE (vl->addressList ().empty ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_FALSE (dm->addressList ().empty ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->addressList ().empty ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_FALSE (br->addressList ().empty ());
 }
@@ -333,7 +350,9 @@ TEST_F (InterfaceTest, addressList)
  */
 TEST_F (InterfaceTest, addRoute)
 {
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    InterfaceManager mgr;
+
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
 
     ASSERT_FALSE (ve->hasRoute ({"192.168.200.0", 24, "192.168.100.254", 0}));
@@ -347,23 +366,25 @@ TEST_F (InterfaceTest, addRoute)
  */
 TEST_F (InterfaceTest, routeList)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->routeList ().empty ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_FALSE (vl->routeList ().empty ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_FALSE (dm->routeList ().empty ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->routeList ().empty ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_FALSE (br->routeList ().empty ());
 }
@@ -373,7 +394,9 @@ TEST_F (InterfaceTest, routeList)
  */
 TEST_F (InterfaceTest, addToBridge)
 {
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    InterfaceManager mgr;
+
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_EQ (ve->master (), 0);
     ASSERT_EQ (ve->addToBridge ("foo", true), -1);
@@ -387,23 +410,25 @@ TEST_F (InterfaceTest, addToBridge)
  */
 TEST_F (InterfaceTest, flags)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_GT (lo->flags (), 0);
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_GT (vl->flags (), 0);
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_GT (dm->flags (), 0);
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_GT (ve->flags (), 0);
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_GT (br->flags (), 0);
 }
@@ -413,35 +438,37 @@ TEST_F (InterfaceTest, flags)
  */
 TEST_F (InterfaceTest, enable)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (lo->isEnabled ());
     ASSERT_EQ (lo->enable (false, true), 0) << lastError.message ();
     ASSERT_FALSE (lo->isEnabled ());
     ASSERT_EQ (lo->enable (true), 0) << lastError.message ();
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_TRUE (vl->isEnabled ());
     ASSERT_EQ (vl->enable (false, true), 0) << lastError.message ();
     ASSERT_FALSE (vl->isEnabled ());
     ASSERT_EQ (vl->enable (true), 0) << lastError.message ();
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_TRUE (dm->isEnabled ());
     ASSERT_EQ (dm->enable (false, true), 0) << lastError.message ();
     ASSERT_FALSE (dm->isEnabled ());
     ASSERT_EQ (dm->enable (true), 0) << lastError.message ();
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (ve->isEnabled ());
     ASSERT_EQ (ve->enable (false, true), 0) << lastError.message ();
     ASSERT_FALSE (ve->isEnabled ());
     ASSERT_EQ (ve->enable (true), 0) << lastError.message ();
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_TRUE (br->isEnabled ());
     ASSERT_EQ (br->enable (false, true), 0) << lastError.message ();
@@ -454,26 +481,28 @@ TEST_F (InterfaceTest, enable)
  */
 TEST_F (InterfaceTest, isRunning)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (lo->isRunning ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_TRUE (waitLinkLocal (vl));
     ASSERT_TRUE (vl->isRunning ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_TRUE (waitLinkLocal (dm));
     ASSERT_TRUE (dm->isRunning ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (waitLinkLocal (ve));
     ASSERT_TRUE (ve->isRunning ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_EQ (ve->addToBridge ("br0", true), 0) << lastError.message ();
     ASSERT_TRUE (waitLinkLocal (br));
@@ -486,23 +515,25 @@ TEST_F (InterfaceTest, isRunning)
  */
 TEST_F (InterfaceTest, isLoopback)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (lo->isLoopback ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_FALSE (vl->isLoopback ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_FALSE (dm->isLoopback ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->isLoopback ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_FALSE (br->isLoopback ());
 }
@@ -512,23 +543,25 @@ TEST_F (InterfaceTest, isLoopback)
  */
 TEST_F (InterfaceTest, isPointToPoint)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isPointToPoint ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_FALSE (vl->isPointToPoint ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_FALSE (dm->isPointToPoint ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->isPointToPoint ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_FALSE (br->isPointToPoint ());
 }
@@ -538,23 +571,25 @@ TEST_F (InterfaceTest, isPointToPoint)
  */
 TEST_F (InterfaceTest, isDummy)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isDummy ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_FALSE (vl->isDummy ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_TRUE (dm->isDummy ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->isDummy ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_FALSE (br->isDummy ());
 }
@@ -564,23 +599,25 @@ TEST_F (InterfaceTest, isDummy)
  */
 TEST_F (InterfaceTest, isBridge)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isBridge ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_FALSE (vl->isBridge ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_FALSE (dm->isBridge ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->isBridge ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_TRUE (br->isBridge ());
 }
@@ -590,23 +627,25 @@ TEST_F (InterfaceTest, isBridge)
  */
 TEST_F (InterfaceTest, isVlan)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isVlan ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_TRUE (vl->isVlan ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_FALSE (dm->isVlan ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->isVlan ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_FALSE (br->isVlan ());
 }
@@ -616,23 +655,25 @@ TEST_F (InterfaceTest, isVlan)
  */
 TEST_F (InterfaceTest, isVeth)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isVeth ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_FALSE (vl->isVeth ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_FALSE (dm->isVeth ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (ve->isVeth ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_FALSE (br->isVeth ());
 }
@@ -642,23 +683,25 @@ TEST_F (InterfaceTest, isVeth)
  */
 TEST_F (InterfaceTest, isGre)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isGre ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_FALSE (vl->isGre ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_FALSE (dm->isGre ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->isGre ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_FALSE (br->isGre ());
 }
@@ -668,23 +711,25 @@ TEST_F (InterfaceTest, isGre)
  */
 TEST_F (InterfaceTest, isTun)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->isTun ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_FALSE (vl->isTun ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_FALSE (dm->isTun ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_FALSE (ve->isTun ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_FALSE (br->isTun ());
 }
@@ -694,23 +739,25 @@ TEST_F (InterfaceTest, isTun)
  */
 TEST_F (InterfaceTest, supportsBroadcast)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->supportsBroadcast ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_TRUE (vl->supportsBroadcast ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_TRUE (dm->supportsBroadcast ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (ve->supportsBroadcast ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_TRUE (br->supportsBroadcast ());
 }
@@ -720,23 +767,25 @@ TEST_F (InterfaceTest, supportsBroadcast)
  */
 TEST_F (InterfaceTest, supportsMulticast)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_FALSE (lo->supportsMulticast ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_TRUE (vl->supportsMulticast ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_TRUE (dm->supportsMulticast ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (ve->supportsMulticast ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_TRUE (br->supportsMulticast ());
 }
@@ -746,23 +795,25 @@ TEST_F (InterfaceTest, supportsMulticast)
  */
 TEST_F (InterfaceTest, supportsIpv4)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (lo->supportsIpv4 ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_TRUE (vl->supportsIpv4 ());
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_TRUE (dm->supportsIpv4 ());
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (ve->supportsIpv4 ());
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_TRUE (br->supportsIpv4 ());
 }
@@ -772,11 +823,13 @@ TEST_F (InterfaceTest, supportsIpv4)
  */
 TEST_F (InterfaceTest, supportsIpv6)
 {
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    InterfaceManager mgr;
+
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (lo->supportsIpv6 ());
 
-    auto vl = InterfaceManager::instance ()->findByName ("dummy0.10");
+    auto vl = mgr.findByName ("dummy0.10");
     ASSERT_NE (vl, nullptr);
     ASSERT_TRUE (waitLinkLocal (vl));
     ASSERT_TRUE (vl->supportsIpv6 ());
@@ -784,7 +837,7 @@ TEST_F (InterfaceTest, supportsIpv6)
     ASSERT_FALSE (vl->supportsIpv6 ());
     ASSERT_EQ (vl->enable (true, true), 0) << lastError.message ();
 
-    auto dm = InterfaceManager::instance ()->findByName ("dummy0");
+    auto dm = mgr.findByName ("dummy0");
     ASSERT_NE (dm, nullptr);
     ASSERT_TRUE (waitLinkLocal (dm));
     ASSERT_TRUE (dm->supportsIpv6 ());
@@ -792,7 +845,7 @@ TEST_F (InterfaceTest, supportsIpv6)
     ASSERT_FALSE (dm->supportsIpv6 ());
     ASSERT_EQ (dm->enable (true, true), 0) << lastError.message ();
 
-    auto ve = InterfaceManager::instance ()->findByName ("veth0");
+    auto ve = mgr.findByName ("veth0");
     ASSERT_NE (ve, nullptr);
     ASSERT_TRUE (waitLinkLocal (ve));
     ASSERT_TRUE (ve->supportsIpv6 ());
@@ -800,7 +853,7 @@ TEST_F (InterfaceTest, supportsIpv6)
     ASSERT_FALSE (ve->supportsIpv6 ());
     ASSERT_EQ (ve->enable (true, true), 0) << lastError.message ();
 
-    auto br = InterfaceManager::instance ()->findByName ("br0");
+    auto br = mgr.findByName ("br0");
     ASSERT_NE (br, nullptr);
     ASSERT_EQ (ve->addToBridge ("br0", true), 0) << lastError.message ();
     ASSERT_TRUE (waitLinkLocal (br));
@@ -816,9 +869,10 @@ TEST_F (InterfaceTest, supportsIpv6)
  */
 TEST_F (InterfaceTest, compare)
 {
+    InterfaceManager mgr;
     Interface::Ptr nil;
 
-    auto lo = InterfaceManager::instance ()->findByName ("lo");
+    auto lo = mgr.findByName ("lo");
     ASSERT_NE (lo, nullptr);
     ASSERT_TRUE (nil == nil);
     ASSERT_TRUE (lo == lo);
