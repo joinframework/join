@@ -30,6 +30,7 @@
 #include <join/queue.hpp>
 
 // C++.
+#include <unordered_set>
 #include <atomic>
 
 // C.
@@ -282,7 +283,7 @@ namespace join
         LocalMem::Mpsc::Queue <Command> _commands;
 
         /// deleted handlers.
-        std::vector <EventHandler*> _deleted;
+        std::unordered_set <EventHandler*> _deleted;
 
         /// running flag for dispatcher thread.
         std::atomic <bool> _running {false};

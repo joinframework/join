@@ -261,7 +261,7 @@ int Reactor::mlock ()
 // =========================================================================
 int Reactor::registerHandler (EventHandler* handler) noexcept
 {
-    _deleted.erase (std::remove (_deleted.begin (), _deleted.end (), handler), _deleted.end ());
+    _deleted.erase (handler);
 
     struct epoll_event ev {};
     ev.events = EPOLLIN | EPOLLRDHUP;
@@ -285,11 +285,11 @@ int Reactor::unregisterHandler (EventHandler* handler) noexcept
     if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->handle (), nullptr) == -1))
     {
         lastError = std::make_error_code (static_cast <std::errc> (errno));
-        _deleted.push_back (handler);
+        _deleted.insert (handler);
         return -1;
     }
 
-    _deleted.push_back (handler);
+    _deleted.insert (handler);
     return 0;
 }
 
@@ -401,7 +401,11 @@ void Reactor::eventLoop ()
             {
                 readCommands ();
             }
-            else
+        }
+
+        for (int i = 0; i < eventCount; ++i)
+        {
+            if (JOIN_LIKELY (events[i].data.ptr != nullptr))
             {
                 dispatchEvent (events[i]);
             }
@@ -417,7 +421,7 @@ void Reactor::eventLoop ()
 // =========================================================================
 bool Reactor::isActive (EventHandler* handler) const noexcept
 {
-    return std::find (_deleted.begin (), _deleted.end (), handler) == _deleted.end ();
+    return _deleted.count (handler) == 0;
 }
 
 // =========================================================================
