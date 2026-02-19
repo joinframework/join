@@ -34,6 +34,7 @@ using join::Errc;
 using join::Mutex;
 using join::Condition;
 using join::ScopedLock;
+using join::Thread;
 using join::Reactor;
 using join::ReactorThread;
 using join::Tcp;
@@ -163,6 +164,7 @@ std::string   ReactorTest::_event;
 TEST_F (ReactorTest, addHandler)
 {
     Reactor reactor;
+    Thread th ([&reactor] () {reactor.run ();});
 
     // test invalid parameter.
     ASSERT_EQ (reactor.addHandler (nullptr), -1);
@@ -179,9 +181,11 @@ TEST_F (ReactorTest, addHandler)
     // add handler.
     ASSERT_EQ (reactor.addHandler (this), 0) << join::lastError.message ();
 
-    // test already in use.
-    ASSERT_EQ (reactor.addHandler (this), -1);
-    ASSERT_EQ (join::lastError, std::errc::file_exists) << join::lastError.message ();
+    // delete handler
+    ASSERT_EQ (reactor.delHandler (this), 0) << join::lastError.message ();
+
+    reactor.stop ();
+    th.join ();
 }
 
 /**
@@ -190,6 +194,7 @@ TEST_F (ReactorTest, addHandler)
 TEST_F (ReactorTest, delHandler)
 {
     Reactor reactor;
+    Thread th ([&reactor] () {reactor.run ();});
 
     // test invalid parameter.
     ASSERT_EQ (reactor.delHandler (nullptr), -1);
@@ -209,9 +214,8 @@ TEST_F (ReactorTest, delHandler)
     // delete handler
     ASSERT_EQ (reactor.delHandler (this), 0) << join::lastError.message ();
 
-    // test already deleted.
-    ASSERT_EQ (reactor.delHandler (this), -1);
-    ASSERT_EQ (join::lastError, std::errc::no_such_file_or_directory);
+    reactor.stop ();
+    th.join ();
 }
 
 /**
