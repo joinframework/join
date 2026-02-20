@@ -40,6 +40,8 @@ using join::Interface;
 using join::InterfaceList;
 using join::InterfaceManager;
 
+using join::UUID;
+
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : InterfaceManager
@@ -126,75 +128,60 @@ int InterfaceManager::refresh (bool sync)
 //   CLASS     : InterfaceManager
 //   METHOD    : addLinkListener
 // =========================================================================
-void InterfaceManager::addLinkListener (const LinkNotify& cb)
+UUID InterfaceManager::addLinkListener (const LinkNotify& cb)
 {
     ScopedLock <Mutex> lock (_linkMutex);
-    _linkListeners.push_back (cb);
+    return _linkListeners.emplace(generateUUID(), cb).first->first;
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : removeLinkListener
 // =========================================================================
-void InterfaceManager::removeLinkListener (const LinkNotify& cb)
+void InterfaceManager::removeLinkListener (const UUID& id)
 {
     ScopedLock <Mutex> lock (_linkMutex);
-    auto it = std::remove_if (_linkListeners.begin(), _linkListeners.end(),
-        [&] (const LinkNotify& existing) {
-            return existing.target_type () == cb.target_type () &&
-                   existing.target <void (const LinkInfo&)> () == cb.target <void (const LinkInfo&)> ();
-        });
-    _linkListeners.erase (it, _linkListeners.end ());
+    _linkListeners.erase(id);
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : addAddressListener
 // =========================================================================
-void InterfaceManager::addAddressListener (const AddressNotify& cb)
+UUID InterfaceManager::addAddressListener (const AddressNotify& cb)
 {
     ScopedLock <Mutex> lock (_addressMutex);
-    _addressListeners.push_back (cb);
+    return _addressListeners.emplace(generateUUID(), cb).first->first;
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : removeAddressListener
 // =========================================================================
-void InterfaceManager::removeAddressListener (const AddressNotify& cb)
+void InterfaceManager::removeAddressListener (const UUID& id)
 {
     ScopedLock <Mutex> lock (_addressMutex);
-    auto it = std::remove_if (_addressListeners.begin(), _addressListeners.end(),
-        [&] (const AddressNotify& existing) {
-            return existing.target_type () == cb.target_type () &&
-                   existing.target <void (const AddressInfo&)> () == cb.target <void (const AddressInfo&)> ();
-        });
-    _addressListeners.erase (it, _addressListeners.end ());
+    _addressListeners.erase(id);
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : addRouteListener
 // =========================================================================
-void InterfaceManager::addRouteListener (const RouteNotify& cb)
+UUID InterfaceManager::addRouteListener (const RouteNotify& cb)
 {
     ScopedLock <Mutex> lock (_routeMutex);
-    _routeListeners.push_back (cb);
+    return _routeListeners.emplace(generateUUID(), cb).first->first;
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : removeRouteListener
 // =========================================================================
-void InterfaceManager::removeRouteListener (const RouteNotify& cb)
+void InterfaceManager::removeRouteListener (const UUID& id)
 {
     ScopedLock <Mutex> lock (_routeMutex);
-    auto it = std::remove_if (_routeListeners.begin(), _routeListeners.end(),
-        [&] (const RouteNotify& existing) {
-            return existing.target_type () == cb.target_type () &&
-                   existing.target <void (const RouteInfo&)> () == cb.target <void (const RouteInfo&)> ();
-        });
-    _routeListeners.erase (it, _routeListeners.end ());
+    _routeListeners.erase(id);
 }
 
 // =========================================================================
@@ -1366,9 +1353,9 @@ void InterfaceManager::notifyLinkUpdate (const LinkInfo& info)
 
     for (auto& listener : _linkListeners) 
     {
-        if (listener)
+        if (listener.second)
         {
-            listener (info);
+            listener.second (info);
         }
     }
 }
@@ -1383,9 +1370,9 @@ void InterfaceManager::notifyAddressUpdate (const AddressInfo& info)
 
     for (auto& listener : _addressListeners) 
     {
-        if (listener)
+        if (listener.second)
         {
-            listener (info);
+            listener.second (info);
         }
     }
 }
@@ -1400,9 +1387,9 @@ void InterfaceManager::notifyRouteUpdate (const RouteInfo& info)
 
     for (auto& listener : _routeListeners) 
     {
-        if (listener)
+        if (listener.second)
         {
-            listener (info);
+            listener.second (info);
         }
     }
 }
