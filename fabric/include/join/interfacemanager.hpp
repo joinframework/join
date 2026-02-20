@@ -31,6 +31,7 @@
 #include <join/condition.hpp>
 #include <join/interface.hpp>
 #include <join/socket.hpp>
+#include <join/utils.hpp>
 
 // C++.
 #include <functional>
@@ -38,6 +39,7 @@
 #include <memory>
 #include <atomic>
 #include <map>
+#include <unordered_map>
 
 // C.
 #include <linux/rtnetlink.h>
@@ -228,38 +230,41 @@ namespace join
         /**
          * @brief registers a callback to be invoked when a link update occurs.
          * @param cb the callback function to register.
+         * @return unique id for the callback.
          */
-        void addLinkListener (const LinkNotify& cb);
+        UUID addLinkListener (const LinkNotify& cb);
 
         /**
          * @brief unregisters a previously registered link update callback.
-         * @param cb the callback function to remove.
+         * @param id unique id of the callback function to remove.
          */
-        void removeLinkListener (const LinkNotify& cb);
+        void removeLinkListener (const UUID& id);
 
         /**
          * @brief registers a callback to be invoked when a address update occurs.
          * @param cb the callback function to register.
+         * @return unique id for the callback.
          */
-        void addAddressListener (const AddressNotify& cb);
+        UUID addAddressListener (const AddressNotify& cb);
 
         /**
          * @brief unregisters a previously registered address update callback.
-         * @param cb the callback function to remove.
+         * @param id unique id of the callback function to remove.
          */
-        void removeAddressListener (const AddressNotify& cb);
+        void removeAddressListener (const UUID& id);
 
         /**
          * @brief registers a callback to be invoked when a route update occurs.
          * @param cb the callback function to register.
+         * @return unique id for the callback.
          */
-        void addRouteListener (const RouteNotify& cb);
+        UUID addRouteListener (const RouteNotify& cb);
 
         /**
          * @brief unregisters a previously registered route update callback.
-         * @param cb the callback function to remove.
+         * @param id unique id of the callback function to remove.
          */
-        void removeRouteListener (const RouteNotify& cb);
+        void removeRouteListener (const UUID& id);
 
         /**
          * @brief creates a dummy interface.
@@ -632,19 +637,19 @@ namespace join
         Mutex _syncMutex;
 
         /// link listener callbacks.
-        std::vector <LinkNotify> _linkListeners;
+        std::unordered_map<UUID, LinkNotify> _linkListeners;
 
         /// protection mutex.
         Mutex _linkMutex;
 
         /// address listener callbacks.
-        std::vector <AddressNotify> _addressListeners;
+        std::unordered_map<UUID, AddressNotify> _addressListeners;
 
         /// protection mutex.
         Mutex _addressMutex;
 
         /// route listener callbacks.
-        std::vector <RouteNotify> _routeListeners;
+        std::unordered_map<UUID, RouteNotify> _routeListeners;
 
         /// protection mutex.
         Mutex _routeMutex;

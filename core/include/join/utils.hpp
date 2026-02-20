@@ -42,6 +42,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cstring>
+#include <uuid/uuid.h>
 
 #define JOIN_LIKELY(x)   __builtin_expect(!!(x), 1)
 #define JOIN_UNLIKELY(x) __builtin_expect(!!(x), 0)
@@ -430,6 +431,24 @@ namespace join
         auto ncount = ns.count ();
 
         return { .tv_sec = scount, .tv_nsec = ncount };
+    }
+
+    /**
+     * @brief generates a new UUID.
+     * @return UUID string.
+     */
+
+    using UUID = std::string;
+
+    inline UUID generateUUID()
+    {
+        uuid_t uuid;
+        std::string out(UUID_STR_LEN, '\0');
+
+        uuid_generate(uuid);
+        uuid_unparse_lower(uuid, &out[0]);
+        
+        return out;
     }
 }
 
