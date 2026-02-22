@@ -1543,7 +1543,7 @@ IpAddress IpAddress::ipv4Address (const std::string& interface)
         }
     }
 
-    lastError = std::make_error_code (static_cast <std::errc> (errno));
+    lastError = std::error_code (errno, std::generic_category ());
     return ipv4Wildcard;
 }
 

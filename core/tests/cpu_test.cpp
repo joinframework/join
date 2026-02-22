@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2021 Mathieu Rabine
+ * Copyright (c) 2026 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,63 +23,43 @@
  */
 
 // libjoin.
-#include <join/threadpool.hpp>
-#include <join/utils.hpp>
 #include <join/cpu.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
-// C.
-#include <unistd.h>
-
-using namespace std::chrono_literals;
-
+using join::LogicalCpu;
+using join::PhysicalCore;
+using join::NumaNode;
 using join::CpuTopology;
-using join::ThreadPool;
-
-size_t nthread = CpuTopology::instance ()->cores ().size ();
 
 /**
- * @brief test size.
+ * @brief test cores.
  */
-TEST (ThreadPool, size)
+TEST (CpuTopology, cores)
 {
-    ThreadPool pool;
-    ASSERT_EQ (pool.size (), nthread);
-    ASSERT_THROW (ThreadPool (0), std::invalid_argument);
-}
+    ASSERT_GE (CpuTopology::instance ()->cores ().size (), 1);
 
-/**
- * @brief test push.
- */
-TEST (ThreadPool, push)
-{
-    std::atomic <int> count {0};
+    for (const auto& core : CpuTopology::instance ()->cores ())
     {
-        ThreadPool pool;
-        for (size_t i = 0; i < pool.size (); ++i)
-        {
-            pool.push ([&count] { ++count; });
-        }
+        ASSERT_GE (core.primaryThread (), 0);
     }
-    ASSERT_EQ (count, nthread);
 }
 
 /**
- * @brief test parallelForEach.
+ * @brief test nodes.
  */
-TEST (ThreadPool, parallelForEach)
+TEST (CpuTopology, nodes)
 {
-    std::vector <std::function <int (unsigned int)>> todo {usleep, usleep, usleep, usleep, usleep};
-    auto elapsed = join::benchmark ([&todo]
-    {
-        join::parallelForEach (todo.begin (), todo.end (), [] (auto& func)
-        {
-            func (20000);
-        });
-    });
-    ASSERT_GE (elapsed, 20ms);
+    ASSERT_GE (CpuTopology::instance ()->nodes ().size (), 1);
+}
+
+/**
+ * @brief test dump.
+ */
+TEST (CpuTopology, dump)
+{
+    ASSERT_NO_THROW (CpuTopology::instance ()->dump ());
 }
 
 /**
@@ -87,6 +67,6 @@ TEST (ThreadPool, parallelForEach)
  */
 int main (int argc, char **argv)
 {
-    testing::InitGoogleTest (&argc, argv);
-    return RUN_ALL_TESTS ();
+   testing::InitGoogleTest (&argc, argv);
+   return RUN_ALL_TESTS ();
 }

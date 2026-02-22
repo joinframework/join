@@ -12,7 +12,7 @@
 [![GitHub License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/joinframework/join/blob/main/LICENSE)
 
 **join** is a **modular C++ network runtime framework for Linux**, designed for
-**low-latency**, **high-throughput**, and **system-level networking**.
+optimized **throughput** and **latency** system-level networking.
 
 It provides a set of composable libraries covering networking primitives,
 concurrency, serialization, cryptography, and Linux network fabric management.
@@ -23,10 +23,25 @@ concurrency, serialization, cryptography, and Linux network fabric management.
 
 - Linux-native networking (sockets, netlink, raw sockets)
 - Event-driven and reactor-based architecture
-- Predictable latency and high throughput
+- Low-jitter event processing
 - Strong separation of concerns via modular libraries
 - High test coverage and correctness-first design
 - Suitable for infrastructure, control-plane, and runtime components
+
+---
+
+## 🎯 Target Use Cases
+
+**Designed for:**
+- Network services and microservices
+- Control plane and infrastructure components
+- System-level networking tools
+- High-performance servers (web, RPC, messaging)
+
+**Not designed for:**
+- Sub-microsecond latency requirements (HFT, market data)
+- Kernel-bypass networking (use DPDK or RDMA instead)
+- Data plane packet processing at 100Gbps
 
 ---
 
@@ -58,11 +73,11 @@ The framework is a collection of specialized modules that build upon one another
 ## 🛠️ Build & Integration
 
 ### Prerequisites
-Ensure you have `OpenSSL`, `Zlib`, and `GTest` (for testing) installed on your system:
+Ensure you have `OpenSSL`, `libnuma`, `Zlib`, and `GTest` (for testing) installed on your system:
 ```bash
-sudo apt install libssl-dev zlib1g-dev libgtest-dev libgmock-dev
+sudo apt install libssl-dev libnuma-dev zlib1g-dev libgtest-dev libgmock-dev
 ```
-> OpenSSL is required by `join-core` as TLS support is part of the core runtime.
+> `libnuma` is required for memory pinning and NUMA affinity in `join-core` while `OpenSSL` provides the core TLS runtime.
 
 ### Build from Source
 ```bash

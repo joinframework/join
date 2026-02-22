@@ -28,10 +28,48 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <fstream>
+
+class FileSystem : public ::testing::Test
+{
+public:
+    /**
+     * @brief tear down test case.
+     */
+    static void TearDownTestCase()
+    {
+        // remove all files before ending the test.
+        ::remove (path.c_str ());
+    }
+
+protected:
+    /// file base.
+    static const std::string base;
+
+    /// file name without extension.
+    static const std::string stem;
+
+    /// file extension.
+    static const std::string ext;
+
+    /// file name.
+    static const std::string name;
+
+    /// file path.
+    static const std::string path;
+};
+
+const std::string FileSystem::base = "/tmp/";
+const std::string FileSystem::stem = "file_test";
+const std::string FileSystem::ext  = "txt";
+const std::string FileSystem::name = stem + "." + ext;
+const std::string FileSystem::path = base + name;
+
 /**
  * @brief Test base method.
  */
-TEST (Filesystem, base)
+TEST_F (FileSystem, base)
 {
     ASSERT_EQ (join::base ("foo"), "");
     ASSERT_EQ (join::base ("foo/bar"), "foo/");
@@ -45,7 +83,7 @@ TEST (Filesystem, base)
 /**
  * @brief Test filename method.
  */
-TEST (Filesystem, filename)
+TEST_F (FileSystem, filename)
 {
     ASSERT_EQ (join::filename ("bar"), "bar");
     ASSERT_EQ (join::filename ("foo/bar"), "bar");
@@ -59,7 +97,7 @@ TEST (Filesystem, filename)
 /**
  * @brief Test extension method.
  */
-TEST (Filesystem, extension)
+TEST_F (FileSystem, extension)
 {
     ASSERT_EQ (join::extension ("foo/bar"), "");
     ASSERT_EQ (join::extension ("foo/bar/"), "");
@@ -72,7 +110,7 @@ TEST (Filesystem, extension)
 /**
  * @brief Test mime method.
  */
-TEST (Filesystem, mime)
+TEST_F (FileSystem, mime)
 {
     ASSERT_EQ (join::mime ("foo.htm"), "text/html");
     ASSERT_EQ (join::mime ("foo.html"), "text/html");
@@ -109,6 +147,24 @@ TEST (Filesystem, mime)
     ASSERT_EQ (join::mime ("foo.woff"), "application/font-woff");
     ASSERT_EQ (join::mime ("foo.woff2"), "application/font-woff2");
     ASSERT_EQ (join::mime ("foo.foo"), "application/octet-stream");
+}
+
+/**
+ * @brief Test exists method.
+ */
+TEST_F (FileSystem, exists)
+{
+    ASSERT_FALSE (join::exists (path));
+
+    std::ofstream file (path);
+    ASSERT_TRUE (file.is_open ());
+    ASSERT_TRUE (join::exists (path));
+
+    file.close ();
+    ASSERT_TRUE (join::exists (path));
+
+    ::remove (path.c_str ());
+    ASSERT_FALSE (join::exists (path));
 }
 
 /**

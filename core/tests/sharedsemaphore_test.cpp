@@ -29,6 +29,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <thread>
+
 // C.
 #include <sys/mman.h>
 #include <sys/stat.h>

@@ -28,6 +28,9 @@
 // C++.
 #include <string>
 
+// C.
+#include <sys/stat.h>
+
 namespace join
 {
     /**
@@ -35,7 +38,7 @@ namespace join
      * @param filepath path to parse.
      * @return base path of the specified file.
      */
-    __inline__ std::string base (const std::string& filepath)
+    inline std::string base (const std::string& filepath)
     {
         size_t pos = filepath.rfind ("/");
 
@@ -50,7 +53,7 @@ namespace join
      * @param filepath path to parse.
      * @return The file name of the specified file.
      */
-    __inline__ std::string filename (const std::string& filepath)
+    inline std::string filename (const std::string& filepath)
     {
         size_t pos = filepath.rfind ("/");
 
@@ -65,7 +68,7 @@ namespace join
      * @param filepath path to parse.
      * @return The extension of the specified file.
      */
-    __inline__ std::string extension (const std::string& filepath)
+    inline std::string extension (const std::string& filepath)
     {
         size_t pos = filepath.rfind (".");
 
@@ -80,7 +83,7 @@ namespace join
      * @param filepath path to parse.
      * @return mime type of the specified file.
      */
-    __inline__ std::string mime (const std::string& filepath)
+    inline std::string mime (const std::string& filepath)
     {
         std::string mime, suffix (extension (filepath));
 
@@ -156,6 +159,17 @@ namespace join
             mime = "application/octet-stream";
 
         return mime;
+    }
+
+    /**
+     * @brief check if the file specified exists.
+     * @param filepath Path to the file to examine.
+     * @return true if file exists, false otherwise.
+     */
+    inline bool exists (const std::string& filepath)
+    {
+        struct stat status;
+        return stat (filepath.c_str (), &status) == 0;
     }
 }
 

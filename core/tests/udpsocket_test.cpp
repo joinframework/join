@@ -32,7 +32,7 @@
 using join::Errc;
 using join::MacAddress;
 using join::IpAddress;
-using join::Reactor;
+using join::ReactorThread;
 using join::Udp;
 
 /**
@@ -47,7 +47,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->bind ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (Reactor::instance ()->addHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
     }
 
     /**
@@ -55,7 +55,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (Reactor::instance ()->delHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->delHandler (this), 0) << join::lastError.message ();
         this->close ();
     }
 

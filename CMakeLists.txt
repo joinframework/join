@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(GNUInstallDirs)
+
 file(STRINGS "${PROJECT_SOURCE_DIR}/VERSION" JOIN_VERSION)
 string(REGEX REPLACE "([0-9]+)\\.[0-9]+\\.[0-9]+.*" "\\1" JOIN_VERSION_MAJOR ${JOIN_VERSION})
 string(REGEX REPLACE "[0-9]+\\.([0-9])+\\.[0-9]+.*" "\\1" JOIN_VERSION_MINOR ${JOIN_VERSION})
@@ -97,13 +99,13 @@ include(CMakePackageConfigHelpers)
 
 install(EXPORT joinTargets
     NAMESPACE join::
-    DESTINATION lib/cmake/join
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
 configure_package_config_file(
     ${PROJECT_SOURCE_DIR}/cmake/joinConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/joinConfig.cmake
-    INSTALL_DESTINATION lib/cmake/join
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
 write_basic_package_version_file(
@@ -115,5 +117,5 @@ write_basic_package_version_file(
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/joinConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/joinConfigVersion.cmake
-    DESTINATION lib/cmake/join
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )

@@ -40,27 +40,6 @@ using namespace std::chrono_literals;
 using join::RealTime;
 
 /**
- * @brief Test move.
- */
-TEST (RealTimer, move)
-{
-    RealTime::Timer timer1, timer2;
-    int count = 0;
-
-    EXPECT_TRUE (timer1.oneShot ());
-    EXPECT_TRUE (timer2.oneShot ());
-    timer1.setInterval (10ms, [&] { ++count; });
-    EXPECT_FALSE (timer1.oneShot ());
-    EXPECT_TRUE (timer2.oneShot ());
-    timer2 = std::move (timer1);
-    EXPECT_TRUE (timer1.oneShot ());
-    EXPECT_FALSE (timer2.oneShot ());
-    RealTime::Timer Timer3 (std::move (timer2));
-    EXPECT_TRUE (timer2.oneShot ());
-    EXPECT_FALSE (Timer3.oneShot ());
-}
-
-/**
  * @brief Test setOneShot.
  */
 TEST (RealTimer, setOneShot)

@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.22.1)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(NUMA REQUIRED numa)
+
 set(PUBLIC_HEADERS
     include/join/version.hpp
     include/join/error.hpp
@@ -8,7 +11,8 @@ set(PUBLIC_HEADERS
     include/join/traits.hpp
     include/join/variant.hpp
     include/join/reactor.hpp
-    include/join/shared.hpp
+    include/join/memory.hpp
+    include/join/queue.hpp
     include/join/mutex.hpp
     include/join/condition.hpp
     include/join/semaphore.hpp
@@ -22,6 +26,7 @@ set(PUBLIC_HEADERS
     include/join/socketstream.hpp
     include/join/acceptor.hpp
     include/join/openssl.hpp
+    include/join/cpu.hpp
 )
 
 set(SOURCES
@@ -36,6 +41,7 @@ set(SOURCES
     src/macaddress.cpp
     src/ipaddress.cpp
     src/socket.cpp
+    src/cpu.cpp
 )
 
 add_library(${JOIN_CORE} ${SOURCES})
@@ -51,6 +57,7 @@ target_include_directories(${JOIN_CORE}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
+        ${NUMA_INCLUDE_DIRS}
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
@@ -60,17 +67,18 @@ target_link_libraries(${JOIN_CORE}
         OpenSSL::SSL
         OpenSSL::Crypto
         Threads::Threads
+        ${NUMA_LIBRARIES}
 )
 
 install(TARGETS ${JOIN_CORE}
     EXPORT joinTargets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    PUBLIC_HEADER DESTINATION include/join
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/join
 )
 
 configure_file(${JOIN_CORE}.pc.in ${JOIN_CORE}.pc @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${JOIN_CORE}.pc DESTINATION lib/pkgconfig)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${JOIN_CORE}.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 if(JOIN_ENABLE_TESTS)
     add_subdirectory(tests)

@@ -117,7 +117,7 @@ bool Semaphore::tryWait () noexcept
     int res = (_named) ? ::sem_trywait (_named_handle) : ::sem_trywait (&_unnamed_handle);
     if (res == -1)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::error_code (errno, std::generic_category ());
     }
     return (res == 0);
 }
@@ -187,7 +187,7 @@ bool SharedSemaphore::tryWait () noexcept
 {
     if (::sem_trywait (&_handle) == -1)
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::error_code (errno, std::generic_category ());
         return false;
     }
     return true;
