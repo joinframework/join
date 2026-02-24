@@ -330,7 +330,7 @@ TEST (PackWriter, setDouble)
 
     stream.str ("");
     EXPECT_EQ (packWriter.setDouble (0.1e1), 0);
-    EXPECT_EQ (stream.str (), std::string ({'\xCB', '\x3F', '\xF0', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00'}));
+    EXPECT_EQ (stream.str (), std::string ({'\xCA', '\x3F', '\x80', '\x00', '\x00'}));
 
     stream.str ("");
     EXPECT_EQ (packWriter.setDouble (-9876.543210), 0);
@@ -439,6 +439,38 @@ TEST (PackWriter, setKey)
 {
     std::stringstream stream;
     PackWriter packWriter (stream);
+
+    stream.str("");
+    EXPECT_EQ (packWriter.setKey (nullptr), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xC0'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (true), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xC3'})); 
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (false), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xC2'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (42), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\x2A'})); 
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (300), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCD', '\x01', '\x2C'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (-10), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xF6'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (0.1e1), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCA', '\x3F', '\x80', '\x00', '\x00'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (98.6), 0);
+    EXPECT_EQ (stream.str(), std::string ({'\xCB', '\x40', '\x58', '\xA6', '\x66', '\x66', '\x66', '\x66', '\x66'}));
 
     stream.str ("");
     EXPECT_EQ (packWriter.setKey (std::string (31, 'x')), 0);

@@ -133,9 +133,10 @@ namespace join
             }
             else
             {
+                Backoff backoff;
                 while (_segment->_sync._magic.load (std::memory_order_acquire) != QueueSync::MAGIC)
                 {
-                    std::this_thread::yield ();
+                    backoff ();
                 }
             }
 
@@ -250,8 +251,8 @@ namespace join
             {
                 return 0;
             }
-            auto tail = _segment->_sync._tail.load (std::memory_order_relaxed);
             auto head = _segment->_sync._head.load (std::memory_order_acquire);
+            auto tail = _segment->_sync._tail.load (std::memory_order_relaxed);
             return head - tail;
         }
 
@@ -501,8 +502,8 @@ namespace join
                 return -1;
             }
 
-            slot->_seq.store (tail + sync._capacity, std::memory_order_release);
             element = slot->data;
+            slot->_seq.store (tail + sync._capacity, std::memory_order_release);
             sync._tail.store (tail + 1, std::memory_order_release);
 
             return 0;

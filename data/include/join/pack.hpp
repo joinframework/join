@@ -276,8 +276,17 @@ namespace join
          */
         virtual int setDouble (double value) override
         {
-            append (0xcb);
-            pack (value);
+            float f = static_cast <float> (value);
+            if (std::isfinite (value) && static_cast <double> (f) == value)
+            {
+                append (0xca);
+                pack (f);
+            }
+            else
+            {
+                append (0xcb);
+                pack (value);
+            }
             return 0;
         }
 
@@ -291,7 +300,7 @@ namespace join
             if (value.size () < 32)
             {
                 append (static_cast <char> (0xa0 | value.size ()));
-            } 
+            }
             else if (value.size () < 256)
             {
                 append (0xd9);
@@ -307,7 +316,7 @@ namespace join
                 append (0xdb);
                 pack (static_cast <uint32_t> (value.size ()));
             }
-            append (value.c_str (), value.size ());
+            append (value.c_str (), static_cast <uint32_t> (value.size ()));
             return 0;
         }
 
@@ -337,7 +346,7 @@ namespace join
 
         /**
          * @brief start object.
-         * @param size array size.
+         * @param size object size.
          * @return 0 on success, -1 otherwise.
          */
         virtual int startObject (uint32_t size = 0) override
@@ -345,12 +354,12 @@ namespace join
             if (size < 16) 
             {
                 append (static_cast <char> (0x80 | size));
-            } 
+            }
             else if (size < 65536) 
             {
                 append (0xde);
                 pack (static_cast <uint16_t> (size));
-            } 
+            }
             else 
             {
                 append (0xdf);
@@ -364,9 +373,9 @@ namespace join
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setKey (const std::string& key) override
+        virtual int setKey (const Value& key) override
         {
-            return setString (key);
+            return setValue (key);
         }
 
     protected:
@@ -605,44 +614,45 @@ namespace join
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
             }
-
-            return 0;
         }
 
         /**
          * @brief parse a null value.
          * @param document document to parse.
+         * @param isKey indicate whether the string to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        int readNull (ViewType& document)
+        int readNull (ViewType& document, bool isKey = false)
         {
             document.get ();
-            return setNull ();
+            return (isKey) ? setKey (Value (in_place_index_t <Value::Null> {}, nullptr)) : setNull ();
         }
 
         /**
          * @brief parse a false value.
          * @param document document to parse.
+         * @param isKey indicate whether the string to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        int readFalse (ViewType& document)
+        int readFalse (ViewType& document, bool isKey = false)
         {
             document.get ();
-            return setBool (false);
+            return (isKey) ? setKey (Value (in_place_index_t <Value::Boolean> {}, false)) : setBool (false);
         }
 
         /**
          * @brief parse a true value.
          * @param document document to parse.
+         * @param isKey indicate whether the string to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        int readTrue (ViewType& document)
+        int readTrue (ViewType& document, bool isKey = false)
         {
             document.get ();
-            return setBool (true);
+            return (isKey) ? setKey (Value (in_place_index_t <Value::Boolean> {}, true)) : setBool (true);
         }
 
         /**
@@ -716,7 +726,7 @@ namespace join
 
             while (len)
             {
-                if (JOIN_UNLIKELY (readString (document, true) == -1))
+                if (JOIN_UNLIKELY (readKey (document) == -1))
                 {
                     return -1;
                 }
@@ -730,6 +740,51 @@ namespace join
             }
 
             return stopObject ();
+        }
+
+        /**
+         * @brief parse a key of any type.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int readKey (ViewType& document)
+        {
+            uint8_t head = static_cast <uint8_t> (document.peek ());
+
+            try
+            {
+                if (isNull (head))
+                {
+                    return readNull (document, true);
+                }
+                else if (isFalse (head))
+                {
+                    return readFalse (document, true);
+                }
+                else if (isTrue (head))
+                {
+                    return readTrue (document, true);
+                }
+                else if (isString (head))
+                {
+                    return readString (document, true);
+                }
+                else if (isNumber (head))
+                {
+                    return readNumber (document, true);
+                }
+                else
+                {
+                    join::lastError = make_error_code (SaxErrc::InvalidValue);
+                    return -1;
+                }
+            }
+            catch (...)
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
         }
 
         /**
@@ -769,7 +824,7 @@ namespace join
                 return -1;
             }
 
-            return isKey ? setKey (output) : setString (output);
+            return isKey ? setKey (Value (in_place_index_t <Value::String> {}, output)) : setString (output);
         }
 
         /**
@@ -810,53 +865,79 @@ namespace join
         /**
          * @brief parse a number value.
          * @param document document to parse.
+         * @param isKey indicate whether the string to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        int readNumber (ViewType& document)
+        int readNumber (ViewType& document, bool isKey = false)
         {
-            if (document.getIf (0xd3))
-            {
-                return setInt64 (unpack <int64_t> (document));
-            }
-            else if (document.getIf (0xcf))
-            {
-                return setUint64 (unpack <uint64_t> (document));
-            }
-            else if (document.getIf (0xcb))
-            {
-                return setDouble (unpack <double> (document));
-            }
-            else if (document.getIf (0xd2))
-            {
-                return setInt (unpack <int32_t> (document));
-            }
-            else if (document.getIf (0xce))
-            {
-                return setUint (unpack <uint32_t> (document));
-            }
-            else if (document.getIf (0xca))
-            {
-                return setDouble (unpack <float> (document));
-            }
-            else if (document.getIf (0xd1))
-            {
-                return setInt (unpack <int16_t> (document));
-            }
-            else if (document.getIf (0xcd))
-            {
-                return setUint (unpack <uint16_t> (document));
-            }
-            else if (document.getIf (0xd0))
-            {
-                return setInt (unpack <int8_t> (document));
-            }
-            else if (document.getIf (0xcc))
-            {
-                return setUint (unpack <uint8_t> (document));
-            }
+            uint8_t head = document.get ();
 
-            return setInt (document.get ());
+            if (head <= 0x7f)
+            {
+                auto number = uint32_t (head);
+                return isKey ? setKey (Value (in_place_index_t <Value::Unsigned> {}, number)) : setUint (number);
+            }
+            else if (head >= 0xe0)
+            {
+                auto number = int32_t (static_cast <int8_t> (head));
+                return isKey ? setKey (Value (in_place_index_t <Value::Integer> {}, number)) : setInt (number);
+            }
+            else if (head == 0xd3)
+            {
+                auto number = unpack <int64_t> (document);
+                return isKey ? setKey (Value (in_place_index_t <Value::Integer64> {}, number)) : setInt64 (number);
+            }
+            else if (head == 0xcf)
+            {
+                auto number = unpack <uint64_t> (document);
+                return isKey ? setKey (Value (in_place_index_t <Value::Unsigned64> {}, number)) : setUint64 (number);
+            }
+            else if (head == 0xcb)
+            {
+                auto number = unpack <double> (document);
+                return isKey ? setKey (Value (in_place_index_t <Value::Real> {}, number)) : setDouble (number);
+            }
+            else if (head == 0xd2)
+            {
+                auto number = unpack <int32_t> (document);
+                return isKey ? setKey (Value (in_place_index_t <Value::Integer> {}, number)) : setInt (number);
+            }
+            else if (head == 0xce)
+            {
+                auto number = unpack <uint32_t> (document);
+                return isKey ? setKey (Value (in_place_index_t <Value::Unsigned> {}, number)) : setUint (number);
+            }
+            else if (head == 0xca)
+            {
+                auto number = double (unpack <float> (document));
+                return isKey ? setKey (Value (in_place_index_t <Value::Real> {}, number)) : setDouble (number);
+            }
+            else if (head == 0xd1)
+            {
+                auto number = int32_t (unpack <int16_t> (document));
+                return isKey ? setKey (Value (in_place_index_t <Value::Integer> {}, number)) : setInt (number);
+            }
+            else if (head == 0xcd)
+            {
+                auto number = uint32_t (unpack <uint16_t> (document));
+                return isKey ? setKey (Value (in_place_index_t <Value::Unsigned> {}, number)) : setUint (number);
+            }
+            else if (head == 0xd0)
+            {
+                auto number = int32_t (unpack <int8_t> (document));
+                return isKey ? setKey (Value (in_place_index_t <Value::Integer> {}, number)) : setInt (number);
+            }
+            else if (head == 0xcc)
+            {
+                auto number = uint32_t (unpack <uint8_t> (document));
+                return isKey ? setKey (Value (in_place_index_t <Value::Unsigned> {}, number)) : setUint (number);
+            }
+            else
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
         }
 
         /**
@@ -913,7 +994,7 @@ namespace join
          */
         constexpr bool isInt (uint8_t c)
         {
-            return ((c <= 0x7f) || (c >= 0xe0)) || (c == 0xd0) || (c == 0xd1) || (c == 0xd2) || (c == 0xd3);
+            return ((c <= 0x7f) || (c >= 0xe0)) || (c == 0xd0) || (c == 0xd1) || (c == 0xd2);
         }
 
         /**

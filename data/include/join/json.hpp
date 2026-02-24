@@ -387,13 +387,13 @@ namespace join
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setKey (const std::string& key) override
+        virtual int setKey (const Value& key) override
         {
             comma ();
             endLine ();
             indent ();
             append ('"');
-            if (writeEscaped (key) == -1)
+            if (writeEscaped (key.getString ()) == -1)
             {
                 return -1;
             }
@@ -832,8 +832,8 @@ namespace join
             std::transform (object.begin (), object.end (), std::back_inserter (members), [] (const Member &member) {return &member;});
             std::sort (members.begin (), members.end (), [] (const Member *a, const Member *b) {
                 std::wstring_convert <std::codecvt_utf8_utf16 <char16_t>, char16_t> cvt_utf8_utf16;
-                std::u16string wa = cvt_utf8_utf16.from_bytes (a->first.data ());
-                std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.data ());
+                std::u16string wa = cvt_utf8_utf16.from_bytes (a->first.getString ().data ());
+                std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.getString ().data ());
                 return wa < wb;
             });
             for (auto const& member : members)
@@ -1847,13 +1847,13 @@ namespace join
         template <typename ViewType>
         int readString (ViewType& document, bool isKey = false)
         {
-            thread_local std::string output;
+            thread_local Value output (in_place_index_t <Value::String> {});
             output.clear ();
             output.reserve (64);
 
             for (;;)
             {
-                document.readUntilEscaped (output);
+                document.readUntilEscaped (output.getString ());
                 int ch = document.peek ();
 
                 if (ch == '"')
@@ -1865,7 +1865,7 @@ namespace join
                 if (ch == '\\')
                 {
                     document.get ();
-                    if (readEscaped (document, output) == -1)
+                    if (readEscaped (document, output.getString ()) == -1)
                     {
                         return -1;
                     }
@@ -1888,7 +1888,7 @@ namespace join
                 }
             }
 
-            return isKey ? setKey (output) : setString (output);
+            return isKey ? setKey (output) : setString (output.getString ());
         }
 
         /**

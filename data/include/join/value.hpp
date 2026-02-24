@@ -51,7 +51,7 @@ namespace join
     using Array = std::vector <Value>;
 
     /// object member.
-    using Member = std::pair <std::string, Value>;
+    using Member = std::pair <Value, Value>;
 
     /// object.
     using Object = std::vector <Member>;
@@ -1053,7 +1053,7 @@ namespace join
          * @return a reference to the mapped element.
          * @throw std::bad_cast.
          */
-        Value& at (const std::string& key)
+        Value& at (const Value& key)
         {
             for (auto& member : get <ObjectValue> ())
             {
@@ -1072,7 +1072,7 @@ namespace join
          * @return a reference to the mapped element.
          * @throw std::bad_cast.
          */
-        const Value& at (const std::string& key) const
+        const Value& at (const Value& key) const
         {
             for (auto const& member : get <ObjectValue> ())
             {
@@ -1102,7 +1102,7 @@ namespace join
          * @return a reference to the mapped element.
          * @throw std::bad_cast.
          */
-        Value& operator[] (const std::string& key)
+        Value& operator[] (const Value& key)
         {
             if (index () == Null)
             {
@@ -1257,7 +1257,7 @@ namespace join
          * @return number of elements removed.
          * @throw std::bad_cast.
          */
-        size_t erase (const std::string& key)
+        size_t erase (const Value& key)
         {
             auto beg = get <ObjectValue> ().begin ();
             auto end = get <ObjectValue> ().end ();
@@ -1346,7 +1346,7 @@ namespace join
          * @return true if the nested container contains an element mapped to key, false otherwise.
          * @throw std::bad_cast.
          */
-        bool contains (const std::string& key) const
+        bool contains (const Value& key) const
         {
             for (auto& member : get <ObjectValue> ())
             {

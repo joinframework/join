@@ -214,7 +214,7 @@ namespace join
 
         /**
          * @brief start object.
-         * @param size array size.
+         * @param size object size.
          * @return 0 on success, -1 otherwise.
          */
         virtual int startObject (uint32_t size = 0) = 0;
@@ -224,7 +224,7 @@ namespace join
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setKey (const std::string& key) = 0;
+        virtual int setKey (const Value& key) = 0;
 
         /**
          * @brief stop object.
@@ -340,30 +340,48 @@ namespace join
          */
         virtual int setArray (const Array& array)
         {
-            startArray (array.size ());
+            if (startArray (array.size ()) == -1)
+            {
+                return -1;
+            }
+
             for (auto const& element : array)
             {
-                setValue (element);
+                if (setValue (element) == -1)
+                {
+                    return -1;
+                }
             }
-            stopArray ();
-            return 0;
+
+            return stopArray ();
         }
 
         /**
          * @brief set object value.
-         * @param value array value to set.
+         * @param value object value to set.
          * @return 0 on success, -1 otherwise.
          */
         virtual int setObject (const Object& object)
         {
-            startObject (object.size ());
+            if (startObject (object.size ()) == -1)
+            {
+                return -1;
+            }
+
             for (auto const& member : object)
             {
-                setKey (member.first);
-                setValue (member.second);
+                if (setKey (member.first) == -1)
+                {
+                    return -1;
+                }
+
+                if (setValue (member.second) == -1)
+                {
+                    return -1;
+                }
             }
-            stopObject ();
-            return 0;
+
+            return stopObject ();
         }
 
         /**
@@ -681,7 +699,7 @@ namespace join
 
         /**
          * @brief start object.
-         * @param size array size.
+         * @param size object size.
          * @return 0 on success, -1 otherwise.
          */
         virtual int startObject (uint32_t size = 0) override
@@ -721,7 +739,7 @@ namespace join
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setKey (const std::string& key) override
+        virtual int setKey (const Value& key) override
         {
             _curkey = key;
             return 0;
@@ -775,7 +793,7 @@ namespace join
         std::stack <Value*> _stack;
 
         /// current key.
-        std::string _curkey;
+        Value _curkey;
 
         /// root.
         Value& _root;
