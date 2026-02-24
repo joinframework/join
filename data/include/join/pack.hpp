@@ -619,7 +619,7 @@ namespace join
         /**
          * @brief parse a null value.
          * @param document document to parse.
-         * @param isKey indicate whether the string to parse is a key or not.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
@@ -632,7 +632,7 @@ namespace join
         /**
          * @brief parse a false value.
          * @param document document to parse.
-         * @param isKey indicate whether the string to parse is a key or not.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
@@ -645,7 +645,7 @@ namespace join
         /**
          * @brief parse a true value.
          * @param document document to parse.
-         * @param isKey indicate whether the string to parse is a key or not.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
@@ -790,7 +790,7 @@ namespace join
         /**
          * @brief parse a string value.
          * @param document document to parse.
-         * @param isKey indicate whether the string to parse is a key or not.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
@@ -865,7 +865,7 @@ namespace join
         /**
          * @brief parse a number value.
          * @param document document to parse.
-         * @param isKey indicate whether the string to parse is a key or not.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>

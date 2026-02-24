@@ -1841,7 +1841,7 @@ namespace join
         /**
          * @brief parse a string value.
          * @param document document to parse.
-         * @param isKey indicate whether the string to parse is a key or not.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
