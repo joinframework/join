@@ -47,6 +47,11 @@ target_link_libraries(localmem.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME localmem.gtest COMMAND localmem.gtest)
 install(TARGETS localmem.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(localallocator.gtest localallocator_test.cpp)
+target_link_libraries(localallocator.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME localallocator.gtest COMMAND localallocator.gtest)
+install(TARGETS localallocator.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(localspsc.gtest localspsc_test.cpp)
 target_link_libraries(localspsc.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME localspsc.gtest COMMAND localspsc.gtest)
