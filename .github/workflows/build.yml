@@ -132,6 +132,7 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           files: lcov.info
+          fail-on-error: false
 
       - name: Deploy coverage report to codecov
         uses: codecov/codecov-action@v5
