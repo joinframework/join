@@ -59,6 +59,22 @@ protected:
 const std::string PosixAlloc::_name = "/test_shm";
 
 /**
+ * @brief test move.
+ */
+TEST_F (PosixAlloc, move)
+{
+    ShmMem::Allocator<1, 64> allocator1 (_name);
+    ShmMem::Allocator<1, 64> allocator2 (_name);
+
+    void* p1 = allocator1.allocate (64);
+    ASSERT_NE (p1, nullptr);
+
+    allocator2 = std::move (allocator1);
+    void* p2 = allocator2.allocate (64);
+    ASSERT_EQ (p2, nullptr);
+}
+
+/**
  * @brief test the allocate method.
  */
 TEST_F (PosixAlloc, allocate)
@@ -85,6 +101,9 @@ TEST_F (PosixAlloc, allocate)
 
     allocator.deallocate (p1);
     allocator.deallocate (p3);
+
+    void* p5 = allocator.allocate (256);
+    EXPECT_EQ (p5, nullptr);
 }
 
 /**
@@ -105,15 +124,18 @@ TEST_F (PosixAlloc, tryAllocate)
     ASSERT_NE (p1, p3);
 
     allocator.deallocate (p1);
-    void* p4 = allocator.allocate (128);
+    void* p4 = allocator.tryAllocate (128);
     ASSERT_EQ (p4, nullptr);
 
     allocator.deallocate (p3);
-    p4 = allocator.allocate (128);
+    p4 = allocator.tryAllocate (128);
     ASSERT_NE (p4, nullptr);
     ASSERT_EQ (p4, p3);
 
     allocator.deallocate (p4);
+
+    void* p5 = allocator.tryAllocate (256);
+    EXPECT_EQ (p5, nullptr);
 }
 
 /**
@@ -132,6 +154,10 @@ TEST_F (PosixAlloc, deallocate)
     ASSERT_NO_THROW (allocator.deallocate (nullptr));
     ASSERT_NO_THROW (allocator.deallocate (p2));
     ASSERT_NO_THROW (allocator.deallocate (p1));
+
+    int dummy;
+    void* dummyPtr = &dummy;
+    EXPECT_NO_THROW (allocator.deallocate (dummyPtr));
 }
 
 /**
@@ -150,6 +176,56 @@ TEST_F (PosixAlloc, mlock)
 {
     ShmMem::Allocator<1, 64> allocator (_name);
     ASSERT_EQ (allocator.mlock (), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief test concurrent access.
+ */
+TEST_F (PosixAlloc, benchmark)
+{
+    ShmMem::Allocator<100, 64> allocator (_name);
+    const int iterations = 5000;
+    const int numProcesses = 4;
+
+    for (int i = 0; i < numProcesses; ++i)
+    {
+        pid_t pid = fork ();
+        ASSERT_GE (pid, 0);
+
+        if (pid == 0)
+        {
+            for (int j = 0; j < iterations; ++j)
+            {
+                void* p = allocator.allocate (64);
+                if (p)
+                {
+                    std::this_thread::yield ();
+                    allocator.deallocate (p);
+                }
+            }
+            exit (0);
+        }
+    }
+
+    int status;
+    for (int i = 0; i < numProcesses; ++i)
+    {
+        wait (&status);
+        EXPECT_TRUE (WIFEXITED (status) && WEXITSTATUS (status) == 0);
+    }
+
+    std::vector<void*> pointers;
+    for (int i = 0; i < 100; ++i)
+    {
+        void* p = allocator.allocate (64);
+        ASSERT_NE (p, nullptr);
+        pointers.push_back (p);
+    }
+
+    for (void* p : pointers)
+    {
+        allocator.deallocate (p);
+    }
 }
 
 /**

@@ -24,11 +24,29 @@
 
 // libjoin.
 #include <join/allocator.hpp>
+#include <join/thread.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
 using join::LocalMem;
+using join::Thread;
+
+/**
+ * @brief test move.
+ */
+TEST (LocalAlloc, move)
+{
+    LocalMem::Allocator<1, 64> allocator1;
+    LocalMem::Allocator<1, 64> allocator2;
+
+    void* p1 = allocator1.allocate (64);
+    ASSERT_NE (p1, nullptr);
+
+    allocator2 = std::move (allocator1);
+    void* p2 = allocator2.allocate (64);
+    ASSERT_EQ (p2, nullptr);
+}
 
 /**
  * @brief test the allocate method.
@@ -57,6 +75,9 @@ TEST (LocalAlloc, allocate)
 
     allocator.deallocate (p1);
     allocator.deallocate (p3);
+
+    void* p5 = allocator.allocate (256);
+    EXPECT_EQ (p5, nullptr);
 }
 
 /**
@@ -72,20 +93,23 @@ TEST (LocalAlloc, tryAllocate)
     void* p2 = allocator.tryAllocate (64);
     ASSERT_EQ (p2, nullptr);
 
-    void* p3 = allocator.allocate (128);
+    void* p3 = allocator.tryAllocate (128);
     ASSERT_NE (p3, nullptr);
     ASSERT_NE (p1, p3);
 
     allocator.deallocate (p1);
-    void* p4 = allocator.allocate (128);
+    void* p4 = allocator.tryAllocate (128);
     ASSERT_EQ (p4, nullptr);
 
     allocator.deallocate (p3);
-    p4 = allocator.allocate (128);
+    p4 = allocator.tryAllocate (128);
     ASSERT_NE (p4, nullptr);
     ASSERT_EQ (p4, p3);
 
     allocator.deallocate (p4);
+
+    void* p5 = allocator.tryAllocate (256);
+    EXPECT_EQ (p5, nullptr);
 }
 
 /**
@@ -104,6 +128,10 @@ TEST (LocalAlloc, deallocate)
     ASSERT_NO_THROW (allocator.deallocate (nullptr));
     ASSERT_NO_THROW (allocator.deallocate (p2));
     ASSERT_NO_THROW (allocator.deallocate (p1));
+
+    int dummy;
+    void* dummyPtr = &dummy;
+    EXPECT_NO_THROW (allocator.deallocate (dummyPtr));
 }
 
 /**
@@ -122,6 +150,53 @@ TEST (LocalAlloc, mlock)
 {
     LocalMem::Allocator<1, 64> allocator;
     ASSERT_EQ (allocator.mlock (), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief test concurrent access.
+ */
+TEST (LocalAlloc, benchmark)
+{
+    join::LocalMem::Allocator<100, 64> allocator;
+    const int iterations = 10000;
+    const int numThreads = 4;
+
+    auto worker = [&] ()
+    {
+        for (int i = 0; i < iterations; ++i)
+        {
+            void* p = allocator.allocate (64);
+            if (p)
+            {
+                std::this_thread::yield ();
+                allocator.deallocate (p);
+            }
+        }
+    };
+
+    std::vector<Thread> threads;
+    for (int i = 0; i < numThreads; ++i)
+    {
+        threads.emplace_back (worker);
+    }
+
+    for (auto& t : threads)
+    {
+        t.join ();
+    }
+
+    std::vector<void*> pointers;
+    for (int i = 0; i < 100; ++i)
+    {
+        void* p = allocator.allocate (64);
+        ASSERT_NE (p, nullptr);
+        pointers.push_back (p);
+    }
+
+    for (void* p : pointers)
+    {
+        allocator.deallocate (p);
+    }
 }
 
 /**

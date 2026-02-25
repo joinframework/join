@@ -358,6 +358,28 @@ namespace join
         BasicArena& operator= (const BasicArena& other) = delete;
 
         /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        BasicArena (BasicArena&& other) noexcept
+        : _backend (std::move (other._backend))
+        , _pools (std::move (other._pools))
+        {
+        }
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to move.
+         * @return this.
+         */
+        BasicArena& operator= (BasicArena&& other) noexcept
+        {
+            _backend = std::move (other._backend);
+            _pools = std::move (other._pools);
+            return *this;
+        }
+
+        /**
          * @brief destroy instance.
          */
         ~BasicArena () = default;
