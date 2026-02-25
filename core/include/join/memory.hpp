@@ -47,13 +47,18 @@
 namespace join
 {
     /// allocator forward declarations.
-    template <typename Backend, size_t Count, size_t... Sizes> class BasicArena;
+    template <typename Backend, size_t Count, size_t... Sizes>
+    class BasicArena;
 
     /// queue forward declarations.
-    template <typename Backend, template <typename, typename> class SyncPolicy> struct SyncBinding;
-    template <typename, typename> struct Spsc;
-    template <typename, typename> struct Mpsc;
-    template <typename, typename> struct Mpmc;
+    template <typename Backend, template <typename, typename> class SyncPolicy>
+    struct SyncBinding;
+    template <typename, typename>
+    struct Spsc;
+    template <typename, typename>
+    struct Mpsc;
+    template <typename, typename>
+    struct Mpmc;
 
     /**
      * @brief bind memory to a NUMA node.
@@ -62,7 +67,7 @@ namespace join
      * @param numa NUMA node ID.
      * @return 0 on success, -1 on failure.
      */
-    inline int mbind (void* ptr, size_t size, int numa)
+    inline int mbind (void* ptr, size_t size, int numa) noexcept
     {
         if (ptr == nullptr || numa < 0)
         {
@@ -86,7 +91,7 @@ namespace join
      * @param size memory size.
      * @return 0 on success, -1 on failure.
      */
-    inline int mlock (void* ptr, size_t size)
+    inline int mlock (void* ptr, size_t size) noexcept
     {
         if (ptr == nullptr)
         {
@@ -110,11 +115,11 @@ namespace join
     {
     public:
         template <size_t Count, size_t... Sizes>
-        using Allocator = BasicArena <LocalMem, Count, Sizes...>;
+        using Allocator = BasicArena<LocalMem, Count, Sizes...>;
 
-        using Spsc = SyncBinding <LocalMem, ::join::Spsc>;
-        using Mpsc = SyncBinding <LocalMem, ::join::Mpsc>;
-        using Mpmc = SyncBinding <LocalMem, ::join::Mpmc>;
+        using Spsc = SyncBinding<LocalMem, ::join::Spsc>;
+        using Mpsc = SyncBinding<LocalMem, ::join::Mpsc>;
+        using Mpmc = SyncBinding<LocalMem, ::join::Mpmc>;
 
         /**
          * @brief allocates a local anonymous memory segment.
@@ -122,9 +127,9 @@ namespace join
          * @throw std::system_error if mmap fails.
          */
         explicit LocalMem (uint64_t size)
-        { 
+        {
             long sc = sysconf (_SC_PAGESIZE);
-            uint64_t pageSize = (sc > 0) ? static_cast <uint64_t> (sc) : 4096;
+            uint64_t pageSize = (sc > 0) ? static_cast<uint64_t> (sc) : 4096;
             _size = (size + pageSize - 1) & ~(pageSize - 1);
 
             create ();
@@ -147,7 +152,7 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        LocalMem (LocalMem&& other) noexcept 
+        LocalMem (LocalMem&& other) noexcept
         : _size (other._size)
         , _ptr (other._ptr)
         {
@@ -200,7 +205,7 @@ namespace join
                 throw std::out_of_range ("offset out of bounds");
             }
 
-            return static_cast <const char*> (_ptr) + offset;
+            return static_cast<const char*> (_ptr) + offset;
         }
 
         /**
@@ -222,7 +227,7 @@ namespace join
                 throw std::out_of_range ("offset out of bounds");
             }
 
-            return static_cast <char*> (_ptr) + offset;
+            return static_cast<char*> (_ptr) + offset;
         }
 
         /**
@@ -230,7 +235,7 @@ namespace join
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
-        int mbind (int numa)
+        int mbind (int numa) const noexcept
         {
             return join::mbind (_ptr, _size, numa);
         }
@@ -239,7 +244,7 @@ namespace join
          * @brief lock memory in RAM.
          * @return 0 on success, -1 on failure.
          */
-        int mlock ()
+        int mlock () const noexcept
         {
             return join::mlock (_ptr, _size);
         }
@@ -293,11 +298,11 @@ namespace join
     {
     public:
         template <size_t Count, size_t... Sizes>
-        using Allocator = BasicArena  <ShmMem, Count, Sizes...>;
+        using Allocator = BasicArena<ShmMem, Count, Sizes...>;
 
-        using Spsc = SyncBinding <ShmMem, ::join::Spsc>;
-        using Mpsc = SyncBinding <ShmMem, ::join::Mpsc>;
-        using Mpmc = SyncBinding <ShmMem, ::join::Mpmc>;
+        using Spsc = SyncBinding<ShmMem, ::join::Spsc>;
+        using Mpsc = SyncBinding<ShmMem, ::join::Mpsc>;
+        using Mpmc = SyncBinding<ShmMem, ::join::Mpmc>;
 
         /**
          * @brief creates or opens a named shared memory segment.
@@ -309,10 +314,10 @@ namespace join
         : _name (name)
         {
             long sc = sysconf (_SC_PAGESIZE);
-            uint64_t pageSize = (sc > 0) ? static_cast <uint64_t> (sc) : 4096;
+            uint64_t pageSize = (sc > 0) ? static_cast<uint64_t> (sc) : 4096;
             _size = (size + pageSize - 1) & ~(pageSize - 1);
 
-            if (_size > static_cast <uint64_t> (std::numeric_limits <off_t>::max ()))
+            if (_size > static_cast<uint64_t> (std::numeric_limits<off_t>::max ()))
             {
                 throw std::overflow_error ("size will overflow");
             }
@@ -337,7 +342,7 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        ShmMem (ShmMem&& other) noexcept 
+        ShmMem (ShmMem&& other) noexcept
         : _size (other._size)
         , _name (std::move (other._name))
         , _ptr (other._ptr)
@@ -396,7 +401,7 @@ namespace join
                 throw std::out_of_range ("offset out of bounds");
             }
 
-            return static_cast <const char*> (_ptr) + offset;
+            return static_cast<const char*> (_ptr) + offset;
         }
 
         /**
@@ -418,7 +423,7 @@ namespace join
                 throw std::out_of_range ("offset out of bounds");
             }
 
-            return static_cast <char*> (_ptr) + offset;
+            return static_cast<char*> (_ptr) + offset;
         }
 
         /**
@@ -426,7 +431,7 @@ namespace join
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
-        int mbind (int numa)
+        int mbind (int numa) const noexcept
         {
             return join::mbind (_ptr, _size, numa);
         }
@@ -435,7 +440,7 @@ namespace join
          * @brief lock memory in RAM.
          * @return 0 on success, -1 on failure.
          */
-        int mlock ()
+        int mlock () const noexcept
         {
             return join::mlock (_ptr, _size);
         }
@@ -492,7 +497,7 @@ namespace join
                     throw std::system_error (err, std::generic_category (), "fstat failed");
                 }
 
-                if (static_cast <uint64_t> (st.st_size) != _size)
+                if (static_cast<uint64_t> (st.st_size) != _size)
                 {
                     ::close (_fd);
                     throw std::runtime_error ("shared memory size mismatch");
