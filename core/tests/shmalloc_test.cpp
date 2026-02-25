@@ -70,8 +70,14 @@ TEST_F (PosixAlloc, move)
     ASSERT_NE (p1, nullptr);
 
     allocator2 = std::move (allocator1);
+
     void* p2 = allocator2.allocate (64);
     ASSERT_EQ (p2, nullptr);
+
+    ShmMem::Allocator<1, 64> allocator3 (std::move (allocator2));
+
+    void* p3 = allocator3.allocate (64);
+    ASSERT_EQ (p3, nullptr);
 }
 
 /**
