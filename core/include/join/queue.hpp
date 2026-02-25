@@ -87,7 +87,7 @@ namespace join
         alignas (64) QueueSync _sync;
 
         /// flexible array of queue slots.
-        QueueSlot <Type> _elements[];
+        QueueSlot<Type> _elements[];
     };
 
     /**
@@ -96,8 +96,8 @@ namespace join
     template <typename Type, typename Backend, typename SyncPolicy>
     class BasicQueue
     {
-        static_assert (std::is_trivially_copyable <Type>::value, "type must be trivially copyable");
-        static_assert (std::is_trivially_destructible <Type>::value, "type must be trivially destructible");
+        static_assert (std::is_trivially_copyable<Type>::value, "type must be trivially copyable");
+        static_assert (std::is_trivially_destructible<Type>::value, "type must be trivially destructible");
 
     public:
         using ValueType = Type;
@@ -110,14 +110,15 @@ namespace join
         template <typename... Args>
         BasicQueue (uint64_t capacity, Args&&... args)
         : _capacity (roundPow2 (capacity))
-        , _elementSize (sizeof (QueueSlot <Type>))
+        , _elementSize (sizeof (QueueSlot<Type>))
         , _totalSize (sizeof (QueueSync) + (_capacity * _elementSize))
-        , _backend (_totalSize, std::forward <Args> (args)...)
-        , _segment (static_cast <QueueSegment <Type>*> (_backend.get ()))
+        , _backend (_totalSize, std::forward<Args> (args)...)
+        , _segment (static_cast<QueueSegment<Type>*> (_backend.get ()))
         {
             uint64_t expected = 0;
 
-            if (_segment->_sync._magic.compare_exchange_strong (expected, 0xFFFFFFFFFFFFFFFF, std::memory_order_acq_rel))
+            if (_segment->_sync._magic.compare_exchange_strong (expected, 0xFFFFFFFFFFFFFFFF,
+                                                                std::memory_order_acq_rel))
             {
                 _segment->_sync._head.store (0, std::memory_order_relaxed);
                 _segment->_sync._tail.store (0, std::memory_order_relaxed);
@@ -175,7 +176,7 @@ namespace join
         /**
          * @brief destroy queue instance.
          */
-        ~BasicQueue () = default;
+        ~BasicQueue () noexcept = default;
 
         /**
          * @brief try to push element into ring buffer.
@@ -300,7 +301,7 @@ namespace join
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
-        int mbind (int numa)
+        int mbind (int numa) const noexcept
         {
             return _backend.mbind (numa);
         }
@@ -309,7 +310,7 @@ namespace join
          * @brief lock memory in RAM.
          * @return 0 on success, -1 on failure.
          */
-        int mlock ()
+        int mlock () const noexcept
         {
             return _backend.mlock ();
         }
@@ -352,7 +353,7 @@ namespace join
         SyncPolicy _policy;
 
         /// shared memory segment.
-        QueueSegment <Type>* _segment = nullptr;
+        QueueSegment<Type>* _segment = nullptr;
     };
 
     /**
@@ -361,7 +362,7 @@ namespace join
     template <typename Type, typename Backend>
     struct Spsc
     {
-        using Queue = BasicQueue <Type, Backend, Spsc>;
+        using Queue = BasicQueue<Type, Backend, Spsc>;
 
         /**
          * @brief try to push element into the ring buffer.
@@ -369,7 +370,7 @@ namespace join
          * @param element element to push.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (QueueSegment <Type>* segment, const Type& element) noexcept
+        static int tryPush (QueueSegment<Type>* segment, const Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -399,7 +400,7 @@ namespace join
          * @param element output element.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (QueueSegment <Type>* segment, Type& element) noexcept
+        static int tryPop (QueueSegment<Type>* segment, Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -430,7 +431,7 @@ namespace join
     template <typename Type, typename Backend>
     struct Mpsc
     {
-        using Queue = BasicQueue <Type, Backend, Mpsc>;
+        using Queue = BasicQueue<Type, Backend, Mpsc>;
 
         /**
          * @brief try to push element into the ring buffer.
@@ -438,7 +439,7 @@ namespace join
          * @param element element to push.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (QueueSegment <Type>* segment, const Type& element) noexcept
+        static int tryPush (QueueSegment<Type>* segment, const Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -457,7 +458,8 @@ namespace join
 
                 if (seq == head)
                 {
-                    if (JOIN_LIKELY (sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire, std::memory_order_relaxed)))
+                    if (JOIN_LIKELY (sync._head.compare_exchange_weak (head, head + 1, std::memory_order_acquire,
+                                                                       std::memory_order_relaxed)))
                     {
                         slot->data = element;
                         slot->_seq.store (head + 1, std::memory_order_release);
@@ -468,7 +470,7 @@ namespace join
                 {
                     lastError = make_error_code (Errc::TemporaryError);
                     return -1;
-                } 
+                }
                 else
                 {
                     backoff ();
@@ -483,7 +485,7 @@ namespace join
          * @param element output element.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (QueueSegment <Type>* segment, Type& element) noexcept
+        static int tryPop (QueueSegment<Type>* segment, Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -516,7 +518,7 @@ namespace join
     template <typename Type, typename Backend>
     struct Mpmc
     {
-        using Queue = BasicQueue <Type, Backend, Mpmc>;
+        using Queue = BasicQueue<Type, Backend, Mpmc>;
 
         /**
          * @brief try to push element into the ring buffer.
@@ -524,9 +526,9 @@ namespace join
          * @param element element to push.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (QueueSegment <Type>* segment, const Type& element) noexcept
+        static int tryPush (QueueSegment<Type>* segment, const Type& element) noexcept
         {
-            return Mpsc <Type, Backend>::tryPush (segment, element);
+            return Mpsc<Type, Backend>::tryPush (segment, element);
         }
 
         /**
@@ -535,7 +537,7 @@ namespace join
          * @param element output element.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (QueueSegment <Type>* segment, Type& element) noexcept
+        static int tryPop (QueueSegment<Type>* segment, Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -554,11 +556,10 @@ namespace join
 
                 if (seq == (tail + 1))
                 {
-                    Type temp = slot->data;
-
-                    if (JOIN_LIKELY (sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire, std::memory_order_relaxed)))
+                    if (JOIN_LIKELY (sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire,
+                                                                       std::memory_order_relaxed)))
                     {
-                        element = temp;
+                        element = slot->data;
                         slot->_seq.store (tail + sync._capacity, std::memory_order_release);
                         return 0;
                     }
@@ -584,7 +585,8 @@ namespace join
     struct SyncBinding
     {
         /// queue type alias combining backend and policy.
-        template <typename Type> using Queue = BasicQueue <Type, Backend, SyncPolicy <Type, Backend>>;
+        template <typename Type>
+        using Queue = BasicQueue<Type, Backend, SyncPolicy<Type, Backend>>;
     };
 }
 

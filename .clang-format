@@ -1,0 +1,62 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+# --- Core Layout ---
+ColumnLimit: 120
+IndentWidth: 4
+Standard: Latest
+
+# --- Includes Management ---
+SortIncludes: Never
+
+# --- Force POSIX / Linux Line Endings ---
+DeriveLineEnding: false
+LineEnding: LF
+InsertTrailingNewline: true
+
+# --- Access Modifiers (public, private, etc.) ---
+AccessModifierOffset: -4
+
+# --- Namespace Management ---
+NamespaceIndentation: All
+FixNamespaceComments: false
+
+# --- Braces (Allman Style + Space) ---
+BreakBeforeBraces: Allman
+SpaceBeforeBraces: Always
+
+# --- Pointer Alignment ---
+PointerAlignment: Left
+
+# --- Spaces ---
+SpaceBeforeParens: Always
+SpaceAfterTemplateKeyword: true
+SpaceInEmptyParentheses: false
+
+# --- Assignments & Alignments ---
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: false
+
+# --- Strict Vertical Layout ---
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Never
+AllowShortLambdasOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# --- Function Separation ---
+SeparateDefinitionBlocks: Always
+MaxEmptyLinesToKeep: 2
+
+# --- Constructor Formatting ---
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ConstructorInitializerIndentWidth: 0
+BreakConstructorInitializers: BeforeComma
+
+# --- Templates ---
+AlwaysBreakTemplateDeclarations: Yes
+
+# --- Preservation & Comments ---
+AlignTrailingComments: true
+ReflowComments: true

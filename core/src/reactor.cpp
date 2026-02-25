@@ -61,7 +61,7 @@ Reactor::Reactor ()
 
     _deleted.reserve (_deletedReserve);
 
-    struct epoll_event ev {};
+    struct epoll_event ev{};
     ev.events = EPOLLIN;
     ev.data.ptr = nullptr;
 
@@ -78,7 +78,7 @@ Reactor::Reactor ()
 //   CLASS     : Reactor
 //   METHOD    : ~Reactor
 // =========================================================================
-Reactor::~Reactor ()
+Reactor::~Reactor () noexcept
 {
     stop ();
 
@@ -109,8 +109,8 @@ int Reactor::addHandler (EventHandler* handler, bool sync) noexcept
         return registerHandler (handler);
     }
 
-    std::atomic <bool> done {false}, *pdone = nullptr;
-    std::atomic <int> errc {0}, *perrc = nullptr;
+    std::atomic<bool> done{false}, *pdone = nullptr;
+    std::atomic<int> errc{0}, *perrc = nullptr;
 
     if (JOIN_UNLIKELY (sync))
     {
@@ -134,7 +134,7 @@ int Reactor::addHandler (EventHandler* handler, bool sync) noexcept
         int err = errc.load (std::memory_order_acquire);
         if (JOIN_UNLIKELY (err != 0))
         {
-            lastError = std::make_error_code (static_cast <std::errc> (err));
+            lastError = std::make_error_code (static_cast<std::errc> (err));
             return -1;
         }
     }
@@ -165,8 +165,8 @@ int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
         return unregisterHandler (handler);
     }
 
-    std::atomic <bool> done {false}, *pdone = nullptr;
-    std::atomic <int> errc {0}, *perrc = nullptr;
+    std::atomic<bool> done{false}, *pdone = nullptr;
+    std::atomic<int> errc{0}, *perrc = nullptr;
 
     if (JOIN_UNLIKELY (sync))
     {
@@ -190,7 +190,7 @@ int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
         int err = errc.load (std::memory_order_acquire);
         if (JOIN_UNLIKELY (err != 0))
         {
-            lastError = std::make_error_code (static_cast <std::errc> (err));
+            lastError = std::make_error_code (static_cast<std::errc> (err));
             return -1;
         }
     }
@@ -241,7 +241,7 @@ void Reactor::stop (bool sync) noexcept
 //   CLASS     : Reactor
 //   METHOD    : mbind
 // =========================================================================
-int Reactor::mbind (int numa)
+int Reactor::mbind (int numa) const noexcept
 {
     return _commands.mbind (numa);
 }
@@ -250,7 +250,7 @@ int Reactor::mbind (int numa)
 //   CLASS     : Reactor
 //   METHOD    : mlock
 // =========================================================================
-int Reactor::mlock ()
+int Reactor::mlock () const noexcept
 {
     return _commands.mlock ();
 }
@@ -263,13 +263,13 @@ int Reactor::registerHandler (EventHandler* handler) noexcept
 {
     _deleted.erase (handler);
 
-    struct epoll_event ev {};
+    struct epoll_event ev{};
     ev.events = EPOLLIN | EPOLLRDHUP;
     ev.data.ptr = handler;
 
     if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev) == -1))
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::make_error_code (static_cast<std::errc> (errno));
         return -1;
     }
 
@@ -284,7 +284,7 @@ int Reactor::unregisterHandler (EventHandler* handler) noexcept
 {
     if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->handle (), nullptr) == -1))
     {
-        lastError = std::make_error_code (static_cast <std::errc> (errno));
+        lastError = std::make_error_code (static_cast<std::errc> (errno));
         _deleted.insert (handler);
         return -1;
     }
@@ -314,22 +314,22 @@ int Reactor::writeCommand (const Command& cmd) noexcept
 //   CLASS     : Reactor
 //   METHOD    : processCommand
 // =========================================================================
-void  Reactor::processCommand (const Command& cmd)
+void Reactor::processCommand (const Command& cmd) noexcept
 {
     int err = 0;
 
     switch (cmd.type)
     {
-        case CommandType::Add:
-            err = registerHandler (cmd.handler);
-            break;
+    case CommandType::Add:
+        err = registerHandler (cmd.handler);
+        break;
 
-        case CommandType::Del:
-            err = unregisterHandler (cmd.handler);
-            break;
+    case CommandType::Del:
+        err = unregisterHandler (cmd.handler);
+        break;
 
-        case CommandType::Stop:
-            break;
+    case CommandType::Stop:
+        break;
     }
 
     if (JOIN_UNLIKELY (cmd.done))
@@ -346,7 +346,7 @@ void  Reactor::processCommand (const Command& cmd)
 //   CLASS     : Reactor
 //   METHOD    : readCommands
 // =========================================================================
-void Reactor::readCommands ()
+void Reactor::readCommands () noexcept
 {
     uint64_t count;
     [[maybe_unused]] ssize_t bytesRead = ::read (_wakeup, &count, sizeof (count));
@@ -364,7 +364,7 @@ void Reactor::readCommands ()
 // =========================================================================
 void Reactor::dispatchEvent (const epoll_event& event)
 {
-    EventHandler* handler = static_cast <EventHandler*> (event.data.ptr);
+    EventHandler* handler = static_cast<EventHandler*> (event.data.ptr);
 
     if (JOIN_LIKELY (isActive (handler)))
     {
@@ -389,7 +389,7 @@ void Reactor::dispatchEvent (const epoll_event& event)
 // =========================================================================
 void Reactor::eventLoop ()
 {
-    std::array <epoll_event, _maxEvents> events;
+    std::array<epoll_event, _maxEvents> events;
 
     while (_running.load (std::memory_order_acquire))
     {
@@ -512,7 +512,11 @@ ReactorThread& ReactorThread::instance ()
 // =========================================================================
 ReactorThread::ReactorThread ()
 {
-    _dispatcher = Thread ([this] () {_reactor.run ();});
+    _dispatcher = Thread (
+        [this] ()
+        {
+            _reactor.run ();
+        });
 }
 
 // =========================================================================
