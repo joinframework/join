@@ -46,7 +46,8 @@ TEST (SaxCategory, message)
 {
     EXPECT_STREQ (SaxCategory ().message (0).c_str (), "success");
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::StackOverflow)).c_str (), "stack overflow");
-    EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::InvalidParent)).c_str (), "parent not an array nor an object");
+    EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::InvalidParent)).c_str (),
+                  "parent not an array nor an object");
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::InvalidKey)).c_str (), "key is invalid");
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::InvalidValue)).c_str (), "value is invalid");
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::ExtraData)).c_str (), "extra data detected");

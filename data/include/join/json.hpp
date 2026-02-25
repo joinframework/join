@@ -39,16 +39,17 @@ namespace join
 {
     namespace details
     {
-        constexpr char digitPairs[201] = { "00010203040506070809"
-                                           "10111213141516171819"
-                                           "20212223242526272829"
-                                           "30313233343536373839"
-                                           "40414243444546474849"
-                                           "50515253545556575859"
-                                           "60616263646566676869"
-                                           "70717273747576777879"
-                                           "80818283848586878889"
-                                           "90919293949596979899" };
+        constexpr char digitPairs[201] = {
+            "00010203040506070809"
+            "10111213141516171819"
+            "20212223242526272829"
+            "30313233343536373839"
+            "40414243444546474849"
+            "50515253545556575859"
+            "60616263646566676869"
+            "70717273747576777879"
+            "80818283848586878889"
+            "90919293949596979899"};
 
         struct UnescapedTable
         {
@@ -540,7 +541,8 @@ namespace join
          * @param codepoint calculated UTF8 codepoint.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int utf8Codepoint (std::string::const_iterator& cur, std::string::const_iterator& end, uint32_t& codepoint)
+        virtual int utf8Codepoint (std::string::const_iterator& cur, std::string::const_iterator& end,
+                                   uint32_t& codepoint)
         {
             uint8_t u0 = static_cast<uint8_t> (*cur);
             if (u0 < 0x80)
@@ -665,7 +667,7 @@ namespace join
                 }
                 else
                 {
-                    char escapeSeq[2] = { '\\', static_cast<char> (esc) };
+                    char escapeSeq[2] = {'\\', static_cast<char> (esc)};
                     append2 (escapeSeq);
                 }
 
@@ -801,11 +803,13 @@ namespace join
             array ();
             if (std::isfinite (value))
             {
-                if ((std::trunc (value) == value) && (value >= 0) && (value < static_cast<double> (std::numeric_limits<uint64_t>::max ())))
+                if ((std::trunc (value) == value) && (value >= 0) &&
+                    (value < static_cast<double> (std::numeric_limits<uint64_t>::max ())))
                 {
                     writeUint64 (static_cast<uint64_t> (value));
                 }
-                else if ((std::trunc (value) == value) && (value >= static_cast<double> (std::numeric_limits<int64_t>::min ())) &&
+                else if ((std::trunc (value) == value) &&
+                         (value >= static_cast<double> (std::numeric_limits<int64_t>::min ())) &&
                          (value < static_cast<double> (std::numeric_limits<int64_t>::max ())))
                 {
                     writeInt64 (static_cast<int64_t> (value));
@@ -1315,14 +1319,16 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (document.getIfNoCase ('i') && !(document.getIfNoCase ('n') && document.getIfNoCase ('i') &&
-                                                               document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
+            if (JOIN_UNLIKELY (document.getIfNoCase ('i') &&
+                               !(document.getIfNoCase ('n') && document.getIfNoCase ('i') &&
+                                 document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
             }
 
-            return setDouble (negative ? -std::numeric_limits<double>::infinity () : std::numeric_limits<double>::infinity ());
+            return setDouble (negative ? -std::numeric_limits<double>::infinity ()
+                                       : std::numeric_limits<double>::infinity ());
         }
 
         /**
@@ -1339,7 +1345,8 @@ namespace join
                 return -1;
             }
 
-            return setDouble (negative ? -std::numeric_limits<double>::quiet_NaN () : std::numeric_limits<double>::quiet_NaN ());
+            return setDouble (negative ? -std::numeric_limits<double>::quiet_NaN ()
+                                       : std::numeric_limits<double>::quiet_NaN ());
         }
 
         /**
@@ -1351,7 +1358,8 @@ namespace join
          * @param middle middle 64 bits of the 192-bit result.
          * @param low low 64 bits of the 192-bit result.
          */
-        inline void umul192 (uint64_t hi, uint64_t lo, uint64_t significand, uint64_t& high, uint64_t& middle, uint64_t& low) noexcept
+        inline void umul192 (uint64_t hi, uint64_t lo, uint64_t significand, uint64_t& high, uint64_t& middle,
+                             uint64_t& low) noexcept
         {
 #if defined(__SIZEOF_INT128__)
             __uint128_t h = static_cast<__uint128_t> (hi) * significand;
@@ -1397,8 +1405,8 @@ namespace join
          */
         inline bool strtodFast (uint64_t significand, int64_t exponent, double& value)
         {
-            constexpr double pow10[] = { 1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
-                                         1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22 };
+            constexpr double pow10[] = {1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
+                                        1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
 
             value = static_cast<double> (significand);
 
@@ -1467,7 +1475,8 @@ namespace join
             uint64_t bits = (static_cast<uint64_t> (exp) << 52) | mant;
             uint64_t frac = high & 0x7FF;
 
-            bool roundUp = ((frac > 0x400) | ((frac == 0x400) && ((middle != 0) || (mant & 1))) | ((frac == 0x3FF) && ((middle != 0))));
+            bool roundUp = ((frac > 0x400) | ((frac == 0x400) && ((middle != 0) || (mant & 1))) |
+                            ((frac == 0x3FF) && ((middle != 0))));
 
             bits += roundUp;
             std::memcpy (&value, &bits, sizeof (double));
@@ -2082,7 +2091,8 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode, typename ViewType>
-        inline typename std::enable_if<!(ReadMode & JsonReadMode::ParseComments), int>::type skipWhitespaces (ViewType& document)
+        inline typename std::enable_if<!(ReadMode & JsonReadMode::ParseComments), int>::type skipWhitespaces (
+            ViewType& document)
         {
             return document.skipWhitespaces ();
         }
@@ -2093,7 +2103,8 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode, typename ViewType>
-        inline typename std::enable_if<(ReadMode & JsonReadMode::ParseComments), int>::type skipWhitespaces (ViewType& document)
+        inline typename std::enable_if<(ReadMode & JsonReadMode::ParseComments), int>::type skipWhitespaces (
+            ViewType& document)
         {
             return document.skipWhitespacesAndComments ();
         }

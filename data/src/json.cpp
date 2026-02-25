@@ -43,7 +43,7 @@ const char* JsonCategory::name () const noexcept
 // =========================================================================
 std::string JsonCategory::message (int code) const
 {
-    switch (static_cast <JsonErrc> (code))
+    switch (static_cast<JsonErrc> (code))
     {
         case JsonErrc::InvalidComment:
             return "comment is invalid";
@@ -86,7 +86,7 @@ const std::error_category& join::jsonCategory () noexcept
 // =========================================================================
 std::error_code join::make_error_code (JsonErrc code) noexcept
 {
-    return std::error_code (static_cast <int> (code), jsonCategory ());
+    return std::error_code (static_cast<int> (code), jsonCategory ());
 }
 
 // =========================================================================
@@ -95,5 +95,5 @@ std::error_code join::make_error_code (JsonErrc code) noexcept
 // =========================================================================
 std::error_condition join::make_error_condition (JsonErrc code) noexcept
 {
-    return std::error_condition (static_cast <int> (code), jsonCategory ());
+    return std::error_condition (static_cast<int> (code), jsonCategory ());
 }

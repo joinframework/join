@@ -674,7 +674,7 @@ namespace join
 
             if (parent->index () == Value::ObjectValue)
             {
-                _stack.push (&parent->insert ({ std::move (_curkey), std::move (array) }));
+                _stack.push (&parent->insert ({std::move (_curkey), std::move (array)}));
             }
             else
             {
@@ -725,7 +725,7 @@ namespace join
 
             if (parent->index () == Value::ObjectValue)
             {
-                _stack.push (&parent->insert ({ std::move (_curkey), std::move (object) }));
+                _stack.push (&parent->insert ({std::move (_curkey), std::move (object)}));
             }
             else
             {
@@ -777,7 +777,7 @@ namespace join
 
             if (parent->index () == Value::ObjectValue)
             {
-                parent->insert ({ std::move (_curkey), std::move (value) });
+                parent->insert ({std::move (_curkey), std::move (value)});
             }
             else
             {
