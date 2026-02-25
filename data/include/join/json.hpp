@@ -39,66 +39,68 @@ namespace join
 {
     namespace details
     {
-        constexpr char digitPairs[201] = {
-            "00010203040506070809"
-            "10111213141516171819"
-            "20212223242526272829"
-            "30313233343536373839"
-            "40414243444546474849"
-            "50515253545556575859"
-            "60616263646566676869"
-            "70717273747576777879"
-            "80818283848586878889"
-            "90919293949596979899"
-        };
+        constexpr char digitPairs[201] = { "00010203040506070809"
+                                           "10111213141516171819"
+                                           "20212223242526272829"
+                                           "30313233343536373839"
+                                           "40414243444546474849"
+                                           "50515253545556575859"
+                                           "60616263646566676869"
+                                           "70717273747576777879"
+                                           "80818283848586878889"
+                                           "90919293949596979899" };
 
         struct UnescapedTable
         {
             uint8_t data[256];
 
-            constexpr UnescapedTable () : data {}
+            constexpr UnescapedTable ()
+            : data{}
             {
-                for (int i = 0; i < 32; ++i)  { data[i] = 'u'; }
+                for (int i = 0; i < 32; ++i)
+                {
+                    data[i] = 'u';
+                }
                 data['\b'] = 'b';
                 data['\t'] = 't';
                 data['\n'] = 'n';
                 data['\f'] = 'f';
                 data['\r'] = 'r';
-                data['"']  = '"';
+                data['"'] = '"';
                 data['\\'] = '\\';
             }
         };
 
-        constexpr UnescapedTable unescapedLookup {};
+        constexpr UnescapedTable unescapedLookup{};
     }
 
     struct LocaleDelete
     {
         constexpr LocaleDelete () noexcept = default;
 
-        void operator () (locale_t loc) noexcept
+        void operator() (locale_t loc) noexcept
         {
             freelocale (loc);
         }
     };
 
-    using LocalePtr = std::unique_ptr <std::remove_pointer_t <locale_t>, LocaleDelete>;
+    using LocalePtr = std::unique_ptr<std::remove_pointer_t<locale_t>, LocaleDelete>;
 
     /**
      * @brief JSON error codes.
      */
     enum class JsonErrc
     {
-        InvalidComment = 1,     /**< comment is invalid. */
-        InvalidEscaping,        /**< character escaping is invalid. */
-        InvalidEncoding,        /**< character encoding is invalid. */
-        IllegalCharacter,       /**< illegal character. */
-        MissingCurlyBracket,    /**< missing curly bracket. */
-        MissingSquareBracket,   /**< missing square bracket. */
-        MissingQuote,           /**< missing quote. */
-        MissingColon,           /**< missing colon. */
-        MissingComma,           /**< missing comma. */
-        EndOfFile,              /**< end of file. */
+        InvalidComment = 1,   /**< comment is invalid. */
+        InvalidEscaping,      /**< character escaping is invalid. */
+        InvalidEncoding,      /**< character encoding is invalid. */
+        IllegalCharacter,     /**< illegal character. */
+        MissingCurlyBracket,  /**< missing curly bracket. */
+        MissingSquareBracket, /**< missing square bracket. */
+        MissingQuote,         /**< missing quote. */
+        MissingColon,         /**< missing colon. */
+        MissingComma,         /**< missing comma. */
+        EndOfFile,            /**< end of file. */
     };
 
     /**
@@ -389,6 +391,11 @@ namespace join
          */
         virtual int setKey (const Value& key) override
         {
+            if (JOIN_UNLIKELY (!key.isString ()))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidKey);
+                return -1;
+            }
             comma ();
             endLine ();
             indent ();
@@ -429,21 +436,21 @@ namespace join
          */
         virtual void writeInt (int32_t value)
         {
-            if (value == std::numeric_limits <int32_t>::min ())
+            if (value == std::numeric_limits<int32_t>::min ())
             {
                 append ('-');
-                writeUint64 (static_cast <uint64_t> (std::numeric_limits <int32_t>::max ()) + 1);
+                writeUint64 (static_cast<uint64_t> (std::numeric_limits<int32_t>::max ()) + 1);
                 return;
             }
 
             if (value < 0)
             {
                 append ('-');
-                writeUint64 (static_cast <uint64_t> (-value));
+                writeUint64 (static_cast<uint64_t> (-value));
                 return;
             }
 
-            writeUint64 (static_cast <uint64_t> (value));
+            writeUint64 (static_cast<uint64_t> (value));
         }
 
         /**
@@ -452,7 +459,7 @@ namespace join
          */
         virtual void writeUint (uint32_t value)
         {
-            writeUint64 (static_cast <uint64_t> (value));
+            writeUint64 (static_cast<uint64_t> (value));
         }
 
         /**
@@ -461,21 +468,21 @@ namespace join
          */
         virtual void writeInt64 (int64_t value)
         {
-            if (value == std::numeric_limits <int64_t>::min ())
+            if (value == std::numeric_limits<int64_t>::min ())
             {
                 append ('-');
-                writeUint64 (static_cast <uint64_t> (std::numeric_limits <int64_t>::max ()) + 1);
+                writeUint64 (static_cast<uint64_t> (std::numeric_limits<int64_t>::max ()) + 1);
                 return;
             }
 
             if (value < 0)
             {
                 append ('-');
-                writeUint64 (static_cast <uint64_t> (-value));
+                writeUint64 (static_cast<uint64_t> (-value));
                 return;
             }
 
-            writeUint64 (static_cast <uint64_t> (value));
+            writeUint64 (static_cast<uint64_t> (value));
         }
 
         /**
@@ -495,7 +502,7 @@ namespace join
 
             while (value >= 100)
             {
-                uint64_t r = value % 100; 
+                uint64_t r = value % 100;
                 value /= 100;
                 ptr -= 2;
                 std::memcpy (ptr, &details::digitPairs[r * 2], 2);
@@ -508,7 +515,7 @@ namespace join
             }
             else
             {
-                *--ptr = '0' + static_cast <char> (value);
+                *--ptr = '0' + static_cast<char> (value);
             }
 
             size_t length = (buffer + 20) - ptr;
@@ -535,7 +542,7 @@ namespace join
          */
         virtual int utf8Codepoint (std::string::const_iterator& cur, std::string::const_iterator& end, uint32_t& codepoint)
         {
-            uint8_t u0 = static_cast <uint8_t> (*cur);
+            uint8_t u0 = static_cast<uint8_t> (*cur);
             if (u0 < 0x80)
             {
                 codepoint = u0;
@@ -547,7 +554,7 @@ namespace join
                 return -1;
             }
 
-            uint8_t u1 = static_cast <uint8_t> (*cur);
+            uint8_t u1 = static_cast<uint8_t> (*cur);
             if (u0 < 0xE0)
             {
                 codepoint = ((u0 & 0x1F) << 6) | (u1 & 0x3F);
@@ -563,7 +570,7 @@ namespace join
                 return -1;
             }
 
-            uint8_t u2 = static_cast <uint8_t> (*cur);
+            uint8_t u2 = static_cast<uint8_t> (*cur);
             if (u0 < 0xF0)
             {
                 codepoint = ((u0 & 0x0F) << 12) | ((u1 & 0x3F) << 6) | (u2 & 0x3F);
@@ -583,7 +590,7 @@ namespace join
                 return -1;
             }
 
-            uint8_t u3 = static_cast <uint8_t> (*cur);
+            uint8_t u3 = static_cast<uint8_t> (*cur);
             if (u0 < 0xF8)
             {
                 codepoint = ((u0 & 0x07) << 18) | ((u1 & 0x3F) << 12) | ((u2 & 0x3F) << 6) | (u3 & 0x3F);
@@ -602,7 +609,7 @@ namespace join
          * @param value string value to escape.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int writeEscaped(const std::string& value)
+        virtual int writeEscaped (const std::string& value)
         {
             auto cur = value.cbegin ();
             auto end = value.cend ();
@@ -611,7 +618,7 @@ namespace join
             {
                 auto beg = cur;
 
-                while (cur != end && details::unescapedLookup.data[static_cast <uint8_t> (*cur)] == 0)
+                while (cur != end && details::unescapedLookup.data[static_cast<uint8_t> (*cur)] == 0)
                 {
                     ++cur;
                 }
@@ -626,7 +633,7 @@ namespace join
                     break;
                 }
 
-                uint8_t ch = static_cast <uint8_t> (*cur);
+                uint8_t ch = static_cast<uint8_t> (*cur);
                 uint8_t esc = details::unescapedLookup.data[ch];
                 if (esc == 'u')
                 {
@@ -658,7 +665,7 @@ namespace join
                 }
                 else
                 {
-                    char escapeSeq[2] = {'\\', static_cast <char> (esc)};
+                    char escapeSeq[2] = { '\\', static_cast<char> (esc) };
                     append2 (escapeSeq);
                 }
 
@@ -726,7 +733,7 @@ namespace join
         }
 
         /// array stack.
-        std::stack <bool> _stack;
+        std::stack<bool> _stack;
 
         /// indentation.
         size_t _indentation;
@@ -794,17 +801,14 @@ namespace join
             array ();
             if (std::isfinite (value))
             {
-                if ((std::trunc (value) == value) &&
-                    (value >= 0) &&
-                    (value < static_cast <double> (std::numeric_limits <uint64_t>::max ())))
+                if ((std::trunc (value) == value) && (value >= 0) && (value < static_cast<double> (std::numeric_limits<uint64_t>::max ())))
                 {
-                    writeUint64 (static_cast <uint64_t> (value));
+                    writeUint64 (static_cast<uint64_t> (value));
                 }
-                else if ((std::trunc (value) == value) &&
-                         (value >= static_cast <double> (std::numeric_limits <int64_t>::min ())) &&
-                         (value <  static_cast <double> (std::numeric_limits <int64_t>::max ())))
+                else if ((std::trunc (value) == value) && (value >= static_cast<double> (std::numeric_limits<int64_t>::min ())) &&
+                         (value < static_cast<double> (std::numeric_limits<int64_t>::max ())))
                 {
-                    writeInt64 (static_cast <int64_t> (value));
+                    writeInt64 (static_cast<int64_t> (value));
                 }
                 else
                 {
@@ -828,14 +832,20 @@ namespace join
         virtual int setObject (const Object& object) override
         {
             startObject (object.size ());
-            std::vector <const Member *> members;
-            std::transform (object.begin (), object.end (), std::back_inserter (members), [] (const Member &member) {return &member;});
-            std::sort (members.begin (), members.end (), [] (const Member *a, const Member *b) {
-                std::wstring_convert <std::codecvt_utf8_utf16 <char16_t>, char16_t> cvt_utf8_utf16;
-                std::u16string wa = cvt_utf8_utf16.from_bytes (a->first.getString ().data ());
-                std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.getString ().data ());
-                return wa < wb;
-            });
+            std::vector<const Member*> members;
+            std::transform (object.begin (), object.end (), std::back_inserter (members),
+                            [] (const Member& member)
+                            {
+                                return &member;
+                            });
+            std::sort (members.begin (), members.end (),
+                       [] (const Member* a, const Member* b)
+                       {
+                           std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cvt_utf8_utf16;
+                           std::u16string wa = cvt_utf8_utf16.from_bytes (a->first.getString ().data ());
+                           std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.getString ().data ());
+                           return wa < wb;
+                       });
             for (auto const& member : members)
             {
                 setKey (member->first);
@@ -869,10 +879,10 @@ namespace join
      */
     enum JsonReadMode
     {
-        None                = 0,       /**< no read mode set. */
-        ParseComments       = 1L << 0, /**< parse comments. */
-        ValidateEncoding    = 1L << 1, /**< validate encoding. */
-        StopParsingOnDone   = 1L << 2, /**< stop parsing on done. */
+        None = 0,                    /**< no read mode set. */
+        ParseComments = 1L << 0,     /**< parse comments. */
+        ValidateEncoding = 1L << 1,  /**< validate encoding. */
+        StopParsingOnDone = 1L << 2, /**< stop parsing on done. */
     };
 
     /**
@@ -882,7 +892,9 @@ namespace join
      * @return bitset result of binary AND on JsonReadMode.
      */
     constexpr JsonReadMode operator& (JsonReadMode a, JsonReadMode b) noexcept
-    { return JsonReadMode (static_cast <int> (a) & static_cast <int> (b)); }
+    {
+        return JsonReadMode (static_cast<int> (a) & static_cast<int> (b));
+    }
 
     /**
      * @brief perform binary OR on JsonReadMode.
@@ -891,7 +903,9 @@ namespace join
      * @return bitset result of binary OR on JsonReadMode.
      */
     constexpr JsonReadMode operator| (JsonReadMode a, JsonReadMode b) noexcept
-    { return JsonReadMode (static_cast <int> (a) | static_cast <int> (b)); }
+    {
+        return JsonReadMode (static_cast<int> (a) | static_cast<int> (b));
+    }
 
     /**
      * @brief perform binary AND on JsonReadMode.
@@ -900,7 +914,9 @@ namespace join
      * @return bitset result of binary AND on JsonReadMode.
      */
     constexpr const JsonReadMode& operator&= (JsonReadMode& a, JsonReadMode b) noexcept
-    { return a = a & b; }
+    {
+        return a = a & b;
+    }
 
     /**
      * @brief perform binary OR on JsonReadMode.
@@ -909,7 +925,9 @@ namespace join
      * @return bitset result of binary OR.
      */
     constexpr const JsonReadMode& operator|= (JsonReadMode& a, JsonReadMode b) noexcept
-    { return a = a | b; }
+    {
+        return a = a | b;
+    }
 
     /**
      * @brief JSON reader class.
@@ -967,7 +985,7 @@ namespace join
         int deserialize (const char* document, size_t length)
         {
             StringView in (document, length);
-            return read <ReadMode> (in);
+            return read<ReadMode> (in);
         }
 
         /**
@@ -978,7 +996,7 @@ namespace join
          */
         int deserialize (const char* document, size_t length) override
         {
-            return deserialize <> (document, length);
+            return deserialize<> (document, length);
         }
 
         /**
@@ -991,7 +1009,7 @@ namespace join
         int deserialize (const char* first, const char* last)
         {
             StringView in (first, last);
-            return read <ReadMode> (in);
+            return read<ReadMode> (in);
         }
 
         /**
@@ -1002,7 +1020,7 @@ namespace join
          */
         int deserialize (const char* first, const char* last) override
         {
-            return deserialize <> (first, last);
+            return deserialize<> (first, last);
         }
 
         /**
@@ -1014,7 +1032,7 @@ namespace join
         int deserialize (const std::string& document)
         {
             StringView in (document.c_str (), document.size ());
-            return read <ReadMode> (in);
+            return read<ReadMode> (in);
         }
 
         /**
@@ -1024,7 +1042,7 @@ namespace join
          */
         int deserialize (const std::string& document) override
         {
-            return deserialize <> (document);
+            return deserialize<> (document);
         }
 
         /**
@@ -1036,7 +1054,7 @@ namespace join
         int deserialize (std::stringstream& document)
         {
             StringStreamView in (document);
-            return read <ReadMode> (in);
+            return read<ReadMode> (in);
         }
 
         /**
@@ -1046,7 +1064,7 @@ namespace join
          */
         int deserialize (std::stringstream& document) override
         {
-            return deserialize <> (document);
+            return deserialize<> (document);
         }
 
         /**
@@ -1058,7 +1076,7 @@ namespace join
         int deserialize (std::istringstream& document)
         {
             StringStreamView in (document);
-            return read <ReadMode> (in);
+            return read<ReadMode> (in);
         }
 
         /**
@@ -1068,7 +1086,7 @@ namespace join
          */
         int deserialize (std::istringstream& document) override
         {
-            return deserialize <> (document);
+            return deserialize<> (document);
         }
 
         /**
@@ -1080,7 +1098,7 @@ namespace join
         int deserialize (std::fstream& document)
         {
             FileStreamView in (document);
-            return read <ReadMode> (in);
+            return read<ReadMode> (in);
         }
 
         /**
@@ -1090,7 +1108,7 @@ namespace join
          */
         int deserialize (std::fstream& document) override
         {
-            return deserialize <> (document);
+            return deserialize<> (document);
         }
 
         /**
@@ -1102,7 +1120,7 @@ namespace join
         int deserialize (std::ifstream& document)
         {
             FileStreamView in (document);
-            return read <ReadMode> (in);
+            return read<ReadMode> (in);
         }
 
         /**
@@ -1112,7 +1130,7 @@ namespace join
          */
         int deserialize (std::ifstream& document) override
         {
-            return deserialize <> (document);
+            return deserialize<> (document);
         }
 
         /**
@@ -1124,7 +1142,7 @@ namespace join
         int deserialize (std::iostream& document)
         {
             StreamView in (document);
-            return read <ReadMode> (in);
+            return read<ReadMode> (in);
         }
 
         /**
@@ -1134,7 +1152,7 @@ namespace join
          */
         int deserialize (std::iostream& document) override
         {
-            return deserialize <> (document);
+            return deserialize<> (document);
         }
 
         /**
@@ -1146,7 +1164,7 @@ namespace join
         int deserialize (std::istream& document)
         {
             StreamView in (document);
-            return read <ReadMode> (in);
+            return read<ReadMode> (in);
         }
 
         /**
@@ -1156,7 +1174,7 @@ namespace join
          */
         int deserialize (std::istream& document) override
         {
-            return deserialize <> (document);
+            return deserialize<> (document);
         }
 
     protected:
@@ -1168,12 +1186,12 @@ namespace join
         template <JsonReadMode ReadMode, typename ViewType>
         int read (ViewType& document)
         {
-            if (skipWhitespaces <ReadMode> (document) != 0)
+            if (skipWhitespaces<ReadMode> (document) != 0)
             {
                 return -1;
             }
 
-            if (readValue <ReadMode> (document) != 0)
+            if (readValue<ReadMode> (document) != 0)
             {
                 return -1;
             }
@@ -1183,12 +1201,12 @@ namespace join
                 return 0;
             }
 
-            if (skipWhitespaces <ReadMode> (document) != 0)
+            if (skipWhitespaces<ReadMode> (document) != 0)
             {
                 return -1;
             }
 
-            if (document.peek () != std::char_traits <char>::eof ())
+            if (document.peek () != std::char_traits<char>::eof ())
             {
                 join::lastError = make_error_code (SaxErrc::ExtraData);
                 return -1;
@@ -1210,10 +1228,10 @@ namespace join
             {
                 case '[':
                     document.get ();
-                    return readArray <ReadMode> (document);
+                    return readArray<ReadMode> (document);
                 case '{':
                     document.get ();
-                    return readObject <ReadMode> (document);
+                    return readObject<ReadMode> (document);
                 case '"':
                     document.get ();
                     return readString (document);
@@ -1273,7 +1291,8 @@ namespace join
         template <typename ViewType>
         int readFalse (ViewType& document)
         {
-            if (JOIN_UNLIKELY ((document.get () != 'a') || (document.get () != 'l') || (document.get () != 's') || (document.get () != 'e')))
+            if (JOIN_UNLIKELY ((document.get () != 'a') || (document.get () != 'l') || (document.get () != 's') ||
+                               (document.get () != 'e')))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -1296,13 +1315,14 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (document.getIfNoCase ('i') && !(document.getIfNoCase ('n') && document.getIfNoCase ('i') && document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
+            if (JOIN_UNLIKELY (document.getIfNoCase ('i') && !(document.getIfNoCase ('n') && document.getIfNoCase ('i') &&
+                                                               document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
             }
 
-            return setDouble (negative ? -std::numeric_limits <double>::infinity () : std::numeric_limits <double>::infinity ());
+            return setDouble (negative ? -std::numeric_limits<double>::infinity () : std::numeric_limits<double>::infinity ());
         }
 
         /**
@@ -1319,7 +1339,7 @@ namespace join
                 return -1;
             }
 
-            return setDouble (negative ? -std::numeric_limits <double>::quiet_NaN () : std::numeric_limits <double>::quiet_NaN ());
+            return setDouble (negative ? -std::numeric_limits<double>::quiet_NaN () : std::numeric_limits<double>::quiet_NaN ());
         }
 
         /**
@@ -1333,18 +1353,18 @@ namespace join
          */
         inline void umul192 (uint64_t hi, uint64_t lo, uint64_t significand, uint64_t& high, uint64_t& middle, uint64_t& low) noexcept
         {
-        #if defined(__SIZEOF_INT128__)
-            __uint128_t h = static_cast <__uint128_t> (hi) * significand;
-            __uint128_t l = static_cast <__uint128_t> (lo) * significand;
+#if defined(__SIZEOF_INT128__)
+            __uint128_t h = static_cast<__uint128_t> (hi) * significand;
+            __uint128_t l = static_cast<__uint128_t> (lo) * significand;
             __uint128_t s = h + (l >> 64);
 
-            high = static_cast <uint64_t> (s >> 64);
-            middle = static_cast <uint64_t> (s);
-            low = static_cast <uint64_t> (l);
-        #else
+            high = static_cast<uint64_t> (s >> 64);
+            middle = static_cast<uint64_t> (s);
+            low = static_cast<uint64_t> (l);
+#else
             uint64_t hi_hi, hi_lo, lo_hi, lo_lo;
 
-            uint64_t m_lo = static_cast <uint32_t> (significand);
+            uint64_t m_lo = static_cast<uint32_t> (significand);
             uint64_t m_hi = significand >> 32;
             uint64_t p0 = (hi & 0xFFFFFFFF) * m_lo;
             uint64_t p1 = (hi >> 32) * m_lo;
@@ -1365,7 +1385,7 @@ namespace join
             low = lo_lo;
             middle = hi_lo + lo_hi;
             high = hi_hi + (middle < hi_lo ? 1 : 0);
-        #endif
+#endif
         }
 
         /**
@@ -1375,15 +1395,12 @@ namespace join
          * @param value converted value.
          * @return true on success, false otherwise.
          */
-        inline bool strtodFast (uint64_t significand, int64_t exponent, double &value)
+        inline bool strtodFast (uint64_t significand, int64_t exponent, double& value)
         {
-            constexpr double pow10[] = {
-                1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10,
-                1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21,
-                1e22
-            };
+            constexpr double pow10[] = { 1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
+                                         1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22 };
 
-            value = static_cast <double> (significand);
+            value = static_cast<double> (significand);
 
             if (JOIN_UNLIKELY ((exponent > 22) && (exponent < (22 + 16))))
             {
@@ -1447,12 +1464,10 @@ namespace join
             middle |= (low != 0);
 
             uint64_t mant = (high >> 11) & 0xFFFFFFFFFFFFF;
-            uint64_t bits = (static_cast <uint64_t> (exp) << 52) | mant;
+            uint64_t bits = (static_cast<uint64_t> (exp) << 52) | mant;
             uint64_t frac = high & 0x7FF;
 
-            bool roundUp = ((frac >  0x400) |
-                           ((frac == 0x400) && ((middle != 0) || (mant & 1))) |
-                           ((frac == 0x3FF) && ((middle != 0))));
+            bool roundUp = ((frac > 0x400) | ((frac == 0x400) && ((middle != 0) || (mant & 1))) | ((frac == 0x3FF) && ((middle != 0))));
 
             bits += roundUp;
             std::memcpy (&value, &bits, sizeof (double));
@@ -1482,14 +1497,14 @@ namespace join
         template <typename ViewType>
         int readNumber (ViewType& document)
         {
-            BufferingView <ViewType> view (document);
+            BufferingView<ViewType> view (document);
 
             bool negative = view.getIf ('-');
 
-            uint64_t max64 = std::numeric_limits <uint64_t>::max ();
+            uint64_t max64 = std::numeric_limits<uint64_t>::max ();
             if (negative)
             {
-                max64 = static_cast <uint64_t> (std::numeric_limits <int64_t>::max ()) + 1;
+                max64 = static_cast<uint64_t> (std::numeric_limits<int64_t>::max ()) + 1;
             }
 
             uint64_t digits = 0;
@@ -1581,7 +1596,7 @@ namespace join
                     {
                         int digit = view.get () - '0';
 
-                        if (JOIN_LIKELY (exponent <= ((std::numeric_limits <int>::max () - digit) / 10)))
+                        if (JOIN_LIKELY (exponent <= ((std::numeric_limits<int>::max () - digit) / 10)))
                         {
                             exponent = (exponent * 10) + digit;
                         }
@@ -1601,7 +1616,7 @@ namespace join
 
             if (!isDouble)
             {
-                return negative ? setInt64 (-static_cast <int64_t> (u)) : setUint64 (u);
+                return negative ? setInt64 (-static_cast<int64_t> (u)) : setUint64 (u);
             }
 
             if (JOIN_LIKELY (digits <= 19))
@@ -1672,30 +1687,30 @@ namespace join
         {
             if (codepoint < 0x80)
             {
-                output.push_back (static_cast <char> (codepoint));
+                output.push_back (static_cast<char> (codepoint));
             }
             else if (codepoint < 0x800)
             {
                 char buf[2];
-                buf[0] = static_cast <char> (0xC0 | (codepoint >> 6));
-                buf[1] = static_cast <char> (0x80 | (codepoint & 0x3F));
+                buf[0] = static_cast<char> (0xC0 | (codepoint >> 6));
+                buf[1] = static_cast<char> (0x80 | (codepoint & 0x3F));
                 output.append (buf, 2);
             }
             else if (codepoint < 0x10000)
             {
                 char buf[3];
-                buf[0] = static_cast <char> (0xE0 | (codepoint >> 12));
-                buf[1] = static_cast <char> (0x80 | ((codepoint >> 6) & 0x3F));
-                buf[2] = static_cast <char> (0x80 | (codepoint & 0x3F));
+                buf[0] = static_cast<char> (0xE0 | (codepoint >> 12));
+                buf[1] = static_cast<char> (0x80 | ((codepoint >> 6) & 0x3F));
+                buf[2] = static_cast<char> (0x80 | (codepoint & 0x3F));
                 output.append (buf, 3);
             }
             else
             {
                 char buf[4];
-                buf[0] = static_cast <char> (0xF0 | (codepoint >> 18));
-                buf[1] = static_cast <char> (0x80 | ((codepoint >> 12) & 0x3F));
-                buf[2] = static_cast <char> (0x80 | ((codepoint >> 6) & 0x3F));
-                buf[3] = static_cast <char> (0x80 | (codepoint & 0x3F));
+                buf[0] = static_cast<char> (0xF0 | (codepoint >> 18));
+                buf[1] = static_cast<char> (0x80 | ((codepoint >> 12) & 0x3F));
+                buf[2] = static_cast<char> (0x80 | ((codepoint >> 6) & 0x3F));
+                buf[3] = static_cast<char> (0x80 | (codepoint & 0x3F));
                 output.append (buf, 4);
             }
         }
@@ -1770,15 +1785,31 @@ namespace join
             int ch = document.get ();
             switch (ch)
             {
-                case '"':  output.push_back ('"');  break;
-                case '\\': output.push_back ('\\'); break;
-                case '/':  output.push_back ('/');  break;
-                case 'b':  output.push_back ('\b'); break;
-                case 'f':  output.push_back ('\f'); break;
-                case 'n':  output.push_back ('\n'); break;
-                case 'r':  output.push_back ('\r'); break;
-                case 't':  output.push_back ('\t'); break;
-                case 'u': 
+                case '"':
+                    output.push_back ('"');
+                    break;
+                case '\\':
+                    output.push_back ('\\');
+                    break;
+                case '/':
+                    output.push_back ('/');
+                    break;
+                case 'b':
+                    output.push_back ('\b');
+                    break;
+                case 'f':
+                    output.push_back ('\f');
+                    break;
+                case 'n':
+                    output.push_back ('\n');
+                    break;
+                case 'r':
+                    output.push_back ('\r');
+                    break;
+                case 't':
+                    output.push_back ('\t');
+                    break;
+                case 'u':
                     return readUnicode (document, output);
                 default:
                     join::lastError = make_error_code (JsonErrc::InvalidEscaping);
@@ -1847,7 +1878,7 @@ namespace join
         template <typename ViewType>
         int readString (ViewType& document, bool isKey = false)
         {
-            thread_local Value output (in_place_index_t <Value::String> {});
+            thread_local Value output (in_place_index_t<Value::String>{});
             output.clear ();
             output.reserve (64);
 
@@ -1904,7 +1935,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+            if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
             {
                 return -1;
             }
@@ -1916,16 +1947,16 @@ namespace join
 
             for (;;)
             {
-                if (JOIN_UNLIKELY (readValue <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (readValue<ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
                 int ch = document.get ();
 
-                if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast <unsigned char> (ch)]))
+                if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
                 {
-                    if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
                     {
                         return -1;
                     }
@@ -1934,7 +1965,7 @@ namespace join
 
                 if (JOIN_LIKELY (ch == ','))
                 {
-                    if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
                     {
                         return -1;
                     }
@@ -1966,7 +1997,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+            if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
             {
                 return -1;
             }
@@ -1991,7 +2022,7 @@ namespace join
 
                 if (document.peek () != ':')
                 {
-                    if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
                     {
                         return -1;
                     }
@@ -2003,21 +2034,21 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (readValue <ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (readValue<ReadMode> (document) == -1))
                 {
                     return -1;
                 }
 
                 int ch = document.get ();
 
-                if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast <unsigned char> (ch)]))
+                if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
                 {
-                    if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
                     {
                         return -1;
                     }
@@ -2026,7 +2057,7 @@ namespace join
 
                 if (JOIN_LIKELY (ch == ','))
                 {
-                    if (JOIN_UNLIKELY (skipWhitespaces <ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
                     {
                         return -1;
                     }
@@ -2051,8 +2082,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode, typename ViewType>
-        inline typename std::enable_if <!(ReadMode & JsonReadMode::ParseComments), int>::type
-        skipWhitespaces (ViewType& document)
+        inline typename std::enable_if<!(ReadMode & JsonReadMode::ParseComments), int>::type skipWhitespaces (ViewType& document)
         {
             return document.skipWhitespaces ();
         }
@@ -2063,8 +2093,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode, typename ViewType>
-        inline typename std::enable_if <(ReadMode & JsonReadMode::ParseComments), int>::type
-        skipWhitespaces (ViewType& document)
+        inline typename std::enable_if<(ReadMode & JsonReadMode::ParseComments), int>::type skipWhitespaces (ViewType& document)
         {
             return document.skipWhitespacesAndComments ();
         }
@@ -2076,7 +2105,7 @@ namespace join
          */
         constexpr bool isUpperAlpha (char c) noexcept
         {
-            return static_cast <unsigned char> (c - 'A') <= 5u;
+            return static_cast<unsigned char> (c - 'A') <= 5u;
         }
 
         /**
@@ -2086,7 +2115,7 @@ namespace join
          */
         constexpr bool isLowerAlpha (char c) noexcept
         {
-            return static_cast <unsigned char> (c - 'a') <= 5u;
+            return static_cast<unsigned char> (c - 'a') <= 5u;
         }
 
         /**
@@ -2096,7 +2125,7 @@ namespace join
          */
         constexpr bool isDigit (char c) noexcept
         {
-            return static_cast <unsigned char> (c - '0') <= 9u;
+            return static_cast<unsigned char> (c - '0') <= 9u;
         }
 
         /**
@@ -2114,7 +2143,10 @@ namespace join
 namespace std
 {
     /// JSON error code specialization.
-    template <> struct is_error_condition_enum <join::JsonErrc> : public true_type {};
+    template <>
+    struct is_error_condition_enum<join::JsonErrc> : public true_type
+    {
+    };
 }
 
 #endif

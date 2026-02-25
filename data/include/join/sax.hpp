@@ -53,10 +53,11 @@ namespace join
      */
     enum class SaxErrc
     {
-        StackOverflow = 1,      /**< Stack overflow. */
-        InvalidParent,          /**< Parent not an array nor an object. */
-        InvalidValue,           /**< Value is invalid. */
-        ExtraData               /**< Extra data detected. */
+        StackOverflow = 1, /**< Stack overflow. */
+        InvalidParent,     /**< Parent not an array nor an object. */
+        InvalidKey,        /**< Key is invalid. */
+        InvalidValue,      /**< Value is invalid. */
+        ExtraData          /**< Extra data detected. */
     };
 
     /**
@@ -288,7 +289,7 @@ namespace join
          */
         virtual int serialize (const Value& value)
         {
-            return  setValue (value);
+            return setValue (value);
         }
 
     protected:
@@ -302,31 +303,31 @@ namespace join
             switch (value.index ())
             {
                 case Value::Boolean:
-                    return setBool (value.get <Value::Boolean> ());
+                    return setBool (value.get<Value::Boolean> ());
 
                 case Value::Integer:
-                    return setInt (value.get <Value::Integer> ());
+                    return setInt (value.get<Value::Integer> ());
 
                 case Value::Unsigned:
-                    return setUint (value.get <Value::Unsigned> ());
+                    return setUint (value.get<Value::Unsigned> ());
 
                 case Value::Integer64:
-                    return setInt64 (value.get <Value::Integer64> ());
+                    return setInt64 (value.get<Value::Integer64> ());
 
                 case Value::Unsigned64:
-                    return setUint64 (value.get <Value::Unsigned64> ());
+                    return setUint64 (value.get<Value::Unsigned64> ());
 
                 case Value::Real:
-                    return setDouble (value.get <Value::Real> ());
+                    return setDouble (value.get<Value::Real> ());
 
                 case Value::String:
-                    return setString (value.get <Value::String> ());
+                    return setString (value.get<Value::String> ());
 
                 case Value::ArrayValue:
-                    return setArray (value.get <Value::ArrayValue> ());
+                    return setArray (value.get<Value::ArrayValue> ());
 
                 case Value::ObjectValue:
-                    return setObject (value.get <Value::ObjectValue> ());
+                    return setObject (value.get<Value::ObjectValue> ());
 
                 default:
                     return setNull ();
@@ -573,7 +574,7 @@ namespace join
          */
         virtual int setNull () override
         {
-            return setValue (Value (in_place_index_t <Value::Null> {}, nullptr));
+            return setValue (Value (in_place_index_t<Value::Null>{}, nullptr));
         }
 
         /**
@@ -583,7 +584,7 @@ namespace join
          */
         virtual int setBool (bool value) override
         {
-            return setValue (Value (in_place_index_t <Value::Boolean> {}, value));
+            return setValue (Value (in_place_index_t<Value::Boolean>{}, value));
         }
 
         /**
@@ -593,7 +594,7 @@ namespace join
          */
         virtual int setInt (int32_t value) override
         {
-            return setValue (Value (in_place_index_t <Value::Integer> {}, value));
+            return setValue (Value (in_place_index_t<Value::Integer>{}, value));
         }
 
         /**
@@ -603,7 +604,7 @@ namespace join
          */
         virtual int setUint (uint32_t value) override
         {
-            return setValue (Value (in_place_index_t <Value::Unsigned> {}, value));
+            return setValue (Value (in_place_index_t<Value::Unsigned>{}, value));
         }
 
         /**
@@ -613,7 +614,7 @@ namespace join
          */
         virtual int setInt64 (int64_t value) override
         {
-            return setValue (Value (in_place_index_t <Value::Integer64> {}, value));
+            return setValue (Value (in_place_index_t<Value::Integer64>{}, value));
         }
 
         /**
@@ -623,7 +624,7 @@ namespace join
          */
         virtual int setUint64 (uint64_t value) override
         {
-            return setValue (Value (in_place_index_t <Value::Unsigned64> {}, value));
+            return setValue (Value (in_place_index_t<Value::Unsigned64>{}, value));
         }
 
         /**
@@ -633,7 +634,7 @@ namespace join
          */
         virtual int setDouble (double value) override
         {
-            return setValue (Value (in_place_index_t <Value::Real> {}, value));
+            return setValue (Value (in_place_index_t<Value::Real>{}, value));
         }
 
         /**
@@ -643,7 +644,7 @@ namespace join
          */
         virtual int setString (const std::string& value) override
         {
-            return setValue (Value (in_place_index_t <Value::String> {}, value));
+            return setValue (Value (in_place_index_t<Value::String>{}, value));
         }
 
         /**
@@ -673,7 +674,7 @@ namespace join
 
             if (parent->index () == Value::ObjectValue)
             {
-                _stack.push (&parent->insert ({std::move (_curkey), std::move (array)}));
+                _stack.push (&parent->insert ({ std::move (_curkey), std::move (array) }));
             }
             else
             {
@@ -724,7 +725,7 @@ namespace join
 
             if (parent->index () == Value::ObjectValue)
             {
-                _stack.push (&parent->insert ({std::move (_curkey), std::move (object)}));
+                _stack.push (&parent->insert ({ std::move (_curkey), std::move (object) }));
             }
             else
             {
@@ -776,7 +777,7 @@ namespace join
 
             if (parent->index () == Value::ObjectValue)
             {
-                parent->insert ({std::move (_curkey), std::move (value)});
+                parent->insert ({ std::move (_curkey), std::move (value) });
             }
             else
             {
@@ -790,7 +791,7 @@ namespace join
         static constexpr size_t _maxdepth = 19;
 
         /// stack.
-        std::stack <Value*> _stack;
+        std::stack<Value*> _stack;
 
         /// current key.
         Value _curkey;
@@ -803,7 +804,10 @@ namespace join
 namespace std
 {
     /// SAX API generic error code specialization.
-    template <> struct is_error_condition_enum <join::SaxErrc> : public true_type {};
+    template <>
+    struct is_error_condition_enum<join::SaxErrc> : public true_type
+    {
+    };
 }
 
 #endif

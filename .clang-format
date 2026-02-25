@@ -3,12 +3,13 @@ Language: Cpp
 BasedOnStyle: LLVM
 
 # --- Core Layout ---
-ColumnLimit: 120
+ColumnLimit: 140
 IndentWidth: 4
 Standard: Latest
 
 # --- Includes Management ---
 SortIncludes: Never
+SortUsingDeclarations: Never
 
 # --- Force POSIX / Linux Line Endings ---
 DeriveLineEnding: false
@@ -25,6 +26,7 @@ FixNamespaceComments: false
 # --- Braces (Allman Style + Space) ---
 BreakBeforeBraces: Allman
 SpaceBeforeBraces: Always
+Cpp11BracedListStyle: false
 
 # --- Pointer Alignment ---
 PointerAlignment: Left
@@ -60,3 +62,6 @@ AlwaysBreakTemplateDeclarations: Yes
 # --- Preservation & Comments ---
 AlignTrailingComments: true
 ReflowComments: true
+
+# --- Switch/Case ---
+IndentCaseLabels: true
