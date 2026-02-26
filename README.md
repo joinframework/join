@@ -102,8 +102,10 @@ ctest --test-dir build --output-on-failure
 find_package(join REQUIRED)
 
 target_link_libraries(your_app PRIVATE 
-    join::core 
-    join::fabric 
+    join::core
+    join::crypto
+    join::data
+    join::fabric
     join::services
 )
 ```
