@@ -72,7 +72,7 @@ jobs:
       - name: Generate coverage report
         if: ${{ inputs.coverage }}
         run: |
-          lcov --directory build --capture --exclude "*/usr/include/*" --exclude '*/samples/*' --exclude '*/tests/*' --output-file lcov.info
+          lcov --directory build --capture --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
           genhtml lcov.info --prefix $GITHUB_WORKSPACE --output-directory coverage
 
       - name: Upload coverage data to GitHub
