@@ -43,10 +43,12 @@
 #include <cstddef>
 #include <cstring>
 
-#define JOIN_LIKELY(x)   __builtin_expect(!!(x), 1)
-#define JOIN_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#define JOIN_LIKELY(x) __builtin_expect (!!(x), 1)
+#define JOIN_UNLIKELY(x) __builtin_expect (!!(x), 0)
 
-#define OUT_ENUM(a) case a : return #a
+#define OUT_ENUM(a) \
+    case a:         \
+        return #a
 
 namespace join
 {
@@ -62,7 +64,7 @@ namespace join
         };
 
         template <typename Type>
-        struct _byteswap <Type, 1>
+        struct _byteswap<Type, 1>
         {
             inline Type operator() (Type val)
             {
@@ -71,7 +73,7 @@ namespace join
         };
 
         template <typename Type>
-        struct _byteswap <Type, 2>
+        struct _byteswap<Type, 2>
         {
             inline Type operator() (Type val)
             {
@@ -84,15 +86,13 @@ namespace join
         };
 
         template <typename Type>
-        struct _byteswap <Type, 4>
+        struct _byteswap<Type, 4>
         {
             inline Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
-                    return ((val & 0xff000000) >> 24) |
-                           ((val & 0x00ff0000) >> 8 ) |
-                           ((val & 0x0000ff00) << 8 ) |
+                    return ((val & 0xff000000) >> 24) | ((val & 0x00ff0000) >> 8) | ((val & 0x0000ff00) << 8) |
                            ((val & 0x000000ff) << 24);
                 }
                 return val;
@@ -100,49 +100,57 @@ namespace join
         };
 
         template <typename Type>
-        struct _byteswap <Type, 8>
+        struct _byteswap<Type, 8>
         {
             inline Type operator() (Type val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
-                    return ((val & 0xff00000000000000ull) >> 56) |
-                           ((val & 0x00ff000000000000ull) >> 40) |
-                           ((val & 0x0000ff0000000000ull) >> 24) |
-                           ((val & 0x000000ff00000000ull) >> 8 ) |
-                           ((val & 0x00000000ff000000ull) << 8 ) |
-                           ((val & 0x0000000000ff0000ull) << 24) |
-                           ((val & 0x000000000000ff00ull) << 40) |
-                           ((val & 0x00000000000000ffull) << 56);
+                    return ((val & 0xff00000000000000ull) >> 56) | ((val & 0x00ff000000000000ull) >> 40) |
+                           ((val & 0x0000ff0000000000ull) >> 24) | ((val & 0x000000ff00000000ull) >> 8) |
+                           ((val & 0x00000000ff000000ull) << 8) | ((val & 0x0000000000ff0000ull) << 24) |
+                           ((val & 0x000000000000ff00ull) << 40) | ((val & 0x00000000000000ffull) << 56);
                 }
                 return val;
             }
         };
 
         template <>
-        struct _byteswap <float, 4>
+        struct _byteswap<float, 4>
         {
             inline float operator() (float val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
-                    union { float f; uint32_t i; } tmp; tmp.f = val;
-                    tmp.i = _byteswap <uint32_t, sizeof (uint32_t)> ()(tmp.i);
+                    union
+                    {
+                        float f;
+                        uint32_t i;
+                    } tmp;
+
+                    tmp.f = val;
+                    tmp.i = _byteswap<uint32_t, sizeof (uint32_t)> () (tmp.i);
                     return tmp.f;
                 }
                 return val;
             }
         };
 
-        template<>
-        struct _byteswap <double, 8>
+        template <>
+        struct _byteswap<double, 8>
         {
             inline double operator() (double val)
             {
                 if (BYTE_ORDER == LITTLE_ENDIAN)
                 {
-                    union { double f; uint64_t i; } tmp; tmp.f = val;
-                    tmp.i = _byteswap <uint64_t, sizeof (uint64_t)> ()(tmp.i);
+                    union
+                    {
+                        double f;
+                        uint64_t i;
+                    } tmp;
+
+                    tmp.f = val;
+                    tmp.i = _byteswap<uint64_t, sizeof (uint64_t)> () (tmp.i);
                     return tmp.f;
                 }
                 return val;
@@ -154,13 +162,13 @@ namespace join
         {
             inline Type operator() (Type val)
             {
-                return _byteswap <Type, sizeof (Type)> ()(val);
+                return _byteswap<Type, sizeof (Type)> () (val);
             }
         };
 
         struct lessNoCase
         {
-            bool operator () (const std::string& a, const std::string& b) const noexcept
+            bool operator() (const std::string& a, const std::string& b) const noexcept
             {
                 return ::strcasecmp (a.c_str (), b.c_str ()) < 0;
             }
@@ -175,7 +183,7 @@ namespace join
     template <class Type>
     inline Type& swap (Type& val)
     {
-        val = details::_swap <Type> ()(val);
+        val = details::_swap<Type> () (val);
         return val;
     }
 
@@ -187,8 +195,11 @@ namespace join
      */
     inline bool compareNoCase (const std::string& a, const std::string& b)
     {
-        return ((a.size () == b.size ()) && 
-            std::equal (a.begin (), a.end (), b.begin (), [] (char c1, char c2) {return std::toupper (c1) == std::toupper (c2);}));
+        return ((a.size () == b.size ()) && std::equal (a.begin (), a.end (), b.begin (),
+                                                        [] (char c1, char c2)
+                                                        {
+                                                            return std::toupper (c1) == std::toupper (c2);
+                                                        }));
     }
 
     /**
@@ -228,7 +239,7 @@ namespace join
      * @param by string to put instead of the "toReplace" substring.
      * @return a reference to the string.
      */
-    inline std::string& replaceAll (std::string& str, const std::string &toReplace, const std::string &by)
+    inline std::string& replaceAll (std::string& str, const std::string& toReplace, const std::string& by)
     {
         size_t pos = 0;
 
@@ -247,13 +258,13 @@ namespace join
      * @param delim delimiter.
      * @return list of tokens.
      */
-    inline std::vector <std::string> split (const std::string& in, const std::string& delim)
+    inline std::vector<std::string> split (const std::string& in, const std::string& delim)
     {
-        std::vector <std::string> tokens;
+        std::vector<std::string> tokens;
         if (in.size ())
         {
             size_t beg = 0, end = in.find (delim);
-            size_t sz = delim.size();
+            size_t sz = delim.size ();
             while (end != std::string::npos)
             {
                 tokens.push_back (in.substr (beg, end - beg));
@@ -271,13 +282,13 @@ namespace join
      * @param delim delimiter.
      * @return list of tokens.
      */
-    inline std::vector <std::string> rsplit (const std::string& in, const std::string& delim)
+    inline std::vector<std::string> rsplit (const std::string& in, const std::string& delim)
     {
-        std::vector <std::string> tokens;
+        std::vector<std::string> tokens;
         if (in.size ())
         {
             size_t beg = in.rfind (delim), end = std::string::npos;
-            size_t sz = delim.size();
+            size_t sz = delim.size ();
             while (beg != std::string::npos)
             {
                 tokens.push_back (in.substr (beg + sz, end - beg - sz));
@@ -346,7 +357,7 @@ namespace join
      */
     inline void dump (const void* data, unsigned long size, std::ostream& out = std::cout)
     {
-        const uint8_t *buf = reinterpret_cast <const uint8_t *> (data);
+        const uint8_t* buf = reinterpret_cast<const uint8_t*> (data);
 
         for (int i = 0; i < int (size); i += 16)
         {
@@ -361,7 +372,7 @@ namespace join
                 if (i + j < int (size))
                 {
                     out << std::hex << std::uppercase << std::setw (2);
-                    out << std::setfill ('0') << static_cast <int> (buf[i + j]);
+                    out << std::setfill ('0') << static_cast<int> (buf[i + j]);
                 }
                 else
                     out << std::dec << "  ";
@@ -391,11 +402,10 @@ namespace join
      * @return random number.
      */
     template <typename Type>
-    std::enable_if_t <std::numeric_limits <Type>::is_integer, Type>
-    randomize ()
+    std::enable_if_t<std::numeric_limits<Type>::is_integer, Type> randomize ()
     {
         std::random_device rnd;
-        std::uniform_int_distribution <Type> dist {};
+        std::uniform_int_distribution<Type> dist{};
         return dist (rnd);
     }
 
@@ -409,9 +419,9 @@ namespace join
     std::chrono::milliseconds benchmark (Func&& func, Args&&... args)
     {
         auto beg = std::chrono::high_resolution_clock::now ();
-        func (std::forward <Args> (args)...);
+        func (std::forward<Args> (args)...);
         auto end = std::chrono::high_resolution_clock::now ();
-        return std::chrono::duration_cast <std::chrono::milliseconds> (end - beg);
+        return std::chrono::duration_cast<std::chrono::milliseconds> (end - beg);
     }
 
     /**
@@ -420,16 +430,16 @@ namespace join
      * @return timespec structure.
      */
     template <typename Clock, typename Duration>
-    struct timespec toTimespec (std::chrono::time_point <Clock, Duration> timePoint)
+    struct timespec toTimespec (std::chrono::time_point<Clock, Duration> timePoint)
     {
-        auto secs = std::chrono::time_point_cast <std::chrono::seconds> (timePoint);
-        auto ns   = std::chrono::time_point_cast <std::chrono::nanoseconds> (timePoint) -
-                    std::chrono::time_point_cast <std::chrono::nanoseconds> (secs);
+        auto secs = std::chrono::time_point_cast<std::chrono::seconds> (timePoint);
+        auto ns   = std::chrono::time_point_cast<std::chrono::nanoseconds> (timePoint) -
+                  std::chrono::time_point_cast<std::chrono::nanoseconds> (secs);
 
         auto scount = secs.time_since_epoch ().count ();
         auto ncount = ns.count ();
 
-        return { .tv_sec = scount, .tv_nsec = ncount };
+        return {.tv_sec = scount, .tv_nsec = ncount};
     }
 }
 

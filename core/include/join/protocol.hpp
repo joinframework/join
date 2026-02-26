@@ -34,26 +34,41 @@
 
 namespace join
 {
-    template <class Protocol> class BasicSocket;
-    template <class Protocol> class BasicDatagramSocket;
-    template <class Protocol> class BasicStreamSocket;
-    template <class Protocol> class BasicTlsSocket;
+    template <class Protocol>
+    class BasicSocket;
+    template <class Protocol>
+    class BasicDatagramSocket;
+    template <class Protocol>
+    class BasicStreamSocket;
+    template <class Protocol>
+    class BasicTlsSocket;
 
-    template <class Protocol> class BasicSocketStream;
-    template <class Protocol> class BasicTlsStream;
+    template <class Protocol>
+    class BasicSocketStream;
+    template <class Protocol>
+    class BasicTlsStream;
 
-    template <class Protocol> class BasicStreamAcceptor;
-    template <class Protocol> class BasicTlsAcceptor;
+    template <class Protocol>
+    class BasicStreamAcceptor;
+    template <class Protocol>
+    class BasicTlsAcceptor;
 
-    template <class Protocol> class BasicHttpClient;
-    template <class Protocol> class BasicHttpSecureClient;
+    template <class Protocol>
+    class BasicHttpClient;
+    template <class Protocol>
+    class BasicHttpSecureClient;
 
-    template <class Protocol> class BasicHttpWorker;
-    template <class Protocol> class BasicHttpServer;
-    template <class Protocol> class BasicHttpSecureServer;
+    template <class Protocol>
+    class BasicHttpWorker;
+    template <class Protocol>
+    class BasicHttpServer;
+    template <class Protocol>
+    class BasicHttpSecureServer;
 
-    template <class Protocol> class BasicSmtpClient;
-    template <class Protocol> class BasicSmtpSecureClient;
+    template <class Protocol>
+    class BasicSmtpClient;
+    template <class Protocol>
+    class BasicSmtpSecureClient;
 
     /**
      * @brief unix datagram protocol class.
@@ -61,8 +76,8 @@ namespace join
     class UnixDgram
     {
     public:
-        using Endpoint = BasicUnixEndpoint <UnixDgram>;
-        using Socket   = BasicDatagramSocket <UnixDgram>;
+        using Endpoint = BasicUnixEndpoint<UnixDgram>;
+        using Socket   = BasicDatagramSocket<UnixDgram>;
 
         /**
          * @brief construct the unix datagram protocol instance by default.
@@ -103,10 +118,10 @@ namespace join
     class UnixStream
     {
     public:
-        using Endpoint = BasicUnixEndpoint <UnixStream>;
-        using Socket   = BasicStreamSocket <UnixStream>;
-        using Stream   = BasicSocketStream <UnixStream>;
-        using Acceptor = BasicStreamAcceptor <UnixStream>;
+        using Endpoint = BasicUnixEndpoint<UnixStream>;
+        using Socket   = BasicStreamSocket<UnixStream>;
+        using Stream   = BasicSocketStream<UnixStream>;
+        using Acceptor = BasicStreamAcceptor<UnixStream>;
 
         /**
          * @brief construct the unix stream protocol instance by default.
@@ -147,8 +162,8 @@ namespace join
     class Netlink
     {
     public:
-        using Endpoint = BasicNetlinkEndpoint <Netlink>;
-        using Socket   = BasicDatagramSocket <Netlink>;
+        using Endpoint = BasicNetlinkEndpoint<Netlink>;
+        using Socket   = BasicDatagramSocket<Netlink>;
 
         /**
          * @brief construct the netlink protocol instance by default.
@@ -239,8 +254,8 @@ namespace join
     class Raw
     {
     public:
-        using Endpoint = BasicLinkLayerEndpoint <Raw>;
-        using Socket   = BasicSocket <Raw>;
+        using Endpoint = BasicLinkLayerEndpoint<Raw>;
+        using Socket   = BasicSocket<Raw>;
 
         /**
          * @brief default constructor.
@@ -285,8 +300,8 @@ namespace join
     class Udp
     {
     public:
-        using Endpoint = BasicInternetEndpoint <Udp>;
-        using Socket   = BasicDatagramSocket <Udp>;
+        using Endpoint = BasicInternetEndpoint<Udp>;
+        using Socket   = BasicDatagramSocket<Udp>;
 
         /**
          * @brief construct the udp protocol instance.
@@ -377,8 +392,8 @@ namespace join
     class Icmp
     {
     public:
-        using Endpoint = BasicInternetEndpoint <Icmp>;
-        using Socket   = BasicDatagramSocket <Icmp>;
+        using Endpoint = BasicInternetEndpoint<Icmp>;
+        using Socket   = BasicDatagramSocket<Icmp>;
 
         /**
          * @brief create the icmp protocol instance.
@@ -474,10 +489,10 @@ namespace join
     class Tcp
     {
     public:
-        using Endpoint = BasicInternetEndpoint <Tcp>;
-        using Socket   = BasicStreamSocket <Tcp>;
-        using Stream   = BasicSocketStream <Tcp>;
-        using Acceptor = BasicStreamAcceptor <Tcp>;
+        using Endpoint = BasicInternetEndpoint<Tcp>;
+        using Socket   = BasicStreamSocket<Tcp>;
+        using Stream   = BasicSocketStream<Tcp>;
+        using Acceptor = BasicStreamAcceptor<Tcp>;
 
         /**
          * @brief create the tcp protocol  instance.
@@ -568,10 +583,10 @@ namespace join
     class Tls
     {
     public:
-        using Endpoint = BasicInternetEndpoint <Tls>;
-        using Socket   = BasicTlsSocket <Tls>;
-        using Stream   = BasicTlsStream <Tls>;
-        using Acceptor = BasicTlsAcceptor <Tls>;
+        using Endpoint = BasicInternetEndpoint<Tls>;
+        using Socket   = BasicTlsSocket<Tls>;
+        using Stream   = BasicTlsStream<Tls>;
+        using Acceptor = BasicTlsAcceptor<Tls>;
 
         /**
          * @brief create the tcp protocol  instance.
@@ -662,13 +677,13 @@ namespace join
     class Http
     {
     public:
-        using Endpoint = BasicInternetEndpoint <Http>;
-        using Socket   = BasicStreamSocket <Http>;
-        using Stream   = BasicSocketStream <Http>;
-        using Acceptor = BasicStreamAcceptor <Http>;
-        using Client   = BasicHttpClient <Http>;
-        using Worker   = BasicHttpWorker <Http>;
-        using Server   = BasicHttpServer <Http>;
+        using Endpoint = BasicInternetEndpoint<Http>;
+        using Socket   = BasicStreamSocket<Http>;
+        using Stream   = BasicSocketStream<Http>;
+        using Acceptor = BasicStreamAcceptor<Http>;
+        using Client   = BasicHttpClient<Http>;
+        using Worker   = BasicHttpWorker<Http>;
+        using Server   = BasicHttpServer<Http>;
 
         /**
          * @brief create the HTTP protocol  instance.
@@ -759,13 +774,13 @@ namespace join
     class Https
     {
     public:
-        using Endpoint = BasicInternetEndpoint <Https>;
-        using Socket   = BasicTlsSocket <Https>;
-        using Stream   = BasicTlsStream <Https>;
-        using Acceptor = BasicTlsAcceptor <Https>;
-        using Client   = BasicHttpSecureClient <Https>;
-        using Worker   = BasicHttpWorker <Https>;
-        using Server   = BasicHttpSecureServer <Https>;
+        using Endpoint = BasicInternetEndpoint<Https>;
+        using Socket   = BasicTlsSocket<Https>;
+        using Stream   = BasicTlsStream<Https>;
+        using Acceptor = BasicTlsAcceptor<Https>;
+        using Client   = BasicHttpSecureClient<Https>;
+        using Worker   = BasicHttpWorker<Https>;
+        using Server   = BasicHttpSecureServer<Https>;
 
         /**
          * @brief create the HTTPS protocol  instance.
@@ -856,10 +871,10 @@ namespace join
     class Smtp
     {
     public:
-        using Endpoint = BasicInternetEndpoint <Smtp>;
-        using Socket   = BasicTlsSocket <Smtp>;
-        using Stream   = BasicTlsStream <Smtp>;
-        using Client   = BasicSmtpClient <Smtp>;
+        using Endpoint = BasicInternetEndpoint<Smtp>;
+        using Socket   = BasicTlsSocket<Smtp>;
+        using Stream   = BasicTlsStream<Smtp>;
+        using Client   = BasicSmtpClient<Smtp>;
 
         /**
          * @brief create the SMTP protocol  instance.
@@ -950,10 +965,10 @@ namespace join
     class Smtps
     {
     public:
-        using Endpoint = BasicInternetEndpoint <Smtps>;
-        using Socket   = BasicTlsSocket <Smtps>;
-        using Stream   = BasicTlsStream <Smtps>;
-        using Client   = BasicSmtpSecureClient <Smtps>;
+        using Endpoint = BasicInternetEndpoint<Smtps>;
+        using Socket   = BasicTlsSocket<Smtps>;
+        using Stream   = BasicTlsStream<Smtps>;
+        using Client   = BasicSmtpSecureClient<Smtps>;
 
         /**
          * @brief create the SMTPS protocol  instance.

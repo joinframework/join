@@ -55,7 +55,7 @@ jobs:
 
       - name: Configure
         if: ${{ inputs.scan || inputs.coverage }}
-        run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_COVERAGE=ON -DJOIN_ENABLE_TESTS=ON
+        run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_SAMPLES=ON -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
 
       - name: Build
         if: ${{ inputs.scan || inputs.coverage }}
