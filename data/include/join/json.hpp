@@ -67,7 +67,7 @@ namespace join
                 data['\n'] = 'n';
                 data['\f'] = 'f';
                 data['\r'] = 'r';
-                data['"'] = '"';
+                data['"']  = '"';
                 data['\\'] = '\\';
             }
         };
@@ -286,8 +286,8 @@ namespace join
             array ();
             uint64_t bits;
             memcpy (&bits, &value, sizeof (bits));
-            const bool neg = (bits >> 63) != 0;
-            const uint64_t exp = (bits >> 52) & 0x7FFULL;
+            const bool neg      = (bits >> 63) != 0;
+            const uint64_t exp  = (bits >> 52) & 0x7FFULL;
             const uint64_t frac = bits & 0x000FFFFFFFFFFFFFULL;
             if (exp != 0x7FFULL)
             {
@@ -635,7 +635,7 @@ namespace join
                     break;
                 }
 
-                uint8_t ch = static_cast<uint8_t> (*cur);
+                uint8_t ch  = static_cast<uint8_t> (*cur);
                 uint8_t esc = details::unescapedLookup.data[ch];
                 if (esc == 'u')
                 {
@@ -883,9 +883,9 @@ namespace join
      */
     enum JsonReadMode
     {
-        None = 0,                    /**< no read mode set. */
-        ParseComments = 1L << 0,     /**< parse comments. */
-        ValidateEncoding = 1L << 1,  /**< validate encoding. */
+        None              = 0,       /**< no read mode set. */
+        ParseComments     = 1L << 0, /**< parse comments. */
+        ValidateEncoding  = 1L << 1, /**< validate encoding. */
         StopParsingOnDone = 1L << 2, /**< stop parsing on done. */
     };
 
@@ -1366,33 +1366,33 @@ namespace join
             __uint128_t l = static_cast<__uint128_t> (lo) * significand;
             __uint128_t s = h + (l >> 64);
 
-            high = static_cast<uint64_t> (s >> 64);
+            high   = static_cast<uint64_t> (s >> 64);
             middle = static_cast<uint64_t> (s);
-            low = static_cast<uint64_t> (l);
+            low    = static_cast<uint64_t> (l);
 #else
             uint64_t hi_hi, hi_lo, lo_hi, lo_lo;
 
-            uint64_t m_lo = static_cast<uint32_t> (significand);
-            uint64_t m_hi = significand >> 32;
-            uint64_t p0 = (hi & 0xFFFFFFFF) * m_lo;
-            uint64_t p1 = (hi >> 32) * m_lo;
-            uint64_t p2 = (hi & 0xFFFFFFFF) * m_hi;
-            uint64_t p3 = (hi >> 32) * m_hi;
+            uint64_t m_lo  = static_cast<uint32_t> (significand);
+            uint64_t m_hi  = significand >> 32;
+            uint64_t p0    = (hi & 0xFFFFFFFF) * m_lo;
+            uint64_t p1    = (hi >> 32) * m_lo;
+            uint64_t p2    = (hi & 0xFFFFFFFF) * m_hi;
+            uint64_t p3    = (hi >> 32) * m_hi;
             uint64_t carry = (p0 >> 32) + (p1 & 0xFFFFFFFF) + (p2 & 0xFFFFFFFF);
-            hi_lo = (carry << 32) | (p0 & 0xFFFFFFFF);
-            hi_hi = (carry >> 32) + (p1 >> 32) + (p2 >> 32) + p3;
+            hi_lo          = (carry << 32) | (p0 & 0xFFFFFFFF);
+            hi_hi          = (carry >> 32) + (p1 >> 32) + (p2 >> 32) + p3;
 
-            p0 = (lo & 0xFFFFFFFF) * m_lo;
-            p1 = (lo >> 32) * m_lo;
-            p2 = (lo & 0xFFFFFFFF) * m_hi;
-            p3 = (lo >> 32) * m_hi;
+            p0    = (lo & 0xFFFFFFFF) * m_lo;
+            p1    = (lo >> 32) * m_lo;
+            p2    = (lo & 0xFFFFFFFF) * m_hi;
+            p3    = (lo >> 32) * m_hi;
             carry = (p0 >> 32) + (p1 & 0xFFFFFFFF) + (p2 & 0xFFFFFFFF);
             lo_lo = (carry << 32) | (p0 & 0xFFFFFFFF);
             lo_hi = (carry >> 32) + (p1 >> 32) + (p2 >> 32) + p3;
 
-            low = lo_lo;
+            low    = lo_lo;
             middle = hi_lo + lo_hi;
-            high = hi_hi + (middle < hi_lo ? 1 : 0);
+            high   = hi_hi + (middle < hi_lo ? 1 : 0);
 #endif
         }
 
@@ -1460,7 +1460,7 @@ namespace join
 
             if (high == 0)
             {
-                high = middle << lz;
+                high   = middle << lz;
                 middle = 0;
             }
             else if (lz != 0)
@@ -1494,7 +1494,7 @@ namespace join
         {
             static LocalePtr locale (newlocale (LC_ALL_MASK, "C", nullptr));
             char* end = nullptr;
-            d = strtod_l (num.c_str (), &end, locale.get ());
+            d         = strtod_l (num.c_str (), &end, locale.get ());
             return (end && (*end == '\0'));
         }
 
@@ -1517,8 +1517,8 @@ namespace join
             }
 
             uint64_t digits = 0;
-            bool isDouble = false;
-            uint64_t u = 0;
+            bool isDouble   = false;
+            uint64_t u      = 0;
 
             if (JOIN_UNLIKELY (view.getIf ('0')))
             {

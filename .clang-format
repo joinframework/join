@@ -33,7 +33,8 @@ SpaceAfterTemplateKeyword: true
 SpaceInEmptyParentheses: false
 
 # --- Assignments & Alignments ---
-AlignConsecutiveAssignments: None
+AlignConsecutiveAssignments:
+  Enabled: true
 AlignConsecutiveDeclarations: false
 
 # --- Switch/Case ---

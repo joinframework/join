@@ -5721,8 +5721,8 @@ TEST (Value, jsonWrite)
 TEST (Value, jsonCanonicalize)
 {
     Value value;
-    value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
-    value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
+    value["numbers"]  = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
+    value["string"]   = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
     value["literals"] = Array{nullptr, true, false};
 
     std::stringstream out;
