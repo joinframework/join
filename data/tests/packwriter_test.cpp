@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/value.hpp>
 #include <join/pack.hpp>
 
 // libraries.
@@ -330,7 +331,7 @@ TEST (PackWriter, setDouble)
 
     stream.str ("");
     EXPECT_EQ (packWriter.setDouble (0.1e1), 0);
-    EXPECT_EQ (stream.str (), std::string ({'\xCB', '\x3F', '\xF0', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00'}));
+    EXPECT_EQ (stream.str (), std::string ({'\xCA', '\x3F', '\x80', '\x00', '\x00'}));
 
     stream.str ("");
     EXPECT_EQ (packWriter.setDouble (-9876.543210), 0);
@@ -441,6 +442,38 @@ TEST (PackWriter, setKey)
     PackWriter packWriter (stream);
 
     stream.str ("");
+    EXPECT_EQ (packWriter.setKey (nullptr), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xC0'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (true), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xC3'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (false), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xC2'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (42), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\x2A'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (300), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCD', '\x01', '\x2C'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (-10), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xF6'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (0.1e1), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCA', '\x3F', '\x80', '\x00', '\x00'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (98.6), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCB', '\x40', '\x58', '\xA6', '\x66', '\x66', '\x66', '\x66', '\x66'}));
+
+    stream.str ("");
     EXPECT_EQ (packWriter.setKey (std::string (31, 'x')), 0);
     EXPECT_EQ (stream.str ().compare (0, 6, std::string ({'\xBF', '\x78', '\x78', '\x78', '\x78', '\x78'})), 0);
 
@@ -463,6 +496,12 @@ TEST (PackWriter, setKey)
     stream.str ("");
     EXPECT_EQ (packWriter.setKey (std::string (65536, 'x')), 0);
     EXPECT_EQ (stream.str ().compare (0, 6, std::string ({'\xDB', '\x00', '\x01', '\x00', '\x00', '\x78'})), 0);
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (Value (join::in_place_index_t<Value::ArrayValue>{})), -1);
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setKey (Value (join::in_place_index_t<Value::ObjectValue>{})), -1);
 }
 
 /**
@@ -485,15 +524,15 @@ TEST (PackWriter, serialize)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), std::string ({'\x98', '\xC0', '\xC3', '\x01', '\x02', '\x03', '\x04', '\xCB',
-                                            '\x3D', '\x41', '\x5F', '\xFF', '\xE5', '\x3A', '\x68', '\x5D',
-                                            '\xA4', '\x74', '\x65', '\x73', '\x74'}));
+    EXPECT_EQ (stream.str (),
+               std::string ({'\x98', '\xC0', '\xC3', '\x01', '\x02', '\x03', '\x04', '\xCB', '\x3D', '\x41', '\x5F',
+                             '\xFF', '\xE5', '\x3A', '\x68', '\x5D', '\xA4', '\x74', '\x65', '\x73', '\x74'}));
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

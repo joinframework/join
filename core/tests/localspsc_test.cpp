@@ -34,7 +34,7 @@ using join::Thread;
 
 TEST (LocalSpsc, tryPush)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (512);
+    LocalMem::Spsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -52,7 +52,7 @@ TEST (LocalSpsc, tryPush)
 
 TEST (LocalSpsc, push)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (512);
+    LocalMem::Spsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -69,7 +69,7 @@ TEST (LocalSpsc, push)
 
 TEST (LocalSpsc, tryPop)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (512);
+    LocalMem::Spsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.tryPop (data), -1);
@@ -86,7 +86,7 @@ TEST (LocalSpsc, tryPop)
 
 TEST (LocalSpsc, pop)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (512);
+    LocalMem::Spsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_TRUE (queue.empty ());
@@ -104,33 +104,35 @@ TEST (LocalSpsc, pushBenchmark)
     const uint64_t capacity = 512;
     const uint64_t num = 1000000;
 
-    LocalMem::Spsc::Queue<uint64_t> queue(capacity);
-    std::atomic <bool> ready{false};
+    LocalMem::Spsc::Queue<uint64_t> queue (capacity);
+    std::atomic<bool> ready{false};
 
-    std::thread consumer ([&] () {
-        uint64_t data = 0;
-
-        while (!ready.load(std::memory_order_acquire))
+    std::thread consumer (
+        [&] ()
         {
-            std::this_thread::yield ();
-        }
+            uint64_t data = 0;
 
-        for (uint64_t i = 0; i < num; ++i)
-        {
-            while (queue.tryPop (data) == -1)
+            while (!ready.load (std::memory_order_acquire))
             {
                 std::this_thread::yield ();
             }
-        }
 
-        for (uint64_t i = 0; i < capacity; ++i)
-        {
-            while (queue.tryPop (data) == -1)
+            for (uint64_t i = 0; i < num; ++i)
             {
-                std::this_thread::yield ();
+                while (queue.tryPop (data) == -1)
+                {
+                    std::this_thread::yield ();
+                }
             }
-        }
-    });
+
+            for (uint64_t i = 0; i < capacity; ++i)
+            {
+                while (queue.tryPop (data) == -1)
+                {
+                    std::this_thread::yield ();
+                }
+            }
+        });
 
     uint64_t data = 0;
 
@@ -150,7 +152,7 @@ TEST (LocalSpsc, pushBenchmark)
         EXPECT_EQ (queue.push (data), 0) << join::lastError.message ();
     }
 
-    consumer.join();
+    consumer.join ();
 }
 
 TEST (LocalSpsc, popBenchmark)
@@ -158,22 +160,24 @@ TEST (LocalSpsc, popBenchmark)
     const uint64_t capacity = 512;
     const uint64_t num = 1000000;
 
-    LocalMem::Spsc::Queue <uint64_t> queue (capacity);
-    std::atomic <bool> producerReady {false};
+    LocalMem::Spsc::Queue<uint64_t> queue (capacity);
+    std::atomic<bool> producerReady{false};
 
-    std::thread producer ([&] () {
-        uint64_t data = 0;
-
-        producerReady.store (true, std::memory_order_release);
-
-        for (uint64_t i = 0; i < num; ++i)
+    std::thread producer (
+        [&] ()
         {
-            while (queue.tryPush (data) == -1)
+            uint64_t data = 0;
+
+            producerReady.store (true, std::memory_order_release);
+
+            for (uint64_t i = 0; i < num; ++i)
             {
-                std::this_thread::yield ();
+                while (queue.tryPush (data) == -1)
+                {
+                    std::this_thread::yield ();
+                }
             }
-        }
-    });
+        });
 
     while (!producerReady.load (std::memory_order_acquire))
     {
@@ -192,7 +196,7 @@ TEST (LocalSpsc, popBenchmark)
 
 TEST (LocalSpsc, pending)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (0);
+    LocalMem::Spsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.pending (), 0);
@@ -202,7 +206,7 @@ TEST (LocalSpsc, pending)
 
 TEST (LocalSpsc, available)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (0);
+    LocalMem::Spsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.available (), 1);
@@ -212,7 +216,7 @@ TEST (LocalSpsc, available)
 
 TEST (LocalSpsc, full)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (0);
+    LocalMem::Spsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -222,7 +226,7 @@ TEST (LocalSpsc, full)
 
 TEST (LocalSpsc, empty)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (0);
+    LocalMem::Spsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_TRUE (queue.empty ());
@@ -232,20 +236,20 @@ TEST (LocalSpsc, empty)
 
 TEST (LocalSpsc, mlock)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (0);
+    LocalMem::Spsc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mlock (), 0) << join::lastError.message ();
 }
 
 TEST (LocalSpsc, mbind)
 {
-    LocalMem::Spsc::Queue <uint64_t> queue (0);
+    LocalMem::Spsc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mbind (0), 0) << join::lastError.message ();
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

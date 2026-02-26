@@ -57,3 +57,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${JOIN_SERVICES}.pc DESTINATION ${CMAK
 if(JOIN_ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
+
+if(JOIN_ENABLE_SAMPLES)
+    add_subdirectory(samples)
+endif()

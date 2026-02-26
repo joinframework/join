@@ -61,9 +61,9 @@ Resolver::Resolver ()
 // =========================================================================
 Resolver::Resolver (const std::string& interface)
 #ifdef DEBUG
-: _onSuccess (defaultOnSuccess),
-  _onFailure (defaultOnFailure),
-  _interface (interface)
+: _onSuccess (defaultOnSuccess)
+, _onFailure (defaultOnFailure)
+, _interface (interface)
 #else
 : _interface (interface)
 #endif
@@ -102,18 +102,19 @@ IpAddressList Resolver::nameServers ()
 //   CLASS     : Resolver
 //   METHOD    : resolveAllHost
 // =========================================================================
-IpAddressList Resolver::resolveAllHost (const std::string& host, int family, const IpAddress& server, uint16_t port, int timeout)
+IpAddressList Resolver::resolveAllHost (const std::string& host, int family, const IpAddress& server, uint16_t port,
+                                        int timeout)
 {
     IpAddressList addresses;
 
     DnsPacket packet;
-    packet.src = IpAddress (server.family ());
+    packet.src  = IpAddress (server.family ());
     packet.dest = server;
     packet.port = port;
 
     QuestionRecord question;
-    question.host = host;
-    question.type = (family == AF_INET6) ? RecordType::AAAA : RecordType::A;
+    question.host     = host;
+    question.type     = (family == AF_INET6) ? RecordType::AAAA : RecordType::A;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -160,7 +161,7 @@ IpAddressList Resolver::resolveAllHost (const std::string& host, const IpAddress
 {
     IpAddressList addresses;
 
-    for (auto const& family : { AF_INET6, AF_INET })
+    for (auto const& family : {AF_INET, AF_INET6})
     {
         IpAddressList tmp = resolveAllHost (host, family, server, port, timeout);
         addresses.insert (addresses.end (), tmp.begin (), tmp.end ());
@@ -191,7 +192,8 @@ IpAddressList Resolver::resolveAllHost (const std::string& host)
 //   CLASS     : Resolver
 //   METHOD    : resolveHost
 // =========================================================================
-IpAddress Resolver::resolveHost (const std::string& host, int family, const IpAddress& server, uint16_t port, int timeout)
+IpAddress Resolver::resolveHost (const std::string& host, int family, const IpAddress& server, uint16_t port,
+                                 int timeout)
 {
     for (auto const& address : resolveAllHost (host, family, server, port, timeout))
     {
@@ -252,13 +254,13 @@ AliasList Resolver::resolveAllAddress (const IpAddress& address, const IpAddress
     AliasList aliases;
 
     DnsPacket packet;
-    packet.src = IpAddress (server.family ());
+    packet.src  = IpAddress (server.family ());
     packet.dest = server;
     packet.port = port;
 
     QuestionRecord question;
-    question.host = address.toArpa ();
-    question.type = RecordType::PTR;
+    question.host     = address.toArpa ();
+    question.type     = RecordType::PTR;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -334,13 +336,13 @@ ServerList Resolver::resolveAllNameServer (const std::string& host, const IpAddr
     ServerList names;
 
     DnsPacket packet;
-    packet.src = IpAddress (server.family ());
+    packet.src  = IpAddress (server.family ());
     packet.dest = server;
     packet.port = port;
 
     QuestionRecord question;
-    question.host = host;
-    question.type = RecordType::NS;
+    question.host     = host;
+    question.type     = RecordType::NS;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -414,13 +416,13 @@ std::string Resolver::resolveNameServer (const std::string& host)
 std::string Resolver::resolveAuthority (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
 {
     DnsPacket packet;
-    packet.src = IpAddress (server.family ());
+    packet.src  = IpAddress (server.family ());
     packet.dest = server;
     packet.port = port;
 
     QuestionRecord question;
-    question.host = host;
-    question.type = RecordType::SOA;
+    question.host     = host;
+    question.type     = RecordType::SOA;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -461,18 +463,19 @@ std::string Resolver::resolveAuthority (const std::string& host)
 //   CLASS     : Resolver
 //   METHOD    : resolveAllMailExchanger
 // =========================================================================
-ExchangerList Resolver::resolveAllMailExchanger (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
+ExchangerList Resolver::resolveAllMailExchanger (const std::string& host, const IpAddress& server, uint16_t port,
+                                                 int timeout)
 {
     ExchangerList exchangers;
 
     DnsPacket packet;
-    packet.src = IpAddress (server.family ());
+    packet.src  = IpAddress (server.family ());
     packet.dest = server;
     packet.port = port;
 
     QuestionRecord question;
-    question.host = host;
-    question.type = RecordType::MX;
+    question.host     = host;
+    question.type     = RecordType::MX;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -515,7 +518,8 @@ ExchangerList Resolver::resolveAllMailExchanger (const std::string& host)
 //   CLASS     : Resolver
 //   METHOD    : resolveMailExchanger
 // =========================================================================
-std::string Resolver::resolveMailExchanger (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
+std::string Resolver::resolveMailExchanger (const std::string& host, const IpAddress& server, uint16_t port,
+                                            int timeout)
 {
     for (auto const& exchanger : resolveAllMailExchanger (host, server, port, timeout))
     {
@@ -612,7 +616,7 @@ int Resolver::lookup (DnsPacket& packet, int timeout)
     }
 
     std::stringstream data;
-    uint16_t reqid = join::randomize <uint16_t> ();
+    uint16_t reqid = join::randomize<uint16_t> ();
     setHeader (reqid, 1 << 8, packet.questions.size (), 0, 0, 0, data);
 
     for (auto const& question : packet.questions)
@@ -628,8 +632,8 @@ int Resolver::lookup (DnsPacket& packet, int timeout)
 
     uint16_t resid = 0, flags = 0, qcount = 0, ancount = 0, nscount = 0, arcount = 0;
     auto elapsed = std::chrono::milliseconds::zero ();
-    std::unique_ptr <char []> buf;
-    
+    std::unique_ptr<char[]> buf;
+
     for (;;)
     {
         auto beg = std::chrono::high_resolution_clock::now ();
@@ -641,7 +645,7 @@ int Resolver::lookup (DnsPacket& packet, int timeout)
             return -1;
         }
 
-        buf = std::make_unique <char []> (socket.canRead ());
+        buf = std::make_unique<char[]> (socket.canRead ());
         if (buf == nullptr)
         {
             lastError = std::make_error_code (std::errc::not_enough_memory);
@@ -659,13 +663,14 @@ int Resolver::lookup (DnsPacket& packet, int timeout)
         data.rdbuf ()->pubsetbuf (buf.get (), size);
         getHeader (resid, flags, qcount, ancount, nscount, arcount, data);
 
-        if (resid != reqid || !std::bitset <16> (flags).test (15))
+        if (resid != reqid || !std::bitset<16> (flags).test (15))
         {
-            elapsed += std::chrono::duration_cast <std::chrono::milliseconds> (std::chrono::high_resolution_clock::now () - beg);
+            elapsed += std::chrono::duration_cast<std::chrono::milliseconds> (
+                std::chrono::high_resolution_clock::now () - beg);
             continue;
         }
 
-        int error = std::bitset <4> (flags).to_ulong ();
+        int error = std::bitset<4> (flags).to_ulong ();
         if (error)
         {
             lastError = parseError (error);
@@ -707,49 +712,51 @@ int Resolver::lookup (DnsPacket& packet, int timeout)
 //   CLASS     : Resolver
 //   METHOD    : setHeader
 // =========================================================================
-void Resolver::setHeader (uint16_t id, uint16_t flags, uint16_t qcount, uint16_t ancount, uint16_t nscount, uint16_t arcount, std::stringstream& data)
+void Resolver::setHeader (uint16_t id, uint16_t flags, uint16_t qcount, uint16_t ancount, uint16_t nscount,
+                          uint16_t arcount, std::stringstream& data)
 {
     id = htons (id);
-    data.write (reinterpret_cast <char *> (&id), sizeof (id));
+    data.write (reinterpret_cast<char*> (&id), sizeof (id));
 
     flags = htons (flags);
-    data.write (reinterpret_cast <char *> (&flags), sizeof (flags));
+    data.write (reinterpret_cast<char*> (&flags), sizeof (flags));
 
     qcount = htons (qcount);
-    data.write (reinterpret_cast <char *> (&qcount), sizeof (qcount));
+    data.write (reinterpret_cast<char*> (&qcount), sizeof (qcount));
 
     ancount = htons (ancount);
-    data.write (reinterpret_cast <char *> (&ancount), sizeof (ancount));
+    data.write (reinterpret_cast<char*> (&ancount), sizeof (ancount));
 
     nscount = htons (nscount);
-    data.write (reinterpret_cast <char *> (&nscount), sizeof (nscount));
+    data.write (reinterpret_cast<char*> (&nscount), sizeof (nscount));
 
     arcount = htons (arcount);
-    data.write (reinterpret_cast <char *> (&arcount), sizeof (arcount));
+    data.write (reinterpret_cast<char*> (&arcount), sizeof (arcount));
 }
 
 // =========================================================================
 //   CLASS     : Resolver
 //   METHOD    : getHeader
 // =========================================================================
-void Resolver::getHeader (uint16_t& id, uint16_t& flags, uint16_t& qcount, uint16_t& ancount, uint16_t& nscount, uint16_t& arcount, std::stringstream& data)
+void Resolver::getHeader (uint16_t& id, uint16_t& flags, uint16_t& qcount, uint16_t& ancount, uint16_t& nscount,
+                          uint16_t& arcount, std::stringstream& data)
 {
-    data.read (reinterpret_cast <char *> (&id), sizeof (id));
+    data.read (reinterpret_cast<char*> (&id), sizeof (id));
     id = ntohs (id);
 
-    data.read (reinterpret_cast <char *> (&flags), sizeof (flags));
+    data.read (reinterpret_cast<char*> (&flags), sizeof (flags));
     flags = ntohs (flags);
 
-    data.read (reinterpret_cast <char *> (&qcount), sizeof (qcount));
+    data.read (reinterpret_cast<char*> (&qcount), sizeof (qcount));
     qcount = ntohs (qcount);
 
-    data.read (reinterpret_cast <char *> (&ancount), sizeof (ancount));
+    data.read (reinterpret_cast<char*> (&ancount), sizeof (ancount));
     ancount = ntohs (ancount);
 
-    data.read (reinterpret_cast <char *> (&nscount), sizeof (nscount));
+    data.read (reinterpret_cast<char*> (&nscount), sizeof (nscount));
     nscount = ntohs (nscount);
 
-    data.read (reinterpret_cast <char *> (&arcount), sizeof (arcount));
+    data.read (reinterpret_cast<char*> (&arcount), sizeof (arcount));
     arcount = ntohs (arcount);
 }
 
@@ -763,7 +770,7 @@ void Resolver::encodeName (const std::string& host, std::stringstream& data)
 
     for (std::string token; std::getline (iss, token, '.');)
     {
-        data << static_cast <uint8_t> (token.size ());
+        data << static_cast<uint8_t> (token.size ());
         data << token;
     }
 
@@ -783,13 +790,13 @@ std::string Resolver::decodeName (std::stringstream& data)
         auto pos = data.tellg ();
 
         uint16_t offset = 0;
-        data.read (reinterpret_cast <char *> (&offset), sizeof (offset));
+        data.read (reinterpret_cast<char*> (&offset), sizeof (offset));
         offset = ntohs (offset);
 
         if (offset & 0xC000)
         {
             pos = data.tellg ();
-            data.seekg (std::bitset <14> (offset).to_ulong ());
+            data.seekg (std::bitset<14> (offset).to_ulong ());
             decoded += decodeName (data);
             data.seekg (pos);
             break;
@@ -799,7 +806,7 @@ std::string Resolver::decodeName (std::stringstream& data)
             data.seekg (pos);
 
             uint8_t size = 0;
-            data.read (reinterpret_cast <char *> (&size), sizeof (size));
+            data.read (reinterpret_cast<char*> (&size), sizeof (size));
 
             if (size == 0)
             {
@@ -826,13 +833,13 @@ std::string Resolver::decodeName (std::stringstream& data)
 std::string Resolver::decodeMail (std::stringstream& data)
 {
     std::string mail = decodeName (data);
-    std::size_t pos = 0;
+    std::size_t pos  = 0;
 
     while ((pos = mail.find (".", pos)) != std::string::npos)
     {
-        if (pos > 1 && mail[pos-1] == '/')
+        if (pos > 1 && mail[pos - 1] == '/')
         {
-            mail.replace (pos-1, 2, ".");
+            mail.replace (pos - 1, 2, ".");
         }
         else
         {
@@ -853,10 +860,10 @@ void Resolver::encodeQuestion (const std::string& host, uint16_t type, uint16_t 
     encodeName (host, data);
 
     type = htons (type);
-    data.write (reinterpret_cast <char *> (&type), sizeof (type));
+    data.write (reinterpret_cast<char*> (&type), sizeof (type));
 
     dnsclass = htons (dnsclass);
-    data.write (reinterpret_cast <char *> (&dnsclass), sizeof (dnsclass));
+    data.write (reinterpret_cast<char*> (&dnsclass), sizeof (dnsclass));
 }
 
 // =========================================================================
@@ -869,10 +876,10 @@ QuestionRecord Resolver::decodeQuestion (std::stringstream& data)
 
     question.host = decodeName (data);
 
-    data.read (reinterpret_cast <char *> (&question.type), sizeof (question.type));
+    data.read (reinterpret_cast<char*> (&question.type), sizeof (question.type));
     question.type = ntohs (question.type);
 
-    data.read (reinterpret_cast <char *> (&question.dnsclass), sizeof (question.dnsclass));
+    data.read (reinterpret_cast<char*> (&question.dnsclass), sizeof (question.dnsclass));
     question.dnsclass = ntohs (question.dnsclass);
 
     return question;
@@ -888,23 +895,23 @@ AnswerRecord Resolver::decodeAnswer (std::stringstream& data)
 
     answer.host = decodeName (data);
 
-    data.read (reinterpret_cast <char *> (&answer.type), sizeof (answer.type));
+    data.read (reinterpret_cast<char*> (&answer.type), sizeof (answer.type));
     answer.type = ntohs (answer.type);
 
-    data.read (reinterpret_cast <char *> (&answer.dnsclass), sizeof (answer.dnsclass));
+    data.read (reinterpret_cast<char*> (&answer.dnsclass), sizeof (answer.dnsclass));
     answer.dnsclass = ntohs (answer.dnsclass);
 
-    data.read (reinterpret_cast <char *> (&answer.ttl), sizeof (answer.ttl));
+    data.read (reinterpret_cast<char*> (&answer.ttl), sizeof (answer.ttl));
     answer.ttl = ntohl (answer.ttl);
 
     uint16_t dataLen = 0;
-    data.read (reinterpret_cast <char *> (&dataLen), sizeof (dataLen));
+    data.read (reinterpret_cast<char*> (&dataLen), sizeof (dataLen));
     dataLen = ntohs (dataLen);
 
     if (answer.type == RecordType::A)
     {
         struct in_addr addr;
-        data.read (reinterpret_cast <char *> (&addr), sizeof (addr));
+        data.read (reinterpret_cast<char*> (&addr), sizeof (addr));
         answer.addr = IpAddress (&addr, sizeof (struct in_addr));
     }
     else if (answer.type == RecordType::NS)
@@ -921,19 +928,19 @@ AnswerRecord Resolver::decodeAnswer (std::stringstream& data)
 
         answer.mail = decodeMail (data);
 
-        data.read (reinterpret_cast <char *> (&answer.serial), sizeof (answer.serial));
+        data.read (reinterpret_cast<char*> (&answer.serial), sizeof (answer.serial));
         answer.serial = ntohl (answer.serial);
 
-        data.read (reinterpret_cast <char *> (&answer.refresh), sizeof (answer.refresh));
+        data.read (reinterpret_cast<char*> (&answer.refresh), sizeof (answer.refresh));
         answer.refresh = ntohl (answer.refresh);
 
-        data.read (reinterpret_cast <char *> (&answer.retry), sizeof (answer.retry));
+        data.read (reinterpret_cast<char*> (&answer.retry), sizeof (answer.retry));
         answer.retry = ntohl (answer.retry);
 
-        data.read (reinterpret_cast <char *> (&answer.expire), sizeof (answer.expire));
+        data.read (reinterpret_cast<char*> (&answer.expire), sizeof (answer.expire));
         answer.expire = ntohl (answer.expire);
 
-        data.read (reinterpret_cast <char *> (&answer.minimum), sizeof (answer.minimum));
+        data.read (reinterpret_cast<char*> (&answer.minimum), sizeof (answer.minimum));
         answer.minimum = ntohl (answer.minimum);
     }
     else if (answer.type == RecordType::PTR)
@@ -942,7 +949,7 @@ AnswerRecord Resolver::decodeAnswer (std::stringstream& data)
     }
     else if (answer.type == RecordType::MX)
     {
-        data.read (reinterpret_cast <char *> (&answer.mxpref), sizeof (answer.mxpref));
+        data.read (reinterpret_cast<char*> (&answer.mxpref), sizeof (answer.mxpref));
         answer.mxpref = ntohs (answer.mxpref);
 
         answer.name = decodeName (data);
@@ -950,7 +957,7 @@ AnswerRecord Resolver::decodeAnswer (std::stringstream& data)
     else if (answer.type == RecordType::AAAA)
     {
         struct in6_addr addr;
-        data.read (reinterpret_cast <char *> (&addr), sizeof (addr));
+        data.read (reinterpret_cast<char*> (&addr), sizeof (addr));
         answer.addr = IpAddress (&addr, sizeof (struct in6_addr));
     }
 

@@ -41,7 +41,7 @@ namespace join
     /**
      * @brief basic HTTP client.
      */
-    template <class Protocol> 
+    template <class Protocol>
     class BasicHttpClient : public Protocol::Stream
     {
     public:
@@ -54,10 +54,10 @@ namespace join
          * @param keepAlive use a persistent connection.
          */
         BasicHttpClient (const char* host, uint16_t port = 80, bool keepAlive = true)
-        : _host (host),
-          _port (port),
-          _keep (keepAlive),
-          _keepTimeout (std::chrono::seconds::zero ())
+        : _host (host)
+        , _port (port)
+        , _keep (keepAlive)
+        , _keepTimeout (std::chrono::seconds::zero ())
         {
         }
 
@@ -90,12 +90,12 @@ namespace join
          * @param other request to move.
          */
         BasicHttpClient (BasicHttpClient&& other)
-        : Protocol::Stream (std::move (other)),
-          _host (std::move (other._host)),
-          _port (other._port),
-          _keep (other._keep),
-          _keepTimeout (other._keepTimeout),
-          _keepMax (other._keepMax)
+        : Protocol::Stream (std::move (other))
+        , _host (std::move (other._host))
+        , _port (other._port)
+        , _keep (other._keep)
+        , _keepTimeout (other._keepTimeout)
+        , _keepMax (other._keepMax)
         {
         }
 
@@ -107,11 +107,11 @@ namespace join
         BasicHttpClient& operator= (BasicHttpClient&& other)
         {
             Protocol::Stream::operator= (std::move (other));
-            this->_host = std::move (other._host);
-            this->_port = other._port;
-            this->_keep = other._keep;
+            this->_host        = std::move (other._host);
+            this->_port        = other._port;
+            this->_keep        = other._keep;
             this->_keepTimeout = other._keepTimeout;
-            this->_keepMax = other._keepMax;
+            this->_keepMax     = other._keepMax;
             return *this;
         }
 
@@ -131,7 +131,7 @@ namespace join
         {
             Protocol::Stream::close ();
             this->_keepTimeout = std::chrono::seconds::zero ();
-            this->_keepMax = -1;
+            this->_keepMax     = -1;
         }
 
         /**
@@ -244,7 +244,7 @@ namespace join
             // check if reconnection is required.
             if (this->needReconnection ())
             {
-                Endpoint endpoint {Resolver::resolveHost (this->host ()), this->port ()};
+                Endpoint endpoint{Resolver::resolveHost (this->host ()), this->port ()};
                 endpoint.hostname (this->host ());
 
                 this->reconnect (endpoint);
@@ -312,7 +312,7 @@ namespace join
 
             // get connection.
             std::string connection = response.header ("Connection");
-            std::string alive = response.header ("Keep-Alive");
+            std::string alive      = response.header ("Keep-Alive");
 
             // check connection.
             if (join::compareNoCase (connection, "keep-alive"))
@@ -320,7 +320,8 @@ namespace join
                 size_t pos = alive.find ("timeout=");
                 if (pos != std::string::npos)
                 {
-                    this->_keepTimeout = std::chrono::seconds (::atoi (alive.substr (pos + 8, alive.find (",", pos + 8)).c_str ()));
+                    this->_keepTimeout =
+                        std::chrono::seconds (::atoi (alive.substr (pos + 8, alive.find (",", pos + 8)).c_str ()));
                 }
 
                 pos = alive.find ("max=");
@@ -332,7 +333,7 @@ namespace join
             else if (join::compareNoCase (connection, "close"))
             {
                 this->_keepTimeout = std::chrono::seconds::zero ();
-                this->_keepMax = 0;
+                this->_keepMax     = 0;
             }
 
             // set encoding.
@@ -356,24 +357,24 @@ namespace join
          * @brief set stream encoding.
          * @param encodings encodings applied to the stream.
          */
-        void setEncoding (const std::vector <std::string>& encodings)
+        void setEncoding (const std::vector<std::string>& encodings)
         {
             for (auto const& encoding : encodings)
             {
                 if (encoding.find ("gzip") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Gzip, this->_wrapped);
-                    this->_wrapped = true;
+                    this->_wrapped   = true;
                 }
                 else if (encoding.find ("deflate") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Deflate, this->_wrapped);
-                    this->_wrapped = true;
+                    this->_wrapped   = true;
                 }
                 else if (encoding.find ("chunked") != std::string::npos)
                 {
                     this->_streambuf = new Chunkstreambuf (this->_streambuf, this->_wrapped);
-                    this->_wrapped = true;
+                    this->_wrapped   = true;
                 }
             }
 
@@ -392,7 +393,7 @@ namespace join
             }
 
             this->_streambuf = &this->_sockbuf;
-            this->_wrapped = false;
+            this->_wrapped   = false;
 
             this->set_rdbuf (this->_streambuf);
         }
@@ -404,7 +405,8 @@ namespace join
         bool expired () const
         {
             auto duration = std::chrono::steady_clock::now () - this->_timestamp;
-            return (this->_keepTimeout < std::chrono::duration_cast <std::chrono::seconds> (duration)) || (this->_keepMax == 0);
+            return (this->_keepTimeout < std::chrono::duration_cast<std::chrono::seconds> (duration)) ||
+                   (this->_keepMax == 0);
         }
 
         /**
@@ -434,7 +436,7 @@ namespace join
         bool _wrapped = false;
 
         /// HTTP timestamp.
-        std::chrono::time_point <std::chrono::steady_clock> _timestamp;
+        std::chrono::time_point<std::chrono::steady_clock> _timestamp;
 
         /// HTTP host.
         std::string _host;
@@ -459,7 +461,7 @@ namespace join
      * @return a reference to the HTTP output stream.
      */
     template <class Protocol>
-    constexpr BasicHttpClient <Protocol>& operator<< (BasicHttpClient <Protocol>& out, HttpRequest& request)
+    constexpr BasicHttpClient<Protocol>& operator<< (BasicHttpClient<Protocol>& out, HttpRequest& request)
     {
         out.send (request);
         return out;
@@ -472,7 +474,7 @@ namespace join
      * @return a reference to the HTTP input stream.
      */
     template <class Protocol>
-    constexpr BasicHttpClient <Protocol>& operator>> (BasicHttpClient <Protocol>& in, HttpResponse& response)
+    constexpr BasicHttpClient<Protocol>& operator>> (BasicHttpClient<Protocol>& in, HttpResponse& response)
     {
         in.receive (response);
         return in;
@@ -481,8 +483,8 @@ namespace join
     /**
      * @brief basic HTTPS client.
      */
-    template <class Protocol> 
-    class BasicHttpSecureClient : public BasicHttpClient <Protocol>
+    template <class Protocol>
+    class BasicHttpSecureClient : public BasicHttpClient<Protocol>
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
@@ -494,7 +496,7 @@ namespace join
          * @param keepAlive use a persistent connection.
          */
         BasicHttpSecureClient (const char* host, uint16_t port = 443, bool keepAlive = true)
-        : BasicHttpClient <Protocol> (host, port, keepAlive)
+        : BasicHttpClient<Protocol> (host, port, keepAlive)
         {
         }
 
@@ -527,7 +529,7 @@ namespace join
          * @param other request to move.
          */
         BasicHttpSecureClient (BasicHttpSecureClient&& other)
-        : BasicHttpClient <Protocol> (std::move (other))
+        : BasicHttpClient<Protocol> (std::move (other))
         {
         }
 
@@ -538,7 +540,7 @@ namespace join
          */
         BasicHttpSecureClient& operator= (BasicHttpSecureClient&& other)
         {
-            BasicHttpClient <Protocol>::operator= (std::move (other));
+            BasicHttpClient<Protocol>::operator= (std::move (other));
             return *this;
         }
 
@@ -576,7 +578,7 @@ namespace join
      * @return a reference to the HTTPS output stream.
      */
     template <class Protocol>
-    constexpr BasicHttpSecureClient <Protocol>& operator<< (BasicHttpSecureClient <Protocol>& out, HttpRequest& request)
+    constexpr BasicHttpSecureClient<Protocol>& operator<< (BasicHttpSecureClient<Protocol>& out, HttpRequest& request)
     {
         out.send (request);
         return out;
@@ -589,7 +591,7 @@ namespace join
      * @return a reference to the HTTPS input stream.
      */
     template <class Protocol>
-    constexpr BasicHttpSecureClient <Protocol>& operator>> (BasicHttpSecureClient <Protocol>& in, HttpResponse& response)
+    constexpr BasicHttpSecureClient<Protocol>& operator>> (BasicHttpSecureClient<Protocol>& in, HttpResponse& response)
     {
         in.receive (response);
         return in;

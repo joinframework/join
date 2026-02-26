@@ -62,7 +62,7 @@ The framework is a collection of specialized modules that build upon one another
 
 | Module | Purpose | Highlights |
 | :--- | :--- | :--- |
-| **`core`** | **Foundation** | Epoll Reactor, TCP/UDP/TLS, Unix Sockets, Thread Pools, Mutexes. |
+| **`core`** | **Foundation** | Epoll Reactor, TCP/UDP/TLS, Unix Sockets, Thread Pools, Lock-Free Queues & Allocator. |
 | **`fabric`**| **Network Control** | Netlink Interface Manager, ARP client, DNS Resolver. |
 | **`crypto`**| **Security** | OpenSSL Wrappers, HMAC, Digital Signatures, Base64. |
 | **`data`** | **Serialization** | High-perf JSON (DOM/SAX), MessagePack, Zlib Streams. |
@@ -102,8 +102,10 @@ ctest --test-dir build --output-on-failure
 find_package(join REQUIRED)
 
 target_link_libraries(your_app PRIVATE 
-    join::core 
-    join::fabric 
+    join::core
+    join::crypto
+    join::data
+    join::fabric
     join::services
 )
 ```
