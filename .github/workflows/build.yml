@@ -55,7 +55,7 @@ jobs:
 
       - name: Configure
         if: ${{ inputs.scan || inputs.coverage }}
-        run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_COVERAGE=ON -DJOIN_ENABLE_TESTS=ON
+        run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_SAMPLES=ON -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
 
       - name: Build
         if: ${{ inputs.scan || inputs.coverage }}
@@ -72,7 +72,7 @@ jobs:
       - name: Generate coverage report
         if: ${{ inputs.coverage }}
         run: |
-          lcov --directory build --capture --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
+          lcov --directory build --capture --exclude "*/usr/include/*" --exclude '*/samples/*' --exclude '*/tests/*' --output-file lcov.info
           genhtml lcov.info --prefix $GITHUB_WORKSPACE --output-directory coverage
 
       - name: Upload coverage data to GitHub
