@@ -43,12 +43,14 @@ const char* SaxCategory::name () const noexcept
 // =========================================================================
 std::string SaxCategory::message (int code) const
 {
-    switch (static_cast <SaxErrc> (code))
+    switch (static_cast<SaxErrc> (code))
     {
         case SaxErrc::StackOverflow:
             return "stack overflow";
         case SaxErrc::InvalidParent:
             return "parent not an array nor an object";
+        case SaxErrc::InvalidKey:
+            return "key is invalid";
         case SaxErrc::InvalidValue:
             return "value is invalid";
         case SaxErrc::ExtraData:
@@ -74,7 +76,7 @@ const std::error_category& join::saxCategory () noexcept
 // =========================================================================
 std::error_code join::make_error_code (SaxErrc code) noexcept
 {
-    return std::error_code (static_cast <int> (code), saxCategory ());
+    return std::error_code (static_cast<int> (code), saxCategory ());
 }
 
 // =========================================================================
@@ -83,5 +85,5 @@ std::error_code join::make_error_code (SaxErrc code) noexcept
 // =========================================================================
 std::error_condition join::make_error_condition (SaxErrc code) noexcept
 {
-    return std::error_condition (static_cast <int> (code), saxCategory ());
+    return std::error_condition (static_cast<int> (code), saxCategory ());
 }

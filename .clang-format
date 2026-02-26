@@ -1,6 +1,6 @@
 ---
 Language: Cpp
-BasedOnStyle: LLVM
+BasedOnStyle: Google
 
 # --- Core Layout ---
 ColumnLimit: 120
@@ -9,6 +9,7 @@ Standard: Latest
 
 # --- Includes Management ---
 SortIncludes: Never
+SortUsingDeclarations: Never
 
 # --- Force POSIX / Linux Line Endings ---
 DeriveLineEnding: false
@@ -26,17 +27,18 @@ FixNamespaceComments: false
 BreakBeforeBraces: Allman
 SpaceBeforeBraces: Always
 
-# --- Pointer Alignment ---
-PointerAlignment: Left
-
 # --- Spaces ---
 SpaceBeforeParens: Always
 SpaceAfterTemplateKeyword: true
 SpaceInEmptyParentheses: false
 
 # --- Assignments & Alignments ---
-AlignConsecutiveAssignments: None
+AlignConsecutiveAssignments:
+  Enabled: true
 AlignConsecutiveDeclarations: false
+
+# --- Switch/Case ---
+IndentCaseLabels: true
 
 # --- Strict Vertical Layout ---
 AllowShortFunctionsOnASingleLine: None
@@ -53,9 +55,6 @@ MaxEmptyLinesToKeep: 2
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ConstructorInitializerIndentWidth: 0
 BreakConstructorInitializers: BeforeComma
-
-# --- Templates ---
-AlwaysBreakTemplateDeclarations: Yes
 
 # --- Preservation & Comments ---
 AlignTrailingComments: true
