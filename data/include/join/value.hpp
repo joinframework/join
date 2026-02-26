@@ -1024,35 +1024,18 @@ namespace join
         }
 
         /**
-         * @brief returns a reference to the element at specified location pos.
-         * @param pos Position of the element to return.
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key the position or key of the element to find.
          * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        Value& at (size_t pos)
-        {
-            return get<ArrayValue> ().at (pos);
-        }
-
-        /**
-         * @brief returns a reference to the element at specified location pos.
-         * @param pos Position of the element to return.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        const Value& at (size_t pos) const
-        {
-            return get<ArrayValue> ().at (pos);
-        }
-
-        /**
-         * @brief returns a reference to the value that is mapped to a key.
-         * @param key the key of the element to find.
-         * @return a reference to the mapped element.
-         * @throw std::bad_cast.
+         * @throw std::bad_cast, std::out_of_range.
          */
         Value& at (const Value& key)
         {
+            if (index () == ArrayValue)
+            {
+                return get<ArrayValue> ().at (key.getUint64 ());
+            }
+
             for (auto& member : get<ObjectValue> ())
             {
                 if (member.first == key)
@@ -1065,13 +1048,18 @@ namespace join
         }
 
         /**
-         * @brief returns a reference to the value that is mapped to a key.
-         * @param key the key of the element to find.
-         * @return a reference to the mapped element.
-         * @throw std::bad_cast.
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key the position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
          */
         const Value& at (const Value& key) const
         {
+            if (index () == ArrayValue)
+            {
+                return get<ArrayValue> ().at (key.getUint64 ());
+            }
+
             for (auto const& member : get<ObjectValue> ())
             {
                 if (member.first == key)
@@ -1084,24 +1072,18 @@ namespace join
         }
 
         /**
-         * @brief returns a reference to the element at specified location pos.
-         * @param pos Position of the element to return.
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key the position or key of the element to find.
          * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        Value& operator[] (size_t pos)
-        {
-            return get<ArrayValue> ()[pos];
-        }
-
-        /**
-         * @brief returns a reference to the value that is mapped to a key.
-         * @param key the key of the element to find.
-         * @return a reference to the mapped element.
          * @throw std::bad_cast.
          */
         Value& operator[] (const Value& key)
         {
+            if (index () == ArrayValue)
+            {
+                return get<ArrayValue> ()[key.getUint64 ()];
+            }
+
             if (index () == Null)
             {
                 set<ObjectValue> ();
@@ -1330,23 +1312,18 @@ namespace join
         }
 
         /**
-         * @brief checks if the nested container contains an element at position pos.
-         * @return true if the nested container contains an element at position pos, false otherwise.
-         * @throw std::bad_cast.
-         */
-        bool contains (size_t pos) const
-        {
-            return get<ArrayValue> ().size () > pos;
-        }
-
-        /**
          * @brief checks if the nested container contains an element that is mapped to key.
          * @return true if the nested container contains an element mapped to key, false otherwise.
          * @throw std::bad_cast.
          */
         bool contains (const Value& key) const
         {
-            for (auto& member : get<ObjectValue> ())
+            if (index () == ArrayValue)
+            {
+                return get<ArrayValue> ().size () > key.getUint64 ();
+            }
+
+            for (auto const& member : get<ObjectValue> ())
             {
                 if (member.first == key)
                 {

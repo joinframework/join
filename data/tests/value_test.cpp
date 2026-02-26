@@ -56,58 +56,58 @@ TEST (Value, create)
     ASSERT_TRUE (falseValue.isBool ());
     ASSERT_TRUE (falseValue.isFalse ());
 
-    Value minIntValue (std::numeric_limits <int32_t>::min ());
+    Value minIntValue (std::numeric_limits<int32_t>::min ());
     ASSERT_TRUE (minIntValue.isNumber ());
     ASSERT_TRUE (minIntValue.isInt ());
 
-    Value maxIntValue (std::numeric_limits <int32_t>::max ());
+    Value maxIntValue (std::numeric_limits<int32_t>::max ());
     ASSERT_TRUE (minIntValue.isNumber ());
     ASSERT_TRUE (minIntValue.isInt ());
 
-    Value minUintValue (std::numeric_limits <uint32_t>::min ());
+    Value minUintValue (std::numeric_limits<uint32_t>::min ());
     ASSERT_TRUE (minUintValue.isNumber ());
     ASSERT_TRUE (minUintValue.isUint ());
 
-    Value maxUintValue (std::numeric_limits <uint32_t>::max ());
+    Value maxUintValue (std::numeric_limits<uint32_t>::max ());
     ASSERT_TRUE (maxUintValue.isNumber ());
     ASSERT_TRUE (maxUintValue.isUint ());
 
-    Value minInt64Value (std::numeric_limits <int64_t>::min ());
+    Value minInt64Value (std::numeric_limits<int64_t>::min ());
     ASSERT_TRUE (minIntValue.isNumber ());
     ASSERT_TRUE (minIntValue.isInt64 ());
 
-    Value maxInt64Value (std::numeric_limits <int64_t>::max ());
+    Value maxInt64Value (std::numeric_limits<int64_t>::max ());
     ASSERT_TRUE (minInt64Value.isNumber ());
     ASSERT_TRUE (minInt64Value.isInt64 ());
 
-    Value minUint64Value (std::numeric_limits <uint64_t>::min ());
+    Value minUint64Value (std::numeric_limits<uint64_t>::min ());
     ASSERT_TRUE (minUint64Value.isNumber ());
     ASSERT_TRUE (minUint64Value.isUint64 ());
 
-    Value maxUint64Value (std::numeric_limits <uint64_t>::max ());
+    Value maxUint64Value (std::numeric_limits<uint64_t>::max ());
     ASSERT_TRUE (maxUint64Value.isNumber ());
     ASSERT_TRUE (maxUint64Value.isUint64 ());
 
-    Value minFloatValue (std::numeric_limits <float>::min ());
+    Value minFloatValue (std::numeric_limits<float>::min ());
     ASSERT_TRUE (minFloatValue.isNumber ());
     ASSERT_TRUE (minFloatValue.isFloat ());
 
-    Value maxFloatValue (std::numeric_limits <float>::max ());
+    Value maxFloatValue (std::numeric_limits<float>::max ());
     ASSERT_TRUE (maxFloatValue.isNumber ());
     ASSERT_TRUE (maxFloatValue.isFloat ());
 
-    Value minDoubleValue (std::numeric_limits <double>::min ());
+    Value minDoubleValue (std::numeric_limits<double>::min ());
     ASSERT_TRUE (minDoubleValue.isNumber ());
     ASSERT_TRUE (minDoubleValue.isDouble ());
 
-    Value maxDoubleValue (std::numeric_limits <double>::max ());
+    Value maxDoubleValue (std::numeric_limits<double>::max ());
     ASSERT_TRUE (maxDoubleValue.isNumber ());
     ASSERT_TRUE (maxDoubleValue.isDouble ());
 
     Value stringValue ("foo");
     ASSERT_TRUE (stringValue.isString ());
 
-    Value arrayValue (Array {1});
+    Value arrayValue (Array{1});
     ASSERT_TRUE (arrayValue.isArray ());
 
     Value objectValue (Object ({{"i", 1}}));
@@ -137,62 +137,62 @@ TEST (Value, copy)
     ASSERT_TRUE (falseValue.isBool ());
     ASSERT_TRUE (falseValue.isFalse ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     Value minIntValue (value);
     ASSERT_TRUE (minIntValue.isNumber ());
     ASSERT_TRUE (minIntValue.isInt ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     Value maxIntValue (value);
     ASSERT_TRUE (minIntValue.isNumber ());
     ASSERT_TRUE (minIntValue.isInt ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     Value minUintValue (value);
     ASSERT_TRUE (minUintValue.isNumber ());
     ASSERT_TRUE (minUintValue.isUint ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     Value maxUintValue (value);
     ASSERT_TRUE (maxUintValue.isNumber ());
     ASSERT_TRUE (maxUintValue.isUint ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     Value minInt64Value (value);
     ASSERT_TRUE (minIntValue.isNumber ());
     ASSERT_TRUE (minIntValue.isInt64 ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     Value maxInt64Value (value);
     ASSERT_TRUE (minInt64Value.isNumber ());
     ASSERT_TRUE (minInt64Value.isInt64 ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     Value minUint64Value (value);
     ASSERT_TRUE (minUint64Value.isNumber ());
     ASSERT_TRUE (minUint64Value.isUint64 ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     Value maxUint64Value (value);
     ASSERT_TRUE (maxUint64Value.isNumber ());
     ASSERT_TRUE (maxUint64Value.isUint64 ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     Value minFloatValue (value);
     ASSERT_TRUE (minFloatValue.isNumber ());
     ASSERT_TRUE (minFloatValue.isFloat ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     Value maxFloatValue (value);
     ASSERT_TRUE (maxFloatValue.isNumber ());
     ASSERT_TRUE (maxFloatValue.isFloat ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     Value minDoubleValue (value);
     ASSERT_TRUE (minDoubleValue.isNumber ());
     ASSERT_TRUE (minDoubleValue.isDouble ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     Value maxDoubleValue (value);
     ASSERT_TRUE (maxDoubleValue.isNumber ());
     ASSERT_TRUE (maxDoubleValue.isDouble ());
@@ -201,7 +201,7 @@ TEST (Value, copy)
     Value stringValue (value);
     ASSERT_TRUE (stringValue.isString ());
 
-    value = Array {1};
+    value = Array{1};
     Value arrayValue (value);
     ASSERT_TRUE (arrayValue.isArray ());
 
@@ -233,62 +233,62 @@ TEST (Value, move)
     ASSERT_TRUE (falseValue.isBool ());
     ASSERT_TRUE (falseValue.isFalse ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     Value minIntValue (std::move (value));
     ASSERT_TRUE (minIntValue.isNumber ());
     ASSERT_TRUE (minIntValue.isInt ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     Value maxIntValue (std::move (value));
     ASSERT_TRUE (minIntValue.isNumber ());
     ASSERT_TRUE (minIntValue.isInt ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     Value minUintValue (std::move (value));
     ASSERT_TRUE (minUintValue.isNumber ());
     ASSERT_TRUE (minUintValue.isUint ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     Value maxUintValue (std::move (value));
     ASSERT_TRUE (maxUintValue.isNumber ());
     ASSERT_TRUE (maxUintValue.isUint ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     Value minInt64Value (std::move (value));
     ASSERT_TRUE (minIntValue.isNumber ());
     ASSERT_TRUE (minIntValue.isInt64 ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     Value maxInt64Value (std::move (value));
     ASSERT_TRUE (minInt64Value.isNumber ());
     ASSERT_TRUE (minInt64Value.isInt64 ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     Value minUint64Value (std::move (value));
     ASSERT_TRUE (minUint64Value.isNumber ());
     ASSERT_TRUE (minUint64Value.isUint64 ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     Value maxUint64Value (std::move (value));
     ASSERT_TRUE (maxUint64Value.isNumber ());
     ASSERT_TRUE (maxUint64Value.isUint64 ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     Value minFloatValue (std::move (value));
     ASSERT_TRUE (minFloatValue.isNumber ());
     ASSERT_TRUE (minFloatValue.isFloat ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     Value maxFloatValue (std::move (value));
     ASSERT_TRUE (maxFloatValue.isNumber ());
     ASSERT_TRUE (maxFloatValue.isFloat ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     Value minDoubleValue (std::move (value));
     ASSERT_TRUE (minDoubleValue.isNumber ());
     ASSERT_TRUE (minDoubleValue.isDouble ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     Value maxDoubleValue (std::move (value));
     ASSERT_TRUE (maxDoubleValue.isNumber ());
     ASSERT_TRUE (maxDoubleValue.isDouble ());
@@ -297,7 +297,7 @@ TEST (Value, move)
     Value stringValue (std::move (value));
     ASSERT_TRUE (stringValue.isString ());
 
-    value = Array {1};
+    value = Array{1};
     Value arrayValue (std::move (value));
     ASSERT_TRUE (arrayValue.isArray ());
 
@@ -313,125 +313,125 @@ TEST (Value, is)
 {
     Value value;
 
-    value.set <std::nullptr_t> (nullptr);
-    ASSERT_TRUE  (value.is <std::nullptr_t> ());
-    ASSERT_FALSE (value.is <bool> ());
-    ASSERT_FALSE (value.is <int32_t> ());
-    ASSERT_FALSE (value.is <uint32_t> ());
-    ASSERT_FALSE (value.is <int64_t> ());
-    ASSERT_FALSE (value.is <uint64_t> ());
-    ASSERT_FALSE (value.is <double> ());
-    ASSERT_FALSE (value.is <std::string> ());
-    ASSERT_FALSE (value.is <Array> ());
-    ASSERT_FALSE (value.is <Object> ());
+    value.set<std::nullptr_t> (nullptr);
+    ASSERT_TRUE (value.is<std::nullptr_t> ());
+    ASSERT_FALSE (value.is<bool> ());
+    ASSERT_FALSE (value.is<int32_t> ());
+    ASSERT_FALSE (value.is<uint32_t> ());
+    ASSERT_FALSE (value.is<int64_t> ());
+    ASSERT_FALSE (value.is<uint64_t> ());
+    ASSERT_FALSE (value.is<double> ());
+    ASSERT_FALSE (value.is<std::string> ());
+    ASSERT_FALSE (value.is<Array> ());
+    ASSERT_FALSE (value.is<Object> ());
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value.is <std::nullptr_t> ());
-    ASSERT_FALSE (value.is <bool> ());
-    ASSERT_TRUE  (value.is <int32_t> ());
-    ASSERT_FALSE (value.is <uint32_t> ());
-    ASSERT_FALSE (value.is <int64_t> ());
-    ASSERT_FALSE (value.is <uint64_t> ());
-    ASSERT_FALSE (value.is <double> ());
-    ASSERT_FALSE (value.is <std::string> ());
-    ASSERT_FALSE (value.is <Array> ());
-    ASSERT_FALSE (value.is <Object> ());
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value.is<std::nullptr_t> ());
+    ASSERT_FALSE (value.is<bool> ());
+    ASSERT_TRUE (value.is<int32_t> ());
+    ASSERT_FALSE (value.is<uint32_t> ());
+    ASSERT_FALSE (value.is<int64_t> ());
+    ASSERT_FALSE (value.is<uint64_t> ());
+    ASSERT_FALSE (value.is<double> ());
+    ASSERT_FALSE (value.is<std::string> ());
+    ASSERT_FALSE (value.is<Array> ());
+    ASSERT_FALSE (value.is<Object> ());
 
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value.is <std::nullptr_t> ());
-    ASSERT_FALSE (value.is <bool> ());
-    ASSERT_FALSE (value.is <int> ());
-    ASSERT_TRUE  (value.is <unsigned int> ());
-    ASSERT_FALSE (value.is <int64_t> ());
-    ASSERT_FALSE (value.is <uint64_t> ());
-    ASSERT_FALSE (value.is <double> ());
-    ASSERT_FALSE (value.is <std::string> ());
-    ASSERT_FALSE (value.is <Array> ());
-    ASSERT_FALSE (value.is <Object> ());
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value.is<std::nullptr_t> ());
+    ASSERT_FALSE (value.is<bool> ());
+    ASSERT_FALSE (value.is<int> ());
+    ASSERT_TRUE (value.is<unsigned int> ());
+    ASSERT_FALSE (value.is<int64_t> ());
+    ASSERT_FALSE (value.is<uint64_t> ());
+    ASSERT_FALSE (value.is<double> ());
+    ASSERT_FALSE (value.is<std::string> ());
+    ASSERT_FALSE (value.is<Array> ());
+    ASSERT_FALSE (value.is<Object> ());
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value.is <std::nullptr_t> ());
-    ASSERT_FALSE (value.is <bool> ());
-    ASSERT_FALSE (value.is <int32_t> ());
-    ASSERT_FALSE (value.is <uint32_t> ());
-    ASSERT_TRUE  (value.is <int64_t> ());
-    ASSERT_FALSE (value.is <uint64_t> ());
-    ASSERT_FALSE (value.is <double> ());
-    ASSERT_FALSE (value.is <std::string> ());
-    ASSERT_FALSE (value.is <Array> ());
-    ASSERT_FALSE (value.is <Object> ());
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value.is<std::nullptr_t> ());
+    ASSERT_FALSE (value.is<bool> ());
+    ASSERT_FALSE (value.is<int32_t> ());
+    ASSERT_FALSE (value.is<uint32_t> ());
+    ASSERT_TRUE (value.is<int64_t> ());
+    ASSERT_FALSE (value.is<uint64_t> ());
+    ASSERT_FALSE (value.is<double> ());
+    ASSERT_FALSE (value.is<std::string> ());
+    ASSERT_FALSE (value.is<Array> ());
+    ASSERT_FALSE (value.is<Object> ());
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value.is <std::nullptr_t> ());
-    ASSERT_FALSE (value.is <bool> ());
-    ASSERT_FALSE (value.is <int> ());
-    ASSERT_FALSE (value.is <unsigned int> ());
-    ASSERT_FALSE (value.is <int64_t> ());
-    ASSERT_TRUE (value.is <uint64_t> ());
-    ASSERT_FALSE (value.is <double> ());
-    ASSERT_FALSE (value.is <std::string> ());
-    ASSERT_FALSE (value.is <Array> ());
-    ASSERT_FALSE (value.is <Object> ());
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value.is<std::nullptr_t> ());
+    ASSERT_FALSE (value.is<bool> ());
+    ASSERT_FALSE (value.is<int> ());
+    ASSERT_FALSE (value.is<unsigned int> ());
+    ASSERT_FALSE (value.is<int64_t> ());
+    ASSERT_TRUE (value.is<uint64_t> ());
+    ASSERT_FALSE (value.is<double> ());
+    ASSERT_FALSE (value.is<std::string> ());
+    ASSERT_FALSE (value.is<Array> ());
+    ASSERT_FALSE (value.is<Object> ());
 
-    value.set <double> (std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value.is <std::nullptr_t> ());
-    ASSERT_FALSE (value.is <bool> ());
-    ASSERT_FALSE (value.is <int32_t> ());
-    ASSERT_FALSE (value.is <uint32_t> ());
-    ASSERT_FALSE (value.is <int64_t> ());
-    ASSERT_FALSE (value.is <uint64_t> ());
-    ASSERT_TRUE  (value.is <double> ());
-    ASSERT_FALSE (value.is <std::string> ());
-    ASSERT_FALSE (value.is <Array> ());
-    ASSERT_FALSE (value.is <Object> ());
+    value.set<double> (std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value.is<std::nullptr_t> ());
+    ASSERT_FALSE (value.is<bool> ());
+    ASSERT_FALSE (value.is<int32_t> ());
+    ASSERT_FALSE (value.is<uint32_t> ());
+    ASSERT_FALSE (value.is<int64_t> ());
+    ASSERT_FALSE (value.is<uint64_t> ());
+    ASSERT_TRUE (value.is<double> ());
+    ASSERT_FALSE (value.is<std::string> ());
+    ASSERT_FALSE (value.is<Array> ());
+    ASSERT_FALSE (value.is<Object> ());
 
-    value.set <std::string> ("foobar");
-    ASSERT_FALSE (value.is <std::nullptr_t> ());
-    ASSERT_FALSE (value.is <bool> ());
-    ASSERT_FALSE (value.is <int32_t> ());
-    ASSERT_FALSE (value.is <uint32_t> ());
-    ASSERT_FALSE (value.is <int64_t> ());
-    ASSERT_FALSE (value.is <uint64_t> ());
-    ASSERT_FALSE (value.is <double> ());
-    ASSERT_TRUE  (value.is <std::string> ());
-    ASSERT_FALSE (value.is <Array> ());
-    ASSERT_FALSE (value.is <Object> ());
+    value.set<std::string> ("foobar");
+    ASSERT_FALSE (value.is<std::nullptr_t> ());
+    ASSERT_FALSE (value.is<bool> ());
+    ASSERT_FALSE (value.is<int32_t> ());
+    ASSERT_FALSE (value.is<uint32_t> ());
+    ASSERT_FALSE (value.is<int64_t> ());
+    ASSERT_FALSE (value.is<uint64_t> ());
+    ASSERT_FALSE (value.is<double> ());
+    ASSERT_TRUE (value.is<std::string> ());
+    ASSERT_FALSE (value.is<Array> ());
+    ASSERT_FALSE (value.is<Object> ());
 
-    value.set <bool> (true);
-    ASSERT_FALSE (value.is <std::nullptr_t> ());
-    ASSERT_TRUE  (value.is <bool> ());
-    ASSERT_FALSE (value.is <int32_t> ());
-    ASSERT_FALSE (value.is <uint32_t> ());
-    ASSERT_FALSE (value.is <int64_t> ());
-    ASSERT_FALSE (value.is <uint64_t> ());
-    ASSERT_FALSE (value.is <double> ());
-    ASSERT_FALSE (value.is <std::string> ());
-    ASSERT_FALSE (value.is <Array> ());
-    ASSERT_FALSE (value.is <Object> ());
+    value.set<bool> (true);
+    ASSERT_FALSE (value.is<std::nullptr_t> ());
+    ASSERT_TRUE (value.is<bool> ());
+    ASSERT_FALSE (value.is<int32_t> ());
+    ASSERT_FALSE (value.is<uint32_t> ());
+    ASSERT_FALSE (value.is<int64_t> ());
+    ASSERT_FALSE (value.is<uint64_t> ());
+    ASSERT_FALSE (value.is<double> ());
+    ASSERT_FALSE (value.is<std::string> ());
+    ASSERT_FALSE (value.is<Array> ());
+    ASSERT_FALSE (value.is<Object> ());
 
-    value.set <Array, Array::value_type> ({1});
-    ASSERT_FALSE (value.is <std::nullptr_t> ());
-    ASSERT_FALSE (value.is <bool> ());
-    ASSERT_FALSE (value.is <int32_t> ());
-    ASSERT_FALSE (value.is <uint32_t> ());
-    ASSERT_FALSE (value.is <int64_t> ());
-    ASSERT_FALSE (value.is <uint64_t> ());
-    ASSERT_FALSE (value.is <double> ());
-    ASSERT_FALSE (value.is <std::string> ());
-    ASSERT_TRUE  (value.is <Array> ());
-    ASSERT_FALSE (value.is <Object> ());
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_FALSE (value.is<std::nullptr_t> ());
+    ASSERT_FALSE (value.is<bool> ());
+    ASSERT_FALSE (value.is<int32_t> ());
+    ASSERT_FALSE (value.is<uint32_t> ());
+    ASSERT_FALSE (value.is<int64_t> ());
+    ASSERT_FALSE (value.is<uint64_t> ());
+    ASSERT_FALSE (value.is<double> ());
+    ASSERT_FALSE (value.is<std::string> ());
+    ASSERT_TRUE (value.is<Array> ());
+    ASSERT_FALSE (value.is<Object> ());
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
-    ASSERT_FALSE (value.is <std::nullptr_t> ());
-    ASSERT_FALSE (value.is <bool> ());
-    ASSERT_FALSE (value.is <int32_t> ());
-    ASSERT_FALSE (value.is <uint32_t> ());
-    ASSERT_FALSE (value.is <int64_t> ());
-    ASSERT_FALSE (value.is <uint64_t> ());
-    ASSERT_FALSE (value.is <double> ());
-    ASSERT_FALSE (value.is <std::string> ());
-    ASSERT_FALSE (value.is <Array> ());
-    ASSERT_TRUE  (value.is <Object> ());
+    value.set<Object, Object::value_type> ({{"i", 1}});
+    ASSERT_FALSE (value.is<std::nullptr_t> ());
+    ASSERT_FALSE (value.is<bool> ());
+    ASSERT_FALSE (value.is<int32_t> ());
+    ASSERT_FALSE (value.is<uint32_t> ());
+    ASSERT_FALSE (value.is<int64_t> ());
+    ASSERT_FALSE (value.is<uint64_t> ());
+    ASSERT_FALSE (value.is<double> ());
+    ASSERT_FALSE (value.is<std::string> ());
+    ASSERT_FALSE (value.is<Array> ());
+    ASSERT_TRUE (value.is<Object> ());
 }
 
 /**
@@ -451,64 +451,64 @@ TEST (Value, isNull)
     value = false;
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isNull ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isNull ());
 
     value = "";
@@ -523,7 +523,7 @@ TEST (Value, isNull)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isNull ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isNull ());
 
     value = Object ({{"i", 1}});
@@ -547,64 +547,64 @@ TEST (Value, isBool)
     value = false;
     ASSERT_TRUE (value.isBool ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isBool ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isBool ());
 
     value = "";
@@ -619,7 +619,7 @@ TEST (Value, isBool)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isBool ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isBool ());
 
     value = Object ({{"i", 1}});
@@ -643,64 +643,64 @@ TEST (Value, isTrue)
     value = false;
     ASSERT_FALSE (value.isTrue ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_FALSE (value.isTrue ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_FALSE (value.isTrue ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_FALSE (value.isTrue ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_FALSE (value.isTrue ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_TRUE (value.isTrue ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_TRUE (value.isTrue ());
 
     value = "";
@@ -715,7 +715,7 @@ TEST (Value, isTrue)
     value = "127.0.0.1";
     ASSERT_THROW (value.isTrue (), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.isTrue (), std::bad_cast);
 
     value = Object ({{"i", 1}});
@@ -739,64 +739,64 @@ TEST (Value, isFalse)
     value = false;
     ASSERT_TRUE (value.isFalse ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isFalse ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isFalse ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isFalse ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isFalse ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isFalse ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isFalse ());
 
     value = "";
@@ -811,7 +811,7 @@ TEST (Value, isFalse)
     value = "127.0.0.1";
     ASSERT_THROW (value.isFalse (), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.isFalse (), std::bad_cast);
 
     value = Object ({{"i", 1}});
@@ -835,64 +835,64 @@ TEST (Value, isNumber)
     value = false;
     ASSERT_FALSE (value.isNumber ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_TRUE (value.isNumber ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_TRUE (value.isNumber ());
 
     value = "";
@@ -907,7 +907,7 @@ TEST (Value, isNumber)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isNumber ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isNumber ());
 
     value = Object ({{"i", 1}});
@@ -931,64 +931,64 @@ TEST (Value, isInt8)
     value = false;
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_TRUE (value.isInt8 ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isInt8 ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isInt8 ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isInt8 ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isInt8 ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isInt8 ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isInt8 ());
 
     value = "";
@@ -1003,7 +1003,7 @@ TEST (Value, isInt8)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt8 ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isInt8 ());
 
     value = Object ({{"i", 1}});
@@ -1027,64 +1027,64 @@ TEST (Value, isUint8)
     value = false;
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isUint8 ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isUint8 ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isUint8 ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isUint8 ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isUint8 ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isUint8 ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isUint8 ());
 
     value = "";
@@ -1099,7 +1099,7 @@ TEST (Value, isUint8)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint8 ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isUint8 ());
 
     value = Object ({{"i", 1}});
@@ -1123,64 +1123,64 @@ TEST (Value, isInt16)
     value = false;
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_TRUE (value.isInt16 ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isInt16 ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isInt16 ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isInt16 ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_TRUE (value.isInt16 ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.isInt16 ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isInt16 ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isInt16 ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isInt16 ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isInt16 ());
 
     value = "";
@@ -1195,7 +1195,7 @@ TEST (Value, isInt16)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt16 ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isInt16 ());
 
     value = Object ({{"i", 1}});
@@ -1219,64 +1219,64 @@ TEST (Value, isUint16)
     value = false;
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isUint16 ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isUint16 ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isUint16 ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.isUint16 ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isUint16 ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_TRUE (value.isUint16 ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isUint16 ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isUint16 ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isUint16 ());
 
     value = "";
@@ -1291,7 +1291,7 @@ TEST (Value, isUint16)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint16 ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isUint16 ());
 
     value = Object ({{"i", 1}});
@@ -1315,64 +1315,64 @@ TEST (Value, isInt)
     value = false;
     ASSERT_FALSE (value.isInt ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isInt ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isInt ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isInt ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isInt ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isInt ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isInt ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isInt ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isInt ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isInt ());
 
     value = "";
@@ -1387,7 +1387,7 @@ TEST (Value, isInt)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isInt ());
 
     value = Object ({{"i", 1}});
@@ -1411,64 +1411,64 @@ TEST (Value, isUint)
     value = false;
     ASSERT_FALSE (value.isUint ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_FALSE (value.isUint ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isUint ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isUint ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isUint ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isUint ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.isUint ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isUint ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_TRUE (value.isUint ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isUint ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_TRUE (value.isUint ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isUint ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_TRUE (value.isUint ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isUint ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isUint ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isUint ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isUint ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isUint ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isUint ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isUint ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isUint ());
 
     value = "";
@@ -1483,7 +1483,7 @@ TEST (Value, isUint)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isUint ());
 
     value = Object ({{"i", 1}});
@@ -1507,64 +1507,64 @@ TEST (Value, isInt64)
     value = false;
     ASSERT_FALSE (value.isInt64 ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isInt64 ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isInt64 ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isInt64 ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isInt64 ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isInt64 ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isInt64 ());
 
     value = "";
@@ -1579,7 +1579,7 @@ TEST (Value, isInt64)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt64 ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isInt64 ());
 
     value = Object ({{"i", 1}});
@@ -1603,64 +1603,64 @@ TEST (Value, isUint64)
     value = false;
     ASSERT_FALSE (value.isUint64 ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_FALSE (value.isUint64 ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isUint64 ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isUint64 ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isUint64 ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_TRUE (value.isUint64 ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isUint64 ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isUint64 ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isUint64 ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isUint64 ());
 
     value = "";
@@ -1675,7 +1675,7 @@ TEST (Value, isUint64)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint64 ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isUint64 ());
 
     value = Object ({{"i", 1}});
@@ -1699,64 +1699,64 @@ TEST (Value, isFloat)
     value = false;
     ASSERT_FALSE (value.isFloat ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_TRUE (value.isFloat ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_TRUE (value.isFloat ());
 
     value = "";
@@ -1771,7 +1771,7 @@ TEST (Value, isFloat)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isFloat ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isFloat ());
 
     value = Object ({{"i", 1}});
@@ -1795,64 +1795,64 @@ TEST (Value, isDouble)
     value = false;
     ASSERT_FALSE (value.isDouble ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_TRUE (value.isDouble ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_TRUE (value.isDouble ());
 
     value = "";
@@ -1867,7 +1867,7 @@ TEST (Value, isDouble)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isDouble ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isDouble ());
 
     value = Object ({{"i", 1}});
@@ -1891,64 +1891,64 @@ TEST (Value, isString)
     value = false;
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isString ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isString ());
 
     value = "";
@@ -1963,7 +1963,7 @@ TEST (Value, isString)
     value = "127.0.0.1";
     ASSERT_TRUE (value.isString ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isString ());
 
     value = Object ({{"i", 1}});
@@ -1987,64 +1987,64 @@ TEST (Value, isArray)
     value = false;
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isArray ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isArray ());
 
     value = "";
@@ -2059,7 +2059,7 @@ TEST (Value, isArray)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isArray ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_TRUE (value.isArray ());
 
     value = Object ({{"i", 1}});
@@ -2083,64 +2083,64 @@ TEST (Value, isObject)
     value = false;
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_FALSE (value.isObject ());
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_FALSE (value.isObject ());
 
     value = "";
@@ -2155,7 +2155,7 @@ TEST (Value, isObject)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isObject ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.isObject ());
 
     value = Object ({{"i", 1}});
@@ -2169,75 +2169,75 @@ TEST (Value, set)
 {
     Value value;
 
-    value.set <std::nullptr_t> (nullptr);
-    ASSERT_TRUE (value.is <std::nullptr_t> ());
+    value.set<std::nullptr_t> (nullptr);
+    ASSERT_TRUE (value.is<std::nullptr_t> ());
 
-    value.set <Value::Null> (nullptr);
-    ASSERT_TRUE (value.is <Value::Null> ());
+    value.set<Value::Null> (nullptr);
+    ASSERT_TRUE (value.is<Value::Null> ());
 
-    value.set <bool> (true);
-    ASSERT_TRUE (value.is <bool> ());
-    ASSERT_TRUE (value.get <bool> ());
+    value.set<bool> (true);
+    ASSERT_TRUE (value.is<bool> ());
+    ASSERT_TRUE (value.get<bool> ());
 
-    value.set <Value::Boolean> (false);
-    ASSERT_TRUE (value.is <bool> ());
-    ASSERT_FALSE (value.get <bool> ());
+    value.set<Value::Boolean> (false);
+    ASSERT_TRUE (value.is<bool> ());
+    ASSERT_FALSE (value.get<bool> ());
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE (value.is <int32_t> ());
-    ASSERT_EQ (value.get <int32_t> (), std::numeric_limits <int32_t>::min ());
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value.is<int32_t> ());
+    ASSERT_EQ (value.get<int32_t> (), std::numeric_limits<int32_t>::min ());
 
-    value.set <Value::Integer> (std::numeric_limits <int>::min ());
-    ASSERT_TRUE (value.is <Value::Integer> ());
-    ASSERT_EQ (value.get <Value::Integer> (), std::numeric_limits <int>::min ());
+    value.set<Value::Integer> (std::numeric_limits<int>::min ());
+    ASSERT_TRUE (value.is<Value::Integer> ());
+    ASSERT_EQ (value.get<Value::Integer> (), std::numeric_limits<int>::min ());
 
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE (value.is <uint32_t> ());
-    ASSERT_EQ (value.get <uint32_t> (), std::numeric_limits <uint32_t>::max ());
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value.is<uint32_t> ());
+    ASSERT_EQ (value.get<uint32_t> (), std::numeric_limits<uint32_t>::max ());
 
-    value.set <Value::Unsigned> (std::numeric_limits <unsigned int>::max ());
-    ASSERT_TRUE (value.is <Value::Unsigned> ());
-    ASSERT_EQ (value.get <Value::Unsigned> (), std::numeric_limits <unsigned int>::max ());
+    value.set<Value::Unsigned> (std::numeric_limits<unsigned int>::max ());
+    ASSERT_TRUE (value.is<Value::Unsigned> ());
+    ASSERT_EQ (value.get<Value::Unsigned> (), std::numeric_limits<unsigned int>::max ());
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE (value.is <int64_t> ());
-    ASSERT_EQ (value.get <int64_t> (), std::numeric_limits <int64_t>::min ());
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value.is<int64_t> ());
+    ASSERT_EQ (value.get<int64_t> (), std::numeric_limits<int64_t>::min ());
 
-    value.set <Value::Integer64> (std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE (value.is <Value::Integer64> ());
-    ASSERT_EQ (value.get <Value::Integer64> (), std::numeric_limits <int64_t>::min ());
+    value.set<Value::Integer64> (std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value.is<Value::Integer64> ());
+    ASSERT_EQ (value.get<Value::Integer64> (), std::numeric_limits<int64_t>::min ());
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE (value.is <uint64_t> ());
-    ASSERT_EQ (value.get <uint64_t> (), std::numeric_limits <uint64_t>::max ());
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value.is<uint64_t> ());
+    ASSERT_EQ (value.get<uint64_t> (), std::numeric_limits<uint64_t>::max ());
 
-    value.set <Value::Unsigned64> (std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE (value.is <Value::Unsigned64> ());
-    ASSERT_EQ (value.get <Value::Unsigned64> (), std::numeric_limits <uint64_t>::max ());
+    value.set<Value::Unsigned64> (std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value.is<Value::Unsigned64> ());
+    ASSERT_EQ (value.get<Value::Unsigned64> (), std::numeric_limits<uint64_t>::max ());
 
-    value.set <double> (std::numeric_limits <double>::min ());
-    ASSERT_TRUE (value.is <double> ());
-    ASSERT_DOUBLE_EQ (value.get <double> (), std::numeric_limits <double>::min ());
+    value.set<double> (std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value.is<double> ());
+    ASSERT_DOUBLE_EQ (value.get<double> (), std::numeric_limits<double>::min ());
 
-    value.set <Value::Real> (std::numeric_limits <double>::min ());
-    ASSERT_TRUE (value.is <Value::Real> ());
-    ASSERT_DOUBLE_EQ (value.get <Value::Real> (), std::numeric_limits <double>::min ());
+    value.set<Value::Real> (std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value.is<Value::Real> ());
+    ASSERT_DOUBLE_EQ (value.get<Value::Real> (), std::numeric_limits<double>::min ());
 
-    value.set <std::string> ("foobar");
-    ASSERT_TRUE (value.is <std::string> ());
-    ASSERT_EQ (value.get <std::string> (), "foobar");
+    value.set<std::string> ("foobar");
+    ASSERT_TRUE (value.is<std::string> ());
+    ASSERT_EQ (value.get<std::string> (), "foobar");
 
-    value.set <Value::String> ("foobar");
-    ASSERT_TRUE (value.is <Value::String> ());
-    ASSERT_EQ (value.get <Value::String> (), "foobar");
+    value.set<Value::String> ("foobar");
+    ASSERT_TRUE (value.is<Value::String> ());
+    ASSERT_EQ (value.get<Value::String> (), "foobar");
 
-    value.set <Array, Array::value_type> ({1});
-    ASSERT_TRUE (value.is <Array> ());
-    ASSERT_EQ (value.get <Array> (), Array {1});
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_TRUE (value.is<Array> ());
+    ASSERT_EQ (value.get<Array> (), Array{1});
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
-    ASSERT_TRUE (value.is <Object> ());
-    ASSERT_EQ (value.get <Object> (), Object ({{"i", 1}}));
+    value.set<Object, Object::value_type> ({{"i", 1}});
+    ASSERT_TRUE (value.is<Object> ());
+    ASSERT_EQ (value.get<Object> (), Object ({{"i", 1}}));
 }
 
 /**
@@ -2247,126 +2247,126 @@ TEST (Value, get)
 {
     Value value;
 
-    value.set <std::nullptr_t> (nullptr);
-    ASSERT_NO_THROW (value.get <std::nullptr_t> ());
-    ASSERT_THROW (value.get <bool> (), std::bad_cast);
-    ASSERT_THROW (value.get <int32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <int64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <double> (), std::bad_cast);
-    ASSERT_THROW (value.get <std::string> (), std::bad_cast);
-    ASSERT_THROW (value.get <Array> (), std::bad_cast);
-    ASSERT_THROW (value.get <Object> (), std::bad_cast);
+    value.set<std::nullptr_t> (nullptr);
+    ASSERT_NO_THROW (value.get<std::nullptr_t> ());
+    ASSERT_THROW (value.get<bool> (), std::bad_cast);
+    ASSERT_THROW (value.get<int32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<int64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<double> (), std::bad_cast);
+    ASSERT_THROW (value.get<std::string> (), std::bad_cast);
+    ASSERT_THROW (value.get<Array> (), std::bad_cast);
+    ASSERT_THROW (value.get<Object> (), std::bad_cast);
 
-    value.set <bool> (false);
-    ASSERT_THROW (value.get <std::nullptr_t> (), std::bad_cast);
-    ASSERT_NO_THROW (value.get <bool> ());
-    ASSERT_THROW (value.get <int32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <int64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <double> (), std::bad_cast);
-    ASSERT_THROW (value.get <std::string> (), std::bad_cast);
-    ASSERT_THROW (value.get <Array> (), std::bad_cast);
-    ASSERT_THROW (value.get <Object> (), std::bad_cast);
+    value.set<bool> (false);
+    ASSERT_THROW (value.get<std::nullptr_t> (), std::bad_cast);
+    ASSERT_NO_THROW (value.get<bool> ());
+    ASSERT_THROW (value.get<int32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<int64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<double> (), std::bad_cast);
+    ASSERT_THROW (value.get<std::string> (), std::bad_cast);
+    ASSERT_THROW (value.get<Array> (), std::bad_cast);
+    ASSERT_THROW (value.get<Object> (), std::bad_cast);
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_THROW (value.get <std::nullptr_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <bool> (), std::bad_cast);
-    ASSERT_NO_THROW (value.get <int32_t> ());
-    ASSERT_THROW (value.get <uint32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <int64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <double> (), std::bad_cast);
-    ASSERT_THROW (value.get <std::string> (), std::bad_cast);
-    ASSERT_THROW (value.get <Array> (), std::bad_cast);
-    ASSERT_THROW (value.get <Object> (), std::bad_cast);
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
+    ASSERT_THROW (value.get<std::nullptr_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<bool> (), std::bad_cast);
+    ASSERT_NO_THROW (value.get<int32_t> ());
+    ASSERT_THROW (value.get<uint32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<int64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<double> (), std::bad_cast);
+    ASSERT_THROW (value.get<std::string> (), std::bad_cast);
+    ASSERT_THROW (value.get<Array> (), std::bad_cast);
+    ASSERT_THROW (value.get<Object> (), std::bad_cast);
 
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
-    ASSERT_THROW (value.get <std::nullptr_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <bool> (), std::bad_cast);
-    ASSERT_THROW (value.get <int32_t> (), std::bad_cast);
-    ASSERT_NO_THROW (value.get <uint32_t> ());
-    ASSERT_THROW (value.get <int64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <double> (), std::bad_cast);
-    ASSERT_THROW (value.get <std::string> (), std::bad_cast);
-    ASSERT_THROW (value.get <Array> (), std::bad_cast);
-    ASSERT_THROW (value.get <Object> (), std::bad_cast);
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
+    ASSERT_THROW (value.get<std::nullptr_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<bool> (), std::bad_cast);
+    ASSERT_THROW (value.get<int32_t> (), std::bad_cast);
+    ASSERT_NO_THROW (value.get<uint32_t> ());
+    ASSERT_THROW (value.get<int64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<double> (), std::bad_cast);
+    ASSERT_THROW (value.get<std::string> (), std::bad_cast);
+    ASSERT_THROW (value.get<Array> (), std::bad_cast);
+    ASSERT_THROW (value.get<Object> (), std::bad_cast);
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
-    ASSERT_THROW (value.get <std::nullptr_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <bool> (), std::bad_cast);
-    ASSERT_THROW (value.get <int32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint32_t> (), std::bad_cast);
-    ASSERT_NO_THROW (value.get <int64_t> ());
-    ASSERT_THROW (value.get <uint64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <double> (), std::bad_cast);
-    ASSERT_THROW (value.get <std::string> (), std::bad_cast);
-    ASSERT_THROW (value.get <Array> (), std::bad_cast);
-    ASSERT_THROW (value.get <Object> (), std::bad_cast);
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
+    ASSERT_THROW (value.get<std::nullptr_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<bool> (), std::bad_cast);
+    ASSERT_THROW (value.get<int32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint32_t> (), std::bad_cast);
+    ASSERT_NO_THROW (value.get<int64_t> ());
+    ASSERT_THROW (value.get<uint64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<double> (), std::bad_cast);
+    ASSERT_THROW (value.get<std::string> (), std::bad_cast);
+    ASSERT_THROW (value.get<Array> (), std::bad_cast);
+    ASSERT_THROW (value.get<Object> (), std::bad_cast);
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
-    ASSERT_THROW (value.get <std::nullptr_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <bool> (), std::bad_cast);
-    ASSERT_THROW (value.get <int> (), std::bad_cast);
-    ASSERT_THROW (value.get <unsigned int> (), std::bad_cast);
-    ASSERT_THROW (value.get <int64_t> (), std::bad_cast);
-    ASSERT_NO_THROW (value.get <uint64_t> ());
-    ASSERT_THROW (value.get <double> (), std::bad_cast);
-    ASSERT_THROW (value.get <std::string> (), std::bad_cast);
-    ASSERT_THROW (value.get <std::nullptr_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <Array> (), std::bad_cast);
-    ASSERT_THROW (value.get <Object> (), std::bad_cast);
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
+    ASSERT_THROW (value.get<std::nullptr_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<bool> (), std::bad_cast);
+    ASSERT_THROW (value.get<int> (), std::bad_cast);
+    ASSERT_THROW (value.get<unsigned int> (), std::bad_cast);
+    ASSERT_THROW (value.get<int64_t> (), std::bad_cast);
+    ASSERT_NO_THROW (value.get<uint64_t> ());
+    ASSERT_THROW (value.get<double> (), std::bad_cast);
+    ASSERT_THROW (value.get<std::string> (), std::bad_cast);
+    ASSERT_THROW (value.get<std::nullptr_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<Array> (), std::bad_cast);
+    ASSERT_THROW (value.get<Object> (), std::bad_cast);
 
-    value.set <double> (std::numeric_limits <double>::min ());
-    ASSERT_THROW (value.get <std::nullptr_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <bool> (), std::bad_cast);
-    ASSERT_THROW (value.get <int32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <int64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint64_t> (), std::bad_cast);
-    ASSERT_NO_THROW (value.get <double> ());
-    ASSERT_THROW (value.get <std::string> (), std::bad_cast);
-    ASSERT_THROW (value.get <Array> (), std::bad_cast);
-    ASSERT_THROW (value.get <Object> (), std::bad_cast);
+    value.set<double> (std::numeric_limits<double>::min ());
+    ASSERT_THROW (value.get<std::nullptr_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<bool> (), std::bad_cast);
+    ASSERT_THROW (value.get<int32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<int64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint64_t> (), std::bad_cast);
+    ASSERT_NO_THROW (value.get<double> ());
+    ASSERT_THROW (value.get<std::string> (), std::bad_cast);
+    ASSERT_THROW (value.get<Array> (), std::bad_cast);
+    ASSERT_THROW (value.get<Object> (), std::bad_cast);
 
-    value.set <std::string> ("foobar");
-    ASSERT_THROW (value.get <std::nullptr_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <bool> (), std::bad_cast);
-    ASSERT_THROW (value.get <int32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <int64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <double> (), std::bad_cast);
-    ASSERT_NO_THROW (value.get <std::string> ());
-    ASSERT_THROW (value.get <Array> (), std::bad_cast);
-    ASSERT_THROW (value.get <Object> (), std::bad_cast);
+    value.set<std::string> ("foobar");
+    ASSERT_THROW (value.get<std::nullptr_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<bool> (), std::bad_cast);
+    ASSERT_THROW (value.get<int32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<int64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<double> (), std::bad_cast);
+    ASSERT_NO_THROW (value.get<std::string> ());
+    ASSERT_THROW (value.get<Array> (), std::bad_cast);
+    ASSERT_THROW (value.get<Object> (), std::bad_cast);
 
-    value.set <Array, Array::value_type> ({1});
-    ASSERT_THROW (value.get <std::nullptr_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <bool> (), std::bad_cast);
-    ASSERT_THROW (value.get <int32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <int64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <double> (), std::bad_cast);
-    ASSERT_THROW (value.get <std::string> (), std::bad_cast);
-    ASSERT_NO_THROW (value.get <Array> ());
-    ASSERT_THROW (value.get <Object> (), std::bad_cast);
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_THROW (value.get<std::nullptr_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<bool> (), std::bad_cast);
+    ASSERT_THROW (value.get<int32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<int64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<double> (), std::bad_cast);
+    ASSERT_THROW (value.get<std::string> (), std::bad_cast);
+    ASSERT_NO_THROW (value.get<Array> ());
+    ASSERT_THROW (value.get<Object> (), std::bad_cast);
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
-    ASSERT_THROW (value.get <std::nullptr_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <bool> (), std::bad_cast);
-    ASSERT_THROW (value.get <int32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint32_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <int64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <uint64_t> (), std::bad_cast);
-    ASSERT_THROW (value.get <double> (), std::bad_cast);
-    ASSERT_THROW (value.get <std::string> (), std::bad_cast);
-    ASSERT_THROW (value.get <Array> (), std::bad_cast);
-    ASSERT_NO_THROW (value.get <Object> ());
+    value.set<Object, Object::value_type> ({{"i", 1}});
+    ASSERT_THROW (value.get<std::nullptr_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<bool> (), std::bad_cast);
+    ASSERT_THROW (value.get<int32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint32_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<int64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<uint64_t> (), std::bad_cast);
+    ASSERT_THROW (value.get<double> (), std::bad_cast);
+    ASSERT_THROW (value.get<std::string> (), std::bad_cast);
+    ASSERT_THROW (value.get<Array> (), std::bad_cast);
+    ASSERT_NO_THROW (value.get<Object> ());
 }
 
 /**
@@ -2376,123 +2376,124 @@ TEST (Value, getBool)
 {
     Value value;
     ASSERT_FALSE (value.getBool ());
-    ASSERT_FALSE (static_cast <bool> (value));
+    ASSERT_FALSE (static_cast<bool> (value));
 
     value = nullptr;
     ASSERT_FALSE (value.getBool ());
-    ASSERT_FALSE (static_cast <bool> (value));
+    ASSERT_FALSE (static_cast<bool> (value));
 
     value = true;
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
     value = false;
     ASSERT_FALSE (value.getBool ());
-    ASSERT_FALSE (static_cast <bool> (value));
+    ASSERT_FALSE (static_cast<bool> (value));
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_FALSE (value.getBool ());
-    ASSERT_FALSE (static_cast <bool> (value));
+    ASSERT_FALSE (static_cast<bool> (value));
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_FALSE (value.getBool ());
-    ASSERT_FALSE (static_cast <bool> (value));
+    ASSERT_FALSE (static_cast<bool> (value));
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_FALSE (value.getBool ());
-    ASSERT_FALSE (static_cast <bool> (value));
+    ASSERT_FALSE (static_cast<bool> (value));
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_FALSE (value.getBool ());
-    ASSERT_FALSE (static_cast <bool> (value));
+    ASSERT_FALSE (static_cast<bool> (value));
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_TRUE (value.getBool ());
-    ASSERT_TRUE (static_cast <bool> (value));
+    ASSERT_TRUE (static_cast<bool> (value));
 
-    bool tmp = false; (void) tmp;
+    bool tmp = false;
+    (void)tmp;
 
     value = "";
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<bool> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<bool> (value)), std::bad_cast);
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<bool> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
-    value = Array {1};
+    ASSERT_THROW ((tmp = static_cast<bool> (value)), std::bad_cast);
+    value = Array{1};
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<bool> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getBool (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <bool> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<bool> (value)), std::bad_cast);
 }
 
 /**
@@ -2501,139 +2502,139 @@ TEST (Value, getBool)
 TEST (Value, getInt8)
 {
     int8_t tmp = 0;
-    (void) tmp;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
-    ASSERT_EQ (value.getInt8 (), std::numeric_limits <int8_t>::min ());
-    ASSERT_EQ (static_cast <int8_t> (value), std::numeric_limits <int8_t>::min ());
+    value = std::numeric_limits<int8_t>::min ();
+    ASSERT_EQ (value.getInt8 (), std::numeric_limits<int8_t>::min ());
+    ASSERT_EQ (static_cast<int8_t> (value), std::numeric_limits<int8_t>::min ());
 
-    value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getInt8 (), std::numeric_limits <int8_t>::max ());
-    ASSERT_EQ (static_cast <int8_t> (value), std::numeric_limits <int8_t>::max ());
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_EQ (value.getInt8 (), std::numeric_limits<int8_t>::max ());
+    ASSERT_EQ (static_cast<int8_t> (value), std::numeric_limits<int8_t>::max ());
 
-    value = std::numeric_limits <uint8_t>::min ();
-    ASSERT_EQ (value.getInt8 (), std::numeric_limits <uint8_t>::min ());
-    ASSERT_EQ (static_cast <int8_t> (value), std::numeric_limits <uint8_t>::min ());
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_EQ (value.getInt8 (), std::numeric_limits<uint8_t>::min ());
+    ASSERT_EQ (static_cast<int8_t> (value), std::numeric_limits<uint8_t>::min ());
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
-    
-    value = std::numeric_limits <int16_t>::max ();
-    ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
-    ASSERT_EQ (value.getInt8 (), std::numeric_limits <uint16_t>::min ());
-    ASSERT_EQ (static_cast <int8_t> (value), std::numeric_limits <uint16_t>::min ());
-
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_EQ (value.getInt8 (), std::numeric_limits<uint16_t>::min ());
+    ASSERT_EQ (static_cast<int8_t> (value), std::numeric_limits<uint16_t>::min ());
+
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
+
+    value = std::numeric_limits<int32_t>::min ();
+    ASSERT_THROW (value.getInt8 (), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = int32_t (12);
     ASSERT_EQ (value.getInt8 (), 12);
-    ASSERT_EQ (static_cast <int8_t> (value), 12);
+    ASSERT_EQ (static_cast<int8_t> (value), 12);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
-    ASSERT_EQ (value.getInt8 (), std::numeric_limits <uint32_t>::min ());
-    ASSERT_EQ (static_cast <int8_t> (value), std::numeric_limits <uint32_t>::min ());
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_EQ (value.getInt8 (), std::numeric_limits<uint32_t>::min ());
+    ASSERT_EQ (static_cast<int8_t> (value), std::numeric_limits<uint32_t>::min ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getInt8 (), 12);
-    ASSERT_EQ (static_cast <int8_t> (value), 12);
+    ASSERT_EQ (static_cast<int8_t> (value), 12);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
-    ASSERT_EQ (value.getInt8 (), std::numeric_limits <uint64_t>::min ());
-    ASSERT_EQ (static_cast <int8_t> (value), std::numeric_limits <uint64_t>::min ());
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_EQ (value.getInt8 (), std::numeric_limits<uint64_t>::min ());
+    ASSERT_EQ (static_cast<int8_t> (value), std::numeric_limits<uint64_t>::min ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getInt8 (), 12);
-    ASSERT_EQ (static_cast <int8_t> (value), 12);
+    ASSERT_EQ (static_cast<int8_t> (value), 12);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 }
 
 /**
@@ -2642,139 +2643,139 @@ TEST (Value, getInt8)
 TEST (Value, getUint8)
 {
     uint8_t tmp = 0;
-    (void) tmp;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getUint8 (), std::numeric_limits <int8_t>::max ());
-    ASSERT_EQ (static_cast <uint8_t> (value), std::numeric_limits <int8_t>::max ());
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_EQ (value.getUint8 (), std::numeric_limits<int8_t>::max ());
+    ASSERT_EQ (static_cast<uint8_t> (value), std::numeric_limits<int8_t>::max ());
 
-    value = std::numeric_limits <uint8_t>::min ();
-    ASSERT_EQ (value.getUint8 (), std::numeric_limits <uint8_t>::min ());
-    ASSERT_EQ (static_cast <uint8_t> (value), std::numeric_limits <uint8_t>::min ());
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_EQ (value.getUint8 (), std::numeric_limits<uint8_t>::min ());
+    ASSERT_EQ (static_cast<uint8_t> (value), std::numeric_limits<uint8_t>::min ());
 
-    value = std::numeric_limits <uint8_t>::max ();
-    ASSERT_EQ (value.getUint8 (), std::numeric_limits <uint8_t>::max ());
-    ASSERT_EQ (static_cast <uint8_t> (value), std::numeric_limits <uint8_t>::max ());
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_EQ (value.getUint8 (), std::numeric_limits<uint8_t>::max ());
+    ASSERT_EQ (static_cast<uint8_t> (value), std::numeric_limits<uint8_t>::max ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
-    ASSERT_EQ (value.getUint8 (), std::numeric_limits <uint16_t>::min ());
-    ASSERT_EQ (static_cast <uint8_t> (value), std::numeric_limits <uint16_t>::min ());
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_EQ (value.getUint8 (), std::numeric_limits<uint16_t>::min ());
+    ASSERT_EQ (static_cast<uint8_t> (value), std::numeric_limits<uint16_t>::min ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = int32_t (12);
     ASSERT_EQ (value.getUint8 (), 12);
-    ASSERT_EQ (static_cast <uint8_t> (value), 12);
+    ASSERT_EQ (static_cast<uint8_t> (value), 12);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
-    ASSERT_EQ (value.getUint8 (), std::numeric_limits <uint32_t>::min ());
-    ASSERT_EQ (static_cast <uint8_t> (value), std::numeric_limits <uint32_t>::min ());
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_EQ (value.getUint8 (), std::numeric_limits<uint32_t>::min ());
+    ASSERT_EQ (static_cast<uint8_t> (value), std::numeric_limits<uint32_t>::min ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getUint8 (), 12);
-    ASSERT_EQ (static_cast <uint8_t> (value), 12);
+    ASSERT_EQ (static_cast<uint8_t> (value), 12);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
-    ASSERT_EQ (value.getUint8 (), std::numeric_limits <uint64_t>::min ());
-    ASSERT_EQ (static_cast <uint8_t> (value), std::numeric_limits <uint64_t>::min ());
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_EQ (value.getUint8 (), std::numeric_limits<uint64_t>::min ());
+    ASSERT_EQ (static_cast<uint8_t> (value), std::numeric_limits<uint64_t>::min ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getUint8 (), 12);
-    ASSERT_EQ (static_cast <uint8_t> (value), 12);
+    ASSERT_EQ (static_cast<uint8_t> (value), 12);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint8_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 }
 
 /**
@@ -2783,139 +2784,139 @@ TEST (Value, getUint8)
 TEST (Value, getInt16)
 {
     int16_t tmp = 0;
-    (void) tmp;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
-    ASSERT_EQ (value.getInt16 (), std::numeric_limits <int8_t>::min ());
-    ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <int8_t>::min ());
+    value = std::numeric_limits<int8_t>::min ();
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits<int8_t>::min ());
+    ASSERT_EQ (static_cast<int16_t> (value), std::numeric_limits<int8_t>::min ());
 
-    value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getInt16 (), std::numeric_limits <int8_t>::max ());
-    ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <int8_t>::max ());
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits<int8_t>::max ());
+    ASSERT_EQ (static_cast<int16_t> (value), std::numeric_limits<int8_t>::max ());
 
-    value = std::numeric_limits <uint8_t>::min ();
-    ASSERT_EQ (value.getInt16 (), std::numeric_limits <uint8_t>::min ());
-    ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <uint8_t>::min ());
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits<uint8_t>::min ());
+    ASSERT_EQ (static_cast<int16_t> (value), std::numeric_limits<uint8_t>::min ());
 
-    value = std::numeric_limits <uint8_t>::max ();
-    ASSERT_EQ (value.getInt16 (), std::numeric_limits <uint8_t>::max ());
-    ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <uint8_t>::max ());
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits<uint8_t>::max ());
+    ASSERT_EQ (static_cast<int16_t> (value), std::numeric_limits<uint8_t>::max ());
 
-    value = std::numeric_limits <int16_t>::min ();
-    ASSERT_EQ (value.getInt16 (), std::numeric_limits <int16_t>::min ());
-    ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <int16_t>::min ());
+    value = std::numeric_limits<int16_t>::min ();
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits<int16_t>::min ());
+    ASSERT_EQ (static_cast<int16_t> (value), std::numeric_limits<int16_t>::min ());
 
-    value = std::numeric_limits <int16_t>::max ();
-    ASSERT_EQ (value.getInt16 (), std::numeric_limits <int16_t>::max ());
-    ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <int16_t>::max ());
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits<int16_t>::max ());
+    ASSERT_EQ (static_cast<int16_t> (value), std::numeric_limits<int16_t>::max ());
 
-    value = std::numeric_limits <uint16_t>::min ();
-    ASSERT_EQ (value.getInt16 (), std::numeric_limits <uint16_t>::min ());
-    ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <uint16_t>::min ());
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits<uint16_t>::min ());
+    ASSERT_EQ (static_cast<int16_t> (value), std::numeric_limits<uint16_t>::min ());
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = int32_t (12);
     ASSERT_EQ (value.getInt16 (), 12);
-    ASSERT_EQ (static_cast <int16_t> (value), 12);
+    ASSERT_EQ (static_cast<int16_t> (value), 12);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
-    ASSERT_EQ (value.getInt16 (), std::numeric_limits <uint32_t>::min ());
-    ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <uint32_t>::min ());
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits<uint32_t>::min ());
+    ASSERT_EQ (static_cast<int16_t> (value), std::numeric_limits<uint32_t>::min ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getInt16 (), 12);
-    ASSERT_EQ (static_cast <int16_t> (value), 12);
+    ASSERT_EQ (static_cast<int16_t> (value), 12);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
-    ASSERT_EQ (value.getInt16 (), std::numeric_limits <uint64_t>::min ());
-    ASSERT_EQ (static_cast <int16_t> (value), std::numeric_limits <uint64_t>::min ());
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_EQ (value.getInt16 (), std::numeric_limits<uint64_t>::min ());
+    ASSERT_EQ (static_cast<int16_t> (value), std::numeric_limits<uint64_t>::min ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getInt16 (), 12);
-    ASSERT_EQ (static_cast <int16_t> (value), 12);
+    ASSERT_EQ (static_cast<int16_t> (value), 12);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 }
 
 /**
@@ -2924,139 +2925,139 @@ TEST (Value, getInt16)
 TEST (Value, getUint16)
 {
     uint16_t tmp = 0;
-    (void) tmp;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getUint16 (), std::numeric_limits <int8_t>::max ());
-    ASSERT_EQ (static_cast <uint16_t> (value), std::numeric_limits <int8_t>::max ());
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_EQ (value.getUint16 (), std::numeric_limits<int8_t>::max ());
+    ASSERT_EQ (static_cast<uint16_t> (value), std::numeric_limits<int8_t>::max ());
 
-    value = std::numeric_limits <uint8_t>::min ();
-    ASSERT_EQ (value.getUint16 (), std::numeric_limits <uint8_t>::min ());
-    ASSERT_EQ (static_cast <uint16_t> (value), std::numeric_limits <uint8_t>::min ());
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_EQ (value.getUint16 (), std::numeric_limits<uint8_t>::min ());
+    ASSERT_EQ (static_cast<uint16_t> (value), std::numeric_limits<uint8_t>::min ());
 
-    value = std::numeric_limits <uint8_t>::max ();
-    ASSERT_EQ (value.getUint16 (), std::numeric_limits <uint8_t>::max ());
-    ASSERT_EQ (static_cast <uint16_t> (value), std::numeric_limits <uint8_t>::max ());
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_EQ (value.getUint16 (), std::numeric_limits<uint8_t>::max ());
+    ASSERT_EQ (static_cast<uint16_t> (value), std::numeric_limits<uint8_t>::max ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
-    ASSERT_EQ (value.getUint16 (), std::numeric_limits <int16_t>::max ());
-    ASSERT_EQ (static_cast <uint16_t> (value), std::numeric_limits <int16_t>::max ());
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_EQ (value.getUint16 (), std::numeric_limits<int16_t>::max ());
+    ASSERT_EQ (static_cast<uint16_t> (value), std::numeric_limits<int16_t>::max ());
 
-    value = std::numeric_limits <uint16_t>::min ();
-    ASSERT_EQ (value.getUint16 (), std::numeric_limits <uint16_t>::min ());
-    ASSERT_EQ (static_cast <uint16_t> (value), std::numeric_limits <uint16_t>::min ());
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_EQ (value.getUint16 (), std::numeric_limits<uint16_t>::min ());
+    ASSERT_EQ (static_cast<uint16_t> (value), std::numeric_limits<uint16_t>::min ());
 
-    value = std::numeric_limits <uint16_t>::max ();
-    ASSERT_EQ (value.getUint16 (), std::numeric_limits <uint16_t>::max ());
-    ASSERT_EQ (static_cast <uint16_t> (value), std::numeric_limits <uint16_t>::max ());
+    value = std::numeric_limits<uint16_t>::max ();
+    ASSERT_EQ (value.getUint16 (), std::numeric_limits<uint16_t>::max ());
+    ASSERT_EQ (static_cast<uint16_t> (value), std::numeric_limits<uint16_t>::max ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = int32_t (12);
     ASSERT_EQ (value.getUint16 (), 12);
-    ASSERT_EQ (static_cast <uint16_t> (value), 12);
+    ASSERT_EQ (static_cast<uint16_t> (value), 12);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
-    ASSERT_EQ (value.getUint16 (), std::numeric_limits <uint32_t>::min ());
-    ASSERT_EQ (static_cast <uint16_t> (value), std::numeric_limits <uint32_t>::min ());
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_EQ (value.getUint16 (), std::numeric_limits<uint32_t>::min ());
+    ASSERT_EQ (static_cast<uint16_t> (value), std::numeric_limits<uint32_t>::min ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getUint16 (), 12);
-    ASSERT_EQ (static_cast <uint16_t> (value), 12);
+    ASSERT_EQ (static_cast<uint16_t> (value), 12);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
-    ASSERT_EQ (value.getUint16 (), std::numeric_limits <uint64_t>::min ());
-    ASSERT_EQ (static_cast <uint16_t> (value), std::numeric_limits <uint64_t>::min ());
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_EQ (value.getUint16 (), std::numeric_limits<uint64_t>::min ());
+    ASSERT_EQ (static_cast<uint16_t> (value), std::numeric_limits<uint64_t>::min ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getUint16 (), 12);
-    ASSERT_EQ (static_cast <uint16_t> (value), 12);
+    ASSERT_EQ (static_cast<uint16_t> (value), 12);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint16_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 }
 
 /**
@@ -3065,135 +3066,135 @@ TEST (Value, getUint16)
 TEST (Value, getInt)
 {
     int32_t tmp = 0;
-    (void) tmp;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <int8_t>::min ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <int8_t>::min ());
+    value = std::numeric_limits<int8_t>::min ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<int8_t>::min ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<int8_t>::min ());
 
-    value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <int8_t>::max ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <int8_t>::max ());
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<int8_t>::max ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<int8_t>::max ());
 
-    value = std::numeric_limits <uint8_t>::min ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <uint8_t>::min ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <uint8_t>::min ());
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<uint8_t>::min ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<uint8_t>::min ());
 
-    value = std::numeric_limits <uint8_t>::max ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <uint8_t>::max ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <uint8_t>::max ());
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<uint8_t>::max ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<uint8_t>::max ());
 
-    value = std::numeric_limits <int16_t>::min ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <int16_t>::min ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <int16_t>::min ());
+    value = std::numeric_limits<int16_t>::min ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<int16_t>::min ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<int16_t>::min ());
 
-    value = std::numeric_limits <int16_t>::max ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <int16_t>::max ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <int16_t>::max ());
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<int16_t>::max ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<int16_t>::max ());
 
-    value = std::numeric_limits <uint16_t>::min ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <uint16_t>::min ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <uint16_t>::min ());
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<uint16_t>::min ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<uint16_t>::min ());
 
-    value = std::numeric_limits <uint16_t>::max ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <uint16_t>::max ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <uint16_t>::max ());
+    value = std::numeric_limits<uint16_t>::max ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<uint16_t>::max ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<uint16_t>::max ());
 
-    value = std::numeric_limits <int32_t>::min ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <int32_t>::min ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <int32_t>::min ());
+    value = std::numeric_limits<int32_t>::min ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<int32_t>::min ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<int32_t>::min ());
 
-    value = std::numeric_limits <int32_t>::max ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <int32_t>::max ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <int32_t>::max ());
+    value = std::numeric_limits<int32_t>::max ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<int32_t>::max ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<int32_t>::max ());
 
-    value = std::numeric_limits <uint32_t>::min ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <uint32_t>::min ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <uint32_t>::min ());
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<uint32_t>::min ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<uint32_t>::min ());
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getInt (), 12);
-    ASSERT_EQ (static_cast <int32_t> (value), 12);
+    ASSERT_EQ (static_cast<int32_t> (value), 12);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
-    ASSERT_EQ (value.getInt (), std::numeric_limits <uint64_t>::min ());
-    ASSERT_EQ (static_cast <int32_t> (value), std::numeric_limits <uint64_t>::min ());
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_EQ (value.getInt (), std::numeric_limits<uint64_t>::min ());
+    ASSERT_EQ (static_cast<int32_t> (value), std::numeric_limits<uint64_t>::min ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getInt (), 12);
-    ASSERT_EQ (static_cast <int32_t> (value), 12);
+    ASSERT_EQ (static_cast<int32_t> (value), 12);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getInt (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 }
 
 /**
@@ -3202,135 +3203,135 @@ TEST (Value, getInt)
 TEST (Value, getUint)
 {
     uint32_t tmp = 0;
-    (void) tmp;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getUint (), std::numeric_limits <int8_t>::max ());
-    ASSERT_EQ (static_cast <uint32_t> (value), std::numeric_limits <int8_t>::max ());
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_EQ (value.getUint (), std::numeric_limits<int8_t>::max ());
+    ASSERT_EQ (static_cast<uint32_t> (value), std::numeric_limits<int8_t>::max ());
 
-    value = std::numeric_limits <uint8_t>::min ();
-    ASSERT_EQ (value.getUint (), std::numeric_limits <uint8_t>::min ());
-    ASSERT_EQ (static_cast <uint32_t> (value), std::numeric_limits <uint8_t>::min ());
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_EQ (value.getUint (), std::numeric_limits<uint8_t>::min ());
+    ASSERT_EQ (static_cast<uint32_t> (value), std::numeric_limits<uint8_t>::min ());
 
-    value = std::numeric_limits <uint8_t>::max ();
-    ASSERT_EQ (value.getUint (), std::numeric_limits <uint8_t>::max ());
-    ASSERT_EQ (static_cast <uint32_t> (value), std::numeric_limits <uint8_t>::max ());
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_EQ (value.getUint (), std::numeric_limits<uint8_t>::max ());
+    ASSERT_EQ (static_cast<uint32_t> (value), std::numeric_limits<uint8_t>::max ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
-    ASSERT_EQ (value.getUint (), std::numeric_limits <int16_t>::max ());
-    ASSERT_EQ (static_cast <uint32_t> (value), std::numeric_limits <int16_t>::max ());
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_EQ (value.getUint (), std::numeric_limits<int16_t>::max ());
+    ASSERT_EQ (static_cast<uint32_t> (value), std::numeric_limits<int16_t>::max ());
 
-    value = std::numeric_limits <uint16_t>::min ();
-    ASSERT_EQ (value.getUint (), std::numeric_limits <uint16_t>::min ());
-    ASSERT_EQ (static_cast <uint32_t> (value), std::numeric_limits <uint16_t>::min ());
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_EQ (value.getUint (), std::numeric_limits<uint16_t>::min ());
+    ASSERT_EQ (static_cast<uint32_t> (value), std::numeric_limits<uint16_t>::min ());
 
-    value = std::numeric_limits <uint16_t>::max ();
-    ASSERT_EQ (value.getUint (), std::numeric_limits <uint16_t>::max ());
-    ASSERT_EQ (static_cast <uint32_t> (value), std::numeric_limits <uint16_t>::max ());
+    value = std::numeric_limits<uint16_t>::max ();
+    ASSERT_EQ (value.getUint (), std::numeric_limits<uint16_t>::max ());
+    ASSERT_EQ (static_cast<uint32_t> (value), std::numeric_limits<uint16_t>::max ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
-    ASSERT_EQ (value.getUint (), std::numeric_limits <int32_t>::max ());
-    ASSERT_EQ (static_cast <uint32_t> (value), std::numeric_limits <int32_t>::max ());
+    value = std::numeric_limits<int32_t>::max ();
+    ASSERT_EQ (value.getUint (), std::numeric_limits<int32_t>::max ());
+    ASSERT_EQ (static_cast<uint32_t> (value), std::numeric_limits<int32_t>::max ());
 
-    value = std::numeric_limits <uint32_t>::min ();
-    ASSERT_EQ (value.getUint (), std::numeric_limits <uint32_t>::min ());
-    ASSERT_EQ (static_cast <uint32_t> (value), std::numeric_limits <uint32_t>::min ());
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_EQ (value.getUint (), std::numeric_limits<uint32_t>::min ());
+    ASSERT_EQ (static_cast<uint32_t> (value), std::numeric_limits<uint32_t>::min ());
 
-    value = std::numeric_limits <uint32_t>::max ();
-    ASSERT_EQ (value.getUint (), std::numeric_limits <uint32_t>::max ());
-    ASSERT_EQ (static_cast <uint32_t> (value), std::numeric_limits <uint32_t>::max ());
+    value = std::numeric_limits<uint32_t>::max ();
+    ASSERT_EQ (value.getUint (), std::numeric_limits<uint32_t>::max ());
+    ASSERT_EQ (static_cast<uint32_t> (value), std::numeric_limits<uint32_t>::max ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
     value = int64_t (12);
     ASSERT_EQ (value.getUint (), 12);
-    ASSERT_EQ (static_cast <uint32_t> (value), 12);
+    ASSERT_EQ (static_cast<uint32_t> (value), 12);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
-    ASSERT_EQ (value.getUint (), std::numeric_limits <uint64_t>::min ());
-    ASSERT_EQ (static_cast <uint32_t> (value), std::numeric_limits <uint64_t>::min ());
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_EQ (value.getUint (), std::numeric_limits<uint64_t>::min ());
+    ASSERT_EQ (static_cast<uint32_t> (value), std::numeric_limits<uint64_t>::min ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getUint (), 12);
-    ASSERT_EQ (static_cast <uint32_t> (value), 12);
+    ASSERT_EQ (static_cast<uint32_t> (value), 12);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getUint (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint32_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 }
 
 /**
@@ -3339,131 +3340,131 @@ TEST (Value, getUint)
 TEST (Value, getInt64)
 {
     int64_t tmp = 0;
-    (void) tmp;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <int8_t>::min ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <int8_t>::min ());
+    value = std::numeric_limits<int8_t>::min ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<int8_t>::min ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<int8_t>::min ());
 
-    value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <int8_t>::max ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <int8_t>::max ());
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<int8_t>::max ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<int8_t>::max ());
 
-    value = std::numeric_limits <uint8_t>::min ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <uint8_t>::min ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <uint8_t>::min ());
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<uint8_t>::min ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<uint8_t>::min ());
 
-    value = std::numeric_limits <uint8_t>::max ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <uint8_t>::max ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <uint8_t>::max ());
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<uint8_t>::max ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<uint8_t>::max ());
 
-    value = std::numeric_limits <int16_t>::min ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <int16_t>::min ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <int16_t>::min ());
+    value = std::numeric_limits<int16_t>::min ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<int16_t>::min ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<int16_t>::min ());
 
-    value = std::numeric_limits <int16_t>::max ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <int16_t>::max ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <int16_t>::max ());
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<int16_t>::max ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<int16_t>::max ());
 
-    value = std::numeric_limits <uint16_t>::min ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <uint16_t>::min ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <uint16_t>::min ());
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<uint16_t>::min ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<uint16_t>::min ());
 
-    value = std::numeric_limits <uint16_t>::max ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <uint16_t>::max ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <uint16_t>::max ());
+    value = std::numeric_limits<uint16_t>::max ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<uint16_t>::max ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<uint16_t>::max ());
 
-    value = std::numeric_limits <int32_t>::min ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <int32_t>::min ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <int32_t>::min ());
+    value = std::numeric_limits<int32_t>::min ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<int32_t>::min ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<int32_t>::min ());
 
-    value = std::numeric_limits <int32_t>::max ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <int32_t>::max ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <int32_t>::max ());
+    value = std::numeric_limits<int32_t>::max ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<int32_t>::max ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<int32_t>::max ());
 
-    value = std::numeric_limits <uint32_t>::min ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <uint32_t>::min ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <uint32_t>::min ());
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<uint32_t>::min ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<uint32_t>::min ());
 
-    value = std::numeric_limits <uint32_t>::max ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <uint32_t>::max ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <uint32_t>::max ());
+    value = std::numeric_limits<uint32_t>::max ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<uint32_t>::max ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<uint32_t>::max ());
 
-    value = std::numeric_limits <int64_t>::min ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <int64_t>::min ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <int64_t>::min ());
+    value = std::numeric_limits<int64_t>::min ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<int64_t>::min ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<int64_t>::min ());
 
-    value = std::numeric_limits <int64_t>::max ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <int64_t>::max ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <int64_t>::max ());
+    value = std::numeric_limits<int64_t>::max ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<int64_t>::max ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<int64_t>::max ());
 
-    value = std::numeric_limits <uint64_t>::min ();
-    ASSERT_EQ (value.getInt64 (), std::numeric_limits <uint64_t>::min ());
-    ASSERT_EQ (static_cast <int64_t> (value), std::numeric_limits <uint64_t>::min ());
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_EQ (value.getInt64 (), std::numeric_limits<uint64_t>::min ());
+    ASSERT_EQ (static_cast<int64_t> (value), std::numeric_limits<uint64_t>::min ());
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getInt64 (), 12);
-    ASSERT_EQ (static_cast <int64_t> (value), 12);
+    ASSERT_EQ (static_cast<int64_t> (value), 12);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <int64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 }
 
 /**
@@ -3472,131 +3473,131 @@ TEST (Value, getInt64)
 TEST (Value, getUint64)
 {
     uint64_t tmp = 0;
-    (void) tmp;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <int8_t>::max ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <int8_t>::max ());
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<int8_t>::max ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<int8_t>::max ());
 
-    value = std::numeric_limits <uint8_t>::min ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <uint8_t>::min ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <uint8_t>::min ());
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<uint8_t>::min ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<uint8_t>::min ());
 
-    value = std::numeric_limits <uint8_t>::max ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <uint8_t>::max ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <uint8_t>::max ());
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<uint8_t>::max ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<uint8_t>::max ());
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <int16_t>::max ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <int16_t>::max ());
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<int16_t>::max ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<int16_t>::max ());
 
-    value = std::numeric_limits <uint16_t>::min ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <uint16_t>::min ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <uint16_t>::min ());
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<uint16_t>::min ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<uint16_t>::min ());
 
-    value = std::numeric_limits <uint16_t>::max ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <uint16_t>::max ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <uint16_t>::max ());
+    value = std::numeric_limits<uint16_t>::max ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<uint16_t>::max ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<uint16_t>::max ());
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <int32_t>::max ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <int32_t>::max ());
+    value = std::numeric_limits<int32_t>::max ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<int32_t>::max ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<int32_t>::max ());
 
-    value = std::numeric_limits <uint32_t>::min ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <uint32_t>::min ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <uint32_t>::min ());
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<uint32_t>::min ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<uint32_t>::min ());
 
-    value = std::numeric_limits <uint32_t>::max ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <uint32_t>::max ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <uint32_t>::max ());
+    value = std::numeric_limits<uint32_t>::max ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<uint32_t>::max ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<uint32_t>::max ());
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <int64_t>::max ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <int64_t>::max ());
+    value = std::numeric_limits<int64_t>::max ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<int64_t>::max ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<int64_t>::max ());
 
-    value = std::numeric_limits <uint64_t>::min ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <uint64_t>::min ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <uint64_t>::min ());
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<uint64_t>::min ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<uint64_t>::min ());
 
-    value = std::numeric_limits <uint64_t>::max ();
-    ASSERT_EQ (value.getUint64 (), std::numeric_limits <uint64_t>::max ());
-    ASSERT_EQ (static_cast <uint64_t> (value), std::numeric_limits <uint64_t>::max ());
+    value = std::numeric_limits<uint64_t>::max ();
+    ASSERT_EQ (value.getUint64 (), std::numeric_limits<uint64_t>::max ());
+    ASSERT_EQ (static_cast<uint64_t> (value), std::numeric_limits<uint64_t>::max ());
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
     value = double (12.0);
     ASSERT_EQ (value.getUint64 (), 12);
-    ASSERT_EQ (static_cast <uint64_t> (value), 12);
+    ASSERT_EQ (static_cast<uint64_t> (value), 12);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
     value = "";
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <uint64_t> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 }
 
 /**
@@ -3604,127 +3605,128 @@ TEST (Value, getUint64)
  */
 TEST (Value, getFloat)
 {
-    float tmp = 0.0f; (void) tmp;
+    float tmp = 0.0f;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <int8_t>::min ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <int8_t>::min ());
+    value = std::numeric_limits<int8_t>::min ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<int8_t>::min ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<int8_t>::min ());
 
-    value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <int8_t>::max ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <int8_t>::max ());
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<int8_t>::max ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<int8_t>::max ());
 
-    value = std::numeric_limits <uint8_t>::min ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <uint8_t>::min ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <uint8_t>::min ());
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<uint8_t>::min ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<uint8_t>::min ());
 
-    value = std::numeric_limits <uint8_t>::max ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <uint8_t>::max ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <uint8_t>::max ());
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<uint8_t>::max ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<uint8_t>::max ());
 
-    value = std::numeric_limits <int16_t>::min ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <int16_t>::min ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <int16_t>::min ());
+    value = std::numeric_limits<int16_t>::min ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<int16_t>::min ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<int16_t>::min ());
 
-    value = std::numeric_limits <int16_t>::max ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <int16_t>::max ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <int16_t>::max ());
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<int16_t>::max ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<int16_t>::max ());
 
-    value = std::numeric_limits <uint16_t>::min ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <uint16_t>::min ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <uint16_t>::min ());
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<uint16_t>::min ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<uint16_t>::min ());
 
-    value = std::numeric_limits <uint16_t>::max ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <uint16_t>::max ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <uint16_t>::max ());
+    value = std::numeric_limits<uint16_t>::max ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<uint16_t>::max ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<uint16_t>::max ());
 
-    value = std::numeric_limits <int32_t>::min ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <int32_t>::min ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <int32_t>::min ());
+    value = std::numeric_limits<int32_t>::min ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<int32_t>::min ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<int32_t>::min ());
 
-    value = std::numeric_limits <int32_t>::max ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <int32_t>::max ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <int32_t>::max ());
+    value = std::numeric_limits<int32_t>::max ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<int32_t>::max ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<int32_t>::max ());
 
-    value = std::numeric_limits <uint32_t>::min ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <uint32_t>::min ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <uint32_t>::min ());
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<uint32_t>::min ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<uint32_t>::min ());
 
-    value = std::numeric_limits <uint32_t>::max ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <uint32_t>::max ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <uint32_t>::max ());
+    value = std::numeric_limits<uint32_t>::max ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<uint32_t>::max ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<uint32_t>::max ());
 
-    value = std::numeric_limits <int64_t>::min ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <int64_t>::min ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <int64_t>::min ());
+    value = std::numeric_limits<int64_t>::min ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<int64_t>::min ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<int64_t>::min ());
 
-    value = std::numeric_limits <int64_t>::max ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <int64_t>::max ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <int64_t>::max ());
+    value = std::numeric_limits<int64_t>::max ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<int64_t>::max ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<int64_t>::max ());
 
-    value = std::numeric_limits <uint64_t>::min ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <uint64_t>::min ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <uint64_t>::min ());
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<uint64_t>::min ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<uint64_t>::min ());
 
-    value = std::numeric_limits <uint64_t>::max ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <uint64_t>::max ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <uint64_t>::max ());
+    value = std::numeric_limits<uint64_t>::max ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<uint64_t>::max ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<uint64_t>::max ());
 
-    value = std::numeric_limits <float>::min ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <float>::min ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <float>::min ());
+    value = std::numeric_limits<float>::min ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<float>::min ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<float>::min ());
 
-    value = std::numeric_limits <float>::max ();
-    ASSERT_EQ (value.getFloat (), std::numeric_limits <float>::max ());
-    ASSERT_EQ (static_cast <float> (value), std::numeric_limits <float>::max ());
+    value = std::numeric_limits<float>::max ();
+    ASSERT_EQ (value.getFloat (), std::numeric_limits<float>::max ());
+    ASSERT_EQ (static_cast<float> (value), std::numeric_limits<float>::max ());
 
-    value = std::numeric_limits <double>::min ();
-    ASSERT_EQ (value.getFloat (), static_cast <float> (std::numeric_limits <double>::min ()));
-    ASSERT_EQ (static_cast <float> (value), static_cast <float> (std::numeric_limits <double>::min ()));
+    value = std::numeric_limits<double>::min ();
+    ASSERT_EQ (value.getFloat (), static_cast<float> (std::numeric_limits<double>::min ()));
+    ASSERT_EQ (static_cast<float> (value), static_cast<float> (std::numeric_limits<double>::min ()));
 
-    value = std::numeric_limits <double>::max ();
-    ASSERT_EQ (value.getFloat (), static_cast <float> (std::numeric_limits <double>::max ()));
-    ASSERT_EQ (static_cast <float> (value), static_cast <float> (std::numeric_limits <double>::max ()));
+    value = std::numeric_limits<double>::max ();
+    ASSERT_EQ (value.getFloat (), static_cast<float> (std::numeric_limits<double>::max ()));
+    ASSERT_EQ (static_cast<float> (value), static_cast<float> (std::numeric_limits<double>::max ()));
 
     value = "";
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getFloat (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <float> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 }
 
 /**
@@ -3732,127 +3734,128 @@ TEST (Value, getFloat)
  */
 TEST (Value, getDouble)
 {
-    double tmp = 0.0; (void) tmp;
+    double tmp = 0.0;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <int8_t>::min ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <int8_t>::min ());
+    value = std::numeric_limits<int8_t>::min ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<int8_t>::min ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<int8_t>::min ());
 
-    value = std::numeric_limits <int8_t>::max ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <int8_t>::max ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <int8_t>::max ());
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<int8_t>::max ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<int8_t>::max ());
 
-    value = std::numeric_limits <uint8_t>::min ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <uint8_t>::min ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <uint8_t>::min ());
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<uint8_t>::min ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<uint8_t>::min ());
 
-    value = std::numeric_limits <uint8_t>::max ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <uint8_t>::max ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <uint8_t>::max ());
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<uint8_t>::max ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<uint8_t>::max ());
 
-    value = std::numeric_limits <int16_t>::min ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <int16_t>::min ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <int16_t>::min ());
+    value = std::numeric_limits<int16_t>::min ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<int16_t>::min ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<int16_t>::min ());
 
-    value = std::numeric_limits <int16_t>::max ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <int16_t>::max ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <int16_t>::max ());
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<int16_t>::max ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<int16_t>::max ());
 
-    value = std::numeric_limits <uint16_t>::min ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <uint16_t>::min ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <uint16_t>::min ());
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<uint16_t>::min ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<uint16_t>::min ());
 
-    value = std::numeric_limits <uint16_t>::max ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <uint16_t>::max ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <uint16_t>::max ());
+    value = std::numeric_limits<uint16_t>::max ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<uint16_t>::max ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<uint16_t>::max ());
 
-    value = std::numeric_limits <int32_t>::min ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <int32_t>::min ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <int32_t>::min ());
+    value = std::numeric_limits<int32_t>::min ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<int32_t>::min ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<int32_t>::min ());
 
-    value = std::numeric_limits <int32_t>::max ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <int32_t>::max ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <int32_t>::max ());
+    value = std::numeric_limits<int32_t>::max ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<int32_t>::max ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<int32_t>::max ());
 
-    value = std::numeric_limits <uint32_t>::min ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <uint32_t>::min ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <uint32_t>::min ());
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<uint32_t>::min ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<uint32_t>::min ());
 
-    value = std::numeric_limits <uint32_t>::max ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <uint32_t>::max ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <uint32_t>::max ());
+    value = std::numeric_limits<uint32_t>::max ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<uint32_t>::max ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<uint32_t>::max ());
 
-    value = std::numeric_limits <int64_t>::min ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <int64_t>::min ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <int64_t>::min ());
+    value = std::numeric_limits<int64_t>::min ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<int64_t>::min ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<int64_t>::min ());
 
-    value = std::numeric_limits <int64_t>::max ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <int64_t>::max ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <int64_t>::max ());
+    value = std::numeric_limits<int64_t>::max ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<int64_t>::max ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<int64_t>::max ());
 
-    value = std::numeric_limits <uint64_t>::min ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <uint64_t>::min ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <uint64_t>::min ());
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<uint64_t>::min ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<uint64_t>::min ());
 
-    value = std::numeric_limits <uint64_t>::max ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <uint64_t>::max ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <uint64_t>::max ());
+    value = std::numeric_limits<uint64_t>::max ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<uint64_t>::max ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<uint64_t>::max ());
 
-    value = std::numeric_limits <float>::min ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <float>::min ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <float>::min ());
+    value = std::numeric_limits<float>::min ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<float>::min ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<float>::min ());
 
-    value = std::numeric_limits <float>::max ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <float>::max ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <float>::max ());
+    value = std::numeric_limits<float>::max ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<float>::max ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<float>::max ());
 
-    value = std::numeric_limits <double>::min ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <double>::min ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <double>::min ());
+    value = std::numeric_limits<double>::min ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<double>::min ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<double>::min ());
 
-    value = std::numeric_limits <double>::max ();
-    ASSERT_EQ (value.getDouble (), std::numeric_limits <double>::max ());
-    ASSERT_EQ (static_cast <double> (value), std::numeric_limits <double>::max ());
+    value = std::numeric_limits<double>::max ();
+    ASSERT_EQ (value.getDouble (), std::numeric_limits<double>::max ());
+    ASSERT_EQ (static_cast<double> (value), std::numeric_limits<double>::max ());
 
     value = "";
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
     value = "foo";
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
     value = "127.0.0.1";
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getDouble (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <double> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 }
 
 /**
@@ -3860,128 +3863,128 @@ TEST (Value, getDouble)
  */
 TEST (Value, getString)
 {
-    const char * tmp = nullptr;
-    (void) tmp;
+    const char* tmp = nullptr;
+    (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
     value = "";
     ASSERT_EQ (value.getString (), "");
-    ASSERT_STREQ (static_cast <const char *> (value), "");
+    ASSERT_STREQ (static_cast<const char*> (value), "");
 
     value = "foo";
     ASSERT_EQ (value.getString (), "foo");
-    ASSERT_STREQ (static_cast <const char *> (value), "foo");
+    ASSERT_STREQ (static_cast<const char*> (value), "foo");
 
     value = "02:42:64:2f:6a:d0";
     ASSERT_STREQ (value.getString ().c_str (), "02:42:64:2f:6a:d0");
-    ASSERT_STREQ (static_cast <const char *> (value), "02:42:64:2f:6a:d0");
+    ASSERT_STREQ (static_cast<const char*> (value), "02:42:64:2f:6a:d0");
 
     value = "127.0.0.1";
     ASSERT_STREQ (value.getString ().c_str (), "127.0.0.1");
-    ASSERT_STREQ (static_cast <const char *> (value), "127.0.0.1");
+    ASSERT_STREQ (static_cast<const char*> (value), "127.0.0.1");
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 
     value = Object ({{"i", 1}});
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast <const char *> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
 }
 
 /**
@@ -4001,64 +4004,64 @@ TEST (Value, getArray)
     value = false;
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
     value = "";
@@ -4073,7 +4076,7 @@ TEST (Value, getArray)
     value = "127.0.0.1";
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_NO_THROW (value.getArray ());
 
     value = Object ({{"i", 1}});
@@ -4097,64 +4100,64 @@ TEST (Value, getObject)
     value = false;
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
     value = "";
@@ -4169,7 +4172,7 @@ TEST (Value, getObject)
     value = "127.0.0.1";
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
     value = Object ({{"i", 1}});
@@ -4183,125 +4186,125 @@ TEST (Value, index)
 {
     Value value;
 
-    value.set <std::nullptr_t> (nullptr);
-    ASSERT_EQ (value.index (), static_cast <size_t> (Value::Index::Null));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Boolean));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Real));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::String));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ArrayValue));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ObjectValue));
+    value.set<std::nullptr_t> (nullptr);
+    ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::Null));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Boolean));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Real));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::String));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value.set <bool> (true);
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Null));
-    ASSERT_EQ (value.index (), static_cast <size_t> (Value::Index::Boolean));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Real));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::String));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ArrayValue));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ObjectValue));
+    value.set<bool> (true);
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Null));
+    ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::Boolean));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Real));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::String));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Null));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Boolean));
-    ASSERT_EQ (value.index (), static_cast <size_t> (Value::Index::Integer));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Real));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::String));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ArrayValue));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ObjectValue));
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Null));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Boolean));
+    ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::Integer));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Real));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::String));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Null));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Boolean));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer));
-    ASSERT_EQ (value.index (), static_cast <size_t> (Value::Index::Unsigned));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Real));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::String));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ArrayValue));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ObjectValue));
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Null));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Boolean));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer));
+    ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::Unsigned));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Real));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::String));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Null));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Boolean));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned));
-    ASSERT_EQ (value.index (), static_cast <size_t> (Value::Index::Integer64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Real));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::String));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ArrayValue));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ObjectValue));
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Null));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Boolean));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned));
+    ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::Integer64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Real));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::String));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Null));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Boolean));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer64));
-    ASSERT_EQ (value.index (), static_cast <size_t> (Value::Index::Unsigned64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Real));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::String));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ArrayValue));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ObjectValue));
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Null));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Boolean));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer64));
+    ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::Unsigned64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Real));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::String));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value.set <double> (std::numeric_limits <double>::min ());
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Null));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Boolean));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned64));
-    ASSERT_EQ (value.index (), static_cast <size_t> (Value::Index::Real));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::String));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ArrayValue));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ObjectValue));
+    value.set<double> (std::numeric_limits<double>::min ());
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Null));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Boolean));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned64));
+    ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::Real));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::String));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value.set <std::string> ("foobar");
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Null));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Boolean));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Real));
-    ASSERT_EQ (value.index (), static_cast <size_t> (Value::Index::String));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ArrayValue));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ObjectValue));
+    value.set<std::string> ("foobar");
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Null));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Boolean));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Real));
+    ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::String));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value.set <Array, Array::value_type> ({1});
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Null));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Boolean));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Real));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::String));
-    ASSERT_EQ (value.index (), static_cast <size_t> (Value::Index::ArrayValue));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ObjectValue));
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Null));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Boolean));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Real));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::String));
+    ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Null));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Boolean));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Integer64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Unsigned64));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::Real));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::String));
-    ASSERT_NE (value.index (), static_cast <size_t> (Value::Index::ArrayValue));
-    ASSERT_EQ (value.index (), static_cast <size_t> (Value::Index::ObjectValue));
+    value.set<Object, Object::value_type> ({{"i", 1}});
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Null));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Boolean));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Integer64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Unsigned64));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::Real));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::String));
+    ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
+    ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 }
 
 /**
@@ -4317,10 +4320,10 @@ TEST (Value, at)
     value.pushBack (true);
     ASSERT_TRUE (value.at (1).isBool ());
 
-    value.pushBack (std::numeric_limits <int64_t>::max ());
+    value.pushBack (std::numeric_limits<int64_t>::max ());
     ASSERT_TRUE (value.at (2).isInt64 ());
 
-    value.pushBack (std::numeric_limits <double>::max ());
+    value.pushBack (std::numeric_limits<double>::max ());
     ASSERT_TRUE (value.at (3).isDouble ());
 
     value.pushBack ("foobar");
@@ -4342,10 +4345,10 @@ TEST (Value, at)
     value["boolean"] = true;
     ASSERT_TRUE (value.at ("boolean").isBool ());
 
-    value["integer"] = std::numeric_limits <int64_t>::max ();
+    value["integer"] = std::numeric_limits<int64_t>::max ();
     ASSERT_TRUE (value.at ("integer").isInt64 ());
 
-    value["double"] = std::numeric_limits <double>::max ();
+    value["double"] = std::numeric_limits<double>::max ();
     ASSERT_TRUE (value.at ("double").isDouble ());
 
     value["string"] = "foobar";
@@ -4373,10 +4376,10 @@ TEST (Value, assign)
     value["boolean"] = true;
     ASSERT_TRUE (value["boolean"].isBool ());
 
-    value["integer"] = std::numeric_limits <int64_t>::max ();
+    value["integer"] = std::numeric_limits<int64_t>::max ();
     ASSERT_TRUE (value["integer"].isInt64 ());
 
-    value["double"] = std::numeric_limits <double>::max ();
+    value["double"] = std::numeric_limits<double>::max ();
     ASSERT_TRUE (value["double"].isDouble ());
 
     value["string"] = "foobar";
@@ -4406,64 +4409,64 @@ TEST (Value, empty)
     value = false;
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.empty (), std::bad_cast);
 
     value = "";
@@ -4508,64 +4511,64 @@ TEST (Value, size)
     value = false;
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.size (), std::bad_cast);
 
     value = "";
@@ -4580,12 +4583,13 @@ TEST (Value, size)
     value = "127.0.0.1";
     ASSERT_EQ (value.size (), 9);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_EQ (value.size (), 1);
 
     value = Object ({{"i", 1}});
     ASSERT_EQ (value.size (), 1);
 }
+
 /**
  * @brief Test reserve method.
  */
@@ -4603,64 +4607,64 @@ TEST (Value, reserve)
     value = false;
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
     value = "";
@@ -4675,7 +4679,7 @@ TEST (Value, reserve)
     value = "127.0.0.1";
     ASSERT_NO_THROW (value.reserve (12));
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_NO_THROW (value.reserve (12));
 
     value = Object ({{"i", 1}});
@@ -4699,64 +4703,64 @@ TEST (Value, clear)
     value = false;
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.clear (), std::bad_cast);
 
     value = "";
@@ -4779,7 +4783,7 @@ TEST (Value, clear)
     ASSERT_NO_THROW (value.clear ());
     ASSERT_TRUE (value.empty ());
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_FALSE (value.empty ());
     ASSERT_NO_THROW (value.clear ());
     ASSERT_TRUE (value.empty ());
@@ -4807,64 +4811,64 @@ TEST (Value, insert)
     value = false;
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
     value = "";
@@ -4879,7 +4883,7 @@ TEST (Value, insert)
     value = "127.0.0.1";
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
 
     value = Object ({{"i", 1}});
@@ -4903,64 +4907,64 @@ TEST (Value, erase)
     value = false;
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
     value = "";
@@ -4975,7 +4979,7 @@ TEST (Value, erase)
     value = "127.0.0.1";
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
     value = Object ({{"i", 1}});
@@ -5000,64 +5004,64 @@ TEST (Value, pushBack)
     value = false;
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
     value = "";
@@ -5072,7 +5076,7 @@ TEST (Value, pushBack)
     value = "127.0.0.1";
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_NO_THROW (value.pushBack (1));
 
     value = Object ({{"i", 1}});
@@ -5096,64 +5100,64 @@ TEST (Value, popBack)
     value = false;
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
     value = "";
@@ -5168,7 +5172,7 @@ TEST (Value, popBack)
     value = "127.0.0.1";
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_NO_THROW (value.popBack ());
 
     value = Object ({{"i", 1}});
@@ -5196,83 +5200,83 @@ TEST (Value, contains)
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::min ();
+    value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int8_t>::max ();
+    value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::min ();
+    value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint8_t>::max ();
+    value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::min ();
+    value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int16_t>::max ();
+    value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::min ();
+    value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint16_t>::max ();
+    value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::min ();
+    value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int32_t>::max ();
+    value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::min ();
+    value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint32_t>::max ();
+    value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::min ();
+    value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <int64_t>::max ();
+    value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::min ();
+    value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <uint64_t>::max ();
+    value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <float>::min ();
+    value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <float>::max ();
+    value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <double>::min ();
+    value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = std::numeric_limits <double>::max ();
+    value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
@@ -5296,16 +5300,16 @@ TEST (Value, contains)
     ASSERT_FALSE (value.contains (0));
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = Array {1};
+    value = Array{1};
     ASSERT_TRUE (value.contains (0));
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
     value = Object ({});
-    ASSERT_THROW (value.contains (0), std::bad_cast);
+    ASSERT_FALSE (value.contains (0));
     ASSERT_FALSE (value.contains ("i"));
 
     value = Object ({{"i", 1}});
-    ASSERT_THROW (value.contains (0), std::bad_cast);
+    ASSERT_FALSE (value.contains (0));
     ASSERT_TRUE (value.contains ("i"));
 }
 
@@ -5316,7 +5320,7 @@ TEST (Value, swap)
 {
     Value value = nullptr;
 
-    Value other = Array {1};
+    Value other = Array{1};
     ASSERT_TRUE (value.isNull ());
     ASSERT_TRUE (other.isArray ());
     value.swap (other);
@@ -5330,42 +5334,42 @@ TEST (Value, swap)
     ASSERT_TRUE (value.isBool ());
     ASSERT_TRUE (other.isArray ());
 
-    other = std::numeric_limits <int32_t>::min ();
+    other = std::numeric_limits<int32_t>::min ();
     ASSERT_TRUE (value.isBool ());
     ASSERT_TRUE (other.isInt ());
     value.swap (other);
     ASSERT_TRUE (value.isInt ());
     ASSERT_TRUE (other.isBool ());
 
-    other = std::numeric_limits <uint32_t>::max ();
+    other = std::numeric_limits<uint32_t>::max ();
     ASSERT_TRUE (value.isInt ());
     ASSERT_TRUE (other.isUint ());
     value.swap (other);
     ASSERT_TRUE (value.isUint ());
     ASSERT_TRUE (other.isInt ());
 
-    other = std::numeric_limits <int64_t>::min ();
+    other = std::numeric_limits<int64_t>::min ();
     ASSERT_TRUE (value.isUint ());
     ASSERT_TRUE (other.isInt64 ());
     value.swap (other);
     ASSERT_TRUE (value.isInt64 ());
     ASSERT_TRUE (other.isUint ());
 
-    other = std::numeric_limits <uint64_t>::max ();
+    other = std::numeric_limits<uint64_t>::max ();
     ASSERT_TRUE (value.isInt64 ());
     ASSERT_TRUE (other.isUint64 ());
     value.swap (other);
     ASSERT_TRUE (value.isUint64 ());
     ASSERT_TRUE (other.isInt64 ());
 
-    other = std::numeric_limits <float>::min ();
+    other = std::numeric_limits<float>::min ();
     ASSERT_TRUE (value.isUint64 ());
     ASSERT_TRUE (other.isFloat ());
     value.swap (other);
     ASSERT_TRUE (value.isFloat ());
     ASSERT_TRUE (other.isUint64 ());
 
-    other = std::numeric_limits <double>::max ();
+    other = std::numeric_limits<double>::max ();
     ASSERT_TRUE (value.isFloat ());
     ASSERT_TRUE (other.isDouble ());
     value.swap (other);
@@ -5379,7 +5383,7 @@ TEST (Value, swap)
     ASSERT_TRUE (value.isString ());
     ASSERT_TRUE (other.isDouble ());
 
-    other = Array {1};
+    other = Array{1};
     ASSERT_TRUE (value.isString ());
     ASSERT_TRUE (other.isArray ());
     value.swap (other);
@@ -5401,9 +5405,8 @@ TEST (Value, packRead)
 {
     Value value;
 
-    std::string str ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73',
-                      '\x74', '\xcb', '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a',
-                      '\x68', '\x5d'});
+    std::string str ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb', '\x3d', '\x41',
+                      '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'});
 
     ASSERT_NE (value.packRead (str), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
@@ -5477,7 +5480,7 @@ TEST (Value, packRead)
     out.close ();
 
     std::fstream fstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
-    ASSERT_NE (value.packRead (fstream), -1) << join::lastError.message();
+    ASSERT_NE (value.packRead (fstream), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);
@@ -5492,7 +5495,7 @@ TEST (Value, packRead)
     fstream.close ();
 
     std::ifstream ifstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
-    ASSERT_NE (value.packRead (ifstream), -1) << join::lastError.message();
+    ASSERT_NE (value.packRead (ifstream), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);
@@ -5508,7 +5511,7 @@ TEST (Value, packRead)
 
     std::stringbuf iosbuf (str, std::ios::in);
     std::iostream iostream (&iosbuf);
-    ASSERT_NE (value.packRead (iostream), -1) << join::lastError.message();
+    ASSERT_NE (value.packRead (iostream), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);
@@ -5523,7 +5526,7 @@ TEST (Value, packRead)
 
     std::stringbuf isbuf (str);
     std::istream istream (&isbuf);
-    ASSERT_NE (value.packRead (istream), -1) << join::lastError.message();
+    ASSERT_NE (value.packRead (istream), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);
@@ -5551,9 +5554,8 @@ TEST (Value, packWrite)
 
     std::stringstream out;
     ASSERT_NE (value.packWrite (out), -1) << join::lastError.message ();
-    EXPECT_EQ (out.str (), std::string ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73',
-                                         '\x74', '\xcb', '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a',
-                                         '\x68', '\x5d'}));
+    EXPECT_EQ (out.str (), std::string ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb',
+                                         '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
 }
 
 /**
@@ -5633,7 +5635,7 @@ TEST (Value, jsonRead)
 
     std::ofstream out ("/tmp/fstream.json");
     out << str;
-    out.close();
+    out.close ();
 
     std::fstream fstream ("/tmp/fstream.json", std::ios::in);
     ASSERT_NE (value.jsonRead (fstream), -1) << join::lastError.message ();
@@ -5667,7 +5669,7 @@ TEST (Value, jsonRead)
 
     std::stringbuf iosbuf (str, std::ios::in);
     std::iostream iostream (&iosbuf);
-    ASSERT_NE (value.jsonRead (iostream), -1) << join::lastError.message();
+    ASSERT_NE (value.jsonRead (iostream), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);
@@ -5682,7 +5684,7 @@ TEST (Value, jsonRead)
 
     std::stringbuf isbuf (str);
     std::istream istream (&isbuf);
-    ASSERT_NE (value.jsonRead (istream), -1) << join::lastError.message();
+    ASSERT_NE (value.jsonRead (istream), -1) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);
@@ -5719,13 +5721,15 @@ TEST (Value, jsonWrite)
 TEST (Value, jsonCanonicalize)
 {
     Value value;
-    value["numbers"]  = Array {333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
-    value["string"]   = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
-    value["literals"] = Array {nullptr, true, false};
+    value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
+    value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
+    value["literals"] = Array{nullptr, true, false};
 
     std::stringstream out;
     ASSERT_NE (value.jsonCanonicalize (out), -1) << join::lastError.message ();
-    EXPECT_EQ (out.str (), "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}");
+    EXPECT_EQ (out.str (),
+               "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$"
+               "\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}");
 }
 
 /**
@@ -5735,367 +5739,367 @@ TEST (Value, equal)
 {
     Value value;
 
-    value.set <std::nullptr_t> (nullptr);
-    ASSERT_TRUE  (value == nullptr);
+    value.set<std::nullptr_t> (nullptr);
+    ASSERT_TRUE (value == nullptr);
     ASSERT_FALSE (value == true);
     ASSERT_FALSE (value == false);
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array {1});
+    ASSERT_FALSE (value == Array{1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
-    value.set <bool> (true);
+    value.set<bool> (true);
     ASSERT_FALSE (value == nullptr);
-    ASSERT_TRUE  (value == true);
+    ASSERT_TRUE (value == true);
     ASSERT_FALSE (value == false);
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array {1});
+    ASSERT_FALSE (value == Array{1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == nullptr);
-    ASSERT_FALSE (value == true);
-    ASSERT_FALSE (value == false);
-    ASSERT_TRUE  (value == std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::max ());
-    ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array {1});
-    ASSERT_FALSE (value == Object ({{"i", 1}}));
-
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (value == nullptr);
     ASSERT_FALSE (value == true);
     ASSERT_FALSE (value == false);
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value == std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::max ());
+    ASSERT_TRUE (value == std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array {1});
+    ASSERT_FALSE (value == Array{1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
     ASSERT_FALSE (value == nullptr);
     ASSERT_FALSE (value == true);
     ASSERT_FALSE (value == false);
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value == std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value == std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array {1});
+    ASSERT_FALSE (value == Array{1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
     ASSERT_FALSE (value == nullptr);
     ASSERT_FALSE (value == true);
     ASSERT_FALSE (value == false);
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value == std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value == std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array {1});
+    ASSERT_FALSE (value == Array{1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
-    value.set <double> (std::numeric_limits <double>::min ());
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
     ASSERT_FALSE (value == nullptr);
     ASSERT_FALSE (value == true);
     ASSERT_FALSE (value == false);
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value == std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value == std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array {1});
+    ASSERT_FALSE (value == Array{1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
-    value.set <std::string> ("foo");
+    value.set<double> (std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == nullptr);
     ASSERT_FALSE (value == true);
     ASSERT_FALSE (value == false);
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value == "foo");
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value == std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::max ());
+    ASSERT_FALSE (value == "foo");
+    ASSERT_FALSE (value == Array{1});
+    ASSERT_FALSE (value == Object ({{"i", 1}}));
+
+    value.set<std::string> ("foo");
+    ASSERT_FALSE (value == nullptr);
+    ASSERT_FALSE (value == true);
+    ASSERT_FALSE (value == false);
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value == "foo");
     ASSERT_FALSE (value == "bar");
-    ASSERT_FALSE (value == Array {1});
+    ASSERT_FALSE (value == Array{1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
-    value.set <Array, Array::value_type> ({1});
+    value.set<Array, Array::value_type> ({1});
     ASSERT_FALSE (value == nullptr);
     ASSERT_FALSE (value == true);
     ASSERT_FALSE (value == false);
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_TRUE  (value == Array {1});
+    ASSERT_TRUE (value == Array{1});
     ASSERT_FALSE (value == Object ({{"i", 1}}));
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
+    value.set<Object, Object::value_type> ({{"i", 1}});
     ASSERT_FALSE (value == nullptr);
     ASSERT_FALSE (value == true);
     ASSERT_FALSE (value == false);
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value == std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array {1});
-    ASSERT_TRUE  (value == Object ({{"i", 1}}));
+    ASSERT_FALSE (value == Array{1});
+    ASSERT_TRUE (value == Object ({{"i", 1}}));
 
-    value.set <std::nullptr_t> (nullptr);
-    ASSERT_TRUE  (nullptr == value);
+    value.set<std::nullptr_t> (nullptr);
+    ASSERT_TRUE (nullptr == value);
     ASSERT_FALSE (true == value);
     ASSERT_FALSE (false == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array {1} == value);
+    ASSERT_FALSE (Array{1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
-    value.set <bool> (true);
+    value.set<bool> (true);
     ASSERT_FALSE (nullptr == value);
-    ASSERT_TRUE  (true == value);
+    ASSERT_TRUE (true == value);
     ASSERT_FALSE (false == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array {1} == value);
+    ASSERT_FALSE (Array{1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (nullptr == value);
-    ASSERT_FALSE (true == value);
-    ASSERT_FALSE (false == value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () == value);
-    ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array {1} == value);
-    ASSERT_FALSE (Object ({{"i", 1}}) == value);
-
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (nullptr == value);
     ASSERT_FALSE (true == value);
     ASSERT_FALSE (false == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () == value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () == value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array {1} == value);
+    ASSERT_FALSE (Array{1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
     ASSERT_FALSE (nullptr == value);
     ASSERT_FALSE (true == value);
     ASSERT_FALSE (false == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () == value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () == value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array {1} == value);
+    ASSERT_FALSE (Array{1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
     ASSERT_FALSE (nullptr == value);
     ASSERT_FALSE (true == value);
     ASSERT_FALSE (false == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () == value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () == value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array {1} == value);
+    ASSERT_FALSE (Array{1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
-    value.set <double> (std::numeric_limits <double>::min ());
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
     ASSERT_FALSE (nullptr == value);
     ASSERT_FALSE (true == value);
     ASSERT_FALSE (false == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () == value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () == value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array {1} == value);
+    ASSERT_FALSE (Array{1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
-    value.set <std::string> ("foo");
+    value.set<double> (std::numeric_limits<double>::min ());
     ASSERT_FALSE (nullptr == value);
     ASSERT_FALSE (true == value);
     ASSERT_FALSE (false == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () == value);
-    ASSERT_TRUE  ("foo" == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () == value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () == value);
+    ASSERT_FALSE ("foo" == value);
+    ASSERT_FALSE (Array{1} == value);
+    ASSERT_FALSE (Object ({{"i", 1}}) == value);
+
+    value.set<std::string> ("foo");
+    ASSERT_FALSE (nullptr == value);
+    ASSERT_FALSE (true == value);
+    ASSERT_FALSE (false == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () == value);
+    ASSERT_TRUE ("foo" == value);
     ASSERT_FALSE ("bar" == value);
-    ASSERT_FALSE (Array {1} == value);
+    ASSERT_FALSE (Array{1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
-    value.set <Array, Array::value_type> ({1});
+    value.set<Array, Array::value_type> ({1});
     ASSERT_FALSE (nullptr == value);
     ASSERT_FALSE (true == value);
     ASSERT_FALSE (false == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_TRUE  (Array {1} == value);
+    ASSERT_TRUE (Array{1} == value);
     ASSERT_FALSE (Object ({{"i", 1}}) == value);
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
+    value.set<Object, Object::value_type> ({{"i", 1}});
     ASSERT_FALSE (nullptr == value);
     ASSERT_FALSE (true == value);
     ASSERT_FALSE (false == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () == value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () == value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array {1} == value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) == value);
+    ASSERT_FALSE (Array{1} == value);
+    ASSERT_TRUE (Object ({{"i", 1}}) == value);
 }
 
 /**
@@ -6105,365 +6109,365 @@ TEST (Value, notEqual)
 {
     Value value;
 
-    value.set <std::nullptr_t> (nullptr);
+    value.set<std::nullptr_t> (nullptr);
     ASSERT_FALSE (value != nullptr);
-    ASSERT_TRUE  (value != true);
-    ASSERT_TRUE  (value != false);
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array {1});
-    ASSERT_TRUE  (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != true);
+    ASSERT_TRUE (value != false);
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value != "foo");
+    ASSERT_TRUE (value != Array{1});
+    ASSERT_TRUE (value != Object ({{"i", 1}}));
 
-    value.set <bool> (true);
-    ASSERT_TRUE  (value != nullptr);
+    value.set<bool> (true);
+    ASSERT_TRUE (value != nullptr);
     ASSERT_FALSE (value != true);
-    ASSERT_TRUE  (value != false);
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array {1});
-    ASSERT_TRUE  (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != false);
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value != "foo");
+    ASSERT_TRUE (value != Array{1});
+    ASSERT_TRUE (value != Object ({{"i", 1}}));
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != nullptr);
-    ASSERT_TRUE  (value != true);
-    ASSERT_TRUE  (value != false);
-    ASSERT_FALSE (value != std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array {1});
-    ASSERT_TRUE  (value != Object ({{"i", 1}}));
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != nullptr);
+    ASSERT_TRUE (value != true);
+    ASSERT_TRUE (value != false);
+    ASSERT_FALSE (value != std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value != "foo");
+    ASSERT_TRUE (value != Array{1});
+    ASSERT_TRUE (value != Object ({{"i", 1}}));
 
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value != nullptr);
-    ASSERT_TRUE  (value != true);
-    ASSERT_TRUE  (value != false);
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value != std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array {1});
-    ASSERT_TRUE  (value != Object ({{"i", 1}}));
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value != nullptr);
+    ASSERT_TRUE (value != true);
+    ASSERT_TRUE (value != false);
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value != std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value != "foo");
+    ASSERT_TRUE (value != Array{1});
+    ASSERT_TRUE (value != Object ({{"i", 1}}));
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != nullptr);
-    ASSERT_TRUE  (value != true);
-    ASSERT_TRUE  (value != false);
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value != std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array {1});
-    ASSERT_TRUE  (value != Object ({{"i", 1}}));
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != nullptr);
+    ASSERT_TRUE (value != true);
+    ASSERT_TRUE (value != false);
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value != std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value != "foo");
+    ASSERT_TRUE (value != Array{1});
+    ASSERT_TRUE (value != Object ({{"i", 1}}));
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value != nullptr);
-    ASSERT_TRUE  (value != true);
-    ASSERT_TRUE  (value != false);
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value != std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array {1});
-    ASSERT_TRUE  (value != Object ({{"i", 1}}));
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value != nullptr);
+    ASSERT_TRUE (value != true);
+    ASSERT_TRUE (value != false);
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value != std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value != "foo");
+    ASSERT_TRUE (value != Array{1});
+    ASSERT_TRUE (value != Object ({{"i", 1}}));
 
-    value.set <double> (std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != nullptr);
-    ASSERT_TRUE  (value != true);
-    ASSERT_TRUE  (value != false);
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value != std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array {1});
-    ASSERT_TRUE  (value != Object ({{"i", 1}}));
+    value.set<double> (std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != nullptr);
+    ASSERT_TRUE (value != true);
+    ASSERT_TRUE (value != false);
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value != std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value != "foo");
+    ASSERT_TRUE (value != Array{1});
+    ASSERT_TRUE (value != Object ({{"i", 1}}));
 
-    value.set <std::string> ("foo");
-    ASSERT_TRUE  (value != nullptr);
-    ASSERT_TRUE  (value != true);
-    ASSERT_TRUE  (value != false);
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
+    value.set<std::string> ("foo");
+    ASSERT_TRUE (value != nullptr);
+    ASSERT_TRUE (value != true);
+    ASSERT_TRUE (value != false);
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_FALSE (value != "foo");
-    ASSERT_TRUE  (value != Array {1});
-    ASSERT_TRUE  (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != Array{1});
+    ASSERT_TRUE (value != Object ({{"i", 1}}));
 
-    value.set <Array, Array::value_type> ({1});
-    ASSERT_TRUE  (value != nullptr);
-    ASSERT_TRUE  (value != true);
-    ASSERT_TRUE  (value != false);
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value != "foo");
-    ASSERT_FALSE (value != Array {1});
-    ASSERT_TRUE  (value != Object ({{"i", 1}}));
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_TRUE (value != nullptr);
+    ASSERT_TRUE (value != true);
+    ASSERT_TRUE (value != false);
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value != "foo");
+    ASSERT_FALSE (value != Array{1});
+    ASSERT_TRUE (value != Object ({{"i", 1}}));
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
-    ASSERT_TRUE  (value != nullptr);
-    ASSERT_TRUE  (value != true);
-    ASSERT_TRUE  (value != false);
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value != std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value != "foo");
-    ASSERT_TRUE  (value != Array {1});
+    value.set<Object, Object::value_type> ({{"i", 1}});
+    ASSERT_TRUE (value != nullptr);
+    ASSERT_TRUE (value != true);
+    ASSERT_TRUE (value != false);
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value != std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value != "foo");
+    ASSERT_TRUE (value != Array{1});
     ASSERT_FALSE (value != Object ({{"i", 1}}));
 
-    value.set <std::nullptr_t> (nullptr);
+    value.set<std::nullptr_t> (nullptr);
     ASSERT_FALSE (nullptr != value);
-    ASSERT_TRUE  (true != value);
-    ASSERT_TRUE  (false != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
-    ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array {1} != value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (true != value);
+    ASSERT_TRUE (false != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () != value);
+    ASSERT_TRUE ("foo" != value);
+    ASSERT_TRUE (Array{1} != value);
+    ASSERT_TRUE (Object ({{"i", 1}}) != value);
 
-    value.set <bool> (true);
-    ASSERT_TRUE  (nullptr != value);
+    value.set<bool> (true);
+    ASSERT_TRUE (nullptr != value);
     ASSERT_FALSE (true != value);
-    ASSERT_TRUE  (false != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
-    ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array {1} != value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (false != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () != value);
+    ASSERT_TRUE ("foo" != value);
+    ASSERT_TRUE (Array{1} != value);
+    ASSERT_TRUE (Object ({{"i", 1}}) != value);
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (nullptr != value);
-    ASSERT_TRUE  (true != value);
-    ASSERT_TRUE  (false != value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
-    ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array {1} != value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) != value);
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (nullptr != value);
+    ASSERT_TRUE (true != value);
+    ASSERT_TRUE (false != value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () != value);
+    ASSERT_TRUE ("foo" != value);
+    ASSERT_TRUE (Array{1} != value);
+    ASSERT_TRUE (Object ({{"i", 1}}) != value);
 
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (nullptr != value);
-    ASSERT_TRUE  (true != value);
-    ASSERT_TRUE  (false != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () != value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
-    ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array {1} != value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) != value);
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (nullptr != value);
+    ASSERT_TRUE (true != value);
+    ASSERT_TRUE (false != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () != value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () != value);
+    ASSERT_TRUE ("foo" != value);
+    ASSERT_TRUE (Array{1} != value);
+    ASSERT_TRUE (Object ({{"i", 1}}) != value);
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (nullptr != value);
-    ASSERT_TRUE  (true != value);
-    ASSERT_TRUE  (false != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () != value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
-    ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array {1} != value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) != value);
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (nullptr != value);
+    ASSERT_TRUE (true != value);
+    ASSERT_TRUE (false != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () != value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () != value);
+    ASSERT_TRUE ("foo" != value);
+    ASSERT_TRUE (Array{1} != value);
+    ASSERT_TRUE (Object ({{"i", 1}}) != value);
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (nullptr != value);
-    ASSERT_TRUE  (true != value);
-    ASSERT_TRUE  (false != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () != value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
-    ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array {1} != value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) != value);
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (nullptr != value);
+    ASSERT_TRUE (true != value);
+    ASSERT_TRUE (false != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () != value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () != value);
+    ASSERT_TRUE ("foo" != value);
+    ASSERT_TRUE (Array{1} != value);
+    ASSERT_TRUE (Object ({{"i", 1}}) != value);
 
-    value.set <double> (std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (nullptr != value);
-    ASSERT_TRUE  (true != value);
-    ASSERT_TRUE  (false != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () != value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
-    ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array {1} != value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) != value);
+    value.set<double> (std::numeric_limits<double>::min ());
+    ASSERT_TRUE (nullptr != value);
+    ASSERT_TRUE (true != value);
+    ASSERT_TRUE (false != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () != value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () != value);
+    ASSERT_TRUE ("foo" != value);
+    ASSERT_TRUE (Array{1} != value);
+    ASSERT_TRUE (Object ({{"i", 1}}) != value);
 
-    value.set <std::string> ("foo");
-    ASSERT_TRUE  (nullptr != value);
-    ASSERT_TRUE  (true != value);
-    ASSERT_TRUE  (false != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
+    value.set<std::string> ("foo");
+    ASSERT_TRUE (nullptr != value);
+    ASSERT_TRUE (true != value);
+    ASSERT_TRUE (false != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_FALSE ("foo" != value);
-    ASSERT_TRUE  ("bar" != value);
-    ASSERT_TRUE  (Array {1} != value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE ("bar" != value);
+    ASSERT_TRUE (Array{1} != value);
+    ASSERT_TRUE (Object ({{"i", 1}}) != value);
 
-    value.set <Array, Array::value_type> ({1});
-    ASSERT_TRUE  (nullptr != value);
-    ASSERT_TRUE  (true != value);
-    ASSERT_TRUE  (false != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
-    ASSERT_TRUE  ("foo" != value);
-    ASSERT_FALSE (Array {1} != value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) != value);
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_TRUE (nullptr != value);
+    ASSERT_TRUE (true != value);
+    ASSERT_TRUE (false != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () != value);
+    ASSERT_TRUE ("foo" != value);
+    ASSERT_FALSE (Array{1} != value);
+    ASSERT_TRUE (Object ({{"i", 1}}) != value);
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
-    ASSERT_TRUE  (nullptr != value);
-    ASSERT_TRUE  (true != value);
-    ASSERT_TRUE  (false != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () != value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () != value);
-    ASSERT_TRUE  ("foo" != value);
-    ASSERT_TRUE  (Array {1} != value);
+    value.set<Object, Object::value_type> ({{"i", 1}});
+    ASSERT_TRUE (nullptr != value);
+    ASSERT_TRUE (true != value);
+    ASSERT_TRUE (false != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () != value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () != value);
+    ASSERT_TRUE ("foo" != value);
+    ASSERT_TRUE (Array{1} != value);
     ASSERT_FALSE (Object ({{"i", 1}}) != value);
 }
 
@@ -6474,292 +6478,292 @@ TEST (Value, lower)
 {
     Value value;
 
-    value.set <std::nullptr_t> (nullptr);
+    value.set<std::nullptr_t> (nullptr);
     ASSERT_FALSE (value < nullptr);
-    ASSERT_TRUE  (value < true);
-    ASSERT_TRUE  (value < false);
-    ASSERT_TRUE  (value < std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value < "foo");
-    ASSERT_TRUE  (value < Array {1});
-    ASSERT_TRUE  (value < Object ({{"i", 1}}));
+    ASSERT_TRUE (value < true);
+    ASSERT_TRUE (value < false);
+    ASSERT_TRUE (value < std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value < "foo");
+    ASSERT_TRUE (value < Array{1});
+    ASSERT_TRUE (value < Object ({{"i", 1}}));
 
-    value.set <bool> (true);
+    value.set<bool> (true);
     ASSERT_FALSE (value < nullptr);
     ASSERT_FALSE (value < true);
     ASSERT_FALSE (value < false);
-    ASSERT_TRUE  (value < std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value < "foo");
-    ASSERT_TRUE  (value < Array {1});
-    ASSERT_TRUE  (value < Object ({{"i", 1}}));
+    ASSERT_TRUE (value < std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value < "foo");
+    ASSERT_TRUE (value < Array{1});
+    ASSERT_TRUE (value < Object ({{"i", 1}}));
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (value < nullptr);
     ASSERT_FALSE (value < true);
     ASSERT_FALSE (value < false);
-    ASSERT_FALSE (value < std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value < std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value < "foo");
-    ASSERT_TRUE  (value < Array {1});
-    ASSERT_TRUE  (value < Object ({{"i", 1}}));
+    ASSERT_FALSE (value < std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value < std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value < "foo");
+    ASSERT_TRUE (value < Array{1});
+    ASSERT_TRUE (value < Object ({{"i", 1}}));
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::max ());
+    value.set<int64_t> (std::numeric_limits<int64_t>::max ());
     ASSERT_FALSE (value < nullptr);
     ASSERT_FALSE (value < true);
     ASSERT_FALSE (value < false);
-    ASSERT_FALSE (value < std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value < "foo");
-    ASSERT_TRUE  (value < Array {1});
-    ASSERT_TRUE  (value < Object ({{"i", 1}}));
+    ASSERT_FALSE (value < std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value < "foo");
+    ASSERT_TRUE (value < Array{1});
+    ASSERT_TRUE (value < Object ({{"i", 1}}));
 
-    value.set <double> (std::numeric_limits <double>::min ());
+    value.set<double> (std::numeric_limits<double>::min ());
     ASSERT_FALSE (value < nullptr);
     ASSERT_FALSE (value < true);
     ASSERT_FALSE (value < false);
-    ASSERT_FALSE (value < std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value < std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value < "foo");
-    ASSERT_TRUE  (value < Array {1});
-    ASSERT_TRUE  (value < Object ({{"i", 1}}));
+    ASSERT_FALSE (value < std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value < std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value < "foo");
+    ASSERT_TRUE (value < Array{1});
+    ASSERT_TRUE (value < Object ({{"i", 1}}));
 
-    value.set <std::string> ("foo");
+    value.set<std::string> ("foo");
     ASSERT_FALSE (value < nullptr);
     ASSERT_FALSE (value < true);
     ASSERT_FALSE (value < false);
-    ASSERT_FALSE (value < std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<double>::max ());
     ASSERT_FALSE (value < "foo");
-    ASSERT_TRUE  (value < Array {1});
-    ASSERT_TRUE  (value < Object ({{"i", 1}}));
+    ASSERT_TRUE (value < Array{1});
+    ASSERT_TRUE (value < Object ({{"i", 1}}));
 
-    value.set <Array, Array::value_type> ({1});
+    value.set<Array, Array::value_type> ({1});
     ASSERT_FALSE (value < nullptr);
     ASSERT_FALSE (value < true);
     ASSERT_FALSE (value < false);
-    ASSERT_FALSE (value < std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<double>::max ());
     ASSERT_FALSE (value < "foo");
-    ASSERT_FALSE (value < Array {1});
-    ASSERT_TRUE  (value < Object ({{"i", 1}}));
+    ASSERT_FALSE (value < Array{1});
+    ASSERT_TRUE (value < Object ({{"i", 1}}));
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
+    value.set<Object, Object::value_type> ({{"i", 1}});
     ASSERT_FALSE (value < nullptr);
     ASSERT_FALSE (value < true);
     ASSERT_FALSE (value < false);
-    ASSERT_FALSE (value < std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value < std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value < std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value < std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value < std::numeric_limits<double>::max ());
     ASSERT_FALSE (value < "foo");
-    ASSERT_FALSE (value < Array {1});
+    ASSERT_FALSE (value < Array{1});
     ASSERT_FALSE (value < Object ({{"i", 1}}));
 
-    value.set <std::nullptr_t> (nullptr);
+    value.set<std::nullptr_t> (nullptr);
     ASSERT_FALSE (nullptr < value);
     ASSERT_FALSE (true < value);
     ASSERT_FALSE (false < value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array {1} < value);
+    ASSERT_FALSE (Array{1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
-    value.set <bool> (true);
-    ASSERT_TRUE  (nullptr < value);
+    value.set<bool> (true);
+    ASSERT_TRUE (nullptr < value);
     ASSERT_FALSE (true < value);
-    ASSERT_TRUE  (false < value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () < value);
+    ASSERT_TRUE (false < value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array {1} < value);
+    ASSERT_FALSE (Array{1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (nullptr < value);
-    ASSERT_TRUE  (true < value);
-    ASSERT_TRUE  (false < value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () < value);
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (nullptr < value);
+    ASSERT_TRUE (true < value);
+    ASSERT_TRUE (false < value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array {1} < value);
+    ASSERT_FALSE (Array{1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (nullptr < value);
-    ASSERT_TRUE  (true < value);
-    ASSERT_TRUE  (false < value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () < value);
+    value.set<int64_t> (std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (nullptr < value);
+    ASSERT_TRUE (true < value);
+    ASSERT_TRUE (false < value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array {1} < value);
+    ASSERT_FALSE (Array{1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
-    value.set <double> (std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (nullptr < value);
-    ASSERT_TRUE  (true < value);
-    ASSERT_TRUE  (false < value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () < value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () < value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () < value);
+    value.set<double> (std::numeric_limits<double>::min ());
+    ASSERT_TRUE (nullptr < value);
+    ASSERT_TRUE (true < value);
+    ASSERT_TRUE (false < value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () < value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () < value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array {1} < value);
+    ASSERT_FALSE (Array{1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
-    value.set <std::string> ("foo");
-    ASSERT_TRUE  (nullptr < value);
-    ASSERT_TRUE  (true < value);
-    ASSERT_TRUE  (false < value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () < value);
+    value.set<std::string> ("foo");
+    ASSERT_TRUE (nullptr < value);
+    ASSERT_TRUE (true < value);
+    ASSERT_TRUE (false < value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array {1} < value);
+    ASSERT_FALSE (Array{1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
-    value.set <Array, Array::value_type> ({1});
-    ASSERT_TRUE  (nullptr < value);
-    ASSERT_TRUE  (true < value);
-    ASSERT_TRUE  (false < value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () < value);
-    ASSERT_TRUE  ("foo" < value);
-    ASSERT_FALSE (Array {1} < value);
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_TRUE (nullptr < value);
+    ASSERT_TRUE (true < value);
+    ASSERT_TRUE (false < value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () < value);
+    ASSERT_TRUE ("foo" < value);
+    ASSERT_FALSE (Array{1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
-    ASSERT_TRUE  (nullptr < value);
-    ASSERT_TRUE  (true < value);
-    ASSERT_TRUE  (false < value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () < value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () < value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () < value);
-    ASSERT_TRUE  ("foo" < value);
-    ASSERT_TRUE  (Array {1} < value);
+    value.set<Object, Object::value_type> ({{"i", 1}});
+    ASSERT_TRUE (nullptr < value);
+    ASSERT_TRUE (true < value);
+    ASSERT_TRUE (false < value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () < value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () < value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () < value);
+    ASSERT_TRUE ("foo" < value);
+    ASSERT_TRUE (Array{1} < value);
     ASSERT_FALSE (Object ({{"i", 1}}) < value);
 }
 
@@ -6770,292 +6774,292 @@ TEST (Value, greater)
 {
     Value value;
 
-    value.set <std::nullptr_t> (nullptr);
+    value.set<std::nullptr_t> (nullptr);
     ASSERT_FALSE (value > nullptr);
     ASSERT_FALSE (value > true);
     ASSERT_FALSE (value > false);
-    ASSERT_FALSE (value > std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array {1});
+    ASSERT_FALSE (value > Array{1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
-    value.set <bool> (true);
-    ASSERT_TRUE  (value > nullptr);
+    value.set<bool> (true);
+    ASSERT_TRUE (value > nullptr);
     ASSERT_FALSE (value > true);
-    ASSERT_TRUE  (value > false);
-    ASSERT_FALSE (value > std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <double>::max ());
+    ASSERT_TRUE (value > false);
+    ASSERT_FALSE (value > std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array {1});
+    ASSERT_FALSE (value > Array{1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value > nullptr);
-    ASSERT_TRUE  (value > true);
-    ASSERT_TRUE  (value > false);
-    ASSERT_FALSE (value > std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <double>::max ());
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value > nullptr);
+    ASSERT_TRUE (value > true);
+    ASSERT_TRUE (value > false);
+    ASSERT_FALSE (value > std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array {1});
+    ASSERT_FALSE (value > Array{1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value > nullptr);
-    ASSERT_TRUE  (value > true);
-    ASSERT_TRUE  (value > false);
-    ASSERT_TRUE  (value > std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <double>::max ());
+    value.set<int64_t> (std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value > nullptr);
+    ASSERT_TRUE (value > true);
+    ASSERT_TRUE (value > false);
+    ASSERT_TRUE (value > std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array {1});
+    ASSERT_FALSE (value > Array{1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
-    value.set <double> (std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value > nullptr);
-    ASSERT_TRUE  (value > true);
-    ASSERT_TRUE  (value > false);
-    ASSERT_TRUE  (value > std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value > std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value > std::numeric_limits <double>::max ());
+    value.set<double> (std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value > nullptr);
+    ASSERT_TRUE (value > true);
+    ASSERT_TRUE (value > false);
+    ASSERT_TRUE (value > std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value > std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array {1});
+    ASSERT_FALSE (value > Array{1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
-    value.set <std::string> ("foo");
-    ASSERT_TRUE  (value > nullptr);
-    ASSERT_TRUE  (value > true);
-    ASSERT_TRUE  (value > false);
-    ASSERT_TRUE  (value > std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <double>::max ());
+    value.set<std::string> ("foo");
+    ASSERT_TRUE (value > nullptr);
+    ASSERT_TRUE (value > true);
+    ASSERT_TRUE (value > false);
+    ASSERT_TRUE (value > std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array {1});
+    ASSERT_FALSE (value > Array{1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
-    value.set <Array, Array::value_type> ({1});
-    ASSERT_TRUE  (value > nullptr);
-    ASSERT_TRUE  (value > true);
-    ASSERT_TRUE  (value > false);
-    ASSERT_TRUE  (value > std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value > "foo");
-    ASSERT_FALSE (value > Array {1});
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_TRUE (value > nullptr);
+    ASSERT_TRUE (value > true);
+    ASSERT_TRUE (value > false);
+    ASSERT_TRUE (value > std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value > "foo");
+    ASSERT_FALSE (value > Array{1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
-    ASSERT_TRUE  (value > nullptr);
-    ASSERT_TRUE  (value > true);
-    ASSERT_TRUE  (value > false);
-    ASSERT_TRUE  (value > std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value > std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value > std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value > "foo");
-    ASSERT_TRUE  (value > Array {1});
+    value.set<Object, Object::value_type> ({{"i", 1}});
+    ASSERT_TRUE (value > nullptr);
+    ASSERT_TRUE (value > true);
+    ASSERT_TRUE (value > false);
+    ASSERT_TRUE (value > std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value > std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value > std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value > "foo");
+    ASSERT_TRUE (value > Array{1});
     ASSERT_FALSE (value > Object ({{"i", 1}}));
 
-    value.set <std::nullptr_t> (nullptr);
+    value.set<std::nullptr_t> (nullptr);
     ASSERT_FALSE (nullptr > value);
-    ASSERT_TRUE  (true > value);
-    ASSERT_TRUE  (false > value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () > value);
-    ASSERT_TRUE  ("foo" > value);
-    ASSERT_TRUE  (Array {1} > value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) > value);
+    ASSERT_TRUE (true > value);
+    ASSERT_TRUE (false > value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () > value);
+    ASSERT_TRUE ("foo" > value);
+    ASSERT_TRUE (Array{1} > value);
+    ASSERT_TRUE (Object ({{"i", 1}}) > value);
 
-    value.set <bool> (true);
+    value.set<bool> (true);
     ASSERT_FALSE (nullptr > value);
     ASSERT_FALSE (true > value);
     ASSERT_FALSE (false > value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () > value);
-    ASSERT_TRUE  ("foo" > value);
-    ASSERT_TRUE  (Array {1} > value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) > value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () > value);
+    ASSERT_TRUE ("foo" > value);
+    ASSERT_TRUE (Array{1} > value);
+    ASSERT_TRUE (Object ({{"i", 1}}) > value);
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (nullptr > value);
     ASSERT_FALSE (true > value);
     ASSERT_FALSE (false > value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () > value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () > value);
-    ASSERT_TRUE  ("foo" > value);
-    ASSERT_TRUE  (Array {1} > value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) > value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () > value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () > value);
+    ASSERT_TRUE ("foo" > value);
+    ASSERT_TRUE (Array{1} > value);
+    ASSERT_TRUE (Object ({{"i", 1}}) > value);
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::max ());
+    value.set<int64_t> (std::numeric_limits<int64_t>::max ());
     ASSERT_FALSE (nullptr > value);
     ASSERT_FALSE (true > value);
     ASSERT_FALSE (false > value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () > value);
-    ASSERT_TRUE  ("foo" > value);
-    ASSERT_TRUE  (Array {1} > value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) > value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () > value);
+    ASSERT_TRUE ("foo" > value);
+    ASSERT_TRUE (Array{1} > value);
+    ASSERT_TRUE (Object ({{"i", 1}}) > value);
 
-    value.set <double> (std::numeric_limits <double>::min ());
+    value.set<double> (std::numeric_limits<double>::min ());
     ASSERT_FALSE (nullptr > value);
     ASSERT_FALSE (true > value);
     ASSERT_FALSE (false > value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () > value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () > value);
-    ASSERT_TRUE  ("foo" > value);
-    ASSERT_TRUE  (Array {1} > value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) > value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () > value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () > value);
+    ASSERT_TRUE ("foo" > value);
+    ASSERT_TRUE (Array{1} > value);
+    ASSERT_TRUE (Object ({{"i", 1}}) > value);
 
-    value.set <std::string> ("foo");
+    value.set<std::string> ("foo");
     ASSERT_FALSE (nullptr > value);
     ASSERT_FALSE (true > value);
     ASSERT_FALSE (false > value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () > value);
     ASSERT_FALSE ("foo" > value);
-    ASSERT_TRUE  (Array {1} > value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) > value);
+    ASSERT_TRUE (Array{1} > value);
+    ASSERT_TRUE (Object ({{"i", 1}}) > value);
 
-    value.set <Array, Array::value_type> ({1});
+    value.set<Array, Array::value_type> ({1});
     ASSERT_FALSE (nullptr > value);
     ASSERT_FALSE (true > value);
     ASSERT_FALSE (false > value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () > value);
     ASSERT_FALSE ("foo" > value);
-    ASSERT_FALSE (Array {1} > value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) > value);
+    ASSERT_FALSE (Array{1} > value);
+    ASSERT_TRUE (Object ({{"i", 1}}) > value);
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
+    value.set<Object, Object::value_type> ({{"i", 1}});
     ASSERT_FALSE (nullptr > value);
     ASSERT_FALSE (true > value);
     ASSERT_FALSE (false > value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () > value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () > value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () > value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () > value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () > value);
     ASSERT_FALSE ("foo" > value);
-    ASSERT_FALSE (Array {1} > value);
+    ASSERT_FALSE (Array{1} > value);
     ASSERT_FALSE (Object ({{"i", 1}}) > value);
 }
 
@@ -7066,366 +7070,366 @@ TEST (Value, lowerOrEqual)
 {
     Value value;
 
-    value.set <std::nullptr_t> (nullptr);
-    ASSERT_TRUE  (value <= nullptr);
-    ASSERT_TRUE  (value <= true);
-    ASSERT_TRUE  (value <= false);
-    ASSERT_TRUE  (value <= std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array {1});
-    ASSERT_TRUE  (value <= Object ({{"i", 1}}));
+    value.set<std::nullptr_t> (nullptr);
+    ASSERT_TRUE (value <= nullptr);
+    ASSERT_TRUE (value <= true);
+    ASSERT_TRUE (value <= false);
+    ASSERT_TRUE (value <= std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value <= "foo");
+    ASSERT_TRUE (value <= Array{1});
+    ASSERT_TRUE (value <= Object ({{"i", 1}}));
 
-    value.set <bool> (true);
+    value.set<bool> (true);
     ASSERT_FALSE (value <= nullptr);
-    ASSERT_TRUE  (value <= true);
+    ASSERT_TRUE (value <= true);
     ASSERT_FALSE (value <= false);
-    ASSERT_TRUE  (value <= std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array {1});
-    ASSERT_TRUE  (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value <= "foo");
+    ASSERT_TRUE (value <= Array{1});
+    ASSERT_TRUE (value <= Object ({{"i", 1}}));
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value <= nullptr);
-    ASSERT_FALSE (value <= true);
-    ASSERT_FALSE (value <= false);
-    ASSERT_TRUE  (value <= std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array {1});
-    ASSERT_TRUE  (value <= Object ({{"i", 1}}));
-
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (value <= nullptr);
     ASSERT_FALSE (value <= true);
     ASSERT_FALSE (value <= false);
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array {1});
-    ASSERT_TRUE  (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value <= "foo");
+    ASSERT_TRUE (value <= Array{1});
+    ASSERT_TRUE (value <= Object ({{"i", 1}}));
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
     ASSERT_FALSE (value <= nullptr);
     ASSERT_FALSE (value <= true);
     ASSERT_FALSE (value <= false);
-    ASSERT_TRUE  (value <= std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array {1});
-    ASSERT_TRUE  (value <= Object ({{"i", 1}}));
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value <= "foo");
+    ASSERT_TRUE (value <= Array{1});
+    ASSERT_TRUE (value <= Object ({{"i", 1}}));
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
     ASSERT_FALSE (value <= nullptr);
     ASSERT_FALSE (value <= true);
     ASSERT_FALSE (value <= false);
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array {1});
-    ASSERT_TRUE  (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value <= "foo");
+    ASSERT_TRUE (value <= Array{1});
+    ASSERT_TRUE (value <= Object ({{"i", 1}}));
 
-    value.set <double> (std::numeric_limits <double>::min ());
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
     ASSERT_FALSE (value <= nullptr);
     ASSERT_FALSE (value <= true);
     ASSERT_FALSE (value <= false);
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value <= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array {1});
-    ASSERT_TRUE  (value <= Object ({{"i", 1}}));
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value <= "foo");
+    ASSERT_TRUE (value <= Array{1});
+    ASSERT_TRUE (value <= Object ({{"i", 1}}));
 
-    value.set <std::string> ("foo");
+    value.set<double> (std::numeric_limits<double>::min ());
     ASSERT_FALSE (value <= nullptr);
     ASSERT_FALSE (value <= true);
     ASSERT_FALSE (value <= false);
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value <= "foo");
-    ASSERT_TRUE  (value <= Array {1});
-    ASSERT_TRUE  (value <= Object ({{"i", 1}}));
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value <= "foo");
+    ASSERT_TRUE (value <= Array{1});
+    ASSERT_TRUE (value <= Object ({{"i", 1}}));
 
-    value.set <Array, Array::value_type> ({1});
+    value.set<std::string> ("foo");
     ASSERT_FALSE (value <= nullptr);
     ASSERT_FALSE (value <= true);
     ASSERT_FALSE (value <= false);
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value <= "foo");
+    ASSERT_TRUE (value <= Array{1});
+    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_FALSE (value <= nullptr);
+    ASSERT_FALSE (value <= true);
+    ASSERT_FALSE (value <= false);
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value <= "foo");
-    ASSERT_TRUE  (value <= Array {1});
-    ASSERT_TRUE  (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= Array{1});
+    ASSERT_TRUE (value <= Object ({{"i", 1}}));
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
+    value.set<Object, Object::value_type> ({{"i", 1}});
     ASSERT_FALSE (value <= nullptr);
     ASSERT_FALSE (value <= true);
     ASSERT_FALSE (value <= false);
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value <= std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value <= std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value <= std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value <= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value <= "foo");
-    ASSERT_FALSE (value <= Array {1});
-    ASSERT_TRUE  (value <= Object ({{"i", 1}}));
+    ASSERT_FALSE (value <= Array{1});
+    ASSERT_TRUE (value <= Object ({{"i", 1}}));
 
-    value.set <std::nullptr_t> (nullptr);
-    ASSERT_TRUE  (nullptr <= value);
+    value.set<std::nullptr_t> (nullptr);
+    ASSERT_TRUE (nullptr <= value);
     ASSERT_FALSE (true <= value);
     ASSERT_FALSE (false <= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array {1} <= value);
+    ASSERT_FALSE (Array{1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
-    value.set <bool> (true);
-    ASSERT_TRUE  (nullptr <= value);
-    ASSERT_TRUE  (true <= value);
-    ASSERT_TRUE  (false <= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
-    ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array {1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
-
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (nullptr <= value);
-    ASSERT_TRUE  (true <= value);
-    ASSERT_TRUE  (false <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
-    ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array {1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
-
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
+    value.set<bool> (true);
     ASSERT_TRUE (nullptr <= value);
     ASSERT_TRUE (true <= value);
     ASSERT_TRUE (false <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array {1} <= value);
+    ASSERT_FALSE (Array{1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (nullptr <= value);
-    ASSERT_TRUE  (true <= value);
-    ASSERT_TRUE  (false <= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (nullptr <= value);
+    ASSERT_TRUE (true <= value);
+    ASSERT_TRUE (false <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array {1} <= value);
+    ASSERT_FALSE (Array{1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (nullptr <= value);
-    ASSERT_TRUE  (true <= value);
-    ASSERT_TRUE  (false <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (nullptr <= value);
+    ASSERT_TRUE (true <= value);
+    ASSERT_TRUE (false <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array {1} <= value);
+    ASSERT_FALSE (Array{1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
-    value.set <double> (std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (nullptr <= value);
-    ASSERT_TRUE  (true <= value);
-    ASSERT_TRUE  (false <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () <= value);
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (nullptr <= value);
+    ASSERT_TRUE (true <= value);
+    ASSERT_TRUE (false <= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array {1} <= value);
+    ASSERT_FALSE (Array{1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
-    value.set <std::string> ("foo");
-    ASSERT_TRUE  (nullptr <= value);
-    ASSERT_TRUE  (true <= value);
-    ASSERT_TRUE  (false <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () <= value);
-    ASSERT_TRUE  ("foo" <= value);
-    ASSERT_FALSE (Array {1} <= value);
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (nullptr <= value);
+    ASSERT_TRUE (true <= value);
+    ASSERT_TRUE (false <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
+    ASSERT_FALSE ("foo" <= value);
+    ASSERT_FALSE (Array{1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
-    value.set <Array, Array::value_type> ({1});
-    ASSERT_TRUE  (nullptr <= value);
-    ASSERT_TRUE  (true <= value);
-    ASSERT_TRUE  (false <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () <= value);
-    ASSERT_TRUE  ("foo" <= value);
-    ASSERT_TRUE  (Array {1} <= value);
+    value.set<double> (std::numeric_limits<double>::min ());
+    ASSERT_TRUE (nullptr <= value);
+    ASSERT_TRUE (true <= value);
+    ASSERT_TRUE (false <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
+    ASSERT_FALSE ("foo" <= value);
+    ASSERT_FALSE (Array{1} <= value);
     ASSERT_FALSE (Object ({{"i", 1}}) <= value);
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
-    ASSERT_TRUE  (nullptr <= value);
-    ASSERT_TRUE  (true <= value);
-    ASSERT_TRUE  (false <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () <= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () <= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () <= value);
-    ASSERT_TRUE  ("foo" <= value);
-    ASSERT_TRUE  (Array {1} <= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) <= value);
+    value.set<std::string> ("foo");
+    ASSERT_TRUE (nullptr <= value);
+    ASSERT_TRUE (true <= value);
+    ASSERT_TRUE (false <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () <= value);
+    ASSERT_TRUE ("foo" <= value);
+    ASSERT_FALSE (Array{1} <= value);
+    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_TRUE (nullptr <= value);
+    ASSERT_TRUE (true <= value);
+    ASSERT_TRUE (false <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () <= value);
+    ASSERT_TRUE ("foo" <= value);
+    ASSERT_TRUE (Array{1} <= value);
+    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+
+    value.set<Object, Object::value_type> ({{"i", 1}});
+    ASSERT_TRUE (nullptr <= value);
+    ASSERT_TRUE (true <= value);
+    ASSERT_TRUE (false <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () <= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () <= value);
+    ASSERT_TRUE ("foo" <= value);
+    ASSERT_TRUE (Array{1} <= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) <= value);
 }
 
 /**
@@ -7435,371 +7439,371 @@ TEST (Value, greaterOrEqual)
 {
     Value value;
 
-    value.set <std::nullptr_t> (nullptr);
-    ASSERT_TRUE  (value >= nullptr);
+    value.set<std::nullptr_t> (nullptr);
+    ASSERT_TRUE (value >= nullptr);
     ASSERT_FALSE (value >= true);
     ASSERT_FALSE (value >= false);
-    ASSERT_FALSE (value >= std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array {1});
+    ASSERT_FALSE (value >= Array{1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
-    value.set <bool> (true);
-    ASSERT_TRUE  (value >= nullptr);
-    ASSERT_TRUE  (value >= true);
-    ASSERT_TRUE  (value >= false);
-    ASSERT_FALSE (value >= std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint32_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
+    value.set<bool> (true);
+    ASSERT_TRUE (value >= nullptr);
+    ASSERT_TRUE (value >= true);
+    ASSERT_TRUE (value >= false);
+    ASSERT_FALSE (value >= std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint32_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array {1});
+    ASSERT_FALSE (value >= Array{1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value >= nullptr);
-    ASSERT_TRUE  (value >= true);
-    ASSERT_TRUE  (value >= false);
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value >= nullptr);
+    ASSERT_TRUE (value >= true);
+    ASSERT_TRUE (value >= false);
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array {1});
+    ASSERT_FALSE (value >= Array{1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value >= nullptr);
-    ASSERT_TRUE  (value >= true);
-    ASSERT_TRUE  (value >= false);
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value >= nullptr);
+    ASSERT_TRUE (value >= true);
+    ASSERT_TRUE (value >= false);
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array {1});
+    ASSERT_FALSE (value >= Array{1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value >= nullptr);
-    ASSERT_TRUE  (value >= true);
-    ASSERT_TRUE  (value >= false);
-    ASSERT_FALSE (value >= std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int32_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int64_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint64_t>::max ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value >= nullptr);
+    ASSERT_TRUE (value >= true);
+    ASSERT_TRUE (value >= false);
+    ASSERT_FALSE (value >= std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int32_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int64_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint64_t>::max ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array {1});
+    ASSERT_FALSE (value >= Array{1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value >= nullptr);
-    ASSERT_TRUE  (value >= true);
-    ASSERT_TRUE  (value >= false);
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value >= nullptr);
+    ASSERT_TRUE (value >= true);
+    ASSERT_TRUE (value >= false);
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array {1});
+    ASSERT_FALSE (value >= Array{1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
-    value.set <double> (std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value >= nullptr);
-    ASSERT_TRUE  (value >= true);
-    ASSERT_TRUE  (value >= false);
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint64_t>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
-    ASSERT_FALSE (value >= std::numeric_limits <double>::max ());
+    value.set<double> (std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value >= nullptr);
+    ASSERT_TRUE (value >= true);
+    ASSERT_TRUE (value >= false);
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint64_t>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
+    ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array {1});
+    ASSERT_FALSE (value >= Array{1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
-    value.set <std::string> ("foo");
-    ASSERT_TRUE  (value >= nullptr);
-    ASSERT_TRUE  (value >= true);
-    ASSERT_TRUE  (value >= false);
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value >= "foo");
-    ASSERT_FALSE (value >= Array {1});
+    value.set<std::string> ("foo");
+    ASSERT_TRUE (value >= nullptr);
+    ASSERT_TRUE (value >= true);
+    ASSERT_TRUE (value >= false);
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value >= "foo");
+    ASSERT_FALSE (value >= Array{1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
-    value.set <Array, Array::value_type> ({1});
-    ASSERT_TRUE  (value >= nullptr);
-    ASSERT_TRUE  (value >= true);
-    ASSERT_TRUE  (value >= false);
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value >= "foo");
-    ASSERT_TRUE  (value >= Array {1});
+    value.set<Array, Array::value_type> ({1});
+    ASSERT_TRUE (value >= nullptr);
+    ASSERT_TRUE (value >= true);
+    ASSERT_TRUE (value >= false);
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value >= "foo");
+    ASSERT_TRUE (value >= Array{1});
     ASSERT_FALSE (value >= Object ({{"i", 1}}));
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
-    ASSERT_TRUE  (value >= nullptr);
-    ASSERT_TRUE  (value >= true);
-    ASSERT_TRUE  (value >= false);
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint32_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <int64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint64_t>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <uint64_t>::max ());
-    ASSERT_TRUE  (value >= std::numeric_limits <double>::min ());
-    ASSERT_TRUE  (value >= std::numeric_limits <double>::max ());
-    ASSERT_TRUE  (value >= "foo");
-    ASSERT_TRUE  (value >= Array {1});
-    ASSERT_TRUE  (value >= Object ({{"i", 1}}));
+    value.set<Object, Object::value_type> ({{"i", 1}});
+    ASSERT_TRUE (value >= nullptr);
+    ASSERT_TRUE (value >= true);
+    ASSERT_TRUE (value >= false);
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<int32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint32_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<int64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint64_t>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<uint64_t>::max ());
+    ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
+    ASSERT_TRUE (value >= std::numeric_limits<double>::max ());
+    ASSERT_TRUE (value >= "foo");
+    ASSERT_TRUE (value >= Array{1});
+    ASSERT_TRUE (value >= Object ({{"i", 1}}));
 
-    value.set <std::nullptr_t> (nullptr);
-    ASSERT_TRUE  (nullptr >= value);
-    ASSERT_TRUE  (true >= value);
-    ASSERT_TRUE  (false >= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
-    ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array {1} >= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
+    value.set<std::nullptr_t> (nullptr);
+    ASSERT_TRUE (nullptr >= value);
+    ASSERT_TRUE (true >= value);
+    ASSERT_TRUE (false >= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
+    ASSERT_TRUE ("foo" >= value);
+    ASSERT_TRUE (Array{1} >= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
 
-    value.set <bool> (true);
+    value.set<bool> (true);
     ASSERT_FALSE (nullptr >= value);
-    ASSERT_TRUE  (true >= value);
+    ASSERT_TRUE (true >= value);
     ASSERT_FALSE (false >= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
-    ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array {1} >= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
+    ASSERT_TRUE ("foo" >= value);
+    ASSERT_TRUE (Array{1} >= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
 
-    value.set <int32_t> (std::numeric_limits <int32_t>::min ());
+    value.set<int32_t> (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (nullptr >= value);
     ASSERT_FALSE (true >= value);
     ASSERT_FALSE (false >= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
-    ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array {1} >= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
+    ASSERT_TRUE ("foo" >= value);
+    ASSERT_TRUE (Array{1} >= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
 
-    value.set <uint32_t> (std::numeric_limits <uint32_t>::max ());
+    value.set<uint32_t> (std::numeric_limits<uint32_t>::max ());
     ASSERT_FALSE (nullptr >= value);
     ASSERT_FALSE (true >= value);
     ASSERT_FALSE (false >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
-    ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array {1} >= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
+    ASSERT_TRUE ("foo" >= value);
+    ASSERT_TRUE (Array{1} >= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
 
-    value.set <int64_t> (std::numeric_limits <int64_t>::min ());
+    value.set<int64_t> (std::numeric_limits<int64_t>::min ());
     ASSERT_FALSE (nullptr >= value);
     ASSERT_FALSE (true >= value);
     ASSERT_FALSE (false >= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
-    ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array {1} >= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
+    ASSERT_TRUE ("foo" >= value);
+    ASSERT_TRUE (Array{1} >= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
 
-    value.set <uint64_t> (std::numeric_limits <uint64_t>::max ());
+    value.set<uint64_t> (std::numeric_limits<uint64_t>::max ());
     ASSERT_FALSE (nullptr >= value);
     ASSERT_FALSE (true >= value);
     ASSERT_FALSE (false >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
-    ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array {1} >= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
+    ASSERT_TRUE ("foo" >= value);
+    ASSERT_TRUE (Array{1} >= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
 
-    value.set <double> (std::numeric_limits <double>::min ());
+    value.set<double> (std::numeric_limits<double>::min ());
     ASSERT_FALSE (nullptr >= value);
     ASSERT_FALSE (true >= value);
     ASSERT_FALSE (false >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <int64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <uint64_t>::max () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::min () >= value);
-    ASSERT_TRUE  (std::numeric_limits <double>::max () >= value);
-    ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array {1} >= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<int64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<uint64_t>::max () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::min () >= value);
+    ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
+    ASSERT_TRUE ("foo" >= value);
+    ASSERT_TRUE (Array{1} >= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
 
-    value.set <std::string> ("foo");
+    value.set<std::string> ("foo");
     ASSERT_FALSE (nullptr >= value);
     ASSERT_FALSE (true >= value);
     ASSERT_FALSE (false >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () >= value);
-    ASSERT_TRUE  ("foo" >= value);
-    ASSERT_TRUE  (Array {1} >= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () >= value);
+    ASSERT_TRUE ("foo" >= value);
+    ASSERT_TRUE (Array{1} >= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
 
-    value.set <Array, Array::value_type> ({1});
+    value.set<Array, Array::value_type> ({1});
     ASSERT_FALSE (nullptr >= value);
     ASSERT_FALSE (true >= value);
     ASSERT_FALSE (false >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () >= value);
     ASSERT_FALSE ("foo" >= value);
-    ASSERT_TRUE  (Array {1} >= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (Array{1} >= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
 
-    value.set <Object, Object::value_type> ({{"i", 1}});
+    value.set<Object, Object::value_type> ({{"i", 1}});
     ASSERT_FALSE (nullptr >= value);
     ASSERT_FALSE (true >= value);
     ASSERT_FALSE (false >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <int32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint32_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <int64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <uint64_t>::max () >= value);
-    ASSERT_FALSE (std::numeric_limits <double>::min () >= value);
-    ASSERT_FALSE (std::numeric_limits <double>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<int32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint32_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<int64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<uint64_t>::max () >= value);
+    ASSERT_FALSE (std::numeric_limits<double>::min () >= value);
+    ASSERT_FALSE (std::numeric_limits<double>::max () >= value);
     ASSERT_FALSE ("foo" >= value);
-    ASSERT_FALSE (Array {1} >= value);
-    ASSERT_TRUE  (Object ({{"i", 1}}) >= value);
+    ASSERT_FALSE (Array{1} >= value);
+    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
