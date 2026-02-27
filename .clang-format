@@ -24,12 +24,11 @@ FixNamespaceComments: false
 
 # --- Braces (Allman Style + Space) ---
 BreakBeforeBraces: Allman
-SpaceBeforeBraces: Always
 
 # --- Spaces ---
 SpaceBeforeParens: Always
 SpaceAfterTemplateKeyword: true
-SpaceInEmptyParentheses: false
+SpaceInParens: Never
 
 # --- Assignments & Alignments ---
 AlignConsecutiveAssignments:
@@ -51,7 +50,7 @@ SeparateDefinitionBlocks: Always
 MaxEmptyLinesToKeep: 2
 
 # --- Constructor Formatting ---
-ConstructorInitializerAllOnOneLineOrOnePerLine: false
+PackConstructorInitializers: NextLine
 ConstructorInitializerIndentWidth: 0
 BreakConstructorInitializers: BeforeComma
 
