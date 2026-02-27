@@ -47,9 +47,7 @@ jobs:
 
       - name: Check formatting
         if: github.event_name == 'pull_request'
-        uses: jidicula/clang-format-action@v4.15.0
-        with:
-          check-path: '.'
+        run: find . -name "*.cpp" -o -name "*.hpp" | xargs clang-format --dry-run --Werror'
 
       - name: Setup Build Environment
         if: ${{ inputs.scan || inputs.coverage }}
