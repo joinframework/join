@@ -47,67 +47,67 @@ jobs:
 
       - name: Check formatting
         if: github.event_name == 'pull_request'
-        run: find . -name "*.cpp" -o -name "*.hpp" | xargs clang-format --dry-run --Werror'
+        run: find . -name "*.cpp" -o -name "*.hpp" | xargs clang-format --dry-run --Werror
 
       - name: Setup Build Environment
-        if: ${{ inputs.scan || inputs.coverage }}
+        if: inputs.scan || inputs.coverage
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Initialize codeql
-        if: ${{ inputs.scan }}
+        if: inputs.scan
         uses: github/codeql-action/init@v3
 
       - name: Configure
-        if: ${{ inputs.scan || inputs.coverage }}
+        if: inputs.scan || inputs.coverage
         run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_SAMPLES=ON -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
 
       - name: Build
-        if: ${{ inputs.scan || inputs.coverage }}
+        if: inputs.scan || inputs.coverage
         run: cmake --build build --config Debug
 
       - name: Run codeql scan
-        if: ${{ inputs.scan }}
+        if: inputs.scan
         uses: github/codeql-action/analyze@v3
 
       - name: Run tests
-        if: ${{ inputs.coverage }}
+        if: inputs.coverage
         run: ctest --test-dir build --output-on-failure -C Debug
 
       - name: Generate coverage report
-        if: ${{ inputs.coverage }}
+        if: inputs.coverage
         run: |
           lcov --directory build --capture --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
           genhtml lcov.info --prefix $GITHUB_WORKSPACE --output-directory coverage
 
       - name: Upload coverage data to GitHub
-        if: ${{ inputs.coverage }}
+        if: inputs.coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-data
           path: lcov.info
 
       - name: Upload coverage report to GitHub
-        if: ${{ inputs.coverage }}
+        if: inputs.coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
 
       - name: Run doxygen
-        if: ${{ inputs.doc }}
+        if: inputs.doc
         uses: mattnotmitt/doxygen-action@v1
         with:
           doxyfile-path: ./doxyfile
           working-directory: .
 
       - name: Upload documentation to GitHub
-        if: ${{ inputs.doc }}
+        if: inputs.doc
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./doc/html
 
   deploy-coverage:
-    if: ${{ inputs.coverage }}
+    if: inputs.coverage
 
     runs-on: ubuntu-latest
 
@@ -154,7 +154,7 @@ jobs:
           coverage-reports: lcov.info
 
   deploy-pages:
-    if: ${{ inputs.doc }}
+    if: inputs.doc
 
     runs-on: ubuntu-latest
 
