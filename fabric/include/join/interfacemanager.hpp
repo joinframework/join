@@ -232,39 +232,39 @@ namespace join
          * @param cb the callback function to register.
          * @return unique id for the callback.
          */
-        UUID addLinkListener (const LinkNotify& cb);
+        uint64_t addLinkListener (const LinkNotify& cb);
 
         /**
          * @brief unregisters a previously registered link update callback.
          * @param id unique id of the callback function to remove.
          */
-        void removeLinkListener (const UUID& id);
+        void removeLinkListener (uint64_t id);
 
         /**
          * @brief registers a callback to be invoked when a address update occurs.
          * @param cb the callback function to register.
          * @return unique id for the callback.
          */
-        UUID addAddressListener (const AddressNotify& cb);
+        uint64_t addAddressListener (const AddressNotify& cb);
 
         /**
          * @brief unregisters a previously registered address update callback.
          * @param id unique id of the callback function to remove.
          */
-        void removeAddressListener (const UUID& id);
+        void removeAddressListener (uint64_t id);
 
         /**
          * @brief registers a callback to be invoked when a route update occurs.
          * @param cb the callback function to register.
          * @return unique id for the callback.
          */
-        UUID addRouteListener (const RouteNotify& cb);
+        uint64_t addRouteListener (const RouteNotify& cb);
 
         /**
          * @brief unregisters a previously registered route update callback.
          * @param id unique id of the callback function to remove.
          */
-        void removeRouteListener (const UUID& id);
+        void removeRouteListener (uint64_t id);
 
         /**
          * @brief creates a dummy interface.
@@ -637,22 +637,25 @@ namespace join
         Mutex _syncMutex;
 
         /// link listener callbacks.
-        std::unordered_map<UUID, LinkNotify> _linkListeners;
+        std::unordered_map<uint64_t, LinkNotify> _linkListeners;
 
         /// protection mutex.
         Mutex _linkMutex;
 
         /// address listener callbacks.
-        std::unordered_map<UUID, AddressNotify> _addressListeners;
+        std::unordered_map<uint64_t, AddressNotify> _addressListeners;
 
         /// protection mutex.
         Mutex _addressMutex;
 
         /// route listener callbacks.
-        std::unordered_map<UUID, RouteNotify> _routeListeners;
+        std::unordered_map<uint64_t, RouteNotify> _routeListeners;
 
         /// protection mutex.
         Mutex _routeMutex;
+
+        /// listeners counter
+        std::atomic<uint64_t> _listenersCounter;
 
         /// event loop reactor.
         Reactor* _reactor;

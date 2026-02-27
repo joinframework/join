@@ -40,8 +40,6 @@ using join::Interface;
 using join::InterfaceList;
 using join::InterfaceManager;
 
-using join::UUID;
-
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : InterfaceManager
@@ -49,6 +47,7 @@ using join::UUID;
 InterfaceManager::InterfaceManager (Reactor* reactor)
 : _buffer (std::make_unique <char []> (_bufferSize))
 , _seq (0)
+, _listenersCounter (0)
 , _reactor (reactor)
 {
     open (Netlink::rt ());
@@ -128,17 +127,17 @@ int InterfaceManager::refresh (bool sync)
 //   CLASS     : InterfaceManager
 //   METHOD    : addLinkListener
 // =========================================================================
-UUID InterfaceManager::addLinkListener (const LinkNotify& cb)
+uint64_t InterfaceManager::addLinkListener (const LinkNotify& cb)
 {
     ScopedLock <Mutex> lock (_linkMutex);
-    return _linkListeners.emplace(generateUUID(), cb).first->first;
+    return _linkListeners.emplace(_listenersCounter.fetch_add(1, std::memory_order::memory_order_acq_rel) + 1, cb).first->first;
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : removeLinkListener
 // =========================================================================
-void InterfaceManager::removeLinkListener (const UUID& id)
+void InterfaceManager::removeLinkListener (uint64_t id)
 {
     ScopedLock <Mutex> lock (_linkMutex);
     _linkListeners.erase(id);
@@ -148,17 +147,17 @@ void InterfaceManager::removeLinkListener (const UUID& id)
 //   CLASS     : InterfaceManager
 //   METHOD    : addAddressListener
 // =========================================================================
-UUID InterfaceManager::addAddressListener (const AddressNotify& cb)
+uint64_t InterfaceManager::addAddressListener (const AddressNotify& cb)
 {
     ScopedLock <Mutex> lock (_addressMutex);
-    return _addressListeners.emplace(generateUUID(), cb).first->first;
+    return _addressListeners.emplace(_listenersCounter.fetch_add(1, std::memory_order::memory_order_acq_rel) + 1, cb).first->first;
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : removeAddressListener
 // =========================================================================
-void InterfaceManager::removeAddressListener (const UUID& id)
+void InterfaceManager::removeAddressListener (uint64_t id)
 {
     ScopedLock <Mutex> lock (_addressMutex);
     _addressListeners.erase(id);
@@ -168,17 +167,17 @@ void InterfaceManager::removeAddressListener (const UUID& id)
 //   CLASS     : InterfaceManager
 //   METHOD    : addRouteListener
 // =========================================================================
-UUID InterfaceManager::addRouteListener (const RouteNotify& cb)
+uint64_t InterfaceManager::addRouteListener (const RouteNotify& cb)
 {
     ScopedLock <Mutex> lock (_routeMutex);
-    return _routeListeners.emplace(generateUUID(), cb).first->first;
+    return _routeListeners.emplace(_listenersCounter.fetch_add(1, std::memory_order::memory_order_acq_rel) + 1, cb).first->first;
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : removeRouteListener
 // =========================================================================
-void InterfaceManager::removeRouteListener (const UUID& id)
+void InterfaceManager::removeRouteListener (uint64_t id)
 {
     ScopedLock <Mutex> lock (_routeMutex);
     _routeListeners.erase(id);

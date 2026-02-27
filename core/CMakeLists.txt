@@ -68,7 +68,6 @@ target_link_libraries(${JOIN_CORE}
         OpenSSL::Crypto
         Threads::Threads
         ${NUMA_LIBRARIES}
-        uuid
 )
 
 install(TARGETS ${JOIN_CORE}
