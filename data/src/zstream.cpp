@@ -34,10 +34,10 @@ using join::Zstream;
 //   METHOD    : Zstreambuf
 // =========================================================================
 Zstreambuf::Zstreambuf (std::streambuf* streambuf, int format, bool own)
-: StreambufDecorator (streambuf, own),
-  _inflate (std::make_unique <z_stream> ()),
-  _deflate (std::make_unique <z_stream> ()),
-  _buf (std::make_unique <char []> (4 * _bufsize))
+: StreambufDecorator (streambuf, own)
+, _inflate (std::make_unique<z_stream> ())
+, _deflate (std::make_unique<z_stream> ())
+, _buf (std::make_unique<char[]> (4 * _bufsize))
 {
     inflateInit2 (_inflate.get (), format);
     deflateInit2 (_deflate.get (), Z_DEFAULT_COMPRESSION, Z_DEFLATED, format, 8, Z_DEFAULT_STRATEGY);
@@ -48,10 +48,10 @@ Zstreambuf::Zstreambuf (std::streambuf* streambuf, int format, bool own)
 //   METHOD    : Zstreambuf
 // =========================================================================
 Zstreambuf::Zstreambuf (Zstreambuf&& other)
-: StreambufDecorator (std::move (other)),
-  _inflate (std::move (other._inflate)),
-  _deflate (std::move (other._deflate)),
-  _buf (std::move (other._buf))
+: StreambufDecorator (std::move (other))
+, _inflate (std::move (other._inflate))
+, _deflate (std::move (other._deflate))
+, _buf (std::move (other._buf))
 {
 }
 
@@ -64,7 +64,7 @@ Zstreambuf& Zstreambuf::operator= (Zstreambuf&& other)
     StreambufDecorator::operator= (std::move (other));
     _inflate = std::move (other._inflate);
     _deflate = std::move (other._deflate);
-    _buf = std::move (other._buf);
+    _buf     = std::move (other._buf);
     return *this;
 }
 
@@ -109,7 +109,7 @@ Zstreambuf::int_type Zstreambuf::underflow ()
                 return traits_type::eof ();
             }
 
-            _inflate->next_in = reinterpret_cast <uint8_t*> (eback () + _bufsize);
+            _inflate->next_in  = reinterpret_cast<uint8_t*> (eback () + _bufsize);
             _inflate->avail_in = _innerbuf->sgetn (eback () + _bufsize, _bufsize);
             if (_inflate->avail_in == 0)
             {
@@ -117,9 +117,9 @@ Zstreambuf::int_type Zstreambuf::underflow ()
             }
         }
 
-        _inflate->next_out = reinterpret_cast <uint8_t*> (eback ());
+        _inflate->next_out  = reinterpret_cast<uint8_t*> (eback ());
         _inflate->avail_out = _bufsize;
-        _instate = ::inflate (_inflate.get (), Z_NO_FLUSH);
+        _instate            = ::inflate (_inflate.get (), Z_NO_FLUSH);
         if ((_instate != Z_OK) && (_instate != Z_STREAM_END))
         {
             join::lastError = make_error_code (Errc::OperationFailed);
@@ -145,12 +145,12 @@ Zstreambuf::int_type Zstreambuf::overflow (int_type c)
 
     if ((pptr () == epptr ()) || (c == traits_type::eof ()))
     {
-        _deflate->next_in = reinterpret_cast <uint8_t*> (pbase ());
+        _deflate->next_in  = reinterpret_cast<uint8_t*> (pbase ());
         _deflate->avail_in = pptr () - pbase ();
 
         while (_deflate->avail_in)
         {
-            _deflate->next_out = reinterpret_cast <uint8_t*> (pbase () + _bufsize);
+            _deflate->next_out  = reinterpret_cast<uint8_t*> (pbase () + _bufsize);
             _deflate->avail_out = _bufsize;
 
             int res = ::deflate (_deflate.get (), (c == traits_type::eof ()) ? Z_FINISH : Z_NO_FLUSH);
@@ -161,7 +161,7 @@ Zstreambuf::int_type Zstreambuf::overflow (int_type c)
             }
 
             std::streamsize deflated = _bufsize - _deflate->avail_out;
-            std::streamsize nwrite = _innerbuf->sputn (pbase () + _bufsize, deflated);
+            std::streamsize nwrite   = _innerbuf->sputn (pbase () + _bufsize, deflated);
             if (nwrite != deflated)
             {
                 return traits_type::eof ();
@@ -208,8 +208,8 @@ Zstream::Zstream (std::iostream& stream, Format format)
 //   METHOD    : Zstream
 // =========================================================================
 Zstream::Zstream (Zstream&& other)
-: std::iostream (std::move (other)),
-  _zbuf (std::move (other._zbuf))
+: std::iostream (std::move (other))
+, _zbuf (std::move (other._zbuf))
 {
     set_rdbuf (&_zbuf);
 }
@@ -218,7 +218,7 @@ Zstream::Zstream (Zstream&& other)
 //   CLASS     : Zstream
 //   METHOD    : operator=
 // =========================================================================
-Zstream& Zstream::operator=(Zstream&& other)
+Zstream& Zstream::operator= (Zstream&& other)
 {
     std::iostream::operator= (std::move (other));
     _zbuf = std::move (other._zbuf);

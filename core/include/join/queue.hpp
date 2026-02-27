@@ -123,7 +123,7 @@ namespace join
                 _segment->_sync._head.store (0, std::memory_order_relaxed);
                 _segment->_sync._tail.store (0, std::memory_order_relaxed);
                 _segment->_sync._capacity = _capacity;
-                _segment->_sync._mask = _capacity - 1;
+                _segment->_sync._mask     = _capacity - 1;
 
                 for (uint64_t i = 0; i < _capacity; ++i)
                 {
@@ -378,7 +378,7 @@ namespace join
                 return -1;
             }
 
-            auto& sync = segment->_sync;
+            auto& sync    = segment->_sync;
             uint64_t head = sync._head.load (std::memory_order_relaxed);
             uint64_t tail = sync._tail.load (std::memory_order_acquire);
 
@@ -408,7 +408,7 @@ namespace join
                 return -1;
             }
 
-            auto& sync = segment->_sync;
+            auto& sync    = segment->_sync;
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
             uint64_t head = sync._head.load (std::memory_order_acquire);
 
@@ -447,13 +447,13 @@ namespace join
                 return -1;
             }
 
-            auto& sync = segment->_sync;
+            auto& sync    = segment->_sync;
             uint64_t head = sync._head.load (std::memory_order_relaxed);
             Backoff backoff;
 
             for (;;)
             {
-                auto* slot = &segment->_elements[head & sync._mask];
+                auto* slot   = &segment->_elements[head & sync._mask];
                 uint64_t seq = slot->_seq.load (std::memory_order_acquire);
 
                 if (seq == head)
@@ -493,10 +493,10 @@ namespace join
                 return -1;
             }
 
-            auto& sync = segment->_sync;
+            auto& sync    = segment->_sync;
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
-            auto* slot = &segment->_elements[tail & sync._mask];
-            uint64_t seq = slot->_seq.load (std::memory_order_acquire);
+            auto* slot    = &segment->_elements[tail & sync._mask];
+            uint64_t seq  = slot->_seq.load (std::memory_order_acquire);
 
             if (JOIN_UNLIKELY (seq != tail + 1))
             {
@@ -545,13 +545,13 @@ namespace join
                 return -1;
             }
 
-            auto& sync = segment->_sync;
+            auto& sync    = segment->_sync;
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
             Backoff backoff;
 
             for (;;)
             {
-                auto* slot = &segment->_elements[tail & sync._mask];
+                auto* slot   = &segment->_elements[tail & sync._mask];
                 uint64_t seq = slot->_seq.load (std::memory_order_acquire);
 
                 if (seq == (tail + 1))

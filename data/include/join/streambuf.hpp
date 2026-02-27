@@ -43,8 +43,8 @@ namespace join
          * @param own is the decorator owning inner stream buffer.
          */
         StreambufDecorator (std::streambuf* streambuf, bool own = false)
-        : _innerbuf (streambuf),
-          _own (own)
+        : _innerbuf (streambuf)
+        , _own (own)
         {
         }
 
@@ -66,12 +66,12 @@ namespace join
          * @param other other object to move.
          */
         StreambufDecorator (StreambufDecorator&& other)
-        : std::streambuf (std::move (other)),
-          _innerbuf (other._innerbuf),
-          _own (other._own)
+        : std::streambuf (std::move (other))
+        , _innerbuf (other._innerbuf)
+        , _own (other._own)
         {
             other._innerbuf = nullptr;
-            other._own = false;
+            other._own      = false;
         }
 
         /**
@@ -82,10 +82,10 @@ namespace join
         StreambufDecorator& operator= (StreambufDecorator&& other)
         {
             std::streambuf::operator= (std::move (other));
-            _innerbuf = other._innerbuf;
-            _own = other._own;
+            _innerbuf       = other._innerbuf;
+            _own            = other._own;
             other._innerbuf = nullptr;
-            other._own = false;
+            other._own      = false;
             return *this;
         }
 

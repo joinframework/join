@@ -64,7 +64,7 @@ namespace join
             if ((length <= kk) && (kk <= 21))
             {
                 memset (buffer + length, '0', kk - length);
-                buffer[kk] = '.';
+                buffer[kk]     = '.';
                 buffer[kk + 1] = '0';
                 return &buffer[kk + 2];
             }
@@ -91,15 +91,17 @@ namespace join
             else
             {
                 memmove (&buffer[2], &buffer[1], length - 1);
-                buffer[1] = '.';
+                buffer[1]          = '.';
                 buffer[length + 1] = 'e';
                 return writeExponent (&buffer[length + 2], kk - 1);
             }
         }
 
-        inline void grisuRound (char* buffer, int length, uint64_t delta, uint64_t rest, uint64_t ten_kappa, uint64_t wp_w)
+        inline void grisuRound (char* buffer, int length, uint64_t delta, uint64_t rest, uint64_t ten_kappa,
+                                uint64_t wp_w)
         {
-            while (rest < wp_w && delta - rest >= ten_kappa && (rest + ten_kappa < wp_w || wp_w - rest > rest + ten_kappa - wp_w))
+            while (rest < wp_w && delta - rest >= ten_kappa &&
+                   (rest + ten_kappa < wp_w || wp_w - rest > rest + ten_kappa - wp_w))
             {
                 --buffer[length - 1];
                 rest += ten_kappa;
@@ -108,55 +110,97 @@ namespace join
 
         inline size_t digitsCount (uint32_t n)
         {
-            if (n < 10) return 1;
-            if (n < 100) return 2;
-            if (n < 1000) return 3;
-            if (n < 10000) return 4;
-            if (n < 100000) return 5;
-            if (n < 1000000) return 6;
-            if (n < 10000000) return 7;
-            if (n < 100000000) return 8;
-            if (n < 1000000000) return 9;
+            if (n < 10)
+                return 1;
+            if (n < 100)
+                return 2;
+            if (n < 1000)
+                return 3;
+            if (n < 10000)
+                return 4;
+            if (n < 100000)
+                return 5;
+            if (n < 1000000)
+                return 6;
+            if (n < 10000000)
+                return 7;
+            if (n < 100000000)
+                return 8;
+            if (n < 1000000000)
+                return 9;
             return 10;
         }
 
         inline void digitsGen (DiyFp W, DiyFp Mp, uint64_t delta, char* buffer, int& length, int& k)
         {
-            static const uint32_t kPow10[] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
-            DiyFp one (static_cast <uint64_t> (1) << -Mp._exponent, Mp._exponent);
-            DiyFp wp_w = Mp - W;
-            uint32_t p1 = static_cast <uint32_t> (Mp._mantissa >> -one._exponent);
+            static const uint32_t kPow10[] = {1,      10,      100,      1000,      10000,
+                                              100000, 1000000, 10000000, 100000000, 1000000000};
+            DiyFp one (static_cast<uint64_t> (1) << -Mp._exponent, Mp._exponent);
+            DiyFp wp_w  = Mp - W;
+            uint32_t p1 = static_cast<uint32_t> (Mp._mantissa >> -one._exponent);
             uint64_t p2 = Mp._mantissa & (one._mantissa - 1);
-            int kappa = static_cast <int> (digitsCount (p1));
-            length = 0;
+            int kappa   = static_cast<int> (digitsCount (p1));
+            length      = 0;
 
             while (kappa > 0)
             {
                 uint32_t d = 0;
                 switch (kappa)
                 {
-                    case 10: d = p1 / 1000000000; p1 %= 1000000000; break;
-                    case  9: d = p1 / 100000000;  p1 %= 100000000;  break;
-                    case  8: d = p1 / 10000000;   p1 %= 10000000;   break;
-                    case  7: d = p1 / 1000000;    p1 %= 1000000;    break;
-                    case  6: d = p1 / 100000;     p1 %= 100000;     break;
-                    case  5: d = p1 / 10000;      p1 %= 10000;      break;
-                    case  4: d = p1 / 1000;       p1 %= 1000;       break;
-                    case  3: d = p1 / 100;        p1 %= 100;        break;
-                    case  2: d = p1 / 10;         p1 %= 10;         break;
-                    case  1: d = p1;              p1  = 0;          break;
-                    default:                                        break;
+                    case 10:
+                        d = p1 / 1000000000;
+                        p1 %= 1000000000;
+                        break;
+                    case 9:
+                        d = p1 / 100000000;
+                        p1 %= 100000000;
+                        break;
+                    case 8:
+                        d = p1 / 10000000;
+                        p1 %= 10000000;
+                        break;
+                    case 7:
+                        d = p1 / 1000000;
+                        p1 %= 1000000;
+                        break;
+                    case 6:
+                        d = p1 / 100000;
+                        p1 %= 100000;
+                        break;
+                    case 5:
+                        d = p1 / 10000;
+                        p1 %= 10000;
+                        break;
+                    case 4:
+                        d = p1 / 1000;
+                        p1 %= 1000;
+                        break;
+                    case 3:
+                        d = p1 / 100;
+                        p1 %= 100;
+                        break;
+                    case 2:
+                        d = p1 / 10;
+                        p1 %= 10;
+                        break;
+                    case 1:
+                        d  = p1;
+                        p1 = 0;
+                        break;
+                    default:
+                        break;
                 }
                 if (d || length)
                 {
                     buffer[length++] = '0' + d;
                 }
                 --kappa;
-                uint64_t tmp = (static_cast <uint64_t> (p1) << -one._exponent) + p2;
+                uint64_t tmp = (static_cast<uint64_t> (p1) << -one._exponent) + p2;
                 if (tmp <= delta)
                 {
                     k += kappa;
-                    grisuRound (buffer, length, delta, tmp, static_cast <uint64_t> (kPow10[kappa]) << -one._exponent, wp_w._mantissa);
+                    grisuRound (buffer, length, delta, tmp, static_cast<uint64_t> (kPow10[kappa]) << -one._exponent,
+                                wp_w._mantissa);
                     return;
                 }
             }
@@ -164,8 +208,10 @@ namespace join
             uint64_t unit = 1;
             for (;;)
             {
-                p2 *= 10; delta *= 10; unit *= 10;
-                char d = static_cast <char> (p2 >> -one._exponent);
+                p2 *= 10;
+                delta *= 10;
+                unit *= 10;
+                char d = static_cast<char> (p2 >> -one._exponent);
                 if (d || length)
                 {
                     buffer[length++] = '0' + d;
@@ -183,7 +229,7 @@ namespace join
 
         inline int kComputation (int exp, int alpha)
         {
-            return static_cast <int> (::ceil ((alpha - exp + 63) * 0.30102999566398114));
+            return static_cast<int> (::ceil ((alpha - exp + 63) * 0.30102999566398114));
         }
 
         inline void grisu2 (char* buffer, int& length, int& k, double value)
@@ -191,11 +237,11 @@ namespace join
             DiyFp val (value), minus, plus;
             val.normalizedBoundaries (minus, plus);
 
-            int mk = kComputation (plus._exponent + 64, -59);
+            int mk            = kComputation (plus._exponent + 64, -59);
             const DiyFp& c_mk = dtoapow[mk + 343];
 
             minus *= c_mk;
-            plus  *= c_mk;
+            plus *= c_mk;
 
             ++minus._mantissa;
             --plus._mantissa;
@@ -215,7 +261,7 @@ namespace join
     inline char* dtoa (char* buffer, double value)
     {
         uint64_t bits;
-        memcpy (&bits, &value, sizeof(double));
+        memcpy (&bits, &value, sizeof (double));
         bool is_negative = (bits >> 63) != 0;
 
         *buffer = '-';

@@ -95,15 +95,15 @@ namespace join
         static const std::streamsize _bufsize = 256;
 
         /// internal buffer.
-        std::unique_ptr <char []> _buf;
+        std::unique_ptr<char[]> _buf;
 
-    #if OPENSSL_VERSION_NUMBER < 0x30000000L
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
         /// message digest.
         const EVP_MD* _md;
 
         /// context.
         HmacCtxPtr _ctx;
-    #else
+#else
         /// mac.
         EvpMacPtr _mac;
 
@@ -112,7 +112,7 @@ namespace join
 
         /// context.
         EvpMacCtxPtr _ctx;
-    #endif
+#endif
 
         /// key.
         std::string _key;
@@ -142,7 +142,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Hmac& operator=(const Hmac& other) = delete;
+        Hmac& operator= (const Hmac& other) = delete;
 
         /**
          * @brief move constructor.
@@ -155,7 +155,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Hmac& operator=(Hmac&& other);
+        Hmac& operator= (Hmac&& other);
 
         /**
          * @brief destroy HMAC stream instance.

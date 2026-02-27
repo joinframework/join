@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
- 
+
 #ifndef __JOIN_ERROR_HPP__
 #define __JOIN_ERROR_HPP__
 
@@ -38,19 +38,19 @@ namespace join
      */
     enum class Errc
     {
-        InUse = 1,              /**< Already in use. */
-        InvalidParam,           /**< Invalid parameters were used. */
-        ConnectionRefused,      /**< The connection was refused. */
-        ConnectionClosed,       /**< The connection was closed by the peer. */
-        TimedOut,               /**< The operation timed out. */
-        PermissionDenied,       /**< The operation was not permitted.*/
-        OutOfMemory,            /**< The operation run out of memory. */
-        OperationFailed,        /**< The operation failed. */
-        NotFound,               /**< Resource not found. */
-        MessageUnknown,         /**< Message unknown. */
-        MessageTooLong,         /**< Message too long. */
-        TemporaryError,         /**< A temporary error occurred, operation should be performed again later. */
-        UnknownError            /**< An unknown error occurred. */
+        InUse = 1,         /**< Already in use. */
+        InvalidParam,      /**< Invalid parameters were used. */
+        ConnectionRefused, /**< The connection was refused. */
+        ConnectionClosed,  /**< The connection was closed by the peer. */
+        TimedOut,          /**< The operation timed out. */
+        PermissionDenied,  /**< The operation was not permitted.*/
+        OutOfMemory,       /**< The operation run out of memory. */
+        OperationFailed,   /**< The operation failed. */
+        NotFound,          /**< Resource not found. */
+        MessageUnknown,    /**< Message unknown. */
+        MessageTooLong,    /**< Message too long. */
+        TemporaryError,    /**< A temporary error occurred, operation should be performed again later. */
+        UnknownError       /**< An unknown error occurred. */
     };
 
     /**
@@ -135,7 +135,10 @@ namespace join
 
 namespace std
 {
-    template <> struct is_error_condition_enum <join::Errc> : public true_type {};
+    template <>
+    struct is_error_condition_enum<join::Errc> : public true_type
+    {
+    };
 }
 
 #endif

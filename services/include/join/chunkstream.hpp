@@ -106,7 +106,7 @@ namespace join
         std::streamsize _chunksize = 16384;
 
         /// internal buffer.
-        std::unique_ptr <char []> _buf;
+        std::unique_ptr<char[]> _buf;
     };
 
     /**
@@ -139,7 +139,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Chunkstream& operator=(const Chunkstream& other) = delete;
+        Chunkstream& operator= (const Chunkstream& other) = delete;
 
         /**
          * @brief move constructor.
@@ -152,7 +152,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Chunkstream& operator=(Chunkstream&& other);
+        Chunkstream& operator= (Chunkstream&& other);
 
         /**
          * @brief destroy the chunk stream instance.

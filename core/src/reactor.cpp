@@ -62,7 +62,7 @@ Reactor::Reactor ()
     _deleted.reserve (_deletedReserve);
 
     struct epoll_event ev{};
-    ev.events = EPOLLIN;
+    ev.events   = EPOLLIN;
     ev.data.ptr = nullptr;
 
     if (epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev) == -1)
@@ -110,7 +110,7 @@ int Reactor::addHandler (EventHandler* handler, bool sync) noexcept
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
-    std::atomic<int> errc{0}, *perrc = nullptr;
+    std::atomic<int> errc{0}, *perrc      = nullptr;
 
     if (JOIN_UNLIKELY (sync))
     {
@@ -166,7 +166,7 @@ int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
-    std::atomic<int> errc{0}, *perrc = nullptr;
+    std::atomic<int> errc{0}, *perrc      = nullptr;
 
     if (JOIN_UNLIKELY (sync))
     {
@@ -264,7 +264,7 @@ int Reactor::registerHandler (EventHandler* handler) noexcept
     _deleted.erase (handler);
 
     struct epoll_event ev{};
-    ev.events = EPOLLIN | EPOLLRDHUP;
+    ev.events   = EPOLLIN | EPOLLRDHUP;
     ev.data.ptr = handler;
 
     if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev) == -1))
@@ -304,7 +304,7 @@ int Reactor::writeCommand (const Command& cmd) noexcept
         return -1;
     }
 
-    uint64_t value = 1;
+    uint64_t value                 = 1;
     [[maybe_unused]] ssize_t bytes = ::write (_wakeup, &value, sizeof (uint64_t));
 
     return 0;
@@ -320,16 +320,16 @@ void Reactor::processCommand (const Command& cmd) noexcept
 
     switch (cmd.type)
     {
-    case CommandType::Add:
-        err = registerHandler (cmd.handler);
-        break;
+        case CommandType::Add:
+            err = registerHandler (cmd.handler);
+            break;
 
-    case CommandType::Del:
-        err = unregisterHandler (cmd.handler);
-        break;
+        case CommandType::Del:
+            err = unregisterHandler (cmd.handler);
+            break;
 
-    case CommandType::Stop:
-        break;
+        case CommandType::Stop:
+            break;
     }
 
     if (JOIN_UNLIKELY (cmd.done))

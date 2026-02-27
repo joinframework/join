@@ -102,16 +102,16 @@ namespace join
         static const std::streamsize _bufsize = 16384;
 
         /// inflate context.
-        std::unique_ptr <z_stream> _inflate;
+        std::unique_ptr<z_stream> _inflate;
 
         /// inflate state.
         int _instate = Z_OK;
 
         /// deflate context.
-        std::unique_ptr <z_stream> _deflate;
+        std::unique_ptr<z_stream> _deflate;
 
         /// internal buffer.
-        std::unique_ptr <char []> _buf;
+        std::unique_ptr<char[]> _buf;
     };
 
     /**
@@ -125,9 +125,9 @@ namespace join
          */
         enum Format
         {
-            Deflate = -MAX_WBITS,           /**< use the deflate compressed data format. */
-            Zlib    =  MAX_WBITS,           /**< use the zlib compressed data format. */
-            Gzip    =  MAX_WBITS + 16,      /**< use the gzip compressed data format. */
+            Deflate = -MAX_WBITS,     /**< use the deflate compressed data format. */
+            Zlib    = MAX_WBITS,      /**< use the zlib compressed data format. */
+            Gzip    = MAX_WBITS + 16, /**< use the gzip compressed data format. */
         };
 
         /**
@@ -148,7 +148,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Zstream& operator=(const Zstream& other) = delete;
+        Zstream& operator= (const Zstream& other) = delete;
 
         /**
          * @brief move constructor.
@@ -161,7 +161,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Zstream& operator=(Zstream&& other);
+        Zstream& operator= (Zstream&& other);
 
         /**
          * @brief destroy the zlib stream instance.

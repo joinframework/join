@@ -148,7 +148,7 @@ SharedSemaphore::SharedSemaphore (size_t value)
 {
     if (::sem_init (&_handle, 1, value) == -1)
     {
-        throw std::system_error (errno, std::system_category(), "sem_init failed");
+        throw std::system_error (errno, std::system_category (), "sem_init failed");
     }
 }
 

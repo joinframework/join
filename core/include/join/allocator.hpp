@@ -111,7 +111,7 @@ namespace join
         static_assert (Count > 0, "count must be at least 1");
         static_assert (Count <= UINT32_MAX, "count exceeds tagged index capacity (~256 GB)");
 
-        using Chunk = BasicChunk<Size>;
+        using Chunk   = BasicChunk<Size>;
         using Segment = BasicSegment<Size>;
 
         /// total number of chunks per pool.
@@ -189,7 +189,7 @@ namespace join
          */
         BasicPool& operator= (BasicPool&& other) noexcept
         {
-            _segment = other._segment;
+            _segment       = other._segment;
             other._segment = nullptr;
             return *this;
         }
@@ -234,12 +234,12 @@ namespace join
         {
             TaggedIndex cur, next;
             next.idx = static_cast<uint32_t> (reinterpret_cast<Chunk*> (p) - _segment->_chunks);
-            cur.raw = _segment->_head.load (std::memory_order_relaxed);
+            cur.raw  = _segment->_head.load (std::memory_order_relaxed);
 
             for (;;)
             {
                 _segment->_chunks[next.idx]._next = cur.idx;
-                next.gen = cur.gen + 1;
+                next.gen                          = cur.gen + 1;
 
                 if (JOIN_LIKELY (_segment->_head.compare_exchange_weak (cur.raw, next.raw, std::memory_order_release,
                                                                         std::memory_order_relaxed)))
@@ -257,8 +257,8 @@ namespace join
         bool owns (void* p) const noexcept
         {
             auto base = reinterpret_cast<std::uintptr_t> (_segment->_chunks);
-            auto end = base + (_count * _stride);
-            auto ptr = reinterpret_cast<std::uintptr_t> (p);
+            auto end  = base + (_count * _stride);
+            auto ptr  = reinterpret_cast<std::uintptr_t> (p);
             return ((ptr >= base) && (ptr < end));
         }
 
@@ -375,7 +375,7 @@ namespace join
         BasicArena& operator= (BasicArena&& other) noexcept
         {
             _backend = std::move (other._backend);
-            _pools = std::move (other._pools);
+            _pools   = std::move (other._pools);
             return *this;
         }
 

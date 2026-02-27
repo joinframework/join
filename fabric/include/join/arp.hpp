@@ -128,12 +128,12 @@ namespace join
         {
             uint16_t ar_hrd;
             uint16_t ar_pro;
-            uint8_t  ar_hln;
-            uint8_t  ar_pln;
+            uint8_t ar_hln;
+            uint8_t ar_pln;
             uint16_t ar_op;
-            uint8_t  ar_sha[ETH_ALEN];
+            uint8_t ar_sha[ETH_ALEN];
             uint32_t ar_sip;
-            uint8_t  ar_tha[ETH_ALEN];
+            uint8_t ar_tha[ETH_ALEN];
             uint32_t ar_tip;
         };
 

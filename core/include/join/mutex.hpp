@@ -169,7 +169,8 @@ namespace join
     };
 
     /**
-     * @brief class used to protect shared data from being simultaneously accessed by multiple process via a shared memory.
+     * @brief class used to protect shared data from being simultaneously accessed by multiple process via a shared
+     * memory.
      */
     class SharedMutex
     {

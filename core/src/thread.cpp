@@ -36,9 +36,9 @@ using join::Thread;
 //   CLASS     : Invoker
 //   METHOD    : _routine
 // =========================================================================
-void * Invoker::_routine (void * context)
+void* Invoker::_routine (void* context)
 {
-    Invoker* self = static_cast <Invoker*> (context);
+    Invoker* self = static_cast<Invoker*> (context);
 
     if (self->_core != -1)
     {
@@ -57,9 +57,9 @@ void * Invoker::_routine (void * context)
 //   CLASS     : Invoker
 //   METHOD    : routine
 // =========================================================================
-void * Invoker::routine ()
+void* Invoker::routine ()
 {
-    if (_func) 
+    if (_func)
     {
         _func ();
     }
@@ -183,14 +183,13 @@ int Thread::priority (int prio)
     return 0;
 }
 
-
 // =========================================================================
 //   CLASS     : Thread
 //   METHOD    : priority
 // =========================================================================
 int Thread::priority (pthread_t handle, int prio)
 {
-    struct sched_param param {};
+    struct sched_param param{};
     param.sched_priority = prio;
 
     if (prio == 0)
@@ -259,7 +258,7 @@ void Thread::join () noexcept
 //   CLASS     : Thread
 //   METHOD    : tryJoin
 // =========================================================================
-bool Thread::tryJoin () noexcept 
+bool Thread::tryJoin () noexcept
 {
     if (running ())
     {
@@ -297,5 +296,5 @@ void Thread::swap (Thread& other) noexcept
 // =========================================================================
 pthread_t Thread::handle () const noexcept
 {
-    return joinable () ? _invoker->_handle : pthread_t {};
+    return joinable () ? _invoker->_handle : pthread_t{};
 }
