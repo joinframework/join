@@ -45,6 +45,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check formatting
+        if: github.event_name == 'pull_request'
+        uses: jidicula/clang-format-action@v4.16.0
+        with:
+          check-path: '.'
+
       - name: Setup Build Environment
         if: ${{ inputs.scan || inputs.coverage }}
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
