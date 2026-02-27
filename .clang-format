@@ -28,7 +28,6 @@ BreakBeforeBraces: Allman
 # --- Spaces ---
 SpaceBeforeParens: Always
 SpaceAfterTemplateKeyword: true
-SpaceInParens: Never
 
 # --- Assignments & Alignments ---
 AlignConsecutiveAssignments:
@@ -50,7 +49,7 @@ SeparateDefinitionBlocks: Always
 MaxEmptyLinesToKeep: 2
 
 # --- Constructor Formatting ---
-PackConstructorInitializers: NextLine
+PackConstructorInitializers: Never
 ConstructorInitializerIndentWidth: 0
 BreakConstructorInitializers: BeforeComma
 
