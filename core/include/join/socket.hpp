@@ -59,7 +59,7 @@ namespace join
     class BasicSocket : public EventHandler
     {
     public:
-        using Ptr      = std::unique_ptr <BasicSocket <Protocol>>;
+        using Ptr      = std::unique_ptr<BasicSocket<Protocol>>;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -67,8 +67,8 @@ namespace join
          */
         enum Mode
         {
-            Blocking,               /**< the socket will block */
-            NonBlocking,            /**< the socket will not block */
+            Blocking,    /**< the socket will block */
+            NonBlocking, /**< the socket will not block */
         };
 
         /**
@@ -76,23 +76,23 @@ namespace join
          */
         enum Option
         {
-            NoDelay,                /**< set the TCP_NODELAY option to disable/enable the nagle's algorithm. */
-            KeepAlive,              /**< set the SO_KEEPALIVE option. */
-            KeepIdle,               /**< set the keepalive idle timeout option. */
-            KeepIntvl,              /**< set the keepalive probe interval option. */
-            KeepCount,              /**< set the keepalive probe count option. */
-            SndBuffer,              /**< set the socket send buffer size at the OS level. */
-            RcvBuffer,              /**< set the socket receive buffer size at the OS level. */
-            TimeStamp,              /**< enable or disable the receiving of the SO_TIMESTAMP control message. */
-            ReuseAddr,              /**< allow reuse of local addresses. */
-            ReusePort,              /**< permits multiple sockets to be bound to an identical socket address. */
-            Broadcast,              /**< allow datagram sockets to send packets to a broadcast address. */
-            Ttl,                    /**< set the time-to-live value of outgoing packets. */
-            MulticastLoop,          /**< determines whether multicast packets should be looped back to the local sockets. */
-            MulticastTtl,           /**< set the time-to-live value of outgoing multicast packets. */
-            PathMtuDiscover,        /**< set the Path MTU Discovery setting for a socket. */
-            RcvError,               /**< enable extended reliable error message passing. */
-            AuxData,                /**< enable extended metadata message passing. */
+            NoDelay,         /**< set the TCP_NODELAY option to disable/enable the nagle's algorithm. */
+            KeepAlive,       /**< set the SO_KEEPALIVE option. */
+            KeepIdle,        /**< set the keepalive idle timeout option. */
+            KeepIntvl,       /**< set the keepalive probe interval option. */
+            KeepCount,       /**< set the keepalive probe count option. */
+            SndBuffer,       /**< set the socket send buffer size at the OS level. */
+            RcvBuffer,       /**< set the socket receive buffer size at the OS level. */
+            TimeStamp,       /**< enable or disable the receiving of the SO_TIMESTAMP control message. */
+            ReuseAddr,       /**< allow reuse of local addresses. */
+            ReusePort,       /**< permits multiple sockets to be bound to an identical socket address. */
+            Broadcast,       /**< allow datagram sockets to send packets to a broadcast address. */
+            Ttl,             /**< set the time-to-live value of outgoing packets. */
+            MulticastLoop,   /**< determines whether multicast packets should be looped back to the local sockets. */
+            MulticastTtl,    /**< set the time-to-live value of outgoing multicast packets. */
+            PathMtuDiscover, /**< set the Path MTU Discovery setting for a socket. */
+            RcvError,        /**< enable extended reliable error message passing. */
+            AuxData,         /**< enable extended metadata message passing. */
         };
 
         /**
@@ -100,11 +100,11 @@ namespace join
          */
         enum State
         {
-            Connecting,             /**< socket is connecting. */
-            Connected,              /**< socket is connected. */
-            Disconnecting,          /**< socket is disconnecting.*/
-            Disconnected,           /**< socket is disconnected.*/
-            Closed,                 /**< socket is closed. */
+            Connecting,    /**< socket is connecting. */
+            Connected,     /**< socket is connected. */
+            Disconnecting, /**< socket is disconnecting.*/
+            Disconnected,  /**< socket is disconnected.*/
+            Closed,        /**< socket is closed. */
         };
 
         /**
@@ -142,14 +142,14 @@ namespace join
          * @param other other object to move.
          */
         BasicSocket (BasicSocket&& other)
-        : _state (other._state),
-          _mode (other._mode),
-          _handle (other._handle),
-          _protocol (other._protocol)
+        : _state (other._state)
+        , _mode (other._mode)
+        , _handle (other._handle)
+        , _protocol (other._protocol)
         {
-            other._state = State::Closed;
-            other._mode = Mode::NonBlocking;
-            other._handle = -1;
+            other._state    = State::Closed;
+            other._mode     = Mode::NonBlocking;
+            other._handle   = -1;
             other._protocol = Protocol ();
         }
 
@@ -162,14 +162,14 @@ namespace join
         {
             this->close ();
 
-            this->_state = other._state;
-            this->_mode = other._mode;
-            this->_handle = other._handle;
+            this->_state    = other._state;
+            this->_mode     = other._mode;
+            this->_handle   = other._handle;
             this->_protocol = other._protocol;
 
-            other._state = State::Closed;
-            other._mode = Mode::NonBlocking;
-            other._handle = -1;
+            other._state    = State::Closed;
+            other._mode     = Mode::NonBlocking;
+            other._handle   = -1;
             other._protocol = Protocol ();
 
             return *this;
@@ -211,7 +211,7 @@ namespace join
                 return -1;
             }
 
-            this->_state = State::Disconnected;
+            this->_state    = State::Disconnected;
             this->_protocol = protocol;
 
             return 0;
@@ -225,7 +225,7 @@ namespace join
             if (this->_state != State::Closed)
             {
                 ::close (this->_handle);
-                this->_state = State::Closed;
+                this->_state  = State::Closed;
                 this->_handle = -1;
             }
         }
@@ -244,7 +244,7 @@ namespace join
 
             if (endpoint.protocol ().family () == AF_PACKET)
             {
-                if (reinterpret_cast <const struct sockaddr_ll*> (endpoint.addr ())->sll_ifindex == 0)
+                if (reinterpret_cast<const struct sockaddr_ll*> (endpoint.addr ())->sll_ifindex == 0)
                 {
                     lastError = std::make_error_code (std::errc::no_such_device);
                     return -1;
@@ -302,18 +302,18 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return the number of bytes received, -1 on failure.
          */
-        virtual int read (char *data, unsigned long maxSize) noexcept
+        virtual int read (char* data, unsigned long maxSize) noexcept
         {
             struct iovec iov;
             iov.iov_base = data;
-            iov.iov_len = maxSize;
+            iov.iov_len  = maxSize;
 
             struct msghdr message;
-            message.msg_name = nullptr;
-            message.msg_namelen = 0;
-            message.msg_iov = &iov;
-            message.msg_iovlen = 1;
-            message.msg_control = nullptr;
+            message.msg_name       = nullptr;
+            message.msg_namelen    = 0;
+            message.msg_iov        = &iov;
+            message.msg_iovlen     = 1;
+            message.msg_control    = nullptr;
             message.msg_controllen = 0;
 
             int size = ::recvmsg (this->_handle, &message, 0);
@@ -349,18 +349,18 @@ namespace join
          * @param maxSize maximum number of bytes to write.
          * @return the number of bytes written, -1 on failure.
          */
-        virtual int write (const char *data, unsigned long maxSize) noexcept
+        virtual int write (const char* data, unsigned long maxSize) noexcept
         {
             struct iovec iov;
-            iov.iov_base = const_cast <char *> (data);
-            iov.iov_len = maxSize;
+            iov.iov_base = const_cast<char*> (data);
+            iov.iov_len  = maxSize;
 
             struct msghdr message;
-            message.msg_name = nullptr;
-            message.msg_namelen = 0;
-            message.msg_iov = &iov;
-            message.msg_iovlen = 1;
-            message.msg_control = nullptr;
+            message.msg_name       = nullptr;
+            message.msg_namelen    = 0;
+            message.msg_iov        = &iov;
+            message.msg_iovlen     = 1;
+            message.msg_control    = nullptr;
             message.msg_controllen = 0;
 
             int result = ::sendmsg (this->_handle, &message, 0);
@@ -412,42 +412,42 @@ namespace join
             {
                 case Option::KeepAlive:
                     optlevel = SOL_SOCKET;
-                    optname = SO_KEEPALIVE;
+                    optname  = SO_KEEPALIVE;
                     break;
 
                 case Option::SndBuffer:
                     optlevel = SOL_SOCKET;
-                    optname = SO_SNDBUF;
+                    optname  = SO_SNDBUF;
                     break;
 
                 case Option::RcvBuffer:
                     optlevel = SOL_SOCKET;
-                    optname = SO_RCVBUF;
+                    optname  = SO_RCVBUF;
                     break;
 
                 case Option::TimeStamp:
                     optlevel = SOL_SOCKET;
-                    optname = SO_TIMESTAMP;
+                    optname  = SO_TIMESTAMP;
                     break;
 
                 case Option::ReuseAddr:
                     optlevel = SOL_SOCKET;
-                    optname = SO_REUSEADDR;
+                    optname  = SO_REUSEADDR;
                     break;
 
                 case Option::ReusePort:
                     optlevel = SOL_SOCKET;
-                    optname = SO_REUSEPORT;
+                    optname  = SO_REUSEPORT;
                     break;
 
                 case Option::Broadcast:
                     optlevel = SOL_SOCKET;
-                    optname = SO_BROADCAST;
+                    optname  = SO_BROADCAST;
                     break;
 
                 case Option::AuxData:
                     optlevel = SOL_PACKET;
-                    optname = PACKET_AUXDATA;
+                    optname  = PACKET_AUXDATA;
                     break;
 
                 default:
@@ -474,12 +474,12 @@ namespace join
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            if (::getsockname (this->_handle, reinterpret_cast <struct sockaddr*> (&sa), &sa_len) == -1)
+            if (::getsockname (this->_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len) == -1)
             {
                 return {};
             }
 
-            return Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
+            return Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len);
         }
 
         /**
@@ -555,17 +555,17 @@ namespace join
 
             if (len == 1)
             {
-            #if __BYTE_ORDER == __LITTLE_ENDIAN
-                sum += *reinterpret_cast <const uint8_t *> (data);
-            #else
-                sum += *reinterpret_cast <const uint8_t *> (data) << 8;
-            #endif
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+                sum += *reinterpret_cast<const uint8_t*> (data);
+#else
+                sum += *reinterpret_cast<const uint8_t*> (data) << 8;
+#endif
             }
 
-            sum  = (sum >> 16) + (sum & 0xffff);
+            sum = (sum >> 16) + (sum & 0xffff);
             sum += (sum >> 16);
 
-            return static_cast <uint16_t> (~sum);
+            return static_cast<uint16_t> (~sum);
         }
 
     protected:
@@ -578,7 +578,7 @@ namespace join
          */
         int wait (bool wantRead, bool wantWrite, int timeout) const noexcept
         {
-            struct pollfd handle { .fd = this->_handle, .events = 0, .revents = 0 };
+            struct pollfd handle{.fd = this->_handle, .events = 0, .revents = 0};
 
             if (wantRead)
             {
@@ -632,7 +632,7 @@ namespace join
      * @return true if inferior.
      */
     template <class Protocol>
-    constexpr bool operator< (const BasicSocket <Protocol>& a, const BasicSocket <Protocol>& b) noexcept
+    constexpr bool operator< (const BasicSocket<Protocol>& a, const BasicSocket<Protocol>& b) noexcept
     {
         return a.handle () < b.handle ();
     }
@@ -641,13 +641,13 @@ namespace join
      * @brief basic datagram socket class.
      */
     template <class Protocol>
-    class BasicDatagramSocket : public BasicSocket <Protocol>
+    class BasicDatagramSocket : public BasicSocket<Protocol>
     {
     public:
-        using Ptr      = std::unique_ptr <BasicDatagramSocket <Protocol>>;
-        using Mode     = typename BasicSocket <Protocol>::Mode;
-        using Option   = typename BasicSocket <Protocol>::Option;
-        using State    = typename BasicSocket <Protocol>::State;
+        using Ptr      = std::unique_ptr<BasicDatagramSocket<Protocol>>;
+        using Mode     = typename BasicSocket<Protocol>::Mode;
+        using Option   = typename BasicSocket<Protocol>::Option;
+        using State    = typename BasicSocket<Protocol>::State;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -663,8 +663,8 @@ namespace join
          * @param mode Set the socket blocking mode.
          */
         BasicDatagramSocket (Mode mode, int ttl = 60)
-        : BasicSocket <Protocol> (mode),
-         _ttl (ttl)
+        : BasicSocket<Protocol> (mode)
+        , _ttl (ttl)
         {
         }
 
@@ -672,7 +672,7 @@ namespace join
          * @brief Copy constructor.
          * @param other Other object to copy.
          */
-        BasicDatagramSocket (const BasicDatagramSocket &other) = delete;
+        BasicDatagramSocket (const BasicDatagramSocket& other) = delete;
 
         /**
          * @brief Copy assignment operator.
@@ -686,9 +686,9 @@ namespace join
          * @param other Other object to move.
          */
         BasicDatagramSocket (BasicDatagramSocket&& other)
-        : BasicSocket <Protocol> (std::move (other)),
-          _remote (std::move (other._remote)),
-          _ttl (other._ttl)
+        : BasicSocket<Protocol> (std::move (other))
+        , _remote (std::move (other._remote))
+        , _ttl (other._ttl)
         {
             other._ttl = 60;
         }
@@ -700,10 +700,10 @@ namespace join
          */
         BasicDatagramSocket& operator= (BasicDatagramSocket&& other)
         {
-            BasicSocket <Protocol>::operator= (std::move (other));
+            BasicSocket<Protocol>::operator= (std::move (other));
 
             _remote = std::move (other._remote);
-            _ttl = other._ttl;
+            _ttl    = other._ttl;
 
             other._ttl = 60;
 
@@ -722,7 +722,7 @@ namespace join
          */
         virtual int open (const Protocol& protocol = Protocol ()) noexcept override
         {
-            int result = BasicSocket <Protocol>::open (protocol);
+            int result = BasicSocket<Protocol>::open (protocol);
             if (result == -1)
             {
                 return -1;
@@ -732,7 +732,8 @@ namespace join
 
             if ((protocol.protocol () == IPPROTO_UDP) || (protocol.protocol () == IPPROTO_TCP))
             {
-                if ((protocol.family () == AF_INET6) && (::setsockopt (this->_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1))
+                if ((protocol.family () == AF_INET6) &&
+                    (::setsockopt (this->_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1))
                 {
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
@@ -742,7 +743,8 @@ namespace join
 
             if ((protocol.protocol () == IPPROTO_ICMPV6) || (protocol.protocol () == IPPROTO_ICMP))
             {
-                if ((protocol.family () == AF_INET) && (::setsockopt (this->_handle, IPPROTO_IP, IP_HDRINCL, &off, sizeof (off)) == -1))
+                if ((protocol.family () == AF_INET) &&
+                    (::setsockopt (this->_handle, IPPROTO_IP, IP_HDRINCL, &off, sizeof (off)) == -1))
                 {
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
@@ -810,7 +812,7 @@ namespace join
 
             int result = ::connect (this->_handle, endpoint.addr (), endpoint.length ());
 
-            this->_state = State::Connecting;
+            this->_state  = State::Connecting;
             this->_remote = endpoint;
 
             if (result == -1)
@@ -841,7 +843,8 @@ namespace join
 
                 nullAddr.ss_family = AF_UNSPEC;
 
-                int result = ::connect (this->_handle, reinterpret_cast <struct sockaddr*> (&nullAddr), sizeof (struct sockaddr_storage));
+                int result = ::connect (this->_handle, reinterpret_cast<struct sockaddr*> (&nullAddr),
+                                        sizeof (struct sockaddr_storage));
                 if (result == -1)
                 {
                     if (errno != EAFNOSUPPORT)
@@ -851,7 +854,7 @@ namespace join
                     }
                 }
 
-                this->_state = State::Disconnected;
+                this->_state  = State::Disconnected;
                 this->_remote = {};
             }
 
@@ -863,7 +866,7 @@ namespace join
          */
         virtual void close () noexcept override
         {
-            BasicSocket <Protocol>::close ();
+            BasicSocket<Protocol>::close ();
             this->_remote = {};
         }
 
@@ -873,9 +876,9 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return the number of bytes received, -1 on failure.
          */
-        virtual int read (char *data, unsigned long maxSize) noexcept override
+        virtual int read (char* data, unsigned long maxSize) noexcept override
         {
-            return BasicSocket <Protocol>::read (data, maxSize);
+            return BasicSocket<Protocol>::read (data, maxSize);
         }
 
         /**
@@ -890,7 +893,7 @@ namespace join
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            int size = ::recvfrom (this->_handle, data, maxSize, 0, reinterpret_cast <struct sockaddr*> (&sa), &sa_len);
+            int size = ::recvfrom (this->_handle, data, maxSize, 0, reinterpret_cast<struct sockaddr*> (&sa), &sa_len);
             if (size < 1)
             {
                 if (size == -1)
@@ -899,7 +902,7 @@ namespace join
                 }
                 else
                 {
-                    lastError = make_error_code (Errc::ConnectionClosed);
+                    lastError    = make_error_code (Errc::ConnectionClosed);
                     this->_state = State::Disconnected;
                 }
 
@@ -908,7 +911,7 @@ namespace join
 
             if (endpoint != nullptr)
             {
-                *endpoint = Endpoint (reinterpret_cast <struct sockaddr*> (&sa), sa_len);
+                *endpoint = Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len);
             }
 
             return size;
@@ -920,9 +923,9 @@ namespace join
          * @param maxSize maximum number of bytes to write.
          * @return the number of bytes written, -1 on failure.
          */
-        virtual int write (const char *data, unsigned long maxSize) noexcept override
+        virtual int write (const char* data, unsigned long maxSize) noexcept override
         {
-            return BasicSocket <Protocol>::write (data, maxSize);
+            return BasicSocket<Protocol>::write (data, maxSize);
         }
 
         /**
@@ -971,12 +974,12 @@ namespace join
                     if (this->family () == AF_INET6)
                     {
                         optlevel = IPPROTO_IPV6;
-                        optname = IPV6_UNICAST_HOPS;
+                        optname  = IPV6_UNICAST_HOPS;
                     }
                     else
                     {
                         optlevel = IPPROTO_IP;
-                        optname = IP_TTL;
+                        optname  = IP_TTL;
                     }
                     break;
 
@@ -984,12 +987,12 @@ namespace join
                     if (this->family () == AF_INET6)
                     {
                         optlevel = IPPROTO_IPV6;
-                        optname = IPV6_MULTICAST_LOOP;
+                        optname  = IPV6_MULTICAST_LOOP;
                     }
                     else
                     {
                         optlevel = IPPROTO_IP;
-                        optname = IP_MULTICAST_LOOP;
+                        optname  = IP_MULTICAST_LOOP;
                     }
                     break;
 
@@ -997,12 +1000,12 @@ namespace join
                     if (this->family () == AF_INET6)
                     {
                         optlevel = IPPROTO_IPV6;
-                        optname = IPV6_MULTICAST_HOPS;
+                        optname  = IPV6_MULTICAST_HOPS;
                     }
                     else
                     {
                         optlevel = IPPROTO_IP;
-                        optname = IP_MULTICAST_TTL;
+                        optname  = IP_MULTICAST_TTL;
                     }
                     break;
 
@@ -1010,12 +1013,12 @@ namespace join
                     if (this->family () == AF_INET6)
                     {
                         optlevel = IPPROTO_IPV6;
-                        optname = IPV6_MTU_DISCOVER;
+                        optname  = IPV6_MTU_DISCOVER;
                     }
                     else
                     {
                         optlevel = IPPROTO_IP;
-                        optname = IP_MTU_DISCOVER;
+                        optname  = IP_MTU_DISCOVER;
                     }
                     break;
 
@@ -1023,12 +1026,12 @@ namespace join
                     if (this->family () == AF_INET6)
                     {
                         optlevel = IPPROTO_IPV6;
-                        optname = IPV6_RECVERR;
+                        optname  = IPV6_RECVERR;
                     }
                     else
                     {
                         optlevel = IPPROTO_IP;
-                        optname = IP_RECVERR;
+                        optname  = IP_RECVERR;
                     }
                     break;
 
@@ -1126,7 +1129,7 @@ namespace join
      * @return true if inferior.
      */
     template <class Protocol>
-    constexpr bool operator< (const BasicDatagramSocket <Protocol>& a, const BasicDatagramSocket <Protocol>& b) noexcept
+    constexpr bool operator< (const BasicDatagramSocket<Protocol>& a, const BasicDatagramSocket<Protocol>& b) noexcept
     {
         return a.handle () < b.handle ();
     }
@@ -1135,13 +1138,13 @@ namespace join
      * @brief basic stream socket class.
      */
     template <class Protocol>
-    class BasicStreamSocket : public BasicDatagramSocket <Protocol>
+    class BasicStreamSocket : public BasicDatagramSocket<Protocol>
     {
     public:
-        using Ptr      = std::unique_ptr <BasicStreamSocket <Protocol>>;
-        using Mode     = typename BasicDatagramSocket <Protocol>::Mode;
-        using Option   = typename BasicDatagramSocket <Protocol>::Option;
-        using State    = typename BasicDatagramSocket <Protocol>::State;
+        using Ptr      = std::unique_ptr<BasicStreamSocket<Protocol>>;
+        using Mode     = typename BasicDatagramSocket<Protocol>::Mode;
+        using Option   = typename BasicDatagramSocket<Protocol>::Option;
+        using State    = typename BasicDatagramSocket<Protocol>::State;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -1157,7 +1160,7 @@ namespace join
          * @param mode Set the socket blocking mode.
          */
         BasicStreamSocket (Mode mode)
-        : BasicDatagramSocket <Protocol> (mode)
+        : BasicDatagramSocket<Protocol> (mode)
         {
         }
 
@@ -1165,7 +1168,7 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicStreamSocket (const BasicStreamSocket &other) = delete;
+        BasicStreamSocket (const BasicStreamSocket& other) = delete;
 
         /**
          * @brief copy assignment operator.
@@ -1179,7 +1182,7 @@ namespace join
          * @param other other object to move.
          */
         BasicStreamSocket (BasicStreamSocket&& other)
-        : BasicDatagramSocket <Protocol> (std::move (other))
+        : BasicDatagramSocket<Protocol> (std::move (other))
         {
         }
 
@@ -1190,7 +1193,7 @@ namespace join
          */
         BasicStreamSocket& operator= (BasicStreamSocket&& other)
         {
-            BasicDatagramSocket <Protocol>::operator= (std::move (other));
+            BasicDatagramSocket<Protocol>::operator= (std::move (other));
 
             return *this;
         }
@@ -1282,7 +1285,7 @@ namespace join
                     return false;
                 }
 
-                auto start = std::chrono::steady_clock::now ();
+                auto start  = std::chrono::steady_clock::now ();
                 int elapsed = 0;
 
                 while ((lastError == Errc::TemporaryError) && (elapsed <= timeout))
@@ -1299,7 +1302,9 @@ namespace join
 
                     if (timeout)
                     {
-                        elapsed = std::chrono::duration_cast <std::chrono::milliseconds> (std::chrono::steady_clock::now () - start).count ();
+                        elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (
+                                      std::chrono::steady_clock::now () - start)
+                                      .count ();
                     }
                 }
 
@@ -1316,7 +1321,7 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int readExactly (char *data, unsigned long size, int timeout = 0)
+        int readExactly (char* data, unsigned long size, int timeout = 0)
         {
             unsigned long numRead = 0;
 
@@ -1360,7 +1365,7 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int writeExactly (const char *data, unsigned long size, int timeout = 0)
+        int writeExactly (const char* data, unsigned long size, int timeout = 0)
         {
             unsigned long numWrite = 0;
 
@@ -1404,26 +1409,26 @@ namespace join
             {
                 case Option::NoDelay:
                     optlevel = IPPROTO_TCP;
-                    optname = TCP_NODELAY;
+                    optname  = TCP_NODELAY;
                     break;
 
                 case Option::KeepIdle:
                     optlevel = IPPROTO_TCP;
-                    optname = TCP_KEEPIDLE;
+                    optname  = TCP_KEEPIDLE;
                     break;
 
                 case Option::KeepIntvl:
                     optlevel = IPPROTO_TCP;
-                    optname = TCP_KEEPINTVL;
+                    optname  = TCP_KEEPINTVL;
                     break;
 
                 case Option::KeepCount:
                     optlevel = IPPROTO_TCP;
-                    optname = TCP_KEEPCNT;
+                    optname  = TCP_KEEPCNT;
                     break;
 
                 default:
-                    return BasicDatagramSocket <Protocol>::setOption (option, value);
+                    return BasicDatagramSocket<Protocol>::setOption (option, value);
             }
 
             int result = ::setsockopt (this->_handle, optlevel, optname, &value, sizeof (value));
@@ -1475,7 +1480,7 @@ namespace join
         }
 
         /// friendship with basic stream acceptor
-        friend class BasicStreamAcceptor <Protocol>;
+        friend class BasicStreamAcceptor<Protocol>;
     };
 
     /**
@@ -1485,7 +1490,7 @@ namespace join
      * @return true if inferior.
      */
     template <class Protocol>
-    constexpr bool operator< (const BasicStreamSocket <Protocol>& a, const BasicStreamSocket <Protocol>& b) noexcept
+    constexpr bool operator< (const BasicStreamSocket<Protocol>& a, const BasicStreamSocket<Protocol>& b) noexcept
     {
         return a.handle () < b.handle ();
     }
@@ -1495,8 +1500,8 @@ namespace join
      */
     enum class TlsErrc
     {
-        TlsCloseNotifyAlert = 1,    /**< A close notify alert was received. */
-        TlsProtocolError            /**< A failure in the TLS library occurred, usually a protocol error. */
+        TlsCloseNotifyAlert = 1, /**< A close notify alert was received. */
+        TlsProtocolError         /**< A failure in the TLS library occurred, usually a protocol error. */
     };
 
     /**
@@ -1543,13 +1548,13 @@ namespace join
      * @brief basic TLS socket class.
      */
     template <class Protocol>
-    class BasicTlsSocket : public BasicStreamSocket <Protocol>
+    class BasicTlsSocket : public BasicStreamSocket<Protocol>
     {
     public:
-        using Ptr      = std::unique_ptr <BasicTlsSocket <Protocol>>;
-        using Mode     = typename BasicStreamSocket <Protocol>::Mode;
-        using Option   = typename BasicStreamSocket <Protocol>::Option;
-        using State    = typename BasicStreamSocket <Protocol>::State;
+        using Ptr      = std::unique_ptr<BasicTlsSocket<Protocol>>;
+        using Mode     = typename BasicStreamSocket<Protocol>::Mode;
+        using Option   = typename BasicStreamSocket<Protocol>::Option;
+        using State    = typename BasicStreamSocket<Protocol>::State;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -1565,8 +1570,8 @@ namespace join
          * @param mode Set the socket blocking mode.
          */
         BasicTlsSocket (Mode mode)
-        : BasicStreamSocket <Protocol> (mode),
-          _tlsContext (SSL_CTX_new (TLS_client_method ()))
+        : BasicStreamSocket<Protocol> (mode)
+        , _tlsContext (SSL_CTX_new (TLS_client_method ()))
         {
             // enable the OpenSSL bug workaround options.
             SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_ALL);
@@ -1575,10 +1580,12 @@ namespace join
             SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_NO_COMPRESSION);
 
             // disallow usage of SSLv2, SSLv3, TLSv1 and TLSv1.1 which are considered insecure.
-            SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+            SSL_CTX_set_options (this->_tlsContext.get (),
+                                 SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
 
             // setup write mode.
-            SSL_CTX_set_mode (this->_tlsContext.get (), SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+            SSL_CTX_set_mode (this->_tlsContext.get (),
+                              SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
             // automatically renegotiates.
             SSL_CTX_set_mode (this->_tlsContext.get (), SSL_MODE_AUTO_RETRY);
@@ -1611,8 +1618,8 @@ namespace join
          * @param tlsContext TLS context.
          */
         BasicTlsSocket (Mode mode, join::SslCtxPtr tlsContext)
-        : BasicStreamSocket <Protocol> (mode),
-          _tlsContext (std::move (tlsContext))
+        : BasicStreamSocket<Protocol> (mode)
+        , _tlsContext (std::move (tlsContext))
         {
             if (this->_tlsContext == nullptr)
             {
@@ -1624,7 +1631,7 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicTlsSocket (const BasicTlsSocket &other) = delete;
+        BasicTlsSocket (const BasicTlsSocket& other) = delete;
 
         /**
          * @brief copy assignment operator.
@@ -1638,10 +1645,10 @@ namespace join
          * @param other other object to move.
          */
         BasicTlsSocket (BasicTlsSocket&& other)
-        : BasicStreamSocket <Protocol> (std::move (other)),
-          _tlsContext (std::move (other._tlsContext)),
-          _tlsHandle (std::move (other._tlsHandle)),
-          _tlsState (other._tlsState)
+        : BasicStreamSocket<Protocol> (std::move (other))
+        , _tlsContext (std::move (other._tlsContext))
+        , _tlsHandle (std::move (other._tlsHandle))
+        , _tlsState (other._tlsState)
         {
             if (this->_tlsHandle)
             {
@@ -1658,11 +1665,11 @@ namespace join
          */
         BasicTlsSocket& operator= (BasicTlsSocket&& other)
         {
-            BasicStreamSocket <Protocol>::operator= (std::move (other));
+            BasicStreamSocket<Protocol>::operator= (std::move (other));
 
             this->_tlsContext = std::move (other._tlsContext);
-            this->_tlsHandle = std::move (other._tlsHandle);
-            this->_tlsState = other._tlsState;
+            this->_tlsHandle  = std::move (other._tlsHandle);
+            this->_tlsState   = other._tlsState;
 
             if (this->_tlsHandle)
             {
@@ -1686,7 +1693,7 @@ namespace join
          */
         int connectEncrypted (const Endpoint& endpoint)
         {
-            if (BasicStreamSocket <Protocol>::connect (endpoint) == -1)
+            if (BasicStreamSocket<Protocol>::connect (endpoint) == -1)
             {
                 return -1;
             }
@@ -1724,7 +1731,8 @@ namespace join
 
                 if (SSL_is_server (this->_tlsHandle.get ()) == 0)
                 {
-                    if (!this->_remote.hostname ().empty () && (SSL_set_tlsext_host_name (this->_tlsHandle.get (), this->_remote.hostname ().c_str ()) != 1))
+                    if (!this->_remote.hostname ().empty () &&
+                        (SSL_set_tlsext_host_name (this->_tlsHandle.get (), this->_remote.hostname ().c_str ()) != 1))
                     {
                         lastError = make_error_code (Errc::InvalidParam);
                         this->_tlsHandle.reset ();
@@ -1740,9 +1748,9 @@ namespace join
 
                 SSL_set_app_data (this->_tlsHandle.get (), this);
 
-            #ifdef DEBUG
+#ifdef DEBUG
                 SSL_set_info_callback (this->_tlsHandle.get (), infoWrapper);
-            #endif
+#endif
 
                 return startHandshake ();
             }
@@ -1772,9 +1780,11 @@ namespace join
                     }
                 }
 
-                while ((lastError == Errc::TemporaryError) && (SSL_want_read  (this->_tlsHandle.get ()) || SSL_want_write (this->_tlsHandle.get ())))
+                while ((lastError == Errc::TemporaryError) &&
+                       (SSL_want_read (this->_tlsHandle.get ()) || SSL_want_write (this->_tlsHandle.get ())))
                 {
-                    if (this->wait (SSL_want_read (this->_tlsHandle.get ()), SSL_want_write (this->_tlsHandle.get ()), timeout) == -1)
+                    if (this->wait (SSL_want_read (this->_tlsHandle.get ()), SSL_want_write (this->_tlsHandle.get ()),
+                                    timeout) == -1)
                     {
                         return false;
                     }
@@ -1821,9 +1831,9 @@ namespace join
                                     case 0:
                                     case ECONNRESET:
                                     case EPIPE:
-                                        lastError = make_error_code (Errc::ConnectionClosed);
+                                        lastError       = make_error_code (Errc::ConnectionClosed);
                                         this->_tlsState = TlsState::NonEncrypted;
-                                        this->_state = State::Disconnected;
+                                        this->_state    = State::Disconnected;
                                         break;
                                     default:
                                         lastError = std::error_code (errno, std::generic_category ());
@@ -1832,9 +1842,9 @@ namespace join
                                 break;
                             default:
                                 // SSL protocol error.
-                            #ifdef DEBUG
+#ifdef DEBUG
                                 std::cout << ERR_reason_error_string (ERR_get_error ()) << std::endl;
-                            #endif
+#endif
                                 lastError = make_error_code (TlsErrc::TlsProtocolError);
                                 break;
                         }
@@ -1856,7 +1866,7 @@ namespace join
                 }
             }
 
-            return BasicStreamSocket <Protocol>::disconnect ();
+            return BasicStreamSocket<Protocol>::disconnect ();
         }
 
         /**
@@ -1864,7 +1874,7 @@ namespace join
          */
         virtual void close () noexcept override
         {
-            BasicStreamSocket <Protocol>::close ();
+            BasicStreamSocket<Protocol>::close ();
             this->_tlsState = TlsState::NonEncrypted;
             this->_tlsHandle.reset ();
         }
@@ -1876,12 +1886,14 @@ namespace join
          */
         virtual bool waitReadyRead (int timeout = 0) const noexcept override
         {
-            if (this->encrypted () && (SSL_want_read (this->_tlsHandle.get ()) || SSL_want_write (this->_tlsHandle.get ())))
+            if (this->encrypted () &&
+                (SSL_want_read (this->_tlsHandle.get ()) || SSL_want_write (this->_tlsHandle.get ())))
             {
-                return (this->wait (SSL_want_read (this->_tlsHandle.get ()), SSL_want_write (this->_tlsHandle.get ()), timeout) == 0);
+                return (this->wait (SSL_want_read (this->_tlsHandle.get ()), SSL_want_write (this->_tlsHandle.get ()),
+                                    timeout) == 0);
             }
 
-            return BasicStreamSocket <Protocol>::waitReadyRead (timeout);
+            return BasicStreamSocket<Protocol>::waitReadyRead (timeout);
         }
 
         /**
@@ -1895,7 +1907,7 @@ namespace join
                 return SSL_pending (this->_tlsHandle.get ());
             }
 
-            return BasicStreamSocket <Protocol>::canRead ();
+            return BasicStreamSocket<Protocol>::canRead ();
         }
 
         /**
@@ -1904,7 +1916,7 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return the number of bytes received, -1 on failure.
          */
-        virtual int read (char *data, unsigned long maxSize) noexcept override
+        virtual int read (char* data, unsigned long maxSize) noexcept override
         {
             if (this->encrypted ())
             {
@@ -1936,9 +1948,9 @@ namespace join
                                 case 0:
                                 case ECONNRESET:
                                 case EPIPE:
-                                    lastError = make_error_code (Errc::ConnectionClosed);
+                                    lastError       = make_error_code (Errc::ConnectionClosed);
                                     this->_tlsState = TlsState::NonEncrypted;
-                                    this->_state = State::Disconnected;
+                                    this->_state    = State::Disconnected;
                                     break;
                                 default:
                                     lastError = std::error_code (errno, std::generic_category ());
@@ -1947,9 +1959,9 @@ namespace join
                             break;
                         default:
                             // SSL protocol error.
-                        #ifdef DEBUG
+#ifdef DEBUG
                             std::cout << ERR_reason_error_string (ERR_get_error ()) << std::endl;
-                        #endif
+#endif
                             lastError = make_error_code (TlsErrc::TlsProtocolError);
                             break;
                     }
@@ -1960,7 +1972,7 @@ namespace join
                 return result;
             }
 
-            return BasicStreamSocket <Protocol>::read (data, maxSize);
+            return BasicStreamSocket<Protocol>::read (data, maxSize);
         }
 
         /**
@@ -1970,12 +1982,14 @@ namespace join
          */
         virtual bool waitReadyWrite (int timeout = 0) const noexcept override
         {
-            if (this->encrypted () && (SSL_want_read (this->_tlsHandle.get ()) || SSL_want_write (this->_tlsHandle.get ())))
+            if (this->encrypted () &&
+                (SSL_want_read (this->_tlsHandle.get ()) || SSL_want_write (this->_tlsHandle.get ())))
             {
-                return (this->wait (SSL_want_read (this->_tlsHandle.get ()), SSL_want_write (this->_tlsHandle.get ()), timeout) == 0);
+                return (this->wait (SSL_want_read (this->_tlsHandle.get ()), SSL_want_write (this->_tlsHandle.get ()),
+                                    timeout) == 0);
             }
 
-            return BasicStreamSocket <Protocol>::waitReadyWrite (timeout);
+            return BasicStreamSocket<Protocol>::waitReadyWrite (timeout);
         }
 
         /**
@@ -1984,7 +1998,7 @@ namespace join
          * @param maxSize maximum number of bytes to write.
          * @return the number of bytes written, -1 on failure.
          */
-        virtual int write (const char *data, unsigned long maxSize) noexcept override
+        virtual int write (const char* data, unsigned long maxSize) noexcept override
         {
             if (this->encrypted ())
             {
@@ -2016,9 +2030,9 @@ namespace join
                                 case 0:
                                 case ECONNRESET:
                                 case EPIPE:
-                                    lastError = make_error_code (Errc::ConnectionClosed);
+                                    lastError       = make_error_code (Errc::ConnectionClosed);
                                     this->_tlsState = TlsState::NonEncrypted;
-                                    this->_state = State::Disconnected;
+                                    this->_state    = State::Disconnected;
                                     break;
                                 default:
                                     lastError = std::error_code (errno, std::generic_category ());
@@ -2027,9 +2041,9 @@ namespace join
                             break;
                         default:
                             // SSL protocol error.
-                        #ifdef DEBUG
+#ifdef DEBUG
                             std::cout << ERR_reason_error_string (ERR_get_error ()) << std::endl;
-                        #endif
+#endif
                             lastError = make_error_code (TlsErrc::TlsProtocolError);
                             break;
                     }
@@ -2040,7 +2054,7 @@ namespace join
                 return result;
             }
 
-            return BasicStreamSocket <Protocol>::write (data, maxSize);
+            return BasicStreamSocket<Protocol>::write (data, maxSize);
         }
 
         /**
@@ -2060,8 +2074,9 @@ namespace join
          */
         int setCertificate (const std::string& cert, const std::string& key = "")
         {
-            if (((this->_tlsHandle) ? SSL_use_certificate_file (this->_tlsHandle.get (), cert.c_str (), SSL_FILETYPE_PEM)
-                                    : SSL_CTX_use_certificate_file (this->_tlsContext.get (), cert.c_str (), SSL_FILETYPE_PEM)) == 0)
+            if (((this->_tlsHandle)
+                     ? SSL_use_certificate_file (this->_tlsHandle.get (), cert.c_str (), SSL_FILETYPE_PEM)
+                     : SSL_CTX_use_certificate_file (this->_tlsContext.get (), cert.c_str (), SSL_FILETYPE_PEM)) == 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
@@ -2069,8 +2084,9 @@ namespace join
 
             if (key.size ())
             {
-                if (((this->_tlsHandle) ? SSL_use_PrivateKey_file (this->_tlsHandle.get (), key.c_str (), SSL_FILETYPE_PEM)
-                                        : SSL_CTX_use_PrivateKey_file (this->_tlsContext.get (), key.c_str (), SSL_FILETYPE_PEM)) == 0)
+                if (((this->_tlsHandle)
+                         ? SSL_use_PrivateKey_file (this->_tlsHandle.get (), key.c_str (), SSL_FILETYPE_PEM)
+                         : SSL_CTX_use_PrivateKey_file (this->_tlsContext.get (), key.c_str (), SSL_FILETYPE_PEM)) == 0)
                 {
                     lastError = make_error_code (Errc::InvalidParam);
                     return -1;
@@ -2146,7 +2162,7 @@ namespace join
          * @param cipher the cipher list.
          * @return 0 on success, -1 on failure.
          */
-        int setCipher (const std::string &cipher)
+        int setCipher (const std::string& cipher)
         {
             if (((this->_tlsHandle) ? SSL_set_cipher_list (this->_tlsHandle.get (), cipher.c_str ())
                                     : SSL_CTX_set_cipher_list (this->_tlsContext.get (), cipher.c_str ())) == 0)
@@ -2163,7 +2179,7 @@ namespace join
          * @param cipher the cipher list.
          * @return 0 on success, -1 on failure.
          */
-        int setCipher_1_3 (const std::string &cipher)
+        int setCipher_1_3 (const std::string& cipher)
         {
             if (((this->_tlsHandle) ? SSL_set_ciphersuites (this->_tlsHandle.get (), cipher.c_str ())
                                     : SSL_CTX_set_ciphersuites (this->_tlsContext.get (), cipher.c_str ())) == 0)
@@ -2181,8 +2197,8 @@ namespace join
          */
         enum TlsState
         {
-            Encrypted,          /**< Socket is encrypted */
-            NonEncrypted,       /**< Socket is not encrypted */
+            Encrypted,    /**< Socket is encrypted */
+            NonEncrypted, /**< Socket is not encrypted */
         };
 
         /**
@@ -2215,7 +2231,7 @@ namespace join
                             case 0:
                             case ECONNRESET:
                             case EPIPE:
-                                lastError = make_error_code (Errc::ConnectionClosed);
+                                lastError    = make_error_code (Errc::ConnectionClosed);
                                 this->_state = State::Disconnected;
                                 break;
                             default:
@@ -2225,9 +2241,9 @@ namespace join
                         break;
                     default:
                         // SSL protocol error.
-                    #ifdef DEBUG
+#ifdef DEBUG
                         std::cout << ERR_reason_error_string (ERR_get_error ()) << std::endl;
-                    #endif
+#endif
                         lastError = make_error_code (TlsErrc::TlsProtocolError);
                         break;
                 }
@@ -2246,10 +2262,10 @@ namespace join
          * @param where information about which context the callback function was called.
          * @param ret error condition.
          */
-        static void infoWrapper (const SSL *ssl, int where, int ret)
+        static void infoWrapper (const SSL* ssl, int where, int ret)
         {
             assert (ssl);
-            static_cast <BasicTlsSocket <Protocol>*> (SSL_get_app_data (ssl))->infoCallback (where, ret);
+            static_cast<BasicTlsSocket<Protocol>*> (SSL_get_app_data (ssl))->infoCallback (where, ret);
         }
 
         /**
@@ -2270,28 +2286,38 @@ namespace join
             else if (where & SSL_CB_LOOP)
             {
                 std::cout << "SSL/TLS State ";
-                (SSL_in_connect_init (this->_tlsHandle.get ())) ? std::cout << "[connect] " : (SSL_in_accept_init (this->_tlsHandle.get ())) ? std::cout << "[accept] " : std::cout << "[undefined] ";
+                (SSL_in_connect_init (this->_tlsHandle.get ()))  ? std::cout << "[connect] "
+                : (SSL_in_accept_init (this->_tlsHandle.get ())) ? std::cout << "[accept] "
+                                                                 : std::cout << "[undefined] ";
                 std::cout << SSL_state_string_long (this->_tlsHandle.get ());
                 std::cout << std::endl;
             }
             else if (where & SSL_CB_HANDSHAKE_START)
             {
-                std::cout << "SSL/TLS Handshake [Start] "<< SSL_state_string_long (this->_tlsHandle.get ()) << std::endl;
+                std::cout << "SSL/TLS Handshake [Start] " << SSL_state_string_long (this->_tlsHandle.get ())
+                          << std::endl;
             }
             else if (where & SSL_CB_HANDSHAKE_DONE)
             {
-                std::cout << "SSL/TLS Handshake [Done] "<< SSL_state_string_long (this->_tlsHandle.get ()) << std::endl;
-                std::cout << SSL_CTX_sess_number (this->_tlsContext.get ()) << " items in the session cache"<< std::endl;
-                std::cout << SSL_CTX_sess_connect (this->_tlsContext.get ()) << " client connects"<< std::endl;
-                std::cout << SSL_CTX_sess_connect_good (this->_tlsContext.get ()) << " client connects that finished"<< std::endl;
-                std::cout << SSL_CTX_sess_connect_renegotiate (this->_tlsContext.get ()) << " client renegotiations requested"<< std::endl;
-                std::cout << SSL_CTX_sess_accept (this->_tlsContext.get ()) << " server connects"<< std::endl;
-                std::cout << SSL_CTX_sess_accept_good (this->_tlsContext.get ()) << " server connects that finished"<< std::endl;
-                std::cout << SSL_CTX_sess_accept_renegotiate (this->_tlsContext.get ()) << " server renegotiations requested"<< std::endl;
-                std::cout << SSL_CTX_sess_hits (this->_tlsContext.get ()) << " session cache hits"<< std::endl;
-                std::cout << SSL_CTX_sess_cb_hits (this->_tlsContext.get ()) << " external session cache hits"<< std::endl;
-                std::cout << SSL_CTX_sess_misses (this->_tlsContext.get ()) << " session cache misses"<< std::endl;
-                std::cout << SSL_CTX_sess_timeouts (this->_tlsContext.get ()) << " session cache timeouts"<< std::endl;
+                std::cout << "SSL/TLS Handshake [Done] " << SSL_state_string_long (this->_tlsHandle.get ())
+                          << std::endl;
+                std::cout << SSL_CTX_sess_number (this->_tlsContext.get ()) << " items in the session cache"
+                          << std::endl;
+                std::cout << SSL_CTX_sess_connect (this->_tlsContext.get ()) << " client connects" << std::endl;
+                std::cout << SSL_CTX_sess_connect_good (this->_tlsContext.get ()) << " client connects that finished"
+                          << std::endl;
+                std::cout << SSL_CTX_sess_connect_renegotiate (this->_tlsContext.get ())
+                          << " client renegotiations requested" << std::endl;
+                std::cout << SSL_CTX_sess_accept (this->_tlsContext.get ()) << " server connects" << std::endl;
+                std::cout << SSL_CTX_sess_accept_good (this->_tlsContext.get ()) << " server connects that finished"
+                          << std::endl;
+                std::cout << SSL_CTX_sess_accept_renegotiate (this->_tlsContext.get ())
+                          << " server renegotiations requested" << std::endl;
+                std::cout << SSL_CTX_sess_hits (this->_tlsContext.get ()) << " session cache hits" << std::endl;
+                std::cout << SSL_CTX_sess_cb_hits (this->_tlsContext.get ()) << " external session cache hits"
+                          << std::endl;
+                std::cout << SSL_CTX_sess_misses (this->_tlsContext.get ()) << " session cache misses" << std::endl;
+                std::cout << SSL_CTX_sess_timeouts (this->_tlsContext.get ()) << " session cache timeouts" << std::endl;
                 std::cout << "negotiated " << SSL_get_cipher (this->_tlsHandle.get ()) << " cipher suite" << std::endl;
             }
         }
@@ -2302,12 +2328,13 @@ namespace join
          * @param context pointer to the complete context used for the certificate chain verification.
          * @return when verified successfully, the callback should return 1, 0 otherwise.
          */
-        static int verifyWrapper (int preverified, X509_STORE_CTX *context)
+        static int verifyWrapper (int preverified, X509_STORE_CTX* context)
         {
-            SSL* ssl = static_cast <SSL*> (X509_STORE_CTX_get_ex_data (context, SSL_get_ex_data_X509_STORE_CTX_idx ()));
+            SSL* ssl = static_cast<SSL*> (X509_STORE_CTX_get_ex_data (context, SSL_get_ex_data_X509_STORE_CTX_idx ()));
 
             assert (ssl);
-            return static_cast <BasicTlsSocket <Protocol>*> (SSL_get_app_data (ssl))->verifyCallback (preverified, context);
+            return static_cast<BasicTlsSocket<Protocol>*> (SSL_get_app_data (ssl))
+                ->verifyCallback (preverified, context);
         }
 
         /**
@@ -2316,14 +2343,14 @@ namespace join
          * @param context pointer to the complete context used for the certificate chain verification.
          * @return when verified successfully, the callback should return 1, 0 otherwise.
          */
-        int verifyCallback (int preverified, X509_STORE_CTX *context) const
+        int verifyCallback (int preverified, X509_STORE_CTX* context) const
         {
             int maxDepth = SSL_get_verify_depth (this->_tlsHandle.get ());
-            int dpth = X509_STORE_CTX_get_error_depth (context);
+            int dpth     = X509_STORE_CTX_get_error_depth (context);
 
-        #ifdef DEBUG
-            std::cout << "verification started at depth="<< dpth << std::endl;
-        #endif
+#ifdef DEBUG
+            std::cout << "verification started at depth=" << dpth << std::endl;
+#endif
 
             // catch a too long certificate chain.
             if ((maxDepth >= 0) && (dpth > maxDepth))
@@ -2334,18 +2361,19 @@ namespace join
 
             if (!preverified)
             {
-            #ifdef DEBUG
-                std::cout << "verification failed at depth=" << dpth << " - " << X509_verify_cert_error_string (X509_STORE_CTX_get_error (context)) << std::endl;
-            #endif
+#ifdef DEBUG
+                std::cout << "verification failed at depth=" << dpth << " - "
+                          << X509_verify_cert_error_string (X509_STORE_CTX_get_error (context)) << std::endl;
+#endif
                 return 0;
             }
 
             // check the certificate host name.
             if (!verifyCert (context))
             {
-            #ifdef DEBUG
+#ifdef DEBUG
                 std::cout << "rejected by CERT at depth=" << dpth << std::endl;
-            #endif
+#endif
                 return 0;
             }
 
@@ -2367,9 +2395,9 @@ namespace join
                 return 0;
             }*/
 
-        #ifdef DEBUG
+#ifdef DEBUG
             std::cout << "certificate accepted at depth=" << dpth << std::endl;
-        #endif
+#endif
 
             return 1;
         }
@@ -2379,16 +2407,16 @@ namespace join
          * @param context pointer to the complete context used for the certificate chain verification.
          * @return when verified successfully, the callback should return 1, 0 otherwise.
          */
-        int verifyCert (X509_STORE_CTX *context) const
+        int verifyCert (X509_STORE_CTX* context) const
         {
-            int depth = X509_STORE_CTX_get_error_depth (context);
+            int depth  = X509_STORE_CTX_get_error_depth (context);
             X509* cert = X509_STORE_CTX_get_current_cert (context);
 
             char buf[256];
             X509_NAME_oneline (X509_get_subject_name (cert), buf, sizeof (buf));
-        #ifdef DEBUG
+#ifdef DEBUG
             std::cout << "subject=" << buf << std::endl;
-        #endif
+#endif
 
             // check the certificate host name
             if (depth == 0)
@@ -2396,9 +2424,9 @@ namespace join
                 // confirm a match between the hostname and the hostnames listed in the certificate.
                 if (!checkHostName (cert))
                 {
-                #ifdef DEBUG
+#ifdef DEBUG
                     std::cout << "no match for hostname in the certificate" << std::endl;
-                #endif
+#endif
                     return 0;
                 }
             }
@@ -2411,24 +2439,25 @@ namespace join
          * @param certificate the server certificate.
          * @return true if an alternative name matched the server hostname.
          */
-        bool checkHostName (X509 *certificate) const
+        bool checkHostName (X509* certificate) const
         {
             bool match = false;
 
             // get alternative names.
-            join::StackOfGeneralNamePtr altnames (reinterpret_cast <STACK_OF (GENERAL_NAME)*> (X509_get_ext_d2i (certificate, NID_subject_alt_name, 0, 0)));
+            join::StackOfGeneralNamePtr altnames (reinterpret_cast<STACK_OF (GENERAL_NAME)*> (
+                X509_get_ext_d2i (certificate, NID_subject_alt_name, 0, 0)));
             if (altnames)
             {
                 for (int i = 0; (i < sk_GENERAL_NAME_num (altnames.get ())) && !match; ++i)
                 {
                     // get a handle to alternative name.
-                    GENERAL_NAME *current_name = sk_GENERAL_NAME_value (altnames.get (), i);
+                    GENERAL_NAME* current_name = sk_GENERAL_NAME_value (altnames.get (), i);
 
                     if (current_name->type == GEN_DNS)
                     {
                         // get data and length.
-                        const char *host = reinterpret_cast <const char *> (ASN1_STRING_get0_data (current_name->d.ia5));
-                        size_t len = size_t (ASN1_STRING_length (current_name->d.ia5));
+                        const char* host = reinterpret_cast<const char*> (ASN1_STRING_get0_data (current_name->d.ia5));
+                        size_t len       = size_t (ASN1_STRING_length (current_name->d.ia5));
                         std::string pattern (host, host + len), serverName (this->_remote.hostname ());
 
                         // strip off trailing dots.
@@ -2485,7 +2514,7 @@ namespace join
         TlsState _tlsState = TlsState::NonEncrypted;
 
         /// friendship with basic TLS acceptor
-        friend class BasicTlsAcceptor <Protocol>;
+        friend class BasicTlsAcceptor<Protocol>;
     };
 
     /**
@@ -2495,7 +2524,7 @@ namespace join
      * @return true if inferior.
      */
     template <class Protocol>
-    constexpr bool operator< (const BasicTlsSocket <Protocol>& a, const BasicTlsSocket <Protocol>& b) noexcept
+    constexpr bool operator< (const BasicTlsSocket<Protocol>& a, const BasicTlsSocket<Protocol>& b) noexcept
     {
         return a.handle () < b.handle ();
     }
@@ -2504,7 +2533,10 @@ namespace join
 namespace std
 {
     /// TLS error code specialization.
-    template <> struct is_error_condition_enum <join::TlsErrc> : public true_type {};
+    template <>
+    struct is_error_condition_enum<join::TlsErrc> : public true_type
+    {
+    };
 }
 
 #endif

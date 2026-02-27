@@ -86,13 +86,13 @@ namespace join
          * @param sbuf file stat.
          * @return a pointer to the buffer where the cached file is saved.
          */
-        void* get (const std::string &fileName, struct stat &sbuf);
+        void* get (const std::string& fileName, struct stat& sbuf);
 
         /**
          * @brief remove a cached entry identified by the given file name.
          * @param fileName path of the file that we want to remove cache entry.
          */
-        void remove (const std::string &fileName);
+        void remove (const std::string& fileName);
 
         /**
          * @brief clear all cached entries.
@@ -110,13 +110,13 @@ namespace join
          */
         struct CacheEntry
         {
-            off_t size;                 /**< file size. */
-            struct timespec modifTime;  /**< file modification date. */
-            void *addr;                 /**< file content address. */
+            off_t size;                /**< file size. */
+            struct timespec modifTime; /**< file modification date. */
+            void* addr;                /**< file content address. */
         };
 
         /// cached entries map.
-        std::map <std::string, std::unique_ptr <CacheEntry>> _entries;
+        std::map<std::string, std::unique_ptr<CacheEntry>> _entries;
 
         /// protection mutex for the cache map.
         Mutex _mutex;

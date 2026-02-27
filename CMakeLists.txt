@@ -45,6 +45,7 @@ option(JOIN_ENABLE_CRYPTO "Enable crypto." ON)
 option(JOIN_ENABLE_DATA "Enable data." ON)
 option(JOIN_ENABLE_FABRIC "Enable fabric." ON)
 option(JOIN_ENABLE_SERVICES "Enable services." ON)
+option(JOIN_ENABLE_SAMPLES "Build samples" OFF)
 option(JOIN_ENABLE_TESTS "Enable tests." OFF)
 option(JOIN_ENABLE_COVERAGE "Enable coverage." OFF)
 

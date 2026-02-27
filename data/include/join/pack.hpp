@@ -118,36 +118,36 @@ namespace join
             if (value < -(1 << 15))
             {
                 append (0xd2);
-                pack (static_cast <uint32_t> (value));
+                pack (static_cast<uint32_t> (value));
             }
             else if (value < -(1 << 7))
             {
                 append (0xd1);
-                pack (static_cast <uint16_t> (value));
+                pack (static_cast<uint16_t> (value));
             }
             else if (value < -(1 << 5))
             {
                 append (0xd0);
-                pack (static_cast <uint8_t> (value));
+                pack (static_cast<uint8_t> (value));
             }
             else if (value < (1 << 7))
             {
-                append (static_cast <uint8_t> (value));
+                append (static_cast<uint8_t> (value));
             }
             else if (value < (1 << 8))
             {
                 append (0xcc);
-                pack (static_cast <uint8_t> (value));
+                pack (static_cast<uint8_t> (value));
             }
             else if (value < (1 << 16))
             {
                 append (0xcd);
-                pack (static_cast <uint16_t> (value));
+                pack (static_cast<uint16_t> (value));
             }
             else
             {
                 append (0xce);
-                pack (static_cast <uint32_t> (value));
+                pack (static_cast<uint32_t> (value));
             }
             return 0;
         }
@@ -161,17 +161,17 @@ namespace join
         {
             if (value < (1 << 7))
             {
-                append (static_cast <uint8_t> (value));
+                append (static_cast<uint8_t> (value));
             }
             else if (value < (1 << 8))
             {
                 append (0xcc);
-                pack (static_cast <uint8_t> (value));
+                pack (static_cast<uint8_t> (value));
             }
             else if (value < (1 << 16))
             {
                 append (0xcd);
-                pack (static_cast <uint16_t> (value));
+                pack (static_cast<uint16_t> (value));
             }
             else
             {
@@ -188,49 +188,49 @@ namespace join
          */
         virtual int setInt64 (int64_t value) override
         {
-            if (value < -(1LL << 31)) 
+            if (value < -(1LL << 31))
             {
                 append (0xd3);
-                pack (static_cast <uint64_t> (value));
+                pack (static_cast<uint64_t> (value));
             }
             else if (value < -(1LL << 15))
             {
                 append (0xd2);
-                pack (static_cast <uint32_t> (value));
+                pack (static_cast<uint32_t> (value));
             }
             else if (value < -(1LL << 7))
             {
                 append (0xd1);
-                pack (static_cast <uint16_t> (value));
+                pack (static_cast<uint16_t> (value));
             }
             else if (value < -(1LL << 5))
             {
                 append (0xd0);
-                pack (static_cast <uint8_t> (value));
+                pack (static_cast<uint8_t> (value));
             }
             else if (value < (1LL << 7))
             {
-                append (static_cast <uint8_t> (value));
+                append (static_cast<uint8_t> (value));
             }
             else if (value < (1LL << 8))
             {
                 append (0xcc);
-                pack (static_cast <uint8_t> (value));
+                pack (static_cast<uint8_t> (value));
             }
             else if (value < (1LL << 16))
             {
                 append (0xcd);
-                pack (static_cast <uint16_t> (value));
+                pack (static_cast<uint16_t> (value));
             }
             else if (value < (1LL << 32))
             {
                 append (0xce);
-                pack (static_cast <uint32_t> (value));
+                pack (static_cast<uint32_t> (value));
             }
             else
             {
                 append (0xcf);
-                pack (static_cast <uint64_t> (value));
+                pack (static_cast<uint64_t> (value));
             }
             return 0;
         }
@@ -244,22 +244,22 @@ namespace join
         {
             if (value < (1ULL << 7))
             {
-                append (static_cast <uint8_t> (value));
+                append (static_cast<uint8_t> (value));
             }
             else if (value < (1ULL << 8))
             {
                 append (0xcc);
-                pack (static_cast <uint8_t> (value));
+                pack (static_cast<uint8_t> (value));
             }
             else if (value < (1ULL << 16))
             {
                 append (0xcd);
-                pack (static_cast <uint16_t> (value));
+                pack (static_cast<uint16_t> (value));
             }
             else if (value < (1ULL << 32))
             {
                 append (0xce);
-                pack (static_cast <uint32_t> (value));
+                pack (static_cast<uint32_t> (value));
             }
             else
             {
@@ -276,8 +276,17 @@ namespace join
          */
         virtual int setDouble (double value) override
         {
-            append (0xcb);
-            pack (value);
+            float f = static_cast<float> (value);
+            if (std::isfinite (value) && static_cast<double> (f) == value)
+            {
+                append (0xca);
+                pack (f);
+            }
+            else
+            {
+                append (0xcb);
+                pack (value);
+            }
             return 0;
         }
 
@@ -290,24 +299,24 @@ namespace join
         {
             if (value.size () < 32)
             {
-                append (static_cast <char> (0xa0 | value.size ()));
-            } 
+                append (static_cast<char> (0xa0 | value.size ()));
+            }
             else if (value.size () < 256)
             {
                 append (0xd9);
-                pack (static_cast <uint8_t> (value.size ()));
+                pack (static_cast<uint8_t> (value.size ()));
             }
             else if (value.size () < 65536)
             {
                 append (0xda);
-                pack (static_cast <uint16_t> (value.size ()));
+                pack (static_cast<uint16_t> (value.size ()));
             }
             else
             {
                 append (0xdb);
-                pack (static_cast <uint32_t> (value.size ()));
+                pack (static_cast<uint32_t> (value.size ()));
             }
-            append (value.c_str (), value.size ());
+            append (value.c_str (), static_cast<uint32_t> (value.size ()));
             return 0;
         }
 
@@ -318,14 +327,14 @@ namespace join
          */
         virtual int startArray (uint32_t size = 0) override
         {
-            if (size < 16) 
+            if (size < 16)
             {
-                append (static_cast <char> (0x90 | size));
+                append (static_cast<char> (0x90 | size));
             }
             else if (size < 65536)
             {
                 append (0xdc);
-                pack (static_cast <uint16_t> (size));
+                pack (static_cast<uint16_t> (size));
             }
             else
             {
@@ -337,21 +346,21 @@ namespace join
 
         /**
          * @brief start object.
-         * @param size array size.
+         * @param size object size.
          * @return 0 on success, -1 otherwise.
          */
         virtual int startObject (uint32_t size = 0) override
         {
-            if (size < 16) 
+            if (size < 16)
             {
-                append (static_cast <char> (0x80 | size));
-            } 
-            else if (size < 65536) 
+                append (static_cast<char> (0x80 | size));
+            }
+            else if (size < 65536)
             {
                 append (0xde);
-                pack (static_cast <uint16_t> (size));
-            } 
-            else 
+                pack (static_cast<uint16_t> (size));
+            }
+            else
             {
                 append (0xdf);
                 pack (size);
@@ -364,9 +373,14 @@ namespace join
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setKey (const std::string& key) override
+        virtual int setKey (const Value& key) override
         {
-            return setString (key);
+            if (JOIN_UNLIKELY (key.isArray () || key.isObject ()))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidKey);
+                return -1;
+            }
+            return setValue (key);
         }
 
     protected:
@@ -377,7 +391,7 @@ namespace join
         template <typename Type>
         void pack (Type value)
         {
-            append (reinterpret_cast <const char *> (&swap (value)), sizeof (value));
+            append (reinterpret_cast<const char*> (&swap (value)), sizeof (value));
         }
     };
 
@@ -539,7 +553,7 @@ namespace join
         {
             if (JOIN_LIKELY (readValue (document) == 0))
             {
-                if (JOIN_LIKELY (document.peek () == std::char_traits <char>::eof ()))
+                if (JOIN_LIKELY (document.peek () == std::char_traits<char>::eof ()))
                 {
                     return 0;
                 }
@@ -558,7 +572,7 @@ namespace join
         template <typename ViewType>
         int readValue (ViewType& document)
         {
-            uint8_t head = static_cast <uint8_t> (document.peek ());
+            uint8_t head = static_cast<uint8_t> (document.peek ());
 
             try
             {
@@ -605,44 +619,45 @@ namespace join
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
             }
-
-            return 0;
         }
 
         /**
          * @brief parse a null value.
          * @param document document to parse.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        int readNull (ViewType& document)
+        int readNull (ViewType& document, bool isKey = false)
         {
             document.get ();
-            return setNull ();
+            return (isKey) ? setKey (Value (in_place_index_t<Value::Null>{}, nullptr)) : setNull ();
         }
 
         /**
          * @brief parse a false value.
          * @param document document to parse.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        int readFalse (ViewType& document)
+        int readFalse (ViewType& document, bool isKey = false)
         {
             document.get ();
-            return setBool (false);
+            return (isKey) ? setKey (Value (in_place_index_t<Value::Boolean>{}, false)) : setBool (false);
         }
 
         /**
          * @brief parse a true value.
          * @param document document to parse.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        int readTrue (ViewType& document)
+        int readTrue (ViewType& document, bool isKey = false)
         {
             document.get ();
-            return setBool (true);
+            return (isKey) ? setKey (Value (in_place_index_t<Value::Boolean>{}, true)) : setBool (true);
         }
 
         /**
@@ -657,15 +672,15 @@ namespace join
 
             if (document.getIf (0xdd))
             {
-                len = unpack <uint32_t> (document);
+                len = unpack<uint32_t> (document);
             }
             else if (document.getIf (0xdc))
             {
-                len = unpack <uint16_t> (document);
+                len = unpack<uint16_t> (document);
             }
             else
             {
-                len = unpack <uint8_t> (document) & ~0x90;
+                len = unpack<uint8_t> (document) & ~0x90;
             }
 
             if (JOIN_UNLIKELY (startArray (len) == -1))
@@ -698,15 +713,15 @@ namespace join
 
             if (document.getIf (0xdf))
             {
-                len = unpack <uint32_t> (document);
+                len = unpack<uint32_t> (document);
             }
             else if (document.getIf (0xde))
             {
-                len = unpack <uint16_t> (document);
+                len = unpack<uint16_t> (document);
             }
             else
             {
-                len = unpack <uint8_t> (document) & ~0x80;
+                len = unpack<uint8_t> (document) & ~0x80;
             }
 
             if (JOIN_UNLIKELY (startObject (len) == -1))
@@ -716,7 +731,7 @@ namespace join
 
             while (len)
             {
-                if (JOIN_UNLIKELY (readString (document, true) == -1))
+                if (JOIN_UNLIKELY (readKey (document) == -1))
                 {
                     return -1;
                 }
@@ -733,9 +748,54 @@ namespace join
         }
 
         /**
+         * @brief parse a key of any type.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int readKey (ViewType& document)
+        {
+            uint8_t head = static_cast<uint8_t> (document.peek ());
+
+            try
+            {
+                if (isNull (head))
+                {
+                    return readNull (document, true);
+                }
+                else if (isFalse (head))
+                {
+                    return readFalse (document, true);
+                }
+                else if (isTrue (head))
+                {
+                    return readTrue (document, true);
+                }
+                else if (isString (head))
+                {
+                    return readString (document, true);
+                }
+                else if (isNumber (head))
+                {
+                    return readNumber (document, true);
+                }
+                else
+                {
+                    join::lastError = make_error_code (SaxErrc::InvalidValue);
+                    return -1;
+                }
+            }
+            catch (...)
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+        }
+
+        /**
          * @brief parse a string value.
          * @param document document to parse.
-         * @param isKey indicate whether the string to parse is a key or not.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
@@ -745,19 +805,19 @@ namespace join
 
             if (document.getIf (0xdb))
             {
-                len = unpack <uint32_t> (document);
+                len = unpack<uint32_t> (document);
             }
             else if (document.getIf (0xda))
             {
-                len = unpack <uint16_t> (document);
+                len = unpack<uint16_t> (document);
             }
             else if (document.getIf (0xd9))
             {
-                len = unpack <uint8_t> (document);
+                len = unpack<uint8_t> (document);
             }
             else
             {
-                len = unpack <uint8_t> (document) & ~0xa0;
+                len = unpack<uint8_t> (document) & ~0xa0;
             }
 
             std::string output;
@@ -769,7 +829,7 @@ namespace join
                 return -1;
             }
 
-            return isKey ? setKey (output) : setString (output);
+            return isKey ? setKey (Value (in_place_index_t<Value::String>{}, output)) : setString (output);
         }
 
         /**
@@ -784,15 +844,15 @@ namespace join
 
             if (document.getIf (0xc6))
             {
-                len = unpack <uint32_t> (document);
+                len = unpack<uint32_t> (document);
             }
             else if (document.getIf (0xc5))
             {
-                len = unpack <uint16_t> (document);
+                len = unpack<uint16_t> (document);
             }
             else if (document.getIf (0xc4))
             {
-                len = unpack <uint8_t> (document);
+                len = unpack<uint8_t> (document);
             }
 
             std::string output;
@@ -810,53 +870,79 @@ namespace join
         /**
          * @brief parse a number value.
          * @param document document to parse.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ViewType>
-        int readNumber (ViewType& document)
+        int readNumber (ViewType& document, bool isKey = false)
         {
-            if (document.getIf (0xd3))
-            {
-                return setInt64 (unpack <int64_t> (document));
-            }
-            else if (document.getIf (0xcf))
-            {
-                return setUint64 (unpack <uint64_t> (document));
-            }
-            else if (document.getIf (0xcb))
-            {
-                return setDouble (unpack <double> (document));
-            }
-            else if (document.getIf (0xd2))
-            {
-                return setInt (unpack <int32_t> (document));
-            }
-            else if (document.getIf (0xce))
-            {
-                return setUint (unpack <uint32_t> (document));
-            }
-            else if (document.getIf (0xca))
-            {
-                return setDouble (unpack <float> (document));
-            }
-            else if (document.getIf (0xd1))
-            {
-                return setInt (unpack <int16_t> (document));
-            }
-            else if (document.getIf (0xcd))
-            {
-                return setUint (unpack <uint16_t> (document));
-            }
-            else if (document.getIf (0xd0))
-            {
-                return setInt (unpack <int8_t> (document));
-            }
-            else if (document.getIf (0xcc))
-            {
-                return setUint (unpack <uint8_t> (document));
-            }
+            uint8_t head = document.get ();
 
-            return setInt (document.get ());
+            if (head <= 0x7f)
+            {
+                auto number = uint32_t (head);
+                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+            }
+            else if (head >= 0xe0)
+            {
+                auto number = int32_t (static_cast<int8_t> (head));
+                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+            }
+            else if (head == 0xd3)
+            {
+                auto number = unpack<int64_t> (document);
+                return isKey ? setKey (Value (in_place_index_t<Value::Integer64>{}, number)) : setInt64 (number);
+            }
+            else if (head == 0xcf)
+            {
+                auto number = unpack<uint64_t> (document);
+                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned64>{}, number)) : setUint64 (number);
+            }
+            else if (head == 0xcb)
+            {
+                auto number = unpack<double> (document);
+                return isKey ? setKey (Value (in_place_index_t<Value::Real>{}, number)) : setDouble (number);
+            }
+            else if (head == 0xd2)
+            {
+                auto number = unpack<int32_t> (document);
+                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+            }
+            else if (head == 0xce)
+            {
+                auto number = unpack<uint32_t> (document);
+                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+            }
+            else if (head == 0xca)
+            {
+                auto number = double (unpack<float> (document));
+                return isKey ? setKey (Value (in_place_index_t<Value::Real>{}, number)) : setDouble (number);
+            }
+            else if (head == 0xd1)
+            {
+                auto number = int32_t (unpack<int16_t> (document));
+                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+            }
+            else if (head == 0xcd)
+            {
+                auto number = uint32_t (unpack<uint16_t> (document));
+                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+            }
+            else if (head == 0xd0)
+            {
+                auto number = int32_t (unpack<int8_t> (document));
+                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+            }
+            else if (head == 0xcc)
+            {
+                auto number = uint32_t (unpack<uint8_t> (document));
+                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+            }
+            else
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
         }
 
         /**
@@ -865,11 +951,10 @@ namespace join
          * @return unpacked value.
          */
         template <typename Type, typename ViewType>
-        std::enable_if_t <std::is_arithmetic <Type>::value, Type>
-        static unpack (ViewType& document)
+        std::enable_if_t<std::is_arithmetic<Type>::value, Type> static unpack (ViewType& document)
         {
             Type value;
-            if (JOIN_UNLIKELY (document.read (reinterpret_cast <char *> (&value), sizeof (value)) != sizeof (value)))
+            if (JOIN_UNLIKELY (document.read (reinterpret_cast<char*> (&value), sizeof (value)) != sizeof (value)))
             {
                 throw std::range_error ("not enough data to unpack");
             }
@@ -913,7 +998,7 @@ namespace join
          */
         constexpr bool isInt (uint8_t c)
         {
-            return ((c <= 0x7f) || (c >= 0xe0)) || (c == 0xd0) || (c == 0xd1) || (c == 0xd2) || (c == 0xd3);
+            return ((c <= 0x7f) || (c >= 0xe0)) || (c == 0xd0) || (c == 0xd1) || (c == 0xd2);
         }
 
         /**

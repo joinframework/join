@@ -47,6 +47,11 @@ target_link_libraries(localmem.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME localmem.gtest COMMAND localmem.gtest)
 install(TARGETS localmem.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(localalloc.gtest localalloc_test.cpp)
+target_link_libraries(localalloc.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME localalloc.gtest COMMAND localalloc.gtest)
+install(TARGETS localalloc.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(localspsc.gtest localspsc_test.cpp)
 target_link_libraries(localspsc.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME localspsc.gtest COMMAND localspsc.gtest)
@@ -66,6 +71,11 @@ add_executable(shmmem.gtest shmmem_test.cpp)
 target_link_libraries(shmmem.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME shmmem.gtest COMMAND shmmem.gtest)
 install(TARGETS shmmem.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(shmalloc.gtest shmalloc_test.cpp)
+target_link_libraries(shmalloc.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME shmalloc.gtest COMMAND shmalloc.gtest)
+install(TARGETS shmalloc.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(shmspsc.gtest shmspsc_test.cpp)
 target_link_libraries(shmspsc.gtest ${JOIN_CORE} GTest::gtest_main rt)

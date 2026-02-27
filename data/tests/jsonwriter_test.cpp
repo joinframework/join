@@ -57,7 +57,7 @@ TEST (JsonWriter, setBool)
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setBool (true), 0);
-    EXPECT_EQ (stream.str (),"true");
+    EXPECT_EQ (stream.str (), "true");
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setBool (false), 0);
@@ -73,7 +73,7 @@ TEST (JsonWriter, setInt)
     JsonWriter jsonWriter (stream);
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.setInt (std::numeric_limits <int32_t>::min ()), 0);
+    EXPECT_EQ (jsonWriter.setInt (std::numeric_limits<int32_t>::min ()), 0);
     EXPECT_EQ (stream.str (), "-2147483648");
 
     stream.str ("");
@@ -111,7 +111,7 @@ TEST (JsonWriter, setInt64)
     JsonWriter jsonWriter (stream);
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.setInt64 (std::numeric_limits <int64_t>::min ()), 0);
+    EXPECT_EQ (jsonWriter.setInt64 (std::numeric_limits<int64_t>::min ()), 0);
     EXPECT_EQ (stream.str (), "-9223372036854775808");
 
     stream.str ("");
@@ -165,19 +165,19 @@ TEST (JsonWriter, setDouble)
     EXPECT_EQ (stream.str (), "1.23456789e-13");
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.setDouble (-std::numeric_limits <double>::infinity ()), 0);
+    EXPECT_EQ (jsonWriter.setDouble (-std::numeric_limits<double>::infinity ()), 0);
     EXPECT_EQ (stream.str (), "-Inf");
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits <double>::infinity ()), 0);
+    EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits<double>::infinity ()), 0);
     EXPECT_EQ (stream.str (), "Inf");
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.setDouble (-std::numeric_limits <double>::quiet_NaN ()), 0);
+    EXPECT_EQ (jsonWriter.setDouble (-std::numeric_limits<double>::quiet_NaN ()), 0);
     EXPECT_EQ (stream.str (), "-NaN");
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits <double>::quiet_NaN ()), 0);
+    EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits<double>::quiet_NaN ()), 0);
     EXPECT_EQ (stream.str (), "NaN");
 }
 
@@ -285,7 +285,7 @@ TEST (JsonWriter, serialize)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

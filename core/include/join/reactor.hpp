@@ -189,13 +189,13 @@ namespace join
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
-        int mbind (int numa);
+        int mbind (int numa) const noexcept;
 
         /**
          * @brief lock command queue memory in RAM.
          * @return 0 on success, -1 on failure.
          */
-        int mlock ();
+        int mlock () const noexcept;
 
     private:
         /// deleted handlers reserve size.
@@ -210,7 +210,12 @@ namespace join
         /**
          * @brief Command type for reactor dispatcher.
          */
-        enum class CommandType { Add, Del, Stop };
+        enum class CommandType
+        {
+            Add,
+            Del,
+            Stop
+        };
 
         /**
          * @brief Command for reactor dispatcher.
@@ -219,8 +224,8 @@ namespace join
         {
             CommandType type;
             EventHandler* handler;
-            std::atomic <bool>* done;
-            std::atomic <int>* errc;
+            std::atomic<bool>* done;
+            std::atomic<int>* errc;
         };
 
         /**
@@ -248,12 +253,12 @@ namespace join
          * @brief process a single command.
          * @param cmd command to process.
          */
-        void processCommand (const Command& cmd);
+        void processCommand (const Command& cmd) noexcept;
 
         /**
          * @brief read and process all pending commands from queue.
          */
-        void  readCommands ();
+        void readCommands () noexcept;
 
         /**
          * @brief dispatch a single event to its handler.
@@ -280,16 +285,16 @@ namespace join
         int _epoll = -1;
 
         /// command queue
-        LocalMem::Mpsc::Queue <Command> _commands;
+        LocalMem::Mpsc::Queue<Command> _commands;
 
         /// deleted handlers.
-        std::unordered_set <EventHandler*> _deleted;
+        std::unordered_set<EventHandler*> _deleted;
 
         /// running flag for dispatcher thread.
-        std::atomic <bool> _running {false};
+        std::atomic<bool> _running{false};
 
         /// event loop thread ID.
-        std::atomic <pthread_t> _threadId {0};
+        std::atomic<pthread_t> _threadId{0};
     };
 
     /**
