@@ -31,7 +31,6 @@
 #include <join/condition.hpp>
 #include <join/interface.hpp>
 #include <join/socket.hpp>
-#include <join/utils.hpp>
 
 // C++.
 #include <functional>
