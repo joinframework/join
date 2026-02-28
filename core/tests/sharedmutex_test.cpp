@@ -50,8 +50,8 @@ const std::string _name = "/test_mutex";
 TEST (SharedMutex, lock)
 {
     SharedMutex* mutex = nullptr;
-    void* shm = nullptr;
-    pid_t child = -1;
+    void* shm          = nullptr;
+    pid_t child        = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
@@ -67,7 +67,7 @@ TEST (SharedMutex, lock)
         goto cleanup;
     }
 
-    mutex = static_cast <SharedMutex*> (shm);
+    mutex = static_cast<SharedMutex*> (shm);
     new (mutex) SharedMutex ();
 
     child = fork ();
@@ -88,7 +88,7 @@ TEST (SharedMutex, lock)
         auto beg = std::chrono::high_resolution_clock::now ();
         mutex->lock ();
         auto end = std::chrono::high_resolution_clock::now ();
-        EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+        EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
         mutex->unlock ();
         int status = -1;
         waitpid (child, &status, 0);
@@ -115,8 +115,8 @@ cleanup:
 TEST (SharedMutex, tryLock)
 {
     SharedMutex* mutex = nullptr;
-    void* shm = nullptr;
-    pid_t child = -1;
+    void* shm          = nullptr;
+    pid_t child        = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
@@ -132,7 +132,7 @@ TEST (SharedMutex, tryLock)
         goto cleanup;
     }
 
-    mutex = static_cast <SharedMutex*> (shm);
+    mutex = static_cast<SharedMutex*> (shm);
     new (mutex) SharedMutex ();
 
     child = fork ();
@@ -179,8 +179,8 @@ cleanup:
 TEST (SharedMutex, scopedLock)
 {
     SharedMutex* mutex = nullptr;
-    void* shm = nullptr;
-    pid_t child = -1;
+    void* shm          = nullptr;
+    pid_t child        = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
@@ -196,14 +196,14 @@ TEST (SharedMutex, scopedLock)
         goto cleanup;
     }
 
-    mutex = static_cast <SharedMutex*> (shm);
+    mutex = static_cast<SharedMutex*> (shm);
     new (mutex) SharedMutex ();
 
     child = fork ();
     if (child == 0)
     {
         {
-            ScopedLock <SharedMutex> lock (*mutex);
+            ScopedLock<SharedMutex> lock (*mutex);
             std::this_thread::sleep_for (15ms);
         }
         _exit (EXIT_SUCCESS);
@@ -219,7 +219,7 @@ TEST (SharedMutex, scopedLock)
         auto beg = std::chrono::high_resolution_clock::now ();
         mutex->lock ();
         auto end = std::chrono::high_resolution_clock::now ();
-        EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+        EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
         mutex->unlock ();
         int status = -1;
         waitpid (child, &status, 0);
@@ -243,7 +243,7 @@ cleanup:
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

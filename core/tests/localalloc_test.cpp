@@ -167,8 +167,7 @@ TEST (LocalAlloc, benchmark)
     const int iterations = 10000;
     const int numThreads = 4;
 
-    auto worker = [&] ()
-    {
+    auto worker = [&] () {
         for (int i = 0; i < iterations; ++i)
         {
             void* p = allocator.allocate (64);

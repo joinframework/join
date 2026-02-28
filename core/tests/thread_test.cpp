@@ -55,7 +55,9 @@ TEST (Thread, moveConstruct)
     EXPECT_FALSE (th1.joinable ());
     Thread th2 (std::move (th1));
     EXPECT_FALSE (th2.joinable ());
-    Thread th3 ([](){std::this_thread::sleep_for (10ms);});
+    Thread th3 ([] () {
+        std::this_thread::sleep_for (10ms);
+    });
     EXPECT_TRUE (th3.joinable ());
     Thread th4 (std::move (th3));
     EXPECT_FALSE (th3.joinable ());
@@ -72,7 +74,9 @@ TEST (Thread, moveAssign)
     EXPECT_FALSE (th1.joinable ());
     th2 = std::move (th1);
     EXPECT_FALSE (th2.joinable ());
-    th3 = Thread ([](){std::this_thread::sleep_for (10ms);});
+    th3 = Thread ([] () {
+        std::this_thread::sleep_for (10ms);
+    });
     EXPECT_TRUE (th3.joinable ());
     th4 = std::move (th3);
     EXPECT_FALSE (th3.joinable ());
@@ -89,11 +93,15 @@ TEST (Thread, affinity)
     ASSERT_EQ (th.affinity (), -1);
     ASSERT_EQ (th.affinity (0), -1);
 
-    th = Thread (0, 0, [] { std::this_thread::sleep_for (std::chrono::seconds (1)); });
+    th = Thread (0, 0, [] {
+        std::this_thread::sleep_for (std::chrono::seconds (1));
+    });
     ASSERT_EQ (th.affinity (), 0);
     th.cancel ();
 
-    th = Thread ([] { std::this_thread::sleep_for (std::chrono::seconds (1)); });
+    th       = Thread ([] {
+        std::this_thread::sleep_for (std::chrono::seconds (1));
+    });
     int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
     ASSERT_EQ (th.affinity (ncpu), -1);
     ASSERT_EQ (th.affinity (0), 0) << join::lastError.message ();
@@ -121,11 +129,15 @@ TEST (Thread, priority)
     ASSERT_EQ (th.priority (), 0);
     ASSERT_EQ (th.priority (0), -1);
 
-    th = Thread (-1, 1, [] { std::this_thread::sleep_for (std::chrono::seconds (1)); });
+    th = Thread (-1, 1, [] {
+        std::this_thread::sleep_for (std::chrono::seconds (1));
+    });
     ASSERT_EQ (th.priority (), 1);
     th.cancel ();
 
-    th = Thread ([] { std::this_thread::sleep_for (std::chrono::seconds (1)); });
+    th = Thread ([] {
+        std::this_thread::sleep_for (std::chrono::seconds (1));
+    });
     ASSERT_EQ (th.priority (-1), -1);
     ASSERT_EQ (th.priority (100), -1);
     ASSERT_EQ (th.priority (0), 0) << join::lastError.message ();
@@ -148,9 +160,11 @@ TEST (Thread, priority)
  */
 TEST (Thread, joinable)
 {
-    Thread th ([](){std::this_thread::sleep_for (10ms);});
+    Thread th ([] () {
+        std::this_thread::sleep_for (10ms);
+    });
     EXPECT_TRUE (th.joinable ());
-    th.join();
+    th.join ();
     EXPECT_FALSE (th.joinable ());
 }
 
@@ -159,11 +173,13 @@ TEST (Thread, joinable)
  */
 TEST (Thread, running)
 {
-    Thread th ([](){std::this_thread::sleep_for (10ms);});
+    Thread th ([] () {
+        std::this_thread::sleep_for (10ms);
+    });
     EXPECT_TRUE (th.running ());
     std::this_thread::sleep_for (15ms);
     EXPECT_FALSE (th.running ());
-    th.join();
+    th.join ();
     EXPECT_FALSE (th.running ());
 }
 
@@ -172,11 +188,13 @@ TEST (Thread, running)
  */
 TEST (Thread, tryJoin)
 {
-    Thread th ([](){std::this_thread::sleep_for (10ms);});
+    Thread th ([] () {
+        std::this_thread::sleep_for (10ms);
+    });
     EXPECT_FALSE (th.tryJoin ());
     std::this_thread::sleep_for (15ms);
     EXPECT_TRUE (th.tryJoin ());
-    th.join();
+    th.join ();
     EXPECT_TRUE (th.tryJoin ());
 }
 
@@ -185,7 +203,9 @@ TEST (Thread, tryJoin)
  */
 TEST (Thread, cancel)
 {
-    Thread th ([](){std::this_thread::sleep_for (100ms);});
+    Thread th ([] () {
+        std::this_thread::sleep_for (100ms);
+    });
     EXPECT_TRUE (th.joinable ());
     th.cancel ();
     EXPECT_FALSE (th.joinable ());
@@ -196,7 +216,10 @@ TEST (Thread, cancel)
  */
 TEST (Thread, swap)
 {
-    Thread th1, th2 ([](){std::this_thread::sleep_for (10ms);});;
+    Thread th1, th2 ([] () {
+        std::this_thread::sleep_for (10ms);
+    });
+    ;
     EXPECT_FALSE (th1.joinable ());
     EXPECT_TRUE (th2.joinable ());
     th1.swap (th2);
@@ -211,22 +234,24 @@ TEST (Thread, swap)
 TEST (Thread, handle)
 {
     Thread th;
-    ASSERT_EQ (th.handle (), pthread_t {});
+    ASSERT_EQ (th.handle (), pthread_t{});
 
-    th = Thread ([] { std::this_thread::sleep_for (std::chrono::seconds (1)); });
-    ASSERT_NE (th.handle (), pthread_t {});
+    th = Thread ([] {
+        std::this_thread::sleep_for (std::chrono::seconds (1));
+    });
+    ASSERT_NE (th.handle (), pthread_t{});
     ASSERT_EQ (th.handle (), th.handle ());
 
     th.cancel ();
 
-    ASSERT_EQ (th.handle (), pthread_t {});
+    ASSERT_EQ (th.handle (), pthread_t{});
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
-   testing::InitGoogleTest (&argc, argv);
-   return RUN_ALL_TESTS ();
+    testing::InitGoogleTest (&argc, argv);
+    return RUN_ALL_TESTS ();
 }

@@ -37,22 +37,22 @@
 namespace join
 {
     /// list of alias.
-    using AliasList = std::set <std::string>;
+    using AliasList = std::set<std::string>;
 
     /// list of name servers.
-    using ServerList = std::set <std::string>;
+    using ServerList = std::set<std::string>;
 
     /// list of mail exchangers.
-    using ExchangerList = std::set <std::string>;
+    using ExchangerList = std::set<std::string>;
 
     /**
      * @brief question record.
      */
     struct QuestionRecord
     {
-        std::string host;                           /**< host name. */
-        uint16_t type = 0;                          /**< resource record type. */
-        uint16_t dnsclass = 0;                      /**< DNS class. */
+        std::string host;      /**< host name. */
+        uint16_t type     = 0; /**< resource record type. */
+        uint16_t dnsclass = 0; /**< DNS class. */
     };
 
     /**
@@ -60,16 +60,16 @@ namespace join
      */
     struct AnswerRecord : public QuestionRecord
     {
-        uint32_t ttl = 0;                           /**< record TTL. */
-        IpAddress addr;                             /**< address. */
-        std::string name;                           /**< canonical, server or mail exchanger name. */
-        std::string mail;                           /**< server mail. */
-        uint32_t serial = 0;                        /**< serial number. */
-        uint32_t refresh = 0;                       /**< refresh interval. */
-        uint32_t retry = 0;                         /**< retry interval. */
-        uint32_t expire = 0;                        /**< upper limit before zone is no longer authoritative. */
-        uint32_t minimum = 0;                       /**< minimum TTL. */
-        uint16_t mxpref = 0;                        /**< mail exchange preference. */
+        uint32_t ttl = 0;     /**< record TTL. */
+        IpAddress addr;       /**< address. */
+        std::string name;     /**< canonical, server or mail exchanger name. */
+        std::string mail;     /**< server mail. */
+        uint32_t serial  = 0; /**< serial number. */
+        uint32_t refresh = 0; /**< refresh interval. */
+        uint32_t retry   = 0; /**< retry interval. */
+        uint32_t expire  = 0; /**< upper limit before zone is no longer authoritative. */
+        uint32_t minimum = 0; /**< minimum TTL. */
+        uint16_t mxpref  = 0; /**< mail exchange preference. */
     };
 
     /**
@@ -77,13 +77,13 @@ namespace join
      */
     struct DnsPacket
     {
-        IpAddress src;                              /**< source IP address.*/
-        IpAddress dest;                             /**< destination IP address.*/
-        uint16_t port = 0;                          /**< port.*/
-        std::vector <QuestionRecord> questions;     /**< question records. */
-        std::vector <AnswerRecord> answers;         /**< answer records. */
-        std::vector <AnswerRecord> authorities;     /**< authority records. */
-        std::vector <AnswerRecord> additionals;     /**< additional records. */
+        IpAddress src;                         /**< source IP address.*/
+        IpAddress dest;                        /**< destination IP address.*/
+        uint16_t port = 0;                     /**< port.*/
+        std::vector<QuestionRecord> questions; /**< question records. */
+        std::vector<AnswerRecord> answers;     /**< answer records. */
+        std::vector<AnswerRecord> authorities; /**< authority records. */
+        std::vector<AnswerRecord> additionals; /**< additional records. */
     };
 
     /**
@@ -97,13 +97,13 @@ namespace join
          */
         enum RecordType : uint16_t
         {
-            A = 1,                          /**< IPv4 host address. */
-            NS = 2,                         /**< Authoritative name server. */
-            CNAME = 5,                      /**< Canonical name for an alias. */
-            SOA = 6,                        /**< Start of a zone of authority. */
-            PTR = 12,                       /**< Domain name pointer. */
-            MX = 15,                        /**< Mail exchange. */
-            AAAA = 28,                      /**< IPv6 host address. */
+            A     = 1,  /**< IPv4 host address. */
+            NS    = 2,  /**< Authoritative name server. */
+            CNAME = 5,  /**< Canonical name for an alias. */
+            SOA   = 6,  /**< Start of a zone of authority. */
+            PTR   = 12, /**< Domain name pointer. */
+            MX    = 15, /**< Mail exchange. */
+            AAAA  = 28, /**< IPv6 host address. */
         };
 
         /**
@@ -111,7 +111,7 @@ namespace join
          */
         enum RecordClass : uint16_t
         {
-            IN = 1,                         /**< Internet. */
+            IN = 1, /**< Internet. */
         };
 
         /**
@@ -171,7 +171,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the resolved IP address list.
          */
-        IpAddressList resolveAllHost (const std::string& host, int family, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        IpAddressList resolveAllHost (const std::string& host, int family, const IpAddress& server,
+                                      uint16_t port = dnsPort, int timeout = 5000);
 
         /**
          * @brief resolve host name and return all IP address found.
@@ -189,7 +190,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the resolved IP address list.
          */
-        IpAddressList resolveAllHost (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        IpAddressList resolveAllHost (const std::string& host, const IpAddress& server, uint16_t port = dnsPort,
+                                      int timeout = 5000);
 
         /**
          * @brief resolve host name and return all IP address found.
@@ -207,7 +209,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the first resolved IP address found matching address family.
          */
-        IpAddress resolveHost (const std::string& host, int family, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        IpAddress resolveHost (const std::string& host, int family, const IpAddress& server, uint16_t port = dnsPort,
+                               int timeout = 5000);
 
         /**
          * @brief resolve host name using address family.
@@ -225,7 +228,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the first resolved IP address found.
          */
-        IpAddress resolveHost (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        IpAddress resolveHost (const std::string& host, const IpAddress& server, uint16_t port = dnsPort,
+                               int timeout = 5000);
 
         /**
          * @brief resolve host name.
@@ -242,7 +246,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the resolved alias list.
          */
-        AliasList resolveAllAddress (const IpAddress& address, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        AliasList resolveAllAddress (const IpAddress& address, const IpAddress& server, uint16_t port = dnsPort,
+                                     int timeout = 5000);
 
         /**
          * @brief resolve all host address.
@@ -259,7 +264,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the first resolved alias.
          */
-        std::string resolveAddress (const IpAddress& address, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        std::string resolveAddress (const IpAddress& address, const IpAddress& server, uint16_t port = dnsPort,
+                                    int timeout = 5000);
 
         /**
          * @brief resolve host address.
@@ -276,7 +282,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the resolved name server list.
          */
-        ServerList resolveAllNameServer (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        ServerList resolveAllNameServer (const std::string& host, const IpAddress& server, uint16_t port = dnsPort,
+                                         int timeout = 5000);
 
         /**
          * @brief resolve all host name server.
@@ -293,7 +300,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the first resolved name server.
          */
-        std::string resolveNameServer (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        std::string resolveNameServer (const std::string& host, const IpAddress& server, uint16_t port = dnsPort,
+                                       int timeout = 5000);
 
         /**
          * @brief resolve host name server.
@@ -310,7 +318,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the start of authority name server.
          */
-        std::string resolveAuthority (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        std::string resolveAuthority (const std::string& host, const IpAddress& server, uint16_t port = dnsPort,
+                                      int timeout = 5000);
 
         /**
          * @brief resolve host start of authority name server.
@@ -327,7 +336,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the resolved mail exchanger list.
          */
-        ExchangerList resolveAllMailExchanger (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        ExchangerList resolveAllMailExchanger (const std::string& host, const IpAddress& server,
+                                               uint16_t port = dnsPort, int timeout = 5000);
 
         /**
          * @brief resolve all host mail exchanger.
@@ -344,7 +354,8 @@ namespace join
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the first resolved mail exchanger.
          */
-        std::string resolveMailExchanger (const std::string& host, const IpAddress& server, uint16_t port = dnsPort, int timeout = 5000);
+        std::string resolveMailExchanger (const std::string& host, const IpAddress& server, uint16_t port = dnsPort,
+                                          int timeout = 5000);
 
         /**
          * @brief resolve host mail exchanger.
@@ -378,7 +389,7 @@ namespace join
         static constexpr uint16_t dnsPort = 53;
 
         /// notification callback definition.
-        using DnsNotify = std::function <void (const DnsPacket&)>;
+        using DnsNotify = std::function<void (const DnsPacket&)>;
 
         /// callback called when a lookup sequence succeed.
         DnsNotify _onSuccess;
@@ -405,7 +416,8 @@ namespace join
          * @param arcount additional record count.
          * @param data data stream where to write header.
          */
-        void setHeader (uint16_t id, uint16_t flags, uint16_t qcount, uint16_t ancount, uint16_t nscount, uint16_t arcount, std::stringstream& data);
+        void setHeader (uint16_t id, uint16_t flags, uint16_t qcount, uint16_t ancount, uint16_t nscount,
+                        uint16_t arcount, std::stringstream& data);
 
         /**
          * @brief get DNS header.
@@ -417,7 +429,8 @@ namespace join
          * @param arcount additional record count.
          * @param data data stream where to read header.
          */
-        void getHeader (uint16_t& id, uint16_t& flags, uint16_t& qcount, uint16_t& ancount, uint16_t& nscount, uint16_t& arcount, std::stringstream& data);
+        void getHeader (uint16_t& id, uint16_t& flags, uint16_t& qcount, uint16_t& ancount, uint16_t& nscount,
+                        uint16_t& arcount, std::stringstream& data);
 
         /**
          * @brief encode name.
@@ -470,19 +483,19 @@ namespace join
          */
         static std::error_code parseError (int error);
 
-    #ifdef DEBUG
+#ifdef DEBUG
         /*
-        * @brief default callback called when a lookup sequence succeed.
-        * @param packet DNS packet.
-        */
+         * @brief default callback called when a lookup sequence succeed.
+         * @param packet DNS packet.
+         */
         static void defaultOnSuccess (const DnsPacket& packet);
 
         /*
-        * @brief default callback called when a lookup sequence failed.
-        * @param packet DNS packet.
-        */
+         * @brief default callback called when a lookup sequence failed.
+         * @param packet DNS packet.
+         */
         static void defaultOnFailure (const DnsPacket& packet);
-    #endif
+#endif
 
         /**
          * @brief safe way to notify DNS events.

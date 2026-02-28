@@ -55,12 +55,14 @@ TEST (ThreadPool, size)
  */
 TEST (ThreadPool, push)
 {
-    std::atomic <int> count {0};
+    std::atomic<int> count{0};
     {
         ThreadPool pool;
         for (size_t i = 0; i < pool.size (); ++i)
         {
-            pool.push ([&count] { ++count; });
+            pool.push ([&count] {
+                ++count;
+            });
         }
     }
     ASSERT_EQ (count, nthread);
@@ -71,11 +73,9 @@ TEST (ThreadPool, push)
  */
 TEST (ThreadPool, parallelForEach)
 {
-    std::vector <std::function <int (unsigned int)>> todo {usleep, usleep, usleep, usleep, usleep};
-    auto elapsed = join::benchmark ([&todo]
-    {
-        join::parallelForEach (todo.begin (), todo.end (), [] (auto& func)
-        {
+    std::vector<std::function<int (unsigned int)>> todo{usleep, usleep, usleep, usleep, usleep};
+    auto elapsed = join::benchmark ([&todo] {
+        join::parallelForEach (todo.begin (), todo.end (), [] (auto& func) {
             func (20000);
         });
     });
@@ -85,7 +85,7 @@ TEST (ThreadPool, parallelForEach)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

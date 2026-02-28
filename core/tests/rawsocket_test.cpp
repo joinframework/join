@@ -56,23 +56,24 @@ public:
 
         // fill in UDP header.
         _packet.ip.protocol = IPPROTO_UDP;
-        _packet.ip.saddr    = *reinterpret_cast <const uint32_t *> (IpAddress ("127.0.0.1").addr ());
-        _packet.ip.daddr    = *reinterpret_cast <const uint32_t *> (IpAddress ("127.0.0.1").addr ());
+        _packet.ip.saddr    = *reinterpret_cast<const uint32_t*> (IpAddress ("127.0.0.1").addr ());
+        _packet.ip.daddr    = *reinterpret_cast<const uint32_t*> (IpAddress ("127.0.0.1").addr ());
         _packet.udp.source  = htons (5000);
         _packet.udp.dest    = htons (5000);
         _packet.udp.len     = htons (sizeof (Packet) - sizeof (_packet.eth) - sizeof (_packet.ip));
         _packet.ip.tot_len  = _packet.udp.len;
-        _packet.udp.check   = Raw::Socket::checksum (reinterpret_cast <uint16_t *> (&_packet.ip), sizeof (Packet) - sizeof (_packet.eth));
+        _packet.udp.check =
+            Raw::Socket::checksum (reinterpret_cast<uint16_t*> (&_packet.ip), sizeof (Packet) - sizeof (_packet.eth));
 
         // fill in IP header.
         _packet.ip.ihl      = sizeof (_packet.ip) >> 2;
         _packet.ip.version  = IPVERSION;
         _packet.ip.tos      = IPTOS_CLASS_CS6 | IPTOS_ECN_NOT_ECT;
         _packet.ip.tot_len  = htons (sizeof (Packet) - sizeof (_packet.eth));
-        _packet.ip.id       = htons (join::randomize <uint16_t> ());
+        _packet.ip.id       = htons (join::randomize<uint16_t> ());
         _packet.ip.frag_off = htons (IP_DF);
         _packet.ip.ttl      = IPDEFTTL;
-        _packet.ip.check    = Raw::Socket::checksum (reinterpret_cast <uint16_t *> (&_packet.ip), sizeof (_packet.ip));
+        _packet.ip.check    = Raw::Socket::checksum (reinterpret_cast<uint16_t*> (&_packet.ip), sizeof (_packet.ip));
 
         // fill in ETH header.
         memcpy (_packet.eth.h_dest, MacAddress::wildcard.addr (), 6);
@@ -104,7 +105,7 @@ protected:
      */
     virtual void onReceive () override
     {
-        auto buffer = std::make_unique <char []> (this->canRead ());
+        auto buffer = std::make_unique<char[]> (this->canRead ());
         if (buffer)
         {
             int nread = this->read (buffer.get (), this->canRead ());
@@ -113,7 +114,7 @@ protected:
                 return;
             }
 
-            Packet *data = reinterpret_cast <Packet *> (buffer.get ());
+            Packet* data = reinterpret_cast<Packet*> (buffer.get ());
             if (data->ip.id != _packet.ip.id)
             {
                 return;
@@ -129,9 +130,9 @@ protected:
     struct __attribute__ ((packed)) Packet
     {
         struct ethhdr eth = {};
-        struct iphdr ip = {};
+        struct iphdr ip   = {};
         struct udphdr udp = {};
-        char data[16] = {};
+        char data[16]     = {};
     };
 
     /// packet.
@@ -146,7 +147,7 @@ protected:
 
 RawSocket::Packet RawSocket::_packet;
 const std::string RawSocket::_interface = "lo";
-const int         RawSocket::_timeout = 1000;
+const int RawSocket::_timeout           = 1000;
 
 /**
  * @brief Test open method.
@@ -197,7 +198,8 @@ TEST_F (RawSocket, canRead)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.write (reinterpret_cast<char*> (&_packet), sizeof (_packet)), sizeof (_packet))
+        << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (rawSocket.canRead (), 0) << join::lastError.message ();
     rawSocket.close ();
@@ -214,7 +216,8 @@ TEST_F (RawSocket, waitReadyRead)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.write (reinterpret_cast<char*> (&_packet), sizeof (_packet)), sizeof (_packet))
+        << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     rawSocket.close ();
 }
@@ -231,7 +234,8 @@ TEST_F (RawSocket, read)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.write (reinterpret_cast<char*> (&_packet), sizeof (_packet)), sizeof (_packet))
+        << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (rawSocket.read (data, sizeof (data)), 0) << join::lastError.message ();
     rawSocket.close ();
@@ -258,11 +262,12 @@ TEST_F (RawSocket, write)
 {
     Raw::Socket rawSocket;
 
-    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), -1);
+    ASSERT_EQ (rawSocket.write (reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.write (reinterpret_cast <char* > (&_packet), sizeof (_packet)), sizeof (_packet)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.write (reinterpret_cast<char*> (&_packet), sizeof (_packet)), sizeof (_packet))
+        << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     rawSocket.close ();
 }
@@ -338,7 +343,7 @@ TEST_F (RawSocket, localEndpoint)
 {
     Raw::Socket rawSocket;
 
-    ASSERT_EQ (rawSocket.localEndpoint (), Raw::Endpoint {});
+    ASSERT_EQ (rawSocket.localEndpoint (), Raw::Endpoint{});
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.localEndpoint ().device (), _interface);
 }
@@ -422,7 +427,7 @@ TEST_F (RawSocket, checksum)
 {
     std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
 
-    ASSERT_EQ (Raw::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+    ASSERT_EQ (Raw::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**
@@ -449,7 +454,7 @@ TEST_F (RawSocket, lower)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

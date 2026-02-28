@@ -36,10 +36,10 @@
  */
 TEST (Traits, identity)
 {
-    auto same = std::is_same <int, join::identity_t <int>>::value;
+    auto same = std::is_same<int, join::identity_t<int>>::value;
     EXPECT_TRUE (same);
 
-    same = std::is_same <int, join::identity_t <double>>::value;
+    same = std::is_same<int, join::identity_t<double>>::value;
     EXPECT_FALSE (same);
 }
 
@@ -48,29 +48,31 @@ TEST (Traits, identity)
  */
 TEST (Traits, match)
 {
-    auto match = std::is_same <int, join::match_t <int8_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
+    auto match = std::is_same<int, join::match_t<int8_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (match);
-    match = std::is_same <int, join::match_t <uint8_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
+    match = std::is_same<int, join::match_t<uint8_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (match);
-    match = std::is_same <int, join::match_t <int16_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
+    match = std::is_same<int, join::match_t<int16_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (match);
-    match = std::is_same <int, join::match_t <uint16_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
+    match = std::is_same<int, join::match_t<uint16_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (match);
-    match = std::is_same <int, join::match_t <int32_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
-    EXPECT_TRUE (match);
-
-    match = std::is_same <double, join::match_t <float&&, int, double, std::string, bool, std::nullptr_t>>::value;
-    EXPECT_TRUE (match);
-    match = std::is_same <double, join::match_t <double&&, int, double, std::string, bool, std::nullptr_t>>::value;
+    match = std::is_same<int, join::match_t<int32_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (match);
 
-    match = std::is_same <std::string, join::match_t <std::string&&, int, double, std::string, bool, std::nullptr_t>>::value;
+    match = std::is_same<double, join::match_t<float&&, int, double, std::string, bool, std::nullptr_t>>::value;
+    EXPECT_TRUE (match);
+    match = std::is_same<double, join::match_t<double&&, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (match);
 
-    match = std::is_same <bool, join::match_t <bool&&, int, double, std::string, bool, std::nullptr_t>>::value;
+    match =
+        std::is_same<std::string, join::match_t<std::string&&, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (match);
 
-    match = std::is_same <std::nullptr_t, join::match_t <std::nullptr_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
+    match = std::is_same<bool, join::match_t<bool&&, int, double, std::string, bool, std::nullptr_t>>::value;
+    EXPECT_TRUE (match);
+
+    match = std::is_same<std::nullptr_t,
+                         join::match_t<std::nullptr_t&&, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (match);
 }
 
@@ -79,19 +81,19 @@ TEST (Traits, match)
  */
 TEST (Traits, find_index)
 {
-    auto index = join::find_index <int, int, double, std::string, bool, std::nullptr_t>::value;
+    auto index = join::find_index<int, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_EQ (index, 0);
 
-    index = join::find_index <double, int, double, std::string, bool, std::nullptr_t>::value;
+    index = join::find_index<double, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_EQ (index, 1);
 
-    index = join::find_index <std::string, int, double, std::string, bool, std::nullptr_t>::value;
+    index = join::find_index<std::string, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_EQ (index, 2);
 
-    index = join::find_index <bool, int, double, std::string, bool, std::nullptr_t>::value;
+    index = join::find_index<bool, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_EQ (index, 3);
 
-    index = join::find_index <std::nullptr_t, int, double, std::string, bool, std::nullptr_t>::value;
+    index = join::find_index<std::nullptr_t, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_EQ (index, 4);
 }
 
@@ -100,59 +102,59 @@ TEST (Traits, find_index)
  */
 TEST (Traits, find_element)
 {
-    auto same = std::is_same <int, join::find_element_t <0, int, double, std::string, bool, std::nullptr_t>>::value;
+    auto same = std::is_same<int, join::find_element_t<0, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (same);
-    same = std::is_same <int, join::find_element_t <1, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<int, join::find_element_t<1, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <int, join::find_element_t <2, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<int, join::find_element_t<2, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <int, join::find_element_t <3, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<int, join::find_element_t<3, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <int, join::find_element_t <4, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<int, join::find_element_t<4, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
 
-    same = std::is_same <double, join::find_element_t <0, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<double, join::find_element_t<0, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <double, join::find_element_t <1, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<double, join::find_element_t<1, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (same);
-    same = std::is_same <double, join::find_element_t <2, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<double, join::find_element_t<2, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <double, join::find_element_t <3, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<double, join::find_element_t<3, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <double, join::find_element_t <4, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<double, join::find_element_t<4, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
 
-    same = std::is_same <std::string, join::find_element_t <0, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<std::string, join::find_element_t<0, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <std::string, join::find_element_t <1, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<std::string, join::find_element_t<1, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <std::string, join::find_element_t <2, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<std::string, join::find_element_t<2, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (same);
-    same = std::is_same <std::string, join::find_element_t <3, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<std::string, join::find_element_t<3, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <std::string, join::find_element_t <4, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<std::string, join::find_element_t<4, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
 
-    same = std::is_same <bool, join::find_element_t <0, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<bool, join::find_element_t<0, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <bool, join::find_element_t <1, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<bool, join::find_element_t<1, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <bool, join::find_element_t <2, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<bool, join::find_element_t<2, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <bool, join::find_element_t <3, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<bool, join::find_element_t<3, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (same);
-    same = std::is_same <bool, join::find_element_t <4, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<bool, join::find_element_t<4, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
 
-    same = std::is_same <std::nullptr_t, join::find_element_t <0, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<std::nullptr_t, join::find_element_t<0, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <std::nullptr_t, join::find_element_t <1, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<std::nullptr_t, join::find_element_t<1, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <std::nullptr_t, join::find_element_t <2, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<std::nullptr_t, join::find_element_t<2, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <std::nullptr_t, join::find_element_t <3, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<std::nullptr_t, join::find_element_t<3, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_FALSE (same);
-    same = std::is_same <std::nullptr_t, join::find_element_t <4, int, double, std::string, bool, std::nullptr_t>>::value;
+    same = std::is_same<std::nullptr_t, join::find_element_t<4, int, double, std::string, bool, std::nullptr_t>>::value;
     EXPECT_TRUE (same);
 }
 
@@ -161,31 +163,31 @@ TEST (Traits, find_element)
  */
 TEST (Traits, is_alternative)
 {
-    auto valid = join::is_alternative <int, int, double, std::string, bool, std::nullptr_t>::value;
+    auto valid = join::is_alternative<int, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (valid);
 
-    valid = join::is_alternative <double, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_alternative<double, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (valid);
 
-    valid = join::is_alternative <std::string, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_alternative<std::string, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (valid);
 
-    valid = join::is_alternative <bool, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_alternative<bool, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (valid);
 
-    valid = join::is_alternative <std::nullptr_t, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_alternative<std::nullptr_t, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (valid);
 
-    valid = join::is_alternative <int64_t, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_alternative<int64_t, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (valid);
 
-    valid = join::is_alternative <float, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_alternative<float, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (valid);
 
-    valid = join::is_alternative <std::fstream, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_alternative<std::fstream, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (valid);
 
-    valid = join::is_alternative <void, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_alternative<void, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (valid);
 }
 
@@ -194,25 +196,25 @@ TEST (Traits, is_alternative)
  */
 TEST (Traits, is_index)
 {
-    auto valid = join::is_index <0, int, double, std::string, bool, std::nullptr_t>::value;
+    auto valid = join::is_index<0, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (valid);
 
-    valid = join::is_index <1, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_index<1, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (valid);
 
-    valid = join::is_index <2, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_index<2, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (valid);
 
-    valid = join::is_index <3, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_index<3, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (valid);
 
-    valid = join::is_index <4, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_index<4, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (valid);
 
-    valid = join::is_index <5, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_index<5, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (valid);
 
-    valid = join::is_index <6, int, double, std::string, bool, std::nullptr_t>::value;
+    valid = join::is_index<6, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (valid);
 }
 
@@ -221,19 +223,19 @@ TEST (Traits, is_index)
  */
 TEST (Traits, count)
 {
-    auto num = join::count <int, double, std::string, bool, std::nullptr_t>::value;
+    auto num = join::count<int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_EQ (num, 0);
 
-    num = join::count <int, int, std::string, bool, std::nullptr_t>::value;
+    num = join::count<int, int, std::string, bool, std::nullptr_t>::value;
     EXPECT_EQ (num, 1);
 
-    num = join::count <int, int, int, bool, std::nullptr_t>::value;
+    num = join::count<int, int, int, bool, std::nullptr_t>::value;
     EXPECT_EQ (num, 2);
 
-    num = join::count <int, int, int, int, std::nullptr_t>::value;
+    num = join::count<int, int, int, int, std::nullptr_t>::value;
     EXPECT_EQ (num, 3);
 
-    num = join::count <int, int, int, int, int>::value;
+    num = join::count<int, int, int, int, int>::value;
     EXPECT_EQ (num, 4);
 }
 
@@ -242,19 +244,19 @@ TEST (Traits, count)
  */
 TEST (Traits, unique)
 {
-    auto unique = join::is_unique <int, double, std::string, bool, std::nullptr_t>::value;
+    auto unique = join::is_unique<int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (unique);
 
-    unique = join::is_unique <int, int, std::string, bool, std::nullptr_t>::value;
+    unique = join::is_unique<int, int, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (unique);
 
-    unique = join::is_unique <int, int, int, bool, std::nullptr_t>::value;
+    unique = join::is_unique<int, int, int, bool, std::nullptr_t>::value;
     EXPECT_FALSE (unique);
 
-    unique = join::is_unique <int, int, int, int, std::nullptr_t>::value;
+    unique = join::is_unique<int, int, int, int, std::nullptr_t>::value;
     EXPECT_FALSE (unique);
 
-    unique = join::is_unique <int, int, int, int, int>::value;
+    unique = join::is_unique<int, int, int, int, int>::value;
     EXPECT_FALSE (unique);
 }
 
@@ -263,13 +265,13 @@ TEST (Traits, unique)
  */
 TEST (Traits, all)
 {
-    auto all = join::all <true, true, true>::value;
+    auto all = join::all<true, true, true>::value;
     EXPECT_TRUE (all);
 
-    all = join::all <true, false, true>::value;
+    all = join::all<true, false, true>::value;
     EXPECT_FALSE (all);
 
-    all = join::all <false, false, false>::value;
+    all = join::all<false, false, false>::value;
     EXPECT_FALSE (all);
 }
 
@@ -278,10 +280,10 @@ TEST (Traits, all)
  */
 TEST (Traits, are_copy_constructible)
 {
-    auto can = join::are_copy_constructible <int, double, std::string, bool, std::nullptr_t>::value;
+    auto can = join::are_copy_constructible<int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (can);
 
-    can = join::are_copy_constructible <std::mutex, int, double, std::string, bool, std::nullptr_t>::value;
+    can = join::are_copy_constructible<std::mutex, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (can);
 }
 
@@ -290,10 +292,10 @@ TEST (Traits, are_copy_constructible)
  */
 TEST (Traits, are_move_constructible)
 {
-    auto can = join::are_move_constructible <int, double, std::string, bool, std::nullptr_t>::value;
+    auto can = join::are_move_constructible<int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (can);
 
-    can = join::are_move_constructible <std::mutex, int, double, std::string, bool, std::nullptr_t>::value;
+    can = join::are_move_constructible<std::mutex, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (can);
 }
 
@@ -302,10 +304,10 @@ TEST (Traits, are_move_constructible)
  */
 TEST (Traits, are_copy_assignable)
 {
-    auto can = join::are_copy_assignable <int, double, std::string, bool, std::nullptr_t>::value;
+    auto can = join::are_copy_assignable<int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (can);
 
-    can = join::are_copy_assignable <std::mutex, int, double, std::string, bool, std::nullptr_t>::value;
+    can = join::are_copy_assignable<std::mutex, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (can);
 }
 
@@ -314,17 +316,17 @@ TEST (Traits, are_copy_assignable)
  */
 TEST (Traits, are_move_assignable)
 {
-    auto can = join::are_move_assignable <int, double, std::string, bool, std::nullptr_t>::value;
+    auto can = join::are_move_assignable<int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_TRUE (can);
 
-    can = join::are_move_assignable <std::mutex, int, double, std::string, bool, std::nullptr_t>::value;
+    can = join::are_move_assignable<std::mutex, int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (can);
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

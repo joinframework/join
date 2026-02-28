@@ -57,10 +57,10 @@ TEST (Semaphore, wait)
         std::this_thread::sleep_for (10ms);
         unnamed.post ();
     });
-    auto beg = std::chrono::high_resolution_clock::now ();
+    auto beg  = std::chrono::high_resolution_clock::now ();
     unnamed.wait ();
     auto end = std::chrono::high_resolution_clock::now ();
-    EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+    EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
     task.wait ();
 
     Semaphore named (_name);
@@ -68,10 +68,10 @@ TEST (Semaphore, wait)
         std::this_thread::sleep_for (10ms);
         named.post ();
     });
-    beg = std::chrono::high_resolution_clock::now ();
+    beg  = std::chrono::high_resolution_clock::now ();
     named.wait ();
     end = std::chrono::high_resolution_clock::now ();
-    EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+    EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
     task.wait ();
 }
 
@@ -149,11 +149,10 @@ TEST (Semaphore, value)
     task.wait ();
 }
 
-
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

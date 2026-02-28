@@ -101,7 +101,7 @@ namespace join
          * @return true on success, false otherwise.
          */
         template <class Rep, class Period>
-        bool timedWait (std::chrono::duration <Rep, Period> timeout)
+        bool timedWait (std::chrono::duration<Rep, Period> timeout)
         {
             struct timespec ts = toTimespec (std::chrono::system_clock::now () + timeout);
             if (((_named) ? ::sem_timedwait (_named_handle, &ts) : ::sem_timedwait (&_unnamed_handle, &ts)) == -1)
@@ -121,7 +121,8 @@ namespace join
 
     private:
         /// semaphore handle.
-        union {
+        union
+        {
             sem_t* _named_handle;
             sem_t _unnamed_handle;
         };
@@ -131,7 +132,8 @@ namespace join
     };
 
     /**
-     * @brief class used to protect shared data from being simultaneously accessed by multiple process via a shared memory.
+     * @brief class used to protect shared data from being simultaneously accessed by multiple process via a shared
+     * memory.
      */
     class SharedSemaphore
     {
@@ -182,7 +184,7 @@ namespace join
          * @return true on success, false otherwise.
          */
         template <class Rep, class Period>
-        bool timedWait (std::chrono::duration <Rep, Period> timeout)
+        bool timedWait (std::chrono::duration<Rep, Period> timeout)
         {
             struct timespec ts = toTimespec (std::chrono::system_clock::now () + timeout);
             if (sem_timedwait (&_handle, &ts) == -1)

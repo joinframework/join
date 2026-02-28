@@ -65,13 +65,13 @@ const std::string ShmSpsc::_name = "/test_spsc_shm";
 
 TEST_F (ShmSpsc, create)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod1 (0, _name);
-    ASSERT_THROW (ShmMem::Spsc::Queue <uint64_t> (2, _name), std::runtime_error);
+    ShmMem::Spsc::Queue<uint64_t> prod1 (0, _name);
+    ASSERT_THROW (ShmMem::Spsc::Queue<uint64_t> (2, _name), std::runtime_error);
 }
 
 TEST_F (ShmSpsc, tryPush)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (512, _name);
+    ShmMem::Spsc::Queue<uint64_t> prod (512, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -89,7 +89,7 @@ TEST_F (ShmSpsc, tryPush)
 
 TEST_F (ShmSpsc, push)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (512, _name);
+    ShmMem::Spsc::Queue<uint64_t> prod (512, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -106,8 +106,8 @@ TEST_F (ShmSpsc, push)
 
 TEST_F (ShmSpsc, tryPop)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (512, _name);
-    ShmMem::Spsc::Queue <uint64_t> cons (512, _name);
+    ShmMem::Spsc::Queue<uint64_t> prod (512, _name);
+    ShmMem::Spsc::Queue<uint64_t> cons (512, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (cons.tryPop (data), -1);
@@ -124,8 +124,8 @@ TEST_F (ShmSpsc, tryPop)
 
 TEST_F (ShmSpsc, pop)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (512, _name);
-    ShmMem::Spsc::Queue <uint64_t> cons (512, _name);
+    ShmMem::Spsc::Queue<uint64_t> prod (512, _name);
+    ShmMem::Spsc::Queue<uint64_t> cons (512, _name);
     uint64_t data = 0;
 
     ASSERT_TRUE (cons.empty ());
@@ -141,15 +141,15 @@ TEST_F (ShmSpsc, pop)
 TEST_F (ShmSpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
-    uint64_t data = 0;
+    const uint64_t num      = 1000000;
+    uint64_t data           = 0;
 
     pid_t child = fork ();
     if (child == 0)
     {
         Semaphore sem (_name);
         sem.wait ();
-        ShmMem::Spsc::Queue <uint64_t> cons (capacity, _name);
+        ShmMem::Spsc::Queue<uint64_t> cons (capacity, _name);
         for (uint64_t i = 0; i < num; ++i)
         {
             while (cons.tryPop (data) == -1)
@@ -171,9 +171,9 @@ TEST_F (ShmSpsc, pushBenchmark)
     {
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
-        std::vector <uint64_t> sendTimestamps;
+        std::vector<uint64_t> sendTimestamps;
         sendTimestamps.resize (num);
-        ShmMem::Spsc::Queue <uint64_t> prod (capacity, _name);
+        ShmMem::Spsc::Queue<uint64_t> prod (capacity, _name);
         // pre-fill the buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
@@ -198,14 +198,14 @@ TEST_F (ShmSpsc, pushBenchmark)
 TEST_F (ShmSpsc, popBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
-    uint64_t data = 0;
+    const uint64_t num      = 1000000;
+    uint64_t data           = 0;
 
     pid_t child = fork ();
     if (child == 0)
     {
         Semaphore sem (_name);
-        ShmMem::Spsc::Queue <uint64_t> prod (capacity, _name);
+        ShmMem::Spsc::Queue<uint64_t> prod (capacity, _name);
         sem.post ();
         for (uint64_t i = 0; i < num; ++i)
         {
@@ -221,7 +221,7 @@ TEST_F (ShmSpsc, popBenchmark)
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
         sem.wait ();
-        ShmMem::Spsc::Queue <uint64_t> cons (capacity, _name);
+        ShmMem::Spsc::Queue<uint64_t> cons (capacity, _name);
         for (uint64_t i = 0; i < num; ++i)
         {
             EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
@@ -236,7 +236,7 @@ TEST_F (ShmSpsc, popBenchmark)
 
 TEST_F (ShmSpsc, pending)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Spsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (prod.pending (), 0);
@@ -246,7 +246,7 @@ TEST_F (ShmSpsc, pending)
 
 TEST_F (ShmSpsc, available)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Spsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (prod.available (), 1);
@@ -256,7 +256,7 @@ TEST_F (ShmSpsc, available)
 
 TEST_F (ShmSpsc, full)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Spsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -266,7 +266,7 @@ TEST_F (ShmSpsc, full)
 
 TEST_F (ShmSpsc, empty)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Spsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_TRUE (prod.empty ());
@@ -276,20 +276,20 @@ TEST_F (ShmSpsc, empty)
 
 TEST_F (ShmSpsc, mlock)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Spsc::Queue<uint64_t> prod (0, _name);
     ASSERT_EQ (prod.mlock (), 0) << join::lastError.message ();
 }
 
 TEST_F (ShmSpsc, mbind)
 {
-    ShmMem::Spsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Spsc::Queue<uint64_t> prod (0, _name);
     ASSERT_EQ (prod.mbind (0), 0) << join::lastError.message ();
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

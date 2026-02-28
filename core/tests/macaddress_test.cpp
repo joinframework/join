@@ -108,7 +108,7 @@ TEST (MacAddress, sockaddrConstruct)
     ASSERT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
 
     hwaddr.sa_family = ARPHRD_NETROM;
-    ASSERT_THROW (MacAddress {hwaddr}, std::invalid_argument);
+    ASSERT_THROW (MacAddress{hwaddr}, std::invalid_argument);
 }
 
 /**
@@ -242,7 +242,7 @@ TEST (MacAddress, toString)
 TEST (MacAddress, toIpv6)
 {
     MacAddress mac = "00:14:3e:48:d4:5b";
-    ASSERT_TRUE (mac.toIpv6 ("2001:db8::", 32).isGlobal());
+    ASSERT_TRUE (mac.toIpv6 ("2001:db8::", 32).isGlobal ());
     ASSERT_EQ (mac.toIpv6 ("2001:db8::", 32).toString (), "2001:db8::214:3eff:fe48:d45b");
 }
 
@@ -332,7 +332,7 @@ TEST (MacAddress, cend)
  */
 TEST (MacAddress, address)
 {
-    ASSERT_TRUE  (MacAddress::address ("bar0").isWildcard ());
+    ASSERT_TRUE (MacAddress::address ("bar0").isWildcard ());
     ASSERT_FALSE (MacAddress::address ("eth0").isWildcard ()) << join::lastError.message ();
 }
 
@@ -535,7 +535,7 @@ TEST (MacAddress, notOperation)
 {
     MacAddress mac, result;
 
-    mac = "02:42:64:2f:6a:d0";
+    mac    = "02:42:64:2f:6a:d0";
     result = ~mac;
     ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:2f");
 }
@@ -793,19 +793,19 @@ TEST (MacAddress, and)
 {
     MacAddress mac1, mac2, result;
 
-    mac1 = "02:42:64:2f:6a:d0";
-    mac2 = "ff:ff:ff:ff:ff:00";
+    mac1   = "02:42:64:2f:6a:d0";
+    mac2   = "ff:ff:ff:ff:ff:00";
     result = mac1 & mac2;
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
 
-    mac1 = "02:42:64:2f:6a:d0";
+    mac1   = "02:42:64:2f:6a:d0";
     result = mac1 & "ff:ff:ff:ff:ff:00";
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
 
-    mac2 = "ff:ff:ff:ff:ff:00";
+    mac2   = "ff:ff:ff:ff:ff:00";
     result = "02:42:64:2f:6a:d0" & mac2;
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
@@ -818,19 +818,19 @@ TEST (MacAddress, or)
 {
     MacAddress mac1, mac2, result;
 
-    mac1 = "02:42:64:2f:6a:d0";
-    mac2 = "ff:ff:ff:ff:ff:00";
+    mac1   = "02:42:64:2f:6a:d0";
+    mac2   = "ff:ff:ff:ff:ff:00";
     result = mac1 | mac2;
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
 
-    mac1 = "02:42:64:2f:6a:d0";
+    mac1   = "02:42:64:2f:6a:d0";
     result = mac1 | "ff:ff:ff:ff:ff:00";
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
 
-    mac2 = "ff:ff:ff:ff:ff:00";
+    mac2   = "ff:ff:ff:ff:ff:00";
     result = "02:42:64:2f:6a:d0" | mac2;
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
@@ -843,19 +843,19 @@ TEST (MacAddress, xor)
 {
     MacAddress mac1, mac2, result;
 
-    mac1 = "02:42:64:2f:6a:d0";
-    mac2 = "ff:ff:ff:ff:ff:00";
+    mac1   = "02:42:64:2f:6a:d0";
+    mac2   = "ff:ff:ff:ff:ff:00";
     result = mac1 ^ mac2;
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
 
-    mac1 = "02:42:64:2f:6a:d0";
+    mac1   = "02:42:64:2f:6a:d0";
     result = mac1 ^ "ff:ff:ff:ff:ff:00";
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
 
-    mac2 = "ff:ff:ff:ff:ff:00";
+    mac2   = "ff:ff:ff:ff:ff:00";
     result = "02:42:64:2f:6a:d0" ^ mac2;
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
@@ -876,8 +876,8 @@ TEST (MacAddress, serialize)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
-   testing::InitGoogleTest (&argc, argv);
-   return RUN_ALL_TESTS ();
+    testing::InitGoogleTest (&argc, argv);
+    return RUN_ALL_TESTS ();
 }

@@ -64,13 +64,13 @@ const std::string ShmMpsc::_name = "/test_mpsc_shm";
 
 TEST_F (ShmMpsc, create)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod1 (0, _name);
-    ASSERT_THROW (ShmMem::Mpsc::Queue <uint64_t> (2, _name), std::runtime_error);
+    ShmMem::Mpsc::Queue<uint64_t> prod1 (0, _name);
+    ASSERT_THROW (ShmMem::Mpsc::Queue<uint64_t> (2, _name), std::runtime_error);
 }
 
 TEST_F (ShmMpsc, tryPush)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (512, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -88,7 +88,7 @@ TEST_F (ShmMpsc, tryPush)
 
 TEST_F (ShmMpsc, push)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (512, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -105,8 +105,8 @@ TEST_F (ShmMpsc, push)
 
 TEST_F (ShmMpsc, tryPop)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (512, _name);
-    ShmMem::Mpsc::Queue <uint64_t> cons (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> cons (512, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (cons.tryPop (data), -1);
@@ -123,8 +123,8 @@ TEST_F (ShmMpsc, tryPop)
 
 TEST_F (ShmMpsc, pop)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (512, _name);
-    ShmMem::Mpsc::Queue <uint64_t> cons (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> cons (512, _name);
     uint64_t data = 0;
 
     ASSERT_TRUE (cons.empty ());
@@ -140,15 +140,15 @@ TEST_F (ShmMpsc, pop)
 TEST_F (ShmMpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
-    uint64_t data = 0;
+    const uint64_t num      = 1000000;
+    uint64_t data           = 0;
 
     pid_t child = fork ();
     if (child == 0)
     {
         Semaphore sem (_name);
         sem.wait ();
-        ShmMem::Mpsc::Queue <uint64_t> cons (capacity, _name);
+        ShmMem::Mpsc::Queue<uint64_t> cons (capacity, _name);
         for (uint64_t i = 0; i < num; ++i)
         {
             while (cons.tryPop (data) == -1)
@@ -171,12 +171,12 @@ TEST_F (ShmMpsc, pushBenchmark)
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
         const int numProducers = 4;
-        std::vector <Thread> producers;
+        std::vector<Thread> producers;
         const uint64_t msgPerProducer = num / numProducers;
         // pre-fill the buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
-            ShmMem::Mpsc::Queue <uint64_t> prod (capacity, _name);
+            ShmMem::Mpsc::Queue<uint64_t> prod (capacity, _name);
             while (prod.tryPush (data) == -1)
             {
                 std::this_thread::yield ();
@@ -185,8 +185,8 @@ TEST_F (ShmMpsc, pushBenchmark)
         sem.post ();
         for (int p = 0; p < numProducers; ++p)
         {
-            producers.emplace_back([&] () {
-                ShmMem::Mpsc::Queue <uint64_t> prod (capacity, _name);
+            producers.emplace_back ([&] () {
+                ShmMem::Mpsc::Queue<uint64_t> prod (capacity, _name);
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
                 {
                     EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
@@ -208,22 +208,22 @@ TEST_F (ShmMpsc, pushBenchmark)
 TEST_F (ShmMpsc, popBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
-    uint64_t data = 0;
+    const uint64_t num      = 1000000;
+    uint64_t data           = 0;
 
     pid_t child = fork ();
     if (child == 0)
     {
         Semaphore sem (_name);
         const int numProducers = 4;
-        std::vector <Thread> producers;
+        std::vector<Thread> producers;
         const uint64_t msgPerProducer = num / numProducers;
-        ShmMem::Mpsc::Queue <uint64_t> prod0 (capacity, _name);
+        ShmMem::Mpsc::Queue<uint64_t> prod0 (capacity, _name);
         sem.post ();
         for (int p = 0; p < numProducers; ++p)
         {
-            producers.emplace_back([&] () {
-                ShmMem::Mpsc::Queue <uint64_t> prod (capacity, _name);
+            producers.emplace_back ([&] () {
+                ShmMem::Mpsc::Queue<uint64_t> prod (capacity, _name);
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
                 {
                     while (prod.tryPush (data) == -1)
@@ -244,7 +244,7 @@ TEST_F (ShmMpsc, popBenchmark)
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
         sem.wait ();
-        ShmMem::Mpsc::Queue <uint64_t> cons (capacity, _name);
+        ShmMem::Mpsc::Queue<uint64_t> cons (capacity, _name);
         for (uint64_t i = 0; i < num; ++i)
         {
             EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
@@ -259,7 +259,7 @@ TEST_F (ShmMpsc, popBenchmark)
 
 TEST_F (ShmMpsc, pending)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (prod.pending (), 0);
@@ -269,7 +269,7 @@ TEST_F (ShmMpsc, pending)
 
 TEST_F (ShmMpsc, available)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (prod.available (), 1);
@@ -279,7 +279,7 @@ TEST_F (ShmMpsc, available)
 
 TEST_F (ShmMpsc, full)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -289,7 +289,7 @@ TEST_F (ShmMpsc, full)
 
 TEST_F (ShmMpsc, empty)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_TRUE (prod.empty ());
@@ -299,20 +299,20 @@ TEST_F (ShmMpsc, empty)
 
 TEST_F (ShmMpsc, mlock)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     ASSERT_EQ (prod.mlock (), 0) << join::lastError.message ();
 }
 
 TEST_F (ShmMpsc, mbind)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     ASSERT_EQ (prod.mbind (0), 0) << join::lastError.message ();
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

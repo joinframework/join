@@ -23,7 +23,18 @@ NamespaceIndentation: All
 FixNamespaceComments: false
 
 # --- Braces (Allman Style + Space) ---
-BreakBeforeBraces: Allman
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: false
 
 # --- Spaces ---
 SpaceBeforeParens: Always

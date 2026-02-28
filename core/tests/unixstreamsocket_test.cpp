@@ -32,6 +32,7 @@
 using join::Errc;
 using join::ReactorThread;
 using join::UnixStream;
+
 /**
  * @brief Class used to test the unix stream socket API.
  */
@@ -92,9 +93,9 @@ protected:
     static const int _timeout;
 };
 
-const std::string    UnixStreamSocket::_serverpath = "/tmp/unixserver_test.sock";
-const std::string    UnixStreamSocket::_clientpath = "/tmp/unixclient_test.sock";
-const int            UnixStreamSocket::_timeout = 1000;
+const std::string UnixStreamSocket::_serverpath = "/tmp/unixserver_test.sock";
+const std::string UnixStreamSocket::_clientpath = "/tmp/unixclient_test.sock";
+const int UnixStreamSocket::_timeout            = 1000;
 
 /**
  * @brief Test open method.
@@ -118,11 +119,11 @@ TEST_F (UnixStreamSocket, close)
 
     ASSERT_FALSE (unixSocket.opened ());
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.opened());
+    ASSERT_TRUE (unixSocket.opened ());
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_FALSE (unixSocket.opened());
+    ASSERT_FALSE (unixSocket.opened ());
     unixSocket.close ();
-    ASSERT_FALSE (unixSocket.opened());
+    ASSERT_FALSE (unixSocket.opened ());
 }
 
 /**
@@ -236,7 +237,7 @@ TEST_F (UnixStreamSocket, waitDisconnected)
 TEST_F (UnixStreamSocket, canRead)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.canRead (), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -255,7 +256,7 @@ TEST_F (UnixStreamSocket, canRead)
 TEST_F (UnixStreamSocket, waitReadyRead)
 {
     UnixStream::Socket unixSocket;
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_FALSE (unixSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -281,7 +282,7 @@ TEST_F (UnixStreamSocket, waitReadyRead)
 TEST_F (UnixStreamSocket, read)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.read (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -300,7 +301,7 @@ TEST_F (UnixStreamSocket, read)
 TEST_F (UnixStreamSocket, readExactly)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.readExactly (data, sizeof (data)), -1);
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -341,7 +342,7 @@ TEST_F (UnixStreamSocket, waitReadyWrite)
 TEST_F (UnixStreamSocket, write)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.write (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -359,7 +360,7 @@ TEST_F (UnixStreamSocket, write)
 TEST_F (UnixStreamSocket, writeExactly)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.writeExactly (data, sizeof (data)), -1);
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
@@ -442,7 +443,7 @@ TEST_F (UnixStreamSocket, localEndpoint)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.localEndpoint (), UnixStream::Endpoint {});
+    ASSERT_EQ (unixSocket.localEndpoint (), UnixStream::Endpoint{});
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.localEndpoint (), UnixStream::Endpoint (_clientpath)) << join::lastError.message ();
@@ -456,7 +457,7 @@ TEST_F (UnixStreamSocket, remoteEndpoint)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.remoteEndpoint (), UnixStream::Endpoint {});
+    ASSERT_EQ (unixSocket.remoteEndpoint (), UnixStream::Endpoint{});
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.remoteEndpoint (), UnixStream::Endpoint (_serverpath)) << join::lastError.message ();
@@ -488,15 +489,15 @@ TEST_F (UnixStreamSocket, connected)
 {
     UnixStream::Socket unixSocket (UnixStream::Socket::Blocking);
 
-    ASSERT_FALSE (unixSocket.connected());
+    ASSERT_FALSE (unixSocket.connected ());
     ASSERT_EQ (unixSocket.open (), 0) << join::lastError.message ();
-    ASSERT_FALSE (unixSocket.connected());
+    ASSERT_FALSE (unixSocket.connected ());
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_TRUE (unixSocket.connected());
+    ASSERT_TRUE (unixSocket.connected ());
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_FALSE (unixSocket.connected());
+    ASSERT_FALSE (unixSocket.connected ());
     unixSocket.close ();
-    ASSERT_FALSE (unixSocket.connected());
+    ASSERT_FALSE (unixSocket.connected ());
 }
 
 /**
@@ -586,7 +587,7 @@ TEST_F (UnixStreamSocket, checksum)
 {
     std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
 
-    ASSERT_EQ (UnixStream::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+    ASSERT_EQ (UnixStream::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**
@@ -598,7 +599,7 @@ TEST_F (UnixStreamSocket, lower)
 
     ASSERT_EQ (unixSocket1.open (), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket2.open (), 0) << join::lastError.message ();
-    if (unixSocket1.handle() < unixSocket2.handle())
+    if (unixSocket1.handle () < unixSocket2.handle ())
     {
         ASSERT_TRUE (unixSocket1 < unixSocket2);
     }
@@ -613,7 +614,7 @@ TEST_F (UnixStreamSocket, lower)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
