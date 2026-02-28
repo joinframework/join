@@ -61,7 +61,10 @@ Reactor::Reactor ()
 
     _deleted.reserve (_deletedReserve);
 
-    struct epoll_event ev{};
+    struct epoll_event ev
+    {
+    };
+
     ev.events   = EPOLLIN;
     ev.data.ptr = nullptr;
 
@@ -263,7 +266,10 @@ int Reactor::registerHandler (EventHandler* handler) noexcept
 {
     _deleted.erase (handler);
 
-    struct epoll_event ev{};
+    struct epoll_event ev
+    {
+    };
+
     ev.events   = EPOLLIN | EPOLLRDHUP;
     ev.data.ptr = handler;
 
