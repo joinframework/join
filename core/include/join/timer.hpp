@@ -175,10 +175,7 @@ namespace join
             _oneShot  = true;
             _ns       = std::chrono::nanoseconds::zero ();
 
-            struct itimerspec ts
-            {
-            };
-
+            struct itimerspec ts = {};
             timerfd_settime (_handle, 0, &ts, nullptr);
         }
 
@@ -188,10 +185,7 @@ namespace join
          */
         bool active () const
         {
-            struct itimerspec ts
-            {
-            };
-
+            struct itimerspec ts = {};
             timerfd_gettime (_handle, &ts);
             const bool hasValue    = (ts.it_value.tv_sec != 0 || ts.it_value.tv_nsec != 0);
             const bool hasInterval = (ts.it_interval.tv_sec != 0 || ts.it_interval.tv_nsec != 0);
@@ -204,10 +198,7 @@ namespace join
          */
         std::chrono::nanoseconds remaining () const
         {
-            struct itimerspec ts
-            {
-            };
-
+            struct itimerspec ts = {};
             timerfd_gettime (_handle, &ts);
             return std::chrono::seconds (ts.it_value.tv_sec) + std::chrono::nanoseconds (ts.it_value.tv_nsec);
         }
@@ -264,9 +255,9 @@ namespace join
          */
         static itimerspec toTimerSpec (std::chrono::nanoseconds ns, bool periodic = false) noexcept
         {
-            itimerspec ts{};
-            ts.it_value.tv_sec  = ns.count () / NS_PER_SEC;
-            ts.it_value.tv_nsec = ns.count () % NS_PER_SEC;
+            struct itimerspec ts = {};
+            ts.it_value.tv_sec   = ns.count () / NS_PER_SEC;
+            ts.it_value.tv_nsec  = ns.count () % NS_PER_SEC;
             if (periodic)
             {
                 ts.it_interval.tv_sec  = ts.it_value.tv_sec;
