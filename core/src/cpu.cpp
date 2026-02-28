@@ -234,30 +234,24 @@ void CpuTopology::detect ()
             _cores[coreIndex].threads.push_back ({static_cast<int> (cpuId), coreId, socket, numa});
         }
 
-        std::sort (_cores.begin (), _cores.end (),
-                   [] (const PhysicalCore& a, const PhysicalCore& b)
-                   {
-                       if (a.socket != b.socket)
-                       {
-                           return a.socket < b.socket;
-                       }
-                       return a.id < b.id;
-                   });
+        std::sort (_cores.begin (), _cores.end (), [] (const PhysicalCore& a, const PhysicalCore& b) {
+            if (a.socket != b.socket)
+            {
+                return a.socket < b.socket;
+            }
+            return a.id < b.id;
+        });
 
         for (auto& core : _cores)
         {
-            std::sort (core.threads.begin (), core.threads.end (),
-                       [] (const LogicalCpu& a, const LogicalCpu& b)
-                       {
-                           return a.id < b.id;
-                       });
+            std::sort (core.threads.begin (), core.threads.end (), [] (const LogicalCpu& a, const LogicalCpu& b) {
+                return a.id < b.id;
+            });
         }
 
-        std::sort (_nodes.begin (), _nodes.end (),
-                   [] (const NumaNode& a, const NumaNode& b)
-                   {
-                       return a.id < b.id;
-                   });
+        std::sort (_nodes.begin (), _nodes.end (), [] (const NumaNode& a, const NumaNode& b) {
+            return a.id < b.id;
+        });
 
         closedir (dir);
     }

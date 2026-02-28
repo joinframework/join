@@ -50,20 +50,18 @@ static std::once_flag flag;
 void join::initializeOpenSSL ()
 {
     // execute initialization only once.
-    std::call_once (flag,
-                    [] ()
-                    {
-                        // initialize the Crypto library.
-                        OPENSSL_init_crypto (0, nullptr);
+    std::call_once (flag, [] () {
+        // initialize the Crypto library.
+        OPENSSL_init_crypto (0, nullptr);
 
-                        // initialize the SSL library.
-                        OPENSSL_init_ssl (0, nullptr);
+        // initialize the SSL library.
+        OPENSSL_init_ssl (0, nullptr);
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-                        OSSL_PROVIDER_load (nullptr, "default");
+        OSSL_PROVIDER_load (nullptr, "default");
 
-                        // required for MD5, SHA1, SM3 on many systems
-                        OSSL_PROVIDER_load (nullptr, "legacy");
+        // required for MD5, SHA1, SM3 on many systems
+        OSSL_PROVIDER_load (nullptr, "legacy");
 #endif
-                    });
+    });
 }

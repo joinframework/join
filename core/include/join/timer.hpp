@@ -114,12 +114,12 @@ namespace join
          * @param callback function to call when timer expires.
          */
         template <class Rep, class Period, typename Func>
-        void setOneShot (std::chrono::duration <Rep, Period> duration, Func&& callback)
+        void setOneShot (std::chrono::duration<Rep, Period> duration, Func&& callback)
         {
-            auto ns = std::chrono::duration_cast <std::chrono::nanoseconds> (duration);
-            _callback = std::forward <Func> (callback);
-            _oneShot = true;
-            _ns = std::chrono::nanoseconds::zero ();
+            auto ns   = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
+            _callback = std::forward<Func> (callback);
+            _oneShot  = true;
+            _ns       = std::chrono::nanoseconds::zero ();
 
             auto ts = toTimerSpec (ns);
             timerfd_settime (_handle, 0, &ts, nullptr);
@@ -131,19 +131,19 @@ namespace join
          * @param callback function to call when timer expires.
          */
         template <class Clock, class Duration, typename Func>
-        void setOneShot (std::chrono::time_point <Clock, Duration> timePoint, Func&& callback)
+        void setOneShot (std::chrono::time_point<Clock, Duration> timePoint, Func&& callback)
         {
-            static_assert(
-                (std::is_same <ClockPolicy, RealTime>::value  && std::is_same <Clock, std::chrono::system_clock>::value) ||
-                (std::is_same <ClockPolicy, Monotonic>::value && std::is_same <Clock, std::chrono::steady_clock>::value),
-                "Clock type mismatch timer policy"
-            );
+            static_assert (
+                (std::is_same<ClockPolicy, RealTime>::value && std::is_same<Clock, std::chrono::system_clock>::value) ||
+                    (std::is_same<ClockPolicy, Monotonic>::value &&
+                     std::is_same<Clock, std::chrono::steady_clock>::value),
+                "Clock type mismatch timer policy");
 
             auto elapsed = timePoint.time_since_epoch ();
-            auto ns = std::chrono::duration_cast <std::chrono::nanoseconds> (elapsed);
-            _callback = std::forward <Func> (callback);
-            _oneShot = true;
-            _ns = std::chrono::nanoseconds::zero ();
+            auto ns      = std::chrono::duration_cast<std::chrono::nanoseconds> (elapsed);
+            _callback    = std::forward<Func> (callback);
+            _oneShot     = true;
+            _ns          = std::chrono::nanoseconds::zero ();
 
             auto ts = toTimerSpec (ns);
             timerfd_settime (_handle, TFD_TIMER_ABSTIME, &ts, nullptr);
@@ -155,12 +155,12 @@ namespace join
          * @param callback function to call on each timer expiration.
          */
         template <class Rep, class Period, typename Func>
-        void setInterval (std::chrono::duration <Rep, Period> duration, Func&& callback)
+        void setInterval (std::chrono::duration<Rep, Period> duration, Func&& callback)
         {
-            auto ns = std::chrono::duration_cast <std::chrono::nanoseconds> (duration);
-            _callback = std::forward <Func> (callback);
-            _oneShot = false;
-            _ns = ns;
+            auto ns   = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
+            _callback = std::forward<Func> (callback);
+            _oneShot  = false;
+            _ns       = ns;
 
             auto ts = toTimerSpec (ns, true);
             timerfd_settime (_handle, 0, &ts, nullptr);
@@ -172,10 +172,10 @@ namespace join
         void cancel ()
         {
             _callback = nullptr;
-            _oneShot = true;
-            _ns = std::chrono::nanoseconds::zero ();
+            _oneShot  = true;
+            _ns       = std::chrono::nanoseconds::zero ();
 
-            struct itimerspec ts {};
+            struct itimerspec ts{};
             timerfd_settime (_handle, 0, &ts, nullptr);
         }
 
@@ -185,9 +185,9 @@ namespace join
          */
         bool active () const
         {
-            struct itimerspec ts {};
+            struct itimerspec ts{};
             timerfd_gettime (_handle, &ts);
-            const bool hasValue = (ts.it_value.tv_sec != 0 || ts.it_value.tv_nsec != 0);
+            const bool hasValue    = (ts.it_value.tv_sec != 0 || ts.it_value.tv_nsec != 0);
             const bool hasInterval = (ts.it_interval.tv_sec != 0 || ts.it_interval.tv_nsec != 0);
             return hasValue || hasInterval;
         }
@@ -198,7 +198,7 @@ namespace join
          */
         std::chrono::nanoseconds remaining () const
         {
-            struct itimerspec ts {};
+            struct itimerspec ts{};
             timerfd_gettime (_handle, &ts);
             return std::chrono::seconds (ts.it_value.tv_sec) + std::chrono::nanoseconds (ts.it_value.tv_nsec);
         }
@@ -255,7 +255,7 @@ namespace join
          */
         static itimerspec toTimerSpec (std::chrono::nanoseconds ns, bool periodic = false) noexcept
         {
-            itimerspec ts {};
+            itimerspec ts{};
             ts.it_value.tv_sec  = ns.count () / NS_PER_SEC;
             ts.it_value.tv_nsec = ns.count () % NS_PER_SEC;
             if (periodic)
@@ -283,10 +283,10 @@ namespace join
         ClockPolicy _policy;
 
         /// callback function
-        std::function <void ()> _callback;
+        std::function<void ()> _callback;
 
         /// interval.
-        std::chrono::nanoseconds _ns {};
+        std::chrono::nanoseconds _ns{};
 
         /// timer type
         bool _oneShot = true;
@@ -304,7 +304,7 @@ namespace join
     class RealTime
     {
     public:
-        using Timer = BasicTimer <RealTime>;
+        using Timer = BasicTimer<RealTime>;
 
         /**
          * @brief construct the timer policy instance by default.
@@ -327,7 +327,7 @@ namespace join
     class Monotonic
     {
     public:
-        using Timer = BasicTimer <Monotonic>;
+        using Timer = BasicTimer<Monotonic>;
 
         /**
          * @brief construct the timer policy instance by default.

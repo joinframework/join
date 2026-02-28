@@ -290,11 +290,9 @@ namespace join
                 break;
             }
 
-            auto auth = std::find_if (replies.begin (), replies.end (),
-                                      [] (auto const& r)
-                                      {
-                                          return r.find ("AUTH") != std::string::npos;
-                                      });
+            auto auth = std::find_if (replies.begin (), replies.end (), [] (auto const& r) {
+                return r.find ("AUTH") != std::string::npos;
+            });
             if (auth != replies.end ())
             {
                 if (auth->find ("LOGIN") != std::string::npos)

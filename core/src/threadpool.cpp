@@ -34,11 +34,9 @@ using join::ThreadPool;
 // =========================================================================
 WorkerThread::WorkerThread (ThreadPool& pool)
 : _pool (std::addressof (pool))
-, _thread (
-      [this]
-      {
-          work ();
-      })
+, _thread ([this] {
+    work ();
+})
 {
 }
 
@@ -62,11 +60,9 @@ void WorkerThread::work ()
         std::function<void ()> func;
         {
             ScopedLock<Mutex> lock (_pool->_mutex);
-            _pool->_condition.wait (lock,
-                                    [&] ()
-                                    {
-                                        return _pool->_stop.load (std::memory_order_relaxed) || !_pool->_jobs.empty ();
-                                    });
+            _pool->_condition.wait (lock, [&] () {
+                return _pool->_stop.load (std::memory_order_relaxed) || !_pool->_jobs.empty ();
+            });
             if (_pool->_stop.load (std::memory_order_relaxed) && _pool->_jobs.empty ())
             {
                 return;

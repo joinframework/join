@@ -512,11 +512,9 @@ ReactorThread& ReactorThread::instance ()
 // =========================================================================
 ReactorThread::ReactorThread ()
 {
-    _dispatcher = Thread (
-        [this] ()
-        {
-            _reactor.run ();
-        });
+    _dispatcher = Thread ([this] () {
+        _reactor.run ();
+    });
 }
 
 // =========================================================================
