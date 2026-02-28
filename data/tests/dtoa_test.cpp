@@ -33,16 +33,26 @@
  */
 TEST (dtoa, digitsCount)
 {
-    EXPECT_EQ (join::details::digitsCount (1), 1);
-    EXPECT_EQ (join::details::digitsCount (11), 2);
-    EXPECT_EQ (join::details::digitsCount (111), 3);
-    EXPECT_EQ (join::details::digitsCount (1111), 4);
-    EXPECT_EQ (join::details::digitsCount (11111), 5);
-    EXPECT_EQ (join::details::digitsCount (111111), 6);
-    EXPECT_EQ (join::details::digitsCount (1111111), 7);
-    EXPECT_EQ (join::details::digitsCount (11111111), 8);
-    EXPECT_EQ (join::details::digitsCount (111111111), 9);
-    EXPECT_EQ (join::details::digitsCount (1111111111), 10);
+    EXPECT_EQ (join::details::digitsCount (0), 1);
+    EXPECT_EQ (join::details::digitsCount (9), 1);
+    EXPECT_EQ (join::details::digitsCount (10), 2);
+    EXPECT_EQ (join::details::digitsCount (99), 2);
+    EXPECT_EQ (join::details::digitsCount (100), 3);
+    EXPECT_EQ (join::details::digitsCount (999), 3);
+    EXPECT_EQ (join::details::digitsCount (1000), 4);
+    EXPECT_EQ (join::details::digitsCount (9999), 4);
+    EXPECT_EQ (join::details::digitsCount (10000), 5);
+    EXPECT_EQ (join::details::digitsCount (99999), 5);
+    EXPECT_EQ (join::details::digitsCount (100000), 6);
+    EXPECT_EQ (join::details::digitsCount (999999), 6);
+    EXPECT_EQ (join::details::digitsCount (1000000), 7);
+    EXPECT_EQ (join::details::digitsCount (9999999), 7);
+    EXPECT_EQ (join::details::digitsCount (10000000), 8);
+    EXPECT_EQ (join::details::digitsCount (99999999), 8);
+    EXPECT_EQ (join::details::digitsCount (100000000), 9);
+    EXPECT_EQ (join::details::digitsCount (999999999), 9);
+    EXPECT_EQ (join::details::digitsCount (1000000000), 10);
+    EXPECT_EQ (join::details::digitsCount (UINT32_MAX), 10);
 }
 
 /**
