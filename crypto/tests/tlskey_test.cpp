@@ -85,15 +85,17 @@ const std::string TlsKeyTest::ecPriKeyPath = "/tmp/eckey.pem";
 const std::string TlsKeyTest::ecPubKeyPath = "/tmp/ec.pub";
 
 /// keys.
-const std::string TlsKeyTest::ecPriKey = "-----BEGIN EC PRIVATE KEY-----\n"
-                                         "MHcCAQEEINr5bOw4vbLCnIAGREN73D+Ne/hn75zgoH/Cv1wxUlQboAoGCCqGSM49\n"
-                                         "AwEHoUQDQgAEO1le+TMvvryHdQVr72RgVwBLkfT4fhMekHFp+3JUqCaod0it/h/j\n"
-                                         "OPZPc69Xj/kLNG816GoqxpEZC+u4qrbFNg==\n"
-                                         "-----END EC PRIVATE KEY-----\n";
-const std::string TlsKeyTest::ecPubKey = "-----BEGIN PUBLIC KEY-----\n"
-                                         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEO1le+TMvvryHdQVr72RgVwBLkfT4\n"
-                                         "fhMekHFp+3JUqCaod0it/h/jOPZPc69Xj/kLNG816GoqxpEZC+u4qrbFNg==\n"
-                                         "-----END PUBLIC KEY-----\n";
+const std::string TlsKeyTest::ecPriKey =
+    "-----BEGIN EC PRIVATE KEY-----\n"
+    "MHcCAQEEINr5bOw4vbLCnIAGREN73D+Ne/hn75zgoH/Cv1wxUlQboAoGCCqGSM49\n"
+    "AwEHoUQDQgAEO1le+TMvvryHdQVr72RgVwBLkfT4fhMekHFp+3JUqCaod0it/h/j\n"
+    "OPZPc69Xj/kLNG816GoqxpEZC+u4qrbFNg==\n"
+    "-----END EC PRIVATE KEY-----\n";
+const std::string TlsKeyTest::ecPubKey =
+    "-----BEGIN PUBLIC KEY-----\n"
+    "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEO1le+TMvvryHdQVr72RgVwBLkfT4\n"
+    "fhMekHFp+3JUqCaod0it/h/jOPZPc69Xj/kLNG816GoqxpEZC+u4qrbFNg==\n"
+    "-----END PUBLIC KEY-----\n";
 
 /**
  * @brief Test bool operator.
@@ -135,7 +137,7 @@ TEST_F (TlsKeyTest, length)
 TEST_F (TlsKeyTest, swap)
 {
     ASSERT_EQ (TlsKey ().type (), TlsKey::Private);
-    
+
     TlsKey key1 (ecPriKeyPath, TlsKey::Private), key2 (ecPubKeyPath, TlsKey::Public);
     ASSERT_EQ (key1.type (), TlsKey::Private);
     ASSERT_EQ (key2.type (), TlsKey::Public);
@@ -174,7 +176,7 @@ TEST_F (TlsKeyTest, clear)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);

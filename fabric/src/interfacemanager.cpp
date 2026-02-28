@@ -139,13 +139,10 @@ void InterfaceManager::addLinkListener (const LinkNotify& cb)
 void InterfaceManager::removeLinkListener (const LinkNotify& cb)
 {
     ScopedLock<Mutex> lock (_linkMutex);
-    auto it =
-        std::remove_if (_linkListeners.begin (), _linkListeners.end (),
-                        [&] (const LinkNotify& existing)
-                        {
-                            return existing.target_type () == cb.target_type () &&
-                                   existing.target<void (const LinkInfo&)> () == cb.target<void (const LinkInfo&)> ();
-                        });
+    auto it = std::remove_if (_linkListeners.begin (), _linkListeners.end (), [&] (const LinkNotify& existing) {
+        return existing.target_type () == cb.target_type () &&
+               existing.target<void (const LinkInfo&)> () == cb.target<void (const LinkInfo&)> ();
+    });
     _linkListeners.erase (it, _linkListeners.end ());
 }
 
@@ -166,13 +163,11 @@ void InterfaceManager::addAddressListener (const AddressNotify& cb)
 void InterfaceManager::removeAddressListener (const AddressNotify& cb)
 {
     ScopedLock<Mutex> lock (_addressMutex);
-    auto it = std::remove_if (_addressListeners.begin (), _addressListeners.end (),
-                              [&] (const AddressNotify& existing)
-                              {
-                                  return existing.target_type () == cb.target_type () &&
-                                         existing.target<void (const AddressInfo&)> () ==
-                                             cb.target<void (const AddressInfo&)> ();
-                              });
+    auto it =
+        std::remove_if (_addressListeners.begin (), _addressListeners.end (), [&] (const AddressNotify& existing) {
+            return existing.target_type () == cb.target_type () &&
+                   existing.target<void (const AddressInfo&)> () == cb.target<void (const AddressInfo&)> ();
+        });
     _addressListeners.erase (it, _addressListeners.end ());
 }
 
@@ -193,13 +188,10 @@ void InterfaceManager::addRouteListener (const RouteNotify& cb)
 void InterfaceManager::removeRouteListener (const RouteNotify& cb)
 {
     ScopedLock<Mutex> lock (_routeMutex);
-    auto it =
-        std::remove_if (_routeListeners.begin (), _routeListeners.end (),
-                        [&] (const RouteNotify& existing)
-                        {
-                            return existing.target_type () == cb.target_type () &&
-                                   existing.target<void (const RouteInfo&)> () == cb.target<void (const RouteInfo&)> ();
-                        });
+    auto it = std::remove_if (_routeListeners.begin (), _routeListeners.end (), [&] (const RouteNotify& existing) {
+        return existing.target_type () == cb.target_type () &&
+               existing.target<void (const RouteInfo&)> () == cb.target<void (const RouteInfo&)> ();
+    });
     _routeListeners.erase (it, _routeListeners.end ());
 }
 
@@ -1234,11 +1226,10 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
 
     if (nlh->nlmsg_type == RTM_NEWADDR)
     {
-        auto it = std::find_if (iface->_addresses.begin (), iface->_addresses.end (),
-                                [&] (const Interface::Address& a)
-                                {
-                                    return std::get<0> (a) == std::get<0> (info.address);
-                                });
+        auto it =
+            std::find_if (iface->_addresses.begin (), iface->_addresses.end (), [&] (const Interface::Address& a) {
+                return std::get<0> (a) == std::get<0> (info.address);
+            });
 
         if (it != iface->_addresses.end ())
         {
@@ -1254,11 +1245,10 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
     }
     else
     {
-        auto it = std::remove_if (iface->_addresses.begin (), iface->_addresses.end (),
-                                  [&] (const Interface::Address& a)
-                                  {
-                                      return std::get<0> (a) == std::get<0> (info.address);
-                                  });
+        auto it =
+            std::remove_if (iface->_addresses.begin (), iface->_addresses.end (), [&] (const Interface::Address& a) {
+                return std::get<0> (a) == std::get<0> (info.address);
+            });
 
         iface->_addresses.erase (it, iface->_addresses.end ());
         info.flags |= ChangeType::Deleted;
@@ -1322,13 +1312,10 @@ void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
 
     if (nlh->nlmsg_type == RTM_NEWROUTE)
     {
-        auto it = std::find_if (iface->_routes.begin (), iface->_routes.end (),
-                                [&] (const Interface::Route& r)
-                                {
-                                    return std::get<0> (r) == std::get<0> (info.route) &&
-                                           std::get<1> (r) == std::get<1> (info.route) &&
-                                           std::get<2> (r) == std::get<2> (info.route);
-                                });
+        auto it = std::find_if (iface->_routes.begin (), iface->_routes.end (), [&] (const Interface::Route& r) {
+            return std::get<0> (r) == std::get<0> (info.route) && std::get<1> (r) == std::get<1> (info.route) &&
+                   std::get<2> (r) == std::get<2> (info.route);
+        });
 
         if (it != iface->_routes.end ())
         {
@@ -1343,13 +1330,10 @@ void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
     }
     else
     {
-        auto it = std::remove_if (iface->_routes.begin (), iface->_routes.end (),
-                                  [&] (const Interface::Route& r)
-                                  {
-                                      return std::get<0> (r) == std::get<0> (info.route) &&
-                                             std::get<1> (r) == std::get<1> (info.route) &&
-                                             std::get<2> (r) == std::get<2> (info.route);
-                                  });
+        auto it = std::remove_if (iface->_routes.begin (), iface->_routes.end (), [&] (const Interface::Route& r) {
+            return std::get<0> (r) == std::get<0> (info.route) && std::get<1> (r) == std::get<1> (info.route) &&
+                   std::get<2> (r) == std::get<2> (info.route);
+        });
 
         iface->_routes.erase (it, iface->_routes.end ());
         info.flags |= ChangeType::Deleted;

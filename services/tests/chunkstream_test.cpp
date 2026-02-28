@@ -36,18 +36,21 @@ using join::Chunkstream;
 const std::streamsize chuncksize = 24;
 
 /// sample text.
-const std::string decoded = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
-                            "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. "
-                            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
-                            "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+const std::string decoded =
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore "
+    "magna aliqua. "
+    "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. "
+    "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
+    "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
-const std::string encoded = "18\r\nLorem ipsum dolor sit am\r\n18\r\net, consectetur adipisci\r\n18\r\nng elit, sed do eiusmod \r\n"
-                            "18\r\ntempor incididunt ut lab\r\n18\r\nore et dolore magna aliq\r\n18\r\nua. Ut enim ad minim ven\r\n"
-                            "18\r\niam, quis nostrud exerci\r\n18\r\ntation ullamco laboris n\r\n18\r\nisi ut aliquip ex ea com\r\n"
-                            "18\r\nmodo consequat. Duis aut\r\n18\r\ne irure dolor in reprehe\r\n18\r\nnderit in voluptate veli\r\n"
-                            "18\r\nt esse cillum dolore eu \r\n18\r\nfugiat nulla pariatur. E\r\n18\r\nxcepteur sint occaecat c\r\n"
-                            "18\r\nupidatat non proident, s\r\n18\r\nunt in culpa qui officia\r\n18\r\n deserunt mollit anim id\r\n"
-                            "d\r\n est laborum.\r\n0\r\n\r\n";
+const std::string encoded =
+    "18\r\nLorem ipsum dolor sit am\r\n18\r\net, consectetur adipisci\r\n18\r\nng elit, sed do eiusmod \r\n"
+    "18\r\ntempor incididunt ut lab\r\n18\r\nore et dolore magna aliq\r\n18\r\nua. Ut enim ad minim ven\r\n"
+    "18\r\niam, quis nostrud exerci\r\n18\r\ntation ullamco laboris n\r\n18\r\nisi ut aliquip ex ea com\r\n"
+    "18\r\nmodo consequat. Duis aut\r\n18\r\ne irure dolor in reprehe\r\n18\r\nnderit in voluptate veli\r\n"
+    "18\r\nt esse cillum dolore eu \r\n18\r\nfugiat nulla pariatur. E\r\n18\r\nxcepteur sint occaecat c\r\n"
+    "18\r\nupidatat non proident, s\r\n18\r\nunt in culpa qui officia\r\n18\r\n deserunt mollit anim id\r\n"
+    "d\r\n est laborum.\r\n0\r\n\r\n";
 
 /**
  * @brief Test encode.
@@ -154,7 +157,7 @@ TEST (Chunkstream, decode)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

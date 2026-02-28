@@ -49,10 +49,10 @@ namespace join
      */
     enum HttpContentType
     {
-        Root,           /**< Content appended to root directory. */
-        Alias,          /**< Content replaced by alias. */
-        Exec,           /**< Executable content. */
-        Redirect,       /**< Redirection. */
+        Root,     /**< Content appended to root directory. */
+        Alias,    /**< Content replaced by alias. */
+        Exec,     /**< Executable content. */
+        Redirect, /**< Redirection. */
     };
 
     /**
@@ -61,16 +61,16 @@ namespace join
     template <class Protocol>
     struct BasicHttpContent
     {
-        using Handler = std::function <void (typename Protocol::Worker*)>;
-        using Access  = std::function <bool (const std::string&, const std::string&, std::error_code&)>;
+        using Handler = std::function<void (typename Protocol::Worker*)>;
+        using Access  = std::function<bool (const std::string&, const std::string&, std::error_code&)>;
 
-        HttpMethod      methods;        /**< allowed methods. */
-        HttpContentType type;           /**< content type (root, alias etc...). */
-        std::string     directory;      /**< requested resource directory. */
-        std::string     name;           /**< requested resource file name. */
-        std::string     alias;          /**< mapped file system path. */
-        Handler         handler;        /**< mapped content handler. */
-        Access          access;         /**< access handler. */
+        HttpMethod methods;    /**< allowed methods. */
+        HttpContentType type;  /**< content type (root, alias etc...). */
+        std::string directory; /**< requested resource directory. */
+        std::string name;      /**< requested resource file name. */
+        std::string alias;     /**< mapped file system path. */
+        Handler handler;       /**< mapped content handler. */
+        Access access;         /**< access handler. */
     };
 
     /**
@@ -80,16 +80,18 @@ namespace join
     class BasicHttpWorker : public Protocol::Stream
     {
     public:
-        using Content = BasicHttpContent <Protocol>;
-        using Server  = BasicHttpServer <Protocol>;
+        using Content = BasicHttpContent<Protocol>;
+        using Server  = BasicHttpServer<Protocol>;
 
         /**
          * @brief create the worker instance.
          * @param server Server instance.
          */
         BasicHttpWorker (Server* server)
-        : _server (server),
-          _thread ([this] () {work ();})
+        : _server (server)
+        , _thread ([this] () {
+            work ();
+        })
         {
         }
 
@@ -152,7 +154,8 @@ namespace join
                 if (this->_max && compareNoCase (this->_request.header ("Connection"), "keep-alive"))
                 {
                     std::stringstream keepAlive;
-                    keepAlive << "timeout=" << this->_server->keepAliveTimeout ().count () << ", max=" << this->_server->keepAliveMax ();
+                    keepAlive << "timeout=" << this->_server->keepAliveTimeout ().count ()
+                              << ", max=" << this->_server->keepAliveMax ();
                     this->_response.header ("Keep-Alive", keepAlive.str ());
                     this->_response.header ("Connection", "Keep-Alive");
                 }
@@ -168,7 +171,9 @@ namespace join
             }
             if (!this->_response.hasHeader ("Content-Security-Policy"))
             {
-                this->_response.header ("Content-Security-Policy", "default-src 'self'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'");
+                this->_response.header (
+                    "Content-Security-Policy",
+                    "default-src 'self'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'");
             }
             if (!this->_response.hasHeader ("X-XSS-Protection"))
             {
@@ -307,7 +312,7 @@ namespace join
             if (this->_request.method () == HttpMethod::Get)
             {
                 // send file.
-                this->write (static_cast <char *> (addr), sbuf.st_size);
+                this->write (static_cast<char*> (addr), sbuf.st_size);
             }
 
             // flush data.
@@ -371,15 +376,15 @@ namespace join
             for (;;)
             {
                 {
-                    ScopedLock <Mutex> lock (this->_server->_mutex);
+                    ScopedLock<Mutex> lock (this->_server->_mutex);
 
                     fd_set fdset = setfd;
-                    int nset = ::select (fdmax + 1, &fdset, nullptr, nullptr, nullptr);
+                    int nset     = ::select (fdmax + 1, &fdset, nullptr, nullptr, nullptr);
                     if (nset > 0)
                     {
                         if (FD_ISSET (this->_server->_event, &fdset))
                         {
-                            uint64_t val = 0;
+                            uint64_t val                   = 0;
                             [[maybe_unused]] ssize_t bytes = ::read (this->_server->_event, &val, sizeof (uint64_t));
                             return;
                         }
@@ -413,8 +418,7 @@ namespace join
 
                 this->writeResponse ();
                 this->cleanUp ();
-            }
-            while ((this->_max < 0) || (--this->_max != 0));
+            } while ((this->_max < 0) || (--this->_max != 0));
 
             this->endRequest ();
         }
@@ -568,24 +572,24 @@ namespace join
          * @brief set stream encoding.
          * @param encodings encodings applied to the stream.
          */
-        void setEncoding (const std::vector <std::string>& encodings)
+        void setEncoding (const std::vector<std::string>& encodings)
         {
             for (auto const& encoding : encodings)
             {
                 if (encoding.find ("gzip") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Gzip, this->_wrapped);
-                    this->_wrapped = true;
+                    this->_wrapped   = true;
                 }
                 else if (encoding.find ("deflate") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Deflate, this->_wrapped);
-                    this->_wrapped = true;
+                    this->_wrapped   = true;
                 }
                 else if (encoding.find ("chunked") != std::string::npos)
                 {
                     this->_streambuf = new Chunkstreambuf (this->_streambuf, this->_wrapped);
-                    this->_wrapped = true;
+                    this->_wrapped   = true;
                 }
             }
 
@@ -604,7 +608,7 @@ namespace join
             }
 
             this->_streambuf = &this->_sockbuf;
-            this->_wrapped = false;
+            this->_wrapped   = false;
 
             this->set_rdbuf (this->_streambuf);
         }
@@ -634,12 +638,12 @@ namespace join
     /**
      * @brief basic HTTP server.
      */
-    template <class Protocol> 
+    template <class Protocol>
     class BasicHttpServer
     {
     public:
-        using Worker   = BasicHttpWorker <Protocol>;
-        using Content  = BasicHttpContent <Protocol>;
+        using Worker   = BasicHttpWorker<Protocol>;
+        using Content  = BasicHttpContent<Protocol>;
         using Handler  = typename Content::Handler;
         using Access   = typename Content::Access;
         using Endpoint = typename Protocol::Endpoint;
@@ -651,10 +655,10 @@ namespace join
          * @param workers number of worker threads.
          */
         BasicHttpServer (size_t workers = std::thread::hardware_concurrency ())
-        : _event (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE)),
-          _nworkers (workers),
-          _baseLocation ("/var/www"),
-          _keepTimeout (10)
+        : _event (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE))
+        , _nworkers (workers)
+        , _baseLocation ("/var/www")
+        , _keepTimeout (10)
         {
             [[maybe_unused]] int res = chdir (this->_baseLocation.c_str ());
         }
@@ -720,7 +724,7 @@ namespace join
          */
         void close () noexcept
         {
-            uint64_t val = this->_nworkers;
+            uint64_t val                   = this->_nworkers;
             [[maybe_unused]] ssize_t bytes = ::write (this->_event, &val, sizeof (uint64_t));
             this->_workers.clear ();
             this->_acceptor.close ();
@@ -768,7 +772,7 @@ namespace join
         void keepAlive (std::chrono::seconds timeout, int max = 1000)
         {
             this->_keepTimeout = timeout;
-            this->_keepMax = max;
+            this->_keepMax     = max;
         }
 
         /**
@@ -830,7 +834,8 @@ namespace join
          * @param access access handler.
          * @return a pointer to the content on success, nullptr on failure.
          */
-        Content* addAlias (const std::string& dir, const std::string& name, const std::string& alias, const Access& access = nullptr)
+        Content* addAlias (const std::string& dir, const std::string& name, const std::string& alias,
+                           const Access& access = nullptr)
         {
             Content* newEntry = new Content;
             if (newEntry != nullptr)
@@ -857,7 +862,8 @@ namespace join
          * @param access access handler.
          * @return a pointer to the content on success, nullptr on failure.
          */
-        Content* addExecute (const HttpMethod methods, const std::string& dir, const std::string& name, const Handler& handler, const Access& access = nullptr)
+        Content* addExecute (const HttpMethod methods, const std::string& dir, const std::string& name,
+                             const Handler& handler, const Access& access = nullptr)
         {
             Content* newEntry = new Content;
             if (newEntry != nullptr)
@@ -882,7 +888,8 @@ namespace join
          * @param access access handler.
          * @return a pointer to the content on success, nullptr on failure.
          */
-        Content* addRedirect (const std::string& dir, const std::string& name, const std::string& location, const Access& access = nullptr)
+        Content* addRedirect (const std::string& dir, const std::string& name, const std::string& location,
+                              const Access& access = nullptr)
         {
             Content* newEntry = new Content;
             if (newEntry != nullptr)
@@ -939,13 +946,13 @@ namespace join
         size_t _nworkers;
 
         /// workers.
-        std::vector <std::unique_ptr <Worker>> _workers;
+        std::vector<std::unique_ptr<Worker>> _workers;
 
         /// accept protection mutex.
         Mutex _mutex;
 
         /// contents.
-        std::vector <std::unique_ptr <Content>> _contents;
+        std::vector<std::unique_ptr<Content>> _contents;
 
         /// base location.
         std::string _baseLocation;
@@ -966,12 +973,12 @@ namespace join
     /**
      * @brief basic HTTPS server.
      */
-    template <class Protocol> 
-    class BasicHttpSecureServer : public BasicHttpServer <Protocol>
+    template <class Protocol>
+    class BasicHttpSecureServer : public BasicHttpServer<Protocol>
     {
     public:
-        using Worker   = BasicHttpWorker <Protocol>;
-        using Content  = BasicHttpContent <Protocol>;
+        using Worker   = BasicHttpWorker<Protocol>;
+        using Content  = BasicHttpContent<Protocol>;
         using Handler  = typename Content::Handler;
         using Access   = typename Content::Access;
         using Endpoint = typename Protocol::Endpoint;
@@ -983,7 +990,7 @@ namespace join
          * @param workers number of worker threads.
          */
         BasicHttpSecureServer (size_t workers = std::thread::hardware_concurrency ())
-        : BasicHttpServer <Protocol> (workers)
+        : BasicHttpServer<Protocol> (workers)
         {
         }
 
@@ -1073,7 +1080,7 @@ namespace join
          * @param cipher the cipher list.
          * @return 0 on success, -1 on failure.
          */
-        int setCipher_1_3 (const std::string &cipher)
+        int setCipher_1_3 (const std::string& cipher)
         {
             return this->_acceptor.setCipher_1_3 (cipher);
         }
@@ -1084,7 +1091,7 @@ namespace join
          * @param curves curve list.
          * @return 0 on success, -1 on failure.
          */
-        int setCurve (const std::string &curves)
+        int setCurve (const std::string& curves)
         {
             return this->_acceptor.setCurve (curves);
         }

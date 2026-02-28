@@ -368,21 +368,15 @@ const std::string& MailMessage::content () const
 int MailMessage::writeHeaders (std::ostream& out) const
 {
     MailRecipients to, cc, bcc;
-    std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (to),
-                  [] (auto const& t)
-                  {
-                      return t.type () == MailRecipient::Recipient;
-                  });
-    std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (cc),
-                  [] (auto const& t)
-                  {
-                      return t.type () == MailRecipient::CCRecipient;
-                  });
-    std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (bcc),
-                  [] (auto const& t)
-                  {
-                      return t.type () == MailRecipient::BCCRecipient;
-                  });
+    std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (to), [] (auto const& t) {
+        return t.type () == MailRecipient::Recipient;
+    });
+    std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (cc), [] (auto const& t) {
+        return t.type () == MailRecipient::CCRecipient;
+    });
+    std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (bcc), [] (auto const& t) {
+        return t.type () == MailRecipient::BCCRecipient;
+    });
 
     // write date.
     out << "Date: ";

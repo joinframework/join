@@ -21,10 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
- 
+
 // libjoin.
 #include <join/view.hpp>
- 
+
 // libraries.
 #include <gtest/gtest.h>
 
@@ -41,13 +41,13 @@ TEST (StringView, create)
     char msg[] = "hello world";
 
     StringView view1 (msg);
-    ASSERT_NE (view1.peek (), std::char_traits <char>::eof ());
+    ASSERT_NE (view1.peek (), std::char_traits<char>::eof ());
 
     StringView view2 (msg, strlen (msg));
-    ASSERT_NE (view2.peek (), std::char_traits <char>::eof ());
+    ASSERT_NE (view2.peek (), std::char_traits<char>::eof ());
 
     StringView view3 (msg, msg + strlen (msg));
-    ASSERT_NE (view3.peek (), std::char_traits <char>::eof ());
+    ASSERT_NE (view3.peek (), std::char_traits<char>::eof ());
 }
 
 /**
@@ -79,7 +79,7 @@ TEST (StringView, peek)
     ASSERT_EQ (view.get (), 'l');
     ASSERT_EQ (view.peek (), 'd');
     ASSERT_EQ (view.get (), 'd');
-    ASSERT_EQ (view.peek (), std::char_traits <char>::eof ());
+    ASSERT_EQ (view.peek (), std::char_traits<char>::eof ());
 }
 
 /**
@@ -100,7 +100,7 @@ TEST (StringView, get)
     ASSERT_EQ (view.get (), 'r');
     ASSERT_EQ (view.get (), 'l');
     ASSERT_EQ (view.get (), 'd');
-    ASSERT_EQ (view.get (), std::char_traits <char>::eof ());
+    ASSERT_EQ (view.get (), std::char_traits<char>::eof ());
 }
 
 /**
@@ -113,9 +113,9 @@ TEST (StringView, getIf)
     ASSERT_FALSE (view.getIf ('X'));
     ASSERT_FALSE (view.getIf ('x'));
     ASSERT_FALSE (view.getIf ('H'));
-    ASSERT_TRUE  (view.getIf ('h'));
+    ASSERT_TRUE (view.getIf ('h'));
     ASSERT_FALSE (view.getIf ('E'));
-    ASSERT_TRUE  (view.getIf ('e'));
+    ASSERT_TRUE (view.getIf ('e'));
 }
 
 /**
@@ -127,10 +127,10 @@ TEST (StringView, getIfNoCase)
 
     ASSERT_FALSE (view.getIfNoCase ('x'));
     ASSERT_FALSE (view.getIfNoCase ('X'));
-    ASSERT_TRUE  (view.getIfNoCase ('h'));
-    ASSERT_TRUE  (view.getIfNoCase ('E'));
-    ASSERT_TRUE  (view.getIfNoCase ('l'));
-    ASSERT_TRUE  (view.getIfNoCase ('L'));
+    ASSERT_TRUE (view.getIfNoCase ('h'));
+    ASSERT_TRUE (view.getIfNoCase ('E'));
+    ASSERT_TRUE (view.getIfNoCase ('l'));
+    ASSERT_TRUE (view.getIfNoCase ('L'));
 }
 
 /**
@@ -185,11 +185,11 @@ TEST (StringView, skipWhitespacesAndComments)
 
     view = "// comment";
     ASSERT_EQ (view.skipWhitespacesAndComments (), 0);
-    ASSERT_EQ (view.peek (), std::char_traits <char>::eof ());
+    ASSERT_EQ (view.peek (), std::char_traits<char>::eof ());
 
     view = "/* comment */";
     ASSERT_EQ (view.skipWhitespacesAndComments (), 0);
-    ASSERT_EQ (view.peek (), std::char_traits <char>::eof ());
+    ASSERT_EQ (view.peek (), std::char_traits<char>::eof ());
 
     view = "/";
     ASSERT_EQ (view.skipWhitespacesAndComments (), -1);
@@ -249,13 +249,13 @@ TEST (StringView, seek)
     ASSERT_EQ (view.get (), 'e');
     ASSERT_EQ (view.get (), 'l');
     view.seek (view.tell () + 10000);
-    ASSERT_EQ (view.get (), std::char_traits <char>::eof ());
+    ASSERT_EQ (view.get (), std::char_traits<char>::eof ());
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

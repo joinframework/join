@@ -45,9 +45,11 @@ TEST (DigestCategory, name)
 TEST (DigestCategory, message)
 {
     EXPECT_STREQ (DigestCategory ().message (0).c_str (), "success");
-    EXPECT_STREQ (DigestCategory ().message (static_cast <int> (DigestErrc::InvalidAlgorithm)).c_str (), "invalid algorithm");
-    EXPECT_STREQ (DigestCategory ().message (static_cast <int> (DigestErrc::InvalidKey)).c_str (), "invalid key");
-    EXPECT_STREQ (DigestCategory ().message (static_cast <int> (DigestErrc::InvalidSignature)).c_str (), "invalid signature");
+    EXPECT_STREQ (DigestCategory ().message (static_cast<int> (DigestErrc::InvalidAlgorithm)).c_str (),
+                  "invalid algorithm");
+    EXPECT_STREQ (DigestCategory ().message (static_cast<int> (DigestErrc::InvalidKey)).c_str (), "invalid key");
+    EXPECT_STREQ (DigestCategory ().message (static_cast<int> (DigestErrc::InvalidSignature)).c_str (),
+                  "invalid signature");
 }
 
 /**
@@ -55,10 +57,10 @@ TEST (DigestCategory, message)
  */
 TEST (DigestCategory, default_error_condition)
 {
-    EXPECT_EQ (DigestCategory ().default_error_condition (0).message(), "success");
-    EXPECT_EQ (DigestCategory ().default_error_condition (1).message(), "invalid algorithm");
-    EXPECT_EQ (DigestCategory ().default_error_condition (2).message(), "invalid key");
-    EXPECT_EQ (DigestCategory ().default_error_condition (3).message(), "invalid signature");
+    EXPECT_EQ (DigestCategory ().default_error_condition (0).message (), "success");
+    EXPECT_EQ (DigestCategory ().default_error_condition (1).message (), "invalid algorithm");
+    EXPECT_EQ (DigestCategory ().default_error_condition (2).message (), "invalid key");
+    EXPECT_EQ (DigestCategory ().default_error_condition (3).message (), "invalid signature");
 }
 
 /**
@@ -140,7 +142,7 @@ TEST (DigestCategory, make_error_condition)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);

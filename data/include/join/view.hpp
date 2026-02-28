@@ -41,25 +41,30 @@ namespace join
 {
     namespace details
     {
-        struct alignas(64) EscapedTable
+        struct alignas (64) EscapedTable
         {
             uint8_t data[256];
 
-            constexpr EscapedTable () : data {}
+            constexpr EscapedTable ()
+            : data{}
             {
-                for (unsigned i = 0; i < 0x20; ++i) { data[i] = 1; }
+                for (unsigned i = 0; i < 0x20; ++i)
+                {
+                    data[i] = 1;
+                }
                 data['"']  = 1;
                 data['\\'] = 1;
             }
         };
 
-        constexpr EscapedTable escapedLookup {};
+        constexpr EscapedTable escapedLookup{};
 
-        struct alignas(64) WhitespaceTable
+        struct alignas (64) WhitespaceTable
         {
             uint8_t data[256];
 
-            constexpr WhitespaceTable () : data {}
+            constexpr WhitespaceTable ()
+            : data{}
             {
                 data['\t'] = 1;
                 data['\n'] = 1;
@@ -68,7 +73,7 @@ namespace join
             }
         };
 
-        constexpr WhitespaceTable whitespaceLookup {};
+        constexpr WhitespaceTable whitespaceLookup{};
     }
 
     /**
@@ -84,7 +89,7 @@ namespace join
          * @param in input string.
          * @param count number of characters.
          */
-        constexpr StringView (const char * in, size_t count)
+        constexpr StringView (const char* in, size_t count)
         : _cur (in)
         , _beg (in)
         , _end (in ? in + count : in)
@@ -96,7 +101,7 @@ namespace join
          * @param first pointer to the first character of the string.
          * @param last pointer to the last character of the string.
          */
-        constexpr StringView (const char * first, const char * last)
+        constexpr StringView (const char* first, const char* last)
         : _cur (first)
         , _beg (first)
         , _end (last)
@@ -107,10 +112,10 @@ namespace join
          * @brief default constructor.
          * @param in input string.
          */
-        StringView (const char * in)
+        StringView (const char* in)
         : _cur (in)
         , _beg (in)
-        , _end (in ? in + std::char_traits <char>::length (in) : in)
+        , _end (in ? in + std::char_traits<char>::length (in) : in)
         {
         }
 
@@ -138,7 +143,7 @@ namespace join
          * @param other object to move.
          * @return a reference of the current object.
          */
-        StringView& operator=(StringView&& other) = default;
+        StringView& operator= (StringView&& other) = default;
 
         /**
          * @brief destroy instance.
@@ -153,9 +158,9 @@ namespace join
         {
             if (JOIN_LIKELY (_cur < _end))
             {
-                return static_cast <unsigned char> (*_cur);
+                return static_cast<unsigned char> (*_cur);
             }
-            return std::char_traits <char>::eof ();
+            return std::char_traits<char>::eof ();
         }
 
         /**
@@ -166,9 +171,9 @@ namespace join
         {
             if (JOIN_LIKELY (_cur < _end))
             {
-                return static_cast <unsigned char> (*_cur++);
+                return static_cast<unsigned char> (*_cur++);
             }
-            return std::char_traits <char>::eof ();
+            return std::char_traits<char>::eof ();
         }
 
         /**
@@ -214,7 +219,7 @@ namespace join
         inline size_t read (char* buf, size_t count) noexcept
         {
             const size_t available = _end - _cur;
-            const size_t nread = (count < available) ? count : available;
+            const size_t nread     = (count < available) ? count : available;
             std::memcpy (buf, _cur, nread);
             _cur += nread;
             return nread;
@@ -230,12 +235,12 @@ namespace join
             const char* cur = _cur;
             const char* end = _end;
 
-            while (cur < end && !details::escapedLookup.data[static_cast <unsigned char> (*cur)])
+            while (cur < end && !details::escapedLookup.data[static_cast<unsigned char> (*cur)])
             {
                 ++cur;
             }
 
-            out.append (beg, static_cast <size_t> (cur - beg));
+            out.append (beg, static_cast<size_t> (cur - beg));
             _cur = cur;
         }
 
@@ -248,7 +253,7 @@ namespace join
             const char* cur = _cur;
             const char* end = _end;
 
-            while (cur < end && details::whitespaceLookup.data[static_cast <unsigned char> (*cur)])
+            while (cur < end && details::whitespaceLookup.data[static_cast<unsigned char> (*cur)])
             {
                 ++cur;
             }
@@ -269,7 +274,7 @@ namespace join
 
             while (cur < end)
             {
-                while (cur < end && details::whitespaceLookup.data[static_cast <unsigned char> (*cur)])
+                while (cur < end && details::whitespaceLookup.data[static_cast<unsigned char> (*cur)])
                 {
                     ++cur;
                 }
@@ -306,8 +311,8 @@ namespace join
                 else if (*cur == '/')
                 {
                     ++cur;
-                    const char* p = static_cast <const char*> (memchr (cur, '\n', end - cur));
-                    cur = p ? p : end;
+                    const char* p = static_cast<const char*> (memchr (cur, '\n', end - cur));
+                    cur           = p ? p : end;
                 }
                 else
                 {
@@ -351,13 +356,13 @@ namespace join
 
     private:
         /// current position.
-        const char * _cur = nullptr;
+        const char* _cur = nullptr;
 
         /// beginning position.
-        const char * _beg = nullptr;
+        const char* _beg = nullptr;
 
         /// ending position.
-        const char * _end = nullptr;
+        const char* _end = nullptr;
     };
 
     /**
@@ -402,7 +407,7 @@ namespace join
          * @param other object to move.
          * @return a reference of the current object.
          */
-        BasicStreamView& operator=(BasicStreamView&& other) = delete;
+        BasicStreamView& operator= (BasicStreamView&& other) = delete;
 
         /**
          * @brief destroy instance.
@@ -434,7 +439,7 @@ namespace join
          */
         inline bool getIf (char expected) noexcept
         {
-            if (_in->sgetc () == static_cast <int> (static_cast <unsigned char> (expected)))
+            if (_in->sgetc () == static_cast<int> (static_cast<unsigned char> (expected)))
             {
                 _in->sbumpc ();
                 return true;
@@ -450,9 +455,9 @@ namespace join
         inline bool getIfNoCase (char expected) noexcept
         {
             const int c = _in->sgetc ();
-            if (JOIN_LIKELY (c != std::char_traits <char>::eof ()))
+            if (JOIN_LIKELY (c != std::char_traits<char>::eof ()))
             {
-                if ((static_cast <char> (c) | 32) == (expected | 32))
+                if ((static_cast<char> (c) | 32) == (expected | 32))
                 {
                     _in->sbumpc ();
                     return true;
@@ -479,9 +484,10 @@ namespace join
         inline void readUntilEscaped (std::string& out) noexcept
         {
             int c;
-            while ((c = _in->sgetc ()) != std::char_traits <char>::eof () && !details::escapedLookup.data[static_cast <unsigned char> (c)])
+            while ((c = _in->sgetc ()) != std::char_traits<char>::eof () &&
+                   !details::escapedLookup.data[static_cast<unsigned char> (c)])
             {
-                out.push_back (static_cast <char> (c));
+                out.push_back (static_cast<char> (c));
                 _in->sbumpc ();
             }
         }
@@ -493,7 +499,8 @@ namespace join
         inline int skipWhitespaces () noexcept
         {
             int c;
-            while ((c = _in->sgetc ()) != std::char_traits <char>::eof () && details::whitespaceLookup.data[static_cast <unsigned char> (c)])
+            while ((c = _in->sgetc ()) != std::char_traits<char>::eof () &&
+                   details::whitespaceLookup.data[static_cast<unsigned char> (c)])
             {
                 _in->sbumpc ();
             }
@@ -509,9 +516,10 @@ namespace join
         {
             int c;
 
-            while ((c = _in->sgetc ()) != std::char_traits <char>::eof ())
+            while ((c = _in->sgetc ()) != std::char_traits<char>::eof ())
             {
-                while ((c = _in->sgetc ()) != std::char_traits <char>::eof () && details::whitespaceLookup.data[static_cast <unsigned char> (c)])
+                while ((c = _in->sgetc ()) != std::char_traits<char>::eof () &&
+                       details::whitespaceLookup.data[static_cast<unsigned char> (c)])
                 {
                     _in->sbumpc ();
                 }
@@ -524,7 +532,7 @@ namespace join
                 _in->sbumpc ();
                 c = _in->sgetc ();
 
-                if (c == std::char_traits <char>::eof ())
+                if (c == std::char_traits<char>::eof ())
                 {
                     return -1;
                 }
@@ -534,7 +542,7 @@ namespace join
                     _in->sbumpc ();
                     bool closed = false;
 
-                    while ((c = _in->sbumpc ()) != std::char_traits <char>::eof ())
+                    while ((c = _in->sbumpc ()) != std::char_traits<char>::eof ())
                     {
                         if (c == '*' && _in->sgetc () == '/')
                         {
@@ -553,7 +561,7 @@ namespace join
                 {
                     _in->sbumpc ();
 
-                    while ((c = _in->sbumpc ()) != std::char_traits <char>::eof () && c != '\n')
+                    while ((c = _in->sbumpc ()) != std::char_traits<char>::eof () && c != '\n')
                     {
                     }
                 }
@@ -571,7 +579,7 @@ namespace join
          * @return current position.
          */
         template <bool S = Seekable>
-        inline typename std::enable_if <S, ViewPos>::type tell () const noexcept
+        inline typename std::enable_if<S, ViewPos>::type tell () const noexcept
         {
             return _in->pubseekoff (0, std::ios::cur, std::ios::in);
         }
@@ -581,7 +589,7 @@ namespace join
          * @param pos position to seek to.
          */
         template <bool S = Seekable>
-        inline typename std::enable_if <S, void>::type seek (ViewPos pos) noexcept
+        inline typename std::enable_if<S, void>::type seek (ViewPos pos) noexcept
         {
             _in->pubseekpos (pos, std::ios::in);
         }
@@ -594,48 +602,54 @@ namespace join
     /**
      * @brief string stream view (seekable).
      */
-    using StringStreamView = BasicStreamView <true>;
+    using StringStreamView = BasicStreamView<true>;
 
     /**
      * @brief file stream view (seekable).
      */
-    using FileStreamView = BasicStreamView <true>;
+    using FileStreamView = BasicStreamView<true>;
 
     /**
      * @brief stream view (non-seekable, for pipes/network streams).
      */
-    using StreamView = BasicStreamView <false>;
+    using StreamView = BasicStreamView<false>;
 
     /**
      * @brief trait to determine if a view type is seekable.
      * @tparam ViewType view type to check.
      */
     template <typename ViewType>
-    struct is_seekable : std::false_type {};
+    struct is_seekable : std::false_type
+    {
+    };
 
     /**
      * @brief specialization for StringView (seekable).
      */
     template <>
-    struct is_seekable <StringView> : std::true_type {};
+    struct is_seekable<StringView> : std::true_type
+    {
+    };
 
     /**
      * @brief specialization for seekable view.
      */
     template <>
-    struct is_seekable <BasicStreamView <true>> : std::true_type {};
+    struct is_seekable<BasicStreamView<true>> : std::true_type
+    {
+    };
 
     /**
      * @brief buffering view adapter
      */
-    template <typename ViewType, bool Seekable = is_seekable <ViewType>::value>
+    template <typename ViewType, bool Seekable = is_seekable<ViewType>::value>
     class BufferingView;
 
     /**
      * @brief buffering view specialization for seekable view.
      */
     template <typename ViewType>
-    class BufferingView <ViewType, true>
+    class BufferingView<ViewType, true>
     {
     public:
         /**
@@ -721,7 +735,7 @@ namespace join
      * @brief buffering view specialization for non-seekable view.
      */
     template <typename ViewType>
-    class BufferingView <ViewType, false>
+    class BufferingView<ViewType, false>
     {
     public:
         /**
@@ -731,7 +745,7 @@ namespace join
         explicit BufferingView (ViewType& view)
         : _view (view)
         {
-            static thread_local std::vector <char> buffer;
+            static thread_local std::vector<char> buffer;
             buffer.clear ();
             buffer.reserve (32);
             _buf = &buffer;
@@ -753,9 +767,9 @@ namespace join
         inline int get () noexcept
         {
             const int c = _view.get ();
-            if (JOIN_LIKELY (c != std::char_traits <char>::eof ()))
+            if (JOIN_LIKELY (c != std::char_traits<char>::eof ()))
             {
-                _buf->push_back (static_cast <char> (c));
+                _buf->push_back (static_cast<char> (c));
             }
             return c;
         }
@@ -767,9 +781,9 @@ namespace join
          */
         inline bool getIf (char expected) noexcept
         {
-            if (_view.peek () == static_cast <int> (static_cast <unsigned char> (expected)))
+            if (_view.peek () == static_cast<int> (static_cast<unsigned char> (expected)))
             {
-                _buf->push_back (static_cast <char> (_view.get ()));
+                _buf->push_back (static_cast<char> (_view.get ()));
                 return true;
             }
             return false;
@@ -783,11 +797,11 @@ namespace join
         inline bool getIfNoCase (char expected) noexcept
         {
             const int c = _view.peek ();
-            if (JOIN_LIKELY (c != std::char_traits <char>::eof ()))
+            if (JOIN_LIKELY (c != std::char_traits<char>::eof ()))
             {
-                if ((static_cast <char> (c) | 32) == (expected | 32))
+                if ((static_cast<char> (c) | 32) == (expected | 32))
                 {
-                    _buf->push_back (static_cast <char> (_view.get ()));
+                    _buf->push_back (static_cast<char> (_view.get ()));
                     return true;
                 }
             }
@@ -818,7 +832,7 @@ namespace join
         ViewType& _view;
 
         /// buffer for consumed data.
-        std::vector <char>* _buf = nullptr;
+        std::vector<char>* _buf = nullptr;
     };
 }
 

@@ -80,7 +80,9 @@ TEST (InterfaceManager, addLinkListener)
     InterfaceManager mgr;
 
     bool called = false;
-    auto cb = [&] (const auto& /*info*/) { called = true; };
+    auto cb     = [&] (const auto& /*info*/) {
+        called = true;
+    };
 
     EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
     EXPECT_FALSE (called);
@@ -103,7 +105,9 @@ TEST (InterfaceManager, addAddressListener)
     InterfaceManager mgr;
 
     bool called = false;
-    auto cb = [&] (const auto& /*info*/) { called = true; };
+    auto cb     = [&] (const auto& /*info*/) {
+        called = true;
+    };
 
     EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
     EXPECT_FALSE (called);
@@ -126,7 +130,9 @@ TEST (InterfaceManager, addRouteListener)
     InterfaceManager mgr;
 
     bool called = false;
-    auto cb = [&] (const auto& /*info*/) { called = true; };
+    auto cb     = [&] (const auto& /*info*/) {
+        called = true;
+    };
 
     EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
     EXPECT_FALSE (called);
@@ -250,8 +256,10 @@ TEST (InterfaceManager, createGreInterface)
     ASSERT_NE (dm, nullptr);
     ASSERT_EQ (dm->enable (true, true), 0) << lastError.message ();
 
-    ASSERT_EQ (mgr.createGreInterface (gre4, dummy0, "0.0.0.0", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true), -1);
-    ASSERT_EQ (mgr.createGreInterface (gre4, dummy0, "0.0.0.0", "172.217.22.142", &ikey, &okey, 64, true), 0) << lastError.message ();
+    ASSERT_EQ (mgr.createGreInterface (gre4, dummy0, "0.0.0.0", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true),
+               -1);
+    ASSERT_EQ (mgr.createGreInterface (gre4, dummy0, "0.0.0.0", "172.217.22.142", &ikey, &okey, 64, true), 0)
+        << lastError.message ();
     auto gr = mgr.findByName (gre4);
     ASSERT_NE (gr, nullptr);
     ASSERT_TRUE (gr->isGre ());
@@ -259,8 +267,10 @@ TEST (InterfaceManager, createGreInterface)
     ASSERT_EQ (gr->enable (false, true), 0) << lastError.message ();
     EXPECT_EQ (mgr.removeInterface (gre4, true), 0) << lastError.message ();
 
-    ASSERT_EQ (mgr.createGreInterface (gre6, dummy0, "0.0.0.0", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true), -1);
-    ASSERT_EQ (mgr.createGreInterface (gre6, dummy0, "::", "2a00:1450:4007:811::200e", &ikey, &okey, 64, true), 0) << lastError.message ();
+    ASSERT_EQ (mgr.createGreInterface (gre6, dummy0, "0.0.0.0", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true),
+               -1);
+    ASSERT_EQ (mgr.createGreInterface (gre6, dummy0, "::", "2a00:1450:4007:811::200e", &ikey, &okey, 64, true), 0)
+        << lastError.message ();
     gr = mgr.findByName (gre6);
     ASSERT_NE (gr, nullptr);
     ASSERT_TRUE (gr->isGre ());
@@ -274,7 +284,7 @@ TEST (InterfaceManager, createGreInterface)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

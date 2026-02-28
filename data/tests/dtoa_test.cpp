@@ -50,7 +50,7 @@ TEST (dtoa, digitsCount)
  */
 TEST (dtoa, dtoa)
 {
-    char beg [25] = {};
+    char beg[25] = {};
 
     char* end = join::dtoa (beg, 0.0);
     ASSERT_NE (end, nullptr);
@@ -228,7 +228,7 @@ TEST (dtoa, dtoa)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

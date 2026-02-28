@@ -147,9 +147,9 @@ namespace join
          */
         enum Type
         {
-            Recipient,              /**< recipient. */
-            CCRecipient,            /**< carbon copy. */
-            BCCRecipient,           /**< black carbon copy. */
+            Recipient,    /**< recipient. */
+            CCRecipient,  /**< carbon copy. */
+            BCCRecipient, /**< black carbon copy. */
         };
 
         /**
@@ -221,7 +221,7 @@ namespace join
     };
 
     /// mail recipient list.
-    using MailRecipients = std::vector <MailRecipient>;
+    using MailRecipients = std::vector<MailRecipient>;
 
     /**
      * @brief mail message.
