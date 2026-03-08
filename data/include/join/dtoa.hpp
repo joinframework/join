@@ -36,7 +36,7 @@ namespace join
 {
     namespace details
     {
-        inline char* writeExponent (char* buffer, int k)
+        inline char* writeExponent (char* buffer, int k) noexcept
         {
             *buffer = '-';
             buffer += (k < 0);
@@ -57,7 +57,7 @@ namespace join
             return buffer;
         }
 
-        inline char* prettify (char* buffer, int length, int k)
+        inline char* prettify (char* buffer, int length, int k) noexcept
         {
             int kk = length + k;
 
@@ -98,7 +98,7 @@ namespace join
         }
 
         inline void grisuRound (char* buffer, int length, uint64_t delta, uint64_t rest, uint64_t ten_kappa,
-                                uint64_t wp_w)
+                                uint64_t wp_w) noexcept
         {
             while (rest < wp_w && delta - rest >= ten_kappa &&
                    (rest + ten_kappa < wp_w || wp_w - rest > rest + ten_kappa - wp_w))
@@ -108,7 +108,7 @@ namespace join
             }
         }
 
-        inline size_t digitsCount (uint32_t n)
+        constexpr inline size_t digitsCount (uint32_t n) noexcept
         {
             if (n < 10)
                 return 1;
@@ -131,7 +131,7 @@ namespace join
             return 10;
         }
 
-        inline void digitsGen (DiyFp W, DiyFp Mp, uint64_t delta, char* buffer, int& length, int& k)
+        inline void digitsGen (DiyFp W, DiyFp Mp, uint64_t delta, char* buffer, int& length, int& k) noexcept
         {
             static const uint32_t kPow10[] = {1,      10,      100,      1000,      10000,
                                               100000, 1000000, 10000000, 100000000, 1000000000};
@@ -227,12 +227,12 @@ namespace join
             }
         }
 
-        inline int kComputation (int exp, int alpha)
+        inline int kComputation (int exp, int alpha) noexcept
         {
             return static_cast<int> (::ceil ((alpha - exp + 63) * 0.30102999566398114));
         }
 
-        inline void grisu2 (char* buffer, int& length, int& k, double value)
+        inline void grisu2 (char* buffer, int& length, int& k, double value) noexcept
         {
             DiyFp val (value), minus, plus;
             val.normalizedBoundaries (minus, plus);
@@ -258,7 +258,7 @@ namespace join
      * @param value value to convert.
      * @return end position.
      */
-    inline char* dtoa (char* buffer, double value)
+    inline char* dtoa (char* buffer, double value) noexcept
     {
         uint64_t bits;
         memcpy (&bits, &value, sizeof (double));
