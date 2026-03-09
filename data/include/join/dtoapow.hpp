@@ -32,6 +32,8 @@ namespace join
 {
     namespace details
     {
+        constexpr uint32_t pow10[] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
+
         constexpr DiyFp dtoapow[] = {
             {0xbf29dcaba82fdeae, -1203}, {0xeef453d6923bd65a, -1200}, {0x9558b4661b6565f8, -1196},
             {0xbaaee17fa23ebf76, -1193}, {0xe95a99df8ace6f54, -1190}, {0x91d8a02bb6c10594, -1186},

@@ -1439,15 +1439,15 @@ namespace join
                 lz = __builtin_clzll (high);
                 exp -= lz;
             }
-            else /*if (middle != 0)*/
+            else if (middle != 0)
             {
                 lz = __builtin_clzll (middle);
                 exp -= lz + 64;
             }
-            // else
-            // {
-            //     return false;
-            // }
+            else
+            {
+                return false;  // LCOV_EXCL_LINE
+            }
 
             if (JOIN_UNLIKELY (exp <= 0 || exp >= 2047))
             {

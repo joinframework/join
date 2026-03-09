@@ -22,15 +22,15 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_DTOA_HPP__
-#define __JOIN_DTOA_HPP__
+#ifndef JOIN_DATA_DTOA_HPP
+#define JOIN_DATA_DTOA_HPP
 
 // libjoin.
 #include <join/dtoapow.hpp>
 
 // C.
+#include <cassert>
 #include <cstring>
-#include <cmath>
 
 namespace join
 {
@@ -59,7 +59,8 @@ namespace join
 
         inline char* prettify (char* buffer, int length, int k) noexcept
         {
-            int kk = length + k;
+            assert (length > 0);
+            const int kk = length + k;
 
             if ((length <= kk) && (kk <= 21))
             {
@@ -100,7 +101,7 @@ namespace join
         inline void grisuRound (char* buffer, int length, uint64_t delta, uint64_t rest, uint64_t ten_kappa,
                                 uint64_t wp_w) noexcept
         {
-            while (rest < wp_w && delta - rest >= ten_kappa &&
+            while ((rest < wp_w && delta - rest >= ten_kappa) &&
                    (rest + ten_kappa < wp_w || wp_w - rest > rest + ten_kappa - wp_w))
             {
                 --buffer[length - 1];
@@ -108,7 +109,7 @@ namespace join
             }
         }
 
-        constexpr inline size_t digitsCount (uint32_t n) noexcept
+        constexpr int digitsCount (uint32_t n) noexcept
         {
             if (n < 10)
                 return 1;
@@ -131,65 +132,21 @@ namespace join
             return 10;
         }
 
-        inline void digitsGen (DiyFp W, DiyFp Mp, uint64_t delta, char* buffer, int& length, int& k) noexcept
+        inline void digitsGen (const DiyFp& W, const DiyFp& Mp, uint64_t delta, char* buffer, int& length,
+                               int& k) noexcept
         {
-            static const uint32_t kPow10[] = {1,      10,      100,      1000,      10000,
-                                              100000, 1000000, 10000000, 100000000, 1000000000};
-            DiyFp one (static_cast<uint64_t> (1) << -Mp._exponent, Mp._exponent);
-            DiyFp wp_w  = Mp - W;
-            uint32_t p1 = static_cast<uint32_t> (Mp._mantissa >> -one._exponent);
-            uint64_t p2 = Mp._mantissa & (one._mantissa - 1);
-            int kappa   = static_cast<int> (digitsCount (p1));
-            length      = 0;
+            const DiyFp one (static_cast<uint64_t> (1) << -Mp._exponent, Mp._exponent);
+            const DiyFp wp_w = Mp - W;
+            uint32_t p1      = static_cast<uint32_t> (Mp._mantissa >> -one._exponent);
+            uint64_t p2      = Mp._mantissa & (one._mantissa - 1);
+            int kappa        = digitsCount (p1);
+            length           = 0;
 
             while (kappa > 0)
             {
-                uint32_t d = 0;
-                switch (kappa)
-                {
-                    case 10:
-                        d = p1 / 1000000000;
-                        p1 %= 1000000000;
-                        break;
-                    case 9:
-                        d = p1 / 100000000;
-                        p1 %= 100000000;
-                        break;
-                    case 8:
-                        d = p1 / 10000000;
-                        p1 %= 10000000;
-                        break;
-                    case 7:
-                        d = p1 / 1000000;
-                        p1 %= 1000000;
-                        break;
-                    case 6:
-                        d = p1 / 100000;
-                        p1 %= 100000;
-                        break;
-                    case 5:
-                        d = p1 / 10000;
-                        p1 %= 10000;
-                        break;
-                    case 4:
-                        d = p1 / 1000;
-                        p1 %= 1000;
-                        break;
-                    case 3:
-                        d = p1 / 100;
-                        p1 %= 100;
-                        break;
-                    case 2:
-                        d = p1 / 10;
-                        p1 %= 10;
-                        break;
-                    case 1:
-                        d  = p1;
-                        p1 = 0;
-                        break;
-                    default:
-                        break;
-                }
+                assert (kappa >= 1 && kappa <= 10);
+                uint32_t d = p1 / pow10[kappa - 1];
+                p1 %= pow10[kappa - 1];
                 if (d || length)
                 {
                     buffer[length++] = '0' + d;
@@ -199,7 +156,7 @@ namespace join
                 if (tmp <= delta)
                 {
                     k += kappa;
-                    grisuRound (buffer, length, delta, tmp, static_cast<uint64_t> (kPow10[kappa]) << -one._exponent,
+                    grisuRound (buffer, length, delta, tmp, static_cast<uint64_t> (pow10[kappa]) << -one._exponent,
                                 wp_w._mantissa);
                     return;
                 }
@@ -208,6 +165,7 @@ namespace join
             uint64_t unit = 1;
             for (;;)
             {
+                assert (unit <= UINT64_MAX / 10);
                 p2 *= 10;
                 delta *= 10;
                 unit *= 10;
@@ -227,17 +185,15 @@ namespace join
             }
         }
 
-        inline int kComputation (int exp, int alpha) noexcept
-        {
-            return static_cast<int> (::ceil ((alpha - exp + 63) * 0.30102999566398114));
-        }
-
         inline void grisu2 (char* buffer, int& length, int& k, double value) noexcept
         {
             DiyFp val (value), minus, plus;
             val.normalizedBoundaries (minus, plus);
 
-            int mk            = kComputation (plus._exponent + 64, -59);
+            const int expr = -59 - (plus._exponent + 64) + 63;
+            const int mk   = (expr * 30103 + 99999) / 100000;
+
+            assert (mk + 343 >= 0 && mk + 343 < 687);
             const DiyFp& c_mk = dtoapow[mk + 343];
 
             minus *= c_mk;
@@ -247,14 +203,13 @@ namespace join
             --plus._mantissa;
 
             k = -mk;
-
             digitsGen (val.normalize () * c_mk, plus, plus._mantissa - minus._mantissa, buffer, length, k);
         }
     }
 
     /**
      * @brief double to string conversion.
-     * @param buffer buffer to write the string representation to.
+     * @param buffer buffer to write the string representation to (must point to at least 25 writable bytes).
      * @param value value to convert.
      * @return end position.
      */

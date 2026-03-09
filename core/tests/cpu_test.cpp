@@ -54,6 +54,7 @@ TEST (CpuTopology, nodes)
     ASSERT_GE (CpuTopology::instance ()->nodes ().size (), 1);
 }
 
+#ifdef DEBUG
 /**
  * @brief test dump.
  */
@@ -61,6 +62,7 @@ TEST (CpuTopology, dump)
 {
     ASSERT_NO_THROW (CpuTopology::instance ()->dump ());
 }
+#endif
 
 /**
  * @brief main function.

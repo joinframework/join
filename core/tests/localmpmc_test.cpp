@@ -116,7 +116,7 @@ TEST (LocalMpmc, pushBenchmark)
 
     for (int i = 0; i < numConsumers; ++i)
     {
-        consumers.emplace_back ([&, msgPerConsumer] () {
+        consumers.emplace_back ([&] () {
             uint64_t data = 0;
             while (!ready.load (std::memory_order_acquire))
             {
@@ -144,7 +144,7 @@ TEST (LocalMpmc, pushBenchmark)
     ready.store (true, std::memory_order_release);
     for (int i = 0; i < numProducers; ++i)
     {
-        producers.emplace_back ([&, msgPerProducer] () {
+        producers.emplace_back ([&] () {
             uint64_t localData = 0;
             while (!ready.load (std::memory_order_acquire))
             {
@@ -190,7 +190,7 @@ TEST (LocalMpmc, popBenchmark)
     std::vector<Thread> producers;
     for (int p = 0; p < numProducers; ++p)
     {
-        producers.emplace_back ([&queue, &ready, msgPerProducer] () {
+        producers.emplace_back ([&] () {
             uint64_t threadData = 0;
             while (!ready.load (std::memory_order_acquire))
             {
@@ -219,7 +219,7 @@ TEST (LocalMpmc, popBenchmark)
     std::vector<Thread> consumers;
     for (int p = 0; p < numConsumers; ++p)
     {
-        consumers.emplace_back ([&queue, msgPerConsumer] () {
+        consumers.emplace_back ([&] () {
             uint64_t threadData = 0;
             for (uint64_t i = 0; i < msgPerConsumer; ++i)
             {

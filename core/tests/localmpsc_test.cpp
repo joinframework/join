@@ -172,7 +172,7 @@ TEST (LocalMpsc, popBenchmark)
     std::vector<Thread> producers;
     for (int p = 0; p < numProducers; ++p)
     {
-        producers.emplace_back ([&queue, msgPerProducer, &ready] () {
+        producers.emplace_back ([&] () {
             uint64_t threadData = 0;
 
             while (!ready.load (std::memory_order_acquire))

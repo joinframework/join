@@ -6,6 +6,7 @@ BasedOnStyle: Google
 ColumnLimit: 120
 IndentWidth: 4
 Standard: Latest
+InsertNewlineAtEOF: true
 
 # --- Includes Management ---
 SortIncludes: Never

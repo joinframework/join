@@ -59,11 +59,11 @@ jobs:
 
       - name: Configure
         if: inputs.scan || inputs.coverage
-        run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_SAMPLES=ON -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
+        run: cmake --preset gcc-debug
 
       - name: Build
         if: inputs.scan || inputs.coverage
-        run: cmake --build build --config Debug
+        run: cmake --build --preset gcc-debug
 
       - name: Run codeql scan
         if: inputs.scan
@@ -71,12 +71,12 @@ jobs:
 
       - name: Run tests
         if: inputs.coverage
-        run: ctest --test-dir build --output-on-failure -C Debug
+        run: ctest --preset gcc-debug --output-on-failure
 
       - name: Generate coverage report
         if: inputs.coverage
         run: |
-          lcov --directory build --capture --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
+          lcov --directory build/gcc/debug --capture --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
           genhtml lcov.info --prefix $GITHUB_WORKSPACE --output-directory coverage
 
       - name: Upload coverage data to GitHub

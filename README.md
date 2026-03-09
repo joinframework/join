@@ -73,11 +73,19 @@ The framework is a collection of specialized modules that build upon one another
 ## 🛠️ Build & Integration
 
 ### Prerequisites
-Ensure you have `OpenSSL`, `libnuma`, `Zlib`, and `GTest` (for testing) installed on your system:
+Install build tools and compilers:
+```bash
+sudo apt install gcc g++ clang clang-tools libclang-rt-dev cmake ninja-build gdb-multiarch
+```
+
+Install required libraries and test dependencies:
 ```bash
 sudo apt install libssl-dev libnuma-dev zlib1g-dev libgtest-dev libgmock-dev
 ```
-> `libnuma` is required for memory pinning and NUMA affinity in `join-core` while `OpenSSL` provides the core TLS runtime.
+
+> **Compilers:** Both GCC and Clang are supported. Clang requires `libclang-rt-dev` for coverage instrumentation (`--coverage`).  
+> **libnuma** is required for memory pinning and NUMA affinity in `join-core`.  
+> **OpenSSL** provides the core TLS runtime.
 
 ### Build from Source
 ```bash
