@@ -69,7 +69,7 @@ protected:
     virtual void onReceive () override
     {
         {
-            ScopedLock <Mutex> lock (_mut);
+            ScopedLock<Mutex> lock (_mut);
             _server.readExactly (_event, _server.canRead ());
             EventHandler::onReceive ();
         }
@@ -88,7 +88,7 @@ protected:
         _server.close ();
 
         {
-            ScopedLock <Mutex> lock (_mut);
+            ScopedLock<Mutex> lock (_mut);
             _event = "onClose";
             EventHandler::onClose ();
         }
@@ -107,7 +107,7 @@ protected:
         _server.close ();
 
         {
-            ScopedLock <Mutex> lock (_mut);
+            ScopedLock<Mutex> lock (_mut);
             _event = "onError";
             EventHandler::onError ();
         }
@@ -153,14 +153,14 @@ protected:
 };
 
 Tcp::Acceptor ReactorTest::_acceptor;
-Tcp::Socket   ReactorTest::_client (Tcp::Socket::Blocking);
-Tcp::Socket   ReactorTest::_server;
-std::string   ReactorTest::_host = "127.0.0.1";
-uint16_t      ReactorTest::_port = 5000;
-const int     ReactorTest::_timeout = 1000;
-Condition     ReactorTest::_cond;
-Mutex         ReactorTest::_mut;
-std::string   ReactorTest::_event;
+Tcp::Socket ReactorTest::_client (Tcp::Socket::Blocking);
+Tcp::Socket ReactorTest::_server;
+std::string ReactorTest::_host  = "127.0.0.1";
+uint16_t ReactorTest::_port     = 5000;
+const int ReactorTest::_timeout = 1000;
+Condition ReactorTest::_cond;
+Mutex ReactorTest::_mut;
+std::string ReactorTest::_event;
 
 /**
  * @brief Test addHandler.
@@ -168,7 +168,9 @@ std::string   ReactorTest::_event;
 TEST_F (ReactorTest, addHandler)
 {
     Reactor reactor;
-    Thread th ([&reactor] () {reactor.run ();});
+    Thread th ([&reactor] () {
+        reactor.run ();
+    });
 
     // test invalid parameter.
     ASSERT_EQ (reactor.addHandler (nullptr), -1);
@@ -202,7 +204,9 @@ TEST_F (ReactorTest, addHandler)
 TEST_F (ReactorTest, delHandler)
 {
     Reactor reactor;
-    Thread th ([&reactor] () {reactor.run ();});
+    Thread th ([&reactor] () {
+        reactor.run ();
+    });
 
     // test invalid parameter.
     ASSERT_EQ (reactor.delHandler (nullptr), -1);
@@ -276,8 +280,10 @@ TEST_F (ReactorTest, onReceive)
 
     // wait for the onReceive notification.
     {
-        ScopedLock <Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {return _event == "onReceive";}));
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _event == "onReceive";
+        }));
         _event.clear ();
     }
 
@@ -311,8 +317,10 @@ TEST_F (ReactorTest, onClose)
 
     // wait for the onClose notification.
     {
-        ScopedLock <Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {return _event == "onClose";}));
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _event == "onClose";
+        }));
         _event.clear ();
     }
 }
@@ -339,14 +347,20 @@ TEST_F (ReactorTest, onError)
     ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
 
     // reset connection.
-    struct linger sl { .l_onoff = 1, .l_linger = 0 };
-    ASSERT_EQ (setsockopt (_client.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof(sl)), 0) << strerror (errno);
+    struct linger sl
+    {
+        .l_onoff = 1, .l_linger = 0
+    };
+
+    ASSERT_EQ (setsockopt (_client.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
     _client.close ();
 
     // wait for the onError notification.
     {
-        ScopedLock <Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {return _event == "onError";}));
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _event == "onError";
+        }));
         _event.clear ();
     }
 }
@@ -354,8 +368,8 @@ TEST_F (ReactorTest, onError)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
-   testing::InitGoogleTest (&argc, argv);
-   return RUN_ALL_TESTS ();
+    testing::InitGoogleTest (&argc, argv);
+    return RUN_ALL_TESTS ();
 }

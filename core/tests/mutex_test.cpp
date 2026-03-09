@@ -52,7 +52,7 @@ TEST (Mutex, lock)
     auto beg = std::chrono::high_resolution_clock::now ();
     mutex.lock ();
     auto end = std::chrono::high_resolution_clock::now ();
-    EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+    EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
     mutex.unlock ();
     task.wait ();
 }
@@ -83,14 +83,14 @@ TEST (Mutex, scopedLock)
 {
     Mutex mutex;
     auto task = std::async (std::launch::async, [&mutex] () {
-        ScopedLock <Mutex> lock (mutex);
+        ScopedLock<Mutex> lock (mutex);
         std::this_thread::sleep_for (15ms);
     });
     std::this_thread::sleep_for (5ms);
     auto beg = std::chrono::high_resolution_clock::now ();
     mutex.lock ();
     auto end = std::chrono::high_resolution_clock::now ();
-    EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+    EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
     mutex.unlock ();
     task.wait ();
 }
@@ -98,7 +98,7 @@ TEST (Mutex, scopedLock)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

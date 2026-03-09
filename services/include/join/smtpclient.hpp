@@ -36,7 +36,7 @@ namespace join
     /**
      * @brief basic SMTP client.
      */
-    template <class Protocol> 
+    template <class Protocol>
     class BasicSmtpClient
     {
     public:
@@ -49,8 +49,8 @@ namespace join
          * @param port port (default: 25).
          */
         BasicSmtpClient (const char* host, uint16_t port = 25)
-        : _host (host),
-          _port (port)
+        : _host (host)
+        , _port (port)
         {
         }
 
@@ -82,11 +82,11 @@ namespace join
          * @param other request to move.
          */
         BasicSmtpClient (BasicSmtpClient&& other)
-        : _stream (std::move (other._stream)),
-          _host (std::move (other._host)),
-          _port (other._port),
-          _login (std::move (other._login)),
-          _password (std::move (other._password))
+        : _stream (std::move (other._stream))
+        , _host (std::move (other._host))
+        , _port (other._port)
+        , _login (std::move (other._login))
+        , _password (std::move (other._password))
         {
         }
 
@@ -97,10 +97,10 @@ namespace join
          */
         BasicSmtpClient& operator= (BasicSmtpClient&& other)
         {
-            this->_stream = std::move (other._stream);
-            this->_host = std::move (other._host);
-            this->_port = other._port;
-            this->_login = std::move (other._login);
+            this->_stream   = std::move (other._stream);
+            this->_host     = std::move (other._host);
+            this->_port     = other._port;
+            this->_login    = std::move (other._login);
             this->_password = std::move (other._password);
             return *this;
         }
@@ -178,7 +178,7 @@ namespace join
          */
         void credentials (const std::string& login, const std::string& password)
         {
-            this->_login = login;
+            this->_login    = login;
             this->_password = password;
         }
 
@@ -228,7 +228,7 @@ namespace join
          * @param cipher the cipher list.
          * @return 0 on success, -1 on failure.
          */
-        int setCipher (const std::string &cipher)
+        int setCipher (const std::string& cipher)
         {
             return this->_stream.setCipher (cipher);
         }
@@ -238,7 +238,7 @@ namespace join
          * @param cipher the cipher list.
          * @return 0 on success, -1 on failure.
          */
-        int setCipher_1_3 (const std::string &cipher)
+        int setCipher_1_3 (const std::string& cipher)
         {
             return this->_stream.setCipher_1_3 (cipher);
         }
@@ -250,7 +250,7 @@ namespace join
          */
         int send (const MailMessage& mail)
         {
-            Endpoint endpoint {Resolver::resolveHost (this->host ()), this->port ()};
+            Endpoint endpoint{Resolver::resolveHost (this->host ()), this->port ()};
             endpoint.hostname (this->host ());
 
             if (this->connect (endpoint) == -1)
@@ -265,7 +265,7 @@ namespace join
                 return -1;
             }
 
-            std::vector <std::string> replies;
+            std::vector<std::string> replies;
 
             for (;;)
             {
@@ -290,7 +290,9 @@ namespace join
                 break;
             }
 
-            auto auth = std::find_if (replies.begin (), replies.end (), [] (auto const &r) {return r.find ("AUTH") != std::string::npos;});
+            auto auth = std::find_if (replies.begin (), replies.end (), [] (auto const& r) {
+                return r.find ("AUTH") != std::string::npos;
+            });
             if (auth != replies.end ())
             {
                 if (auth->find ("LOGIN") != std::string::npos)
@@ -369,9 +371,9 @@ namespace join
          */
         int sendMessage (const std::string& message)
         {
-        #ifdef DEBUG
+#ifdef DEBUG
             std::cout << message << std::endl;
-        #endif
+#endif
             this->_stream.write (message.c_str (), message.size ());
             this->_stream.write ("\r\n", 2);
             this->_stream.flush ();
@@ -383,7 +385,7 @@ namespace join
          * @param replies replies to read.
          * @return reply code.
          */
-        std::string readReplies (std::vector <std::string>* replies = nullptr)
+        std::string readReplies (std::vector<std::string>* replies = nullptr)
         {
             std::string reply, code;
             for (;;)
@@ -392,9 +394,9 @@ namespace join
                 {
                     return {};
                 }
-            #ifdef DEBUG
+#ifdef DEBUG
                 std::cout << reply << std::endl;
-            #endif
+#endif
                 if ((reply.find ("-") != 3) && (reply.find (" ") != 3))
                 {
                     join::lastError = make_error_code (Errc::MessageUnknown);
@@ -434,7 +436,7 @@ namespace join
          * @param replies server replies.
          * @return 0 on success, -1 on failure.
          */
-        int initialize (std::vector <std::string>& replies)
+        int initialize (std::vector<std::string>& replies)
         {
             if (this->sendMessage ("EHLO " + this->hostname ()) == -1)
             {
@@ -643,8 +645,8 @@ namespace join
     /**
      * @brief Basic SMTPS client.
      */
-    template <class Protocol> 
-    class BasicSmtpSecureClient : public BasicSmtpClient <Protocol>
+    template <class Protocol>
+    class BasicSmtpSecureClient : public BasicSmtpClient<Protocol>
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
@@ -655,7 +657,7 @@ namespace join
          * @param port port (default: 465).
          */
         BasicSmtpSecureClient (const char* host, uint16_t port = 465)
-        : BasicSmtpClient <Protocol> (host, port)
+        : BasicSmtpClient<Protocol> (host, port)
         {
         }
 
@@ -687,7 +689,7 @@ namespace join
          * @param other request to move.
          */
         BasicSmtpSecureClient (BasicSmtpSecureClient&& other)
-        : BasicSmtpClient <Protocol> (std::move (other))
+        : BasicSmtpClient<Protocol> (std::move (other))
         {
         }
 
@@ -698,7 +700,7 @@ namespace join
          */
         BasicSmtpSecureClient& operator= (BasicSmtpSecureClient&& other)
         {
-            BasicSmtpClient <Protocol>::operator= (std::move (other));
+            BasicSmtpClient<Protocol>::operator= (std::move (other));
             return *this;
         }
 

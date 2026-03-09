@@ -15,10 +15,9 @@ string(REGEX REPLACE "[0-9]+\\.[0-9]+\\.([0-9]+).*" "\\1" JOIN_VERSION_PATCH ${J
 message(STATUS "${PROJECT_NAME} version: ${JOIN_VERSION}")
 configure_file("${PROJECT_SOURCE_DIR}/version.hpp.in" "${PROJECT_SOURCE_DIR}/core/include/join/version.hpp")
 
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+if(NOT DEFINED CMAKE_BUILD_TYPE AND NOT DEFINED CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to Release as none was specified.")
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose build type." FORCE)
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+    set(CMAKE_BUILD_TYPE Release)
 endif()
 
 add_compile_options(

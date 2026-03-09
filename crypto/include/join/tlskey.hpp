@@ -44,8 +44,8 @@ namespace join
          */
         enum Type
         {
-            Public,             /**< public key. */
-            Private,            /**< private key. */
+            Public,  /**< public key. */
+            Private, /**< private key. */
         };
 
         /**

@@ -34,7 +34,7 @@ using join::Thread;
 
 TEST (LocalMpsc, tryPush)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (512);
+    LocalMem::Mpsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -52,7 +52,7 @@ TEST (LocalMpsc, tryPush)
 
 TEST (LocalMpsc, push)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (512);
+    LocalMem::Mpsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -69,7 +69,7 @@ TEST (LocalMpsc, push)
 
 TEST (LocalMpsc, tryPop)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (512);
+    LocalMem::Mpsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.tryPop (data), -1);
@@ -86,7 +86,7 @@ TEST (LocalMpsc, tryPop)
 
 TEST (LocalMpsc, pop)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (512);
+    LocalMem::Mpsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_TRUE (queue.empty ());
@@ -102,10 +102,10 @@ TEST (LocalMpsc, pop)
 TEST (LocalMpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
+    const uint64_t num      = 1000000;
 
-    LocalMem::Mpsc::Queue <uint64_t> queue (capacity);
-    std::atomic <bool> ready {false};
+    LocalMem::Mpsc::Queue<uint64_t> queue (capacity);
+    std::atomic<bool> ready{false};
 
     Thread consumer ([&] () {
         uint64_t data = 0;
@@ -131,9 +131,9 @@ TEST (LocalMpsc, pushBenchmark)
     });
 
     const int numProducers = 4;
-    std::vector <Thread> producers;
+    std::vector<Thread> producers;
     const uint64_t msgPerProducer = num / numProducers;
-    uint64_t data = 0;
+    uint64_t data                 = 0;
     // pre-fill the buffer
     for (uint64_t i = 0; i < capacity; ++i)
     {
@@ -161,18 +161,18 @@ TEST (LocalMpsc, pushBenchmark)
 
 TEST (LocalMpsc, popBenchmark)
 {
-    const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
-    const int numProducers = 4;
+    const uint64_t capacity       = 512;
+    const uint64_t num            = 1000000;
+    const int numProducers        = 4;
     const uint64_t msgPerProducer = num / numProducers;
 
-    LocalMem::Mpsc::Queue <uint64_t> queue (capacity);
-    std::atomic <bool> ready {false};
+    LocalMem::Mpsc::Queue<uint64_t> queue (capacity);
+    std::atomic<bool> ready{false};
 
-    std::vector <Thread> producers;
+    std::vector<Thread> producers;
     for (int p = 0; p < numProducers; ++p)
     {
-        producers.emplace_back ([&queue, msgPerProducer, &ready] () {
+        producers.emplace_back ([&] () {
             uint64_t threadData = 0;
 
             while (!ready.load (std::memory_order_acquire))
@@ -203,7 +203,7 @@ TEST (LocalMpsc, popBenchmark)
 
 TEST (LocalMpsc, pending)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.pending (), 0);
@@ -213,7 +213,7 @@ TEST (LocalMpsc, pending)
 
 TEST (LocalMpsc, available)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.available (), 1);
@@ -223,7 +223,7 @@ TEST (LocalMpsc, available)
 
 TEST (LocalMpsc, full)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -233,7 +233,7 @@ TEST (LocalMpsc, full)
 
 TEST (LocalMpsc, empty)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_TRUE (queue.empty ());
@@ -243,20 +243,20 @@ TEST (LocalMpsc, empty)
 
 TEST (LocalMpsc, mlock)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mlock (), 0) << join::lastError.message ();
 }
 
 TEST (LocalMpsc, mbind)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mbind (0), 0) << join::lastError.message ();
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

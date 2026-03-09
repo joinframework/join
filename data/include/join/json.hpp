@@ -837,19 +837,15 @@ namespace join
         {
             startObject (object.size ());
             std::vector<const Member*> members;
-            std::transform (object.begin (), object.end (), std::back_inserter (members),
-                            [] (const Member& member)
-                            {
-                                return &member;
-                            });
-            std::sort (members.begin (), members.end (),
-                       [] (const Member* a, const Member* b)
-                       {
-                           std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cvt_utf8_utf16;
-                           std::u16string wa = cvt_utf8_utf16.from_bytes (a->first.getString ().data ());
-                           std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.getString ().data ());
-                           return wa < wb;
-                       });
+            std::transform (object.begin (), object.end (), std::back_inserter (members), [] (const Member& member) {
+                return &member;
+            });
+            std::sort (members.begin (), members.end (), [] (const Member* a, const Member* b) {
+                std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cvt_utf8_utf16;
+                std::u16string wa = cvt_utf8_utf16.from_bytes (a->first.getString ().data ());
+                std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.getString ().data ());
+                return wa < wb;
+            });
             for (auto const& member : members)
             {
                 setKey (member->first);
@@ -1443,15 +1439,15 @@ namespace join
                 lz = __builtin_clzll (high);
                 exp -= lz;
             }
-            else /*if (middle != 0)*/
+            else if (middle != 0)
             {
                 lz = __builtin_clzll (middle);
                 exp -= lz + 64;
             }
-            // else
-            // {
-            //     return false;
-            // }
+            else
+            {
+                return false;  // LCOV_EXCL_LINE
+            }
 
             if (JOIN_UNLIKELY (exp <= 0 || exp >= 2047))
             {

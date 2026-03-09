@@ -39,10 +39,10 @@ namespace join
      */
     struct LogicalCpu
     {
-        int id;                             /**< logical CPU ID */
-        int core;                           /**< physical core ID */
-        int socket;                         /**< physical socket ID */
-        int numa;                           /**< NUMA node ID */
+        int id;     /**< logical CPU ID */
+        int core;   /**< physical core ID */
+        int socket; /**< physical socket ID */
+        int numa;   /**< NUMA node ID */
     };
 
     /**
@@ -50,10 +50,10 @@ namespace join
      */
     struct PhysicalCore
     {
-        int id;                             /**< physical CPU ID */
-        int socket;                         /**< physical socket ID */
-        int numa;                           /**< NUMA node ID */
-        std::vector <LogicalCpu> threads;   /**< logical CPUs (SMT/HT) */
+        int id;                          /**< physical CPU ID */
+        int socket;                      /**< physical socket ID */
+        int numa;                        /**< NUMA node ID */
+        std::vector<LogicalCpu> threads; /**< logical CPUs (SMT/HT) */
 
         /**
          * @brief get primary thread (first hardware thread, avoids HT).
@@ -70,8 +70,8 @@ namespace join
      */
     struct NumaNode
     {
-        int id;                             /**< NUMA node ID */
-        std::vector <int> cores;            /**< physical core IDs */
+        int id;                 /**< NUMA node ID */
+        std::vector<int> cores; /**< physical core IDs */
     };
 
     /**
@@ -103,20 +103,20 @@ namespace join
          * @brief get all physical cores.
          * @return vector of physical cores.
          */
-        const std::vector <PhysicalCore>& cores () const noexcept;
+        const std::vector<PhysicalCore>& cores () const noexcept;
 
         /**
          * @brief get all NUMA nodes.
          * @return vector of NUMA nodes.
          */
-        const std::vector <NumaNode>& nodes () const noexcept;
+        const std::vector<NumaNode>& nodes () const noexcept;
 
         /**
          * @brief dump CPU topology to standard output.
          */
-    #ifdef DEBUG
+#ifdef DEBUG
         void dump () const;
-    #endif
+#endif
 
     private:
         /**
@@ -149,10 +149,10 @@ namespace join
         void detect ();
 
         /// physical cores.
-        std::vector <PhysicalCore> _cores;
+        std::vector<PhysicalCore> _cores;
 
         /// NUMA nodes.
-        std::vector <NumaNode> _nodes;
+        std::vector<NumaNode> _nodes;
     };
 }
 

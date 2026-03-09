@@ -64,13 +64,13 @@ const std::string ShmMpmc::_name = "/test_mpmc_shm";
 
 TEST_F (ShmMpmc, create)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod1 (0, _name);
-    ASSERT_THROW (ShmMem::Mpmc::Queue <uint64_t> (2, _name), std::runtime_error);
+    ShmMem::Mpmc::Queue<uint64_t> prod1 (0, _name);
+    ASSERT_THROW (ShmMem::Mpmc::Queue<uint64_t> (2, _name), std::runtime_error);
 }
 
 TEST_F (ShmMpmc, tryPush)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod (512, _name);
+    ShmMem::Mpmc::Queue<uint64_t> prod (512, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -88,7 +88,7 @@ TEST_F (ShmMpmc, tryPush)
 
 TEST_F (ShmMpmc, push)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod (512, _name);
+    ShmMem::Mpmc::Queue<uint64_t> prod (512, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -105,8 +105,8 @@ TEST_F (ShmMpmc, push)
 
 TEST_F (ShmMpmc, tryPop)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod (512, _name);
-    ShmMem::Mpmc::Queue <uint64_t> cons (512, _name);
+    ShmMem::Mpmc::Queue<uint64_t> prod (512, _name);
+    ShmMem::Mpmc::Queue<uint64_t> cons (512, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (cons.tryPop (data), -1);
@@ -123,8 +123,8 @@ TEST_F (ShmMpmc, tryPop)
 
 TEST_F (ShmMpmc, pop)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod (512, _name);
-    ShmMem::Mpmc::Queue <uint64_t> cons (512, _name);
+    ShmMem::Mpmc::Queue<uint64_t> prod (512, _name);
+    ShmMem::Mpmc::Queue<uint64_t> cons (512, _name);
     uint64_t data = 0;
 
     ASSERT_TRUE (cons.empty ());
@@ -140,21 +140,21 @@ TEST_F (ShmMpmc, pop)
 TEST_F (ShmMpmc, pushBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
-    uint64_t data = 0;
+    const uint64_t num      = 1000000;
+    uint64_t data           = 0;
 
     pid_t child = fork ();
     if (child == 0)
     {
         const int numConsumers = 4;
-        std::vector <Thread> consumers;
+        std::vector<Thread> consumers;
         const uint64_t msgPerConsumer = num / numConsumers;
         Semaphore sem (_name);
         sem.wait ();
         for (int p = 0; p < numConsumers; ++p)
         {
-            consumers.emplace_back([&] () {
-                ShmMem::Mpmc::Queue <uint64_t> cons (capacity, _name);
+            consumers.emplace_back ([&] () {
+                ShmMem::Mpmc::Queue<uint64_t> cons (capacity, _name);
                 for (uint64_t i = 0; i < msgPerConsumer; ++i)
                 {
                     while (cons.tryPop (data) == -1)
@@ -171,7 +171,7 @@ TEST_F (ShmMpmc, pushBenchmark)
         // empty pre-filled buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
-            ShmMem::Mpmc::Queue <uint64_t> cons (capacity, _name);
+            ShmMem::Mpmc::Queue<uint64_t> cons (capacity, _name);
             while (cons.tryPop (data) == -1)
             {
                 std::this_thread::yield ();
@@ -184,12 +184,12 @@ TEST_F (ShmMpmc, pushBenchmark)
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
         const int numProducers = 4;
-        std::vector <Thread> producers;
+        std::vector<Thread> producers;
         const uint64_t msgPerProducer = num / numProducers;
         // pre-fill the buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
-            ShmMem::Mpmc::Queue <uint64_t> prod (capacity, _name);
+            ShmMem::Mpmc::Queue<uint64_t> prod (capacity, _name);
             while (prod.tryPush (data) == -1)
             {
                 std::this_thread::yield ();
@@ -198,8 +198,8 @@ TEST_F (ShmMpmc, pushBenchmark)
         sem.post ();
         for (int p = 0; p < numProducers; ++p)
         {
-            producers.emplace_back([&] () {
-                ShmMem::Mpmc::Queue <uint64_t> prod (capacity, _name);
+            producers.emplace_back ([&] () {
+                ShmMem::Mpmc::Queue<uint64_t> prod (capacity, _name);
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
                 {
                     EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
@@ -221,20 +221,20 @@ TEST_F (ShmMpmc, pushBenchmark)
 TEST_F (ShmMpmc, popBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
-    uint64_t data = 0;
+    const uint64_t num      = 1000000;
+    uint64_t data           = 0;
 
     pid_t child = fork ();
     if (child == 0)
     {
         Semaphore sem (_name);
         const int numProducers = 4;
-        std::vector <Thread> producers;
+        std::vector<Thread> producers;
         const uint64_t msgPerProducer = num / numProducers;
         // pre-fill the buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
-            ShmMem::Mpmc::Queue <uint64_t> prod (capacity, _name);
+            ShmMem::Mpmc::Queue<uint64_t> prod (capacity, _name);
             while (prod.tryPush (data) == -1)
             {
                 std::this_thread::yield ();
@@ -243,8 +243,8 @@ TEST_F (ShmMpmc, popBenchmark)
         sem.post ();
         for (int p = 0; p < numProducers; ++p)
         {
-            producers.emplace_back([&] () {
-                ShmMem::Mpmc::Queue <uint64_t> prod (capacity, _name);
+            producers.emplace_back ([&] () {
+                ShmMem::Mpmc::Queue<uint64_t> prod (capacity, _name);
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
                 {
                     while (prod.tryPush (data) == -1)
@@ -264,14 +264,14 @@ TEST_F (ShmMpmc, popBenchmark)
     {
         EXPECT_NE (child, -1);
         const int numConsumers = 4;
-        std::vector <Thread> consumers;
+        std::vector<Thread> consumers;
         const uint64_t msgPerConsumer = num / numConsumers;
         Semaphore sem (_name);
         sem.wait ();
         for (int p = 0; p < numConsumers; ++p)
         {
-            consumers.emplace_back([&] () {
-                ShmMem::Mpmc::Queue <uint64_t> cons (capacity, _name);
+            consumers.emplace_back ([&] () {
+                ShmMem::Mpmc::Queue<uint64_t> cons (capacity, _name);
                 for (uint64_t i = 0; i < msgPerConsumer; ++i)
                 {
                     EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
@@ -285,7 +285,7 @@ TEST_F (ShmMpmc, popBenchmark)
         // empty pre-filled buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
-            ShmMem::Mpmc::Queue <uint64_t> cons (capacity, _name);
+            ShmMem::Mpmc::Queue<uint64_t> cons (capacity, _name);
             while (cons.tryPop (data) == -1)
             {
                 std::this_thread::yield ();
@@ -301,7 +301,7 @@ TEST_F (ShmMpmc, popBenchmark)
 
 TEST_F (ShmMpmc, pending)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpmc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (prod.pending (), 0);
@@ -311,7 +311,7 @@ TEST_F (ShmMpmc, pending)
 
 TEST_F (ShmMpmc, available)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpmc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (prod.available (), 1);
@@ -321,7 +321,7 @@ TEST_F (ShmMpmc, available)
 
 TEST_F (ShmMpmc, full)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpmc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -331,7 +331,7 @@ TEST_F (ShmMpmc, full)
 
 TEST_F (ShmMpmc, empty)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpmc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_TRUE (prod.empty ());
@@ -341,20 +341,20 @@ TEST_F (ShmMpmc, empty)
 
 TEST_F (ShmMpmc, mlock)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpmc::Queue<uint64_t> prod (0, _name);
     ASSERT_EQ (prod.mlock (), 0) << join::lastError.message ();
 }
 
 TEST_F (ShmMpmc, mbind)
 {
-    ShmMem::Mpmc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpmc::Queue<uint64_t> prod (0, _name);
     ASSERT_EQ (prod.mbind (0), 0) << join::lastError.message ();
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

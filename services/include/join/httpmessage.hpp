@@ -43,18 +43,18 @@ namespace join
      */
     enum class HttpErrc
     {
-        BadRequest = 1,     /**< malformed request syntax. */
-        Unauthorized,       /**< authentication is required. */
-        Forbidden,          /**< missing required permissions. */
-        NotFound,           /**< resource could not be found. */
-        Unsupported,        /**< method is not supported. */
-        LengthRequired,     /**< length was not specified. */
-        PayloadTooLarge,    /**< request payload is too large. */
-        UriTooLong,         /**< request URI is too long. */
-        HeaderTooLarge,     /**< request header is too large. */
-        ServerError,        /**< generic error. */
-        NotImplemented,     /**< not implemented. */
-        BadGateway,         /**< invalid response from the upstream server. */
+        BadRequest = 1,  /**< malformed request syntax. */
+        Unauthorized,    /**< authentication is required. */
+        Forbidden,       /**< missing required permissions. */
+        NotFound,        /**< resource could not be found. */
+        Unsupported,     /**< method is not supported. */
+        LengthRequired,  /**< length was not specified. */
+        PayloadTooLarge, /**< request payload is too large. */
+        UriTooLong,      /**< request URI is too long. */
+        HeaderTooLarge,  /**< request header is too large. */
+        ServerError,     /**< generic error. */
+        NotImplemented,  /**< not implemented. */
+        BadGateway,      /**< invalid response from the upstream server. */
     };
 
     /**
@@ -110,11 +110,12 @@ namespace join
      */
     enum HttpMethod
     {
-        Head    = 1L << 0,  /**< retrieve informations identified by the Request-URI without message-body. */
-        Get     = 1L << 1,  /**< retrieve informations identified by the Request-URI. */
-        Put     = 1L << 2,  /**< request that the enclosed entity be stored under the supplied Request-URI. */
-        Post    = 1L << 3,  /**< request that the enclosed entity is accepted as a new subordinate of the resource identified by the Request-URI. */
-        Delete  = 1L << 4,  /**< request that the server delete the resource identified by the Request-URI. */
+        Head = 1L << 0,   /**< retrieve informations identified by the Request-URI without message-body. */
+        Get  = 1L << 1,   /**< retrieve informations identified by the Request-URI. */
+        Put  = 1L << 2,   /**< request that the enclosed entity be stored under the supplied Request-URI. */
+        Post = 1L << 3,   /**< request that the enclosed entity is accepted as a new subordinate of the resource
+                             identified by the Request-URI. */
+        Delete = 1L << 4, /**< request that the server delete the resource identified by the Request-URI. */
     };
 
     /**
@@ -124,7 +125,9 @@ namespace join
      * @return bitset result of binary AND on HttpMethod.
      */
     inline HttpMethod operator& (HttpMethod __a, HttpMethod __b)
-    { return HttpMethod (static_cast <int> (__a) & static_cast <int> (__b)); }
+    {
+        return HttpMethod (static_cast<int> (__a) & static_cast<int> (__b));
+    }
 
     /**
      * @brief perform binary OR on HttpMethod.
@@ -133,7 +136,9 @@ namespace join
      * @return bitset result of binary OR on HttpMethod.
      */
     inline HttpMethod operator| (HttpMethod __a, HttpMethod __b)
-    { return HttpMethod (static_cast <int> (__a) | static_cast <int> (__b)); }
+    {
+        return HttpMethod (static_cast<int> (__a) | static_cast<int> (__b));
+    }
 
     /**
      * @brief perform binary XOR on HttpMethod.
@@ -142,15 +147,19 @@ namespace join
      * @return bitset result of binary XOR on HttpMethod.
      */
     inline HttpMethod operator^ (HttpMethod __a, HttpMethod __b)
-    { return HttpMethod (static_cast <int> (__a) ^ static_cast <int> (__b)); }
+    {
+        return HttpMethod (static_cast<int> (__a) ^ static_cast<int> (__b));
+    }
 
     /**
      * @brief perform binary NOT on HttpMethod.
      * @param __a bitset.
      * @return bitset result of binary NOT on HttpMethod.
      */
-    inline HttpMethod operator~ (HttpMethod __a)
-    { return HttpMethod (~static_cast <int> (__a)); }
+    inline HttpMethod operator~(HttpMethod __a)
+    {
+        return HttpMethod (~static_cast<int> (__a));
+    }
 
     /**
      * @brief perform binary AND on HttpMethod.
@@ -159,7 +168,9 @@ namespace join
      * @return bitset result of binary AND on HttpMethod.
      */
     inline const HttpMethod& operator&= (HttpMethod& __a, HttpMethod __b)
-    { return __a = __a & __b; }
+    {
+        return __a = __a & __b;
+    }
 
     /**
      * @brief perform binary OR on HttpMethod.
@@ -168,7 +179,9 @@ namespace join
      * @return bitset result of binary OR.
      */
     inline const HttpMethod& operator|= (HttpMethod& __a, HttpMethod __b)
-    { return __a = __a | __b; }
+    {
+        return __a = __a | __b;
+    }
 
     /**
      * @brief perform binary XOR on HttpMethod.
@@ -177,7 +190,9 @@ namespace join
      * @return bitset result of binary XOR on HttpMethod.
      */
     inline const HttpMethod& operator^= (HttpMethod& __a, HttpMethod __b)
-    { return __a = __a ^ __b; }
+    {
+        return __a = __a ^ __b;
+    }
 
     /**
      * @brief HTTP message.
@@ -186,7 +201,7 @@ namespace join
     {
     public:
         // headers map.
-        using HeaderMap = std::map <std::string, std::string, details::lessNoCase>;
+        using HeaderMap = std::map<std::string, std::string, details::lessNoCase>;
 
         /**
          * @brief create the HttpMessage instance.
@@ -338,7 +353,7 @@ namespace join
     {
     public:
         // parameters map.
-        using ParameterMap = std::map <std::string, std::string>;
+        using ParameterMap = std::map<std::string, std::string>;
 
         /**
          * @brief create the HttpRequest instance by default.
@@ -512,7 +527,7 @@ namespace join
          * @param url url to decode.
          * @return a reference to the url object.
          */
-        std::string& decodeUrl (std::string &url);
+        std::string& decodeUrl (std::string& url);
 
         /**
          * @brief produce a normalized path (collapse duplicated separator and remove dot segment).
@@ -525,7 +540,7 @@ namespace join
          * @brief store parameters received in request.
          * @param query parameters received in request.
          */
-        void store (const std::string &query);
+        void store (const std::string& query);
 
         /// HTTP method.
         HttpMethod _method = Get;
@@ -629,7 +644,10 @@ namespace join
 namespace std
 {
     /// HTTP API generic error code specialization.
-    template <> struct is_error_condition_enum <join::HttpErrc> : public true_type {};
+    template <>
+    struct is_error_condition_enum<join::HttpErrc> : public true_type
+    {
+    };
 }
 
 #endif

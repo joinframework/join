@@ -102,14 +102,14 @@ MacAddress Arp::request (const IpAddress& ip)
 
     // generated using 'tcpdump -dd arp'
     struct sock_filter code[] = {
-        { 0x28, 0, 0, 0x0000000c },
-        { 0x15, 0, 1, 0x00000806 },
-        { 0x6,  0, 0, 0x00040000 },
-        { 0x6,  0, 0, 0x00000000 },
+        {0x28, 0, 0, 0x0000000c},
+        {0x15, 0, 1, 0x00000806},
+        {0x6, 0, 0, 0x00040000},
+        {0x6, 0, 0, 0x00000000},
     };
 
     struct sock_fprog bpf = {
-        .len = 4,
+        .len    = 4,
         .filter = code,
     };
 
@@ -123,17 +123,17 @@ MacAddress Arp::request (const IpAddress& ip)
     ::memcpy (out.eth.h_source, MacAddress::address (_interface).addr (), ETH_ALEN);
     out.eth.h_proto = ::htons (ETH_P_ARP);
 
-    out.arp.ar_hrd  = ::htons (ARPHRD_ETHER);
-    out.arp.ar_pro  = ::htons (ETH_P_IP);
-    out.arp.ar_hln  = ETH_ALEN;
-    out.arp.ar_pln  = 4;
-    out.arp.ar_op   = ::htons (ARPOP_REQUEST);
+    out.arp.ar_hrd = ::htons (ARPHRD_ETHER);
+    out.arp.ar_pro = ::htons (ETH_P_IP);
+    out.arp.ar_hln = ETH_ALEN;
+    out.arp.ar_pln = 4;
+    out.arp.ar_op  = ::htons (ARPOP_REQUEST);
     ::memcpy (out.arp.ar_sha, MacAddress::address (_interface).addr (), ETH_ALEN);
-    out.arp.ar_sip  = *reinterpret_cast <const uint32_t *> (IpAddress::ipv4Address (_interface).addr ());
+    out.arp.ar_sip = *reinterpret_cast<const uint32_t*> (IpAddress::ipv4Address (_interface).addr ());
     ::memcpy (out.arp.ar_tha, MacAddress::wildcard.addr (), ETH_ALEN);
-    out.arp.ar_tip  = *reinterpret_cast <const uint32_t *> (ip.addr ());
+    out.arp.ar_tip = *reinterpret_cast<const uint32_t*> (ip.addr ());
 
-    if (stream.write (reinterpret_cast <const char *> (&out), sizeof (Packet)) == -1)
+    if (stream.write (reinterpret_cast<const char*> (&out), sizeof (Packet)) == -1)
     {
         return {};
     }
@@ -151,34 +151,32 @@ MacAddress Arp::request (const IpAddress& ip)
             break;
         }
 
-        auto buffer = std::make_unique <char []> (stream.canRead ());
+        auto buffer = std::make_unique<char[]> (stream.canRead ());
         if (buffer == nullptr)
         {
             lastError = make_error_code (Errc::OutOfMemory);
             break;
         }
 
-        int size = stream.read (reinterpret_cast <char *> (buffer.get ()), stream.canRead ());
+        int size = stream.read (reinterpret_cast<char*> (buffer.get ()), stream.canRead ());
         if (size_t (size) < sizeof (Packet))
         {
-            elapsed += std::chrono::duration_cast <std::chrono::milliseconds> (std::chrono::high_resolution_clock::now () - beg);
+            elapsed += std::chrono::duration_cast<std::chrono::milliseconds> (
+                std::chrono::high_resolution_clock::now () - beg);
             continue;
         }
 
-        Packet *in = reinterpret_cast <Packet *> (buffer.get ());
-        if (in->eth.h_proto != htons (ETH_P_ARP)                     ||
-            in->arp.ar_hrd  != htons (ARPHRD_ETHER)                  ||
-            in->arp.ar_pro  != htons (ETH_P_IP)                      ||
-            in->arp.ar_hln  != ETH_ALEN                              ||
-            in->arp.ar_pln  != 4                                     ||
-            in->arp.ar_op   != htons (ARPOP_REPLY)                   ||
-            ::memcmp (in->arp.ar_tha, out.arp.ar_sha, ETH_ALEN) != 0)
+        Packet* in = reinterpret_cast<Packet*> (buffer.get ());
+        if (in->eth.h_proto != htons (ETH_P_ARP) || in->arp.ar_hrd != htons (ARPHRD_ETHER) ||
+            in->arp.ar_pro != htons (ETH_P_IP) || in->arp.ar_hln != ETH_ALEN || in->arp.ar_pln != 4 ||
+            in->arp.ar_op != htons (ARPOP_REPLY) || ::memcmp (in->arp.ar_tha, out.arp.ar_sha, ETH_ALEN) != 0)
         {
-            elapsed += std::chrono::duration_cast <std::chrono::milliseconds> (std::chrono::high_resolution_clock::now () - beg);
+            elapsed += std::chrono::duration_cast<std::chrono::milliseconds> (
+                std::chrono::high_resolution_clock::now () - beg);
             continue;
         }
 
-        return MacAddress (reinterpret_cast <uint8_t*> (in->arp.ar_sha), ETH_ALEN);
+        return MacAddress (reinterpret_cast<uint8_t*> (in->arp.ar_sha), ETH_ALEN);
     }
 
     return {};
@@ -214,13 +212,13 @@ int Arp::add (const MacAddress& mac, const IpAddress& ip)
         ::memcpy (areq.arp_ha.sa_data, mac.addr (), mac.length ());
         areq.arp_flags = ATF_PERM | ATF_COM;
 
-        struct sockaddr_in *in = reinterpret_cast <struct sockaddr_in *> (&areq.arp_pa);
-        in->sin_addr.s_addr    = *reinterpret_cast <const uint32_t *> (ip.addr ());
+        struct sockaddr_in* in = reinterpret_cast<struct sockaddr_in*> (&areq.arp_pa);
+        in->sin_addr.s_addr    = *reinterpret_cast<const uint32_t*> (ip.addr ());
         in->sin_family         = AF_INET;
 
         int result = ::ioctl (fd, SIOCSARP, &areq);
         ::close (fd);
-        
+
         if (result != -1)
         {
             return 0;
@@ -259,8 +257,8 @@ MacAddress Arp::cache (const IpAddress& ip)
         ::memset (&areq, 0, sizeof (areq));
         ::strncpy (areq.arp_dev, _interface.c_str (), IFNAMSIZ - 1);
 
-        struct sockaddr_in *in = reinterpret_cast <struct sockaddr_in *> (&areq.arp_pa);
-        in->sin_addr.s_addr    = *reinterpret_cast <const uint32_t *> (ip.addr ());
+        struct sockaddr_in* in = reinterpret_cast<struct sockaddr_in*> (&areq.arp_pa);
+        in->sin_addr.s_addr    = *reinterpret_cast<const uint32_t*> (ip.addr ());
         in->sin_family         = AF_INET;
 
         int result = ::ioctl (fd, SIOCGARP, &areq);
@@ -270,7 +268,7 @@ MacAddress Arp::cache (const IpAddress& ip)
         {
             if (areq.arp_flags & ATF_COM)
             {
-                return MacAddress (reinterpret_cast <uint8_t*> (areq.arp_ha.sa_data), ETH_ALEN);
+                return MacAddress (reinterpret_cast<uint8_t*> (areq.arp_ha.sa_data), ETH_ALEN);
             }
 
             lastError = make_error_code (Errc::NotFound);

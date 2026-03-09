@@ -104,21 +104,21 @@ TEST (IpAddress, sockaddrConstruct)
     struct sockaddr_storage sa;
     memset (&sa, 0, sizeof (sa));
 
-    ASSERT_THROW (IpAddress (*reinterpret_cast <struct sockaddr*> (&sa)), std::invalid_argument);
+    ASSERT_THROW (IpAddress (*reinterpret_cast<struct sockaddr*> (&sa)), std::invalid_argument);
 
     struct sockaddr_storage sa4;
     memset (&sa4, 0, sizeof (sa4));
 
-    reinterpret_cast <struct sockaddr_in*> (&sa4)->sin_family = AF_INET;
-    IpAddress ip4 (*reinterpret_cast <struct sockaddr*> (&sa4));
+    reinterpret_cast<struct sockaddr_in*> (&sa4)->sin_family = AF_INET;
+    IpAddress ip4 (*reinterpret_cast<struct sockaddr*> (&sa4));
     ASSERT_EQ (ip4.family (), AF_INET);
     ASSERT_STREQ (ip4.toString ().c_str (), "0.0.0.0");
 
     struct sockaddr_storage sa6;
     memset (&sa6, 0, sizeof (sa6));
 
-    reinterpret_cast <struct sockaddr_in6*> (&sa6)->sin6_family = AF_INET6;
-    IpAddress ip6 (*reinterpret_cast <struct sockaddr*> (&sa6));
+    reinterpret_cast<struct sockaddr_in6*> (&sa6)->sin6_family = AF_INET6;
+    IpAddress ip6 (*reinterpret_cast<struct sockaddr*> (&sa6));
     ASSERT_EQ (ip6.family (), AF_INET6);
     ASSERT_STREQ (ip6.toString ().c_str (), "::");
 }
@@ -437,7 +437,7 @@ TEST (IpAddress, sockaddrAssign)
     memset (&sa4, 0, sizeof (struct sockaddr_in));
     sa4.sin_family = AF_INET;
 
-    ip4 = *reinterpret_cast <struct sockaddr*> (&sa4);
+    ip4 = *reinterpret_cast<struct sockaddr*> (&sa4);
     ASSERT_EQ (ip4.family (), AF_INET);
     ASSERT_NE (ip4.addr (), nullptr);
     ASSERT_EQ (ip4.length (), sizeof (struct in_addr));
@@ -457,7 +457,7 @@ TEST (IpAddress, sockaddrAssign)
     memset (&sa6, 0, sizeof (struct sockaddr_in6));
     sa6.sin6_family = AF_INET6;
 
-    ip6 = *reinterpret_cast <struct sockaddr*> (&sa6);
+    ip6 = *reinterpret_cast<struct sockaddr*> (&sa6);
     ASSERT_EQ (ip6.family (), AF_INET6);
     ASSERT_NE (ip6.addr (), nullptr);
     ASSERT_EQ (ip6.length (), sizeof (struct in6_addr));
@@ -1477,55 +1477,55 @@ TEST (IpAddress, isIpAddress)
  */
 TEST (IpAddress, toIpv4)
 {
-    IpAddress ip = "0.0.0.0";
+    IpAddress ip   = "0.0.0.0";
     IpAddress ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "0.0.0.0");
 
-    ip = "127.0.0.1";
+    ip   = "127.0.0.1";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "127.0.0.1");
 
-    ip = "10.41.45.2";
+    ip   = "10.41.45.2";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "10.41.45.2");
 
-    ip = "::127.0.0.1";
+    ip   = "::127.0.0.1";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "127.0.0.1");
 
-    ip = "::10.41.45.2";
+    ip   = "::10.41.45.2";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "10.41.45.2");
 
-    ip = "::ffff:0.0.0.0";
+    ip   = "::ffff:0.0.0.0";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "0.0.0.0");
 
-    ip = "::ffff:127.0.0.1";
+    ip   = "::ffff:127.0.0.1";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "127.0.0.1");
 
-    ip = "::ffff:10.41.45.2";
+    ip   = "::ffff:10.41.45.2";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "10.41.45.2");
 
-    ip = "::";
+    ip   = "::";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "::");
 
-    ip = "0:0:0:0:0:0:0:0";
+    ip   = "0:0:0:0:0:0:0:0";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "::");
 
-    ip = "0::0";
+    ip   = "0::0";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "::");
 
-    ip = "::1";
+    ip   = "::1";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "::1");
 
-    ip = "fe80::57f3:baa4:fc3a:890a";
+    ip   = "fe80::57f3:baa4:fc3a:890a";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "fe80::57f3:baa4:fc3a:890a");
 }
@@ -1585,10 +1585,10 @@ TEST (IpAddress, toString)
     ip = "::";
     ASSERT_STREQ (ip.toString ().c_str (), "::");
 
-    ip   = "0:0:0:0:0:0:0:0";
+    ip = "0:0:0:0:0:0:0:0";
     ASSERT_STREQ (ip.toString ().c_str (), "::");
 
-    ip   = "0::0";
+    ip = "0::0";
     ASSERT_STREQ (ip.toString ().c_str (), "::");
 
     ip = "::1";
@@ -1628,69 +1628,69 @@ TEST (IpAddress, toArpa)
 TEST (IpAddress, clear)
 {
     IpAddress ip = "127.0.0.1";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "192.168.7.2";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "10.41.51.18";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "91.121.158.49";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "224.125.3.12";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "255.255.255.255";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "::1";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "fec0::1234:5678:9ab";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "fe80::57f3:baa4:fc3a:890a";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "2001:db8:1234:5678::1";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "ff05::1";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "::128.144.52.38";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 
     ip = "::ffff:128.144.52.38";
-    ASSERT_FALSE (ip.isWildcard());
+    ASSERT_FALSE (ip.isWildcard ());
     ip.clear ();
-    ASSERT_TRUE (ip.isWildcard());
+    ASSERT_TRUE (ip.isWildcard ());
 }
 
 /**
@@ -1698,7 +1698,7 @@ TEST (IpAddress, clear)
  */
 TEST (IpAddress, ipv4Address)
 {
-    ASSERT_TRUE  (IpAddress::ipv4Address ("bar0").isWildcard ());
+    ASSERT_TRUE (IpAddress::ipv4Address ("bar0").isWildcard ());
     ASSERT_FALSE (IpAddress::ipv4Address ("lo").isWildcard ()) << join::lastError.message ();
 }
 
@@ -1726,10 +1726,10 @@ TEST (IpAddress, at)
     ASSERT_THROW (((const IpAddress*)&ip4)->operator[] (4), std::out_of_range);
 
     IpAddress ip6 (AF_INET6);
-    ip6[0] = 0xfe;
-    ip6[1] = 0x80;
-    ip6[8] = 0x57;
-    ip6[9] = 0xf3;
+    ip6[0]  = 0xfe;
+    ip6[1]  = 0x80;
+    ip6[8]  = 0x57;
+    ip6[9]  = 0xf3;
     ip6[10] = 0xba;
     ip6[11] = 0xa4;
     ip6[12] = 0xfc;
@@ -2233,8 +2233,8 @@ TEST (IpAddress, and)
 {
     IpAddress ip1, ip2, result;
 
-    ip1 = "192.168.13.31";
-    ip2 = IpAddress (24, AF_INET);
+    ip1    = "192.168.13.31";
+    ip2    = IpAddress (24, AF_INET);
     result = ip1 & ip2;
     ASSERT_STREQ (result.toString ().c_str (), "192.168.13.0");
 
@@ -2244,8 +2244,8 @@ TEST (IpAddress, and)
     result = "255.255.255.0" & ip1;
     ASSERT_STREQ (result.toString ().c_str (), "192.168.13.0");
 
-    ip1 = "2001:db8:abcd:12::1";
-    ip2 = IpAddress (64, AF_INET6);
+    ip1    = "2001:db8:abcd:12::1";
+    ip2    = IpAddress (64, AF_INET6);
     result = ip1 & ip2;
     ASSERT_STREQ (result.toString ().c_str (), "2001:db8:abcd:12::");
 
@@ -2267,8 +2267,8 @@ TEST (IpAddress, or)
 {
     IpAddress ip1, ip2, result;
 
-    ip1 = "192.168.13.31";
-    ip2 = IpAddress (24, AF_INET);
+    ip1    = "192.168.13.31";
+    ip2    = IpAddress (24, AF_INET);
     result = ip1 | ip2;
     ASSERT_STREQ (result.toString ().c_str (), "255.255.255.31");
 
@@ -2278,8 +2278,8 @@ TEST (IpAddress, or)
     result = "255.255.255.0" | ip1;
     ASSERT_STREQ (result.toString ().c_str (), "255.255.255.31");
 
-    ip1 = "2001:db8:abcd:12::1";
-    ip2 = IpAddress (64, AF_INET6);
+    ip1    = "2001:db8:abcd:12::1";
+    ip2    = IpAddress (64, AF_INET6);
     result = ip1 | ip2;
     ASSERT_STREQ (result.toString ().c_str (), "ffff:ffff:ffff:ffff::1");
 
@@ -2301,8 +2301,8 @@ TEST (IpAddress, xor)
 {
     IpAddress ip1, ip2, result;
 
-    ip1 = "192.168.13.31";
-    ip2 = IpAddress (24, AF_INET);
+    ip1    = "192.168.13.31";
+    ip2    = IpAddress (24, AF_INET);
     result = ip1 ^ ip2;
     ASSERT_STREQ (result.toString ().c_str (), "63.87.242.31");
 
@@ -2312,8 +2312,8 @@ TEST (IpAddress, xor)
     result = "255.255.255.0" ^ ip1;
     ASSERT_STREQ (result.toString ().c_str (), "63.87.242.31");
 
-    ip1 = "2001:db8:abcd:12::1";
-    ip2 = IpAddress (64, AF_INET6);
+    ip1    = "2001:db8:abcd:12::1";
+    ip2    = IpAddress (64, AF_INET6);
     result = ip1 ^ ip2;
     ASSERT_STREQ (result.toString ().c_str (), "dffe:f247:5432:ffed::1");
 
@@ -2331,15 +2331,15 @@ TEST (IpAddress, xor)
 /**
  * @brief not operators.
  */
-TEST (IpAddress, not)
+TEST (IpAddress, not )
 {
     IpAddress ip, result;
 
-    ip = "192.168.13.31";
+    ip     = "192.168.13.31";
     result = ~ip;
     ASSERT_STREQ (result.toString ().c_str (), "63.87.242.224");
 
-    ip = "2001:db8:abcd:12::1";
+    ip     = "2001:db8:abcd:12::1";
     result = ~ip;
     ASSERT_STREQ (result.toString ().c_str (), "dffe:f247:5432:ffed:ffff:ffff:ffff:fffe");
 }
@@ -2359,7 +2359,7 @@ TEST (IpAddress, serialize)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

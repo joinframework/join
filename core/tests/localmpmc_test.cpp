@@ -34,7 +34,7 @@ using join::Thread;
 
 TEST (LocalMpmc, tryPush)
 {
-    LocalMem::Mpmc::Queue <uint64_t> queue (512);
+    LocalMem::Mpmc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -52,7 +52,7 @@ TEST (LocalMpmc, tryPush)
 
 TEST (LocalMpmc, push)
 {
-    LocalMem::Mpmc::Queue <uint64_t> queue (512);
+    LocalMem::Mpmc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -69,7 +69,7 @@ TEST (LocalMpmc, push)
 
 TEST (LocalMpmc, tryPop)
 {
-    LocalMem::Mpmc::Queue <uint64_t> queue (512);
+    LocalMem::Mpmc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.tryPop (data), -1);
@@ -86,7 +86,7 @@ TEST (LocalMpmc, tryPop)
 
 TEST (LocalMpmc, pop)
 {
-    LocalMem::Mpmc::Queue <uint64_t> queue (512);
+    LocalMem::Mpmc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_TRUE (queue.empty ());
@@ -101,22 +101,22 @@ TEST (LocalMpmc, pop)
 
 TEST (LocalMpmc, pushBenchmark)
 {
-    const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
-    const int numProducers = 4;
-    const int numConsumers = 4;
+    const uint64_t capacity       = 512;
+    const uint64_t num            = 1000000;
+    const int numProducers        = 4;
+    const int numConsumers        = 4;
     const uint64_t msgPerProducer = num / numProducers;
     const uint64_t msgPerConsumer = num / numConsumers;
 
-    LocalMem::Mpmc::Queue <uint64_t> queue (capacity);
-    std::atomic <bool> ready {false};
+    LocalMem::Mpmc::Queue<uint64_t> queue (capacity);
+    std::atomic<bool> ready{false};
 
-    std::vector <Thread> consumers;
-    std::vector <Thread> producers;
+    std::vector<Thread> consumers;
+    std::vector<Thread> producers;
 
     for (int i = 0; i < numConsumers; ++i)
     {
-        consumers.emplace_back ([&, msgPerConsumer] () {
+        consumers.emplace_back ([&] () {
             uint64_t data = 0;
             while (!ready.load (std::memory_order_acquire))
             {
@@ -144,7 +144,7 @@ TEST (LocalMpmc, pushBenchmark)
     ready.store (true, std::memory_order_release);
     for (int i = 0; i < numProducers; ++i)
     {
-        producers.emplace_back ([&, msgPerProducer] () {
+        producers.emplace_back ([&] () {
             uint64_t localData = 0;
             while (!ready.load (std::memory_order_acquire))
             {
@@ -157,8 +157,10 @@ TEST (LocalMpmc, pushBenchmark)
         });
     }
 
-    for (auto& p : producers) p.join ();
-    for (auto& c : consumers) c.join ();
+    for (auto& p : producers)
+        p.join ();
+    for (auto& c : consumers)
+        c.join ();
 
 
     uint64_t drainData = 0;
@@ -175,20 +177,20 @@ TEST (LocalMpmc, pushBenchmark)
 
 TEST (LocalMpmc, popBenchmark)
 {
-    const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
-    const int numProducers = 4;
-    const int numConsumers = 4;
+    const uint64_t capacity       = 512;
+    const uint64_t num            = 1000000;
+    const int numProducers        = 4;
+    const int numConsumers        = 4;
     const uint64_t msgPerProducer = num / numProducers;
     const uint64_t msgPerConsumer = num / numConsumers;
 
-    LocalMem::Mpmc::Queue <uint64_t> queue (capacity);
-    std::atomic <bool> ready {false};
+    LocalMem::Mpmc::Queue<uint64_t> queue (capacity);
+    std::atomic<bool> ready{false};
 
-    std::vector <Thread> producers;
+    std::vector<Thread> producers;
     for (int p = 0; p < numProducers; ++p)
     {
-        producers.emplace_back ([&queue, &ready, msgPerProducer] () {
+        producers.emplace_back ([&] () {
             uint64_t threadData = 0;
             while (!ready.load (std::memory_order_acquire))
             {
@@ -214,10 +216,10 @@ TEST (LocalMpmc, popBenchmark)
         }
     }
     ready.store (true, std::memory_order_release);
-    std::vector <Thread> consumers;
+    std::vector<Thread> consumers;
     for (int p = 0; p < numConsumers; ++p)
     {
-        consumers.emplace_back ([&queue, msgPerConsumer] () {
+        consumers.emplace_back ([&] () {
             uint64_t threadData = 0;
             for (uint64_t i = 0; i < msgPerConsumer; ++i)
             {
@@ -226,8 +228,10 @@ TEST (LocalMpmc, popBenchmark)
         });
     }
 
-    for (auto& c : consumers) c.join ();
-    for (auto& p : producers) p.join ();
+    for (auto& c : consumers)
+        c.join ();
+    for (auto& p : producers)
+        p.join ();
 
     uint64_t drainData = 0;
 
@@ -243,7 +247,7 @@ TEST (LocalMpmc, popBenchmark)
 
 TEST (LocalMpmc, pending)
 {
-    LocalMem::Mpmc::Queue <uint64_t> queue (0);
+    LocalMem::Mpmc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.pending (), 0);
@@ -253,7 +257,7 @@ TEST (LocalMpmc, pending)
 
 TEST (LocalMpmc, available)
 {
-    LocalMem::Mpmc::Queue <uint64_t> queue (0);
+    LocalMem::Mpmc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.available (), 1);
@@ -263,7 +267,7 @@ TEST (LocalMpmc, available)
 
 TEST (LocalMpmc, full)
 {
-    LocalMem::Mpmc::Queue <uint64_t> queue (0);
+    LocalMem::Mpmc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -273,7 +277,7 @@ TEST (LocalMpmc, full)
 
 TEST (LocalMpmc, empty)
 {
-    LocalMem::Mpmc::Queue <uint64_t> queue (0);
+    LocalMem::Mpmc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_TRUE (queue.empty ());
@@ -283,20 +287,20 @@ TEST (LocalMpmc, empty)
 
 TEST (LocalMpmc, mlock)
 {
-    LocalMem::Mpmc::Queue <uint64_t> queue (0);
+    LocalMem::Mpmc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mlock (), 0) << join::lastError.message ();
 }
 
 TEST (LocalMpmc, mbind)
 {
-    LocalMem::Mpmc::Queue <uint64_t> queue (0);
+    LocalMem::Mpmc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mbind (0), 0) << join::lastError.message ();
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

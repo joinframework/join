@@ -52,16 +52,16 @@ namespace join
      */
     enum ChangeType
     {
-        Added               = 1L << 0,
-        Deleted             = 1L << 1,
-        Modified            = 1L << 2,
-        AdminStateChanged   = 1L << 3,
-        OperStateChanged    = 1L << 4,
-        MacChanged          = 1L << 5,
-        NameChanged         = 1L << 6,
-        MtuChanged          = 1L << 7,
-        KindChanged         = 1L << 8,
-        MasterChanged       = 1L << 9,
+        Added             = 1L << 0,
+        Deleted           = 1L << 1,
+        Modified          = 1L << 2,
+        AdminStateChanged = 1L << 3,
+        OperStateChanged  = 1L << 4,
+        MacChanged        = 1L << 5,
+        NameChanged       = 1L << 6,
+        MtuChanged        = 1L << 7,
+        KindChanged       = 1L << 8,
+        MasterChanged     = 1L << 9,
     };
 
     /**
@@ -71,7 +71,9 @@ namespace join
      * @return bitset result of binary AND on ChangeType.
      */
     inline ChangeType operator& (ChangeType __a, ChangeType __b)
-    { return ChangeType (static_cast <int> (__a) & static_cast <int> (__b)); }
+    {
+        return ChangeType (static_cast<int> (__a) & static_cast<int> (__b));
+    }
 
     /**
      * @brief perform binary OR on ChangeType.
@@ -80,7 +82,9 @@ namespace join
      * @return bitset result of binary OR on ChangeType.
      */
     inline ChangeType operator| (ChangeType __a, ChangeType __b)
-    { return ChangeType (static_cast <int> (__a) | static_cast <int> (__b)); }
+    {
+        return ChangeType (static_cast<int> (__a) | static_cast<int> (__b));
+    }
 
     /**
      * @brief perform binary XOR on ChangeType.
@@ -89,15 +93,19 @@ namespace join
      * @return bitset result of binary XOR on ChangeType.
      */
     inline ChangeType operator^ (ChangeType __a, ChangeType __b)
-    { return ChangeType (static_cast <int> (__a) ^ static_cast <int> (__b)); }
+    {
+        return ChangeType (static_cast<int> (__a) ^ static_cast<int> (__b));
+    }
 
     /**
      * @brief perform binary NOT on ChangeType.
      * @param __a bitset.
      * @return bitset result of binary NOT on ChangeType.
      */
-    inline ChangeType operator~ (ChangeType __a)
-    { return ChangeType (~static_cast <int> (__a)); }
+    inline ChangeType operator~(ChangeType __a)
+    {
+        return ChangeType (~static_cast<int> (__a));
+    }
 
     /**
      * @brief perform binary AND on ChangeType.
@@ -106,7 +114,9 @@ namespace join
      * @return bitset result of binary AND on ChangeType.
      */
     inline const ChangeType& operator&= (ChangeType& __a, ChangeType __b)
-    { return __a = __a & __b; }
+    {
+        return __a = __a & __b;
+    }
 
     /**
      * @brief perform binary OR on ChangeType.
@@ -115,7 +125,9 @@ namespace join
      * @return bitset result of binary OR.
      */
     inline const ChangeType& operator|= (ChangeType& __a, ChangeType __b)
-    { return __a = __a | __b; }
+    {
+        return __a = __a | __b;
+    }
 
     /**
      * @brief perform binary XOR on ChangeType.
@@ -124,15 +136,17 @@ namespace join
      * @return bitset result of binary XOR on ChangeType.
      */
     inline const ChangeType& operator^= (ChangeType& __a, ChangeType __b)
-    { return __a = __a ^ __b; }
+    {
+        return __a = __a ^ __b;
+    }
 
     /**
      * @brief link information.
      */
     struct LinkInfo
     {
-        uint32_t index;                 /**< interface index. */
-        ChangeType flags;               /**< what changed (bitmask). */
+        uint32_t index;   /**< interface index. */
+        ChangeType flags; /**< what changed (bitmask). */
     };
 
     /**
@@ -140,7 +154,7 @@ namespace join
      */
     struct AddressInfo : public LinkInfo
     {
-        Interface::Address address;     /**< address changed. */
+        Interface::Address address; /**< address changed. */
     };
 
     /**
@@ -148,7 +162,7 @@ namespace join
      */
     struct RouteInfo : public LinkInfo
     {
-         Interface::Route route;        /**< route changed. */
+        Interface::Route route; /**< route changed. */
     };
 
     /**
@@ -157,9 +171,9 @@ namespace join
     class InterfaceManager : private Netlink::Socket
     {
     public:
-        using LinkNotify    = std::function <void (const LinkInfo& info)>;
-        using AddressNotify = std::function <void (const AddressInfo& info)>;
-        using RouteNotify   = std::function <void (const RouteInfo& info)>;
+        using LinkNotify    = std::function<void (const LinkInfo& info)>;
+        using AddressNotify = std::function<void (const AddressInfo& info)>;
+        using RouteNotify   = std::function<void (const RouteInfo& info)>;
 
         /**
          * @brief create instance.
@@ -286,7 +300,8 @@ namespace join
          * @param sync wait for completion.
          * @return 0 on success, -1 on failure.
          */
-        int createVlanInterface (const std::string& interfaceName, uint32_t parentIndex, uint16_t id, uint16_t proto = ETH_P_8021Q, bool sync = false);
+        int createVlanInterface (const std::string& interfaceName, uint32_t parentIndex, uint16_t id,
+                                 uint16_t proto = ETH_P_8021Q, bool sync = false);
 
         /**
          * @brief creates a VLAN interface.
@@ -297,7 +312,8 @@ namespace join
          * @param sync wait for completion.
          * @return 0 on success, -1 on failure.
          */
-        int createVlanInterface (const std::string& interfaceName, const std::string& parentName, uint16_t id, uint16_t proto = ETH_P_8021Q, bool sync = false);
+        int createVlanInterface (const std::string& interfaceName, const std::string& parentName, uint16_t id,
+                                 uint16_t proto = ETH_P_8021Q, bool sync = false);
 
         /**
          * @brief creates a Virtual Ethernet nterface pair.
@@ -307,7 +323,8 @@ namespace join
          * @param sync wait for completion.
          * @return 0 on success, -1 on failure.
          */
-        int createVethInterface (const std::string& hostName, const std::string& peerName, pid_t* pid = nullptr, bool sync = false);
+        int createVethInterface (const std::string& hostName, const std::string& peerName, pid_t* pid = nullptr,
+                                 bool sync = false);
 
         /**
          * @brief creates a a GRE tunnel interface.
@@ -321,9 +338,9 @@ namespace join
          * @param sync wait for completion.
          * @return 0 on success, -1 on failure.
          */
-        int createGreInterface (const std::string& tunnelName, uint32_t parentIndex,
-                                const IpAddress& localAddress, const IpAddress& remoteAddress,
-                                const uint32_t* ikey = nullptr, const uint32_t* okey = nullptr, uint8_t ttl = 64, bool sync = false);
+        int createGreInterface (const std::string& tunnelName, uint32_t parentIndex, const IpAddress& localAddress,
+                                const IpAddress& remoteAddress, const uint32_t* ikey = nullptr,
+                                const uint32_t* okey = nullptr, uint8_t ttl = 64, bool sync = false);
 
         /**
          * @brief creates a a GRE tunnel interface.
@@ -339,7 +356,8 @@ namespace join
          */
         int createGreInterface (const std::string& tunnelName, const std::string& parentName,
                                 const IpAddress& localAddress, const IpAddress& remoteAddress,
-                                const uint32_t* ikey = nullptr, const uint32_t* okey = nullptr, uint8_t ttl = 64, bool sync = false);
+                                const uint32_t* ikey = nullptr, const uint32_t* okey = nullptr, uint8_t ttl = 64,
+                                bool sync = false);
 
         /**
          * @brief deletes the specified network interface.
@@ -373,7 +391,7 @@ namespace join
                 oldVal = newVal;
                 return changed;
             }
-            return static_cast <ChangeType> (0);
+            return static_cast<ChangeType> (0);
         }
 
         /**
@@ -383,28 +401,28 @@ namespace join
          * @brief data attribute data.
          * @brief alen attribute data length.
          */
-        void addAttributes (struct nlmsghdr *nlh, int type, const void *data, int alen);
+        void addAttributes (struct nlmsghdr* nlh, int type, const void* data, int alen);
 
         /**
          * @brief start nested attributes.
          * @brief nlh netlink message header.
          * @return nested attributes pointer.
          */
-        struct rtattr* startNestedAttributes (struct nlmsghdr *nlh, int type);
+        struct rtattr* startNestedAttributes (struct nlmsghdr* nlh, int type);
 
         /**
          * @brief Stop nested attributes.
          * @brief nlh netlink message header.
          * @brief nested attributes pointer.
          */
-        int stopNestedAttributes (struct nlmsghdr *nlh, struct rtattr *nested);
+        int stopNestedAttributes (struct nlmsghdr* nlh, struct rtattr* nested);
 
         /**
          * @brief Add veth peer info data.
          * @brief nlh netlink message header.
          * @brief peerName peer interface name.
          */
-        void addPeerInfoData (struct nlmsghdr *nlh, const std::string& peerName);
+        void addPeerInfoData (struct nlmsghdr* nlh, const std::string& peerName);
 
         /**
          * @brief set interface mtu.
@@ -459,7 +477,8 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addAddress (uint32_t interfaceIndex, const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {}, bool sync = false);
+        int addAddress (uint32_t interfaceIndex, const IpAddress& ipAddress, uint32_t prefix,
+                        const IpAddress& broadcast = {}, bool sync = false);
 
         /**
          * @brief remove ip address from interface.
@@ -470,7 +489,8 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int removeAddress (uint32_t interfaceIndex, const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {}, bool sync = false);
+        int removeAddress (uint32_t interfaceIndex, const IpAddress& ipAddress, uint32_t prefix,
+                           const IpAddress& broadcast = {}, bool sync = false);
 
         /**
          * @brief add route to interface.
@@ -482,7 +502,8 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t* metric = nullptr, bool sync = false);
+        int addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway,
+                      uint32_t* metric = nullptr, bool sync = false);
 
         /**
          * @brief remove route from interface.
@@ -494,7 +515,8 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t* metric = nullptr, bool sync = false);
+        int removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway,
+                         uint32_t* metric = nullptr, bool sync = false);
 
         /**
          * @brief dump link data.
@@ -532,7 +554,7 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int waitResponse (ScopedLock <Mutex>& lock, uint32_t seq, uint32_t timeout = 5000);
+        int waitResponse (ScopedLock<Mutex>& lock, uint32_t seq, uint32_t timeout = 5000);
 
         /**
          * @brief method called when data are ready to be read on handle.
@@ -599,7 +621,7 @@ namespace join
         static constexpr size_t _bufferSize = 4096;
 
         /// internal read buffer.
-        std::unique_ptr <char []> _buffer;
+        std::unique_ptr<char[]> _buffer;
 
         /// reserved vlan id.
         static constexpr uint16_t reservedVlanId = 0;
@@ -608,7 +630,7 @@ namespace join
         static constexpr uint16_t maxVlanId = 4094;
 
         /// interfaces.
-        std::map <uint32_t, Interface::Ptr> _interfaces;
+        std::map<uint32_t, Interface::Ptr> _interfaces;
 
         /// protection mutex.
         Mutex _ifMutex;
@@ -626,25 +648,25 @@ namespace join
         };
 
         /// pending requests.
-        std::map <uint32_t, std::shared_ptr <PendingRequest>> _pending;
+        std::map<uint32_t, std::shared_ptr<PendingRequest>> _pending;
 
         /// mutex for synchronous operations.
         Mutex _syncMutex;
 
         /// link listener callbacks.
-        std::vector <LinkNotify> _linkListeners;
+        std::vector<LinkNotify> _linkListeners;
 
         /// protection mutex.
         Mutex _linkMutex;
 
         /// address listener callbacks.
-        std::vector <AddressNotify> _addressListeners;
+        std::vector<AddressNotify> _addressListeners;
 
         /// protection mutex.
         Mutex _addressMutex;
 
         /// route listener callbacks.
-        std::vector <RouteNotify> _routeListeners;
+        std::vector<RouteNotify> _routeListeners;
 
         /// protection mutex.
         Mutex _routeMutex;

@@ -175,7 +175,7 @@ public:
     {
         unlink (_rootcert.c_str ());
         unlink (_certFile.c_str ());
-        rmdir  (_certPath.c_str ());
+        rmdir (_certPath.c_str ());
         unlink (_key.c_str ());
         unlink (_invalidKey.c_str ());
     }
@@ -256,15 +256,16 @@ protected:
     static const std::string _invalidKey;
 };
 
-const std::string TlsSocketStream::_host = "127.0.0.1";
-const uint16_t    TlsSocketStream::_port = 5000;
-const uint16_t    TlsSocketStream::_invalid_port = 5032;
-const int         TlsSocketStream::_timeout = 1000;
-const std::string TlsSocketStream::_rootcert = "/tmp/tlssocket_test_root.cert";
-const std::string TlsSocketStream::_certPath = "/tmp/certs";
-const std::string TlsSocketStream::_certFile = _certPath + "/tlssocket_test.cert";
-const std::string TlsSocketStream::_key = "/tmp/tlssocket_test.key";
+const std::string TlsSocketStream::_host       = "127.0.0.1";
+const uint16_t TlsSocketStream::_port          = 5000;
+const uint16_t TlsSocketStream::_invalid_port  = 5032;
+const int TlsSocketStream::_timeout            = 1000;
+const std::string TlsSocketStream::_rootcert   = "/tmp/tlssocket_test_root.cert";
+const std::string TlsSocketStream::_certPath   = "/tmp/certs";
+const std::string TlsSocketStream::_certFile   = _certPath + "/tlssocket_test.cert";
+const std::string TlsSocketStream::_key        = "/tmp/tlssocket_test.key";
 const std::string TlsSocketStream::_invalidKey = "/tmp/tlssocket_test_invalid.key";
+
 /**
  * @brief Test default constructor.
  */
@@ -408,12 +409,12 @@ TEST_F (TlsSocketStream, close)
     ASSERT_FALSE (tlsStream.opened ());
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_TRUE (tlsStream.opened());
+    ASSERT_TRUE (tlsStream.opened ());
     tlsStream.disconnect ();
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
-    ASSERT_FALSE (tlsStream.opened());
+    ASSERT_FALSE (tlsStream.opened ());
     tlsStream.close ();
-    ASSERT_FALSE (tlsStream.opened());
+    ASSERT_FALSE (tlsStream.opened ());
 }
 
 /**
@@ -422,7 +423,7 @@ TEST_F (TlsSocketStream, close)
 TEST_F (TlsSocketStream, localEndpoint)
 {
     Tls::Stream tlsStream;
-    ASSERT_EQ (tlsStream.localEndpoint (), Tls::Endpoint {});
+    ASSERT_EQ (tlsStream.localEndpoint (), Tls::Endpoint{});
     tlsStream.bind ({_host, uint16_t (_port + 1)});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.connectEncrypted ({_host, _port});
@@ -439,7 +440,7 @@ TEST_F (TlsSocketStream, localEndpoint)
 TEST_F (TlsSocketStream, remoteEndpoint)
 {
     Tls::Stream tlsStream;
-    ASSERT_EQ (tlsStream.remoteEndpoint (), Tls::Endpoint {});
+    ASSERT_EQ (tlsStream.remoteEndpoint (), Tls::Endpoint{});
     tlsStream.bind ({_host, uint16_t (_port + 1)});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.connectEncrypted ({_host, _port});
@@ -573,7 +574,7 @@ TEST_F (TlsSocketStream, setCaFile)
 TEST_F (TlsSocketStream, setVerify)
 {
     Tls::Stream tlsStream;
-    Tls::Endpoint endpoint {_host, _port};
+    Tls::Endpoint endpoint{_host, _port};
 
     tlsStream.setVerify (false);
     tlsStream.connectEncrypted (endpoint);
@@ -844,7 +845,7 @@ TEST_F (TlsSocketStream, getline)
     tlsStream.connectEncrypted ({_host, _port});
     tlsStream.write ("test\n", 5);
     tlsStream.flush ();
-    std::array <char, 32> test = {};
+    std::array<char, 32> test = {};
     tlsStream.getline (test.data (), test.size (), '\n');
     ASSERT_STREQ (test.data (), "test");
     tlsStream.disconnect ();
@@ -861,7 +862,7 @@ TEST_F (TlsSocketStream, ignore)
     tlsStream.connectEncrypted ({_host, _port});
     tlsStream.write ("test\n", 5);
     tlsStream.flush ();
-    tlsStream.ignore (std::numeric_limits <std::streamsize>::max (), 'e');
+    tlsStream.ignore (std::numeric_limits<std::streamsize>::max (), 'e');
     ASSERT_EQ (tlsStream.get (), 's');
     ASSERT_EQ (tlsStream.get (), 't');
     tlsStream.disconnect ();
@@ -878,7 +879,7 @@ TEST_F (TlsSocketStream, read)
     tlsStream.connectEncrypted ({_host, _port});
     tlsStream.write ("test", 4);
     tlsStream.flush ();
-    std::array <char, 32> test = {};
+    std::array<char, 32> test = {};
     tlsStream.read (test.data (), 4);
     ASSERT_STREQ (test.data (), "test");
     tlsStream.disconnect ();
@@ -895,7 +896,7 @@ TEST_F (TlsSocketStream, DISABLED_readsome)
     tlsStream.connectEncrypted ({_host, _port});
     tlsStream.write ("test", 4);
     tlsStream.flush ();
-    std::array <char, 32> test = {};
+    std::array<char, 32> test = {};
     ASSERT_EQ (tlsStream.readsome (test.data (), test.size ()), 4);
     ASSERT_STREQ (test.data (), "test");
     tlsStream.disconnect ();
@@ -912,7 +913,7 @@ TEST_F (TlsSocketStream, gcount)
     tlsStream.connectEncrypted ({_host, _port});
     tlsStream.write ("test", 4);
     tlsStream.flush ();
-    std::array <char, 32> test = {};
+    std::array<char, 32> test = {};
     tlsStream.read (test.data (), 4);
     ASSERT_EQ (tlsStream.gcount (), 4);
     tlsStream.disconnect ();
@@ -923,7 +924,7 @@ TEST_F (TlsSocketStream, gcount)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);

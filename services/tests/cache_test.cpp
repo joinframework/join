@@ -124,14 +124,14 @@ protected:
 };
 
 Cache CacheTest::cache;
-const std::string CacheTest::base = "/tmp/";
-const std::string CacheTest::stem = "join_cache_test";
-const std::string CacheTest::ext = "txt";
-const std::string CacheTest::name = stem + "." + ext;
-const std::string CacheTest::path = base + name;
-const std::string CacheTest::content = "test string";
-const std::string CacheTest::bad = base + stem + ".bad";
-const std::string CacheTest::other = base + stem + ".other";
+const std::string CacheTest::base         = "/tmp/";
+const std::string CacheTest::stem         = "join_cache_test";
+const std::string CacheTest::ext          = "txt";
+const std::string CacheTest::name         = stem + "." + ext;
+const std::string CacheTest::path         = base + name;
+const std::string CacheTest::content      = "test string";
+const std::string CacheTest::bad          = base + stem + ".bad";
+const std::string CacheTest::other        = base + stem + ".other";
 const std::string CacheTest::otherContent = "other test string";
 
 /**
@@ -141,23 +141,23 @@ TEST_F (CacheTest, get)
 {
     struct stat sbuf;
 
-    char* data = reinterpret_cast <char*> (cache.get (bad, sbuf));
+    char* data = reinterpret_cast<char*> (cache.get (bad, sbuf));
     ASSERT_EQ (data, nullptr);
 
-    data = reinterpret_cast <char*> (cache.get (base, sbuf));
+    data = reinterpret_cast<char*> (cache.get (base, sbuf));
     ASSERT_EQ (data, nullptr);
 
-    data = reinterpret_cast <char*> (cache.get (path, sbuf));
+    data = reinterpret_cast<char*> (cache.get (path, sbuf));
     ASSERT_NE (data, nullptr);
     ASSERT_EQ (std::string (data, sbuf.st_size), content);
 
-    data = reinterpret_cast <char*> (cache.get (other, sbuf));
+    data = reinterpret_cast<char*> (cache.get (other, sbuf));
     ASSERT_NE (data, nullptr);
     ASSERT_EQ (std::string (data, sbuf.st_size), otherContent);
 
     ASSERT_TRUE (writeFile (path, otherContent));
 
-    data = reinterpret_cast <char*> (cache.get (path, sbuf));
+    data = reinterpret_cast<char*> (cache.get (path, sbuf));
     ASSERT_NE (data, nullptr);
     ASSERT_EQ (std::string (data, sbuf.st_size), otherContent);
 }
@@ -191,7 +191,7 @@ TEST_F (CacheTest, size)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

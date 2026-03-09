@@ -58,11 +58,11 @@ namespace join
         explicit Interface (InterfaceManager* manager, uint32_t index);
 
     public:
-        using Ptr           = std::shared_ptr <Interface>;
-        using Address       = std::tuple <IpAddress, uint32_t, IpAddress>;
-        using AddressList   = std::vector <Address>;
-        using Route         = std::tuple <IpAddress, uint32_t, IpAddress, uint32_t>;
-        using RouteList     = std::vector <Route>;
+        using Ptr         = std::shared_ptr<Interface>;
+        using Address     = std::tuple<IpAddress, uint32_t, IpAddress>;
+        using AddressList = std::vector<Address>;
+        using Route       = std::tuple<IpAddress, uint32_t, IpAddress, uint32_t>;
+        using RouteList   = std::vector<Route>;
 
         /**
          * @brief create instance.
@@ -134,7 +134,8 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {}, bool sync = false);
+        int addAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {},
+                        bool sync = false);
 
         /**
          * @brief add address to interface.
@@ -152,7 +153,8 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int removeAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {}, bool sync = false);
+        int removeAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {},
+                           bool sync = false);
 
         /**
          * @brief remove address from interface.
@@ -190,7 +192,8 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway = {}, uint32_t metric = 0, bool sync = false);
+        int addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway = {}, uint32_t metric = 0,
+                      bool sync = false);
 
         /**
          * @brief add route to interface.
@@ -209,7 +212,8 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway = {}, uint32_t metric = 0, bool sync = false);
+        int removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway = {}, uint32_t metric = 0,
+                         bool sync = false);
 
         /**
          * @brief remove route from interface.
@@ -446,7 +450,7 @@ namespace join
     }
 
     /// list of interfaces.
-    using InterfaceList = std::set <Interface::Ptr>;
+    using InterfaceList = std::set<Interface::Ptr>;
 }
 
 #endif

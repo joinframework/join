@@ -102,37 +102,35 @@ TEST (LocalSpsc, pop)
 TEST (LocalSpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
+    const uint64_t num      = 1000000;
 
     LocalMem::Spsc::Queue<uint64_t> queue (capacity);
     std::atomic<bool> ready{false};
 
-    std::thread consumer (
-        [&] ()
-        {
-            uint64_t data = 0;
+    std::thread consumer ([&] () {
+        uint64_t data = 0;
 
-            while (!ready.load (std::memory_order_acquire))
+        while (!ready.load (std::memory_order_acquire))
+        {
+            std::this_thread::yield ();
+        }
+
+        for (uint64_t i = 0; i < num; ++i)
+        {
+            while (queue.tryPop (data) == -1)
             {
                 std::this_thread::yield ();
             }
+        }
 
-            for (uint64_t i = 0; i < num; ++i)
+        for (uint64_t i = 0; i < capacity; ++i)
+        {
+            while (queue.tryPop (data) == -1)
             {
-                while (queue.tryPop (data) == -1)
-                {
-                    std::this_thread::yield ();
-                }
+                std::this_thread::yield ();
             }
-
-            for (uint64_t i = 0; i < capacity; ++i)
-            {
-                while (queue.tryPop (data) == -1)
-                {
-                    std::this_thread::yield ();
-                }
-            }
-        });
+        }
+    });
 
     uint64_t data = 0;
 
@@ -158,26 +156,24 @@ TEST (LocalSpsc, pushBenchmark)
 TEST (LocalSpsc, popBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num = 1000000;
+    const uint64_t num      = 1000000;
 
     LocalMem::Spsc::Queue<uint64_t> queue (capacity);
     std::atomic<bool> producerReady{false};
 
-    std::thread producer (
-        [&] ()
+    std::thread producer ([&] () {
+        uint64_t data = 0;
+
+        producerReady.store (true, std::memory_order_release);
+
+        for (uint64_t i = 0; i < num; ++i)
         {
-            uint64_t data = 0;
-
-            producerReady.store (true, std::memory_order_release);
-
-            for (uint64_t i = 0; i < num; ++i)
+            while (queue.tryPush (data) == -1)
             {
-                while (queue.tryPush (data) == -1)
-                {
-                    std::this_thread::yield ();
-                }
+                std::this_thread::yield ();
             }
-        });
+        }
+    });
 
     while (!producerReady.load (std::memory_order_acquire))
     {

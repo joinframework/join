@@ -48,19 +48,20 @@ TEST (ErrorCategory, name)
 TEST (ErrorCategory, message)
 {
     EXPECT_STREQ (ErrorCategory ().message (0).c_str (), "success");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::InUse)).c_str (), "already in use");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::InvalidParam)).c_str (), "invalid parameters");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::ConnectionRefused)).c_str (), "connection refused");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::ConnectionClosed)).c_str (), "connection closed");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::TimedOut)).c_str (), "timer expired");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::PermissionDenied)).c_str (), "operation not permitted");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::OutOfMemory)).c_str (), "cannot allocate memory");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::OperationFailed)).c_str (), "operation failed");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::NotFound)).c_str (), "resource not found");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::MessageUnknown)).c_str (), "message unknown");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::MessageTooLong)).c_str (), "message too long");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::TemporaryError)).c_str (), "temporary error");
-    EXPECT_STREQ (ErrorCategory ().message (static_cast <int> (Errc::UnknownError)).c_str (), "unknown error");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::InUse)).c_str (), "already in use");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::InvalidParam)).c_str (), "invalid parameters");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::ConnectionRefused)).c_str (), "connection refused");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::ConnectionClosed)).c_str (), "connection closed");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::TimedOut)).c_str (), "timer expired");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::PermissionDenied)).c_str (),
+                  "operation not permitted");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::OutOfMemory)).c_str (), "cannot allocate memory");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::OperationFailed)).c_str (), "operation failed");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::NotFound)).c_str (), "resource not found");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::MessageUnknown)).c_str (), "message unknown");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::MessageTooLong)).c_str (), "message too long");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::TemporaryError)).c_str (), "temporary error");
+    EXPECT_STREQ (ErrorCategory ().message (static_cast<int> (Errc::UnknownError)).c_str (), "unknown error");
 }
 
 /**
@@ -68,20 +69,20 @@ TEST (ErrorCategory, message)
  */
 TEST (ErrorCategory, default_error_condition)
 {
-    EXPECT_EQ (ErrorCategory ().default_error_condition (0).message(), "success");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (1).message(), "already in use");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (2).message(), "invalid parameters");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (3).message(), "connection refused");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (4).message(), "connection closed");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (5).message(), "timer expired");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (6).message(), "operation not permitted");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (7).message(), "cannot allocate memory");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (8).message(), "operation failed");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (9).message(), "resource not found");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (10).message(), "message unknown");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (11).message(), "message too long");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (12).message(), "temporary error");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (13).message(), "unknown error");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (0).message (), "success");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (1).message (), "already in use");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (2).message (), "invalid parameters");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (3).message (), "connection refused");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (4).message (), "connection closed");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (5).message (), "timer expired");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (6).message (), "operation not permitted");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (7).message (), "cannot allocate memory");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (8).message (), "operation failed");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (9).message (), "resource not found");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (10).message (), "message unknown");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (11).message (), "message too long");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (12).message (), "temporary error");
+    EXPECT_EQ (ErrorCategory ().default_error_condition (13).message (), "unknown error");
 }
 
 /**
@@ -239,7 +240,7 @@ TEST (ErrorCategory, make_error_condition)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

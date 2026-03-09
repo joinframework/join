@@ -44,7 +44,7 @@ public:
     /**
      * @brief set up test case.
      */
-    static void SetUpTestCase()
+    static void SetUpTestCase ()
     {
         [[maybe_unused]] int result;
 
@@ -67,7 +67,7 @@ public:
     /**
      * @brief tear down test case.
      */
-    static void TearDownTestCase()
+    static void TearDownTestCase ()
     {
         [[maybe_unused]] int result;
 
@@ -95,7 +95,8 @@ TEST_F (ArpTest, get)
     ASSERT_TRUE (Arp::get ("192.168.16.217", "br0").isWildcard ());
     ASSERT_EQ (lastError, std::errc::no_such_device_or_address) << lastError.message ();
 
-    ASSERT_EQ (Arp::get (IpAddress::ipv4Address ("eth0"), "eth0"), MacAddress::address ("eth0")) << lastError.message ();
+    ASSERT_EQ (Arp::get (IpAddress::ipv4Address ("eth0"), "eth0"), MacAddress::address ("eth0"))
+        << lastError.message ();
 
     ASSERT_EQ (Arp::get ("192.168.16.200", "br0"), "4e:ed:ed:ee:59:db") << lastError.message ();
 }
@@ -152,7 +153,7 @@ TEST_F (ArpTest, cache)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

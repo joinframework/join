@@ -37,7 +37,7 @@ public:
     /**
      * @brief tear down test case.
      */
-    static void TearDownTestCase()
+    static void TearDownTestCase ()
     {
         // remove all files before ending the test.
         ::remove (path.c_str ());
@@ -170,7 +170,7 @@ TEST_F (FileSystem, exists)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

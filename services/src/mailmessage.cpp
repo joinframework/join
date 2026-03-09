@@ -49,8 +49,8 @@ MailSender::MailSender (const std::string& address)
 //   METHOD    : MailSender
 // =========================================================================
 MailSender::MailSender (const std::string& address, const std::string& name)
-: _address (address),
-  _name (name)
+: _address (address)
+, _name (name)
 {
 }
 
@@ -59,8 +59,8 @@ MailSender::MailSender (const std::string& address, const std::string& name)
 //   METHOD    : MailSender
 // =========================================================================
 MailSender::MailSender (const MailSender& other)
-: _address (other._address),
-  _name (other._name)
+: _address (other._address)
+, _name (other._name)
 {
 }
 
@@ -71,7 +71,7 @@ MailSender::MailSender (const MailSender& other)
 MailSender& MailSender::operator= (const MailSender& other)
 {
     _address = other._address;
-    _name = other._name;
+    _name    = other._name;
     return *this;
 }
 
@@ -80,8 +80,8 @@ MailSender& MailSender::operator= (const MailSender& other)
 //   METHOD    : MailSender
 // =========================================================================
 MailSender::MailSender (MailSender&& other)
-: _address (std::move (other._address)),
-  _name (std::move (other._name))
+: _address (std::move (other._address))
+, _name (std::move (other._name))
 {
 }
 
@@ -92,7 +92,7 @@ MailSender::MailSender (MailSender&& other)
 MailSender& MailSender::operator= (MailSender&& other)
 {
     _address = std::move (other._address);
-    _name = std::move (other._name);
+    _name    = std::move (other._name);
     return *this;
 }
 
@@ -165,8 +165,8 @@ MailRecipient::MailRecipient (const std::string& address, Type t)
 //   METHOD    : MailRecipient
 // =========================================================================
 MailRecipient::MailRecipient (const std::string& address, const std::string& name, Type t)
-: MailSender (address, name),
-  _type (t)
+: MailSender (address, name)
+, _type (t)
 {
 }
 
@@ -175,8 +175,8 @@ MailRecipient::MailRecipient (const std::string& address, const std::string& nam
 //   METHOD    : MailRecipient
 // =========================================================================
 MailRecipient::MailRecipient (const MailRecipient& other)
-: MailSender (other),
-  _type (other._type)
+: MailSender (other)
+, _type (other._type)
 {
 }
 
@@ -196,8 +196,8 @@ MailRecipient& MailRecipient::operator= (const MailRecipient& other)
 //   METHOD    : MailRecipient
 // =========================================================================
 MailRecipient::MailRecipient (MailRecipient&& other)
-: MailSender (std::move (other)),
-  _type (other._type)
+: MailSender (std::move (other))
+, _type (other._type)
 {
 }
 
@@ -235,10 +235,10 @@ MailRecipient::Type MailRecipient::type () const
 //   METHOD    : MailMessage
 // =========================================================================
 MailMessage::MailMessage (const MailMessage& other)
-: _sender (other._sender),
-  _recipients (other._recipients),
-  _subject (other._subject),
-  _content (other._content)
+: _sender (other._sender)
+, _recipients (other._recipients)
+, _subject (other._subject)
+, _content (other._content)
 {
 }
 
@@ -248,10 +248,10 @@ MailMessage::MailMessage (const MailMessage& other)
 // =========================================================================
 MailMessage& MailMessage::operator= (const MailMessage& other)
 {
-    _sender = other._sender;
+    _sender     = other._sender;
     _recipients = other._recipients;
-    _subject = other._subject;
-    _content = other._content;
+    _subject    = other._subject;
+    _content    = other._content;
     return *this;
 }
 
@@ -260,10 +260,10 @@ MailMessage& MailMessage::operator= (const MailMessage& other)
 //   METHOD    : MailMessage
 // =========================================================================
 MailMessage::MailMessage (MailMessage&& other)
-: _sender (std::move (other._sender)),
-  _recipients (std::move (other._recipients)),
-  _subject (std::move (other._subject)),
-  _content (std::move (other._content))
+: _sender (std::move (other._sender))
+, _recipients (std::move (other._recipients))
+, _subject (std::move (other._subject))
+, _content (std::move (other._content))
 {
 }
 
@@ -273,10 +273,10 @@ MailMessage::MailMessage (MailMessage&& other)
 // =========================================================================
 MailMessage& MailMessage::operator= (MailMessage&& other)
 {
-    _sender = std::move (other._sender);
+    _sender     = std::move (other._sender);
     _recipients = std::move (other._recipients);
-    _subject = std::move (other._subject);
-    _content = std::move (other._content);
+    _subject    = std::move (other._subject);
+    _content    = std::move (other._content);
     return *this;
 }
 
@@ -368,9 +368,15 @@ const std::string& MailMessage::content () const
 int MailMessage::writeHeaders (std::ostream& out) const
 {
     MailRecipients to, cc, bcc;
-    std::copy_if (_recipients.begin (), _recipients.end(), std::back_inserter (to),  [] (auto const& t) { return t.type () == MailRecipient::Recipient; });
-    std::copy_if (_recipients.begin (), _recipients.end(), std::back_inserter (cc),  [] (auto const& t) { return t.type () == MailRecipient::CCRecipient; });
-    std::copy_if (_recipients.begin (), _recipients.end(), std::back_inserter (bcc), [] (auto const& t) { return t.type () == MailRecipient::BCCRecipient; });
+    std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (to), [] (auto const& t) {
+        return t.type () == MailRecipient::Recipient;
+    });
+    std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (cc), [] (auto const& t) {
+        return t.type () == MailRecipient::CCRecipient;
+    });
+    std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (bcc), [] (auto const& t) {
+        return t.type () == MailRecipient::BCCRecipient;
+    });
 
     // write date.
     out << "Date: ";
@@ -387,7 +393,7 @@ int MailMessage::writeHeaders (std::ostream& out) const
     if (!to.empty ())
     {
         out << "To: ";
-        std::copy (to.begin (), std::prev (to.end ()), std::ostream_iterator <MailRecipient> (out, ","));
+        std::copy (to.begin (), std::prev (to.end ()), std::ostream_iterator<MailRecipient> (out, ","));
         out << to.back ();
         out << "\r\n";
     }
@@ -396,7 +402,7 @@ int MailMessage::writeHeaders (std::ostream& out) const
     if (!cc.empty ())
     {
         out << "Cc: ";
-        std::copy (cc.begin (), std::prev (cc.end ()), std::ostream_iterator <MailRecipient> (out, ","));
+        std::copy (cc.begin (), std::prev (cc.end ()), std::ostream_iterator<MailRecipient> (out, ","));
         out << cc.back ();
         out << "\r\n";
     }
@@ -405,7 +411,7 @@ int MailMessage::writeHeaders (std::ostream& out) const
     if (!bcc.empty ())
     {
         out << "Bcc: ";
-        std::copy (bcc.begin (), std::prev (bcc.end ()), std::ostream_iterator <MailRecipient> (out, ","));
+        std::copy (bcc.begin (), std::prev (bcc.end ()), std::ostream_iterator<MailRecipient> (out, ","));
         out << bcc.back ();
         out << "\r\n";
     }

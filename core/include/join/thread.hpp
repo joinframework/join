@@ -55,7 +55,7 @@ namespace join
          */
         template <class Function, class... Args>
         explicit Invoker (Function&& func, Args&&... args)
-        : Invoker (-1, 0, std::forward<Function>(func), std::forward<Args>(args)...)
+        : Invoker (-1, 0, std::forward<Function> (func), std::forward<Args> (args)...)
         {
         }
 
@@ -68,7 +68,7 @@ namespace join
          */
         template <class Function, class... Args>
         explicit Invoker (int core, int prio, Function&& func, Args&&... args)
-        : _func (std::bind (std::forward <Function> (func), std::forward <Args> (args)...))
+        : _func (std::bind (std::forward<Function> (func), std::forward<Args> (args)...))
         , _core (core)
         , _priority (prio)
         , _done (false)
@@ -114,16 +114,16 @@ namespace join
          * @param context context passed to the new thread of execution.
          * @return thread return statement.
          */
-        static void * _routine (void * context);
+        static void* _routine (void* context);
 
         /**
          * @brief thread routine.
          * @return thread return statement.
          */
-        void * routine ();
+        void* routine ();
 
         /// user function to execute.
-        std::function <void ()> _func;
+        std::function<void ()> _func;
 
         /// thread handle.
         pthread_t _handle;
@@ -159,7 +159,7 @@ namespace join
          */
         template <class Function, class... Args>
         explicit Thread (Function&& func, Args&&... args)
-        : Thread (-1, 0, std::forward <Function> (func), std::forward <Args> (args)...)
+        : Thread (-1, 0, std::forward<Function> (func), std::forward<Args> (args)...)
         {
         }
 
@@ -172,7 +172,7 @@ namespace join
          */
         template <class Function, class... Args>
         explicit Thread (int core, int prio, Function&& func, Args&&... args)
-        : _invoker (new Invoker (core, prio, std::forward <Function> (func), std::forward <Args> (args)...))
+        : _invoker (new Invoker (core, prio, std::forward<Function> (func), std::forward<Args> (args)...))
         {
         }
 
@@ -291,7 +291,7 @@ namespace join
 
     private:
         /// current thread informations.
-        std::unique_ptr <Invoker> _invoker;
+        std::unique_ptr<Invoker> _invoker;
     };
 }
 

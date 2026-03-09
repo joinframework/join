@@ -178,7 +178,7 @@ public:
     {
         unlink (_rootcert.c_str ());
         unlink (_certFile.c_str ());
-        rmdir  (_certPath.c_str ());
+        rmdir (_certPath.c_str ());
         unlink (_key.c_str ());
         unlink (_invalidKey.c_str ());
     }
@@ -191,9 +191,9 @@ protected:
     {
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
         ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
-    #endif
+#endif
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
     }
@@ -248,7 +248,9 @@ protected:
             join::getline (stream, tmp);
             stream << "354 End data with <CR><LF>.<CR><LF>\r\n";
             stream.flush ();
-            while (join::getline (stream, tmp) && tmp != ".") {};
+            while (join::getline (stream, tmp) && tmp != ".")
+            {
+            };
             stream << "250 2.0.0 Ok: queued as 1A208D10002C\r\n";
             stream.flush ();
             join::getline (stream, tmp);
@@ -291,8 +293,8 @@ protected:
 };
 
 const std::string SmtpsClient::_host       = "localhost";
-const uint16_t    SmtpsClient::_port       = 5000;
-const int         SmtpsClient::_timeout    = 1000;
+const uint16_t SmtpsClient::_port          = 5000;
+const int SmtpsClient::_timeout            = 1000;
 const std::string SmtpsClient::_rootcert   = "/tmp/tlssocket_test_root.cert";
 const std::string SmtpsClient::_certPath   = "/tmp/certs";
 const std::string SmtpsClient::_certFile   = _certPath + "/tlssocket_test.cert";
@@ -307,10 +309,10 @@ const std::string SmtpsClient::_password   = "12345";
 TEST_F (SmtpsClient, move)
 {
     Smtps::Client tmp (_host, _port);
-    Smtps::Client client1 (std::move (tmp)); 
+    Smtps::Client client1 (std::move (tmp));
     ASSERT_EQ (client1.host (), _host);
 
-    Smtps::Client  client2 ("localhost");
+    Smtps::Client client2 ("localhost");
     ASSERT_EQ (client2.host (), "localhost");
 
     client2 = std::move (client1);
@@ -480,7 +482,7 @@ TEST_F (SmtpsClient, send)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);

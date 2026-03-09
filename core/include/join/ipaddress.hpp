@@ -42,7 +42,7 @@ namespace join
     class IpAddressImpl;
 
     /// List of IP address.
-    using IpAddressList = std::vector <IpAddress>;
+    using IpAddressList = std::vector<IpAddress>;
 
     /**
      * @brief IPv6, IPv4 address class.
@@ -293,7 +293,8 @@ namespace join
 
         /**
          * @brief convert IP address to an IPv6 address.
-         * @return a valid IPv6 address if IP address is an IPv6 address or an IPv4 mapped IPv6 address if IP address is an IPv4 address.
+         * @return a valid IPv6 address if IP address is an IPv6 address or an IPv4 mapped IPv6 address if IP address is
+         * an IPv4 address.
          */
         IpAddress toIpv6 () const;
 
@@ -331,7 +332,7 @@ namespace join
          * @brief perform NOT operation on IP address.
          * @return result of NOT operation on IpAddress.
          */
-        IpAddress operator~ () const;
+        IpAddress operator~() const;
 
         /**
          * @brief returns a reference to the element at the specified location.
@@ -341,12 +342,12 @@ namespace join
          */
         uint8_t& operator[] (size_t position);
 
-       /**
-        * @brief returns a reference to the element at the specified location.
-        * @param position position of the element to return.
-        * @return reference to the requested element.
-        * @throw invalid_argument if position is out of range.
-        */
+        /**
+         * @brief returns a reference to the element at the specified location.
+         * @param position position of the element to return.
+         * @return reference to the requested element.
+         * @throw invalid_argument if position is out of range.
+         */
         const uint8_t& operator[] (size_t position) const;
 
         /// wildcard IPv6 address.
@@ -375,7 +376,7 @@ namespace join
 
     private:
         /// IP address implementation.
-        std::unique_ptr <IpAddressImpl> _ip;
+        std::unique_ptr<IpAddressImpl> _ip;
     };
 
     /**

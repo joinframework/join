@@ -50,8 +50,8 @@ namespace join
          * @brief default constructor.
          */
         BasicSocketStreambuf ()
-        : _buf (std::make_unique <char []> (2 * _bufsize)),
-          _socket (Socket::Mode::NonBlocking)
+        : _buf (std::make_unique<char[]> (2 * _bufsize))
+        , _socket (Socket::Mode::NonBlocking)
         {
         }
 
@@ -73,10 +73,10 @@ namespace join
          * @param other other object to move.
          */
         BasicSocketStreambuf (BasicSocketStreambuf&& other)
-        : std::streambuf (std::move (other)),
-          _buf (std::move (other._buf)),
-          _timeout (other._timeout),
-          _socket (std::move (other._socket))
+        : std::streambuf (std::move (other))
+        , _buf (std::move (other._buf))
+        , _timeout (other._timeout)
+        , _socket (std::move (other._socket))
         {
         }
 
@@ -90,9 +90,9 @@ namespace join
             this->close ();
 
             std::streambuf::operator= (std::move (other));
-            this->_buf = std::move (other._buf);
+            this->_buf     = std::move (other._buf);
             this->_timeout = other._timeout;
-            this->_socket = std::move (other._socket);
+            this->_socket  = std::move (other._socket);
 
             return *this;
         }
@@ -242,7 +242,7 @@ namespace join
                                 continue;
                             }
                         }
-                        this->_socket.close();
+                        this->_socket.close ();
                         return traits_type::eof ();
                     }
 
@@ -312,7 +312,7 @@ namespace join
         static const std::streamsize _bufsize = 4096;
 
         /// internal buffer.
-        std::unique_ptr <char []> _buf;
+        std::unique_ptr<char[]> _buf;
 
         /// timeout.
         int _timeout = 30000;
@@ -328,7 +328,7 @@ namespace join
     class BasicSocketStream : public std::iostream
     {
     public:
-        using SocketStreambuf = BasicSocketStreambuf <Protocol>;
+        using SocketStreambuf = BasicSocketStreambuf<Protocol>;
         using Endpoint        = typename Protocol::Endpoint;
         using Socket          = typename Protocol::Socket;
 
@@ -351,15 +351,15 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        BasicSocketStream& operator=(const BasicSocketStream& other) = delete;
+        BasicSocketStream& operator= (const BasicSocketStream& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
         BasicSocketStream (BasicSocketStream&& other)
-        : std::iostream (std::move (other)),
-          _sockbuf (std::move (other._sockbuf))
+        : std::iostream (std::move (other))
+        , _sockbuf (std::move (other._sockbuf))
         {
             this->set_rdbuf (&this->_sockbuf);
         }
@@ -369,7 +369,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        BasicSocketStream& operator=(BasicSocketStream&& other)
+        BasicSocketStream& operator= (BasicSocketStream&& other)
         {
             std::iostream::operator= (std::move (other));
             this->_sockbuf = std::move (other._sockbuf);
@@ -509,10 +509,10 @@ namespace join
      * @brief TLS stream class.
      */
     template <class Protocol>
-    class BasicTlsStream : public BasicSocketStream <Protocol>
+    class BasicTlsStream : public BasicSocketStream<Protocol>
     {
     public:
-        using SocketStreambuf = BasicSocketStreambuf <Protocol>;
+        using SocketStreambuf = BasicSocketStreambuf<Protocol>;
         using Endpoint        = typename Protocol::Endpoint;
         using Socket          = typename Protocol::Socket;
 
@@ -520,7 +520,7 @@ namespace join
          * @brief default constructor.
          */
         BasicTlsStream ()
-        : BasicSocketStream <Protocol> ()
+        : BasicSocketStream<Protocol> ()
         {
         }
 
@@ -535,14 +535,14 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        BasicTlsStream& operator=(const BasicTlsStream& other) = delete;
+        BasicTlsStream& operator= (const BasicTlsStream& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
         BasicTlsStream (BasicTlsStream&& other)
-        : BasicSocketStream <Protocol> (std::move (other))
+        : BasicSocketStream<Protocol> (std::move (other))
         {
         }
 
@@ -551,9 +551,9 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        BasicTlsStream& operator=(BasicTlsStream&& other)
+        BasicTlsStream& operator= (BasicTlsStream&& other)
         {
-            BasicSocketStream <Protocol>::operator= (std::move (other));
+            BasicSocketStream<Protocol>::operator= (std::move (other));
 
             return *this;
         }
@@ -648,7 +648,7 @@ namespace join
          * @param cipher the cipher list.
          * @return 0 on success, -1 on failure.
          */
-        int setCipher (const std::string &cipher)
+        int setCipher (const std::string& cipher)
         {
             return this->_sockbuf.socket ().setCipher (cipher);
         }
@@ -658,7 +658,7 @@ namespace join
          * @param cipher the cipher list.
          * @return 0 on success, -1 on failure.
          */
-        int setCipher_1_3 (const std::string &cipher)
+        int setCipher_1_3 (const std::string& cipher)
         {
             return this->_sockbuf.socket ().setCipher_1_3 (cipher);
         }

@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
- // libjoin.
+// libjoin.
 #include <join/json.hpp>
 
 // Libraries.
@@ -45,16 +45,21 @@ TEST (JsonCategory, name)
 TEST (JsonCategory, message)
 {
     EXPECT_STREQ (JsonCategory ().message (0).c_str (), "success");
-    EXPECT_STREQ (JsonCategory ().message (static_cast <int> (JsonErrc::InvalidComment)).c_str (), "comment is invalid");
-    EXPECT_STREQ (JsonCategory ().message (static_cast <int> (JsonErrc::InvalidEscaping)).c_str (), "character escaping is invalid");
-    EXPECT_STREQ (JsonCategory ().message (static_cast <int> (JsonErrc::InvalidEncoding)).c_str (), "character encoding is invalid");
-    EXPECT_STREQ (JsonCategory ().message (static_cast <int> (JsonErrc::IllegalCharacter)).c_str (), "illegal character");
-    EXPECT_STREQ (JsonCategory ().message (static_cast <int> (JsonErrc::MissingCurlyBracket)).c_str (), "missing curly bracket");
-    EXPECT_STREQ (JsonCategory ().message (static_cast <int> (JsonErrc::MissingSquareBracket)).c_str (), "missing square bracket");
-    EXPECT_STREQ (JsonCategory ().message (static_cast <int> (JsonErrc::MissingQuote)).c_str (), "missing quote");
-    EXPECT_STREQ (JsonCategory ().message (static_cast <int> (JsonErrc::MissingColon)).c_str (), "missing colon");
-    EXPECT_STREQ (JsonCategory ().message (static_cast <int> (JsonErrc::MissingComma)).c_str (), "missing comma");
-    EXPECT_STREQ (JsonCategory ().message (static_cast <int> (JsonErrc::EndOfFile)).c_str (), "end of file");
+    EXPECT_STREQ (JsonCategory ().message (static_cast<int> (JsonErrc::InvalidComment)).c_str (), "comment is invalid");
+    EXPECT_STREQ (JsonCategory ().message (static_cast<int> (JsonErrc::InvalidEscaping)).c_str (),
+                  "character escaping is invalid");
+    EXPECT_STREQ (JsonCategory ().message (static_cast<int> (JsonErrc::InvalidEncoding)).c_str (),
+                  "character encoding is invalid");
+    EXPECT_STREQ (JsonCategory ().message (static_cast<int> (JsonErrc::IllegalCharacter)).c_str (),
+                  "illegal character");
+    EXPECT_STREQ (JsonCategory ().message (static_cast<int> (JsonErrc::MissingCurlyBracket)).c_str (),
+                  "missing curly bracket");
+    EXPECT_STREQ (JsonCategory ().message (static_cast<int> (JsonErrc::MissingSquareBracket)).c_str (),
+                  "missing square bracket");
+    EXPECT_STREQ (JsonCategory ().message (static_cast<int> (JsonErrc::MissingQuote)).c_str (), "missing quote");
+    EXPECT_STREQ (JsonCategory ().message (static_cast<int> (JsonErrc::MissingColon)).c_str (), "missing colon");
+    EXPECT_STREQ (JsonCategory ().message (static_cast<int> (JsonErrc::MissingComma)).c_str (), "missing comma");
+    EXPECT_STREQ (JsonCategory ().message (static_cast<int> (JsonErrc::EndOfFile)).c_str (), "end of file");
 }
 
 /**
@@ -62,17 +67,17 @@ TEST (JsonCategory, message)
  */
 TEST (JsonCategory, default_error_condition)
 {
-    EXPECT_EQ (JsonCategory ().default_error_condition (0).message(), "success");
-    EXPECT_EQ (JsonCategory ().default_error_condition (1).message(), "comment is invalid");
-    EXPECT_EQ (JsonCategory ().default_error_condition (2).message(), "character escaping is invalid");
-    EXPECT_EQ (JsonCategory ().default_error_condition (3).message(), "character encoding is invalid");
-    EXPECT_EQ (JsonCategory ().default_error_condition (4).message(), "illegal character");
-    EXPECT_EQ (JsonCategory ().default_error_condition (5).message(), "missing curly bracket");
-    EXPECT_EQ (JsonCategory ().default_error_condition (6).message(), "missing square bracket");
-    EXPECT_EQ (JsonCategory ().default_error_condition (7).message(), "missing quote");
-    EXPECT_EQ (JsonCategory ().default_error_condition (8).message(), "missing colon");
-    EXPECT_EQ (JsonCategory ().default_error_condition (9).message(), "missing comma");
-    EXPECT_EQ (JsonCategory ().default_error_condition (10).message(), "end of file");
+    EXPECT_EQ (JsonCategory ().default_error_condition (0).message (), "success");
+    EXPECT_EQ (JsonCategory ().default_error_condition (1).message (), "comment is invalid");
+    EXPECT_EQ (JsonCategory ().default_error_condition (2).message (), "character escaping is invalid");
+    EXPECT_EQ (JsonCategory ().default_error_condition (3).message (), "character encoding is invalid");
+    EXPECT_EQ (JsonCategory ().default_error_condition (4).message (), "illegal character");
+    EXPECT_EQ (JsonCategory ().default_error_condition (5).message (), "missing curly bracket");
+    EXPECT_EQ (JsonCategory ().default_error_condition (6).message (), "missing square bracket");
+    EXPECT_EQ (JsonCategory ().default_error_condition (7).message (), "missing quote");
+    EXPECT_EQ (JsonCategory ().default_error_condition (8).message (), "missing colon");
+    EXPECT_EQ (JsonCategory ().default_error_condition (9).message (), "missing comma");
+    EXPECT_EQ (JsonCategory ().default_error_condition (10).message (), "end of file");
 }
 
 /**
@@ -154,7 +159,7 @@ TEST (JsonCategory, make_error_condition)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

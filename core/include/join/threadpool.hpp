@@ -153,8 +153,8 @@ namespace join
         template <class Function, class... Args>
         void push (Function&& func, Args&&... args)
         {
-            ScopedLock <Mutex> lock (_mutex);
-            _jobs.emplace_back (std::bind (std::forward <Function> (func), std::forward <Args> (args)...));
+            ScopedLock<Mutex> lock (_mutex);
+            _jobs.emplace_back (std::bind (std::forward<Function> (func), std::forward<Args> (args)...));
             _condition.signal ();
         }
 
@@ -165,7 +165,7 @@ namespace join
 
     private:
         /// worker threads.
-        std::vector <std::unique_ptr <WorkerThread>> _workers;
+        std::vector<std::unique_ptr<WorkerThread>> _workers;
 
         /// condition shared with worker threads.
         Condition _condition;
@@ -174,10 +174,10 @@ namespace join
         Mutex _mutex;
 
         /// gracefully stop all threads.
-        std::atomic <bool> _stop;
+        std::atomic<bool> _stop;
 
         /// jobs queue.
-        std::deque <std::function <void ()>> _jobs;
+        std::deque<std::function<void ()>> _jobs;
 
         /// friendship with worker thread.
         friend class WorkerThread;
@@ -199,18 +199,18 @@ namespace join
             // determine number of threads and tasks per thread to run.
             int concurrency = int (CpuTopology::instance ()->cores ().size ());
             // no need to create more threads than tasks.
-            concurrency     = std::min (concurrency, count);
-            int elements    = count / concurrency;
-            int rest        = count % concurrency;
+            concurrency  = std::min (concurrency, count);
+            int elements = count / concurrency;
+            int rest     = count % concurrency;
             // distribute tasks to threads.
-            std::vector <int> tasks (concurrency, elements);
+            std::vector<int> tasks (concurrency, elements);
             for (int i = 0; i < rest; ++i)
             {
                 ++tasks[i];
             }
 
             // determine the real thread pool size (concurrency minus 1 as we are a thread).
-            std::vector <Thread> pool;
+            std::vector<Thread> pool;
             int nth = concurrency - 1;
             pool.reserve (nth);
 
@@ -243,8 +243,7 @@ namespace join
     template <class InputIt, class Func>
     void parallelForEach (InputIt first, InputIt last, Func function)
     {
-        distribute (first, last, [&function] (InputIt beg, InputIt end)
-        {
+        distribute (first, last, [&function] (InputIt beg, InputIt end) {
             for (; beg != end; ++beg)
             {
                 function (*beg);

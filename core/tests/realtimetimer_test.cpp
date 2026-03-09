@@ -47,14 +47,18 @@ TEST (RealTimer, setOneShot)
     RealTime::Timer timer;
     int count = 0;
 
-    timer.setOneShot (10ms, [&] { ++count; });
+    timer.setOneShot (10ms, [&] {
+        ++count;
+    });
     std::this_thread::sleep_for (35ms);
     EXPECT_EQ (count, 1);
     EXPECT_FALSE (timer.active ());
     EXPECT_TRUE (timer.oneShot ());
     EXPECT_EQ (timer.interval (), 0ms);
 
-    timer.setOneShot (std::chrono::system_clock::now () + 10ms, [&] { ++count; });
+    timer.setOneShot (std::chrono::system_clock::now () + 10ms, [&] {
+        ++count;
+    });
     std::this_thread::sleep_for (35ms);
     EXPECT_EQ (count, 2);
     EXPECT_FALSE (timer.active ());
@@ -70,7 +74,9 @@ TEST (RealTimer, setInterval)
     RealTime::Timer timer;
     int count = 0;
 
-    timer.setInterval (10ms, [&] { ++count; });
+    timer.setInterval (10ms, [&] {
+        ++count;
+    });
     std::this_thread::sleep_for (35ms);
     EXPECT_GT (count, 1);
     EXPECT_TRUE (timer.active ());
@@ -86,7 +92,9 @@ TEST (RealTimer, cancel)
     RealTime::Timer timer;
     int count1 = 0, count2 = 0;
 
-    timer.setInterval (10ms, [&] { count1++; });
+    timer.setInterval (10ms, [&] {
+        count1++;
+    });
     std::this_thread::sleep_for (35ms);
     timer.cancel ();
     count2 = count1;
@@ -104,7 +112,9 @@ TEST (RealTimer, active)
     int count = 0;
 
     ASSERT_FALSE (timer.active ());
-    timer.setInterval (10ms, [&] { ++count; });
+    timer.setInterval (10ms, [&] {
+        ++count;
+    });
     ASSERT_TRUE (timer.active ());
     timer.cancel ();
     ASSERT_FALSE (timer.active ());
@@ -113,11 +123,12 @@ TEST (RealTimer, active)
 /**
  * @brief Test remaining.
  */
-TEST(RealTimer, remaining)
+TEST (RealTimer, remaining)
 {
     RealTime::Timer timer;
 
-    timer.setOneShot (20ms, [] {});
+    timer.setOneShot (20ms, [] {
+    });
     auto t1 = timer.remaining ();
     std::this_thread::sleep_for (15ms);
     auto t2 = timer.remaining ();
@@ -125,9 +136,10 @@ TEST(RealTimer, remaining)
     EXPECT_LT (t2.count (), t1.count ());
     std::this_thread::sleep_for (15ms);
     auto t3 = timer.remaining ();
-    EXPECT_EQ (t3.count (), 0); // remaining time is zero
+    EXPECT_EQ (t3.count (), 0);  // remaining time is zero
 
-    timer.setInterval (20ms, [] {});
+    timer.setInterval (20ms, [] {
+    });
     t1 = timer.remaining ();
     std::this_thread::sleep_for (15ms);
     t2 = timer.remaining ();
@@ -135,7 +147,7 @@ TEST(RealTimer, remaining)
     EXPECT_LT (t2.count (), t1.count ());
     std::this_thread::sleep_for (15ms);
     t3 = timer.remaining ();
-    EXPECT_GT (t3.count (), 0); // next interval has started
+    EXPECT_GT (t3.count (), 0);  // next interval has started
 }
 
 /**
@@ -147,7 +159,9 @@ TEST (RealTimer, interval)
     int count = 0;
 
     ASSERT_EQ (timer.interval (), 0ms);
-    timer.setInterval (10ms, [&] { ++count; });
+    timer.setInterval (10ms, [&] {
+        ++count;
+    });
     ASSERT_EQ (timer.interval (), 10ms);
     timer.cancel ();
     ASSERT_EQ (timer.interval (), 0ms);
@@ -162,7 +176,9 @@ TEST (RealTimer, oneShot)
     int count = 0;
 
     ASSERT_TRUE (timer.oneShot ());
-    timer.setInterval (10ms, [&] { ++count; });
+    timer.setInterval (10ms, [&] {
+        ++count;
+    });
     ASSERT_FALSE (timer.oneShot ());
     timer.cancel ();
     ASSERT_TRUE (timer.oneShot ());
@@ -181,7 +197,7 @@ TEST (RealTimer, type)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

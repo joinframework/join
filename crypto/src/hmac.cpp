@@ -38,14 +38,17 @@ using join::BytesArray;
 //   METHOD    : Hmacbuf
 // =========================================================================
 Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
-: _buf (std::make_unique <char []> (_bufsize)),
+: _buf (std::make_unique<char[]> (_bufsize))
+,
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
-  _md (EVP_get_digestbyname (algo.c_str ())),
+_md (EVP_get_digestbyname (algo.c_str ()))
+,
 #else
-  _mac (EVP_MAC_fetch (nullptr, "HMAC", nullptr)),
-  _algo (algo),
+_mac (EVP_MAC_fetch (nullptr, "HMAC", nullptr))
+, _algo (algo)
+,
 #endif
-  _key (key)
+_key (key)
 {
     if (_buf == nullptr)
     {
@@ -65,16 +68,19 @@ Hmacbuf::Hmacbuf (const std::string& algo, const std::string& key)
 //   METHOD    : Hmacbuf
 // =========================================================================
 Hmacbuf::Hmacbuf (Hmacbuf&& other)
-: std::streambuf (std::move (other)),
-  _buf (std::move (other._buf)),
+: std::streambuf (std::move (other))
+, _buf (std::move (other._buf))
+,
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
-  _md (other._md),
+_md (other._md)
+,
 #else
-  _mac (std::move (other._mac)),
-  _algo (std::move (other._algo)),
+_mac (std::move (other._mac))
+, _algo (std::move (other._algo))
+,
 #endif
-  _ctx (std::move (other._ctx)),
-  _key (std::move (other._key))
+_ctx (std::move (other._ctx))
+, _key (std::move (other._key))
 {
 }
 
@@ -89,7 +95,7 @@ Hmacbuf& Hmacbuf::operator= (Hmacbuf&& other)
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
     _md = other._md;
 #else
-    _mac = std::move (other._mac);
+    _mac  = std::move (other._mac);
     _algo = std::move (other._algo);
 #endif
     _ctx = std::move (other._ctx);
@@ -107,13 +113,13 @@ BytesArray Hmacbuf::finalize ()
 
     if (_buf && (this->overflow (traits_type::eof ()) != traits_type::eof ()))
     {
-    #if OPENSSL_VERSION_NUMBER < 0x30000000L
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
         hmac.resize (EVP_MD_size (_md));
         HMAC_Final (_ctx.get (), &hmac[0], nullptr);
-    #else
+#else
         hmac.resize (EVP_MAC_CTX_get_mac_size (_ctx.get ()));
         EVP_MAC_final (_ctx.get (), &hmac[0], nullptr, hmac.size ());
-    #endif
+#endif
     }
 
     _ctx.reset ();
@@ -129,24 +135,24 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
 {
     if (_ctx == nullptr)
     {
-    #if OPENSSL_VERSION_NUMBER < 0x30000000L
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
         _ctx.reset (HMAC_CTX_new ());
-    #else
+#else
         _ctx.reset (EVP_MAC_CTX_new (_mac.get ()));
-    #endif
+#endif
         if (_ctx == nullptr)
         {
             lastError = make_error_code (Errc::OutOfMemory);
             return traits_type::eof ();
         }
-    #if OPENSSL_VERSION_NUMBER < 0x30000000L
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
         HMAC_Init_ex (_ctx.get (), _key.c_str (), _key.size (), _md, nullptr);
-    #else
+#else
         OSSL_PARAM params[2];
         params[0] = OSSL_PARAM_construct_utf8_string ("digest", &_algo[0], 0);
         params[1] = OSSL_PARAM_construct_end ();
-        EVP_MAC_init (_ctx.get (), reinterpret_cast <const uint8_t *> (_key.c_str ()), _key.size (), params);
-    #endif
+        EVP_MAC_init (_ctx.get (), reinterpret_cast<const uint8_t*> (_key.c_str ()), _key.size (), params);
+#endif
     }
 
     if (this->pbase () == nullptr)
@@ -162,11 +168,11 @@ Hmacbuf::int_type Hmacbuf::overflow (int_type c)
     std::streamsize pending = this->pptr () - this->pbase ();
     if (pending)
     {
-    #if OPENSSL_VERSION_NUMBER < 0x30000000L
-        HMAC_Update (_ctx.get (), reinterpret_cast <uint8_t*> (this->pbase ()), pending);
-    #else
-        EVP_MAC_update (_ctx.get (), reinterpret_cast <uint8_t*> (this->pbase ()), pending);
-    #endif
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+        HMAC_Update (_ctx.get (), reinterpret_cast<uint8_t*> (this->pbase ()), pending);
+#else
+        EVP_MAC_update (_ctx.get (), reinterpret_cast<uint8_t*> (this->pbase ()), pending);
+#endif
     }
 
     this->setp (this->pbase (), this->pbase () + _bufsize);
@@ -194,8 +200,8 @@ Hmac::Hmac (Digest::Algorithm algo, const std::string& key)
 //   METHOD    : Hmac
 // =========================================================================
 Hmac::Hmac (Hmac&& other)
-: std::ostream (std::move (other)),
-  _hmacbuf (std::move (other._hmacbuf))
+: std::ostream (std::move (other))
+, _hmacbuf (std::move (other._hmacbuf))
 {
     this->set_rdbuf (&_hmacbuf);
 }
@@ -204,7 +210,7 @@ Hmac::Hmac (Hmac&& other)
 //   CLASS     : Hmac
 //   METHOD    : Hmac
 // =========================================================================
-Hmac& Hmac::operator=(Hmac&& other)
+Hmac& Hmac::operator= (Hmac&& other)
 {
     std::ostream::operator= (std::move (other));
     _hmacbuf = std::move (other._hmacbuf);
@@ -242,7 +248,7 @@ BytesArray Hmac::md5bin (const char* message, std::streamsize size, const std::s
 // =========================================================================
 BytesArray Hmac::md5bin (const BytesArray& message, const std::string& key)
 {
-    return md5bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
+    return md5bin (reinterpret_cast<const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
@@ -269,7 +275,7 @@ std::string Hmac::md5hex (const char* data, std::streamsize size, const std::str
 // =========================================================================
 std::string Hmac::md5hex (const BytesArray& data, const std::string& key)
 {
-    return md5hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
+    return md5hex (reinterpret_cast<const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
@@ -298,7 +304,7 @@ BytesArray Hmac::sha1bin (const char* message, std::streamsize size, const std::
 // =========================================================================
 BytesArray Hmac::sha1bin (const BytesArray& message, const std::string& key)
 {
-    return sha1bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
+    return sha1bin (reinterpret_cast<const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
@@ -325,7 +331,7 @@ std::string Hmac::sha1hex (const char* data, std::streamsize size, const std::st
 // =========================================================================
 std::string Hmac::sha1hex (const BytesArray& data, const std::string& key)
 {
-    return sha1hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
+    return sha1hex (reinterpret_cast<const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
@@ -354,7 +360,7 @@ BytesArray Hmac::sha224bin (const char* message, std::streamsize size, const std
 // =========================================================================
 BytesArray Hmac::sha224bin (const BytesArray& message, const std::string& key)
 {
-    return sha224bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
+    return sha224bin (reinterpret_cast<const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
@@ -381,7 +387,7 @@ std::string Hmac::sha224hex (const char* data, std::streamsize size, const std::
 // =========================================================================
 std::string Hmac::sha224hex (const BytesArray& data, const std::string& key)
 {
-    return sha224hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
+    return sha224hex (reinterpret_cast<const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
@@ -410,7 +416,7 @@ BytesArray Hmac::sha256bin (const char* message, std::streamsize size, const std
 // =========================================================================
 BytesArray Hmac::sha256bin (const BytesArray& message, const std::string& key)
 {
-    return sha256bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
+    return sha256bin (reinterpret_cast<const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
@@ -437,7 +443,7 @@ std::string Hmac::sha256hex (const char* data, std::streamsize size, const std::
 // =========================================================================
 std::string Hmac::sha256hex (const BytesArray& data, const std::string& key)
 {
-    return sha256hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
+    return sha256hex (reinterpret_cast<const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
@@ -466,7 +472,7 @@ BytesArray Hmac::sha384bin (const char* message, std::streamsize size, const std
 // =========================================================================
 BytesArray Hmac::sha384bin (const BytesArray& message, const std::string& key)
 {
-    return sha384bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
+    return sha384bin (reinterpret_cast<const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
@@ -493,7 +499,7 @@ std::string Hmac::sha384hex (const char* data, std::streamsize size, const std::
 // =========================================================================
 std::string Hmac::sha384hex (const BytesArray& data, const std::string& key)
 {
-    return sha384hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
+    return sha384hex (reinterpret_cast<const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
@@ -522,7 +528,7 @@ BytesArray Hmac::sha512bin (const char* message, std::streamsize size, const std
 // =========================================================================
 BytesArray Hmac::sha512bin (const BytesArray& message, const std::string& key)
 {
-    return sha512bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
+    return sha512bin (reinterpret_cast<const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
@@ -549,7 +555,7 @@ std::string Hmac::sha512hex (const char* data, std::streamsize size, const std::
 // =========================================================================
 std::string Hmac::sha512hex (const BytesArray& data, const std::string& key)
 {
-    return sha512hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
+    return sha512hex (reinterpret_cast<const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================
@@ -578,7 +584,7 @@ BytesArray Hmac::sm3bin (const char* message, std::streamsize size, const std::s
 // =========================================================================
 BytesArray Hmac::sm3bin (const BytesArray& message, const std::string& key)
 {
-    return sm3bin (reinterpret_cast <const char*> (message.data ()), message.size (), key);
+    return sm3bin (reinterpret_cast<const char*> (message.data ()), message.size (), key);
 }
 
 // =========================================================================
@@ -605,7 +611,7 @@ std::string Hmac::sm3hex (const char* data, std::streamsize size, const std::str
 // =========================================================================
 std::string Hmac::sm3hex (const BytesArray& data, const std::string& key)
 {
-    return sm3hex (reinterpret_cast <const char*> (data.data ()), data.size (), key);
+    return sm3hex (reinterpret_cast<const char*> (data.data ()), data.size (), key);
 }
 
 // =========================================================================

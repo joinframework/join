@@ -73,7 +73,7 @@ namespace join
          */
         struct sockaddr* addr () noexcept
         {
-            return reinterpret_cast <struct sockaddr*> (&this->_addr);
+            return reinterpret_cast<struct sockaddr*> (&this->_addr);
         }
 
         /**
@@ -82,7 +82,7 @@ namespace join
          */
         const struct sockaddr* addr () const noexcept
         {
-            return reinterpret_cast <const struct sockaddr*> (&this->_addr);
+            return reinterpret_cast<const struct sockaddr*> (&this->_addr);
         }
 
     protected:
@@ -94,14 +94,14 @@ namespace join
      * @brief basic unix endpoint class.
      */
     template <class Protocol>
-    class BasicUnixEndpoint : public BasicEndpoint <Protocol>
+    class BasicUnixEndpoint : public BasicEndpoint<Protocol>
     {
     public:
         /**
          * @brief default constructor.
          */
         constexpr BasicUnixEndpoint () noexcept
-        : BasicEndpoint <Protocol> ()
+        : BasicEndpoint<Protocol> ()
         {
         }
 
@@ -111,7 +111,7 @@ namespace join
          * @param len socket address length.
          */
         BasicUnixEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
-        : BasicEndpoint <Protocol> (addr, len)
+        : BasicEndpoint<Protocol> (addr, len)
         {
         }
 
@@ -122,7 +122,7 @@ namespace join
         BasicUnixEndpoint (const char* dev) noexcept
         : BasicUnixEndpoint ()
         {
-            struct sockaddr_un* sa = reinterpret_cast <struct sockaddr_un*> (&this->_addr);
+            struct sockaddr_un* sa = reinterpret_cast<struct sockaddr_un*> (&this->_addr);
             strncpy (sa->sun_path, dev, sizeof (sa->sun_path) - 1);
         }
 
@@ -131,7 +131,7 @@ namespace join
          * @param dev device name to set.
          */
         BasicUnixEndpoint (const std::string& dev) noexcept
-        : BasicUnixEndpoint <Protocol> (dev.c_str ())
+        : BasicUnixEndpoint<Protocol> (dev.c_str ())
         {
         }
 
@@ -159,7 +159,7 @@ namespace join
          */
         void device (const std::string& dev) noexcept
         {
-            struct sockaddr_un* sa = reinterpret_cast <struct sockaddr_un*> (&this->_addr);
+            struct sockaddr_un* sa = reinterpret_cast<struct sockaddr_un*> (&this->_addr);
             strncpy (sa->sun_path, dev.c_str (), sizeof (sa->sun_path) - 1);
         }
 
@@ -169,7 +169,7 @@ namespace join
          */
         std::string device () const
         {
-            return reinterpret_cast <const struct sockaddr_un*> (&this->_addr)->sun_path;
+            return reinterpret_cast<const struct sockaddr_un*> (&this->_addr)->sun_path;
         }
     };
 
@@ -180,7 +180,7 @@ namespace join
      * @return true if endpoints are equal, false otherwise.
      */
     template <class Protocol>
-    bool operator== (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator== (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
     {
         return a.device () == b.device ();
     }
@@ -192,7 +192,7 @@ namespace join
      * @return true if endpoints are not equal, false otherwise.
      */
     template <class Protocol>
-    bool operator!= (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator!= (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
     {
         return !(a == b);
     }
@@ -204,7 +204,7 @@ namespace join
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
-    bool operator< (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator< (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
     {
         return a.device () < b.device ();
     }
@@ -216,7 +216,7 @@ namespace join
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
-    bool operator> (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator> (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
     {
         return b < a;
     }
@@ -228,7 +228,7 @@ namespace join
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
-    bool operator<= (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator<= (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
     {
         return !(b < a);
     }
@@ -240,7 +240,7 @@ namespace join
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
-    bool operator>= (const BasicUnixEndpoint <Protocol>& a, const BasicUnixEndpoint <Protocol>& b) noexcept
+    bool operator>= (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
     {
         return !(a < b);
     }
@@ -252,7 +252,7 @@ namespace join
      * @return output stream.
      */
     template <class Protocol>
-    std::ostream& operator<< (std::ostream& os, const BasicUnixEndpoint <Protocol>& endpoint)
+    std::ostream& operator<< (std::ostream& os, const BasicUnixEndpoint<Protocol>& endpoint)
     {
         os << endpoint.device ();
         return os;
@@ -262,14 +262,14 @@ namespace join
      * @brief basic netlink endpoint class.
      */
     template <class Protocol>
-    class BasicNetlinkEndpoint : public BasicEndpoint <Protocol>
+    class BasicNetlinkEndpoint : public BasicEndpoint<Protocol>
     {
     public:
         /**
          * @brief default constructor.
          */
         constexpr BasicNetlinkEndpoint () noexcept
-        : BasicEndpoint <Protocol> ()
+        : BasicEndpoint<Protocol> ()
         , _protocol (Protocol ().protocol ())
         {
         }
@@ -280,7 +280,7 @@ namespace join
          * @param len socket address length.
          */
         BasicNetlinkEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
-        : BasicEndpoint <Protocol> (addr, len)
+        : BasicEndpoint<Protocol> (addr, len)
         , _protocol (Protocol ().protocol ())
         {
         }
@@ -292,12 +292,12 @@ namespace join
          * @param groups netlink groups to set.
          */
         BasicNetlinkEndpoint (const Protocol& protocol, uint32_t pid, uint32_t groups) noexcept
-        : BasicEndpoint <Protocol> ()
+        : BasicEndpoint<Protocol> ()
         , _protocol (protocol.protocol ())
         {
-            struct sockaddr_nl* nl = reinterpret_cast <struct sockaddr_nl*> (&this->_addr);
-            nl->nl_pid = pid;
-            nl->nl_groups = groups;
+            struct sockaddr_nl* nl = reinterpret_cast<struct sockaddr_nl*> (&this->_addr);
+            nl->nl_pid             = pid;
+            nl->nl_groups          = groups;
         }
 
         /**
@@ -357,7 +357,7 @@ namespace join
          */
         void pid (uint32_t pid) noexcept
         {
-            reinterpret_cast <struct sockaddr_nl*> (&this->_addr)->nl_pid = pid;
+            reinterpret_cast<struct sockaddr_nl*> (&this->_addr)->nl_pid = pid;
         }
 
         /**
@@ -366,7 +366,7 @@ namespace join
          */
         uint32_t pid () const noexcept
         {
-            return reinterpret_cast <const struct sockaddr_nl*> (&this->_addr)->nl_pid;
+            return reinterpret_cast<const struct sockaddr_nl*> (&this->_addr)->nl_pid;
         }
 
         /**
@@ -375,7 +375,7 @@ namespace join
          */
         void groups (uint32_t groups) noexcept
         {
-            reinterpret_cast <struct sockaddr_nl*> (&this->_addr)->nl_groups = groups;
+            reinterpret_cast<struct sockaddr_nl*> (&this->_addr)->nl_groups = groups;
         }
 
         /**
@@ -384,7 +384,7 @@ namespace join
          */
         uint32_t groups () const noexcept
         {
-            return reinterpret_cast <const struct sockaddr_nl*> (&this->_addr)->nl_groups;
+            return reinterpret_cast<const struct sockaddr_nl*> (&this->_addr)->nl_groups;
         }
 
         /**
@@ -408,7 +408,7 @@ namespace join
      * @return true if endpoints are equal, false otherwise.
      */
     template <class Protocol>
-    bool operator== (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
+    bool operator== (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
     {
         return a.pid () == b.pid () && a.groups () == b.groups ();
     }
@@ -420,7 +420,7 @@ namespace join
      * @return true if endpoints are not equal, false otherwise.
      */
     template <class Protocol>
-    bool operator!= (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
+    bool operator!= (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
     {
         return !(a == b);
     }
@@ -432,7 +432,7 @@ namespace join
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
-    bool operator< (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
+    bool operator< (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
     {
         if (a.pid () != b.pid ())
         {
@@ -448,7 +448,7 @@ namespace join
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
-    bool operator> (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
+    bool operator> (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
     {
         return b < a;
     }
@@ -460,7 +460,7 @@ namespace join
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
-    bool operator<= (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
+    bool operator<= (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
     {
         return !(b < a);
     }
@@ -472,7 +472,7 @@ namespace join
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
-    bool operator>= (const BasicNetlinkEndpoint <Protocol>& a, const BasicNetlinkEndpoint <Protocol>& b) noexcept
+    bool operator>= (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
     {
         return !(a < b);
     }
@@ -484,7 +484,7 @@ namespace join
      * @return output stream.
      */
     template <class Protocol>
-    std::ostream& operator<< (std::ostream& os, const BasicNetlinkEndpoint <Protocol>& endpoint)
+    std::ostream& operator<< (std::ostream& os, const BasicNetlinkEndpoint<Protocol>& endpoint)
     {
         os << "pid=" << endpoint.pid () << ",groups=" << endpoint.groups ();
         return os;
@@ -494,16 +494,16 @@ namespace join
      * @brief basic link layer endpoint class.
      */
     template <class Protocol>
-    class BasicLinkLayerEndpoint : public BasicEndpoint <Protocol>
+    class BasicLinkLayerEndpoint : public BasicEndpoint<Protocol>
     {
     public:
         /**
          * @brief default constructor.
          */
         BasicLinkLayerEndpoint () noexcept
-        : BasicEndpoint <Protocol> ()
+        : BasicEndpoint<Protocol> ()
         {
-            reinterpret_cast <struct sockaddr_ll*> (&this->_addr)->sll_protocol = this->protocol ().protocol ();
+            reinterpret_cast<struct sockaddr_ll*> (&this->_addr)->sll_protocol = this->protocol ().protocol ();
         }
 
         /**
@@ -512,7 +512,7 @@ namespace join
          * @param len socket address length.
          */
         BasicLinkLayerEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
-        : BasicEndpoint <Protocol> (addr, len)
+        : BasicEndpoint<Protocol> (addr, len)
         {
         }
 
@@ -521,9 +521,9 @@ namespace join
          * @param dev device name to set.
          */
         BasicLinkLayerEndpoint (const char* dev) noexcept
-        : BasicEndpoint <Protocol> ()
+        : BasicEndpoint<Protocol> ()
         {
-            reinterpret_cast <struct sockaddr_ll*> (&this->_addr)->sll_ifindex = if_nametoindex (dev);
+            reinterpret_cast<struct sockaddr_ll*> (&this->_addr)->sll_ifindex = if_nametoindex (dev);
         }
 
         /**
@@ -531,7 +531,7 @@ namespace join
          * @param dev device name to set.
          */
         BasicLinkLayerEndpoint (const std::string& dev) noexcept
-        : BasicLinkLayerEndpoint <Protocol> (dev.c_str ())
+        : BasicLinkLayerEndpoint<Protocol> (dev.c_str ())
         {
         }
 
@@ -559,7 +559,7 @@ namespace join
          */
         void device (const std::string& dev) noexcept
         {
-            reinterpret_cast <struct sockaddr_ll*> (&this->_addr)->sll_ifindex = if_nametoindex (dev.c_str ());
+            reinterpret_cast<struct sockaddr_ll*> (&this->_addr)->sll_ifindex = if_nametoindex (dev.c_str ());
         }
 
         /**
@@ -569,7 +569,7 @@ namespace join
         std::string device () const
         {
             char ifname[IFNAMSIZ];
-            if (if_indextoname (reinterpret_cast <const struct sockaddr_ll*> (&this->_addr)->sll_ifindex, ifname))
+            if (if_indextoname (reinterpret_cast<const struct sockaddr_ll*> (&this->_addr)->sll_ifindex, ifname))
             {
                 return ifname;
             }
@@ -584,7 +584,7 @@ namespace join
      * @return true if endpoints are equal, false otherwise.
      */
     template <class Protocol>
-    bool operator== (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator== (const BasicLinkLayerEndpoint<Protocol>& a, const BasicLinkLayerEndpoint<Protocol>& b) noexcept
     {
         return a.device () == b.device ();
     }
@@ -596,7 +596,7 @@ namespace join
      * @return true if endpoints are not equal, false otherwise.
      */
     template <class Protocol>
-    bool operator!= (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator!= (const BasicLinkLayerEndpoint<Protocol>& a, const BasicLinkLayerEndpoint<Protocol>& b) noexcept
     {
         return !(a == b);
     }
@@ -608,7 +608,7 @@ namespace join
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
-    bool operator< (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator< (const BasicLinkLayerEndpoint<Protocol>& a, const BasicLinkLayerEndpoint<Protocol>& b) noexcept
     {
         return a.device () < b.device ();
     }
@@ -620,7 +620,7 @@ namespace join
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
-    bool operator> (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator> (const BasicLinkLayerEndpoint<Protocol>& a, const BasicLinkLayerEndpoint<Protocol>& b) noexcept
     {
         return b < a;
     }
@@ -632,7 +632,7 @@ namespace join
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
-    bool operator<= (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator<= (const BasicLinkLayerEndpoint<Protocol>& a, const BasicLinkLayerEndpoint<Protocol>& b) noexcept
     {
         return !(b < a);
     }
@@ -644,7 +644,7 @@ namespace join
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
-    bool operator>= (const BasicLinkLayerEndpoint <Protocol>& a, const BasicLinkLayerEndpoint <Protocol>& b) noexcept
+    bool operator>= (const BasicLinkLayerEndpoint<Protocol>& a, const BasicLinkLayerEndpoint<Protocol>& b) noexcept
     {
         return !(a < b);
     }
@@ -656,7 +656,7 @@ namespace join
      * @return output stream.
      */
     template <class Protocol>
-    std::ostream& operator<< (std::ostream& os, const BasicLinkLayerEndpoint <Protocol>& endpoint)
+    std::ostream& operator<< (std::ostream& os, const BasicLinkLayerEndpoint<Protocol>& endpoint)
     {
         os << endpoint.device ();
         return os;
@@ -666,14 +666,14 @@ namespace join
      * @brief basic internet endpoint class.
      */
     template <class Protocol>
-    class BasicInternetEndpoint : public BasicEndpoint <Protocol>
+    class BasicInternetEndpoint : public BasicEndpoint<Protocol>
     {
     public:
         /**
          * @brief default constructor.
          */
         constexpr BasicInternetEndpoint () noexcept
-        : BasicEndpoint <Protocol> ()
+        : BasicEndpoint<Protocol> ()
         {
         }
 
@@ -682,7 +682,7 @@ namespace join
          * @param addr socket address.
          */
         BasicInternetEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
-        : BasicEndpoint <Protocol> (addr, len)
+        : BasicEndpoint<Protocol> (addr, len)
         {
         }
 
@@ -692,21 +692,21 @@ namespace join
          * @param port endpoint port number.
          */
         BasicInternetEndpoint (const IpAddress& ip, uint16_t port = 0) noexcept
-        : BasicEndpoint <Protocol> ()
+        : BasicEndpoint<Protocol> ()
         {
             if (ip.family () == AF_INET6)
             {
-                struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->_addr);
+                struct sockaddr_in6* sa = reinterpret_cast<struct sockaddr_in6*> (&this->_addr);
                 sa->sin6_family         = AF_INET6;
                 sa->sin6_port           = htons (port);
                 memcpy (&sa->sin6_addr, ip.addr (), ip.length ());
-                sa->sin6_scope_id       = ip.scope ();
+                sa->sin6_scope_id = ip.scope ();
             }
             else
             {
-                struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->_addr);
-                sa->sin_family          = AF_INET;
-                sa->sin_port            = htons (port);
+                struct sockaddr_in* sa = reinterpret_cast<struct sockaddr_in*> (&this->_addr);
+                sa->sin_family         = AF_INET;
+                sa->sin_port           = htons (port);
                 memcpy (&sa->sin_addr, ip.addr (), ip.length ());
             }
         }
@@ -717,7 +717,7 @@ namespace join
          * @param port endpoint port number.
          */
         BasicInternetEndpoint (const std::string& ip, uint16_t port = 0)
-        : BasicInternetEndpoint <Protocol> (IpAddress (ip), port)
+        : BasicInternetEndpoint<Protocol> (IpAddress (ip), port)
         {
         }
 
@@ -727,7 +727,7 @@ namespace join
          * @param port endpoint port number.
          */
         BasicInternetEndpoint (const char* ip, uint16_t port = 0)
-        : BasicInternetEndpoint <Protocol> (IpAddress (ip), port)
+        : BasicInternetEndpoint<Protocol> (IpAddress (ip), port)
         {
         }
 
@@ -737,19 +737,19 @@ namespace join
          * @param port endpoint port number.
          */
         BasicInternetEndpoint (const Protocol& protocol, uint16_t port = 0) noexcept
-        : BasicEndpoint <Protocol> ()
+        : BasicEndpoint<Protocol> ()
         {
             if (protocol.family () == AF_INET6)
             {
-                struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->_addr);
+                struct sockaddr_in6* sa = reinterpret_cast<struct sockaddr_in6*> (&this->_addr);
                 sa->sin6_family         = AF_INET6;
                 sa->sin6_port           = htons (port);
             }
             else
             {
-                struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->_addr);
-                sa->sin_family          = AF_INET;
-                sa->sin_port            = htons (port);
+                struct sockaddr_in* sa = reinterpret_cast<struct sockaddr_in*> (&this->_addr);
+                sa->sin_family         = AF_INET;
+                sa->sin_port           = htons (port);
             }
         }
 
@@ -779,15 +779,15 @@ namespace join
         {
             if (ip.family () == AF_INET6)
             {
-                struct sockaddr_in6* sa = reinterpret_cast <struct sockaddr_in6*> (&this->_addr);
+                struct sockaddr_in6* sa = reinterpret_cast<struct sockaddr_in6*> (&this->_addr);
                 sa->sin6_family         = AF_INET6;
                 memcpy (&sa->sin6_addr, ip.addr (), ip.length ());
-                sa->sin6_scope_id       = ip.scope ();
+                sa->sin6_scope_id = ip.scope ();
             }
             else
             {
-                struct sockaddr_in* sa  = reinterpret_cast <struct sockaddr_in*> (&this->_addr);
-                sa->sin_family          = AF_INET;
+                struct sockaddr_in* sa = reinterpret_cast<struct sockaddr_in*> (&this->_addr);
+                sa->sin_family         = AF_INET;
                 memcpy (&sa->sin_addr, ip.addr (), ip.length ());
             }
         }
@@ -798,7 +798,7 @@ namespace join
          */
         IpAddress ip () const noexcept
         {
-            return *reinterpret_cast <const struct sockaddr*> (&this->_addr);
+            return *reinterpret_cast<const struct sockaddr*> (&this->_addr);
         }
 
         /**
@@ -809,11 +809,11 @@ namespace join
         {
             if (this->_addr.ss_family == AF_INET6)
             {
-                reinterpret_cast <struct sockaddr_in6*> (&this->_addr)->sin6_port = htons (p);
+                reinterpret_cast<struct sockaddr_in6*> (&this->_addr)->sin6_port = htons (p);
             }
             else
             {
-                reinterpret_cast <struct sockaddr_in*> (&this->_addr)->sin_port = htons (p);
+                reinterpret_cast<struct sockaddr_in*> (&this->_addr)->sin_port = htons (p);
             }
         }
 
@@ -825,11 +825,11 @@ namespace join
         {
             if (this->_addr.ss_family == AF_INET6)
             {
-                return ntohs (reinterpret_cast <const struct sockaddr_in6*> (&this->_addr)->sin6_port);
+                return ntohs (reinterpret_cast<const struct sockaddr_in6*> (&this->_addr)->sin6_port);
             }
             else
             {
-                return ntohs (reinterpret_cast <const struct sockaddr_in*> (&this->_addr)->sin_port);
+                return ntohs (reinterpret_cast<const struct sockaddr_in*> (&this->_addr)->sin_port);
             }
         }
 
@@ -867,7 +867,7 @@ namespace join
         {
             if (this->_addr.ss_family == AF_INET6)
             {
-                reinterpret_cast <struct sockaddr_in6*> (&this->_addr)->sin6_scope_id = if_nametoindex (dev.c_str ());
+                reinterpret_cast<struct sockaddr_in6*> (&this->_addr)->sin6_scope_id = if_nametoindex (dev.c_str ());
             }
         }
 
@@ -880,7 +880,7 @@ namespace join
             if (this->_addr.ss_family == AF_INET6)
             {
                 char ifname[IFNAMSIZ];
-                if (if_indextoname (reinterpret_cast <const struct sockaddr_in6*> (&this->_addr)->sin6_scope_id, ifname))
+                if (if_indextoname (reinterpret_cast<const struct sockaddr_in6*> (&this->_addr)->sin6_scope_id, ifname))
                 {
                     return ifname;
                 }
@@ -900,7 +900,7 @@ namespace join
      * @return true if endpoints is equal, false otherwise.
      */
     template <class Protocol>
-    bool operator== (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator== (const BasicInternetEndpoint<Protocol>& a, const BasicInternetEndpoint<Protocol>& b) noexcept
     {
         return a.ip () == b.ip () && a.port () == b.port ();
     }
@@ -912,7 +912,7 @@ namespace join
      * @return true if endpoints is not equal, false otherwise.
      */
     template <class Protocol>
-    bool operator!= (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator!= (const BasicInternetEndpoint<Protocol>& a, const BasicInternetEndpoint<Protocol>& b) noexcept
     {
         return !(a == b);
     }
@@ -924,7 +924,7 @@ namespace join
      * @return true if lower, false otherwise.
      */
     template <class Protocol>
-    bool operator< (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator< (const BasicInternetEndpoint<Protocol>& a, const BasicInternetEndpoint<Protocol>& b) noexcept
     {
         return std::tie (a.ip (), a.port ()) < std::tie (b.ip (), b.port ());
     }
@@ -936,7 +936,7 @@ namespace join
      * @return true if greater, false otherwise.
      */
     template <class Protocol>
-    bool operator> (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator> (const BasicInternetEndpoint<Protocol>& a, const BasicInternetEndpoint<Protocol>& b) noexcept
     {
         return b < a;
     }
@@ -948,7 +948,7 @@ namespace join
      * @return true if lower or equal, false otherwise.
      */
     template <class Protocol>
-    bool operator<= (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator<= (const BasicInternetEndpoint<Protocol>& a, const BasicInternetEndpoint<Protocol>& b) noexcept
     {
         return !(b < a);
     }
@@ -960,7 +960,7 @@ namespace join
      * @return true if greater or equal, false otherwise.
      */
     template <class Protocol>
-    bool operator>= (const BasicInternetEndpoint <Protocol>& a, const BasicInternetEndpoint <Protocol>& b) noexcept
+    bool operator>= (const BasicInternetEndpoint<Protocol>& a, const BasicInternetEndpoint<Protocol>& b) noexcept
     {
         return !(a < b);
     }
@@ -972,7 +972,7 @@ namespace join
      * @return output stream.
      */
     template <class Protocol>
-    std::ostream& operator<< (std::ostream& os, const BasicInternetEndpoint <Protocol>& endpoint)
+    std::ostream& operator<< (std::ostream& os, const BasicInternetEndpoint<Protocol>& endpoint)
     {
         if (endpoint.protocol () == Protocol::v6 ())
             os << "[" << endpoint.ip () << "]";

@@ -195,11 +195,9 @@ namespace join
      */
     inline bool compareNoCase (const std::string& a, const std::string& b)
     {
-        return ((a.size () == b.size ()) && std::equal (a.begin (), a.end (), b.begin (),
-                                                        [] (char c1, char c2)
-                                                        {
-                                                            return std::toupper (c1) == std::toupper (c2);
-                                                        }));
+        return ((a.size () == b.size ()) && std::equal (a.begin (), a.end (), b.begin (), [] (char c1, char c2) {
+                    return std::toupper (c1) == std::toupper (c2);
+                }));
     }
 
     /**

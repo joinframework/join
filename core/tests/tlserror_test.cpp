@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
- // libjoin.
+// libjoin.
 #include <join/socket.hpp>
 
 // Libraries.
@@ -45,8 +45,9 @@ TEST (TlsCategory, name)
 TEST (TlsCategory, message)
 {
     EXPECT_STREQ (TlsCategory ().message (0).c_str (), "success");
-    EXPECT_STREQ (TlsCategory ().message (static_cast <int> (TlsErrc::TlsCloseNotifyAlert)).c_str (), "TLS close notify alert received");
-    EXPECT_STREQ (TlsCategory ().message (static_cast <int> (TlsErrc::TlsProtocolError)).c_str (), "TLS protocol error");
+    EXPECT_STREQ (TlsCategory ().message (static_cast<int> (TlsErrc::TlsCloseNotifyAlert)).c_str (),
+                  "TLS close notify alert received");
+    EXPECT_STREQ (TlsCategory ().message (static_cast<int> (TlsErrc::TlsProtocolError)).c_str (), "TLS protocol error");
 }
 
 /**
@@ -54,9 +55,9 @@ TEST (TlsCategory, message)
  */
 TEST (TlsCategory, default_error_condition)
 {
-    EXPECT_EQ (TlsCategory ().default_error_condition (0).message(), "success");
-    EXPECT_EQ (TlsCategory ().default_error_condition (1).message(), "TLS close notify alert received");
-    EXPECT_EQ (TlsCategory ().default_error_condition (2).message(), "TLS protocol error");
+    EXPECT_EQ (TlsCategory ().default_error_condition (0).message (), "success");
+    EXPECT_EQ (TlsCategory ().default_error_condition (1).message (), "TLS close notify alert received");
+    EXPECT_EQ (TlsCategory ().default_error_condition (2).message (), "TLS protocol error");
 }
 
 /**
@@ -142,7 +143,7 @@ TEST (TlsCategory, make_error_condition)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

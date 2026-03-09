@@ -36,7 +36,7 @@
 namespace join
 {
     /// bytes array.
-    using BytesArray = std::vector <uint8_t>;
+    using BytesArray = std::vector<uint8_t>;
 
     /**
      * @brief convert bytes array to string.
@@ -48,7 +48,7 @@ namespace join
         std::stringstream oss;
         for (size_t i = 0; i < bin.size (); ++i)
         {
-            oss << std::hex << std::setw (2) << std::setfill ('0') << static_cast <uint32_t> (bin[i]);
+            oss << std::hex << std::setw (2) << std::setfill ('0') << static_cast<uint32_t> (bin[i]);
         }
         return oss.str ();
     }
@@ -113,7 +113,7 @@ namespace join
         static const std::streamsize _bufsize = 256;
 
         /// internal buffer.
-        std::unique_ptr <char []> _buf;
+        std::unique_ptr<char[]> _buf;
 
         /// encode context.
         EvpEncodeCtxPtr _encodectx;
@@ -144,7 +144,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Encoder& operator=(const Encoder& other) = delete;
+        Encoder& operator= (const Encoder& other) = delete;
 
         /**
          * @brief move constructor.
@@ -157,7 +157,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Encoder& operator=(Encoder&& other);
+        Encoder& operator= (Encoder&& other);
 
         /**
          * @brief destroy instance.
@@ -235,7 +235,7 @@ namespace join
         static const std::streamsize _bufsize = 256;
 
         /// internal buffer.
-        std::unique_ptr <char []> _buf;
+        std::unique_ptr<char[]> _buf;
 
         /// decode context.
         EvpEncodeCtxPtr _decodectx;
@@ -266,7 +266,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Decoder& operator=(const Decoder& other) = delete;
+        Decoder& operator= (const Decoder& other) = delete;
 
         /**
          * @brief move constructor.
@@ -279,7 +279,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Decoder& operator=(Decoder&& other);
+        Decoder& operator= (Decoder&& other);
 
         /**
          * @brief destroy instance.

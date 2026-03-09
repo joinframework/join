@@ -356,9 +356,9 @@ TEST_F (InterfaceTest, addRoute)
     ASSERT_NE (ve, nullptr);
 
     ASSERT_FALSE (ve->hasRoute ({"192.168.200.0", 24, "192.168.100.254", 0}));
-    ASSERT_EQ (ve->addRoute ({"192.168.200.0", 24, "192.168.100.254", 0}, true), 0) << lastError.message();
+    ASSERT_EQ (ve->addRoute ({"192.168.200.0", 24, "192.168.100.254", 0}, true), 0) << lastError.message ();
     ASSERT_TRUE (ve->hasRoute ({"192.168.200.0", 24, "192.168.100.254", 0}));
-    ASSERT_EQ (ve->removeRoute ({"192.168.200.0", 24, "192.168.100.254", 0}), 0) << lastError.message();
+    ASSERT_EQ (ve->removeRoute ({"192.168.200.0", 24, "192.168.100.254", 0}), 0) << lastError.message ();
 }
 
 /**
@@ -886,7 +886,7 @@ TEST_F (InterfaceTest, compare)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

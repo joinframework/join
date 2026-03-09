@@ -175,7 +175,7 @@ public:
     {
         unlink (_rootcert.c_str ());
         unlink (_certFile.c_str ());
-        rmdir  (_certPath.c_str ());
+        rmdir (_certPath.c_str ());
         unlink (_key.c_str ());
         unlink (_invalidKey.c_str ());
     }
@@ -257,15 +257,15 @@ protected:
     static const std::string _invalidKey;
 };
 
-const std::string TlsSocket::_hostv4 = "127.0.0.1";
-const std::string TlsSocket::_hostv6 = "::1";
-const uint16_t TlsSocket::_port = 5000;
-const uint16_t TlsSocket::_invalid_port = 5032;
-const int TlsSocket::_timeout = 1000;
-const std::string TlsSocket::_rootcert = "/tmp/tlssocket_test_root.cert";
-const std::string TlsSocket::_certPath = "/tmp/certs";
-const std::string TlsSocket::_certFile = _certPath + "/tlssocket_test.cert";
-const std::string TlsSocket::_key = "/tmp/tlssocket_test.key";
+const std::string TlsSocket::_hostv4     = "127.0.0.1";
+const std::string TlsSocket::_hostv6     = "::1";
+const uint16_t TlsSocket::_port          = 5000;
+const uint16_t TlsSocket::_invalid_port  = 5032;
+const int TlsSocket::_timeout            = 1000;
+const std::string TlsSocket::_rootcert   = "/tmp/tlssocket_test_root.cert";
+const std::string TlsSocket::_certPath   = "/tmp/certs";
+const std::string TlsSocket::_certFile   = _certPath + "/tlssocket_test.cert";
+const std::string TlsSocket::_key        = "/tmp/tlssocket_test.key";
 const std::string TlsSocket::_invalidKey = "/tmp/tlssocket_test_invalid.key";
 
 /**
@@ -284,9 +284,9 @@ TEST_F (TlsSocket, move)
     Tls::Socket tlsSocket1 (Tls::Socket::Blocking), tlsSocket2;
 
     ASSERT_EQ (tlsSocket1.connect ({_hostv4, _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE (tlsSocket1.connected());
+    ASSERT_TRUE (tlsSocket1.connected ());
     tlsSocket2 = std::move (tlsSocket1);
-    ASSERT_TRUE (tlsSocket2.connected());
+    ASSERT_TRUE (tlsSocket2.connected ());
     tlsSocket2.close ();
 }
 
@@ -317,11 +317,11 @@ TEST_F (TlsSocket, close)
 
     ASSERT_FALSE (tlsSocket.opened ());
     ASSERT_EQ (tlsSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE (tlsSocket.opened());
+    ASSERT_TRUE (tlsSocket.opened ());
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_FALSE (tlsSocket.opened());
+    ASSERT_FALSE (tlsSocket.opened ());
     tlsSocket.close ();
-    ASSERT_FALSE (tlsSocket.opened());
+    ASSERT_FALSE (tlsSocket.opened ());
 }
 
 /**
@@ -520,7 +520,7 @@ TEST_F (TlsSocket, waitDisconnected)
 TEST_F (TlsSocket, waitReadyRead)
 {
     Tls::Socket tlsSocket;
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_FALSE (tlsSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -546,7 +546,7 @@ TEST_F (TlsSocket, waitReadyRead)
 TEST_F (TlsSocket, canRead)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tlsSocket.canRead (), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -566,7 +566,7 @@ TEST_F (TlsSocket, canRead)
 TEST_F (TlsSocket, read)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tlsSocket.read (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -585,7 +585,7 @@ TEST_F (TlsSocket, read)
 TEST_F (TlsSocket, readExactly)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tlsSocket.readExactly (data, sizeof (data)), -1);
     ASSERT_EQ (tlsSocket.connectEncrypted ({_hostv4, _port}), 0) << join::lastError.message ();
@@ -626,7 +626,7 @@ TEST_F (TlsSocket, waitReadyWrite)
 TEST_F (TlsSocket, write)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tlsSocket.write (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -644,7 +644,7 @@ TEST_F (TlsSocket, write)
 TEST_F (TlsSocket, writeExactly)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tlsSocket.writeExactly (data, sizeof (data)), -1);
     ASSERT_EQ (tlsSocket.connectEncrypted ({_hostv4, _port}), 0) << join::lastError.message ();
@@ -740,7 +740,7 @@ TEST_F (TlsSocket, localEndpoint)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.localEndpoint (), Tls::Endpoint {});
+    ASSERT_EQ (tlsSocket.localEndpoint (), Tls::Endpoint{});
     ASSERT_EQ (tlsSocket.bind ({_hostv4, uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.localEndpoint (), Tls::Endpoint (_hostv4, uint16_t (_port + 1))) << join::lastError.message ();
@@ -754,7 +754,7 @@ TEST_F (TlsSocket, remoteEndpoint)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
-    ASSERT_EQ (tlsSocket.remoteEndpoint (), Tls::Endpoint {});
+    ASSERT_EQ (tlsSocket.remoteEndpoint (), Tls::Endpoint{});
     ASSERT_EQ (tlsSocket.bind ({_hostv4, uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.remoteEndpoint (), Tls::Endpoint (_hostv4, _port)) << join::lastError.message ();
@@ -902,7 +902,7 @@ TEST_F (TlsSocket, checksum)
 {
     std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
 
-    ASSERT_EQ (Tls::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+    ASSERT_EQ (Tls::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**
@@ -972,7 +972,7 @@ TEST_F (TlsSocket, setCaFile)
 TEST_F (TlsSocket, setVerify)
 {
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
-    Tls::Endpoint endpoint {_hostv4, _port};
+    Tls::Endpoint endpoint{_hostv4, _port};
 
     tlsSocket.setVerify (false);
     ASSERT_EQ (tlsSocket.connectEncrypted (endpoint), 0) << join::lastError.message ();
@@ -1058,7 +1058,7 @@ TEST_F (TlsSocket, isLower)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);

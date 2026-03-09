@@ -48,7 +48,7 @@ const char* HttpCategory::name () const noexcept
 // =========================================================================
 std::string HttpCategory::message (int code) const
 {
-    switch (static_cast <HttpErrc> (code))
+    switch (static_cast<HttpErrc> (code))
     {
         case HttpErrc::BadRequest:
             return "bad request";
@@ -85,7 +85,7 @@ std::string HttpCategory::message (int code) const
 // =========================================================================
 bool HttpCategory::equivalent (const std::error_code& code, int condition) const noexcept
 {
-    switch (static_cast <HttpErrc> (condition))
+    switch (static_cast<HttpErrc> (condition))
     {
         case HttpErrc::HeaderTooLarge:
             return code == join::Errc::MessageTooLong;
@@ -110,7 +110,7 @@ const std::error_category& join::httpCategory ()
 // =========================================================================
 std::error_code join::make_error_code (HttpErrc code)
 {
-    return std::error_code (static_cast <int> (code), httpCategory ());
+    return std::error_code (static_cast<int> (code), httpCategory ());
 }
 
 // =========================================================================
@@ -119,7 +119,7 @@ std::error_code join::make_error_code (HttpErrc code)
 // =========================================================================
 std::error_condition join::make_error_condition (HttpErrc code)
 {
-    return std::error_condition (static_cast <int> (code), httpCategory ());
+    return std::error_condition (static_cast<int> (code), httpCategory ());
 }
 
 // =========================================================================
@@ -136,8 +136,8 @@ HttpMessage::HttpMessage ()
 //   METHOD    : HttpMessage
 // =========================================================================
 HttpMessage::HttpMessage (const HttpMessage& other)
-: _version (other._version),
-  _headers (other._headers)
+: _version (other._version)
+, _headers (other._headers)
 {
 }
 
@@ -158,8 +158,8 @@ HttpMessage& HttpMessage::operator= (const HttpMessage& other)
 //   METHOD    : HttpMessage
 // =========================================================================
 HttpMessage::HttpMessage (HttpMessage&& other)
-: _version (std::move (other._version)),
-  _headers (std::move (other._headers))
+: _version (std::move (other._version))
+, _headers (std::move (other._headers))
 {
     other._version = "HTTP/1.1";
 }
@@ -360,8 +360,8 @@ int HttpMessage::parseHeader (const std::string& head)
 //   METHOD    : HttpRequest
 // =========================================================================
 HttpRequest::HttpRequest ()
-: HttpMessage (),
-  _path ("/")
+: HttpMessage ()
+, _path ("/")
 {
 }
 
@@ -370,9 +370,9 @@ HttpRequest::HttpRequest ()
 //   METHOD    : HttpRequest
 // =========================================================================
 HttpRequest::HttpRequest (HttpMethod method)
-: HttpMessage (),
-  _method (method),
-  _path ("/")
+: HttpMessage ()
+, _method (method)
+, _path ("/")
 {
 }
 
@@ -381,10 +381,10 @@ HttpRequest::HttpRequest (HttpMethod method)
 //   METHOD    : HttpRequest
 // =========================================================================
 HttpRequest::HttpRequest (const HttpRequest& other)
-: HttpMessage (other),
-  _method (other._method),
-  _path (other._path),
-  _parameters (other._parameters)
+: HttpMessage (other)
+, _method (other._method)
+, _path (other._path)
+, _parameters (other._parameters)
 {
 }
 
@@ -396,8 +396,8 @@ HttpRequest& HttpRequest::operator= (const HttpRequest& other)
 {
     HttpMessage::operator= (other);
 
-    _method = other._method;
-    _path = other._path;
+    _method     = other._method;
+    _path       = other._path;
     _parameters = other._parameters;
 
     return *this;
@@ -408,13 +408,13 @@ HttpRequest& HttpRequest::operator= (const HttpRequest& other)
 //   METHOD    : HttpRequest
 // =========================================================================
 HttpRequest::HttpRequest (HttpRequest&& other)
-: HttpMessage (std::move (other)),
-  _method (other._method),
-  _path (std::move (other._path)),
-  _parameters (std::move (other._parameters))
+: HttpMessage (std::move (other))
+, _method (other._method)
+, _path (std::move (other._path))
+, _parameters (std::move (other._parameters))
 {
     other._method = Get;
-    other._path = "/";
+    other._path   = "/";
 }
 
 // =========================================================================
@@ -425,12 +425,12 @@ HttpRequest& HttpRequest::operator= (HttpRequest&& other)
 {
     HttpMessage::operator= (std::move (other));
 
-    _method = other._method;
-    _path = std::move (other._path);
+    _method     = other._method;
+    _path       = std::move (other._path);
     _parameters = std::move (other._parameters);
 
     other._method = Get;
-    other._path = "/";
+    other._path   = "/";
 
     return *this;
 }
@@ -522,7 +522,7 @@ std::string HttpRequest::parameter (const std::string& name) const
 //   CLASS     : HttpRequest
 //   METHOD    : parameter
 // =========================================================================
-void HttpRequest::parameter (const std::string &name, const std::string &var)
+void HttpRequest::parameter (const std::string& name, const std::string& var)
 {
     _parameters[name] = var;
 }
@@ -639,7 +639,7 @@ std::string HttpRequest::auth () const
 std::string HttpRequest::credentials () const
 {
     std::string authorization = header ("Authorization");
-    auto beg = authorization.find (" ");
+    auto beg                  = authorization.find (" ");
     if (beg == std::string::npos)
     {
         return {};
@@ -655,7 +655,7 @@ void HttpRequest::clear ()
 {
     HttpMessage::clear ();
     _method = Get;
-    _path = "/";
+    _path   = "/";
     _parameters.clear ();
 }
 
@@ -739,7 +739,7 @@ int HttpRequest::parseFirstLine (const std::string& line)
 //   CLASS     : HttpRequest
 //   METHOD    : decodeUrl
 // =========================================================================
-std::string& HttpRequest::decodeUrl (std::string &url)
+std::string& HttpRequest::decodeUrl (std::string& url)
 {
     std::ostringstream oss;
     size_t pos = 0;
@@ -755,7 +755,7 @@ std::string& HttpRequest::decodeUrl (std::string &url)
             ss1 >> std::hex >> dec1;
             ss2 >> std::hex >> dec2;
             dec = (dec1 << 4) + dec2;
-            oss << static_cast <char> (dec);
+            oss << static_cast<char> (dec);
             ++pos;
         }
         else
@@ -772,7 +772,7 @@ std::string& HttpRequest::decodeUrl (std::string &url)
 //   CLASS     :
 //   METHOD    : removeLastSegment
 // =========================================================================
-std::string& removeLastSegment (std::string &path)
+std::string& removeLastSegment (std::string& path)
 {
     while (!path.empty ())
     {
@@ -832,11 +832,11 @@ std::string& HttpRequest::normalize (std::string& path)
         }
         else if (path.find_first_not_of (".") == std::string::npos)
         {
-            path.clear();
+            path.clear ();
         }
         else
         {
-            pos = path.find ("/", (path.front() == '/') ? 1 : 0);
+            pos = path.find ("/", (path.front () == '/') ? 1 : 0);
             output.append (path.substr (0, pos));
             path.erase (0, pos);
         }
@@ -851,7 +851,7 @@ std::string& HttpRequest::normalize (std::string& path)
 //   CLASS     : HttpRequest
 //   METHOD    : store
 // =========================================================================
-void HttpRequest::store (const std::string &query)
+void HttpRequest::store (const std::string& query)
 {
     size_t pos = 0;
 
@@ -869,7 +869,7 @@ void HttpRequest::store (const std::string &query)
             sepPos = query.length ();
         }
 
-        std::string name  = query.substr (pos, equalPos - pos);
+        std::string name = query.substr (pos, equalPos - pos);
         decodeUrl (name);
 
         std::string value = query.substr (equalPos + 1, sepPos - equalPos - 1);
@@ -891,9 +891,9 @@ void HttpRequest::store (const std::string &query)
 //   METHOD    : HttpResponse
 // =========================================================================
 HttpResponse::HttpResponse (const HttpResponse& other)
-: HttpMessage (other),
-  _status (other._status),
-  _reason (other._reason)
+: HttpMessage (other)
+, _status (other._status)
+, _reason (other._reason)
 {
 }
 
@@ -916,9 +916,9 @@ HttpResponse& HttpResponse::operator= (const HttpResponse& other)
 //   METHOD    : HttpResponse
 // =========================================================================
 HttpResponse::HttpResponse (HttpResponse&& other)
-: HttpMessage (std::move (other)),
-  _status (std::move (other._status)),
-  _reason (std::move (other._reason))
+: HttpMessage (std::move (other))
+, _status (std::move (other._status))
+, _reason (std::move (other._reason))
 {
 }
 

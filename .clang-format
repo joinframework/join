@@ -6,6 +6,7 @@ BasedOnStyle: Google
 ColumnLimit: 120
 IndentWidth: 4
 Standard: Latest
+InsertNewlineAtEOF: true
 
 # --- Includes Management ---
 SortIncludes: Never
@@ -14,7 +15,6 @@ SortUsingDeclarations: Never
 # --- Force POSIX / Linux Line Endings ---
 DeriveLineEnding: false
 LineEnding: LF
-InsertTrailingNewline: true
 
 # --- Access Modifiers (public, private, etc.) ---
 AccessModifierOffset: -4
@@ -24,13 +24,22 @@ NamespaceIndentation: All
 FixNamespaceComments: false
 
 # --- Braces (Allman Style + Space) ---
-BreakBeforeBraces: Allman
-SpaceBeforeBraces: Always
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: false
 
 # --- Spaces ---
 SpaceBeforeParens: Always
 SpaceAfterTemplateKeyword: true
-SpaceInEmptyParentheses: false
 
 # --- Assignments & Alignments ---
 AlignConsecutiveAssignments:
@@ -52,7 +61,7 @@ SeparateDefinitionBlocks: Always
 MaxEmptyLinesToKeep: 2
 
 # --- Constructor Formatting ---
-ConstructorInitializerAllOnOneLineOrOnePerLine: false
+PackConstructorInitializers: Never
 ConstructorInitializerIndentWidth: 0
 BreakConstructorInitializers: BeforeComma
 

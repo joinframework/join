@@ -60,6 +60,7 @@ TEST (UnixAcceptor, create)
     ASSERT_EQ (server.create (path), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 }
+
 /**
  * @brief Test close method.
  */
@@ -120,7 +121,7 @@ TEST (UnixAcceptor, localEndpoint)
 {
     UnixStream::Acceptor server;
 
-    ASSERT_EQ (server.localEndpoint (), UnixStream::Endpoint {});
+    ASSERT_EQ (server.localEndpoint (), UnixStream::Endpoint{});
     ASSERT_EQ (server.create (path), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().device (), path);
     server.close ();
@@ -193,7 +194,7 @@ TEST (UnixAcceptor, handle)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
