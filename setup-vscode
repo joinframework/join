@@ -13,6 +13,7 @@ require() {
 }
 
 require gdb-multiarch
+require clang-format
 require cmake
 require ninja
 require clang
