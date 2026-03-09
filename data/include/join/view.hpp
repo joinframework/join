@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_VIEW_HPP__
-#define __JOIN_VIEW_HPP__
+#ifndef JOIN_DATA_VIEW_HPP
+#define JOIN_DATA_VIEW_HPP
 
 // libjoin.
 #include <join/utils.hpp>

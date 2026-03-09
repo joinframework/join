@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_HMAC_HPP__
-#define __JOIN_HMAC_HPP__
+#ifndef JOIN_CRYPTO_HMAC_HPP
+#define JOIN_CRYPTO_HMAC_HPP
 
 // libjoin.
 #include <join/digest.hpp>

@@ -13,6 +13,7 @@ require() {
 }
 
 require gdb-multiarch
+require clang-format
 require cmake
 require ninja
 require clang
@@ -36,6 +37,7 @@ EOMextensions
     cat <<EOMsettings > "$VSCODEDIR/settings.json"
 {
   "editor.formatOnSave": true,
+  "C_Cpp.clang_format_path": "/usr/bin/clang-format",
   "cmake.useCMakePresets": "always",
   "cmake.buildBeforeRun": false,
   "cmake.debugConfig": {

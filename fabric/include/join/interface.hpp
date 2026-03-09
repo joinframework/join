@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_INTERFACE_HPP__
-#define __JOIN_INTERFACE_HPP__
+#ifndef JOIN_FABRIC_INTERFACE_HPP
+#define JOIN_FABRIC_INTERFACE_HPP
 
 // libjoin.
 #include <join/macaddress.hpp>

@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_DIGEST_HPP__
-#define __JOIN_DIGEST_HPP__
+#ifndef JOIN_CRYPTO_DIGEST_HPP
+#define JOIN_CRYPTO_DIGEST_HPP
 
 // libjoin.
 #include <join/openssl.hpp>

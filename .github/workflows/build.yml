@@ -26,6 +26,20 @@ on:
         default: false
 
 jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check formatting
+        uses: jidicula/clang-format-action@v4.16.0
+        with:
+          clang-format-version: '18'
+          check-path: '.'
+          exclude-regex: 'build'
+
   build:
     runs-on: ubuntu-latest
 
@@ -41,13 +55,11 @@ jobs:
       run:
         shell: bash
 
+    needs: format
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Check formatting
-        if: github.event_name == 'pull_request'
-        run: find . -name "*.cpp" -o -name "*.hpp" | xargs clang-format --dry-run --Werror
 
       - name: Setup Build Environment
         if: inputs.scan || inputs.coverage
@@ -122,8 +134,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
 
       - name: Download coverage data from GitHub
         uses: actions/download-artifact@v4

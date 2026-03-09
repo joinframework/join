@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_UTILS_HPP__
-#define __JOIN_UTILS_HPP__
+#ifndef JOIN_CORE_UTILS_HPP
+#define JOIN_CORE_UTILS_HPP
 
 // libjoin.
 #include <join/error.hpp>

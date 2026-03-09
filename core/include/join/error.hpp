@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_ERROR_HPP__
-#define __JOIN_ERROR_HPP__
+#ifndef JOIN_CORE_ERROR_HPP
+#define JOIN_CORE_ERROR_HPP
 
 // C++.
 #include <system_error>

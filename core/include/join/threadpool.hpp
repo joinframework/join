@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_THREADPOOL_HPP__
-#define __JOIN_THREADPOOL_HPP__
+#ifndef JOIN_CORE_THREADPOOL_HPP
+#define JOIN_CORE_THREADPOOL_HPP
 
 // libjoin.
 #include <join/condition.hpp>

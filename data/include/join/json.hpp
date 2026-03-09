@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_JSON_HPP__
-#define __JOIN_JSON_HPP__
+#ifndef JOIN_DATA_JSON_HPP
+#define JOIN_DATA_JSON_HPP
 
 // libjoin.
 #include <join/atodpow.hpp>

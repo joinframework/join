@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_SAX_HPP__
-#define __JOIN_SAX_HPP__
+#ifndef JOIN_DATA_SAX_HPP
+#define JOIN_DATA_SAX_HPP
 
 // libjoin.
 #include <join/error.hpp>

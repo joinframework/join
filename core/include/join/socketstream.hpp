@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_SOCKETSTREAM_HPP__
-#define __JOIN_SOCKETSTREAM_HPP__
+#ifndef JOIN_CORE_SOCKETSTREAM_HPP
+#define JOIN_CORE_SOCKETSTREAM_HPP
 
 // libjoin.
 #include <join/socket.hpp>

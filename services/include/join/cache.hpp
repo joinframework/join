@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_CACHE_HPP__
-#define __JOIN_CACHE_HPP__
+#ifndef JOIN_SERVICES_CACHE_HPP
+#define JOIN_SERVICES_CACHE_HPP
 
 // libjoin.
 #include <join/mutex.hpp>

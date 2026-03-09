@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_VARIANT_HPP__
-#define __JOIN_VARIANT_HPP__
+#ifndef JOIN_CORE_VARIANT_HPP
+#define JOIN_CORE_VARIANT_HPP
 
 // libjoin.
 #include <join/traits.hpp>

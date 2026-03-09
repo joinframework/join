@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_MACADDRESS_HPP__
-#define __JOIN_MACADDRESS_HPP__
+#ifndef JOIN_CORE_MACADDRESS_HPP
+#define JOIN_CORE_MACADDRESS_HPP
 
 // libjoin.
 #include <join/ipaddress.hpp>

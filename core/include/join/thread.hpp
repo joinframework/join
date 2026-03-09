@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_THREAD_HPP__
-#define __JOIN_THREAD_HPP__
+#ifndef JOIN_CORE_THREAD_HPP
+#define JOIN_CORE_THREAD_HPP
 
 // C++.
 #include <system_error>

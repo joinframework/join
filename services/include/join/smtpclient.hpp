@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_SMTP_CLIENT_HPP__
-#define __JOIN_SMTP_CLIENT_HPP__
+#ifndef JOIN_SERVICES_SMTPCLIENT_HPP
+#define JOIN_SERVICES_SMTPCLIENT_HPP
 
 // libjoin.
 #include <join/socketstream.hpp>

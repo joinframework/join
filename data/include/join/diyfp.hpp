@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_DIYFP_HPP__
-#define __JOIN_DIYFP_HPP__
+#ifndef JOIN_DATA_DIYFP_HPP
+#define JOIN_DATA_DIYFP_HPP
 
 // C++.
 #include <utility>

@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_TRAITS_HPP__
-#define __JOIN_TRAITS_HPP__
+#ifndef JOIN_CORE_TRAITS_HPP
+#define JOIN_CORE_TRAITS_HPP
 
 // C++.
 #include <utility>
