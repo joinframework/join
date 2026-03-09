@@ -1448,6 +1448,89 @@ TEST (Variant, greater_or_equal)
 }
 
 /**
+ * @brief Test swap method.
+ */
+TEST (Variant, swap)
+{
+    Variant<int, double, std::string, bool, std::nullptr_t> var1, var2;
+
+    // swap same alternative
+    var1.set<int> (3);
+    var2.set<int> (7);
+    var1.swap (var2);
+    ASSERT_TRUE (var1.is<int> ());
+    EXPECT_EQ (var1.get<int> (), 7);
+    ASSERT_TRUE (var2.is<int> ());
+    EXPECT_EQ (var2.get<int> (), 3);
+
+    var1.set<double> (0.5);
+    var2.set<double> (1.5);
+    var1.swap (var2);
+    ASSERT_TRUE (var1.is<double> ());
+    EXPECT_DOUBLE_EQ (var1.get<double> (), 1.5);
+    ASSERT_TRUE (var2.is<double> ());
+    EXPECT_DOUBLE_EQ (var2.get<double> (), 0.5);
+
+    var1.set<std::string> ("foo");
+    var2.set<std::string> ("bar");
+    var1.swap (var2);
+    ASSERT_TRUE (var1.is<std::string> ());
+    EXPECT_STREQ (var1.get<std::string> ().c_str (), "bar");
+    ASSERT_TRUE (var2.is<std::string> ());
+    EXPECT_STREQ (var2.get<std::string> ().c_str (), "foo");
+
+    var1.set<bool> (true);
+    var2.set<bool> (false);
+    var1.swap (var2);
+    ASSERT_TRUE (var1.is<bool> ());
+    EXPECT_FALSE (var1.get<bool> ());
+    ASSERT_TRUE (var2.is<bool> ());
+    EXPECT_TRUE (var2.get<bool> ());
+
+    var1.set<std::nullptr_t> (nullptr);
+    var2.set<std::nullptr_t> (nullptr);
+    var1.swap (var2);
+    ASSERT_TRUE (var1.is<std::nullptr_t> ());
+    EXPECT_EQ (var1.get<std::nullptr_t> (), nullptr);
+    ASSERT_TRUE (var2.is<std::nullptr_t> ());
+    EXPECT_EQ (var2.get<std::nullptr_t> (), nullptr);
+
+    // swap different alternatives
+    var1.set<int> (42);
+    var2.set<double> (3.14);
+    var1.swap (var2);
+    ASSERT_TRUE (var1.is<double> ());
+    EXPECT_DOUBLE_EQ (var1.get<double> (), 3.14);
+    ASSERT_TRUE (var2.is<int> ());
+    EXPECT_EQ (var2.get<int> (), 42);
+
+    var1.set<std::string> ("hello");
+    var2.set<bool> (true);
+    var1.swap (var2);
+    ASSERT_TRUE (var1.is<bool> ());
+    EXPECT_TRUE (var1.get<bool> ());
+    ASSERT_TRUE (var2.is<std::string> ());
+    EXPECT_STREQ (var2.get<std::string> ().c_str (), "hello");
+
+    var1.set<std::nullptr_t> (nullptr);
+    var2.set<int> (99);
+    var1.swap (var2);
+    ASSERT_TRUE (var1.is<int> ());
+    EXPECT_EQ (var1.get<int> (), 99);
+    ASSERT_TRUE (var2.is<std::nullptr_t> ());
+    EXPECT_EQ (var2.get<std::nullptr_t> (), nullptr);
+
+    // free function swap
+    var1.set<int> (10);
+    var2.set<std::string> ("world");
+    join::swap (var1, var2);
+    ASSERT_TRUE (var1.is<std::string> ());
+    EXPECT_STREQ (var1.get<std::string> ().c_str (), "world");
+    ASSERT_TRUE (var2.is<int> ());
+    EXPECT_EQ (var2.get<int> (), 10);
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char** argv)
