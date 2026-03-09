@@ -25,15 +25,15 @@
 #ifndef __JOIN_VARIANT_HPP__
 #define __JOIN_VARIANT_HPP__
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
-
 // libjoin.
 #include <join/traits.hpp>
 
 // C++.
 #include <algorithm>
 #include <typeinfo>
+
+// C.
+#include <cstddef>
 
 namespace join
 {
@@ -49,206 +49,174 @@ namespace join
         };
 
         /**
-         * @brief helper class for variant creation/deletion.
+         * @brief helper class for variant operations using jump tables for O(1) dispatch.
          */
         template <typename... Ts>
         struct VariantHelper
         {
-        };
-
-        /**
-         * @brief helper class for recursive operations.
-         */
-        template <typename Last>
-        struct VariantHelper<Last>
-        {
+        public:
             /**
-             * @brief external routine to destroy the object.
-             * @param index object data type index.
+             * @brief copy one object to another.
+             * @param which internal storage index of the active alternative.
+             * @param src source storage pointer.
+             * @param dst destination storage pointer.
+             */
+            static void copy (std::size_t which, const void* src, void* dst)
+            {
+                static const CopyFunc table[] = {&copyImpl<Ts>...};
+                table[which](src, dst);
+            }
+
+            /**
+             * @brief move one object to another.
+             * @param which internal storage index of the active alternative.
+             * @param src source storage pointer.
+             * @param dst destination storage pointer.
+             */
+            static void move (std::size_t which, void* src, void* dst)
+            {
+                static const MoveFunc table[] = {&moveImpl<Ts>...};
+                table[which](src, dst);
+            }
+
+            /**
+             * @brief destroy the currently active object.
+             * @param which internal storage index of the active alternative.
              * @param data storage pointer.
              */
-            inline static void destroy (std::size_t /*index*/, void* data)
+            static void destroy (std::size_t which, void* data)
             {
-                reinterpret_cast<Last*> (data)->~Last ();
+                static const DestroyFunc table[] = {&destroyImpl<Ts>...};
+                table[which](data);
             }
 
             /**
-             * @brief external routine to copy one object to an other.
-             * @param oldIndex old object data type index.
-             * @param oldData old object storage pointer.
-             * @param newData new object storage pointer.
-             */
-            inline static void copy (std::size_t /*oldIndex*/, const void* oldData, void* newData)
-            {
-                new (newData) Last (*reinterpret_cast<const Last*> (oldData));
-            }
-
-            /**
-             * @brief external routine to move one object to an other.
-             * @param oldIndex old object data type index.
-             * @param oldData old object storage pointer.
-             * @param newData new object storage pointer.
-             */
-            inline static void move (std::size_t /*oldIndex*/, void* oldData, void* newData)
-            {
-                new (newData) Last (std::move (*reinterpret_cast<Last*> (oldData)));
-            }
-
-            /**
-             * @brief external routine to compare if one object is equal to an other of same type.
-             * @param index object data type index.
-             * @param data storage pointer.
-             * @param otherData other storage pointer.
+             * @brief compare if two objects of the same alternative are equal.
+             * @param which internal storage index of the active alternative.
+             * @param a first storage pointer.
+             * @param b second storage pointer.
              * @return true if equal, false otherwise.
              */
-            inline static bool equal (std::size_t /*index*/, const void* data, const void* otherData)
+            static bool equal (std::size_t which, const void* a, const void* b)
             {
-                return *reinterpret_cast<const Last*> (data) == *reinterpret_cast<const Last*> (otherData);
+                static const EqualFunc table[] = {&equalImpl<Ts>...};
+                return table[which](a, b);
             }
 
             /**
-             * @brief external routine to compare if one object is lower than an other of the same type.
-             * @param index object data type index.
-             * @param data storage pointer.
-             * @param otherData other storage pointer.
-             * @return true if lower than, false otherwise.
+             * @brief compare if one object is lower than another of the same alternative.
+             * @param which internal storage index of the active alternative.
+             * @param a first storage pointer.
+             * @param b second storage pointer.
+             * @return true if a is lower than b, false otherwise.
              */
-            template <typename T = Last, typename std::enable_if_t<!std::is_null_pointer<T>::value>* = nullptr>
-            inline static bool lower (std::size_t /*index*/, const void* data, const void* otherData)
+            static bool lower (std::size_t which, const void* a, const void* b)
             {
-                return *reinterpret_cast<const Last*> (data) < *reinterpret_cast<const Last*> (otherData);
+                static const LowerFunc table[] = {&lowerImpl<Ts>...};
+                return table[which](a, b);
+            }
+
+        private:
+            /// function pointer type for copy operations.
+            using CopyFunc = void (*) (const void*, void*);
+
+            /// function pointer type for move operations.
+            using MoveFunc = void (*) (void*, void*);
+
+            /// function pointer type for destroy operations.
+            using DestroyFunc = void (*) (void*);
+
+            /// function pointer type for equality comparisons.
+            using EqualFunc = bool (*) (const void*, const void*);
+
+            /// function pointer type for less-than comparisons.
+            using LowerFunc = bool (*) (const void*, const void*);
+
+            /**
+             * @brief copy construct a T into dst from src.
+             * @tparam T type of the alternative to copy.
+             * @param src source storage pointer.
+             * @param dst destination storage pointer.
+             */
+            template <typename T>
+            static void copyImpl (const void* src, void* dst)
+            {
+                new (dst) T (*reinterpret_cast<const T*> (src));
             }
 
             /**
-             * @brief external routine to compare if one object is lower than an other of the same type.
-             * @param index object data type index.
-             * @param data storage pointer.
-             * @param otherData other storage pointer.
-             * @return true if lower than, false otherwise.
+             * @brief move construct a T into dst from src.
+             * @tparam T type of the alternative to move.
+             * @param src source storage pointer.
+             * @param dst destination storage pointer.
              */
-            template <typename T = Last, typename std::enable_if_t<std::is_null_pointer<T>::value>* = nullptr>
-            inline static bool lower (std::size_t /*index*/, const void* /*data*/, const void* /*otherData*/)
+            template <typename T>
+            static void moveImpl (void* src, void* dst)
+            {
+                new (dst) T (std::move (*reinterpret_cast<T*> (src)));
+            }
+
+            /**
+             * @brief destroy a T in place.
+             * @tparam T type of the alternative to destroy.
+             * @param data storage pointer.
+             */
+            template <typename T>
+            static void destroyImpl (void* data)
+            {
+                reinterpret_cast<T*> (data)->~T ();
+            }
+
+            /**
+             * @brief compare two T objects for equality.
+             * @tparam T type of the alternative to compare.
+             * @param a first storage pointer.
+             * @param b second storage pointer.
+             * @return true if equal, false otherwise.
+             */
+            template <typename T>
+            static bool equalImpl (const void* a, const void* b)
+            {
+                return *reinterpret_cast<const T*> (a) == *reinterpret_cast<const T*> (b);
+            }
+
+            /**
+             * @brief less-than comparison for non-null pointer alternatives.
+             * @tparam T type of the alternative to compare.
+             * @param a first storage pointer.
+             * @param b second storage pointer.
+             * @return true if a is lower than b, false otherwise.
+             */
+            template <typename T>
+            static typename std::enable_if<!std::is_null_pointer<T>::value, bool>::type lowerDispatch (const void* a,
+                                                                                                       const void* b)
+            {
+                return *reinterpret_cast<const T*> (a) < *reinterpret_cast<const T*> (b);
+            }
+
+            /**
+             * @brief less-than comparison for nullptr_t alternatives, always returns false.
+             * @tparam T type of the alternative to compare.
+             * @return false.
+             */
+            template <typename T>
+            static typename std::enable_if<std::is_null_pointer<T>::value, bool>::type lowerDispatch (const void*,
+                                                                                                      const void*)
             {
                 return false;
             }
-        };
-
-        /**
-         * @brief helper class for recursive operations.
-         */
-        template <typename First, typename... Ts>
-        struct VariantHelper<First, Ts...>
-        {
-            /**
-             * @brief external routine to destroy the object.
-             * @param index object data type index.
-             * @param data storage pointer.
-             */
-            inline static void destroy (std::size_t index, void* data)
-            {
-                if (index == sizeof...(Ts))
-                {
-                    reinterpret_cast<First*> (data)->~First ();
-                }
-                else
-                {
-                    VariantHelper<Ts...>::destroy (index, data);
-                }
-            }
 
             /**
-             * @brief external routine to copy one object to an other.
-             * @param oldIndex old object data type index.
-             * @param oldData old object storage pointer.
-             * @param newData new object storage pointer.
+             * @brief dispatch less-than comparison, handling nullptr_t alternatives.
+             * @tparam T type of the alternative to compare.
+             * @param a first storage pointer.
+             * @param b second storage pointer.
+             * @return true if a is lower than b, false otherwise.
              */
-            inline static void copy (std::size_t oldIndex, const void* oldData, void* newData)
+            template <typename T>
+            static bool lowerImpl (const void* a, const void* b)
             {
-                if (oldIndex == sizeof...(Ts))
-                {
-                    new (newData) First (*reinterpret_cast<const First*> (oldData));
-                }
-                else
-                {
-                    VariantHelper<Ts...>::copy (oldIndex, oldData, newData);
-                }
-            }
-
-            /**
-             * @brief external routine to move one object to an other.
-             * @param oldIndex old object data type index.
-             * @param oldData old object storage pointer.
-             * @param newData new object storage pointer.
-             */
-            inline static void move (std::size_t oldIndex, void* oldData, void* newData)
-            {
-                if (oldIndex == sizeof...(Ts))
-                {
-                    new (newData) First (std::move (*reinterpret_cast<First*> (oldData)));
-                }
-                else
-                {
-                    VariantHelper<Ts...>::move (oldIndex, oldData, newData);
-                }
-            }
-
-            /**
-             * @brief external routine to compare if one object is equal to an other of same type.
-             * @param index object data type index.
-             * @param data storage pointer.
-             * @param otherData other storage pointer.
-             * @return true if equal, false otherwise.
-             */
-            inline static bool equal (std::size_t index, const void* data, const void* otherData)
-            {
-                if (index == sizeof...(Ts))
-                {
-                    return *reinterpret_cast<const First*> (data) == *reinterpret_cast<const First*> (otherData);
-                }
-                else
-                {
-                    return VariantHelper<Ts...>::equal (index, data, otherData);
-                }
-            }
-
-            /**
-             * @brief external routine to compare if one object is lower than an other of the same type.
-             * @param index object data type index.
-             * @param data storage pointer.
-             * @param otherData other storage pointer.
-             * @return true if lower than, false otherwise.
-             */
-            template <typename T = First, typename std::enable_if_t<!std::is_null_pointer<T>::value>* = nullptr>
-            inline static bool lower (std::size_t index, const void* data, const void* otherData)
-            {
-                if (index == sizeof...(Ts))
-                {
-                    return *reinterpret_cast<const First*> (data) < *reinterpret_cast<const First*> (otherData);
-                }
-                else
-                {
-                    return VariantHelper<Ts...>::lower (index, data, otherData);
-                }
-            }
-
-            /**
-             * @brief external routine to compare if one object is lower than an other of the same type.
-             * @param index object data type index.
-             * @param data storage pointer.
-             * @param otherData other storage pointer.
-             * @return true if lower than, false otherwise.
-             */
-            template <typename T = First, typename std::enable_if_t<std::is_null_pointer<T>::value>* = nullptr>
-            inline static bool lower (std::size_t index, const void* data, const void* otherData)
-            {
-                if (index == sizeof...(Ts))
-                {
-                    return false;
-                }
-                else
-                {
-                    return VariantHelper<Ts...>::lower (index, data, otherData);
-                }
+                return lowerDispatch<T> (a, b);
             }
         };
 
@@ -262,7 +230,7 @@ namespace join
             /**
              * @brief default constructor.
              */
-            constexpr VariantStorage () noexcept
+            constexpr VariantStorage ()
             : VariantStorage (in_place_index_t<0>{})
             {
             }
@@ -293,7 +261,7 @@ namespace join
              */
             template <std::size_t I, typename... Args>
             constexpr explicit VariantStorage (in_place_index_t<I>, Args&&... args)
-            : _which (sizeof...(Ts) - I - 1)
+            : _which (I)
             {
                 new (storage ()) find_element_t<I, Ts...> (std::forward<Args> (args)...);
             }
@@ -313,9 +281,8 @@ namespace join
              */
             constexpr VariantStorage& operator= (const VariantStorage& other)
             {
-                VariantHelper<Ts...>::destroy (_which, storage ());
-                VariantHelper<Ts...>::copy (other._which, other.storage (), storage ());
-                _which = other._which;
+                VariantStorage tmp (other);
+                swap (tmp);
                 return *this;
             }
 
@@ -326,9 +293,7 @@ namespace join
              */
             constexpr VariantStorage& operator= (VariantStorage&& other) noexcept
             {
-                VariantHelper<Ts...>::destroy (_which, storage ());
-                VariantHelper<Ts...>::move (other._which, other.storage (), storage ());
-                _which = other._which;
+                swap (other);
                 return *this;
             }
 
@@ -350,11 +315,27 @@ namespace join
                 return static_cast<const void*> (std::addressof (_data));
             }
 
+            /**
+             * @brief swap this storage with other.
+             * @param other storage to swap with.
+             */
+            void swap (VariantStorage& other) noexcept
+            {
+                alignas (Ts...) unsigned char tmp[std::max ({sizeof (Ts)...})];
+                VariantHelper<Ts...>::move (_which, storage (), &tmp);
+                VariantHelper<Ts...>::destroy (_which, storage ());
+                VariantHelper<Ts...>::move (other._which, other.storage (), storage ());
+                VariantHelper<Ts...>::destroy (other._which, other.storage ());
+                VariantHelper<Ts...>::move (_which, &tmp, other.storage ());
+                VariantHelper<Ts...>::destroy (_which, &tmp);
+                std::swap (_which, other._which);
+            }
+
             /// aligned storage.
-            typename std::aligned_union<std::max ({sizeof (Ts)...}), Ts...>::type _data;
+            alignas (Ts...) unsigned char _data[std::max ({sizeof (Ts)...})];
 
             /// index of the alternative that is currently held by the variant.
-            std::size_t _which = sizeof...(Ts) - 1;
+            std::size_t _which = 0;
         };
     }
 
@@ -402,7 +383,7 @@ namespace join
         template <
             typename T, typename Match = match_t<T&&, Ts...>,
             typename = std::enable_if_t<is_unique<Match, Ts...>::value && std::is_constructible<Match, T&&>::value>>
-        constexpr Variant (T&& t) noexcept
+        constexpr Variant (T&& t)
         : Variant (in_place_index_t<find_index<Match, Ts...>::value>{}, std::forward<T> (t))
         {
         }
@@ -481,7 +462,7 @@ namespace join
          */
         template <typename T, typename Match = match_t<T&&, Ts...>>
         constexpr std::enable_if_t<is_unique<Match, Ts...>::value && std::is_constructible<Match, T&&>::value, Variant&>
-        operator= (T&& t) noexcept
+        operator= (T&& t)
         {
             set<find_index<Match, Ts...>::value> (std::forward<T> (t));
             return *this;
@@ -677,7 +658,16 @@ namespace join
          */
         constexpr std::size_t index () const noexcept
         {
-            return sizeof...(Ts) - this->_which - 1;
+            return this->_which;
+        }
+
+        /**
+         * @brief swap this variant with another.
+         * @param other variant to swap with.
+         */
+        void swap (Variant& other) noexcept
+        {
+            Base::swap (other);
         }
 
     protected:
@@ -692,7 +682,7 @@ namespace join
             {
                 return false;
             }
-            return details::VariantHelper<Ts...>::equal (this->_which, this->storage (), rhs.storage ());
+            return details::VariantHelper<Ts...>::equal (index (), this->storage (), rhs.storage ());
         }
 
         /**
@@ -710,7 +700,7 @@ namespace join
             {
                 return false;
             }
-            return details::VariantHelper<Ts...>::lower (this->_which, this->storage (), rhs.storage ());
+            return details::VariantHelper<Ts...>::lower (index (), this->storage (), rhs.storage ());
         }
 
         // friendship with equal operator.
@@ -793,8 +783,17 @@ namespace join
     {
         return !(lhs < rhs);
     }
-}
 
-#pragma GCC diagnostic pop
+    /**
+     * @brief swap two variants.
+     * @param lhs first variant.
+     * @param rhs second variant.
+     */
+    template <typename... Ts>
+    void swap (Variant<Ts...>& lhs, Variant<Ts...>& rhs) noexcept
+    {
+        lhs.swap (rhs);
+    }
+}
 
 #endif
