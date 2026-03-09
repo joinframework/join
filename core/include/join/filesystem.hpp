@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_FILESYSTEM_HPP__
-#define __JOIN_FILESYSTEM_HPP__
+#ifndef JOIN_CORE_FILESYSTEM_HPP
+#define JOIN_CORE_FILESYSTEM_HPP
 
 // C++.
 #include <string>

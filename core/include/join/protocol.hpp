@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_PROTOCOL_HPP__
-#define __JOIN_PROTOCOL_HPP__
+#ifndef JOIN_CORE_PROTOCOL_HPP
+#define JOIN_CORE_PROTOCOL_HPP
 
 // libjoin.
 #include <join/endpoint.hpp>

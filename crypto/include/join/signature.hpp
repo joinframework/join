@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_SIGNATURE_HPP__
-#define __JOIN_SIGNATURE_HPP__
+#ifndef JOIN_CRYPTO_SIGNATURE_HPP
+#define JOIN_CRYPTO_SIGNATURE_HPP
 
 // libjoin.
 #include <join/digest.hpp>

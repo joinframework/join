@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_IPADDRESS_HPP__
-#define __JOIN_IPADDRESS_HPP__
+#ifndef JOIN_CORE_IPADDRESS_HPP
+#define JOIN_CORE_IPADDRESS_HPP
 
 // C++.
 #include <ostream>

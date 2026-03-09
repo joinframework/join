@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_SOCKET_HPP__
-#define __JOIN_SOCKET_HPP__
+#ifndef JOIN_CORE_SOCKET_HPP
+#define JOIN_CORE_SOCKET_HPP
 
 // libjoin.
 #include <join/protocol.hpp>
@@ -578,10 +578,7 @@ namespace join
          */
         int wait (bool wantRead, bool wantWrite, int timeout) const noexcept
         {
-            struct pollfd handle
-            {
-                .fd = this->_handle, .events = 0, .revents = 0
-            };
+            struct pollfd handle{.fd = this->_handle, .events = 0, .revents = 0};
 
             if (wantRead)
             {

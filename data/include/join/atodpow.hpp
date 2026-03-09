@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_ATODPOW_HPP__
-#define __JOIN_ATODPOW_HPP__
+#ifndef JOIN_DATA_ATODPOW_HPP
+#define JOIN_DATA_ATODPOW_HPP
 
 #include <cstdint>
 

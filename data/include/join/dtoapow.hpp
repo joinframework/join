@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_DTOAPOW_HPP__
-#define __JOIN_DTOAPOW_HPP__
+#ifndef JOIN_DATA_DTOAPOW_HPP
+#define JOIN_DATA_DTOAPOW_HPP
 
 // join.
 #include <join/diyfp.hpp>

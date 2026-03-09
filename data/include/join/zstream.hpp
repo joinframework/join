@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_ZSTREAM_HPP__
-#define __JOIN_ZSTREAM_HPP__
+#ifndef JOIN_DATA_ZSTREAM_HPP
+#define JOIN_DATA_ZSTREAM_HPP
 
 // libjoin.
 #include <join/streambuf.hpp>

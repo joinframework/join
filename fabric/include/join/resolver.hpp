@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_RESOLVER_HPP__
-#define __JOIN_RESOLVER_HPP__
+#ifndef JOIN_FABRIC_RESOLVER_HPP
+#define JOIN_FABRIC_RESOLVER_HPP
 
 // libjoin.
 #include <join/endpoint.hpp>

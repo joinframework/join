@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_BACKOFF_HPP__
-#define __JOIN_BACKOFF_HPP__
+#ifndef JOIN_CORE_BACKOFF_HPP
+#define JOIN_CORE_BACKOFF_HPP
 
 // C++.
 #include <algorithm>

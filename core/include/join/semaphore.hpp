@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_SEMAPHORE_HPP__
-#define __JOIN_SEMAPHORE_HPP__
+#ifndef JOIN_CORE_SEMAPHORE_HPP
+#define JOIN_CORE_SEMAPHORE_HPP
 
 // libjoin.
 #include <join/error.hpp>

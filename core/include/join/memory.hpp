@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_MEMORY_HPP__
-#define __JOIN_MEMORY_HPP__
+#ifndef JOIN_CORE_MEMORY_HPP
+#define JOIN_CORE_MEMORY_HPP
 
 // libjoin.
 #include <join/error.hpp>

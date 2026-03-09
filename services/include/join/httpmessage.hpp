@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_HTTP_MESSAGE_HPP__
-#define __JOIN_HTTP_MESSAGE_HPP__
+#ifndef JOIN_SERVICES_HTTPMESSAGE_HPP
+#define JOIN_SERVICES_HTTPMESSAGE_HPP
 
 // libjoin.
 #include <join/error.hpp>

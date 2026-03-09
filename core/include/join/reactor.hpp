@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_REACTOR_HPP__
-#define __JOIN_REACTOR_HPP__
+#ifndef JOIN_CORE_REACTOR_HPP
+#define JOIN_CORE_REACTOR_HPP
 
 // libjoin.
 #include <join/thread.hpp>

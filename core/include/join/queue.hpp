@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_QUEUE_HPP__
-#define __JOIN_QUEUE_HPP__
+#ifndef JOIN_CORE_QUEUE_HPP
+#define JOIN_CORE_QUEUE_HPP
 
 // libjoin.
 #include <join/backoff.hpp>

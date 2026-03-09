@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_MAIL_MESSAGE_HPP__
-#define __JOIN_MAIL_MESSAGE_HPP__
+#ifndef JOIN_SERVICES_MAILMESSAGE_HPP
+#define JOIN_SERVICES_MAILMESSAGE_HPP
 
 // libjoin.
 #include <join/version.hpp>

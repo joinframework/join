@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_ALLOCATOR_HPP__
-#define __JOIN_ALLOCATOR_HPP__
+#ifndef JOIN_CORE_ALLOCATOR_HPP
+#define JOIN_CORE_ALLOCATOR_HPP
 
 // libjoin.
 #include <join/backoff.hpp>

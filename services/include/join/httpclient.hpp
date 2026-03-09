@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_HTTP_CLIENT_HPP__
-#define __JOIN_HTTP_CLIENT_HPP__
+#ifndef JOIN_SERVICES_HTTPCLIENT_HPP
+#define JOIN_SERVICES_HTTPCLIENT_HPP
 
 // libjoin.
 #include <join/version.hpp>

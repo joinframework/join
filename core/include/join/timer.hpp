@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_TIMER_HPP__
-#define __JOIN_TIMER_HPP__
+#ifndef JOIN_CORE_TIMER_HPP
+#define JOIN_CORE_TIMER_HPP
 
 // libjoin.
 #include <join/reactor.hpp>

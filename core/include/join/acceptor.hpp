@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_ACCEPTOR_HPP__
-#define __JOIN_ACCEPTOR_HPP__
+#ifndef JOIN_CORE_ACCEPTOR_HPP
+#define JOIN_CORE_ACCEPTOR_HPP
 
 // libjoin.
 #include <join/socketstream.hpp>

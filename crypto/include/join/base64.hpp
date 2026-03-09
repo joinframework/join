@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_BASE64_HPP__
-#define __JOIN_BASE64_HPP__
+#ifndef JOIN_CRYPTO_BASE64_HPP
+#define JOIN_CRYPTO_BASE64_HPP
 
 // libjoin.
 #include <join/openssl.hpp>

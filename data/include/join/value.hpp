@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_VALUE_HPP__
-#define __JOIN_VALUE_HPP__
+#ifndef JOIN_DATA_VALUE_HPP
+#define JOIN_DATA_VALUE_HPP
 
 // libjoin.
 #include <join/variant.hpp>
@@ -960,7 +960,7 @@ namespace join
          * @return converted string value.
          * @throw std::bad_cast.
          */
-        explicit operator const char* () const
+        explicit operator const char*() const
         {
             return getString ().c_str ();
         }

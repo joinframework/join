@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_ENDPOINT_HPP__
-#define __JOIN_ENDPOINT_HPP__
+#ifndef JOIN_CORE_ENDPOINT_HPP
+#define JOIN_CORE_ENDPOINT_HPP
 
 // libjoin.
 #include <join/macaddress.hpp>

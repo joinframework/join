@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_CPU_HPP__
-#define __JOIN_CPU_HPP__
+#ifndef JOIN_CORE_CPU_HPP
+#define JOIN_CORE_CPU_HPP
 
 // C++.
 #include <string>

@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_STREAMBUF_HPP__
-#define __JOIN_STREAMBUF_HPP__
+#ifndef JOIN_DATA_STREAMBUF_HPP
+#define JOIN_DATA_STREAMBUF_HPP
 
 // C++.
 #include <iostream>
