@@ -960,7 +960,7 @@ namespace join
          * @return converted string value.
          * @throw std::bad_cast.
          */
-        explicit operator const char*() const
+        explicit operator const char* () const
         {
             return getString ().c_str ();
         }
