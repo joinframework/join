@@ -439,7 +439,7 @@ namespace join
         /**
          * @brief destroy the Variant instance.
          */
-        virtual ~Variant () = default;
+        ~Variant () = default;
 
         /**
          * @brief copy assignment.
