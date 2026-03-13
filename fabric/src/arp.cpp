@@ -163,24 +163,18 @@ void Arp::onReceive () noexcept
 {
     Packet in{};
 
-    if (read (reinterpret_cast<char*> (&in), sizeof (in)) != static_cast<int> (sizeof (in)))
+    if (read (reinterpret_cast<char*> (&in), sizeof (in)) == static_cast<int> (sizeof (in)) &&
+        in.eth.h_proto == htons (ETH_P_ARP) && in.arp.ar_hrd == htons (ARPHRD_ETHER) &&
+        in.arp.ar_pro == htons (ETH_P_IP) && in.arp.ar_hln == ETH_ALEN && in.arp.ar_pln == 4 &&
+        in.arp.ar_op == htons (ARPOP_REPLY))
     {
-        return;
-    }
+        ScopedLock<Mutex> lock (_syncMutex);
 
-    if (in.eth.h_proto != htons (ETH_P_ARP) || in.arp.ar_hrd != htons (ARPHRD_ETHER) ||
-        in.arp.ar_pro != htons (ETH_P_IP) || in.arp.ar_hln != ETH_ALEN || in.arp.ar_pln != 4 ||
-        in.arp.ar_op != htons (ARPOP_REPLY))
-    {
-        return;
-    }
-
-    ScopedLock<Mutex> lock (_syncMutex);
-
-    auto it = _pending.find (in.arp.ar_sip);
-    if (it != _pending.end ())
-    {
-        it->second->mac = MacAddress (in.arp.ar_sha, ETH_ALEN);
-        it->second->cond.signal ();
+        auto it = _pending.find (in.arp.ar_sip);
+        if (it != _pending.end ())
+        {
+            it->second->mac = MacAddress (in.arp.ar_sha, ETH_ALEN);
+            it->second->cond.signal ();
+        }
     }
 }

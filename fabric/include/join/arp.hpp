@@ -311,7 +311,7 @@ namespace join
         MacAddress waitResponse (ScopedLock<Mutex>& lock, uint32_t tip, std::chrono::duration<Rep, Period> timeout)
         {
             auto inserted = _pending.emplace (tip, std::make_unique<PendingRequest> ());
-            if (!inserted.second)
+            if (!inserted.second)  // LCOV_EXCL_LINE
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return {};
