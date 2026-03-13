@@ -24,12 +24,6 @@
 
 // libjoin.
 #include <join/interfacemanager.hpp>
-#include <join/reactor.hpp>
-
-// C++.
-#include <algorithm>
-#include <iostream>
-#include <mutex>
 
 // C.
 #include <linux/if_tunnel.h>
@@ -45,18 +39,11 @@ using join::InterfaceManager;
 //   METHOD    : InterfaceManager
 // =========================================================================
 InterfaceManager::InterfaceManager (Reactor* reactor)
-: _buffer (std::make_unique<char[]> (_bufferSize))
-, _seq (0)
-, _reactor (reactor)
+: NetlinkManager (RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE,
+                  reactor)
 {
-    open (Netlink::rt ());
-    bind (RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE);
-    if (_reactor == nullptr)
-    {
-        _reactor = ReactorThread::reactor ();
-    }
-    _reactor->addHandler (this);
-    refresh (true);
+    start ();
+    refresh ();
 }
 
 // =========================================================================
@@ -65,8 +52,7 @@ InterfaceManager::InterfaceManager (Reactor* reactor)
 // =========================================================================
 InterfaceManager::~InterfaceManager ()
 {
-    _reactor->delHandler (this);
-    close ();
+    stop ();
 }
 
 // =========================================================================
@@ -104,10 +90,11 @@ InterfaceList InterfaceManager::enumerate ()
     ScopedLock<Mutex> lock (_ifMutex);
 
     InterfaceList ifaces;
+    ifaces.reserve (_interfaces.size ());
 
     for (auto& interface : _interfaces)
     {
-        ifaces.insert (interface.second);
+        ifaces.push_back (interface.second);
     }
 
     return ifaces;
@@ -117,82 +104,74 @@ InterfaceList InterfaceManager::enumerate ()
 //   CLASS     : InterfaceManager
 //   METHOD    : refresh
 // =========================================================================
-int InterfaceManager::refresh (bool sync)
+int InterfaceManager::refresh ()
 {
-    return -(dumpLink (sync) != 0 || dumpAddress (sync) != 0 || dumpRoute (sync) != 0);
+    {
+        ScopedLock<Mutex> lock (_ifMutex);
+        _interfaces.clear ();
+    }
+
+    return -(dumpLink (true) != 0 || dumpAddress (true) != 0 || dumpRoute (true) != 0);
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : addLinkListener
 // =========================================================================
-void InterfaceManager::addLinkListener (const LinkNotify& cb)
+uint64_t InterfaceManager::addLinkListener (const LinkNotify& cb)
 {
-    ScopedLock<Mutex> lock (_linkMutex);
-    _linkListeners.push_back (cb);
+    ScopedLock<Mutex> lock (_listenerMutex);
+    return _linkListeners.emplace (++_listenerCounter, cb).first->first;
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : removeLinkListener
 // =========================================================================
-void InterfaceManager::removeLinkListener (const LinkNotify& cb)
+void InterfaceManager::removeLinkListener (uint64_t id)
 {
-    ScopedLock<Mutex> lock (_linkMutex);
-    auto it = std::remove_if (_linkListeners.begin (), _linkListeners.end (), [&] (const LinkNotify& existing) {
-        return existing.target_type () == cb.target_type () &&
-               existing.target<void (const LinkInfo&)> () == cb.target<void (const LinkInfo&)> ();
-    });
-    _linkListeners.erase (it, _linkListeners.end ());
+    ScopedLock<Mutex> lock (_listenerMutex);
+    _linkListeners.erase (id);
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : addAddressListener
 // =========================================================================
-void InterfaceManager::addAddressListener (const AddressNotify& cb)
+uint64_t InterfaceManager::addAddressListener (const AddressNotify& cb)
 {
-    ScopedLock<Mutex> lock (_addressMutex);
-    _addressListeners.push_back (cb);
+    ScopedLock<Mutex> lock (_listenerMutex);
+    return _addressListeners.emplace (++_listenerCounter, cb).first->first;
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : removeAddressListener
 // =========================================================================
-void InterfaceManager::removeAddressListener (const AddressNotify& cb)
+void InterfaceManager::removeAddressListener (uint64_t id)
 {
-    ScopedLock<Mutex> lock (_addressMutex);
-    auto it =
-        std::remove_if (_addressListeners.begin (), _addressListeners.end (), [&] (const AddressNotify& existing) {
-            return existing.target_type () == cb.target_type () &&
-                   existing.target<void (const AddressInfo&)> () == cb.target<void (const AddressInfo&)> ();
-        });
-    _addressListeners.erase (it, _addressListeners.end ());
+    ScopedLock<Mutex> lock (_listenerMutex);
+    _addressListeners.erase (id);
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : addRouteListener
 // =========================================================================
-void InterfaceManager::addRouteListener (const RouteNotify& cb)
+uint64_t InterfaceManager::addRouteListener (const RouteNotify& cb)
 {
-    ScopedLock<Mutex> lock (_routeMutex);
-    _routeListeners.push_back (cb);
+    ScopedLock<Mutex> lock (_listenerMutex);
+    return _routeListeners.emplace (++_listenerCounter, cb).first->first;
 }
 
 // =========================================================================
 //   CLASS     : InterfaceManager
 //   METHOD    : removeRouteListener
 // =========================================================================
-void InterfaceManager::removeRouteListener (const RouteNotify& cb)
+void InterfaceManager::removeRouteListener (uint64_t id)
 {
-    ScopedLock<Mutex> lock (_routeMutex);
-    auto it = std::remove_if (_routeListeners.begin (), _routeListeners.end (), [&] (const RouteNotify& existing) {
-        return existing.target_type () == cb.target_type () &&
-               existing.target<void (const RouteInfo&)> () == cb.target<void (const RouteInfo&)> ();
-    });
-    _routeListeners.erase (it, _routeListeners.end ());
+    ScopedLock<Mutex> lock (_listenerMutex);
+    _routeListeners.erase (id);
 }
 
 // =========================================================================
@@ -201,8 +180,7 @@ void InterfaceManager::removeRouteListener (const RouteNotify& cb)
 // =========================================================================
 int InterfaceManager::createDummyInterface (const std::string& interfaceName, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -238,8 +216,7 @@ int InterfaceManager::createDummyInterface (const std::string& interfaceName, bo
 // =========================================================================
 int InterfaceManager::createBridgeInterface (const std::string& interfaceName, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -282,8 +259,7 @@ int InterfaceManager::createVlanInterface (const std::string& interfaceName, uin
         return -1;
     }
 
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -346,8 +322,7 @@ int InterfaceManager::createVlanInterface (const std::string& interfaceName, con
 int InterfaceManager::createVethInterface (const std::string& hostName, const std::string& peerName, pid_t* pid,
                                            bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -406,8 +381,7 @@ int InterfaceManager::createGreInterface (const std::string& tunnelName, uint32_
         return -1;
     }
 
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -510,8 +484,7 @@ int InterfaceManager::createGreInterface (const std::string& tunnelName, const s
 // =========================================================================
 int InterfaceManager::removeInterface (uint32_t interfaceIndex, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -536,43 +509,6 @@ int InterfaceManager::removeInterface (uint32_t interfaceIndex, bool sync)
 int InterfaceManager::removeInterface (const std::string& interfaceName, bool sync)
 {
     return removeInterface (if_nametoindex (interfaceName.c_str ()), sync);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : addAttributes
-// =========================================================================
-void InterfaceManager::addAttributes (struct nlmsghdr* nlh, int type, const void* data, int alen)
-{
-    int len = RTA_LENGTH (alen);
-    struct rtattr* rta =
-        reinterpret_cast<struct rtattr*> (reinterpret_cast<char*> (nlh) + NLMSG_ALIGN (nlh->nlmsg_len));
-    rta->rta_type = type;
-    rta->rta_len  = len;
-    memcpy (RTA_DATA (rta), data, alen);
-    nlh->nlmsg_len = NLMSG_ALIGN (nlh->nlmsg_len) + RTA_ALIGN (len);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : startNestedAttributes
-// =========================================================================
-struct rtattr* InterfaceManager::startNestedAttributes (struct nlmsghdr* nlh, int type)
-{
-    struct rtattr* nested =
-        reinterpret_cast<struct rtattr*> (reinterpret_cast<char*> (nlh) + NLMSG_ALIGN (nlh->nlmsg_len));
-    addAttributes (nlh, type, nullptr, 0);
-    return nested;
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : stopNestedAttributes
-// =========================================================================
-int InterfaceManager::stopNestedAttributes (struct nlmsghdr* nlh, struct rtattr* nested)
-{
-    nested->rta_len = reinterpret_cast<char*> (nlh) + NLMSG_ALIGN (nlh->nlmsg_len) - reinterpret_cast<char*> (nested);
-    return nlh->nlmsg_len;
 }
 
 // =========================================================================
@@ -603,8 +539,7 @@ void InterfaceManager::addPeerInfoData (struct nlmsghdr* nlh, const std::string&
 // =========================================================================
 int InterfaceManager::mtu (uint32_t interfaceIndex, uint32_t mtuBytes, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -631,8 +566,7 @@ int InterfaceManager::mtu (uint32_t interfaceIndex, uint32_t mtuBytes, bool sync
 // =========================================================================
 int InterfaceManager::mac (uint32_t interfaceIndex, const MacAddress& macAddress, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -659,8 +593,7 @@ int InterfaceManager::mac (uint32_t interfaceIndex, const MacAddress& macAddress
 // =========================================================================
 int InterfaceManager::addToBridge (uint32_t interfaceIndex, const uint32_t masterIndex, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -695,8 +628,7 @@ int InterfaceManager::removeFromBridge (uint32_t interfaceIndex, bool sync)
 // =========================================================================
 int InterfaceManager::enable (uint32_t interfaceIndex, bool enabled, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -723,8 +655,7 @@ int InterfaceManager::enable (uint32_t interfaceIndex, bool enabled, bool sync)
 int InterfaceManager::addAddress (uint32_t interfaceIndex, const IpAddress& ipAddress, uint32_t prefix,
                                   const IpAddress& broadcast, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -762,8 +693,7 @@ int InterfaceManager::addAddress (uint32_t interfaceIndex, const IpAddress& ipAd
 int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& ipAddress, uint32_t prefix,
                                      const IpAddress& broadcast, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -801,8 +731,7 @@ int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& i
 int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix,
                                 const IpAddress& gateway, uint32_t* metric, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -849,8 +778,7 @@ int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, 
 int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix,
                                    const IpAddress& gateway, uint32_t* metric, bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -896,8 +824,7 @@ int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& des
 // =========================================================================
 int InterfaceManager::dumpLink (bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -920,8 +847,7 @@ int InterfaceManager::dumpLink (bool sync)
 // =========================================================================
 int InterfaceManager::dumpAddress (bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -944,8 +870,7 @@ int InterfaceManager::dumpAddress (bool sync)
 // =========================================================================
 int InterfaceManager::dumpRoute (bool sync)
 {
-    char buffer[_bufferSize];
-    memset (buffer, 0, sizeof (buffer));
+    char buffer[_bufferSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -964,107 +889,29 @@ int InterfaceManager::dumpRoute (bool sync)
 
 // =========================================================================
 //   CLASS     : InterfaceManager
-//   METHOD    : sendRequest
+//   METHOD    : onMessage
 // =========================================================================
-int InterfaceManager::sendRequest (struct nlmsghdr* nlh, bool sync)
+void InterfaceManager::onMessage (struct nlmsghdr* nlh)
 {
-    ScopedLock<Mutex> lock (_syncMutex);
-
-    if (write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len) == -1)
+    switch (nlh->nlmsg_type)
     {
-        return -1;
-    }
+        case RTM_NEWLINK:
+        case RTM_DELLINK:
+            onLinkMessage (nlh);
+            break;
 
-    if (sync)
-    {
-        return waitResponse (lock, nlh->nlmsg_seq);
-    }
+        case RTM_NEWADDR:
+        case RTM_DELADDR:
+            onAddressMessage (nlh);
+            break;
 
-    return 0;
-}
+        case RTM_NEWROUTE:
+        case RTM_DELROUTE:
+            onRouteMessage (nlh);
+            break;
 
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : waitResponse
-// =========================================================================
-int InterfaceManager::waitResponse (ScopedLock<Mutex>& lock, uint32_t seq, uint32_t timeout)
-{
-    auto inserted = _pending.emplace (seq, std::make_shared<PendingRequest> ());
-    if (!inserted.second)
-    {
-        lastError = make_error_code (Errc::OperationFailed);
-        return -1;
-    }
-
-    if (!inserted.first->second->cond.timedWait (lock, std::chrono::milliseconds (timeout)))
-    {
-        _pending.erase (inserted.first);
-        lastError = make_error_code (Errc::TimedOut);
-        return -1;
-    }
-
-    if (inserted.first->second->error != 0)
-    {
-        int err = inserted.first->second->error;
-        _pending.erase (inserted.first);
-        lastError = std::error_code (err, std::generic_category ());
-        return -1;
-    }
-
-    _pending.erase (inserted.first);
-
-    return 0;
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : onReceive
-// =========================================================================
-void InterfaceManager::onReceive ()
-{
-    ssize_t len = read (_buffer.get (), _bufferSize);
-    if (len != -1)
-    {
-        struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (_buffer.get ());
-        while (NLMSG_OK (nlh, len))
-        {
-            if (nlh->nlmsg_type == NLMSG_DONE)
-            {
-                notifyRequest (nlh->nlmsg_seq, 0);
-                break;
-            }
-
-            if (nlh->nlmsg_type == NLMSG_ERROR)
-            {
-                struct nlmsgerr* err = static_cast<struct nlmsgerr*> (NLMSG_DATA (nlh));
-                notifyRequest (err->msg.nlmsg_seq, -err->error);
-                nlh = NLMSG_NEXT (nlh, len);
-                continue;
-            }
-
-            switch (nlh->nlmsg_type)
-            {
-                case RTM_NEWLINK:
-                case RTM_DELLINK:
-                    onLinkMessage (nlh);
-                    break;
-
-                case RTM_NEWADDR:
-                case RTM_DELADDR:
-                    onAddressMessage (nlh);
-                    break;
-
-                case RTM_NEWROUTE:
-                case RTM_DELROUTE:
-                    onRouteMessage (nlh);
-                    break;
-
-                default:
-                    break;
-            }
-
-            nlh = NLMSG_NEXT (nlh, len);
-        }
+        default:
+            break;
     }
 }
 
@@ -1083,31 +930,37 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
         return;
     }
 
-    LinkInfo info = {};
-    info.index    = ifi->ifi_index;
+    LinkInfo info{};
 
     if (nlh->nlmsg_type == RTM_DELLINK)
     {
-        info.flags |= ChangeType::Deleted;
+        info.flags |= InterfaceChangeType::Deleted;
+        {
+            ScopedLock<Mutex> lock (_ifMutex);
+            auto it = _interfaces.find (ifi->ifi_index);
+            if (it != _interfaces.end ())
+            {
+                info.interface = it->second;
+                _interfaces.erase (it);
+            }
+        }
         notifyLinkUpdate (info);
-        ScopedLock<Mutex> lock (_ifMutex);
-        _interfaces.erase (info.index);
         return;
     }
 
-    Interface::Ptr iface = acquire (info);
+    Interface::Ptr iface = acquire (ifi->ifi_index, info);
 
     {
         ScopedLock<Mutex> lock (iface->_mutex);
 
         if ((iface->_flags & IFF_UP) != (ifi->ifi_flags & IFF_UP))
         {
-            info.flags |= ChangeType::AdminStateChanged;
+            info.flags |= InterfaceChangeType::AdminStateChanged;
         }
 
         if ((iface->_flags & IFF_RUNNING) != (ifi->ifi_flags & IFF_RUNNING))
         {
-            info.flags |= ChangeType::OperStateChanged;
+            info.flags |= InterfaceChangeType::OperStateChanged;
         }
 
         iface->_flags = ifi->ifi_flags;
@@ -1119,17 +972,17 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
                 case IFLA_ADDRESS:
                     info.flags |=
                         updateValue (iface->_mac, MacAddress (reinterpret_cast<uint8_t*> (RTA_DATA (rta)), IFHWADDRLEN),
-                                     ChangeType::MacChanged);
+                                     InterfaceChangeType::MacChanged);
                     break;
 
                 case IFLA_IFNAME:
                     info.flags |= updateValue (iface->_name, std::string (reinterpret_cast<char*> (RTA_DATA (rta))),
-                                               ChangeType::NameChanged);
+                                               InterfaceChangeType::NameChanged);
                     break;
 
                 case IFLA_MTU:
                     info.flags |= updateValue (iface->_mtu, *reinterpret_cast<uint32_t*> (RTA_DATA (rta)),
-                                               ChangeType::MtuChanged);
+                                               InterfaceChangeType::MtuChanged);
                     break;
 
                 case IFLA_LINKINFO:
@@ -1138,7 +991,7 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
 
                 case IFLA_MASTER:
                     info.flags |= updateValue (iface->_master, *reinterpret_cast<uint32_t*> (RTA_DATA (rta)),
-                                               ChangeType::MasterChanged);
+                                               InterfaceChangeType::MasterChanged);
                     break;
 
                 default:
@@ -1156,7 +1009,7 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
 //   CLASS     : InterfaceManager
 //   METHOD    : onLinkInfoMessage
 // =========================================================================
-void InterfaceManager::onLinkInfoMessage (Interface::Ptr& iface, struct rtattr* rta, ChangeType& flags)
+void InterfaceManager::onLinkInfoMessage (Interface::Ptr& iface, struct rtattr* rta, InterfaceChangeType& flags)
 {
     struct rtattr* attr = reinterpret_cast<struct rtattr*> (RTA_DATA (rta));
     int len             = RTA_PAYLOAD (rta);
@@ -1167,7 +1020,7 @@ void InterfaceManager::onLinkInfoMessage (Interface::Ptr& iface, struct rtattr* 
         {
             case IFLA_INFO_KIND:
                 flags |= updateValue (iface->_kind, std::string (reinterpret_cast<char*> (RTA_DATA (attr))),
-                                      ChangeType::KindChanged);
+                                      InterfaceChangeType::KindChanged);
                 break;
 
             default:
@@ -1188,11 +1041,9 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
     struct rtattr* rta    = IFA_RTA (ifa);
     int len               = IFA_PAYLOAD (nlh);
 
-    AddressInfo info = {};
-    info.index       = ifa->ifa_index;
-
     socklen_t addrlen = (ifa->ifa_family == AF_INET6) ? IpAddress::ipv6Length : IpAddress::ipv4Length;
 
+    AddressInfo info{};
     std::get<1> (info.address) = ifa->ifa_prefixlen;
     std::get<2> (info.address) = IpAddress (ifa->ifa_family);
 
@@ -1200,9 +1051,15 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
     {
         switch (rta->rta_type)
         {
-            case IFA_ADDRESS:
             case IFA_LOCAL:
                 std::get<0> (info.address) = IpAddress (RTA_DATA (rta), addrlen, ifa->ifa_index);
+                break;
+
+            case IFA_ADDRESS:
+                if (std::get<0> (info.address).isWildcard ())
+                {
+                    std::get<0> (info.address) = IpAddress (RTA_DATA (rta), addrlen, ifa->ifa_index);
+                }
                 break;
 
             case IFA_BROADCAST:
@@ -1216,45 +1073,45 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
         rta = RTA_NEXT (rta, len);
     }
 
-    Interface::Ptr iface = findByIndex (info.index);
-    if (!iface)
+    info.interface = findByIndex (ifa->ifa_index);
+    if (!info.interface)
     {
         return;
     }
 
-    iface->_mutex.lock ();
-
-    if (nlh->nlmsg_type == RTM_NEWADDR)
     {
-        auto it =
-            std::find_if (iface->_addresses.begin (), iface->_addresses.end (), [&] (const Interface::Address& a) {
-                return std::get<0> (a) == std::get<0> (info.address);
-            });
+        ScopedLock<Mutex> lock (info.interface->_mutex);
 
-        if (it != iface->_addresses.end ())
+        if (nlh->nlmsg_type == RTM_NEWADDR)
         {
-            std::get<1> (*it) = std::get<1> (info.address);
-            std::get<2> (*it) = std::get<2> (info.address);
-            info.flags |= ChangeType::Modified;
+            auto it = std::find_if (info.interface->_addresses.begin (), info.interface->_addresses.end (),
+                                    [&] (const Interface::Address& a) {
+                                        return std::get<0> (a) == std::get<0> (info.address);
+                                    });
+
+            if (it != info.interface->_addresses.end ())
+            {
+                std::get<1> (*it) = std::get<1> (info.address);
+                std::get<2> (*it) = std::get<2> (info.address);
+                info.flags |= InterfaceChangeType::Modified;
+            }
+            else
+            {
+                info.interface->_addresses.push_back (info.address);
+                info.flags |= InterfaceChangeType::Added;
+            }
         }
         else
         {
-            iface->_addresses.push_back (info.address);
-            info.flags |= ChangeType::Added;
+            auto it = std::remove_if (info.interface->_addresses.begin (), info.interface->_addresses.end (),
+                                      [&] (const Interface::Address& a) {
+                                          return std::get<0> (a) == std::get<0> (info.address);
+                                      });
+
+            info.interface->_addresses.erase (it, info.interface->_addresses.end ());
+            info.flags |= InterfaceChangeType::Deleted;
         }
     }
-    else
-    {
-        auto it =
-            std::remove_if (iface->_addresses.begin (), iface->_addresses.end (), [&] (const Interface::Address& a) {
-                return std::get<0> (a) == std::get<0> (info.address);
-            });
-
-        iface->_addresses.erase (it, iface->_addresses.end ());
-        info.flags |= ChangeType::Deleted;
-    }
-
-    iface->_mutex.unlock ();
 
     notifyAddressUpdate (info);
 }
@@ -1269,11 +1126,11 @@ void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
     struct rtattr* rta = RTM_RTA (rtm);
     int len            = RTM_PAYLOAD (nlh);
 
-    RouteInfo info = {};
-
     socklen_t addrlen = (rtm->rtm_family == AF_INET6) ? IpAddress::ipv6Length : IpAddress::ipv4Length;
 
+    RouteInfo info{};
     std::get<1> (info.route) = rtm->rtm_dst_len;
+    uint32_t index           = 0;
 
     while (RTA_OK (rta, len))
     {
@@ -1292,7 +1149,7 @@ void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
                 break;
 
             case RTA_OIF:
-                info.index = *reinterpret_cast<uint32_t*> (RTA_DATA (rta));
+                index = *reinterpret_cast<uint32_t*> (RTA_DATA (rta));
                 break;
 
             default:
@@ -1302,62 +1159,48 @@ void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
         rta = RTA_NEXT (rta, len);
     }
 
-    Interface::Ptr iface = findByIndex (info.index);
-    if (!iface)
+    info.interface = findByIndex (index);
+    if (!info.interface)
     {
         return;
     }
 
-    iface->_mutex.lock ();
-
-    if (nlh->nlmsg_type == RTM_NEWROUTE)
     {
-        auto it = std::find_if (iface->_routes.begin (), iface->_routes.end (), [&] (const Interface::Route& r) {
-            return std::get<0> (r) == std::get<0> (info.route) && std::get<1> (r) == std::get<1> (info.route) &&
-                   std::get<2> (r) == std::get<2> (info.route);
-        });
+        ScopedLock<Mutex> lock (info.interface->_mutex);
 
-        if (it != iface->_routes.end ())
+        if (nlh->nlmsg_type == RTM_NEWROUTE)
         {
-            std::get<3> (*it) = std::get<3> (info.route);
-            info.flags |= ChangeType::Modified;
+            auto it = std::find_if (
+                info.interface->_routes.begin (), info.interface->_routes.end (), [&] (const Interface::Route& r) {
+                    return std::get<0> (r) == std::get<0> (info.route) && std::get<1> (r) == std::get<1> (info.route) &&
+                           std::get<2> (r) == std::get<2> (info.route);
+                });
+
+            if (it != info.interface->_routes.end ())
+            {
+                std::get<3> (*it) = std::get<3> (info.route);
+                info.flags |= InterfaceChangeType::Modified;
+            }
+            else
+            {
+                info.interface->_routes.push_back (info.route);
+                info.flags |= InterfaceChangeType::Added;
+            }
         }
         else
         {
-            iface->_routes.push_back (info.route);
-            info.flags |= ChangeType::Added;
+            auto it = std::remove_if (
+                info.interface->_routes.begin (), info.interface->_routes.end (), [&] (const Interface::Route& r) {
+                    return std::get<0> (r) == std::get<0> (info.route) && std::get<1> (r) == std::get<1> (info.route) &&
+                           std::get<2> (r) == std::get<2> (info.route);
+                });
+
+            info.interface->_routes.erase (it, info.interface->_routes.end ());
+            info.flags |= InterfaceChangeType::Deleted;
         }
     }
-    else
-    {
-        auto it = std::remove_if (iface->_routes.begin (), iface->_routes.end (), [&] (const Interface::Route& r) {
-            return std::get<0> (r) == std::get<0> (info.route) && std::get<1> (r) == std::get<1> (info.route) &&
-                   std::get<2> (r) == std::get<2> (info.route);
-        });
-
-        iface->_routes.erase (it, iface->_routes.end ());
-        info.flags |= ChangeType::Deleted;
-    }
-
-    iface->_mutex.unlock ();
 
     notifyRouteUpdate (info);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : notifyRequest
-// =========================================================================
-void InterfaceManager::notifyRequest (uint32_t seq, int error)
-{
-    ScopedLock<Mutex> lock (_syncMutex);
-
-    auto it = _pending.find (seq);
-    if (it != _pending.end ())
-    {
-        it->second->error = error;
-        it->second->cond.signal ();
-    }
 }
 
 // =========================================================================
@@ -1366,13 +1209,16 @@ void InterfaceManager::notifyRequest (uint32_t seq, int error)
 // =========================================================================
 void InterfaceManager::notifyLinkUpdate (const LinkInfo& info)
 {
-    ScopedLock<Mutex> lock (_linkMutex);
-
-    for (auto& listener : _linkListeners)
+    std::unordered_map<uint64_t, LinkNotify> linklisteners;
     {
-        if (listener)
+        ScopedLock<Mutex> lock (_listenerMutex);
+        linklisteners = _linkListeners;
+    }
+    for (auto& listener : linklisteners)
+    {
+        if (listener.second)
         {
-            listener (info);
+            listener.second (info);
         }
     }
 }
@@ -1383,13 +1229,16 @@ void InterfaceManager::notifyLinkUpdate (const LinkInfo& info)
 // =========================================================================
 void InterfaceManager::notifyAddressUpdate (const AddressInfo& info)
 {
-    ScopedLock<Mutex> lock (_addressMutex);
-
-    for (auto& listener : _addressListeners)
+    std::unordered_map<uint64_t, AddressNotify> addresslisteners;
     {
-        if (listener)
+        ScopedLock<Mutex> lock (_listenerMutex);
+        addresslisteners = _addressListeners;
+    }
+    for (auto& listener : addresslisteners)
+    {
+        if (listener.second)
         {
-            listener (info);
+            listener.second (info);
         }
     }
 }
@@ -1400,13 +1249,16 @@ void InterfaceManager::notifyAddressUpdate (const AddressInfo& info)
 // =========================================================================
 void InterfaceManager::notifyRouteUpdate (const RouteInfo& info)
 {
-    ScopedLock<Mutex> lock (_routeMutex);
-
-    for (auto& listener : _routeListeners)
+    std::unordered_map<uint64_t, RouteNotify> routelisteners;
     {
-        if (listener)
+        ScopedLock<Mutex> lock (_listenerMutex);
+        routelisteners = _routeListeners;
+    }
+    for (auto& listener : routelisteners)
+    {
+        if (listener.second)
         {
-            listener (info);
+            listener.second (info);
         }
     }
 }
@@ -1415,20 +1267,21 @@ void InterfaceManager::notifyRouteUpdate (const RouteInfo& info)
 //   CLASS     : InterfaceManager
 //   METHOD    : acquire
 // =========================================================================
-Interface::Ptr InterfaceManager::acquire (LinkInfo& info)
+Interface::Ptr InterfaceManager::acquire (uint32_t index, LinkInfo& info)
 {
     ScopedLock<Mutex> lock (_ifMutex);
 
-    auto it = _interfaces.find (info.index);
+    auto it = _interfaces.find (index);
     if (it != _interfaces.end ())
     {
-        info.flags |= ChangeType::Modified;
+        info.interface = it->second;
         return it->second;
     }
 
-    Interface::Ptr iface (new Interface (this, info.index));
-    _interfaces[info.index] = iface;
-    info.flags |= ChangeType::Added;
+    Interface::Ptr iface (new Interface (this, index));
+    _interfaces[index] = iface;
+    info.interface     = iface;
+    info.flags |= InterfaceChangeType::Added;
 
     return iface;
 }
