@@ -460,4 +460,25 @@ namespace join
     std::ostream& operator<< (std::ostream& out, const IpAddress& address);
 }
 
+namespace std
+{
+    /**
+     * @brief std::hash specialization for IpAddress.
+     */
+    template <>
+    struct hash<join::IpAddress>
+    {
+        size_t operator() (const join::IpAddress& ipAddress) const noexcept
+        {
+            size_t h             = 0;
+            const uint8_t* bytes = reinterpret_cast<const uint8_t*> (ipAddress.addr ());
+            for (socklen_t i = 0; i < ipAddress.length (); ++i)
+            {
+                h ^= std::hash<uint8_t>{}(bytes[i] + 0x9e3779b9 + (h << 6) + (h >> 2));
+            }
+            return h;
+        }
+    };
+}
+
 #endif

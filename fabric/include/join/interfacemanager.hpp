@@ -26,118 +26,108 @@
 #define JOIN_FABRIC_INTERFACEMANAGER_HPP
 
 // libjoin.
+#include <join/netlinkmanager.hpp>
 #include <join/macaddress.hpp>
 #include <join/ipaddress.hpp>
-#include <join/condition.hpp>
 #include <join/interface.hpp>
-#include <join/socket.hpp>
 
 // C++.
 #include <functional>
 #include <string>
-#include <memory>
-#include <atomic>
-#include <map>
-
-// C.
-#include <linux/rtnetlink.h>
-#include <linux/netlink.h>
-#include <cstdint>
-#include <cstddef>
 
 namespace join
 {
     /**
      * @brief enumeration of interface change type.
      */
-    enum ChangeType
+    enum class InterfaceChangeType : uint32_t
     {
-        Added             = 1L << 0,
-        Deleted           = 1L << 1,
-        Modified          = 1L << 2,
-        AdminStateChanged = 1L << 3,
-        OperStateChanged  = 1L << 4,
-        MacChanged        = 1L << 5,
-        NameChanged       = 1L << 6,
-        MtuChanged        = 1L << 7,
-        KindChanged       = 1L << 8,
-        MasterChanged     = 1L << 9,
+        Added             = 1L << 0, /**< interface did not exist before. */
+        Deleted           = 1L << 1, /**< interface was removed. */
+        Modified          = 1L << 2, /**< interface was updated. */
+        AdminStateChanged = 1L << 3, /**< interface admin status was updated. */
+        OperStateChanged  = 1L << 4, /**< interface operational status was updated. */
+        MacChanged        = 1L << 5, /**< interface MAC address changed. */
+        NameChanged       = 1L << 6, /**< interface name changed. */
+        MtuChanged        = 1L << 7, /**< interface MTU changed. */
+        KindChanged       = 1L << 8, /**< interface kind changed. */
+        MasterChanged     = 1L << 9, /**< interface master bridge changed. */
     };
 
     /**
-     * @brief perform binary AND on ChangeType.
-     * @param __a bitset.
-     * @param __b other bitset.
-     * @return bitset result of binary AND on ChangeType.
+     * @brief perform binary AND on InterfaceChangeType.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary AND on InterfaceChangeType.
      */
-    inline ChangeType operator& (ChangeType __a, ChangeType __b)
+    inline InterfaceChangeType operator& (InterfaceChangeType a, InterfaceChangeType b)
     {
-        return ChangeType (static_cast<int> (__a) & static_cast<int> (__b));
+        return InterfaceChangeType (static_cast<uint32_t> (a) & static_cast<uint32_t> (b));
     }
 
     /**
-     * @brief perform binary OR on ChangeType.
-     * @param __a bitset.
-     * @param __b other bitset.
-     * @return bitset result of binary OR on ChangeType.
+     * @brief perform binary OR on InterfaceChangeType.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary OR on InterfaceChangeType.
      */
-    inline ChangeType operator| (ChangeType __a, ChangeType __b)
+    inline InterfaceChangeType operator| (InterfaceChangeType a, InterfaceChangeType b)
     {
-        return ChangeType (static_cast<int> (__a) | static_cast<int> (__b));
+        return InterfaceChangeType (static_cast<uint32_t> (a) | static_cast<uint32_t> (b));
     }
 
     /**
-     * @brief perform binary XOR on ChangeType.
-     * @param __a bitset.
-     * @param __b other bitset.
-     * @return bitset result of binary XOR on ChangeType.
+     * @brief perform binary XOR on InterfaceChangeType.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary XOR on InterfaceChangeType.
      */
-    inline ChangeType operator^ (ChangeType __a, ChangeType __b)
+    inline InterfaceChangeType operator^ (InterfaceChangeType a, InterfaceChangeType b)
     {
-        return ChangeType (static_cast<int> (__a) ^ static_cast<int> (__b));
+        return InterfaceChangeType (static_cast<uint32_t> (a) ^ static_cast<uint32_t> (b));
     }
 
     /**
-     * @brief perform binary NOT on ChangeType.
-     * @param __a bitset.
-     * @return bitset result of binary NOT on ChangeType.
+     * @brief perform binary NOT on InterfaceChangeType.
+     * @param a bitset.
+     * @return bitset result of binary NOT on InterfaceChangeType.
      */
-    inline ChangeType operator~(ChangeType __a)
+    inline InterfaceChangeType operator~(InterfaceChangeType a)
     {
-        return ChangeType (~static_cast<int> (__a));
+        return InterfaceChangeType (~static_cast<uint32_t> (a));
     }
 
     /**
-     * @brief perform binary AND on ChangeType.
-     * @param __a bitset.
-     * @param __b other bitset.
-     * @return bitset result of binary AND on ChangeType.
+     * @brief perform binary AND on InterfaceChangeType.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary AND on InterfaceChangeType.
      */
-    inline const ChangeType& operator&= (ChangeType& __a, ChangeType __b)
+    inline const InterfaceChangeType& operator&= (InterfaceChangeType& a, InterfaceChangeType b)
     {
-        return __a = __a & __b;
+        return a = a & b;
     }
 
     /**
-     * @brief perform binary OR on ChangeType.
-     * @param __a bitset.
-     * @param __b other bitset.
+     * @brief perform binary OR on InterfaceChangeType.
+     * @param a bitset.
+     * @param b other bitset.
      * @return bitset result of binary OR.
      */
-    inline const ChangeType& operator|= (ChangeType& __a, ChangeType __b)
+    inline const InterfaceChangeType& operator|= (InterfaceChangeType& a, InterfaceChangeType b)
     {
-        return __a = __a | __b;
+        return a = a | b;
     }
 
     /**
-     * @brief perform binary XOR on ChangeType.
-     * @param __a bitset.
-     * @param __b other bitset.
-     * @return bitset result of binary XOR on ChangeType.
+     * @brief perform binary XOR on InterfaceChangeType.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary XOR on InterfaceChangeType.
      */
-    inline const ChangeType& operator^= (ChangeType& __a, ChangeType __b)
+    inline const InterfaceChangeType& operator^= (InterfaceChangeType& a, InterfaceChangeType b)
     {
-        return __a = __a ^ __b;
+        return a = a ^ b;
     }
 
     /**
@@ -145,8 +135,8 @@ namespace join
      */
     struct LinkInfo
     {
-        uint32_t index;   /**< interface index. */
-        ChangeType flags; /**< what changed (bitmask). */
+        Interface::Ptr interface;  /**< interface. */
+        InterfaceChangeType flags; /**< what changed (bitmask). */
     };
 
     /**
@@ -168,7 +158,7 @@ namespace join
     /**
      * @brief interface manager class.
      */
-    class InterfaceManager : private Netlink::Socket
+    class InterfaceManager : public NetlinkManager
     {
     public:
         using LinkNotify    = std::function<void (const LinkInfo& info)>;
@@ -233,47 +223,49 @@ namespace join
         InterfaceList enumerate ();
 
         /**
-         * @brief refresh all data by dumping link, address, and route data.
-         * @param sync wait for completion.
+         * @brief refresh all data.
          * @return 0 on success, -1 on failure.
          */
-        int refresh (bool sync = true);
+        int refresh ();
 
         /**
          * @brief registers a callback to be invoked when a link update occurs.
          * @param cb the callback function to register.
+         * @return unique id for the callback.
          */
-        void addLinkListener (const LinkNotify& cb);
+        uint64_t addLinkListener (const LinkNotify& cb);
 
         /**
          * @brief unregisters a previously registered link update callback.
-         * @param cb the callback function to remove.
+         * @param id unique id of the callback function to remove.
          */
-        void removeLinkListener (const LinkNotify& cb);
+        void removeLinkListener (uint64_t id);
 
         /**
          * @brief registers a callback to be invoked when a address update occurs.
          * @param cb the callback function to register.
+         * @return unique id for the callback.
          */
-        void addAddressListener (const AddressNotify& cb);
+        uint64_t addAddressListener (const AddressNotify& cb);
 
         /**
          * @brief unregisters a previously registered address update callback.
-         * @param cb the callback function to remove.
+         * @param id unique id of the callback function to remove.
          */
-        void removeAddressListener (const AddressNotify& cb);
+        void removeAddressListener (uint64_t id);
 
         /**
          * @brief registers a callback to be invoked when a route update occurs.
          * @param cb the callback function to register.
+         * @return unique id for the callback.
          */
-        void addRouteListener (const RouteNotify& cb);
+        uint64_t addRouteListener (const RouteNotify& cb);
 
         /**
          * @brief unregisters a previously registered route update callback.
-         * @param cb the callback function to remove.
+         * @param id unique id of the callback function to remove.
          */
-        void removeRouteListener (const RouteNotify& cb);
+        void removeRouteListener (uint64_t id);
 
         /**
          * @brief creates a dummy interface.
@@ -377,52 +369,11 @@ namespace join
 
     private:
         /**
-         * @brief update value if changed and set flag accordingly.
-         * @param oldVal old value.
-         * @param newVal new value.
-         * @param changed change type.
-         * @return changed flags.
-         */
-        template <typename T>
-        ChangeType updateValue (T& oldVal, const T& newVal, ChangeType changed) const
-        {
-            if (oldVal != newVal)
-            {
-                oldVal = newVal;
-                return changed;
-            }
-            return static_cast<ChangeType> (0);
-        }
-
-        /**
-         * @brief add attributes to netlink message.
-         * @brief nlh netlink message header.
-         * @brief type attribute type.
-         * @brief data attribute data.
-         * @brief alen attribute data length.
-         */
-        void addAttributes (struct nlmsghdr* nlh, int type, const void* data, int alen);
-
-        /**
-         * @brief start nested attributes.
-         * @brief nlh netlink message header.
-         * @return nested attributes pointer.
-         */
-        struct rtattr* startNestedAttributes (struct nlmsghdr* nlh, int type);
-
-        /**
-         * @brief Stop nested attributes.
-         * @brief nlh netlink message header.
-         * @brief nested attributes pointer.
-         */
-        int stopNestedAttributes (struct nlmsghdr* nlh, struct rtattr* nested);
-
-        /**
          * @brief Add veth peer info data.
          * @brief nlh netlink message header.
          * @brief peerName peer interface name.
          */
-        void addPeerInfoData (struct nlmsghdr* nlh, const std::string& peerName);
+        static void addPeerInfoData (struct nlmsghdr* nlh, const std::string& peerName);
 
         /**
          * @brief set interface mtu.
@@ -540,26 +491,10 @@ namespace join
         int dumpRoute (bool sync = false);
 
         /**
-         * @brief send netlink request.
-         * @param nlh netlink message header.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
+         * @brief dispatch a single RTM_* message to the derived class.
+         * @param nlh the netlink message to process.
          */
-        int sendRequest (struct nlmsghdr* nlh, bool sync);
-
-        /**
-         * @brief wait for specific netlink response.
-         * @param lock mutex previously locked by the calling thread.
-         * @param seq sequence number to wait for.
-         * @param timeout timeout in milliseconds.
-         * @return 0 on success, -1 on failure.
-         */
-        int waitResponse (ScopedLock<Mutex>& lock, uint32_t seq, uint32_t timeout = 5000);
-
-        /**
-         * @brief method called when data are ready to be read on handle.
-         */
-        virtual void onReceive () override;
+        void onMessage (struct nlmsghdr* nlh) override;
 
         /**
          * @brief handle link notification.
@@ -572,7 +507,7 @@ namespace join
          * @param nlh netlink message.
          * @param flags interface change flags.
          */
-        void onLinkInfoMessage (Interface::Ptr& iface, struct rtattr* rta, ChangeType& flags);
+        void onLinkInfoMessage (Interface::Ptr& iface, struct rtattr* rta, InterfaceChangeType& flags);
 
         /**
          * @brief handle address notification.
@@ -585,13 +520,6 @@ namespace join
          * @param nlh netlink message.
          */
         void onRouteMessage (struct nlmsghdr* nlh);
-
-        /**
-         * @brief notify pending request.
-         * @param seq sequence number.
-         * @param error error number.
-         */
-        void notifyRequest (uint32_t seq, int error = 0);
 
         /**
          * @brief notifies all registered link listeners on link update.
@@ -613,15 +541,10 @@ namespace join
 
         /**
          * @brief acquire interface.
+         * @param index interface index.
          * @param info interface informations.
          */
-        Interface::Ptr acquire (LinkInfo& info);
-
-        /// internal buffer size.
-        static constexpr size_t _bufferSize = 4096;
-
-        /// internal read buffer.
-        std::unique_ptr<char[]> _buffer;
+        Interface::Ptr acquire (uint32_t index, LinkInfo& info);
 
         /// reserved vlan id.
         static constexpr uint16_t reservedVlanId = 0;
@@ -630,49 +553,25 @@ namespace join
         static constexpr uint16_t maxVlanId = 4094;
 
         /// interfaces.
-        std::map<uint32_t, Interface::Ptr> _interfaces;
+        std::unordered_map<uint32_t, Interface::Ptr> _interfaces;
 
         /// protection mutex.
         Mutex _ifMutex;
 
-        /// sequence number.
-        std::atomic<uint32_t> _seq;
-
-        /**
-         * @brief pending request.
-         */
-        struct PendingRequest
-        {
-            Condition cond;
-            int error = 0;
-        };
-
-        /// pending requests.
-        std::map<uint32_t, std::shared_ptr<PendingRequest>> _pending;
-
-        /// mutex for synchronous operations.
-        Mutex _syncMutex;
-
         /// link listener callbacks.
-        std::vector<LinkNotify> _linkListeners;
-
-        /// protection mutex.
-        Mutex _linkMutex;
+        std::unordered_map<uint64_t, LinkNotify> _linkListeners;
 
         /// address listener callbacks.
-        std::vector<AddressNotify> _addressListeners;
-
-        /// protection mutex.
-        Mutex _addressMutex;
+        std::unordered_map<uint64_t, AddressNotify> _addressListeners;
 
         /// route listener callbacks.
-        std::vector<RouteNotify> _routeListeners;
+        std::unordered_map<uint64_t, RouteNotify> _routeListeners;
 
-        /// protection mutex.
-        Mutex _routeMutex;
+        /// listener id counter.
+        uint64_t _listenerCounter = 0;
 
-        /// event loop reactor.
-        Reactor* _reactor;
+        /// protection mutex for listeners.
+        Mutex _listenerMutex;
 
         // friendship with interface.
         friend class Interface;
