@@ -161,7 +161,7 @@ MacAddress Arp::cache (const std::string& interface, const IpAddress& ip)
 // =========================================================================
 void Arp::onReceive () noexcept
 {
-    Packet in = {};
+    Packet in{};
 
     if (read (reinterpret_cast<char*> (&in), sizeof (in)) != static_cast<int> (sizeof (in)))
     {

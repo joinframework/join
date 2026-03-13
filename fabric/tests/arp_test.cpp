@@ -133,6 +133,24 @@ TEST_F (ArpTest, add)
 }
 
 /**
+ * @brief Test add method.
+ */
+TEST_F (ArpTest, remove)
+{
+    ASSERT_EQ (Arp::remove ("br0", IpAddress (AF_INET6)), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    ASSERT_EQ (Arp::remove ("foo0", "192.168.16.200"), -1);
+    ASSERT_EQ (lastError, std::errc::no_such_device) << lastError.message ();
+
+    ASSERT_EQ (Arp::add ("br0", "4e:ed:ed:ee:59:dc", "192.168.16.210"), 0);
+    ASSERT_EQ (Arp::cache ("br0", "192.168.16.210"), "4e:ed:ed:ee:59:dc") << lastError.message ();
+
+    ASSERT_EQ (Arp::remove ("br0", "192.168.16.210"), 0);
+    ASSERT_TRUE (Arp::cache ("br0", "192.168.16.210").isWildcard ());
+}
+
+/**
  * @brief Test cache method.
  */
 TEST_F (ArpTest, cache)
