@@ -64,8 +64,9 @@ uint32_t Interface::index () const noexcept
 //   CLASS     : Interface
 //   METHOD    : master
 // =========================================================================
-uint32_t Interface::master () const noexcept
+uint32_t Interface::master () const
 {
+    ScopedLock<Mutex> lock (_mutex);
     return _master;
 }
 
@@ -73,8 +74,9 @@ uint32_t Interface::master () const noexcept
 //   CLASS     : Interface
 //   METHOD    : name
 // =========================================================================
-const std::string& Interface::name () const noexcept
+std::string Interface::name () const
 {
+    ScopedLock<Mutex> lock (_mutex);
     return _name;
 }
 
@@ -82,7 +84,7 @@ const std::string& Interface::name () const noexcept
 //   CLASS     : Interface
 //   METHOD    : mtu
 // =========================================================================
-int Interface::mtu (uint32_t mtuBytes, bool sync)
+int Interface::mtu (uint32_t mtuBytes, bool sync) const
 {
     return _manager->mtu (_index, mtuBytes, sync);
 }
@@ -91,8 +93,9 @@ int Interface::mtu (uint32_t mtuBytes, bool sync)
 //   CLASS     : Interface
 //   METHOD    : mtu
 // =========================================================================
-uint32_t Interface::mtu () const noexcept
+uint32_t Interface::mtu () const
 {
+    ScopedLock<Mutex> lock (_mutex);
     return _mtu;
 }
 
@@ -100,8 +103,9 @@ uint32_t Interface::mtu () const noexcept
 //   CLASS     : Interface
 //   METHOD    : kind
 // =========================================================================
-const std::string& Interface::kind () const noexcept
+std::string Interface::kind () const
 {
+    ScopedLock<Mutex> lock (_mutex);
     return _kind;
 }
 
@@ -109,7 +113,7 @@ const std::string& Interface::kind () const noexcept
 //   CLASS     : Interface
 //   METHOD    : mac
 // =========================================================================
-int Interface::mac (const MacAddress& macAddress, bool sync)
+int Interface::mac (const MacAddress& macAddress, bool sync) const
 {
     return _manager->mac (_index, macAddress, sync);
 }
@@ -118,8 +122,9 @@ int Interface::mac (const MacAddress& macAddress, bool sync)
 //   CLASS     : Interface
 //   METHOD    : mac
 // =========================================================================
-const MacAddress& Interface::mac () const noexcept
+MacAddress Interface::mac () const
 {
+    ScopedLock<Mutex> lock (_mutex);
     return _mac;
 }
 
@@ -127,7 +132,7 @@ const MacAddress& Interface::mac () const noexcept
 //   CLASS     : Interface
 //   METHOD    : addAddress
 // =========================================================================
-int Interface::addAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast, bool sync)
+int Interface::addAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast, bool sync) const
 {
     return _manager->addAddress (_index, ipAddress, prefix, broadcast, sync);
 }
@@ -136,7 +141,7 @@ int Interface::addAddress (const IpAddress& ipAddress, uint32_t prefix, const Ip
 //   CLASS     : Interface
 //   METHOD    : addAddress
 // =========================================================================
-int Interface::addAddress (const Address& address, bool sync)
+int Interface::addAddress (const Address& address, bool sync) const
 {
     return addAddress (std::get<0> (address), std::get<1> (address), std::get<2> (address), sync);
 }
@@ -145,7 +150,7 @@ int Interface::addAddress (const Address& address, bool sync)
 //   CLASS     : Interface
 //   METHOD    : removeAddress
 // =========================================================================
-int Interface::removeAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast, bool sync)
+int Interface::removeAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast, bool sync) const
 {
     return _manager->removeAddress (_index, ipAddress, prefix, broadcast, sync);
 }
@@ -154,7 +159,7 @@ int Interface::removeAddress (const IpAddress& ipAddress, uint32_t prefix, const
 //   CLASS     : Interface
 //   METHOD    : removeAddress
 // =========================================================================
-int Interface::removeAddress (const Address& address, bool sync)
+int Interface::removeAddress (const Address& address, bool sync) const
 {
     return removeAddress (std::get<0> (address), std::get<1> (address), std::get<2> (address), sync);
 }
@@ -163,8 +168,9 @@ int Interface::removeAddress (const Address& address, bool sync)
 //   CLASS     : Interface
 //   METHOD    : addressList
 // =========================================================================
-const Interface::AddressList& Interface::addressList () const noexcept
+Interface::AddressList Interface::addressList () const
 {
+    ScopedLock<Mutex> lock (_mutex);
     return _addresses;
 }
 
@@ -172,7 +178,7 @@ const Interface::AddressList& Interface::addressList () const noexcept
 //   CLASS     : Interface
 //   METHOD    : hasAddress
 // =========================================================================
-bool Interface::hasAddress (const IpAddress& ipAddress)
+bool Interface::hasAddress (const IpAddress& ipAddress) const
 {
     ScopedLock<Mutex> lock (_mutex);
 
@@ -191,7 +197,7 @@ bool Interface::hasAddress (const IpAddress& ipAddress)
 //   CLASS     : Interface
 //   METHOD    : hasLocalAddress
 // =========================================================================
-bool Interface::hasLocalAddress ()
+bool Interface::hasLocalAddress () const
 {
     ScopedLock<Mutex> lock (_mutex);
 
@@ -210,7 +216,8 @@ bool Interface::hasLocalAddress ()
 //   CLASS     : Interface
 //   METHOD    : addRoute
 // =========================================================================
-int Interface::addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric, bool sync)
+int Interface::addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric,
+                         bool sync) const
 {
     return _manager->addRoute (_index, dest, prefix, gateway, &metric, sync);
 }
@@ -219,7 +226,7 @@ int Interface::addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress
 //   CLASS     : Interface
 //   METHOD    : addRoute
 // =========================================================================
-int Interface::addRoute (const Route& route, bool sync)
+int Interface::addRoute (const Route& route, bool sync) const
 {
     return addRoute (std::get<0> (route), std::get<1> (route), std::get<2> (route), std::get<3> (route), sync);
 }
@@ -229,7 +236,7 @@ int Interface::addRoute (const Route& route, bool sync)
 //   METHOD    : removeRoute
 // =========================================================================
 int Interface::removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric,
-                            bool sync)
+                            bool sync) const
 {
     return _manager->removeRoute (_index, dest, prefix, gateway, &metric, sync);
 }
@@ -238,7 +245,7 @@ int Interface::removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddr
 //   CLASS     : Interface
 //   METHOD    : removeRoute
 // =========================================================================
-int Interface::removeRoute (const Route& route, bool sync)
+int Interface::removeRoute (const Route& route, bool sync) const
 {
     return removeRoute (std::get<0> (route), std::get<1> (route), std::get<2> (route), std::get<3> (route), sync);
 }
@@ -247,8 +254,9 @@ int Interface::removeRoute (const Route& route, bool sync)
 //   CLASS     : Interface
 //   METHOD    : routeList
 // =========================================================================
-const Interface::RouteList& Interface::routeList () const noexcept
+Interface::RouteList Interface::routeList () const
 {
+    ScopedLock<Mutex> lock (_mutex);
     return _routes;
 }
 
@@ -256,7 +264,7 @@ const Interface::RouteList& Interface::routeList () const noexcept
 //   CLASS     : Interface
 //   METHOD    : hasRoute
 // =========================================================================
-bool Interface::hasRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric)
+bool Interface::hasRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric) const
 {
     ScopedLock<Mutex> lock (_mutex);
 
@@ -276,7 +284,7 @@ bool Interface::hasRoute (const IpAddress& dest, uint32_t prefix, const IpAddres
 //   CLASS     : Interface
 //   METHOD    : hasRoute
 // =========================================================================
-bool Interface::hasRoute (const Route& route)
+bool Interface::hasRoute (const Route& route) const
 {
     return hasRoute (std::get<0> (route), std::get<1> (route), std::get<2> (route), std::get<3> (route));
 }
@@ -285,7 +293,7 @@ bool Interface::hasRoute (const Route& route)
 //   CLASS     : Interface
 //   METHOD    : addToBridge
 // =========================================================================
-int Interface::addToBridge (uint32_t masterIndex, bool sync)
+int Interface::addToBridge (uint32_t masterIndex, bool sync) const
 {
     return _manager->addToBridge (_index, masterIndex, sync);
 }
@@ -294,7 +302,7 @@ int Interface::addToBridge (uint32_t masterIndex, bool sync)
 //   CLASS     : Interface
 //   METHOD    : addToBridge
 // =========================================================================
-int Interface::addToBridge (const std::string& masterName, bool sync)
+int Interface::addToBridge (const std::string& masterName, bool sync) const
 {
     int index = if_nametoindex (masterName.c_str ());
     if (index == 0)
@@ -310,7 +318,7 @@ int Interface::addToBridge (const std::string& masterName, bool sync)
 //   CLASS     : Interface
 //   METHOD    : removeFromBridge
 // =========================================================================
-int Interface::removeFromBridge (bool sync)
+int Interface::removeFromBridge (bool sync) const
 {
     return _manager->removeFromBridge (_index, sync);
 }
@@ -319,8 +327,9 @@ int Interface::removeFromBridge (bool sync)
 //   CLASS     : Interface
 //   METHOD    : flags
 // =========================================================================
-uint32_t Interface::flags () const noexcept
+uint32_t Interface::flags () const
 {
+    ScopedLock<Mutex> lock (_mutex);
     return _flags;
 }
 
@@ -328,7 +337,7 @@ uint32_t Interface::flags () const noexcept
 //   CLASS     : Interface
 //   METHOD    : enable
 // =========================================================================
-int Interface::enable (bool enabled, bool sync)
+int Interface::enable (bool enabled, bool sync) const
 {
     return _manager->enable (_index, enabled, sync);
 }
@@ -337,115 +346,116 @@ int Interface::enable (bool enabled, bool sync)
 //   CLASS     : Interface
 //   METHOD    : isEnabled
 // =========================================================================
-bool Interface::isEnabled () const noexcept
+bool Interface::isEnabled () const
 {
-    return (_flags & IFF_UP);
+    return (flags () & IFF_UP) != 0;
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : isRunning
 // =========================================================================
-bool Interface::isRunning () const noexcept
+bool Interface::isRunning () const
 {
-    return (_flags & IFF_RUNNING);
+    return (flags () & IFF_RUNNING) != 0;
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : isLoopback
 // =========================================================================
-bool Interface::isLoopback () const noexcept
+bool Interface::isLoopback () const
 {
-    return (_flags & IFF_LOOPBACK);
+    return (flags () & IFF_LOOPBACK) != 0;
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : isPointToPoint
 // =========================================================================
-bool Interface::isPointToPoint () const noexcept
+bool Interface::isPointToPoint () const
 {
-    return (_flags & IFF_POINTOPOINT);
+    return (flags () & IFF_POINTOPOINT) != 0;
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : isDummy
 // =========================================================================
-bool Interface::isDummy () const noexcept
+bool Interface::isDummy () const
 {
-    return (_kind == "dummy");
+    return (kind () == "dummy");
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : isBridge
 // =========================================================================
-bool Interface::isBridge () const noexcept
+bool Interface::isBridge () const
 {
-    return (_kind == "bridge");
+    return (kind () == "bridge");
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : isVlan
 // =========================================================================
-bool Interface::isVlan () const noexcept
+bool Interface::isVlan () const
 {
-    return (_kind == "vlan");
+    return (kind () == "vlan");
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : isVeth
 // =========================================================================
-bool Interface::isVeth () const noexcept
+bool Interface::isVeth () const
 {
-    return (_kind == "veth");
+    return (kind () == "veth");
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : isGre
 // =========================================================================
-bool Interface::isGre () const noexcept
+bool Interface::isGre () const
 {
-    return ((_kind == "gre") || (_kind == "ip6gre"));
+    const auto k = kind ();
+    return k == "gre" || k == "ip6gre";
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : isTun
 // =========================================================================
-bool Interface::isTun () const noexcept
+bool Interface::isTun () const
 {
-    return (_kind == "tun");
+    return (kind () == "tun");
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : supportsBroadcast
 // =========================================================================
-bool Interface::supportsBroadcast () const noexcept
+bool Interface::supportsBroadcast () const
 {
-    return (_flags & IFF_BROADCAST);
+    return (flags () & IFF_BROADCAST) != 0;
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : supportsMulticast
 // =========================================================================
-bool Interface::supportsMulticast () const noexcept
+bool Interface::supportsMulticast () const
 {
-    return (_flags & IFF_MULTICAST);
+    return (flags () & IFF_MULTICAST) != 0;
 }
 
 // =========================================================================
 //   CLASS     : Interface
 //   METHOD    : supportsIpv4
 // =========================================================================
-bool Interface::supportsIpv4 ()
+bool Interface::supportsIpv4 () const
 {
     ScopedLock<Mutex> lock (_mutex);
 
@@ -464,7 +474,7 @@ bool Interface::supportsIpv4 ()
 //   CLASS     : Interface
 //   METHOD    : supportsIpv6
 // =========================================================================
-bool Interface::supportsIpv6 ()
+bool Interface::supportsIpv6 () const
 {
     ScopedLock<Mutex> lock (_mutex);
 

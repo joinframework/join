@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.22.1)
 
 set(PUBLIC_HEADERS
     include/join/resolver.hpp
+    include/join/netlinkmanager.hpp
+    include/join/neighbor.hpp
+    include/join/neighbormanager.hpp
     include/join/arp.hpp
     include/join/interface.hpp
     include/join/interfacemanager.hpp
@@ -9,6 +12,9 @@ set(PUBLIC_HEADERS
 
 set(SOURCES
     src/resolver.cpp
+    src/netlinkmanager.cpp
+    src/neighbor.cpp
+    src/neighbormanager.cpp
     src/arp.cpp
     src/interface.cpp
     src/interfacemanager.cpp

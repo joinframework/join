@@ -84,16 +84,16 @@ TEST (InterfaceManager, addLinkListener)
         called = true;
     };
 
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
 
-    mgr.addLinkListener (cb);
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    auto id = mgr.addLinkListener (cb);
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_TRUE (called);
 
-    mgr.removeLinkListener (cb);
+    mgr.removeLinkListener (id);
     called = false;
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
 }
 
@@ -109,16 +109,16 @@ TEST (InterfaceManager, addAddressListener)
         called = true;
     };
 
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
 
-    mgr.addAddressListener (cb);
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    auto id = mgr.addAddressListener (cb);
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_TRUE (called);
 
-    mgr.removeAddressListener (cb);
+    mgr.removeAddressListener (id);
     called = false;
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
 }
 
@@ -134,16 +134,16 @@ TEST (InterfaceManager, addRouteListener)
         called = true;
     };
 
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
 
-    mgr.addRouteListener (cb);
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    auto id = mgr.addRouteListener (cb);
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_TRUE (called);
 
-    mgr.removeRouteListener (cb);
+    mgr.removeRouteListener (id);
     called = false;
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
 }
 
