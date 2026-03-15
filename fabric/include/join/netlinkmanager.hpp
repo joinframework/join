@@ -144,8 +144,9 @@ namespace join
 
         /**
          * @brief method called when data are ready to be read on handle.
+         * @param fd file descriptor.
          */
-        virtual void onReceive () override final;
+        virtual void onReceive (int fd) override final;
 
         /**
          * @brief dispatch a single RTM_* message to the derived class.
