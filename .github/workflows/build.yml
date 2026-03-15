@@ -51,7 +51,7 @@ jobs:
 
     permissions:
       contents: read
-     
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,7 +63,45 @@ jobs:
           check-path: '.'
           exclude-regex: 'build'
 
+  scan:
+    if: inputs.scan
+
+    needs: [format]
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: joinframework/join-ci:latest
+
+    permissions:
+      contents: read
+      security-events: write
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize codeql
+        uses: github/codeql-action/init@v3
+        with:
+          languages: cpp
+
+      - name: Configure
+        run: cmake --preset gcc-debug
+
+      - name: Build
+        run: cmake --build --preset gcc-debug
+
+      - name: Run codeql scan
+        uses: github/codeql-action/analyze@v3
+
   build:
+    needs: [format]
+
     strategy:
       matrix:
         arch: ${{ inputs.arch == 'all' && fromJson('["amd64", "arm64"]') || fromJson(format('["{0}"]', inputs.arch)) }}
@@ -77,77 +115,48 @@ jobs:
 
     permissions:
       contents: read
-      security-events: write
 
     defaults:
       run:
         shell: bash
 
-    needs: format
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Build Environment
-        if: inputs.scan || inputs.coverage
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Initialize codeql
-        if: inputs.scan && matrix.arch == 'amd64'
-        uses: github/codeql-action/init@v3
-
       - name: Configure
-        if: inputs.scan || inputs.coverage
         run: cmake --preset ${{ matrix.compiler }}-debug
 
       - name: Build
-        if: inputs.scan || inputs.coverage
         run: cmake --build --preset ${{ matrix.compiler }}-debug
 
-      - name: Run codeql scan
-        if: inputs.scan && matrix.arch == 'amd64'
-        uses: github/codeql-action/analyze@v3
-
       - name: Run tests
-        if: inputs.coverage
         run: ctest --preset ${{ matrix.compiler }}-debug
 
       - name: Generate coverage report
-        if: inputs.coverage
+        if: inputs.coverage && matrix.arch == 'amd64' && matrix.compiler == 'gcc'
         run: |
           lcov --directory build/${{ matrix.compiler }}/debug --capture --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
           genhtml lcov.info --prefix $GITHUB_WORKSPACE --output-directory coverage
 
       - name: Upload coverage data to GitHub
-        if: inputs.coverage
+        if: inputs.coverage && matrix.arch == 'amd64' && matrix.compiler == 'gcc'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.compiler }}-${{ matrix.arch }}-coverage-data
           path: lcov.info
 
       - name: Upload coverage report to GitHub
-        if: inputs.coverage
+        if: inputs.coverage && matrix.arch == 'amd64' && matrix.compiler == 'gcc'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.compiler }}-${{ matrix.arch }}-coverage-report
           path: coverage/
 
-      - name: Run doxygen
-        if: inputs.doc && matrix.compiler == 'gcc' && matrix.arch == 'amd64'
-        uses: mattnotmitt/doxygen-action@v1
-        with:
-          doxyfile-path: ./doxyfile
-          working-directory: .
+  doc:
+    if: inputs.doc
 
-      - name: Upload documentation to GitHub
-        if: inputs.doc && matrix.compiler == 'gcc' && matrix.arch == 'amd64'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./doc/html
-
-  deploy-coverage:
-    if: inputs.coverage && (inputs.compiler == 'all' || inputs.compiler == 'gcc') && (inputs.arch == 'all' || inputs.arch == 'amd64')
+    needs: [format]
 
     runs-on: ubuntu-latest
 
@@ -157,7 +166,34 @@ jobs:
     permissions:
       contents: read
 
-    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run doxygen
+        uses: mattnotmitt/doxygen-action@v1
+        with:
+          doxyfile-path: ./doxyfile
+          working-directory: .
+
+      - name: Upload documentation to GitHub
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./doc/html
+
+  deploy-coverage:
+    if: inputs.coverage && (inputs.compiler == 'all' || inputs.compiler == 'gcc') && (inputs.arch == 'all' || inputs.arch == 'amd64')
+
+    needs: [build]
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: joinframework/join-ci:latest
+
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -194,21 +230,20 @@ jobs:
   deploy-pages:
     if: inputs.doc
 
+    needs: [doc]
+
     runs-on: ubuntu-latest
 
     container:
       image: joinframework/join-ci:latest
 
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
-    needs: build
+    permissions:
+      pages: write
+      id-token: write
 
     steps:
       - name: Deploy documentation to GitHub Pages

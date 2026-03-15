@@ -1,25 +1,21 @@
-name: test
+name: ci
 
 on:
-  push:
-    branches: [ main ]
-
   pull_request:
     branches: [ main ]
 
   workflow_dispatch:
 
 jobs:
-  coverage:
+  check:
     uses: ./.github/workflows/build.yml
+
+    permissions:
+      contents: read
+      security-events: write
 
     secrets: inherit
 
     with:
       coverage: true
-
-    permissions:
-      contents: read
-      security-events: write
-      pages: write
-      id-token: write
+      scan: true
