@@ -80,6 +80,12 @@ namespace join
          */
         virtual ~NetlinkManager () = default;
 
+        /**
+         * @brief get the event loop reactor.
+         * @return pointer to the reactor.
+         */
+        Reactor* reactor () const noexcept;
+
     protected:
         /**
          * @brief start listening for netlink events.

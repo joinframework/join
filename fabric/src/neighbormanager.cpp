@@ -56,6 +56,16 @@ NeighborManager::~NeighborManager ()
 
 // =========================================================================
 //   CLASS     : NeighborManager
+//   METHOD    : instance
+// =========================================================================
+NeighborManager& NeighborManager::instance ()
+{
+    static NeighborManager manager;
+    return manager;
+}
+
+// =========================================================================
+//   CLASS     : NeighborManager
 //   METHOD    : findByIndex
 // =========================================================================
 Neighbor::Ptr NeighborManager::findByIndex (uint32_t index, const IpAddress& ipAddress)

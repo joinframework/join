@@ -104,13 +104,13 @@ TEST_F (NeighborManagerTest, findByIndex)
     auto foo = mgr.findByIndex (if_nametoindex ("foo"), "192.168.100.2");
     ASSERT_EQ (foo, nullptr);
 
-    auto ve = mgr.findByIndex (if_nametoindex ("veth0"), "192.168.100.2");
+    auto ve = NeighborManager::instance ().findByIndex (if_nametoindex ("veth0"), "192.168.100.2");
     ASSERT_NE (ve, nullptr);
 
     foo = mgr.findByIndex (if_nametoindex ("foo"), "2001:db8::1236");
     ASSERT_EQ (foo, nullptr);
 
-    ve = mgr.findByIndex (if_nametoindex ("veth0"), "2001:db8::1236");
+    ve = NeighborManager::instance ().findByIndex (if_nametoindex ("veth0"), "2001:db8::1236");
     ASSERT_NE (ve, nullptr);
 }
 
@@ -124,13 +124,13 @@ TEST_F (NeighborManagerTest, findByName)
     auto foo = mgr.findByName ("foo", "192.168.100.2");
     ASSERT_EQ (foo, nullptr);
 
-    auto ve = mgr.findByName ("veth0", "192.168.100.2");
+    auto ve = NeighborManager::instance ().findByName ("veth0", "192.168.100.2");
     ASSERT_NE (ve, nullptr);
 
     foo = mgr.findByName ("foo", "2001:db8::1236");
     ASSERT_EQ (foo, nullptr);
 
-    ve = mgr.findByName ("veth0", "2001:db8::1236");
+    ve = NeighborManager::instance ().findByName ("veth0", "2001:db8::1236");
     ASSERT_NE (ve, nullptr);
 }
 

@@ -43,7 +43,7 @@ TEST (InterfaceManager, findByIndex)
     auto foo = mgr.findByIndex (50000);
     ASSERT_EQ (foo, nullptr);
 
-    auto lo = mgr.findByIndex (if_nametoindex ("lo"));
+    auto lo = InterfaceManager::instance ().findByIndex (if_nametoindex ("lo"));
     ASSERT_NE (lo, nullptr);
 }
 
@@ -57,7 +57,7 @@ TEST (InterfaceManager, findByName)
     auto foo = mgr.findByName ("foo");
     ASSERT_EQ (foo, nullptr);
 
-    auto lo = mgr.findByName ("lo");
+    auto lo = InterfaceManager::instance ().findByName ("lo");
     ASSERT_NE (lo, nullptr);
 }
 

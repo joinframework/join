@@ -57,6 +57,16 @@ InterfaceManager::~InterfaceManager ()
 
 // =========================================================================
 //   CLASS     : InterfaceManager
+//   METHOD    : instance
+// =========================================================================
+InterfaceManager& InterfaceManager::instance ()
+{
+    static InterfaceManager manager;
+    return manager;
+}
+
+// =========================================================================
+//   CLASS     : InterfaceManager
 //   METHOD    : findByIndex
 // =========================================================================
 Interface::Ptr InterfaceManager::findByIndex (uint32_t interfaceIndex)

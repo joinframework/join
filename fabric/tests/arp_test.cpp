@@ -86,19 +86,19 @@ public:
  */
 TEST_F (ArpTest, get)
 {
-    ASSERT_TRUE (Arp::get (IpAddress (AF_INET6), "br0").isWildcard ());
+    ASSERT_TRUE (Arp::get ("br0", IpAddress (AF_INET6)).isWildcard ());
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
-    ASSERT_TRUE (Arp::get ("192.168.16.200", "foo0").isWildcard ());
+    ASSERT_TRUE (Arp::get ("foo0", "192.168.16.200").isWildcard ());
     ASSERT_EQ (lastError, std::errc::no_such_device) << lastError.message ();
 
-    ASSERT_TRUE (Arp::get ("192.168.16.217", "br0").isWildcard ());
+    ASSERT_TRUE (Arp::get ("br0", "192.168.16.217", std::chrono::milliseconds (20)).isWildcard ());
     ASSERT_EQ (lastError, std::errc::no_such_device_or_address) << lastError.message ();
 
-    ASSERT_EQ (Arp::get (IpAddress::ipv4Address ("eth0"), "eth0"), MacAddress::address ("eth0"))
+    ASSERT_EQ (Arp::get ("eth0", IpAddress::ipv4Address ("eth0")), MacAddress::address ("eth0"))
         << lastError.message ();
 
-    ASSERT_EQ (Arp::get ("192.168.16.200", "br0"), "4e:ed:ed:ee:59:db") << lastError.message ();
+    ASSERT_EQ (Arp::get ("br0", "192.168.16.200"), "4e:ed:ed:ee:59:db") << lastError.message ();
 }
 
 /**
@@ -106,16 +106,16 @@ TEST_F (ArpTest, get)
  */
 TEST_F (ArpTest, request)
 {
-    ASSERT_TRUE (Arp::request (IpAddress (AF_INET6), "br0").isWildcard ());
+    ASSERT_TRUE (Arp::request ("br0", IpAddress (AF_INET6)).isWildcard ());
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
-    ASSERT_TRUE (Arp::request ("192.168.16.200", "foo0").isWildcard ());
+    ASSERT_TRUE (Arp::request ("foo0", "192.168.16.200").isWildcard ());
     ASSERT_EQ (lastError, std::errc::no_such_device) << lastError.message ();
 
-    ASSERT_TRUE (Arp::request ("192.168.16.217", "br0").isWildcard ());
+    ASSERT_TRUE (Arp::request ("br0", "192.168.16.217", std::chrono::milliseconds (20)).isWildcard ());
     ASSERT_EQ (lastError, std::errc::no_such_device_or_address) << lastError.message ();
 
-    ASSERT_EQ (Arp::request ("192.168.16.200", "br0"), "4e:ed:ed:ee:59:db") << lastError.message ();
+    ASSERT_EQ (Arp::request ("br0", "192.168.16.200"), "4e:ed:ed:ee:59:db") << lastError.message ();
 }
 
 /**
@@ -123,13 +123,31 @@ TEST_F (ArpTest, request)
  */
 TEST_F (ArpTest, add)
 {
-    ASSERT_EQ (Arp::add ("4e:ed:ed:ee:59:dd", IpAddress (AF_INET6), "br0"), -1);
+    ASSERT_EQ (Arp::add ("br0", "4e:ed:ed:ee:59:dd", IpAddress (AF_INET6)), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
-    ASSERT_EQ (Arp::add ("4e:ed:ed:ee:59:dd", "192.168.16.201", "foo0"), -1);
+    ASSERT_EQ (Arp::add ("foo0", "4e:ed:ed:ee:59:dd", "192.168.16.201"), -1);
     ASSERT_EQ (lastError, std::errc::no_such_device) << lastError.message ();
 
-    ASSERT_EQ (Arp::add ("4e:ed:ed:ee:59:dd", "192.168.16.201", "br0"), 0);
+    ASSERT_EQ (Arp::add ("br0", "4e:ed:ed:ee:59:dd", "192.168.16.201"), 0) << lastError.message ();
+}
+
+/**
+ * @brief Test add method.
+ */
+TEST_F (ArpTest, remove)
+{
+    ASSERT_EQ (Arp::remove ("br0", IpAddress (AF_INET6)), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    ASSERT_EQ (Arp::remove ("foo0", "192.168.16.200"), -1);
+    ASSERT_EQ (lastError, std::errc::no_such_device) << lastError.message ();
+
+    ASSERT_EQ (Arp::add ("br0", "4e:ed:ed:ee:59:dc", "192.168.16.210"), 0) << lastError.message ();
+    ASSERT_EQ (Arp::cache ("br0", "192.168.16.210"), "4e:ed:ed:ee:59:dc") << lastError.message ();
+
+    ASSERT_EQ (Arp::remove ("br0", "192.168.16.210"), 0) << lastError.message ();
+    ASSERT_TRUE (Arp::cache ("br0", "192.168.16.210").isWildcard ());
 }
 
 /**
@@ -137,17 +155,21 @@ TEST_F (ArpTest, add)
  */
 TEST_F (ArpTest, cache)
 {
-    ASSERT_TRUE (Arp::cache (IpAddress (AF_INET6), "br0").isWildcard ());
+    ASSERT_TRUE (Arp::cache ("br0", IpAddress (AF_INET6)).isWildcard ());
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
-    ASSERT_TRUE (Arp::cache ("192.168.16.200", "foo0").isWildcard ());
+    ASSERT_TRUE (Arp::cache ("foo0", "192.168.16.200").isWildcard ());
     ASSERT_EQ (lastError, std::errc::no_such_device) << lastError.message ();
 
-    ASSERT_TRUE (Arp::cache ("192.168.16.200", "br0").isWildcard ());
+    ASSERT_TRUE (Arp::cache ("br0", "192.168.16.200").isWildcard ());
     ASSERT_EQ (lastError, std::errc::no_such_device_or_address) << lastError.message ();
 
-    ASSERT_EQ (Arp::add ("4e:ed:ed:ee:59:db", "192.168.16.200", "br0"), 0);
-    ASSERT_EQ (Arp::cache ("192.168.16.200", "br0"), "4e:ed:ed:ee:59:db") << lastError.message ();
+    ASSERT_EQ (Arp::add ("br0", "4e:ed:ed:ee:59:db", "192.168.16.200"), 0) << lastError.message ();
+    ASSERT_EQ (Arp::cache ("br0", "192.168.16.200"), "4e:ed:ed:ee:59:db") << lastError.message ();
+
+    std::system ("ip neigh add 192.168.16.210 dev br0 nud failed");
+    ASSERT_TRUE (Arp::cache ("br0", "192.168.16.210").isWildcard ());
+    ASSERT_EQ (lastError, std::errc::no_such_device_or_address);
 }
 
 /**

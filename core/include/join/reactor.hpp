@@ -104,7 +104,7 @@ namespace join
         }
 
         /**
-         * @brief method called when an error occured on handle.
+         * @brief method called when an error occurred on handle.
          */
         virtual void onError ()
         {

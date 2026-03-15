@@ -177,6 +177,12 @@ namespace join
         ~NeighborManager ();
 
         /**
+         * @brief get the a singleton instance.
+         * @return reference to the singleton instance.
+         */
+        static NeighborManager& instance ();
+
+        /**
          * @brief find a neighbor entry by interface index and IP address.
          * @param index interface index.
          * @param ipAddress destination address.
