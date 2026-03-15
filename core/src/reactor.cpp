@@ -62,12 +62,9 @@ Reactor::Reactor ()
 
     _deleted.reserve (_deletedReserve);
 
-    struct epoll_event ev
-    {
-    };
-
-    ev.events  = EPOLLIN;
-    ev.data.fd = _wakeup;
+    struct epoll_event ev = {};
+    ev.events             = EPOLLIN;
+    ev.data.fd            = _wakeup;
 
     if (epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev) == -1)
     {
@@ -262,9 +259,8 @@ int Reactor::registerHandler (int fd, EventHandler* handler) noexcept
     _deleted.erase (fd);
 
     struct epoll_event ev = {};
-
-    ev.events  = EPOLLIN | EPOLLRDHUP;
-    ev.data.fd = fd;
+    ev.events             = EPOLLIN | EPOLLRDHUP;
+    ev.data.fd            = fd;
 
     if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, fd, &ev) == -1))
     {
@@ -373,21 +369,19 @@ void Reactor::dispatchEvent (const epoll_event& event)
         return;
     }
 
-    EventHandler* handler = it->second;
-
     if (JOIN_LIKELY (isActive (fd)))
     {
         if (JOIN_UNLIKELY (event.events & EPOLLERR))
         {
-            handler->onError (fd);
+            it->second->onError (fd);
         }
         else if (JOIN_UNLIKELY (event.events & (EPOLLRDHUP | EPOLLHUP)))
         {
-            handler->onClose (fd);
+            it->second->onClose (fd);
         }
         else if (JOIN_LIKELY (event.events & EPOLLIN))
         {
-            handler->onReceive (fd);
+            it->second->onReceive (fd);
         }
     }
 }

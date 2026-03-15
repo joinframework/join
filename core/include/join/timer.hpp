@@ -99,7 +99,7 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicTimer ()
+        virtual ~BasicTimer () noexcept
         {
             _reactor->delHandler (_handle);
             if (_handle != -1)
@@ -122,7 +122,7 @@ namespace join
             _ns       = std::chrono::nanoseconds::zero ();
 
             auto ts = toTimerSpec (ns);
-            timerfd_settime (_handle, 0, &ts, nullptr);
+            timerfd_settime (handle (), 0, &ts, nullptr);
         }
 
         /**
@@ -146,7 +146,7 @@ namespace join
             _ns          = std::chrono::nanoseconds::zero ();
 
             auto ts = toTimerSpec (ns);
-            timerfd_settime (_handle, TFD_TIMER_ABSTIME, &ts, nullptr);
+            timerfd_settime (handle (), TFD_TIMER_ABSTIME, &ts, nullptr);
         }
 
         /**
@@ -163,30 +163,30 @@ namespace join
             _ns       = ns;
 
             auto ts = toTimerSpec (ns, true);
-            timerfd_settime (_handle, 0, &ts, nullptr);
+            timerfd_settime (handle (), 0, &ts, nullptr);
         }
 
         /**
          * @brief cancel the timer.
          */
-        void cancel ()
+        void cancel () noexcept
         {
             _callback = nullptr;
             _oneShot  = true;
             _ns       = std::chrono::nanoseconds::zero ();
 
             struct itimerspec ts = {};
-            timerfd_settime (_handle, 0, &ts, nullptr);
+            timerfd_settime (handle (), 0, &ts, nullptr);
         }
 
         /**
          * @brief check if timer is running.
          * @return true if timer is active.
          */
-        bool active () const
+        bool active () const noexcept
         {
             struct itimerspec ts = {};
-            timerfd_gettime (_handle, &ts);
+            timerfd_gettime (handle (), &ts);
             const bool hasValue    = (ts.it_value.tv_sec != 0 || ts.it_value.tv_nsec != 0);
             const bool hasInterval = (ts.it_interval.tv_sec != 0 || ts.it_interval.tv_nsec != 0);
             return hasValue || hasInterval;
@@ -199,7 +199,7 @@ namespace join
         std::chrono::nanoseconds remaining () const
         {
             struct itimerspec ts = {};
-            timerfd_gettime (_handle, &ts);
+            timerfd_gettime (handle (), &ts);
             return std::chrono::seconds (ts.it_value.tv_sec) + std::chrono::nanoseconds (ts.it_value.tv_nsec);
         }
 
@@ -238,7 +238,7 @@ namespace join
         virtual void onReceive ([[maybe_unused]] int fd) override
         {
             uint64_t expirations;
-            ssize_t result = read (_handle, &expirations, sizeof (expirations));
+            ssize_t result = read (handle (), &expirations, sizeof (expirations));
             if (result == sizeof (expirations) && _callback)
             {
                 for (uint64_t i = 0; i < expirations; ++i)
@@ -271,7 +271,7 @@ namespace join
          * @brief get native handle.
          * @return native handle.
          */
-        virtual int handle () const noexcept
+        int handle () const noexcept
         {
             return _handle;
         }
