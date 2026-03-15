@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  check:
+  ci:
     uses: ./.github/workflows/build.yml
 
     permissions:

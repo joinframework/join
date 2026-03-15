@@ -7,12 +7,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  scan:
+  audit:
     uses: ./.github/workflows/build.yml
 
     permissions:
       contents: read
       security-events: write
+      pull-requests: write
+      pages: write
+      id-token: write
 
     secrets: inherit
 
