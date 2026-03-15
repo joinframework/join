@@ -203,6 +203,12 @@ namespace join
         ~InterfaceManager ();
 
         /**
+         * @brief get the a singleton instance.
+         * @return reference to the singleton instance.
+         */
+        static InterfaceManager& instance ();
+
+        /**
          * @brief find interface by index.
          * @param interfaceIndex interface index.
          * @return interface.

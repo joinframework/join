@@ -42,10 +42,10 @@ using join::Arp;
 //   CLASS     : Arp
 //   METHOD    : Arp
 // =========================================================================
-Arp::Arp (const std::string& interface, Reactor* reactor)
+Arp::Arp (const std::string& interface, NeighborManager* neighbors)
 : _interface (interface)
-, _reactor (reactor ? reactor : ReactorThread::reactor ())
-, _neighbors (_reactor)
+, _neighbors (neighbors ? neighbors : &NeighborManager::instance ())
+, _reactor (_neighbors->reactor ())
 {
 }
 
@@ -68,7 +68,7 @@ int Arp::add (const MacAddress& mac, const IpAddress& ip)
         return -1;
     }
 
-    return _neighbors.addNeighbor (index, ip, mac, NUD_PERMANENT, true);
+    return _neighbors->addNeighbor (index, ip, mac, NUD_PERMANENT, true);
 }
 
 // =========================================================================
@@ -99,7 +99,7 @@ int Arp::remove (const IpAddress& ip)
         return -1;
     }
 
-    return _neighbors.removeNeighbor (index, ip, true);
+    return _neighbors->removeNeighbor (index, ip, true);
 }
 
 // =========================================================================
@@ -130,7 +130,7 @@ MacAddress Arp::cache (const IpAddress& ip)
         return {};
     }
 
-    auto neighbor = _neighbors.findByIndex (index, ip);
+    auto neighbor = _neighbors->findByIndex (index, ip);
     if (!neighbor)
     {
         lastError = std::make_error_code (std::errc::no_such_device_or_address);

@@ -56,9 +56,35 @@ namespace join
         /**
          * @brief create the Arp instance.
          * @param interface interface name.
-         * @param reactor event loop reactor.
+         * @param neighbors neighbor manager to use (uses NeighborManager::instance if nullptr).
          */
-        Arp (const std::string& interface, Reactor* reactor = nullptr);
+        Arp (const std::string& interface, NeighborManager* neighbors = nullptr);
+
+        /**
+         * @brief create instance by copy.
+         * @param other other interface to copy.
+         */
+        Arp (const Arp& other) = delete;
+
+        /**
+         * @brief create instance by move.
+         * @param other other interface to move.
+         */
+        Arp (Arp&& other) = delete;
+
+        /**
+         * @brief assign instance by copy.
+         * @param other other interface to copy.
+         * @return A reference of the current object.
+         */
+        Arp& operator= (const Arp& other) = delete;
+
+        /**
+         * @brief assign instance by move.
+         * @param other other interface to move.
+         * @return A reference of the current object.
+         */
+        Arp& operator= (Arp&& other) = delete;
 
         /**
          * @brief destroy the Arp instance.
@@ -358,11 +384,11 @@ namespace join
         /// interface name.
         const std::string _interface;
 
-        /// event loop reactor.
-        Reactor* const _reactor;
-
         /// neighbor manager
-        NeighborManager _neighbors;
+        NeighborManager* _neighbors = nullptr;
+
+        /// event loop reactor.
+        Reactor* const _reactor = nullptr;
     };
 }
 

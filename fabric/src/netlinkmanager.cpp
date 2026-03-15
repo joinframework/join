@@ -25,6 +25,7 @@
 // libjoin.
 #include <join/netlinkmanager.hpp>
 
+using join::Reactor;
 using join::NetlinkManager;
 
 // =========================================================================
@@ -42,6 +43,15 @@ NetlinkManager::NetlinkManager (uint32_t groups, Reactor* reactor)
     {
         _reactor = ReactorThread::reactor ();
     }
+}
+
+// =========================================================================
+//   CLASS     : NetlinkManager
+//   METHOD    : reactor
+// =========================================================================
+Reactor* NetlinkManager::reactor () const noexcept
+{
+    return _reactor;
 }
 
 // =========================================================================
