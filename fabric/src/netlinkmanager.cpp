@@ -60,7 +60,7 @@ Reactor* NetlinkManager::reactor () const noexcept
 // =========================================================================
 void NetlinkManager::start ()
 {
-    _reactor->addHandler (this);
+    _reactor->addHandler (handle (), this);
 }
 
 // =========================================================================
@@ -69,7 +69,7 @@ void NetlinkManager::start ()
 // =========================================================================
 void NetlinkManager::stop ()
 {
-    _reactor->delHandler (this);
+    _reactor->delHandler (handle ());
 }
 
 // =========================================================================
@@ -102,7 +102,7 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 //   CLASS     : NetlinkManager
 //   METHOD    : onReceive
 // =========================================================================
-void NetlinkManager::onReceive ()
+void NetlinkManager::onReceive ([[maybe_unused]] int fd)
 {
     ssize_t len = read (_buffer.get (), _bufferSize);
     if (len != -1)

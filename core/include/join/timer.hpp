@@ -67,7 +67,7 @@ namespace join
                 _reactor = ReactorThread::reactor ();
             }
 
-            _reactor->addHandler (this);
+            _reactor->addHandler (_handle, this);
         }
 
         /**
@@ -101,7 +101,7 @@ namespace join
          */
         virtual ~BasicTimer ()
         {
-            _reactor->delHandler (this);
+            _reactor->delHandler (_handle);
             if (_handle != -1)
             {
                 close (_handle);
@@ -233,8 +233,9 @@ namespace join
     protected:
         /**
          * @brief method called when data are ready to be read on handle.
+         * @param fd file descriptor.
          */
-        virtual void onReceive () override
+        virtual void onReceive ([[maybe_unused]] int fd) override
         {
             uint64_t expirations;
             ssize_t result = read (_handle, &expirations, sizeof (expirations));
@@ -270,7 +271,7 @@ namespace join
          * @brief get native handle.
          * @return native handle.
          */
-        virtual int handle () const noexcept override
+        virtual int handle () const noexcept
         {
             return _handle;
         }

@@ -159,7 +159,7 @@ MacAddress Arp::cache (const std::string& interface, const IpAddress& ip)
 //   CLASS     : Arp
 //   METHOD    : onReceive
 // =========================================================================
-void Arp::onReceive () noexcept
+void Arp::onReceive ([[maybe_unused]] int fd) noexcept
 {
     Packet in{};
 

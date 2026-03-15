@@ -272,7 +272,7 @@ namespace join
          * @brief get socket native handle.
          * @return socket native handle.
          */
-        int handle () const noexcept override
+        int handle () const noexcept
         {
             return this->_handle;
         }

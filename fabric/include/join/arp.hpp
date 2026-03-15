@@ -210,9 +210,9 @@ namespace join
                 return {};
             }
 
-            _reactor->addHandler (this);
+            _reactor->addHandler (handle (), this);
             MacAddress mac = waitResponse (lock, out.arp.ar_tip, timeout);
-            _reactor->delHandler (this);
+            _reactor->delHandler (handle ());
 
             close ();
             return mac;
@@ -360,8 +360,9 @@ namespace join
 
         /**
          * @brief method called when data are ready to be read.
+         * @param fd file descriptor.
          */
-        void onReceive () noexcept override;
+        void onReceive (int fd) noexcept override;
 
         /// buffer size.
         static constexpr size_t _bufferSize = 4096;
