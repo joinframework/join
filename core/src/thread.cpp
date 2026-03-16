@@ -28,6 +28,7 @@
 
 // C.
 #include <signal.h>
+#include <unistd.h>
 
 using join::Invoker;
 using join::Thread;
