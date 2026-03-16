@@ -25,6 +25,9 @@
 // libjoin.
 #include <join/netlinkmanager.hpp>
 
+// C.
+#include <sys/eventfd.h>
+
 using join::Reactor;
 using join::NetlinkManager;
 
@@ -35,6 +38,8 @@ using join::NetlinkManager;
 NetlinkManager::NetlinkManager (uint32_t groups, Reactor* reactor)
 : _buffer (std::make_unique<char[]> (_bufferSize))
 , _seq (0)
+, _jobs (_jobQueueSize)
+, _wakeup (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
 , _reactor (reactor)
 {
     open (Netlink::rt ());
@@ -43,6 +48,15 @@ NetlinkManager::NetlinkManager (uint32_t groups, Reactor* reactor)
     {
         _reactor = ReactorThread::reactor ();
     }
+}
+
+// =========================================================================
+//   CLASS     : NetlinkManager
+//   METHOD    : ~NetlinkManager
+// =========================================================================
+NetlinkManager::~NetlinkManager ()
+{
+    ::close (_wakeup);
 }
 
 // =========================================================================
@@ -60,6 +74,7 @@ Reactor* NetlinkManager::reactor () const noexcept
 // =========================================================================
 void NetlinkManager::start ()
 {
+    _reactor->addHandler (_wakeup, this);
     _reactor->addHandler (handle (), this);
 }
 
@@ -70,6 +85,7 @@ void NetlinkManager::start ()
 void NetlinkManager::stop ()
 {
     _reactor->delHandler (handle ());
+    _reactor->delHandler (_wakeup);
 }
 
 // =========================================================================
@@ -102,8 +118,22 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 //   CLASS     : NetlinkManager
 //   METHOD    : onReceive
 // =========================================================================
-void NetlinkManager::onReceive ([[maybe_unused]] int fd)
+void NetlinkManager::onReceive (int fd)
 {
+    if (fd == _wakeup)
+    {
+        uint64_t v;
+        ::read (_wakeup, &v, sizeof (v));
+
+        Job* job;
+        while (_jobs.tryPop (job) == 0)
+        {
+            job->func ();
+            job->done.store (true, std::memory_order_release);
+        }
+        return;
+    }
+
     ssize_t len = read (_buffer.get (), _bufferSize);
     if (len != -1)
     {

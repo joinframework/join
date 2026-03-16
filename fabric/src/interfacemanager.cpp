@@ -130,8 +130,13 @@ int InterfaceManager::refresh ()
 // =========================================================================
 uint64_t InterfaceManager::addLinkListener (const LinkNotify& cb)
 {
-    ScopedLock<Mutex> lock (_listenerMutex);
-    return _linkListeners.emplace (++_listenerCounter, cb).first->first;
+    uint64_t id = ++_listenerCounter;
+
+    pushJob ([this, id, cb] () {
+        _linkListeners.emplace (id, cb);
+    });
+
+    return id;
 }
 
 // =========================================================================
@@ -140,8 +145,9 @@ uint64_t InterfaceManager::addLinkListener (const LinkNotify& cb)
 // =========================================================================
 void InterfaceManager::removeLinkListener (uint64_t id)
 {
-    ScopedLock<Mutex> lock (_listenerMutex);
-    _linkListeners.erase (id);
+    pushJob ([this, id] () {
+        _linkListeners.erase (id);
+    });
 }
 
 // =========================================================================
@@ -150,8 +156,13 @@ void InterfaceManager::removeLinkListener (uint64_t id)
 // =========================================================================
 uint64_t InterfaceManager::addAddressListener (const AddressNotify& cb)
 {
-    ScopedLock<Mutex> lock (_listenerMutex);
-    return _addressListeners.emplace (++_listenerCounter, cb).first->first;
+    uint64_t id = ++_listenerCounter;
+
+    pushJob ([this, id, cb] () {
+        _addressListeners.emplace (id, cb);
+    });
+
+    return id;
 }
 
 // =========================================================================
@@ -160,8 +171,9 @@ uint64_t InterfaceManager::addAddressListener (const AddressNotify& cb)
 // =========================================================================
 void InterfaceManager::removeAddressListener (uint64_t id)
 {
-    ScopedLock<Mutex> lock (_listenerMutex);
-    _addressListeners.erase (id);
+    pushJob ([this, id] () {
+        _addressListeners.erase (id);
+    });
 }
 
 // =========================================================================
@@ -170,8 +182,13 @@ void InterfaceManager::removeAddressListener (uint64_t id)
 // =========================================================================
 uint64_t InterfaceManager::addRouteListener (const RouteNotify& cb)
 {
-    ScopedLock<Mutex> lock (_listenerMutex);
-    return _routeListeners.emplace (++_listenerCounter, cb).first->first;
+    uint64_t id = ++_listenerCounter;
+
+    pushJob ([this, id, cb] () {
+        _routeListeners.emplace (id, cb);
+    });
+
+    return id;
 }
 
 // =========================================================================
@@ -180,8 +197,9 @@ uint64_t InterfaceManager::addRouteListener (const RouteNotify& cb)
 // =========================================================================
 void InterfaceManager::removeRouteListener (uint64_t id)
 {
-    ScopedLock<Mutex> lock (_listenerMutex);
-    _routeListeners.erase (id);
+    pushJob ([this, id] () {
+        _routeListeners.erase (id);
+    });
 }
 
 // =========================================================================
@@ -1219,12 +1237,7 @@ void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
 // =========================================================================
 void InterfaceManager::notifyLinkUpdate (const LinkInfo& info)
 {
-    std::unordered_map<uint64_t, LinkNotify> linklisteners;
-    {
-        ScopedLock<Mutex> lock (_listenerMutex);
-        linklisteners = _linkListeners;
-    }
-    for (auto& listener : linklisteners)
+    for (auto& listener : _linkListeners)
     {
         if (listener.second)
         {
@@ -1239,12 +1252,7 @@ void InterfaceManager::notifyLinkUpdate (const LinkInfo& info)
 // =========================================================================
 void InterfaceManager::notifyAddressUpdate (const AddressInfo& info)
 {
-    std::unordered_map<uint64_t, AddressNotify> addresslisteners;
-    {
-        ScopedLock<Mutex> lock (_listenerMutex);
-        addresslisteners = _addressListeners;
-    }
-    for (auto& listener : addresslisteners)
+    for (auto& listener : _addressListeners)
     {
         if (listener.second)
         {
@@ -1259,12 +1267,7 @@ void InterfaceManager::notifyAddressUpdate (const AddressInfo& info)
 // =========================================================================
 void InterfaceManager::notifyRouteUpdate (const RouteInfo& info)
 {
-    std::unordered_map<uint64_t, RouteNotify> routelisteners;
-    {
-        ScopedLock<Mutex> lock (_listenerMutex);
-        routelisteners = _routeListeners;
-    }
-    for (auto& listener : routelisteners)
+    for (auto& listener : _routeListeners)
     {
         if (listener.second)
         {

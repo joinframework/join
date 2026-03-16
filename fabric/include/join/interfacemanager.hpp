@@ -574,10 +574,7 @@ namespace join
         std::unordered_map<uint64_t, RouteNotify> _routeListeners;
 
         /// listener id counter.
-        uint64_t _listenerCounter = 0;
-
-        /// protection mutex for listeners.
-        Mutex _listenerMutex;
+        std::atomic<uint64_t> _listenerCounter{0};
 
         // friendship with interface.
         friend class Interface;

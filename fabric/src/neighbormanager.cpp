@@ -159,8 +159,13 @@ int NeighborManager::refresh ()
 // =========================================================================
 uint64_t NeighborManager::addNeighborListener (const NeighborNotify& cb)
 {
-    ScopedLock<Mutex> lock (_listenerMutex);
-    return _neighborListeners.emplace (++_listenerCounter, cb).first->first;
+    uint64_t id = ++_listenerCounter;
+
+    pushJob ([this, id, cb] () {
+        _neighborListeners.emplace (id, cb);
+    });
+
+    return id;
 }
 
 // =========================================================================
@@ -169,8 +174,9 @@ uint64_t NeighborManager::addNeighborListener (const NeighborNotify& cb)
 // =========================================================================
 void NeighborManager::removeNeighborListener (uint64_t id)
 {
-    ScopedLock<Mutex> lock (_listenerMutex);
-    _neighborListeners.erase (id);
+    pushJob ([this, id] () {
+        _neighborListeners.erase (id);
+    });
 }
 
 // =========================================================================
@@ -447,12 +453,7 @@ void NeighborManager::onNeighborMessage (struct nlmsghdr* nlh)
 // =========================================================================
 void NeighborManager::notifyNeighborUpdate (const NeighborInfo& info)
 {
-    std::unordered_map<uint64_t, NeighborNotify> neighborlisteners;
-    {
-        ScopedLock<Mutex> lock (_listenerMutex);
-        neighborlisteners = _neighborListeners;
-    }
-    for (auto& listener : neighborlisteners)
+    for (auto& listener : _neighborListeners)
     {
         if (listener.second)
         {

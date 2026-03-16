@@ -28,9 +28,11 @@
 // libjoin.
 #include <join/condition.hpp>
 #include <join/socket.hpp>
+#include <join/queue.hpp>
 
 // C++.
 #include <unordered_map>
+#include <functional>
 #include <memory>
 #include <atomic>
 
@@ -78,7 +80,7 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~NetlinkManager () = default;
+        virtual ~NetlinkManager ();
 
         /**
          * @brief get the event loop reactor.
@@ -140,6 +142,35 @@ namespace join
 
             _pending.erase (inserted.first);
             return 0;
+        }
+
+        /**
+         * @brief push a job to be executed on the reactor thread.
+         * @param func function to execute on the reactor thread.
+         * @param args arguments to bind to the function.
+         */
+        template <typename Func, typename... Args>
+        void pushJob (Func&& func, Args&&... args) noexcept
+        {
+            Job job;
+            job.func = std::bind (std::forward<Func> (func), std::forward<Args> (args)...);
+
+            if (_reactor->isReactorThread ())
+            {
+                job.func ();
+                return;
+            }
+
+            _jobs.push (&job);
+
+            uint64_t v = 1;
+            ::write (_wakeup, &v, sizeof (v));
+
+            Backoff backoff;
+            while (!job.done.load (std::memory_order_acquire))
+            {
+                backoff ();
+            }
         }
 
         /**
@@ -224,6 +255,27 @@ namespace join
 
         /// protection mutex.
         Mutex _syncMutex;
+
+        /**
+         * @brief job to be executed on the reactor thread.
+         */
+        struct Job
+        {
+            /// function to execute.
+            std::function<void ()> func;
+
+            /// set to true when the job has been executed.
+            std::atomic<bool> done{false};
+        };
+
+        /// job queue size.
+        static constexpr size_t _jobQueueSize = 256;
+
+        /// job queue.
+        LocalMem::Mpsc::Queue<Job*> _jobs;
+
+        /// eventfd used to wake the reactor thread for pending jobs.
+        int _wakeup = -1;
 
         /// event loop reactor.
         Reactor* _reactor;

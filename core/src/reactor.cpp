@@ -105,7 +105,7 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool sync) noexcept
         return -1;
     }
 
-    if (_threadId.load (std::memory_order_acquire) == pthread_self ())
+    if (isReactorThread ())
     {
         return registerHandler (fd, handler);
     }
@@ -155,7 +155,7 @@ int Reactor::delHandler (int fd, bool sync) noexcept
         return -1;
     }
 
-    if (_threadId.load (std::memory_order_acquire) == pthread_self ())
+    if (isReactorThread ())
     {
         return unregisterHandler (fd);
     }
@@ -215,7 +215,7 @@ void Reactor::stop (bool sync) noexcept
 {
     _running.store (false, std::memory_order_release);
 
-    if (_threadId.load (std::memory_order_acquire) == pthread_self ())
+    if (isReactorThread ())
     {
         return;
     }
@@ -248,6 +248,15 @@ int Reactor::mbind (int numa) const noexcept
 int Reactor::mlock () const noexcept
 {
     return _commands.mlock ();
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : isReactorThread
+// =========================================================================
+bool Reactor::isReactorThread () const noexcept
+{
+    return _threadId.load (std::memory_order_acquire) == pthread_self ();
 }
 
 // =========================================================================
