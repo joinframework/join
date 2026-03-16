@@ -196,6 +196,12 @@ namespace join
          */
         int mlock () const noexcept;
 
+        /**
+         * @brief check if the calling thread is the reactor thread.
+         * @return true if called from the reactor thread.
+         */
+        bool isReactorThread () const noexcept;
+
     private:
         /// deleted handlers reserve size.
         static constexpr size_t _deletedReserve = 64;
