@@ -8,6 +8,8 @@ set(PUBLIC_HEADERS
     include/join/arp.hpp
     include/join/interface.hpp
     include/join/interfacemanager.hpp
+    include/join/route.hpp
+    include/join/routemanager.hpp
 )
 
 set(SOURCES
@@ -18,6 +20,8 @@ set(SOURCES
     src/arp.cpp
     src/interface.cpp
     src/interfacemanager.cpp
+    src/route.cpp
+    src/routemanager.cpp
 )
 
 add_library(${JOIN_FABRIC} ${SOURCES})

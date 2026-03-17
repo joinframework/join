@@ -29,12 +29,10 @@
 
 // C++.
 #include <algorithm>
-#include <chrono>
 
 // C.
 #include <linux/if_arp.h>
 #include <linux/if.h>
-#include <cstring>
 
 using join::Interface;
 using join::InterfaceManager;
@@ -143,7 +141,7 @@ int Interface::addAddress (const IpAddress& ipAddress, uint32_t prefix, const Ip
 // =========================================================================
 int Interface::addAddress (const Address& address, bool sync) const
 {
-    return addAddress (std::get<0> (address), std::get<1> (address), std::get<2> (address), sync);
+    return addAddress (address.ip, address.prefix, address.broadcast, sync);
 }
 
 // =========================================================================
@@ -161,7 +159,7 @@ int Interface::removeAddress (const IpAddress& ipAddress, uint32_t prefix, const
 // =========================================================================
 int Interface::removeAddress (const Address& address, bool sync) const
 {
-    return removeAddress (std::get<0> (address), std::get<1> (address), std::get<2> (address), sync);
+    return removeAddress (address.ip, address.prefix, address.broadcast, sync);
 }
 
 // =========================================================================
@@ -184,7 +182,7 @@ bool Interface::hasAddress (const IpAddress& ipAddress) const
 
     for (const auto& addr : _addresses)
     {
-        if (std::get<0> (addr) == IpAddress (ipAddress.addr (), ipAddress.length (), _index))
+        if (addr.ip == IpAddress (ipAddress.addr (), ipAddress.length (), _index))
         {
             return true;
         }
@@ -203,90 +201,13 @@ bool Interface::hasLocalAddress () const
 
     for (const auto& addr : _addresses)
     {
-        if (std::get<0> (addr).isLinkLocal ())
+        if (addr.ip.isLinkLocal ())
         {
             return true;
         }
     }
 
     return false;
-}
-
-// =========================================================================
-//   CLASS     : Interface
-//   METHOD    : addRoute
-// =========================================================================
-int Interface::addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric,
-                         bool sync) const
-{
-    return _manager->addRoute (_index, dest, prefix, gateway, &metric, sync);
-}
-
-// =========================================================================
-//   CLASS     : Interface
-//   METHOD    : addRoute
-// =========================================================================
-int Interface::addRoute (const Route& route, bool sync) const
-{
-    return addRoute (std::get<0> (route), std::get<1> (route), std::get<2> (route), std::get<3> (route), sync);
-}
-
-// =========================================================================
-//   CLASS     : Interface
-//   METHOD    : removeRoute
-// =========================================================================
-int Interface::removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric,
-                            bool sync) const
-{
-    return _manager->removeRoute (_index, dest, prefix, gateway, &metric, sync);
-}
-
-// =========================================================================
-//   CLASS     : Interface
-//   METHOD    : removeRoute
-// =========================================================================
-int Interface::removeRoute (const Route& route, bool sync) const
-{
-    return removeRoute (std::get<0> (route), std::get<1> (route), std::get<2> (route), std::get<3> (route), sync);
-}
-
-// =========================================================================
-//   CLASS     : Interface
-//   METHOD    : routeList
-// =========================================================================
-Interface::RouteList Interface::routeList () const
-{
-    ScopedLock<Mutex> lock (_mutex);
-    return _routes;
-}
-
-// =========================================================================
-//   CLASS     : Interface
-//   METHOD    : hasRoute
-// =========================================================================
-bool Interface::hasRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric) const
-{
-    ScopedLock<Mutex> lock (_mutex);
-
-    for (const auto& rt : _routes)
-    {
-        if (std::get<0> (rt) == dest && std::get<1> (rt) == prefix && std::get<2> (rt) == gateway &&
-            std::get<3> (rt) == metric)
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-// =========================================================================
-//   CLASS     : Interface
-//   METHOD    : hasRoute
-// =========================================================================
-bool Interface::hasRoute (const Route& route) const
-{
-    return hasRoute (std::get<0> (route), std::get<1> (route), std::get<2> (route), std::get<3> (route));
 }
 
 // =========================================================================
@@ -384,7 +305,7 @@ bool Interface::isPointToPoint () const
 // =========================================================================
 bool Interface::isDummy () const
 {
-    return (kind () == "dummy");
+    return kind () == "dummy";
 }
 
 // =========================================================================
@@ -393,7 +314,7 @@ bool Interface::isDummy () const
 // =========================================================================
 bool Interface::isBridge () const
 {
-    return (kind () == "bridge");
+    return kind () == "bridge";
 }
 
 // =========================================================================
@@ -402,7 +323,7 @@ bool Interface::isBridge () const
 // =========================================================================
 bool Interface::isVlan () const
 {
-    return (kind () == "vlan");
+    return kind () == "vlan";
 }
 
 // =========================================================================
@@ -411,7 +332,7 @@ bool Interface::isVlan () const
 // =========================================================================
 bool Interface::isVeth () const
 {
-    return (kind () == "veth");
+    return kind () == "veth";
 }
 
 // =========================================================================
@@ -430,7 +351,7 @@ bool Interface::isGre () const
 // =========================================================================
 bool Interface::isTun () const
 {
-    return (kind () == "tun");
+    return kind () == "tun";
 }
 
 // =========================================================================
@@ -459,9 +380,9 @@ bool Interface::supportsIpv4 () const
 {
     ScopedLock<Mutex> lock (_mutex);
 
-    for (auto const& addr : _addresses)
+    for (const auto& addr : _addresses)
     {
-        if (std::get<0> (addr).family () == AF_INET)
+        if (addr.ip.family () == AF_INET)
         {
             return true;
         }
@@ -478,9 +399,9 @@ bool Interface::supportsIpv6 () const
 {
     ScopedLock<Mutex> lock (_mutex);
 
-    for (auto const& addr : _addresses)
+    for (const auto& addr : _addresses)
     {
-        if (std::get<0> (addr).family () == AF_INET6)
+        if (addr.ip.family () == AF_INET6)
         {
             return true;
         }

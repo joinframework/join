@@ -346,50 +346,6 @@ TEST_F (InterfaceTest, addressList)
 }
 
 /**
- * @brief test the addRoute method.
- */
-TEST_F (InterfaceTest, addRoute)
-{
-    InterfaceManager mgr;
-
-    auto ve = mgr.findByName ("veth0");
-    ASSERT_NE (ve, nullptr);
-
-    ASSERT_FALSE (ve->hasRoute ({"192.168.200.0", 24, "192.168.100.254", 0}));
-    ASSERT_EQ (ve->addRoute ({"192.168.200.0", 24, "192.168.100.254", 0}, true), 0) << lastError.message ();
-    ASSERT_TRUE (ve->hasRoute ({"192.168.200.0", 24, "192.168.100.254", 0}));
-    ASSERT_EQ (ve->removeRoute ({"192.168.200.0", 24, "192.168.100.254", 0}), 0) << lastError.message ();
-}
-
-/**
- * @brief test the routeList method.
- */
-TEST_F (InterfaceTest, routeList)
-{
-    InterfaceManager mgr;
-
-    auto lo = mgr.findByName ("lo");
-    ASSERT_NE (lo, nullptr);
-    ASSERT_FALSE (lo->routeList ().empty ());
-
-    auto vl = mgr.findByName ("dummy0.10");
-    ASSERT_NE (vl, nullptr);
-    ASSERT_FALSE (vl->routeList ().empty ());
-
-    auto dm = mgr.findByName ("dummy0");
-    ASSERT_NE (dm, nullptr);
-    ASSERT_FALSE (dm->routeList ().empty ());
-
-    auto ve = mgr.findByName ("veth0");
-    ASSERT_NE (ve, nullptr);
-    ASSERT_FALSE (ve->routeList ().empty ());
-
-    auto br = mgr.findByName ("br0");
-    ASSERT_NE (br, nullptr);
-    ASSERT_FALSE (br->routeList ().empty ());
-}
-
-/**
  * @brief test the addToBridge method.
  */
 TEST_F (InterfaceTest, addToBridge)
@@ -567,7 +523,7 @@ TEST_F (InterfaceTest, isPointToPoint)
 }
 
 /**
- * @brief test the isBridge method.
+ * @brief test the isDummy method.
  */
 TEST_F (InterfaceTest, isDummy)
 {

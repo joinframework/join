@@ -231,6 +231,16 @@ TEST_F (NeighborManagerTest, flushNeighbors)
 }
 
 /**
+ * @brief test the singleton method.
+ */
+TEST_F (NeighborManagerTest, instance)
+{
+    auto& n1 = NeighborManager::instance ();
+    auto& n2 = NeighborManager::instance ();
+    ASSERT_EQ (&n1, &n2);
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char** argv)

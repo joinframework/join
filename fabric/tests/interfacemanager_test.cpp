@@ -68,8 +68,8 @@ TEST (InterfaceManager, enumerate)
 {
     InterfaceManager mgr;
 
-    auto addresses = mgr.enumerate ();
-    ASSERT_GT (addresses.size (), 0);
+    auto interfaces = mgr.enumerate ();
+    ASSERT_GT (interfaces.size (), 0);
 }
 
 /**
@@ -117,31 +117,6 @@ TEST (InterfaceManager, addAddressListener)
     EXPECT_TRUE (called);
 
     mgr.removeAddressListener (id);
-    called = false;
-    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
-    EXPECT_FALSE (called);
-}
-
-/**
- * @brief test the addRouteListener method.
- */
-TEST (InterfaceManager, addRouteListener)
-{
-    InterfaceManager mgr;
-
-    bool called = false;
-    auto cb     = [&] (const auto& /*info*/) {
-        called = true;
-    };
-
-    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
-    EXPECT_FALSE (called);
-
-    auto id = mgr.addRouteListener (cb);
-    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
-    EXPECT_TRUE (called);
-
-    mgr.removeRouteListener (id);
     called = false;
     EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
@@ -279,6 +254,16 @@ TEST (InterfaceManager, createGreInterface)
     EXPECT_EQ (mgr.removeInterface (gre6, true), 0) << lastError.message ();
 
     EXPECT_EQ (mgr.removeInterface (dummy0, true), 0) << lastError.message ();
+}
+
+/**
+ * @brief test the singleton method.
+ */
+TEST (InterfaceManager, instance)
+{
+    auto& i1 = InterfaceManager::instance ();
+    auto& i2 = InterfaceManager::instance ();
+    ASSERT_EQ (&i1, &i2);
 }
 
 /**

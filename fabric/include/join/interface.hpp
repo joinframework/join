@@ -28,12 +28,12 @@
 // libjoin.
 #include <join/macaddress.hpp>
 #include <join/ipaddress.hpp>
+#include <join/mutex.hpp>
 
 // C++.
 #include <string>
 #include <memory>
 #include <vector>
-#include <tuple>
 
 // C.
 #include <cstdint>
@@ -57,11 +57,19 @@ namespace join
         explicit Interface (InterfaceManager* manager, uint32_t index);
 
     public:
-        using Ptr         = std::shared_ptr<Interface>;
-        using Address     = std::tuple<IpAddress, uint32_t, IpAddress>;
+        using Ptr = std::shared_ptr<Interface>;
+
+        /**
+         * @brief IP address entry associated with an interface.
+         */
+        struct Address
+        {
+            IpAddress ip;        /**< IP address. */
+            uint32_t prefix = 0; /**< prefix length. */
+            IpAddress broadcast; /**< broadcast address. */
+        };
+
         using AddressList = std::vector<Address>;
-        using Route       = std::tuple<IpAddress, uint32_t, IpAddress, uint32_t>;
-        using RouteList   = std::vector<Route>;
 
         /**
          * @brief create instance.
@@ -129,7 +137,7 @@ namespace join
          * @brief add address to interface.
          * @param ipAddress ip address to add.
          * @param prefix prefix length.
-         * @param broadcast broadcast address .
+         * @param broadcast broadcast address.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
@@ -148,7 +156,7 @@ namespace join
          * @brief remove address from interface.
          * @param ipAddress ip address to delete.
          * @param prefix prefix length.
-         * @param broadcast broadcast address .
+         * @param broadcast broadcast address.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
@@ -171,79 +179,16 @@ namespace join
 
         /**
          * @brief check if interface has address stored.
-         * @param ipAddress ip address to delete.
-         * @return true if interface has address stored, false otherwise
+         * @param ipAddress ip address to check.
+         * @return true if interface has address stored, false otherwise.
          */
         bool hasAddress (const IpAddress& ipAddress) const;
 
         /**
          * @brief check if interface has link local address stored.
-         * @return true if interface has link local address stored, false otherwise
+         * @return true if interface has link local address stored, false otherwise.
          */
         bool hasLocalAddress () const;
-
-        /**
-         * @brief add route to interface.
-         * @param dest destination network.
-         * @param prefix prefix length.
-         * @param gateway gateway address.
-         * @param metric route metric.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway = {}, uint32_t metric = 0,
-                      bool sync = false) const;
-
-        /**
-         * @brief add route to interface.
-         * @param route route.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int addRoute (const Route& route, bool sync = false) const;
-
-        /**
-         * @brief remove route from interface.
-         * @param dest destination network.
-         * @param prefix prefix length.
-         * @param gateway gateway address.
-         * @param metric route metric.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway = {}, uint32_t metric = 0,
-                         bool sync = false) const;
-
-        /**
-         * @brief remove route from interface.
-         * @param route route.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int removeRoute (const Route& route, bool sync = false) const;
-
-        /**
-         * @brief get interface routes.
-         * @return interface routes.
-         */
-        RouteList routeList () const;
-
-        /**
-         * @brief check if interface has route stored.
-         * @param dest destination network.
-         * @param prefix prefix length.
-         * @param gateway gateway address.
-         * @param metric route metric.
-         * @return 0 on success, -1 on failure.
-         */
-        bool hasRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric) const;
-
-        /**
-         * @brief check if interface has route stored.
-         * @param route route.
-         * @return true if interface has route stored, false otherwise
-         */
-        bool hasRoute (const Route& route) const;
 
         /**
          * @brief add interface to bridge.
@@ -367,7 +312,7 @@ namespace join
         bool supportsIpv6 () const;
 
     private:
-        /// interface manager
+        /// interface manager.
         InterfaceManager* _manager = nullptr;
 
         /// interface index.
@@ -394,9 +339,6 @@ namespace join
         /// interface addresses.
         AddressList _addresses;
 
-        /// interface routes.
-        RouteList _routes;
-
         /// protection mutex.
         mutable Mutex _mutex;
 
@@ -411,7 +353,7 @@ namespace join
     };
 
     /**
-     * @brief compare if two interfaces are equals.
+     * @brief compare if two interfaces are equal.
      * @param lhs interface to compare.
      * @param rhs interface to compare to.
      * @return true if equal.

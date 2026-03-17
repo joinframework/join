@@ -98,10 +98,10 @@ namespace join
     }
 
     /**
-     * @brief perform binary AND on InterfaceChangeType.
+     * @brief perform binary AND assignment on InterfaceChangeType.
      * @param a bitset.
      * @param b other bitset.
-     * @return bitset result of binary AND on InterfaceChangeType.
+     * @return reference to updated bitset.
      */
     inline const InterfaceChangeType& operator&= (InterfaceChangeType& a, InterfaceChangeType b)
     {
@@ -109,10 +109,10 @@ namespace join
     }
 
     /**
-     * @brief perform binary OR on InterfaceChangeType.
+     * @brief perform binary OR assignment on InterfaceChangeType.
      * @param a bitset.
      * @param b other bitset.
-     * @return bitset result of binary OR.
+     * @return reference to updated bitset.
      */
     inline const InterfaceChangeType& operator|= (InterfaceChangeType& a, InterfaceChangeType b)
     {
@@ -120,10 +120,10 @@ namespace join
     }
 
     /**
-     * @brief perform binary XOR on InterfaceChangeType.
+     * @brief perform binary XOR assignment on InterfaceChangeType.
      * @param a bitset.
      * @param b other bitset.
-     * @return bitset result of binary XOR on InterfaceChangeType.
+     * @return reference to updated bitset.
      */
     inline const InterfaceChangeType& operator^= (InterfaceChangeType& a, InterfaceChangeType b)
     {
@@ -131,7 +131,7 @@ namespace join
     }
 
     /**
-     * @brief link information.
+     * @brief link change notification payload.
      */
     struct LinkInfo
     {
@@ -140,19 +140,11 @@ namespace join
     };
 
     /**
-     * @brief address information.
+     * @brief address change notification payload.
      */
     struct AddressInfo : public LinkInfo
     {
         Interface::Address address; /**< address changed. */
-    };
-
-    /**
-     * @brief route information.
-     */
-    struct RouteInfo : public LinkInfo
-    {
-        Interface::Route route; /**< route changed. */
     };
 
     /**
@@ -163,7 +155,6 @@ namespace join
     public:
         using LinkNotify    = std::function<void (const LinkInfo& info)>;
         using AddressNotify = std::function<void (const AddressInfo& info)>;
-        using RouteNotify   = std::function<void (const RouteInfo& info)>;
 
         /**
          * @brief create instance.
@@ -203,7 +194,7 @@ namespace join
         ~InterfaceManager ();
 
         /**
-         * @brief get the a singleton instance.
+         * @brief get the singleton instance.
          * @return reference to the singleton instance.
          */
         static InterfaceManager& instance ();
@@ -211,20 +202,20 @@ namespace join
         /**
          * @brief find interface by index.
          * @param interfaceIndex interface index.
-         * @return interface.
+         * @return interface pointer, or nullptr if not found.
          */
         Interface::Ptr findByIndex (uint32_t interfaceIndex);
 
         /**
          * @brief find interface by name.
          * @param interfaceName interface name.
-         * @return interface.
+         * @return interface pointer, or nullptr if not found.
          */
         Interface::Ptr findByName (const std::string& interfaceName);
 
         /**
          * @brief enumerate all interfaces.
-         * @return all interfaces.
+         * @return snapshot of all interfaces.
          */
         InterfaceList enumerate ();
 
@@ -235,43 +226,30 @@ namespace join
         int refresh ();
 
         /**
-         * @brief registers a callback to be invoked when a link update occurs.
+         * @brief register a callback to be invoked when a link update occurs.
          * @param cb the callback function to register.
          * @return unique id for the callback.
          */
         uint64_t addLinkListener (const LinkNotify& cb);
 
         /**
-         * @brief unregisters a previously registered link update callback.
+         * @brief unregister a previously registered link update callback.
          * @param id unique id of the callback function to remove.
          */
         void removeLinkListener (uint64_t id);
 
         /**
-         * @brief registers a callback to be invoked when a address update occurs.
+         * @brief register a callback to be invoked when an address update occurs.
          * @param cb the callback function to register.
          * @return unique id for the callback.
          */
         uint64_t addAddressListener (const AddressNotify& cb);
 
         /**
-         * @brief unregisters a previously registered address update callback.
+         * @brief unregister a previously registered address update callback.
          * @param id unique id of the callback function to remove.
          */
         void removeAddressListener (uint64_t id);
-
-        /**
-         * @brief registers a callback to be invoked when a route update occurs.
-         * @param cb the callback function to register.
-         * @return unique id for the callback.
-         */
-        uint64_t addRouteListener (const RouteNotify& cb);
-
-        /**
-         * @brief unregisters a previously registered route update callback.
-         * @param id unique id of the callback function to remove.
-         */
-        void removeRouteListener (uint64_t id);
 
         /**
          * @brief creates a dummy interface.
@@ -314,7 +292,7 @@ namespace join
                                  uint16_t proto = ETH_P_8021Q, bool sync = false);
 
         /**
-         * @brief creates a Virtual Ethernet nterface pair.
+         * @brief creates a Virtual Ethernet interface pair.
          * @param hostName name of the interface to be created in the current namespace.
          * @param peerName name of the interface to be created in the target namespace.
          * @param pid process id of target namespace.
@@ -325,14 +303,14 @@ namespace join
                                  bool sync = false);
 
         /**
-         * @brief creates a a GRE tunnel interface.
+         * @brief creates a GRE tunnel interface.
          * @param tunnelName name of the GRE tunnel interface to be created.
          * @param parentIndex index of the physical interface to bind the tunnel to.
          * @param localAddress local endpoint IP address for the tunnel.
          * @param remoteAddress remote endpoint IP address for the tunnel.
          * @param ikey optional inbound GRE key.
          * @param okey optional outbound GRE key.
-         * @param ttl ttl/hop Limit for encapsulated packets (0-255)
+         * @param ttl ttl/hop limit for encapsulated packets (0-255).
          * @param sync wait for completion.
          * @return 0 on success, -1 on failure.
          */
@@ -341,14 +319,14 @@ namespace join
                                 const uint32_t* okey = nullptr, uint8_t ttl = 64, bool sync = false);
 
         /**
-         * @brief creates a a GRE tunnel interface.
+         * @brief creates a GRE tunnel interface.
          * @param tunnelName name of the GRE tunnel interface to be created.
          * @param parentName name of the physical interface to bind the tunnel to.
          * @param localAddress local endpoint IP address for the tunnel.
          * @param remoteAddress remote endpoint IP address for the tunnel.
          * @param ikey optional inbound GRE key.
          * @param okey optional outbound GRE key.
-         * @param ttl ttl/hop Limit for encapsulated packets (0-255)
+         * @param ttl ttl/hop limit for encapsulated packets (0-255).
          * @param sync wait for completion.
          * @return 0 on success, -1 on failure.
          */
@@ -375,9 +353,9 @@ namespace join
 
     private:
         /**
-         * @brief Add veth peer info data.
-         * @brief nlh netlink message header.
-         * @brief peerName peer interface name.
+         * @brief add veth peer info data.
+         * @param nlh netlink message header.
+         * @param peerName peer interface name.
          */
         static void addPeerInfoData (struct nlmsghdr* nlh, const std::string& peerName);
 
@@ -417,7 +395,7 @@ namespace join
         int removeFromBridge (uint32_t interfaceIndex, bool sync = false);
 
         /**
-         * @brief enable interface.
+         * @brief enable or disable interface.
          * @param interfaceIndex interface index.
          * @param enabled true to enable interface, false otherwise.
          * @param sync wait for operation completion if true.
@@ -450,32 +428,6 @@ namespace join
                            const IpAddress& broadcast = {}, bool sync = false);
 
         /**
-         * @brief add route to interface.
-         * @param interfaceIndex interface index.
-         * @param dest destination network.
-         * @param prefix prefix length.
-         * @param gateway gateway address.
-         * @param metric route metric.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway,
-                      uint32_t* metric = nullptr, bool sync = false);
-
-        /**
-         * @brief remove route from interface.
-         * @param interfaceIndex interface index.
-         * @param dest destination network.
-         * @param prefix prefix length.
-         * @param gateway gateway address.
-         * @param metric route metric.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway,
-                         uint32_t* metric = nullptr, bool sync = false);
-
-        /**
          * @brief dump link data.
          * @param sync wait for completion.
          * @return 0 on success, -1 on failure.
@@ -488,13 +440,6 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int dumpAddress (bool sync = false);
-
-        /**
-         * @brief dump route data.
-         * @param sync wait for completion.
-         * @return 0 on success, -1 on failure.
-         */
-        int dumpRoute (bool sync = false);
 
         /**
          * @brief dispatch a single RTM_* message to the derived class.
@@ -510,7 +455,8 @@ namespace join
 
         /**
          * @brief handle link info notification.
-         * @param nlh netlink message.
+         * @param iface interface pointer.
+         * @param rta rtattr pointer.
          * @param flags interface change flags.
          */
         void onLinkInfoMessage (Interface::Ptr& iface, struct rtattr* rta, InterfaceChangeType& flags);
@@ -522,33 +468,22 @@ namespace join
         void onAddressMessage (struct nlmsghdr* nlh);
 
         /**
-         * @brief handle route notification.
-         * @param nlh netlink message.
-         */
-        void onRouteMessage (struct nlmsghdr* nlh);
-
-        /**
-         * @brief notifies all registered link listeners on link update.
+         * @brief notify all registered link listeners on link update.
          * @param info the updated link information.
          */
         void notifyLinkUpdate (const LinkInfo& info);
 
         /**
-         * @brief notifies all registered address listeners on address update.
+         * @brief notify all registered address listeners on address update.
          * @param info the updated address information.
          */
         void notifyAddressUpdate (const AddressInfo& info);
 
         /**
-         * @brief notifies all registered route listeners on route update.
-         * @param info the updated route information.
-         */
-        void notifyRouteUpdate (const RouteInfo& info);
-
-        /**
          * @brief acquire interface.
          * @param index interface index.
-         * @param info interface informations.
+         * @param info interface information.
+         * @return shared pointer to the Interface.
          */
         Interface::Ptr acquire (uint32_t index, LinkInfo& info);
 
@@ -558,10 +493,10 @@ namespace join
         /// max vlan id.
         static constexpr uint16_t maxVlanId = 4094;
 
-        /// interfaces.
+        /// interface cache.
         std::unordered_map<uint32_t, Interface::Ptr> _interfaces;
 
-        /// protection mutex.
+        /// protection mutex for the cache.
         Mutex _ifMutex;
 
         /// link listener callbacks.
@@ -569,9 +504,6 @@ namespace join
 
         /// address listener callbacks.
         std::unordered_map<uint64_t, AddressNotify> _addressListeners;
-
-        /// route listener callbacks.
-        std::unordered_map<uint64_t, RouteNotify> _routeListeners;
 
         /// listener id counter.
         std::atomic<uint64_t> _listenerCounter{0};
