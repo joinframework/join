@@ -123,7 +123,7 @@ void NetlinkManager::onReceive (int fd)
     if (fd == _wakeup)
     {
         uint64_t v;
-        ::read (_wakeup, &v, sizeof (v));
+        [[maybe_unused]] ssize_t bytes = ::read (_wakeup, &v, sizeof (v));
 
         Job* job;
         while (_jobs.tryPop (job) == 0)

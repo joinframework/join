@@ -167,7 +167,7 @@ TEST_F (ArpTest, cache)
     ASSERT_EQ (Arp::add ("br0", "4e:ed:ed:ee:59:db", "192.168.16.200"), 0) << lastError.message ();
     ASSERT_EQ (Arp::cache ("br0", "192.168.16.200"), "4e:ed:ed:ee:59:db") << lastError.message ();
 
-    std::system ("ip neigh add 192.168.16.210 dev br0 nud failed");
+    [[maybe_unused]] int result = std::system ("ip neigh add 192.168.16.210 dev br0 nud failed");
     ASSERT_TRUE (Arp::cache ("br0", "192.168.16.210").isWildcard ());
     ASSERT_EQ (lastError, std::errc::no_such_device_or_address);
 }

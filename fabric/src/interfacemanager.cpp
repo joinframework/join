@@ -39,8 +39,7 @@ using join::InterfaceManager;
 //   METHOD    : InterfaceManager
 // =========================================================================
 InterfaceManager::InterfaceManager (Reactor* reactor)
-: NetlinkManager (RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE,
-                  reactor)
+: NetlinkManager (RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR, reactor)
 {
     start ();
     refresh ();
@@ -121,7 +120,7 @@ int InterfaceManager::refresh ()
         _interfaces.clear ();
     }
 
-    return -(dumpLink (true) != 0 || dumpAddress (true) != 0 || dumpRoute (true) != 0);
+    return -(dumpLink (true) != 0 || dumpAddress (true) != 0);
 }
 
 // =========================================================================
@@ -178,32 +177,6 @@ void InterfaceManager::removeAddressListener (uint64_t id)
 
 // =========================================================================
 //   CLASS     : InterfaceManager
-//   METHOD    : addRouteListener
-// =========================================================================
-uint64_t InterfaceManager::addRouteListener (const RouteNotify& cb)
-{
-    uint64_t id = ++_listenerCounter;
-
-    pushJob ([this, id, cb] () {
-        _routeListeners.emplace (id, cb);
-    });
-
-    return id;
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : removeRouteListener
-// =========================================================================
-void InterfaceManager::removeRouteListener (uint64_t id)
-{
-    pushJob ([this, id] () {
-        _routeListeners.erase (id);
-    });
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
 //   METHOD    : createDummyInterface
 // =========================================================================
 int InterfaceManager::createDummyInterface (const std::string& interfaceName, bool sync)
@@ -221,13 +194,13 @@ int InterfaceManager::createDummyInterface (const std::string& interfaceName, bo
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
     ifi->ifi_family       = AF_UNSPEC;
 
-    // set interface name
+    // set interface name.
     addAttributes (nlh, IFLA_IFNAME, interfaceName.c_str (), interfaceName.length () + 1);
 
-    // start nested link info attributes
+    // start nested link info attributes.
     struct rtattr* linkinfo = startNestedAttributes (nlh, IFLA_LINKINFO);
 
-    // add interface kind
+    // add interface kind.
     std::string kind = "dummy";
     addAttributes (nlh, IFLA_INFO_KIND, kind.c_str (), kind.size () + 1);
 
@@ -754,100 +727,6 @@ int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& i
 
 // =========================================================================
 //   CLASS     : InterfaceManager
-//   METHOD    : addRoute
-// =========================================================================
-int InterfaceManager::addRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix,
-                                const IpAddress& gateway, uint32_t* metric, bool sync)
-{
-    char buffer[_bufferSize] = {};
-
-    // netlink header.
-    struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct rtmsg));
-    nlh->nlmsg_type      = RTM_NEWROUTE;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_REPLACE;
-    nlh->nlmsg_seq       = ++_seq;
-
-    // routing message.
-    struct rtmsg* rtm = reinterpret_cast<struct rtmsg*> (NLMSG_DATA (nlh));
-    rtm->rtm_family   = dest.family ();
-    rtm->rtm_dst_len  = prefix;
-    rtm->rtm_table    = RT_TABLE_MAIN;
-    rtm->rtm_protocol = RTPROT_STATIC;
-    rtm->rtm_scope    = RT_SCOPE_UNIVERSE;
-    rtm->rtm_type     = RTN_UNICAST;
-
-    // add destination.
-    addAttributes (nlh, RTA_DST, dest.addr (), dest.length ());
-
-    // add gateway if specified.
-    if (!gateway.isWildcard ())
-    {
-        addAttributes (nlh, RTA_GATEWAY, gateway.addr (), gateway.length ());
-    }
-
-    // add output interface.
-    addAttributes (nlh, RTA_OIF, &interfaceIndex, sizeof (uint32_t));
-
-    // add metric if specified.
-    if (metric)
-    {
-        addAttributes (nlh, RTA_PRIORITY, metric, sizeof (uint32_t));
-    }
-
-    // send request.
-    return sendRequest (nlh, sync);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : removeRoute
-// =========================================================================
-int InterfaceManager::removeRoute (uint32_t interfaceIndex, const IpAddress& dest, uint32_t prefix,
-                                   const IpAddress& gateway, uint32_t* metric, bool sync)
-{
-    char buffer[_bufferSize] = {};
-
-    // netlink header.
-    struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct rtmsg));
-    nlh->nlmsg_type      = RTM_DELROUTE;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK;
-    nlh->nlmsg_seq       = ++_seq;
-
-    // routing message.
-    struct rtmsg* rtm = reinterpret_cast<struct rtmsg*> (NLMSG_DATA (nlh));
-    rtm->rtm_family   = dest.family ();
-    rtm->rtm_dst_len  = prefix;
-    rtm->rtm_table    = RT_TABLE_MAIN;
-    rtm->rtm_protocol = RTPROT_STATIC;
-    rtm->rtm_scope    = RT_SCOPE_UNIVERSE;
-    rtm->rtm_type     = RTN_UNICAST;
-
-    // add destination.
-    addAttributes (nlh, RTA_DST, dest.addr (), dest.length ());
-
-    // add gateway if specified.
-    if (!gateway.isWildcard ())
-    {
-        addAttributes (nlh, RTA_GATEWAY, gateway.addr (), gateway.length ());
-    }
-
-    // add output interface.
-    addAttributes (nlh, RTA_OIF, &interfaceIndex, sizeof (uint32_t));
-
-    // add metric if specified.
-    if (metric)
-    {
-        addAttributes (nlh, RTA_PRIORITY, metric, sizeof (uint32_t));
-    }
-
-    // send request.
-    return sendRequest (nlh, sync);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
 //   METHOD    : dumpLink
 // =========================================================================
 int InterfaceManager::dumpLink (bool sync)
@@ -894,29 +773,6 @@ int InterfaceManager::dumpAddress (bool sync)
 
 // =========================================================================
 //   CLASS     : InterfaceManager
-//   METHOD    : dumpRoute
-// =========================================================================
-int InterfaceManager::dumpRoute (bool sync)
-{
-    char buffer[_bufferSize] = {};
-
-    // netlink header.
-    struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct rtgenmsg));
-    nlh->nlmsg_type      = RTM_GETROUTE;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_DUMP;
-    nlh->nlmsg_seq       = ++_seq;
-
-    // general message.
-    struct rtgenmsg* rtgen = reinterpret_cast<struct rtgenmsg*> (NLMSG_DATA (nlh));
-    rtgen->rtgen_family    = AF_UNSPEC;
-
-    // send request.
-    return sendRequest (nlh, sync);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
 //   METHOD    : onMessage
 // =========================================================================
 void InterfaceManager::onMessage (struct nlmsghdr* nlh)
@@ -931,11 +787,6 @@ void InterfaceManager::onMessage (struct nlmsghdr* nlh)
         case RTM_NEWADDR:
         case RTM_DELADDR:
             onAddressMessage (nlh);
-            break;
-
-        case RTM_NEWROUTE:
-        case RTM_DELROUTE:
-            onRouteMessage (nlh);
             break;
 
         default:
@@ -1072,26 +923,26 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
     socklen_t addrlen = (ifa->ifa_family == AF_INET6) ? IpAddress::ipv6Length : IpAddress::ipv4Length;
 
     AddressInfo info{};
-    std::get<1> (info.address) = ifa->ifa_prefixlen;
-    std::get<2> (info.address) = IpAddress (ifa->ifa_family);
+    info.address.prefix    = ifa->ifa_prefixlen;
+    info.address.broadcast = IpAddress (ifa->ifa_family);
 
     while (RTA_OK (rta, len))
     {
         switch (rta->rta_type)
         {
             case IFA_LOCAL:
-                std::get<0> (info.address) = IpAddress (RTA_DATA (rta), addrlen, ifa->ifa_index);
+                info.address.ip = IpAddress (RTA_DATA (rta), addrlen, ifa->ifa_index);
                 break;
 
             case IFA_ADDRESS:
-                if (std::get<0> (info.address).isWildcard ())
+                if (info.address.ip.isWildcard ())
                 {
-                    std::get<0> (info.address) = IpAddress (RTA_DATA (rta), addrlen, ifa->ifa_index);
+                    info.address.ip = IpAddress (RTA_DATA (rta), addrlen, ifa->ifa_index);
                 }
                 break;
 
             case IFA_BROADCAST:
-                std::get<2> (info.address) = IpAddress (RTA_DATA (rta), addrlen);
+                info.address.broadcast = IpAddress (RTA_DATA (rta), addrlen);
                 break;
 
             default:
@@ -1114,13 +965,13 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
         {
             auto it = std::find_if (info.interface->_addresses.begin (), info.interface->_addresses.end (),
                                     [&] (const Interface::Address& a) {
-                                        return std::get<0> (a) == std::get<0> (info.address);
+                                        return a.ip == info.address.ip;
                                     });
 
             if (it != info.interface->_addresses.end ())
             {
-                std::get<1> (*it) = std::get<1> (info.address);
-                std::get<2> (*it) = std::get<2> (info.address);
+                it->prefix    = info.address.prefix;
+                it->broadcast = info.address.broadcast;
                 info.flags |= InterfaceChangeType::Modified;
             }
             else
@@ -1133,7 +984,7 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
         {
             auto it = std::remove_if (info.interface->_addresses.begin (), info.interface->_addresses.end (),
                                       [&] (const Interface::Address& a) {
-                                          return std::get<0> (a) == std::get<0> (info.address);
+                                          return a.ip == info.address.ip;
                                       });
 
             info.interface->_addresses.erase (it, info.interface->_addresses.end ());
@@ -1142,93 +993,6 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
     }
 
     notifyAddressUpdate (info);
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : onRouteMessage
-// =========================================================================
-void InterfaceManager::onRouteMessage (struct nlmsghdr* nlh)
-{
-    struct rtmsg* rtm  = reinterpret_cast<struct rtmsg*> (NLMSG_DATA (nlh));
-    struct rtattr* rta = RTM_RTA (rtm);
-    int len            = RTM_PAYLOAD (nlh);
-
-    socklen_t addrlen = (rtm->rtm_family == AF_INET6) ? IpAddress::ipv6Length : IpAddress::ipv4Length;
-
-    RouteInfo info{};
-    std::get<1> (info.route) = rtm->rtm_dst_len;
-    uint32_t index           = 0;
-
-    while (RTA_OK (rta, len))
-    {
-        switch (rta->rta_type)
-        {
-            case RTA_DST:
-                std::get<0> (info.route) = IpAddress (RTA_DATA (rta), addrlen);
-                break;
-
-            case RTA_GATEWAY:
-                std::get<2> (info.route) = IpAddress (RTA_DATA (rta), addrlen);
-                break;
-
-            case RTA_PRIORITY:
-                std::get<3> (info.route) = *reinterpret_cast<uint32_t*> (RTA_DATA (rta));
-                break;
-
-            case RTA_OIF:
-                index = *reinterpret_cast<uint32_t*> (RTA_DATA (rta));
-                break;
-
-            default:
-                break;
-        }
-
-        rta = RTA_NEXT (rta, len);
-    }
-
-    info.interface = findByIndex (index);
-    if (!info.interface)
-    {
-        return;
-    }
-
-    {
-        ScopedLock<Mutex> lock (info.interface->_mutex);
-
-        if (nlh->nlmsg_type == RTM_NEWROUTE)
-        {
-            auto it = std::find_if (
-                info.interface->_routes.begin (), info.interface->_routes.end (), [&] (const Interface::Route& r) {
-                    return std::get<0> (r) == std::get<0> (info.route) && std::get<1> (r) == std::get<1> (info.route) &&
-                           std::get<2> (r) == std::get<2> (info.route);
-                });
-
-            if (it != info.interface->_routes.end ())
-            {
-                std::get<3> (*it) = std::get<3> (info.route);
-                info.flags |= InterfaceChangeType::Modified;
-            }
-            else
-            {
-                info.interface->_routes.push_back (info.route);
-                info.flags |= InterfaceChangeType::Added;
-            }
-        }
-        else
-        {
-            auto it = std::remove_if (
-                info.interface->_routes.begin (), info.interface->_routes.end (), [&] (const Interface::Route& r) {
-                    return std::get<0> (r) == std::get<0> (info.route) && std::get<1> (r) == std::get<1> (info.route) &&
-                           std::get<2> (r) == std::get<2> (info.route);
-                });
-
-            info.interface->_routes.erase (it, info.interface->_routes.end ());
-            info.flags |= InterfaceChangeType::Deleted;
-        }
-    }
-
-    notifyRouteUpdate (info);
 }
 
 // =========================================================================
@@ -1253,21 +1017,6 @@ void InterfaceManager::notifyLinkUpdate (const LinkInfo& info)
 void InterfaceManager::notifyAddressUpdate (const AddressInfo& info)
 {
     for (auto& listener : _addressListeners)
-    {
-        if (listener.second)
-        {
-            listener.second (info);
-        }
-    }
-}
-
-// =========================================================================
-//   CLASS     : InterfaceManager
-//   METHOD    : notifyRouteUpdate
-// =========================================================================
-void InterfaceManager::notifyRouteUpdate (const RouteInfo& info)
-{
-    for (auto& listener : _routeListeners)
     {
         if (listener.second)
         {

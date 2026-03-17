@@ -163,8 +163,8 @@ namespace join
 
             _jobs.push (&job);
 
-            uint64_t v = 1;
-            ::write (_wakeup, &v, sizeof (v));
+            uint64_t v                     = 1;
+            [[maybe_unused]] ssize_t bytes = ::write (_wakeup, &v, sizeof (v));
 
             Backoff backoff;
             while (!job.done.load (std::memory_order_acquire))
