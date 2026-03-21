@@ -23,12 +23,15 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::LocalMem;
 using join::Thread;
 
@@ -144,13 +147,17 @@ TEST (LocalSpsc, pushBenchmark)
     }
 
     ready.store (true, std::memory_order_release);
+    Rdtsc::Stats stats ("SPSC push");
 
     for (uint64_t i = 0; i < num; ++i)
     {
+        ScopedStats<Rdtsc::Stats> guard (stats);
         EXPECT_EQ (queue.push (data), 0) << join::lastError.message ();
     }
 
     consumer.join ();
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
 TEST (LocalSpsc, popBenchmark)
@@ -181,13 +188,17 @@ TEST (LocalSpsc, popBenchmark)
     }
 
     uint64_t data = 0;
+    Rdtsc::Stats stats ("SPSC pop");
 
     for (uint64_t i = 0; i < num; ++i)
     {
+        ScopedStats<Rdtsc::Stats> guard (stats);
         EXPECT_EQ (queue.pop (data), 0) << join::lastError.message ();
     }
 
     producer.join ();
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
 TEST (LocalSpsc, pending)
