@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/semaphore.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
@@ -30,6 +31,8 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::Semaphore;
 using join::ShmMem;
 using join::Thread;
@@ -196,12 +199,14 @@ TEST_F (ShmMpmc, pushBenchmark)
             }
         }
         sem.post ();
+        Rdtsc::Stats stats ("MPMC push");
         for (int p = 0; p < numProducers; ++p)
         {
             producers.emplace_back ([&] () {
                 ShmMem::Mpmc::Queue<uint64_t> prod (capacity, _name);
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
                 {
+                    ScopedStats<Rdtsc::Stats> guard (stats);
                     EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
                 }
             });
@@ -210,6 +215,8 @@ TEST_F (ShmMpmc, pushBenchmark)
         {
             producer.join ();
         }
+        std::cout << join::statsHeader << "\n";
+        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
     }
 
     int status;
@@ -268,12 +275,14 @@ TEST_F (ShmMpmc, popBenchmark)
         const uint64_t msgPerConsumer = num / numConsumers;
         Semaphore sem (_name);
         sem.wait ();
+        Rdtsc::Stats stats ("MPMC pop");
         for (int p = 0; p < numConsumers; ++p)
         {
             consumers.emplace_back ([&] () {
                 ShmMem::Mpmc::Queue<uint64_t> cons (capacity, _name);
                 for (uint64_t i = 0; i < msgPerConsumer; ++i)
                 {
+                    ScopedStats<Rdtsc::Stats> guard (stats);
                     EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
                 }
             });
@@ -291,6 +300,8 @@ TEST_F (ShmMpmc, popBenchmark)
                 std::this_thread::yield ();
             }
         }
+        std::cout << join::statsHeader << "\n";
+        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
     }
 
     int status;

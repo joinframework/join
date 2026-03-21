@@ -420,7 +420,7 @@ namespace join
         }
         else if (lscale == 1'000)
         {
-            lunit = "µs";
+            lunit = "us";
         }
 
         const long tscale = [&] {

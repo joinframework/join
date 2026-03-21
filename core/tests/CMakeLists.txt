@@ -42,6 +42,21 @@ target_link_libraries(monotonictimer.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME monotonictimer.gtest COMMAND monotonictimer.gtest)
 install(TARGETS monotonictimer.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(monotonicstats.gtest monotonicstats_test.cpp)
+target_link_libraries(monotonicstats.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME monotonicstats.gtest COMMAND monotonicstats.gtest)
+install(TARGETS monotonicstats.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(monotonicrawstats.gtest monotonicrawstats_test.cpp)
+target_link_libraries(monotonicrawstats.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME monotonicrawstats.gtest COMMAND monotonicrawstats.gtest)
+install(TARGETS monotonicrawstats.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(rdtscstats.gtest rdtscstats_test.cpp)
+target_link_libraries(rdtscstats.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME rdtscstats.gtest COMMAND rdtscstats.gtest)
+install(TARGETS rdtscstats.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(localmem.gtest localmem_test.cpp)
 target_link_libraries(localmem.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME localmem.gtest COMMAND localmem.gtest)

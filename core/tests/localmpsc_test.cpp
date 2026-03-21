@@ -23,12 +23,15 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::LocalMem;
 using join::Thread;
 
@@ -143,11 +146,13 @@ TEST (LocalMpsc, pushBenchmark)
         }
     }
     ready.store (true, std::memory_order_release);
+    Rdtsc::Stats stats ("MPSC push");
     for (int p = 0; p < numProducers; ++p)
     {
         producers.emplace_back ([&] () {
             for (uint64_t i = 0; i < msgPerProducer; ++i)
             {
+                ScopedStats<Rdtsc::Stats> guard (stats);
                 EXPECT_EQ (queue.push (data), 0) << join::lastError.message ();
             }
         });
@@ -157,6 +162,8 @@ TEST (LocalMpsc, pushBenchmark)
         p.join ();
     }
     consumer.join ();
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
 TEST (LocalMpsc, popBenchmark)
@@ -191,14 +198,18 @@ TEST (LocalMpsc, popBenchmark)
 
     uint64_t data = 0;
     ready.store (true, std::memory_order_release);
+    Rdtsc::Stats stats ("MPSC pop");
     for (uint64_t i = 0; i < num; ++i)
     {
+        ScopedStats<Rdtsc::Stats> guard (stats);
         EXPECT_EQ (queue.pop (data), 0) << join::lastError.message ();
     }
     for (auto& p : producers)
     {
         p.join ();
     }
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
 TEST (LocalMpsc, pending)
