@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/semaphore.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
@@ -30,6 +31,8 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::Semaphore;
 using join::Backoff;
 using join::ShmMem;
@@ -183,10 +186,14 @@ TEST_F (ShmSpsc, pushBenchmark)
             }
         }
         sem.post ();
+        Rdtsc::Stats stats ("SPSC push");
         for (uint64_t i = 0; i < num; ++i)
         {
+            ScopedStats<Rdtsc::Stats> guard (stats);
             EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
         }
+        std::cout << join::statsHeader << "\n";
+        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
     }
 
     int status;
@@ -222,10 +229,14 @@ TEST_F (ShmSpsc, popBenchmark)
         Semaphore sem (_name);
         sem.wait ();
         ShmMem::Spsc::Queue<uint64_t> cons (capacity, _name);
+        Rdtsc::Stats stats ("SPSC pop");
         for (uint64_t i = 0; i < num; ++i)
         {
+            ScopedStats<Rdtsc::Stats> guard (stats);
             EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
         }
+        std::cout << join::statsHeader << "\n";
+        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
     }
 
     int status;

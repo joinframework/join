@@ -27,6 +27,9 @@ set(PUBLIC_HEADERS
     include/join/acceptor.hpp
     include/join/openssl.hpp
     include/join/cpu.hpp
+    include/join/clock.hpp
+    include/join/timer.hpp
+    include/join/statistics.hpp
 )
 
 set(SOURCES

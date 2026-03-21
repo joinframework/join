@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/reactor.hpp>
+#include <join/clock.hpp>
 
 // C++.
 #include <functional>
@@ -39,9 +40,6 @@
 
 namespace join
 {
-    class RealTime;
-    class Monotonic;
-
     /**
      * @brief base timer class.
      */
@@ -297,52 +295,6 @@ namespace join
 
         /// event loop reactor.
         Reactor* _reactor;
-    };
-
-    /**
-     * @brief real time clock policy class.
-     */
-    class RealTime
-    {
-    public:
-        using Timer = BasicTimer<RealTime>;
-
-        /**
-         * @brief construct the timer policy instance by default.
-         */
-        constexpr RealTime () noexcept = default;
-
-        /**
-         * @brief get timer type.
-         * @return the timer type.
-         */
-        constexpr int type () const noexcept
-        {
-            return CLOCK_REALTIME;
-        }
-    };
-
-    /**
-     * @brief monotonic clock policy class.
-     */
-    class Monotonic
-    {
-    public:
-        using Timer = BasicTimer<Monotonic>;
-
-        /**
-         * @brief construct the timer policy instance by default.
-         */
-        constexpr Monotonic () noexcept = default;
-
-        /**
-         * @brief get timer type.
-         * @return the timer type.
-         */
-        constexpr int type () const noexcept
-        {
-            return CLOCK_MONOTONIC;
-        }
     };
 }
 

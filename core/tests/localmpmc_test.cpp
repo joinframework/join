@@ -23,12 +23,15 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::LocalMem;
 using join::Thread;
 
@@ -142,6 +145,7 @@ TEST (LocalMpmc, pushBenchmark)
         }
     }
     ready.store (true, std::memory_order_release);
+    Rdtsc::Stats stats ("MPMC push");
     for (int i = 0; i < numProducers; ++i)
     {
         producers.emplace_back ([&] () {
@@ -152,6 +156,7 @@ TEST (LocalMpmc, pushBenchmark)
             }
             for (uint64_t j = 0; j < msgPerProducer; ++j)
             {
+                ScopedStats<Rdtsc::Stats> guard (stats);
                 EXPECT_EQ (queue.push (localData), 0) << join::lastError.message ();
             }
         });
@@ -161,7 +166,6 @@ TEST (LocalMpmc, pushBenchmark)
         p.join ();
     for (auto& c : consumers)
         c.join ();
-
 
     uint64_t drainData = 0;
 
@@ -173,6 +177,9 @@ TEST (LocalMpmc, pushBenchmark)
             std::this_thread::yield ();
         }
     }
+
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
 TEST (LocalMpmc, popBenchmark)
@@ -217,12 +224,14 @@ TEST (LocalMpmc, popBenchmark)
     }
     ready.store (true, std::memory_order_release);
     std::vector<Thread> consumers;
+    Rdtsc::Stats stats ("MPMC pop");
     for (int p = 0; p < numConsumers; ++p)
     {
         consumers.emplace_back ([&] () {
             uint64_t threadData = 0;
             for (uint64_t i = 0; i < msgPerConsumer; ++i)
             {
+                ScopedStats<Rdtsc::Stats> guard (stats);
                 EXPECT_EQ (queue.pop (threadData), 0) << join::lastError.message ();
             }
         });
@@ -243,6 +252,9 @@ TEST (LocalMpmc, popBenchmark)
             std::this_thread::yield ();
         }
     }
+
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
 TEST (LocalMpmc, pending)

@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/semaphore.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
@@ -30,6 +31,8 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::Semaphore;
 using join::ShmMem;
 using join::Thread;
@@ -183,12 +186,14 @@ TEST_F (ShmMpsc, pushBenchmark)
             }
         }
         sem.post ();
+        Rdtsc::Stats stats ("MPSC push");
         for (int p = 0; p < numProducers; ++p)
         {
             producers.emplace_back ([&] () {
                 ShmMem::Mpsc::Queue<uint64_t> prod (capacity, _name);
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
                 {
+                    ScopedStats<Rdtsc::Stats> guard (stats);
                     EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
                 }
             });
@@ -197,6 +202,8 @@ TEST_F (ShmMpsc, pushBenchmark)
         {
             producer.join ();
         }
+        std::cout << join::statsHeader << "\n";
+        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
     }
 
     int status;
@@ -245,10 +252,14 @@ TEST_F (ShmMpsc, popBenchmark)
         Semaphore sem (_name);
         sem.wait ();
         ShmMem::Mpsc::Queue<uint64_t> cons (capacity, _name);
+        Rdtsc::Stats stats ("MPSC pop");
         for (uint64_t i = 0; i < num; ++i)
         {
+            ScopedStats<Rdtsc::Stats> guard (stats);
             EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
         }
+        std::cout << join::statsHeader << "\n";
+        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
     }
 
     int status;
