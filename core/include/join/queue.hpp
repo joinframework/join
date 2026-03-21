@@ -62,10 +62,23 @@ namespace join
     };
 
     /**
-     * @brief queue slot.
+     * @brief lightweight queue slot used by SPSC.
      */
     template <typename Type>
-    struct QueueSlot
+    struct QueueSlotLight
+    {
+        /// stored element data.
+        Type data;
+
+        /// padding to prevent false sharing.
+        char _padding[(64 - (sizeof (Type) % 64)) % 64];
+    };
+
+    /**
+     * @brief full queue slot used by MPSC/MPMC.
+     */
+    template <typename Type>
+    struct QueueSlotFull
     {
         /// sequence number for synchronization.
         alignas (64) std::atomic_uint64_t _seq;
@@ -80,14 +93,35 @@ namespace join
     /**
      * @brief queue memory segment.
      */
-    template <typename Type>
+    template <typename Type, typename Slot>
     struct QueueSegment
     {
         /// synchronization primitives.
         alignas (64) QueueSync _sync;
 
         /// flexible array of queue slots.
-        QueueSlot<Type> _elements[];
+        Slot _elements[];
+    };
+
+    // forward declarations.
+    template <typename Type, typename Backend>
+    struct Spsc;
+
+    /**
+     * @brief primary trait: all sync policies need sequence numbers by default.
+     * @tparam SyncPolicy instantiated sync policy type.
+     */
+    template <typename SyncPolicy>
+    struct needs_seq : std::true_type
+    {
+    };
+
+    /**
+     * @brief specialization for SPSC: no sequence number needed.
+     */
+    template <typename Type, typename Backend>
+    struct needs_seq<Spsc<Type, Backend>> : std::false_type
+    {
     };
 
     /**
@@ -101,6 +135,9 @@ namespace join
 
     public:
         using ValueType = Type;
+        using Slot =
+            typename std::conditional<needs_seq<SyncPolicy>::value, QueueSlotFull<Type>, QueueSlotLight<Type>>::type;
+        using Segment = QueueSegment<Type, Slot>;
 
         /**
          * @brief create instance.
@@ -110,10 +147,10 @@ namespace join
         template <typename... Args>
         BasicQueue (uint64_t capacity, Args&&... args)
         : _capacity (roundPow2 (capacity))
-        , _elementSize (sizeof (QueueSlot<Type>))
+        , _elementSize (sizeof (Slot))
         , _totalSize (sizeof (QueueSync) + (_capacity * _elementSize))
         , _backend (_totalSize, std::forward<Args> (args)...)
-        , _segment (static_cast<QueueSegment<Type>*> (_backend.get ()))
+        , _segment (static_cast<Segment*> (_backend.get ()))
         {
             uint64_t expected = 0;
 
@@ -125,10 +162,7 @@ namespace join
                 _segment->_sync._capacity = _capacity;
                 _segment->_sync._mask     = _capacity - 1;
 
-                for (uint64_t i = 0; i < _capacity; ++i)
-                {
-                    _segment->_elements[i]._seq.store (i, std::memory_order_relaxed);
-                }
+                initSlots<needs_seq<SyncPolicy>::value> ();
 
                 _segment->_sync._magic.store (QueueSync::MAGIC, std::memory_order_release);
             }
@@ -337,6 +371,28 @@ namespace join
             return v + 1;
         }
 
+    private:
+        /**
+         * @brief initialize slots for policies that do not require sequence numbers (SPSC).
+         */
+        template <bool NeedsSeq, typename std::enable_if<!NeedsSeq>::type* = nullptr>
+        void initSlots () noexcept
+        {
+            // nothing to initialize.
+        }
+
+        /**
+         * @brief initialize sequence numbers for policies that require sequence numbers (MPSC/MPMC).
+         */
+        template <bool NeedsSeq, typename std::enable_if<NeedsSeq>::type* = nullptr>
+        void initSlots () noexcept
+        {
+            for (uint64_t i = 0; i < _capacity; ++i)
+            {
+                _segment->_elements[i]._seq.store (i, std::memory_order_relaxed);
+            }
+        }
+
         /// memory segment capacity.
         uint64_t _capacity = 0;
 
@@ -353,7 +409,7 @@ namespace join
         SyncPolicy _policy;
 
         /// shared memory segment.
-        QueueSegment<Type>* _segment = nullptr;
+        Segment* _segment = nullptr;
     };
 
     /**
@@ -370,7 +426,7 @@ namespace join
          * @param element element to push.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (QueueSegment<Type>* segment, const Type& element) noexcept
+        static int tryPush (QueueSegment<Type, QueueSlotLight<Type>>* segment, const Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -400,7 +456,7 @@ namespace join
          * @param element output element.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (QueueSegment<Type>* segment, Type& element) noexcept
+        static int tryPop (QueueSegment<Type, QueueSlotLight<Type>>* segment, Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -439,7 +495,7 @@ namespace join
          * @param element element to push.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (QueueSegment<Type>* segment, const Type& element) noexcept
+        static int tryPush (QueueSegment<Type, QueueSlotFull<Type>>* segment, const Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -485,7 +541,7 @@ namespace join
          * @param element output element.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (QueueSegment<Type>* segment, Type& element) noexcept
+        static int tryPop (QueueSegment<Type, QueueSlotFull<Type>>* segment, Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -526,7 +582,7 @@ namespace join
          * @param element element to push.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (QueueSegment<Type>* segment, const Type& element) noexcept
+        static int tryPush (QueueSegment<Type, QueueSlotFull<Type>>* segment, const Type& element) noexcept
         {
             return Mpsc<Type, Backend>::tryPush (segment, element);
         }
@@ -537,7 +593,7 @@ namespace join
          * @param element output element.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (QueueSegment<Type>* segment, Type& element) noexcept
+        static int tryPop (QueueSegment<Type, QueueSlotFull<Type>>* segment, Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
