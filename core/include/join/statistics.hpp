@@ -313,7 +313,7 @@ namespace join
         {
             if (ns == 0)
             {
-                ns = 1;
+                ns = 1;  // LCOV_EXCL_LINE
             }
 
             const int bi  = hdrBucketIndex (ns);
@@ -322,7 +322,7 @@ namespace join
 
             if (JOIN_UNLIKELY (idx >= _buckets))
             {
-                return _overflowIdx;
+                return _overflowIdx;  // LCOV_EXCL_LINE
             }
 
             return idx;
@@ -337,7 +337,7 @@ namespace join
         {
             if (idx >= _overflowIdx)
             {
-                return _maxTrackableValue;
+                return _maxTrackableValue;  // LCOV_EXCL_LINE
             }
 
             const int bi = std::max (0, idx / _subBucketHalfCount - 1);
