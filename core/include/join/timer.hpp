@@ -51,8 +51,8 @@ namespace join
          * @brief create instance.
          * @param reactor event loop reactor.
          */
-        BasicTimer (Reactor* reactor = nullptr)
-        : _handle (timerfd_create (_policy.type (), TFD_NONBLOCK | TFD_CLOEXEC))
+        explicit BasicTimer (Reactor* reactor = nullptr)
+        : _handle (timerfd_create (ClockPolicy::type (), TFD_NONBLOCK | TFD_CLOEXEC))
         , _reactor (reactor)
         {
             if (_handle == -1)
@@ -97,7 +97,7 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicTimer () noexcept
+        ~BasicTimer () noexcept
         {
             _reactor->delHandler (_handle);
             if (_handle != -1)
@@ -194,7 +194,7 @@ namespace join
          * @brief get the remaining time until expiration.
          * @return remaining duration.
          */
-        std::chrono::nanoseconds remaining () const
+        std::chrono::nanoseconds remaining () const noexcept
         {
             struct itimerspec ts = {};
             timerfd_gettime (handle (), &ts);
@@ -223,12 +223,12 @@ namespace join
          * @brief get the timer type.
          * @return the timer type.
          */
-        int type () const noexcept
+        static constexpr int type () noexcept
         {
-            return _policy.type ();
+            return ClockPolicy::type ();
         }
 
-    protected:
+    private:
         /**
          * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.
@@ -252,11 +252,11 @@ namespace join
          * @param periodic specify if periodic.
          * @return itimerspec.
          */
-        static itimerspec toTimerSpec (std::chrono::nanoseconds ns, bool periodic = false) noexcept
+        static constexpr itimerspec toTimerSpec (std::chrono::nanoseconds ns, bool periodic = false) noexcept
         {
-            struct itimerspec ts = {};
-            ts.it_value.tv_sec   = ns.count () / NS_PER_SEC;
-            ts.it_value.tv_nsec  = ns.count () % NS_PER_SEC;
+            itimerspec ts{};
+            ts.it_value.tv_sec  = ns.count () / _nsPerSec;
+            ts.it_value.tv_nsec = ns.count () % _nsPerSec;
             if (periodic)
             {
                 ts.it_interval.tv_sec  = ts.it_value.tv_sec;
@@ -274,12 +274,8 @@ namespace join
             return _handle;
         }
 
-    private:
         /// ns per sec.
-        static constexpr uint64_t NS_PER_SEC = 1000000000ULL;
-
-        /// clock policy.
-        ClockPolicy _policy;
+        static constexpr uint64_t _nsPerSec = 1000000000ULL;
 
         /// callback function
         std::function<void ()> _callback;

@@ -37,6 +37,16 @@ using join::ScopedStats;
 using join::MonotonicRaw;
 
 /**
+ * @brief Test name.
+ */
+TEST (MonotonicRawStats, name)
+{
+    MonotonicRaw::Stats stats ("latency");
+
+    EXPECT_EQ (stats.name (), "latency");
+}
+
+/**
  * @brief Test start.
  */
 TEST (MonotonicRawStats, start)
@@ -81,6 +91,8 @@ TEST (MonotonicRawStats, reset)
     std::chrono::duration<double, std::nano> zero (0.0);
     EXPECT_EQ (stats.mean (), zero);
     EXPECT_EQ (stats.throughput (), 0.0);
+    EXPECT_EQ (stats.percentile (50.0), MonotonicRaw::Stats::Duration (0));
+    EXPECT_EQ (stats.percentile (99.0), MonotonicRaw::Stats::Duration (0));
 }
 
 /**
@@ -174,13 +186,61 @@ TEST (MonotonicRawStats, throughput)
 }
 
 /**
- * @brief Test name.
+ * @brief Test percentile.
  */
-TEST (MonotonicRawStats, name)
+TEST (MonotonicRawStats, percentile)
 {
-    MonotonicRaw::Stats stats ("latency");
+    MonotonicRaw::Stats stats;
+    EXPECT_EQ (stats.percentile (0.0), MonotonicRaw::Stats::Duration (0));
+    EXPECT_EQ (stats.percentile (50.0), MonotonicRaw::Stats::Duration (0));
+    EXPECT_EQ (stats.percentile (99.0), MonotonicRaw::Stats::Duration (0));
 
-    EXPECT_EQ (stats.name (), "latency");
+    auto beg = stats.start ();
+    std::this_thread::sleep_for (5ms);
+    stats.stop (beg);
+
+    EXPECT_GT (stats.percentile (50.0).count (), 0);
+    EXPECT_GT (stats.percentile (90.0).count (), 0);
+    EXPECT_GT (stats.percentile (99.0).count (), 0);
+    EXPECT_LE (stats.percentile (50.0), stats.percentile (90.0));
+    EXPECT_LE (stats.percentile (90.0), stats.percentile (99.0));
+    EXPECT_GE (stats.percentile (99.0), stats.min ());
+
+    stats.reset ();
+
+    for (int i = 1; i <= 10; ++i)
+    {
+        auto beg = stats.start ();
+        std::this_thread::sleep_for (std::chrono::milliseconds (i));
+        stats.stop (beg);
+    }
+
+    EXPECT_EQ (stats.count (), 10);
+    EXPECT_LE (stats.percentile (50.0), stats.percentile (90.0));
+    EXPECT_LE (stats.percentile (90.0), stats.percentile (99.0));
+    EXPECT_GE (stats.percentile (99.0), stats.percentile (50.0));
+    EXPECT_GE (stats.percentile (99.0), stats.min ());
+}
+
+/**
+ * @brief Test mbind.
+ */
+TEST (RdtscStats, mbind)
+{
+    MonotonicRaw::Stats stats;
+
+    ASSERT_EQ (stats.mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (join::mbind (nullptr, 4096, 0), -1);
+}
+
+/**
+ * @brief Test mlock.
+ */
+TEST (RdtscStats, mlock)
+{
+    MonotonicRaw::Stats stats;
+
+    ASSERT_EQ (stats.mlock (), 0) << join::lastError.message ();
 }
 
 /**
@@ -213,6 +273,9 @@ TEST (MonotonicRawStats, statsHeader)
     EXPECT_NE (oss.str ().find ("Min"), std::string::npos);
     EXPECT_NE (oss.str ().find ("Mean"), std::string::npos);
     EXPECT_NE (oss.str ().find ("Max"), std::string::npos);
+    EXPECT_NE (oss.str ().find ("P50"), std::string::npos);
+    EXPECT_NE (oss.str ().find ("P90"), std::string::npos);
+    EXPECT_NE (oss.str ().find ("P99"), std::string::npos);
 }
 
 /**
