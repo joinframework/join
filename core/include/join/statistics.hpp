@@ -26,9 +26,11 @@
 #define JOIN_CORE_STATISTICS_HPP
 
 // libjoin.
+#include <join/memory.hpp>
 #include <join/clock.hpp>
 
 // C++.
+#include <algorithm>
 #include <iomanip>
 #include <ostream>
 #include <sstream>
@@ -51,12 +53,18 @@ namespace join
         using TimePoint = typename ClockPolicy::TimePoint;
 
         /**
-         * @brief default constructor.
+         * @brief create instance.
          * @param name metric name.
          */
-        BasicStats (const std::string& name = {})
-        : _name (name)
+        explicit BasicStats (const std::string& name = {})
+        : _countsMem (_countsSize)
+        , _counts (static_cast<std::atomic<uint64_t>*> (_countsMem.get ()))
+        , _name (name)
         {
+            for (int i = 0; i < _countsLen; ++i)
+            {
+                new (&_counts[i]) std::atomic<uint64_t> (0);
+            }
         }
 
         /**
@@ -86,7 +94,7 @@ namespace join
         BasicStats& operator= (BasicStats&& other) = delete;
 
         /**
-         * @brief destructor.
+         * @brief destroy instance.
          */
         ~BasicStats () noexcept = default;
 
@@ -105,16 +113,21 @@ namespace join
          */
         TimePoint start () const noexcept
         {
-            return _clock.now ();
+            return ClockPolicy::now ();
         }
 
         /**
          * @brief mark the end of a measured interval and update all aggregates.
-         * @param start time point returned by the matching start() call.
+         * @param startTime time point returned by the matching start() call.
          */
-        void stop (TimePoint start) noexcept
+        void stop (TimePoint startTime) noexcept
         {
-            record (std::chrono::duration_cast<Duration> (_clock.now () - start));
+            const uint64_t ns =
+                static_cast<uint64_t> (std::chrono::duration_cast<Duration> (ClockPolicy::now () - startTime).count ());
+
+            record (ns);
+
+            _counts[countsIndex (ns)].fetch_add (1, std::memory_order_relaxed);
         }
 
         /**
@@ -127,6 +140,10 @@ namespace join
             _min.store (std::numeric_limits<uint64_t>::max (), std::memory_order_relaxed);
             _max.store (0, std::memory_order_relaxed);
             _sum.store (0, std::memory_order_relaxed);
+            for (int i = 0; i < _countsLen; ++i)
+            {
+                _counts[i].store (0, std::memory_order_relaxed);
+            }
         }
 
         /**
@@ -205,15 +222,61 @@ namespace join
             return (static_cast<double> (count) * 1e9) / static_cast<double> (sum);
         }
 
+        /**
+         * @brief compute the requested percentile from the HDR histogram.
+         * @param p percentile in [0.0, 100.0].
+         * @return latency at the p-th percentile; zero if no samples have been recorded.
+         */
+        Duration percentile (double p) const noexcept
+        {
+            const uint64_t total = _count.load (std::memory_order_acquire);
+            if (total == 0)
+            {
+                return Duration (0);
+            }
+
+            const uint64_t target = static_cast<uint64_t> (p / 100.0 * static_cast<double> (total));
+            uint64_t cumulative   = 0;
+
+            for (int i = 0; i < _countsLen; ++i)
+            {
+                cumulative += _counts[i].load (std::memory_order_relaxed);
+
+                if (cumulative > target)
+                {
+                    return Duration (static_cast<typename Duration::rep> (bucketUpperBound (i)));
+                }
+            }
+
+            return Duration (static_cast<typename Duration::rep> (_maxTrackableValue));
+        }
+
+        /**
+         * @brief bind histogram memory to a NUMA node.
+         * @param numa NUMA node ID.
+         * @return 0 on success, -1 on failure.
+         */
+        int mbind (int numa) const noexcept
+        {
+            return _countsMem.mbind (numa);
+        }
+
+        /**
+         * @brief lock histogram memory in RAM.
+         * @return 0 on success, -1 on failure.
+         */
+        int mlock () const noexcept
+        {
+            return _countsMem.mlock ();
+        }
+
     private:
         /**
          * @brief atomically update all accumulators with a new sample.
-         * @param elapsed elapsed duration to record.
+         * @param ns elapsed duration in nanoseconds to record.
          */
-        void record (Duration elapsed) noexcept
+        void record (uint64_t ns) noexcept
         {
-            const uint64_t ns = static_cast<uint64_t> (elapsed.count ());
-
             _sum.fetch_add (ns, std::memory_order_relaxed);
             _last.store (ns, std::memory_order_relaxed);
 
@@ -229,6 +292,92 @@ namespace join
 
             _count.fetch_add (1, std::memory_order_release);
         }
+
+        /**
+         * @brief compute the HDR power-of-2 bucket index for a value.
+         * @param v value in nanoseconds.
+         * @return bucket index.
+         */
+        static int hdrBucketIndex (uint64_t v) noexcept
+        {
+            const int pow2ceiling = 64 - __builtin_clzll (v | static_cast<uint64_t> (_subBucketCount - 1));
+            return std::max (0, pow2ceiling - (_subBucketHalfCountMagnitude + 1));
+        }
+
+        /**
+         * @brief compute the flat HDR counts array index for a nanosecond value.
+         * @param ns sample value in nanoseconds.
+         * @return index.
+         */
+        static int countsIndex (uint64_t ns) noexcept
+        {
+            if (ns == 0)
+            {
+                ns = 1;  // LCOV_EXCL_LINE
+            }
+
+            const int bi  = hdrBucketIndex (ns);
+            const int si  = static_cast<int> (ns >> bi);
+            const int idx = (bi + 1) * _subBucketHalfCount + si - _subBucketHalfCount;
+
+            if (JOIN_UNLIKELY (idx >= _buckets))
+            {
+                return _overflowIdx;  // LCOV_EXCL_LINE
+            }
+
+            return idx;
+        }
+
+        /**
+         * @brief compute the upper bound (in nanoseconds) of a given HDR bucket.
+         * @param idx flat counts array index.
+         * @return upper bound in nanoseconds.
+         */
+        static uint64_t bucketUpperBound (int idx) noexcept
+        {
+            if (idx >= _overflowIdx)
+            {
+                return _maxTrackableValue;  // LCOV_EXCL_LINE
+            }
+
+            const int bi = std::max (0, idx / _subBucketHalfCount - 1);
+            const int si = idx - bi * _subBucketHalfCount;
+
+            return static_cast<uint64_t> (si + 1) << bi;
+        }
+
+        /// number of sub-bucket half-count bits.
+        static constexpr int _subBucketHalfCountMagnitude = 7;
+
+        /// total number of sub-buckets per bucket.
+        static constexpr int _subBucketCount = 1 << (_subBucketHalfCountMagnitude + 1);
+
+        /// half the sub-bucket count.
+        static constexpr int _subBucketHalfCount = _subBucketCount >> 1;
+
+        /// number of power-of-2 buckets.
+        static constexpr int _bucketCount = 30;
+
+        /// total number of regular histogram counters.
+        static constexpr int _buckets = (_bucketCount + 1) * _subBucketHalfCount;
+
+        /// total counters including the overflow bucket.
+        static constexpr int _countsLen = _buckets + 1;
+
+        /// index of the overflow bucket.
+        static constexpr int _overflowIdx = _buckets;
+
+        /// maximum trackable value in nanoseconds.
+        static constexpr uint64_t _maxTrackableValue = static_cast<uint64_t> (_subBucketCount) << (_bucketCount - 1);
+
+        /// size in bytes of the histogram counters region.
+        static constexpr uint64_t _countsSize = static_cast<uint64_t> (_countsLen) * sizeof (std::atomic<uint64_t>);
+
+        /// mmaped region backing the HDR histogram counters.
+        LocalMem _countsMem;
+
+        /// pointer into _countsMem.
+        std::atomic<uint64_t>* const _counts;
 
         /// number of completed intervals.
         alignas (64) std::atomic_uint64_t _count{0};
@@ -246,9 +395,9 @@ namespace join
         alignas (64) std::atomic_uint64_t _sum{0};
 
         /// metric name.
-        std::string _name;
+        const std::string _name;
 
-        /// clock policy.
+        /// clock policy (triggers calibration for Rdtsc).
         ClockPolicy _clock;
     };
 
@@ -267,7 +416,7 @@ namespace join
         constexpr int colLatency = 16;
 
         /// total table width.
-        constexpr int colTotal = colMetric + colCount + colThroughput + colLatency * 3;
+        constexpr int colTotal = colMetric + colCount + colThroughput + colLatency * 6;
 
         /**
          * @brief returns the xalloc index used to store the latency scale on a stream.
@@ -299,7 +448,9 @@ namespace join
     {
         out << std::left << std::setw (details::colMetric) << "Metric" << std::right << std::setw (details::colCount)
             << "Count" << std::setw (details::colThroughput) << "Throughput" << std::setw (details::colLatency) << "Min"
-            << std::setw (details::colLatency) << "Mean" << std::setw (details::colLatency) << "Max" << "\n"
+            << std::setw (details::colLatency) << "Mean" << std::setw (details::colLatency) << "Max"
+            << std::setw (details::colLatency) << "P50" << std::setw (details::colLatency) << "P90"
+            << std::setw (details::colLatency) << "P99" << "\n"
             << std::string (details::colTotal, '-');
 
         return out;
@@ -423,12 +574,12 @@ namespace join
             lunit = "us";
         }
 
+        // throughput scale.
         const long tscale = [&] {
             const long s = out.iword (details::throughputScaleIndex ());
             return s == 0 ? 1L : s;
         }();
 
-        // throughput scale.
         const double dtscale = static_cast<double> (tscale);
         const char* tunit    = "ops/s";
         if (tscale == 1'000'000'000)
@@ -450,19 +601,25 @@ namespace join
         const auto mean  = statistics.mean ();
         const auto max   = statistics.max ();
         const auto thr   = statistics.throughput ();
+        const auto p50   = statistics.percentile (50.0);
+        const auto p90   = statistics.percentile (90.0);
+        const auto p99   = statistics.percentile (99.0);
 
-        std::ostringstream oss;
-        oss << std::fixed << std::setprecision (out.precision ()) << thr / dtscale << " (" << tunit << ")";
         auto printLatCol = [&] (double v) {
             std::ostringstream ss;
             ss << std::fixed << std::setprecision (out.precision ()) << v << " (" << lunit << ")";
             out << std::setw (details::colLatency) << ss.str ();
         };
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision (out.precision ()) << thr / dtscale << " (" << tunit << ")";
         out << std::left << std::setw (details::colMetric) << statistics.name () << std::right
             << std::setw (details::colCount) << count << std::setw (details::colThroughput) << oss.str ();
-        printLatCol (min.count () / dlscale);
+        printLatCol (static_cast<double> (min.count ()) / dlscale);
         printLatCol (mean.count () / dlscale);
-        printLatCol (max.count () / dlscale);
+        printLatCol (static_cast<double> (max.count ()) / dlscale);
+        printLatCol (static_cast<double> (p50.count ()) / dlscale);
+        printLatCol (static_cast<double> (p90.count ()) / dlscale);
+        printLatCol (static_cast<double> (p99.count ()) / dlscale);
 
         return out;
     }

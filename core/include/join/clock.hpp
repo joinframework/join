@@ -105,7 +105,7 @@ namespace join
          * @brief read the current time.
          * @return current time point.
          */
-        TimePoint now () const noexcept
+        static TimePoint now () noexcept
         {
             timespec ts{};
             ::clock_gettime (CLOCK_MONOTONIC, &ts);
@@ -141,7 +141,7 @@ namespace join
          * @brief read the current time.
          * @return current time point.
          */
-        TimePoint now () const noexcept
+        static TimePoint now () noexcept
         {
             timespec ts{};
             ::clock_gettime (CLOCK_MONOTONIC_RAW, &ts);
@@ -171,7 +171,7 @@ namespace join
          * @brief read the current time.
          * @return current time point.
          */
-        TimePoint now () const noexcept
+        static TimePoint now () noexcept
         {
             const uint64_t ns = static_cast<uint64_t> ((static_cast<__uint128_t> (readCycles ()) * cycleToNs ()) >> 32);
             return TimePoint (Duration (static_cast<int64_t> (ns)));
@@ -193,7 +193,7 @@ namespace join
             __asm__ volatile ("mrs %0, cntvct_el0" : "=r"(val));
             return val;
 #else
-#error "RdTsc: unsupported architecture"
+#error "Rdtsc: unsupported architecture"
 #endif
         }
 
@@ -225,11 +225,10 @@ namespace join
                 ::clock_gettime (CLOCK_MONOTONIC, &t1);
                 const uint64_t c1 = readCycles ();
 
-                const uint64_t ns =
-                    static_cast<uint64_t> ((t1.tv_sec - t0.tv_sec) * 1'000'000'000LL + (t1.tv_nsec - t0.tv_nsec));
+                const int64_t ns      = (t1.tv_sec - t0.tv_sec) * 1'000'000'000LL + (t1.tv_nsec - t0.tv_nsec);
                 const uint64_t cycles = c1 - c0;
 
-                cycleToNs () = (ns << 32) / cycles;
+                cycleToNs () = (static_cast<uint64_t> (ns) << 32) / cycles;
             });
         }
     };
