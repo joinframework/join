@@ -244,7 +244,7 @@ TEST (MonotonicStats, usec)
     std::ostringstream oss;
     oss << join::usec << stats;
 
-    EXPECT_NE (oss.str ().find ("\xc2\xb5s"), std::string::npos);
+    EXPECT_NE (oss.str ().find ("us"), std::string::npos);
 }
 
 /**
