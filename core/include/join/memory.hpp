@@ -53,10 +53,13 @@ namespace join
     /// queue forward declarations.
     template <typename Backend, template <typename, typename> class SyncPolicy>
     struct SyncBinding;
+
     template <typename, typename>
     struct Spsc;
+
     template <typename, typename>
     struct Mpsc;
+
     template <typename, typename>
     struct Mpmc;
 
@@ -129,7 +132,7 @@ namespace join
         explicit LocalMem (uint64_t size)
         {
             long sc           = sysconf (_SC_PAGESIZE);
-            uint64_t pageSize = (sc > 0) ? static_cast<uint64_t> (sc) : 4096;
+            uint64_t pageSize = (sc > 0) ? static_cast<uint64_t> (sc) : _defaultPageSize;
             _size             = (size + pageSize - 1) & ~(pageSize - 1);
 
             create ();
@@ -193,7 +196,7 @@ namespace join
          * @throws std::runtime_error if memory is not mapped.
          * @throws std::out_of_range if offset is out of bounds.
          */
-        inline const void* get (uint64_t offset = 0) const
+        const void* get (uint64_t offset = 0) const
         {
             if (JOIN_UNLIKELY (_ptr == nullptr))
             {
@@ -215,7 +218,7 @@ namespace join
          * @throws std::runtime_error if memory is not mapped.
          * @throws std::out_of_range if offset is out of bounds.
          */
-        inline void* get (uint64_t offset = 0)
+        void* get (uint64_t offset = 0)
         {
             if (JOIN_UNLIKELY (_ptr == nullptr))
             {
@@ -284,6 +287,9 @@ namespace join
             _size = 0;
         }
 
+        /// default page size.
+        static constexpr uint64_t _defaultPageSize = 4096;
+
         /// memory size.
         uint64_t _size = 0;
 
@@ -314,7 +320,7 @@ namespace join
         : _name (name)
         {
             long sc           = sysconf (_SC_PAGESIZE);
-            uint64_t pageSize = (sc > 0) ? static_cast<uint64_t> (sc) : 4096;
+            uint64_t pageSize = (sc > 0) ? static_cast<uint64_t> (sc) : _defaultPageSize;
             _size             = (size + pageSize - 1) & ~(pageSize - 1);
 
             if (_size > static_cast<uint64_t> (std::numeric_limits<off_t>::max ()))
@@ -389,7 +395,7 @@ namespace join
          * @throws std::runtime_error if memory is not mapped.
          * @throws std::out_of_range if offset is out of bounds.
          */
-        inline const void* get (uint64_t offset = 0) const
+        const void* get (uint64_t offset = 0) const
         {
             if (JOIN_UNLIKELY (_ptr == nullptr))
             {
@@ -411,7 +417,7 @@ namespace join
          * @throws std::runtime_error if memory is not mapped.
          * @throws std::out_of_range if offset is out of bounds.
          */
-        inline void* get (uint64_t offset = 0)
+        void* get (uint64_t offset = 0)
         {
             if (JOIN_UNLIKELY (_ptr == nullptr))
             {
@@ -549,6 +555,9 @@ namespace join
             _name.clear ();
             _size = 0;
         }
+
+        /// default page size.
+        static constexpr uint64_t _defaultPageSize = 4096;
 
         /// shared memory size.
         uint64_t _size = 0;
