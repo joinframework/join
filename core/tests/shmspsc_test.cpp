@@ -168,6 +168,7 @@ TEST_F (ShmSpsc, tryPopBatch)
     ShmMem::Spsc::Queue<uint64_t> cons (512, _name);
     uint64_t in[512], out[512] = {};
 
+    ASSERT_EQ (cons.tryPop (nullptr, 256), -1);
     ASSERT_EQ (cons.tryPop (out, 256), -1);
     ASSERT_TRUE (cons.empty ());
     ASSERT_EQ (cons.pending (), 0);
@@ -210,6 +211,7 @@ TEST_F (ShmSpsc, popBatch)
     ASSERT_EQ (prod.tryPush (in, 512), 512) << join::lastError.message ();
     ASSERT_FALSE (cons.empty ());
     ASSERT_EQ (cons.pending (), 512);
+    ASSERT_EQ (cons.pop (nullptr, 256), -1);
     ASSERT_EQ (cons.pop (out, 256), 0) << join::lastError.message ();
     ASSERT_FALSE (cons.empty ());
     ASSERT_EQ (cons.pending (), 256);
