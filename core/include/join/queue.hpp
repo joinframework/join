@@ -36,6 +36,9 @@
 #include <algorithm>
 #include <atomic>
 
+// C.
+#include <sys/types.h>
+
 namespace join
 {
     /**
@@ -227,9 +230,9 @@ namespace join
          * @brief try to push multiple elements into the ring buffer.
          * @param elements pointer to the first element.
          * @param size number of elements to push.
-         * @return number of elements successfully pushed.
+         * @return number of elements successfully pushed, -1 otherwise.
          */
-        uint64_t tryPush (const Type* elements, uint64_t size) noexcept
+        ssize_t tryPush (const Type* elements, size_t size) noexcept
         {
             return SyncPolicy::tryPush (_segment, elements, size);
         }
@@ -262,16 +265,15 @@ namespace join
          * @param size number of elements to push.
          * @return 0 on success, -1 otherwise.
          */
-        int push (const Type* elements, uint64_t size) noexcept
+        int push (const Type* elements, size_t size) noexcept
         {
             Backoff backoff;
             uint64_t pushed = 0;
 
             while (pushed < size)
             {
-                pushed += tryPush (elements + pushed, size - pushed);
-
-                if (pushed < size)
+                ssize_t n = tryPush (elements + pushed, size - pushed);
+                if (n == -1)
                 {
                     if (JOIN_UNLIKELY (lastError != Errc::TemporaryError))
                     {
@@ -279,6 +281,10 @@ namespace join
                     }
 
                     backoff ();
+                }
+                else
+                {
+                    pushed += static_cast<uint64_t> (n);
                 }
             }
 
@@ -299,9 +305,9 @@ namespace join
          * @brief try to pop multiple elements from the ring buffer.
          * @param elements pointer to the output buffer.
          * @param size maximum number of elements to pop.
-         * @return number of elements successfully popped.
+         * @return number of elements successfully popped, -1 otherwise.
          */
-        uint64_t tryPop (Type* elements, uint64_t size) noexcept
+        ssize_t tryPop (Type* elements, size_t size) noexcept
         {
             return SyncPolicy::tryPop (_segment, elements, size);
         }
@@ -334,16 +340,15 @@ namespace join
          * @param size number of elements to pop.
          * @return 0 on success, -1 otherwise.
          */
-        int pop (Type* elements, uint64_t size) noexcept
+        int pop (Type* elements, size_t size) noexcept
         {
             Backoff backoff;
             uint64_t popped = 0;
 
             while (popped < size)
             {
-                popped += tryPop (elements + popped, size - popped);
-
-                if (popped < size)
+                ssize_t n = tryPop (elements + popped, size - popped);
+                if (n == -1)
                 {
                     if (JOIN_UNLIKELY (lastError != Errc::TemporaryError))
                     {
@@ -351,6 +356,10 @@ namespace join
                     }
 
                     backoff ();
+                }
+                else
+                {
+                    popped += static_cast<uint64_t> (n);
                 }
             }
 
@@ -495,7 +504,8 @@ namespace join
     template <typename Type, typename Backend>
     struct Spsc
     {
-        using Queue = BasicQueue<Type, Backend, Spsc>;
+        using Queue   = BasicQueue<Type, Backend, Spsc>;
+        using Segment = QueueSegment<Type, QueueSlotLight<Type>>;
 
         /**
          * @brief try to push element into the ring buffer.
@@ -503,7 +513,7 @@ namespace join
          * @param element element to push.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (QueueSegment<Type, QueueSlotLight<Type>>* segment, const Type& element) noexcept
+        static int tryPush (Segment* segment, const Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -532,25 +542,25 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the first element.
          * @param size number of elements to push.
-         * @return number of elements successfully pushed.
+         * @return number of elements successfully pushed, -1 otherwise.
          */
-        static uint64_t tryPush (QueueSegment<Type, QueueSlotLight<Type>>* segment, const Type* elements,
-                                 uint64_t size) noexcept
+        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
-                return 0;
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
             }
 
             auto& sync       = segment->_sync;
             uint64_t head    = sync._head.load (std::memory_order_relaxed);
             uint64_t tail    = sync._tail.load (std::memory_order_acquire);
-            uint64_t toWrite = std::min (size, sync._capacity - (head - tail));
+            uint64_t toWrite = std::min (static_cast<uint64_t> (size), sync._capacity - (head - tail));
 
             if (JOIN_UNLIKELY (toWrite == 0))
             {
                 lastError = make_error_code (Errc::TemporaryError);
-                return 0;
+                return -1;
             }
 
             for (uint64_t i = 0; i < toWrite; ++i)
@@ -560,7 +570,7 @@ namespace join
 
             sync._head.store (head + toWrite, std::memory_order_release);
 
-            return toWrite;
+            return static_cast<ssize_t> (toWrite);
         }
 
         /**
@@ -569,7 +579,7 @@ namespace join
          * @param element output element.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (QueueSegment<Type, QueueSlotLight<Type>>* segment, Type& element) noexcept
+        static int tryPop (Segment* segment, Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -598,25 +608,25 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the output buffer.
          * @param size maximum number of elements to pop.
-         * @return number of elements successfully popped.
+         * @return number of elements successfully popped, -1 otherwise.
          */
-        static uint64_t tryPop (QueueSegment<Type, QueueSlotLight<Type>>* segment, Type* elements,
-                                uint64_t size) noexcept
+        static ssize_t tryPop (Segment* segment, Type* elements, size_t size) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
-                return 0;
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
             }
 
             auto& sync      = segment->_sync;
             uint64_t tail   = sync._tail.load (std::memory_order_relaxed);
             uint64_t head   = sync._head.load (std::memory_order_acquire);
-            uint64_t toRead = std::min (size, head - tail);
+            uint64_t toRead = std::min (static_cast<uint64_t> (size), head - tail);
 
             if (JOIN_UNLIKELY (toRead == 0))
             {
                 lastError = make_error_code (Errc::TemporaryError);
-                return 0;
+                return -1;
             }
 
             for (uint64_t i = 0; i < toRead; ++i)
@@ -626,7 +636,7 @@ namespace join
 
             sync._tail.store (tail + toRead, std::memory_order_release);
 
-            return toRead;
+            return static_cast<ssize_t> (toRead);
         }
     };
 
@@ -636,7 +646,8 @@ namespace join
     template <typename Type, typename Backend>
     struct Mpsc
     {
-        using Queue = BasicQueue<Type, Backend, Mpsc>;
+        using Queue   = BasicQueue<Type, Backend, Mpsc>;
+        using Segment = QueueSegment<Type, QueueSlotFull<Type>>;
 
         /**
          * @brief try to push element into the ring buffer.
@@ -644,7 +655,7 @@ namespace join
          * @param element element to push.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (QueueSegment<Type, QueueSlotFull<Type>>* segment, const Type& element) noexcept
+        static int tryPush (Segment* segment, const Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -689,14 +700,14 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the first element.
          * @param size number of elements to push.
-         * @return number of elements successfully pushed.
+         * @return number of elements successfully pushed, -1 otherwise.
          */
-        static uint64_t tryPush (QueueSegment<Type, QueueSlotFull<Type>>* segment, const Type* elements,
-                                 uint64_t size) noexcept
+        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
-                return 0;
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
             }
 
             Backoff backoff;
@@ -706,12 +717,12 @@ namespace join
             for (;;)
             {
                 uint64_t tail    = sync._tail.load (std::memory_order_acquire);
-                uint64_t toWrite = std::min (size, sync._capacity - (head - tail));
+                uint64_t toWrite = std::min (static_cast<uint64_t> (size), sync._capacity - (head - tail));
 
                 if (JOIN_UNLIKELY (toWrite == 0))
                 {
                     lastError = make_error_code (Errc::TemporaryError);
-                    return 0;
+                    return -1;
                 }
 
                 if (JOIN_LIKELY (sync._head.compare_exchange_weak (head, head + toWrite, std::memory_order_acquire,
@@ -724,7 +735,7 @@ namespace join
                         slot->_seq.store (head + i + 1, std::memory_order_release);
                     }
 
-                    return toWrite;
+                    return static_cast<ssize_t> (toWrite);
                 }
 
                 backoff ();
@@ -737,7 +748,7 @@ namespace join
          * @param element output element.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (QueueSegment<Type, QueueSlotFull<Type>>* segment, Type& element) noexcept
+        static int tryPop (Segment* segment, Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -768,20 +779,20 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the output buffer.
          * @param size maximum number of elements to pop.
-         * @return number of elements successfully popped.
+         * @return number of elements successfully popped, -1 otherwise.
          */
-        static uint64_t tryPop (QueueSegment<Type, QueueSlotFull<Type>>* segment, Type* elements,
-                                uint64_t size) noexcept
+        static ssize_t tryPop (Segment* segment, Type* elements, size_t size) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
-                return 0;
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
             }
 
             auto& sync      = segment->_sync;
             uint64_t tail   = sync._tail.load (std::memory_order_relaxed);
             uint64_t head   = sync._head.load (std::memory_order_acquire);
-            uint64_t toRead = std::min (size, head - tail);
+            uint64_t toRead = std::min (static_cast<uint64_t> (size), head - tail);
             uint64_t popped = 0;
 
             for (uint64_t i = 0; i < toRead; ++i)
@@ -801,13 +812,11 @@ namespace join
             if (JOIN_LIKELY (popped > 0))
             {
                 sync._tail.store (tail + popped, std::memory_order_release);
-            }
-            else if (JOIN_UNLIKELY (toRead > 0))
-            {
-                lastError = make_error_code (Errc::TemporaryError);
+                return static_cast<ssize_t> (popped);
             }
 
-            return popped;
+            lastError = make_error_code (Errc::TemporaryError);
+            return -1;
         }
     };
 
@@ -817,7 +826,8 @@ namespace join
     template <typename Type, typename Backend>
     struct Mpmc
     {
-        using Queue = BasicQueue<Type, Backend, Mpmc>;
+        using Queue   = BasicQueue<Type, Backend, Mpmc>;
+        using Segment = QueueSegment<Type, QueueSlotFull<Type>>;
 
         /**
          * @brief try to push element into the ring buffer.
@@ -825,7 +835,7 @@ namespace join
          * @param element element to push.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (QueueSegment<Type, QueueSlotFull<Type>>* segment, const Type& element) noexcept
+        static int tryPush (Segment* segment, const Type& element) noexcept
         {
             return Mpsc<Type, Backend>::tryPush (segment, element);
         }
@@ -835,10 +845,9 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the first element.
          * @param size number of elements to push.
-         * @return number of elements successfully pushed.
+         * @return number of elements successfully pushed, -1 otherwise.
          */
-        static uint64_t tryPush (QueueSegment<Type, QueueSlotFull<Type>>* segment, const Type* elements,
-                                 uint64_t size) noexcept
+        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size) noexcept
         {
             return Mpsc<Type, Backend>::tryPush (segment, elements, size);
         }
@@ -849,7 +858,7 @@ namespace join
          * @param element output element.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (QueueSegment<Type, QueueSlotFull<Type>>* segment, Type& element) noexcept
+        static int tryPop (Segment* segment, Type& element) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -894,14 +903,14 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the output buffer.
          * @param size maximum number of elements to pop.
-         * @return number of elements successfully popped.
+         * @return number of elements successfully popped, -1 otherwise.
          */
-        static uint64_t tryPop (QueueSegment<Type, QueueSlotFull<Type>>* segment, Type* elements,
-                                uint64_t size) noexcept
+        static ssize_t tryPop (Segment* segment, Type* elements, size_t size) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
-                return 0;
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
             }
 
             Backoff backoff;
@@ -911,12 +920,12 @@ namespace join
             for (;;)
             {
                 uint64_t head   = sync._head.load (std::memory_order_acquire);
-                uint64_t toRead = std::min (size, head - tail);
+                uint64_t toRead = std::min (static_cast<uint64_t> (size), head - tail);
 
                 if (JOIN_UNLIKELY (toRead == 0))
                 {
                     lastError = make_error_code (Errc::TemporaryError);
-                    return 0;
+                    return -1;
                 }
 
                 uint64_t ready = 0;
@@ -932,7 +941,7 @@ namespace join
                 if (JOIN_UNLIKELY (ready == 0))
                 {
                     lastError = make_error_code (Errc::TemporaryError);
-                    return 0;
+                    return -1;
                 }
 
                 if (JOIN_LIKELY (sync._tail.compare_exchange_weak (tail, tail + ready, std::memory_order_acquire,
@@ -945,7 +954,7 @@ namespace join
                         slot->_seq.store (tail + i + sync._capacity, std::memory_order_release);
                     }
 
-                    return ready;
+                    return static_cast<ssize_t> (ready);
                 }
 
                 backoff ();

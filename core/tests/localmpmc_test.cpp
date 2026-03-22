@@ -53,6 +53,25 @@ TEST (LocalMpmc, tryPush)
     ASSERT_EQ (queue.available (), 0);
 }
 
+TEST (LocalMpmc, tryPushBatch)
+{
+    LocalMem::Mpmc::Queue<uint64_t> queue (512);
+    uint64_t data[512] = {};
+
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.available (), 512);
+    ASSERT_EQ (queue.tryPush (nullptr, 256), -1);
+    ASSERT_EQ (queue.tryPush (data, 256), 256) << join::lastError.message ();
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.pending (), 256);
+    ASSERT_EQ (queue.available (), 256);
+    ASSERT_EQ (queue.tryPush (data, 256), 256) << join::lastError.message ();
+    ASSERT_EQ (queue.tryPush (data, 1), -1);
+    ASSERT_TRUE (queue.full ());
+    ASSERT_EQ (queue.available (), 0);
+    ASSERT_EQ (queue.pending (), 512);
+}
+
 TEST (LocalMpmc, push)
 {
     LocalMem::Mpmc::Queue<uint64_t> queue (512);
@@ -68,6 +87,24 @@ TEST (LocalMpmc, push)
     }
     ASSERT_TRUE (queue.full ());
     ASSERT_EQ (queue.available (), 0);
+}
+
+TEST (LocalMpmc, pushBatch)
+{
+    LocalMem::Mpmc::Queue<uint64_t> queue (512);
+    uint64_t data[512] = {};
+
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.available (), 512);
+    ASSERT_EQ (queue.push (nullptr, 256), -1);
+    ASSERT_EQ (queue.push (data, 256), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.pending (), 256);
+    ASSERT_EQ (queue.available (), 256);
+    ASSERT_EQ (queue.push (data, 256), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue.full ());
+    ASSERT_EQ (queue.available (), 0);
+    ASSERT_EQ (queue.pending (), 512);
 }
 
 TEST (LocalMpmc, tryPop)
@@ -87,6 +124,26 @@ TEST (LocalMpmc, tryPop)
     ASSERT_EQ (queue.tryPop (data), -1);
 }
 
+TEST (LocalMpmc, tryPopBatch)
+{
+    LocalMem::Mpmc::Queue<uint64_t> queue (512);
+    uint64_t in[512], out[512] = {};
+
+    ASSERT_EQ (queue.tryPop (out, 256), -1);
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPush (in, 512), 512) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 512);
+    ASSERT_EQ (queue.tryPop (out, 256), 256) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 256);
+    ASSERT_EQ (queue.tryPop (out, 256), 256) << join::lastError.message ();
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPop (out, 1), -1);
+}
+
 TEST (LocalMpmc, pop)
 {
     LocalMem::Mpmc::Queue<uint64_t> queue (512);
@@ -98,6 +155,24 @@ TEST (LocalMpmc, pop)
     ASSERT_FALSE (queue.empty ());
     ASSERT_EQ (queue.pending (), 1);
     ASSERT_EQ (queue.pop (data), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+}
+
+TEST (LocalMpmc, popBatch)
+{
+    LocalMem::Mpmc::Queue<uint64_t> queue (512);
+    uint64_t in[512], out[512] = {};
+
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPush (in, 512), 512) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 512);
+    ASSERT_EQ (queue.pop (out, 256), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 256);
+    ASSERT_EQ (queue.pop (out, 256), 0) << join::lastError.message ();
     ASSERT_TRUE (queue.empty ());
     ASSERT_EQ (queue.pending (), 0);
 }
