@@ -86,7 +86,7 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: Initialize codeql
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4.34.1
         with:
           languages: cpp
 
@@ -97,7 +97,7 @@ jobs:
         run: cmake --build --preset gcc-debug
 
       - name: Run codeql scan
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4.34.1
 
   build:
     needs: [format]
