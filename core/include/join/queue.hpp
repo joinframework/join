@@ -175,7 +175,7 @@ namespace join
                 Backoff backoff;
                 while (_segment->_sync._magic.load (std::memory_order_acquire) != QueueSync::MAGIC)
                 {
-                    backoff ();
+                    backoff ();  // LCOV_EXCL_LINE
                 }
             }
 
@@ -374,7 +374,7 @@ namespace join
         {
             if (JOIN_UNLIKELY (_segment == nullptr))
             {
-                return 0;
+                return 0;  // LCOV_EXCL_LINE
             }
             auto head = _segment->_sync._head.load (std::memory_order_acquire);
             auto tail = _segment->_sync._tail.load (std::memory_order_relaxed);
@@ -389,7 +389,7 @@ namespace join
         {
             if (JOIN_UNLIKELY (_segment == nullptr))
             {
-                return 0;
+                return 0;  // LCOV_EXCL_LINE
             }
             return _segment->_sync._capacity - pending ();
         }
@@ -402,7 +402,7 @@ namespace join
         {
             if (JOIN_UNLIKELY (_segment == nullptr))
             {
-                return false;
+                return false;  // LCOV_EXCL_LINE
             }
             return pending () == _segment->_sync._capacity;
         }
@@ -415,7 +415,7 @@ namespace join
         {
             if (JOIN_UNLIKELY (_segment == nullptr))
             {
-                return true;
+                return true;  // LCOV_EXCL_LINE
             }
             return pending () == 0;
         }
@@ -517,8 +517,10 @@ namespace join
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             auto& sync    = segment->_sync;
@@ -583,8 +585,10 @@ namespace join
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             auto& sync    = segment->_sync;
@@ -659,8 +663,10 @@ namespace join
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             auto& sync    = segment->_sync;
@@ -752,8 +758,10 @@ namespace join
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             auto& sync    = segment->_sync;
@@ -862,8 +870,10 @@ namespace join
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             auto& sync    = segment->_sync;
