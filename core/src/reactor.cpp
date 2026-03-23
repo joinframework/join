@@ -232,6 +232,7 @@ void Reactor::stop (bool sync) noexcept
     }
 }
 
+#ifdef JOIN_HAS_NUMA
 // =========================================================================
 //   CLASS     : Reactor
 //   METHOD    : mbind
@@ -240,6 +241,7 @@ int Reactor::mbind (int numa) const noexcept
 {
     return _commands.mbind (numa);
 }
+#endif
 
 // =========================================================================
 //   CLASS     : Reactor
@@ -494,6 +496,7 @@ pthread_t ReactorThread::handle ()
     return instance ()._dispatcher.handle ();
 }
 
+#ifdef JOIN_HAS_NUMA
 // =========================================================================
 //   CLASS     : ReactorThread
 //   METHOD    : mbind
@@ -502,6 +505,7 @@ int ReactorThread::mbind (int numa)
 {
     return instance ()._reactor.mbind (numa);
 }
+#endif
 
 // =========================================================================
 //   CLASS     : ReactorThread

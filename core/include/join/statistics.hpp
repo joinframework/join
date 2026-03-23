@@ -96,7 +96,13 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        ~BasicStats () noexcept = default;
+        ~BasicStats () noexcept
+        {
+            for (int i = 0; i < _countsLen; ++i)
+            {
+                _counts[i].~atomic<uint64_t> ();
+            }
+        }
 
         /**
          * @brief get metric name.
@@ -125,9 +131,21 @@ namespace join
             const uint64_t ns =
                 static_cast<uint64_t> (std::chrono::duration_cast<Duration> (ClockPolicy::now () - startTime).count ());
 
-            record (ns);
+            _sum.fetch_add (ns, std::memory_order_relaxed);
+            _last.store (ns, std::memory_order_relaxed);
+
+            auto prev = _min.load (std::memory_order_relaxed);
+            while (ns < prev &&
+                   !_min.compare_exchange_weak (prev, ns, std::memory_order_relaxed, std::memory_order_relaxed))
+                ;
+
+            prev = _max.load (std::memory_order_relaxed);
+            while (ns > prev &&
+                   !_max.compare_exchange_weak (prev, ns, std::memory_order_relaxed, std::memory_order_relaxed))
+                ;
 
             _counts[countsIndex (ns)].fetch_add (1, std::memory_order_relaxed);
+            _count.fetch_add (1, std::memory_order_release);
         }
 
         /**
@@ -161,6 +179,10 @@ namespace join
          */
         Duration last () const noexcept
         {
+            if (_count.load (std::memory_order_acquire) == 0)
+            {
+                return Duration (0);
+            }
             return Duration (_last.load (std::memory_order_relaxed));
         }
 
@@ -251,6 +273,7 @@ namespace join
             return Duration (static_cast<typename Duration::rep> (_maxTrackableValue));
         }
 
+#ifdef JOIN_HAS_NUMA
         /**
          * @brief bind histogram memory to a NUMA node.
          * @param numa NUMA node ID.
@@ -260,6 +283,7 @@ namespace join
         {
             return _countsMem.mbind (numa);
         }
+#endif
 
         /**
          * @brief lock histogram memory in RAM.
@@ -271,28 +295,6 @@ namespace join
         }
 
     private:
-        /**
-         * @brief atomically update all accumulators with a new sample.
-         * @param ns elapsed duration in nanoseconds to record.
-         */
-        void record (uint64_t ns) noexcept
-        {
-            _sum.fetch_add (ns, std::memory_order_relaxed);
-            _last.store (ns, std::memory_order_relaxed);
-
-            auto prev = _min.load (std::memory_order_relaxed);
-            while (ns < prev &&
-                   !_min.compare_exchange_weak (prev, ns, std::memory_order_relaxed, std::memory_order_relaxed))
-                ;
-
-            prev = _max.load (std::memory_order_relaxed);
-            while (ns > prev &&
-                   !_max.compare_exchange_weak (prev, ns, std::memory_order_relaxed, std::memory_order_relaxed))
-                ;
-
-            _count.fetch_add (1, std::memory_order_release);
-        }
-
         /**
          * @brief compute the HDR power-of-2 bucket index for a value.
          * @param v value in nanoseconds.

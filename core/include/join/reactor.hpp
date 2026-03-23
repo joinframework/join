@@ -183,12 +183,14 @@ namespace join
          */
         void stop (bool sync = true) noexcept;
 
+#ifdef JOIN_HAS_NUMA
         /**
          * @brief bind command queue memory to a NUMA node.
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
         int mbind (int numa) const noexcept;
+#endif
 
         /**
          * @brief lock command queue memory in RAM.
@@ -351,12 +353,14 @@ namespace join
          */
         static pthread_t handle ();
 
+#ifdef JOIN_HAS_NUMA
         /**
          * @brief bind command queue memory to a NUMA node.
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
         static int mbind (int numa);
+#endif
 
         /**
          * @brief lock command queue memory in RAM.

@@ -35,6 +35,9 @@ using join::Rdtsc;
 using join::LocalMem;
 using join::Thread;
 
+/**
+ * @brief test tryPush.
+ */
 TEST (LocalMpsc, tryPush)
 {
     LocalMem::Mpsc::Queue<uint64_t> queue (512);
@@ -53,25 +56,40 @@ TEST (LocalMpsc, tryPush)
     ASSERT_EQ (queue.available (), 0);
 }
 
+/**
+ * @brief test batch tryPush.
+ */
 TEST (LocalMpsc, tryPushBatch)
 {
-    LocalMem::Mpsc::Queue<uint64_t> queue (512);
-    uint64_t data[512] = {};
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Mpsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
 
     ASSERT_FALSE (queue.full ());
-    ASSERT_EQ (queue.available (), 512);
-    ASSERT_EQ (queue.tryPush (nullptr, 256), -1);
-    ASSERT_EQ (queue.tryPush (data, 256), 256) << join::lastError.message ();
+    ASSERT_EQ (queue.available (), full);
+    ASSERT_EQ (queue.tryPush (nullptr, half), -1);
+    ASSERT_EQ (queue.tryPush (in, half), half) << join::lastError.message ();
     ASSERT_FALSE (queue.full ());
-    ASSERT_EQ (queue.pending (), 256);
-    ASSERT_EQ (queue.available (), 256);
-    ASSERT_EQ (queue.tryPush (data, 256), 256) << join::lastError.message ();
-    ASSERT_EQ (queue.tryPush (data, 1), -1);
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.available (), half);
+    ASSERT_EQ (queue.tryPush (in + half, half), half) << join::lastError.message ();
+    ASSERT_EQ (queue.tryPush (in, 1), -1);
     ASSERT_TRUE (queue.full ());
     ASSERT_EQ (queue.available (), 0);
-    ASSERT_EQ (queue.pending (), 512);
+    ASSERT_EQ (queue.pending (), full);
 }
 
+/**
+ * @brief test push.
+ */
 TEST (LocalMpsc, push)
 {
     LocalMem::Mpsc::Queue<uint64_t> queue (512);
@@ -89,24 +107,38 @@ TEST (LocalMpsc, push)
     ASSERT_EQ (queue.available (), 0);
 }
 
+/**
+ * @brief test batch push.
+ */
 TEST (LocalMpsc, pushBatch)
 {
-    LocalMem::Mpsc::Queue<uint64_t> queue (512);
-    uint64_t data[512] = {};
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Mpsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
 
     ASSERT_FALSE (queue.full ());
-    ASSERT_EQ (queue.available (), 512);
-    ASSERT_EQ (queue.push (nullptr, 256), -1);
-    ASSERT_EQ (queue.push (data, 256), 0) << join::lastError.message ();
+    ASSERT_EQ (queue.available (), full);
+    ASSERT_EQ (queue.push (nullptr, half), -1);
+    ASSERT_EQ (queue.push (in, half), 0) << join::lastError.message ();
     ASSERT_FALSE (queue.full ());
-    ASSERT_EQ (queue.pending (), 256);
-    ASSERT_EQ (queue.available (), 256);
-    ASSERT_EQ (queue.push (data, 256), 0) << join::lastError.message ();
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.available (), half);
+    ASSERT_EQ (queue.push (in + half, half), 0) << join::lastError.message ();
     ASSERT_TRUE (queue.full ());
     ASSERT_EQ (queue.available (), 0);
     ASSERT_EQ (queue.pending (), 512);
 }
 
+/**
+ * @brief test tryPop.
+ */
 TEST (LocalMpsc, tryPop)
 {
     LocalMem::Mpsc::Queue<uint64_t> queue (512);
@@ -124,27 +156,46 @@ TEST (LocalMpsc, tryPop)
     ASSERT_EQ (queue.tryPop (data), -1);
 }
 
+/**
+ * @brief test batch tryPop.
+ */
 TEST (LocalMpsc, tryPopBatch)
 {
-    LocalMem::Mpsc::Queue<uint64_t> queue (512);
-    uint64_t in[512], out[512] = {};
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
 
-    ASSERT_EQ (queue.tryPop (nullptr, 256), -1);
-    ASSERT_EQ (queue.tryPop (out, 256), -1);
+    LocalMem::Mpsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {}, out[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_EQ (queue.tryPop (nullptr, half), -1);
+    ASSERT_EQ (queue.tryPop (out, half), -1);
     ASSERT_TRUE (queue.empty ());
     ASSERT_EQ (queue.pending (), 0);
-    ASSERT_EQ (queue.tryPush (in, 512), 512) << join::lastError.message ();
+    ASSERT_EQ (queue.tryPush (in, full), full) << join::lastError.message ();
     ASSERT_FALSE (queue.empty ());
-    ASSERT_EQ (queue.pending (), 512);
-    ASSERT_EQ (queue.tryPop (out, 256), 256) << join::lastError.message ();
+    ASSERT_EQ (queue.pending (), full);
+    ASSERT_EQ (queue.tryPop (out, half), half) << join::lastError.message ();
     ASSERT_FALSE (queue.empty ());
-    ASSERT_EQ (queue.pending (), 256);
-    ASSERT_EQ (queue.tryPop (out, 256), 256) << join::lastError.message ();
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.tryPop (out + half, half), half) << join::lastError.message ();
     ASSERT_TRUE (queue.empty ());
     ASSERT_EQ (queue.pending (), 0);
     ASSERT_EQ (queue.tryPop (out, 1), -1);
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (out[i], i);
+    }
 }
 
+/**
+ * @brief test pop.
+ */
 TEST (LocalMpsc, pop)
 {
     LocalMem::Mpsc::Queue<uint64_t> queue (512);
@@ -160,25 +211,44 @@ TEST (LocalMpsc, pop)
     ASSERT_EQ (queue.pending (), 0);
 }
 
+/**
+ * @brief test batch pop.
+ */
 TEST (LocalMpsc, popBatch)
 {
-    LocalMem::Mpsc::Queue<uint64_t> queue (512);
-    uint64_t in[512], out[512] = {};
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Mpsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {}, out[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
 
     ASSERT_TRUE (queue.empty ());
     ASSERT_EQ (queue.pending (), 0);
-    ASSERT_EQ (queue.tryPush (in, 512), 512) << join::lastError.message ();
+    ASSERT_EQ (queue.tryPush (in, full), full) << join::lastError.message ();
     ASSERT_FALSE (queue.empty ());
-    ASSERT_EQ (queue.pending (), 512);
-    ASSERT_EQ (queue.pop (nullptr, 256), -1);
-    ASSERT_EQ (queue.pop (out, 256), 0) << join::lastError.message ();
+    ASSERT_EQ (queue.pending (), full);
+    ASSERT_EQ (queue.pop (nullptr, half), -1);
+    ASSERT_EQ (queue.pop (out, half), 0) << join::lastError.message ();
     ASSERT_FALSE (queue.empty ());
-    ASSERT_EQ (queue.pending (), 256);
-    ASSERT_EQ (queue.pop (out, 256), 0) << join::lastError.message ();
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.pop (out + half, half), 0) << join::lastError.message ();
     ASSERT_TRUE (queue.empty ());
     ASSERT_EQ (queue.pending (), 0);
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (out[i], i);
+    }
 }
 
+/**
+ * @brief benchmark push.
+ */
 TEST (LocalMpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
@@ -243,6 +313,9 @@ TEST (LocalMpsc, pushBenchmark)
     std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
+/**
+ * @brief benchmark pop.
+ */
 TEST (LocalMpsc, popBenchmark)
 {
     const uint64_t capacity       = 512;
@@ -289,6 +362,9 @@ TEST (LocalMpsc, popBenchmark)
     std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
+/**
+ * @brief test pending.
+ */
 TEST (LocalMpsc, pending)
 {
     LocalMem::Mpsc::Queue<uint64_t> queue (0);
@@ -299,6 +375,9 @@ TEST (LocalMpsc, pending)
     ASSERT_EQ (queue.pending (), 1);
 }
 
+/**
+ * @brief test available.
+ */
 TEST (LocalMpsc, available)
 {
     LocalMem::Mpsc::Queue<uint64_t> queue (0);
@@ -309,6 +388,9 @@ TEST (LocalMpsc, available)
     ASSERT_EQ (queue.available (), 0);
 }
 
+/**
+ * @brief test full.
+ */
 TEST (LocalMpsc, full)
 {
     LocalMem::Mpsc::Queue<uint64_t> queue (0);
@@ -319,6 +401,9 @@ TEST (LocalMpsc, full)
     ASSERT_TRUE (queue.full ());
 }
 
+/**
+ * @brief test empty.
+ */
 TEST (LocalMpsc, empty)
 {
     LocalMem::Mpsc::Queue<uint64_t> queue (0);
@@ -329,17 +414,25 @@ TEST (LocalMpsc, empty)
     ASSERT_FALSE (queue.empty ());
 }
 
+/**
+ * @brief test mlock.
+ */
 TEST (LocalMpsc, mlock)
 {
     LocalMem::Mpsc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mlock (), 0) << join::lastError.message ();
 }
 
+#ifdef JOIN_HAS_NUMA
+/**
+ * @brief test mbind.
+ */
 TEST (LocalMpsc, mbind)
 {
     LocalMem::Mpsc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mbind (0), 0) << join::lastError.message ();
 }
+#endif
 
 /**
  * @brief main function.

@@ -222,6 +222,7 @@ TEST (RdtscStats, percentile)
     EXPECT_GE (stats.percentile (99.0), stats.min ());
 }
 
+#ifdef JOIN_HAS_NUMA
 /**
  * @brief Test mbind.
  */
@@ -232,6 +233,7 @@ TEST (RdtscStats, mbind)
     ASSERT_EQ (stats.mbind (0), 0) << join::lastError.message ();
     ASSERT_EQ (join::mbind (nullptr, 4096, 0), -1);
 }
+#endif
 
 /**
  * @brief Test mlock.

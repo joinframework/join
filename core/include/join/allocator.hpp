@@ -417,6 +417,7 @@ namespace join
             deallocateImplem<0> (p);
         }
 
+#ifdef JOIN_HAS_NUMA
         /**
          * @brief bind memory to a NUMA node.
          * @param numa NUMA node ID.
@@ -426,6 +427,7 @@ namespace join
         {
             return _backend.mbind (numa);
         }
+#endif
 
         /**
          * @brief lock memory in RAM.

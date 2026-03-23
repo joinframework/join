@@ -39,8 +39,10 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#ifdef JOIN_HAS_NUMA
 #include <numaif.h>
 #include <numa.h>
+#endif
 #include <fcntl.h>
 #include <cstdint>
 
@@ -63,6 +65,7 @@ namespace join
     template <typename, typename>
     struct Mpmc;
 
+#ifdef JOIN_HAS_NUMA
     /**
      * @brief bind memory to a NUMA node.
      * @param ptr memory pointer.
@@ -87,6 +90,7 @@ namespace join
 
         return 0;
     }
+#endif
 
     /**
      * @brief lock memory in RAM.
@@ -233,6 +237,7 @@ namespace join
             return static_cast<char*> (_ptr) + offset;
         }
 
+#ifdef JOIN_HAS_NUMA
         /**
          * @brief bind memory to a NUMA node.
          * @param numa NUMA node ID.
@@ -242,6 +247,7 @@ namespace join
         {
             return join::mbind (_ptr, _size, numa);
         }
+#endif
 
         /**
          * @brief lock memory in RAM.
@@ -432,6 +438,7 @@ namespace join
             return static_cast<char*> (_ptr) + offset;
         }
 
+#ifdef JOIN_HAS_NUMA
         /**
          * @brief bind memory to a NUMA node.
          * @param numa NUMA node ID.
@@ -441,6 +448,7 @@ namespace join
         {
             return join::mbind (_ptr, _size, numa);
         }
+#endif
 
         /**
          * @brief lock memory in RAM.

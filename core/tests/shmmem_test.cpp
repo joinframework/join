@@ -96,6 +96,7 @@ TEST_F (PosixMem, get)
     EXPECT_THROW (cmem1.get (), std::runtime_error);
 }
 
+#ifdef JOIN_HAS_NUMA
 TEST_F (PosixMem, mbind)
 {
     ShmMem mem (4096, _name);
@@ -104,6 +105,7 @@ TEST_F (PosixMem, mbind)
     ASSERT_EQ (join::mbind (nullptr, 4096, 0), -1);
     ASSERT_EQ (join::mbind (mem.get (), 4096, 9999), -1);
 }
+#endif
 
 TEST_F (PosixMem, mlock)
 {
