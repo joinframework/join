@@ -12,7 +12,9 @@ set(PUBLIC_HEADERS
     include/join/variant.hpp
     include/join/reactor.hpp
     include/join/memory.hpp
+    include/join/allocator.hpp
     include/join/queue.hpp
+    include/join/backoff.hpp
     include/join/mutex.hpp
     include/join/condition.hpp
     include/join/semaphore.hpp
