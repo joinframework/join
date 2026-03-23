@@ -103,6 +103,7 @@ jobs:
     needs: [format]
 
     strategy:
+      fail-fast: false
       matrix:
         arch: ${{ inputs.arch == 'all' && fromJson('["amd64", "arm64"]') || fromJson(format('["{0}"]', inputs.arch)) }}
         compiler: ${{ inputs.compiler == 'all' && fromJson('["gcc", "clang"]') || fromJson(format('["{0}"]', inputs.compiler)) }}
