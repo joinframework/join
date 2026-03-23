@@ -83,17 +83,19 @@ Install required libraries and test dependencies:
 sudo apt install libssl-dev zlib1g-dev libgtest-dev libgmock-dev
 ```
 
-> **Compilers:** Both GCC and Clang are supported. Clang requires `libclang-rt-dev` for coverage instrumentation (`--coverage`).  
+> **Compilers:** Both GCC and Clang are supported. Clang requires `libclang-rt-dev` for coverage instrumentation.
 > **OpenSSL** provides the core TLS runtime.
 
 ### Optional Dependencies
 
 | Option | Library | Default | Description |
 | :--- | :--- | :---: | :--- |
+| `JOIN_ENABLE_IO_URING` | `liburing-dev` | `OFF` | Enables the io_uring based proactor backend for async I/O. |
 | `JOIN_ENABLE_NUMA` | `libnuma-dev` | `OFF` | Enables NUMA aware memory binding for `LocalMem` and `ShmMem`. |
 
 Install as needed:
 ```bash
+sudo apt install liburing-dev   # for JOIN_ENABLE_IO_URING
 sudo apt install libnuma-dev    # for JOIN_ENABLE_NUMA
 ```
 
@@ -108,6 +110,7 @@ cmake --build build
 With optional backends:
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release \
+    -DJOIN_ENABLE_IO_URING=ON \
     -DJOIN_ENABLE_NUMA=ON \
     -DJOIN_ENABLE_TESTS=ON
 cmake --build build
@@ -122,6 +125,7 @@ cmake --build build
 | `JOIN_ENABLE_DATA` | `ON` | Build the data module. |
 | `JOIN_ENABLE_FABRIC` | `ON` | Build the fabric module. |
 | `JOIN_ENABLE_SERVICES` | `ON` | Build the services module (requires crypto, data, fabric). |
+| `JOIN_ENABLE_IO_URING` | `OFF` | Enable io_uring backend (requires `liburing-dev`). |
 | `JOIN_ENABLE_NUMA` | `OFF` | Enable NUMA support (requires `libnuma-dev`). |
 | `JOIN_ENABLE_SAMPLES` | `OFF` | Build sample programs. |
 | `JOIN_ENABLE_TESTS` | `OFF` | Build the test suite. |
