@@ -140,7 +140,7 @@ jobs:
       - name: Build (debug)
         run: cmake --build --preset ${{ matrix.compiler }}-debug
 
-      - name: Run tests
+      - name: Run tests (debug)
         run: ctest --preset ${{ matrix.compiler }}-debug
 
       - name: Generate coverage report
