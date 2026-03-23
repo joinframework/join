@@ -130,6 +130,9 @@ jobs:
       - name: Build (release)
         run: cmake --build --preset ${{ matrix.compiler }}-release
 
+      - name: Run tests (release)
+        run: ctest --preset ${{ matrix.compiler }}-release
+
       - name: Configure (debug)
         run: cmake --preset ${{ matrix.compiler }}-debug
 
