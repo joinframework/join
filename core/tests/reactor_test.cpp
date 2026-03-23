@@ -233,8 +233,9 @@ TEST_F (ReactorTest, delHandler)
     th.join ();
 }
 
+#ifdef JOIN_HAS_NUMA
 /**
- * @brief Test delHandler.
+ * @brief Test mbind.
  */
 TEST_F (ReactorTest, mbind)
 {
@@ -242,6 +243,7 @@ TEST_F (ReactorTest, mbind)
 
     ASSERT_EQ (reactor.mbind (0), 0) << join::lastError.message ();
 }
+#endif
 
 /**
  * @brief Test delHandler.
@@ -267,7 +269,9 @@ TEST_F (ReactorTest, onReceive)
     ASSERT_EQ (ReactorThread::affinity (), 0);
     ASSERT_EQ (ReactorThread::priority (1), 0) << join::lastError.message ();
     ASSERT_EQ (ReactorThread::priority (), 1);
+#ifdef JOIN_HAS_NUMA
     ASSERT_EQ (ReactorThread::mbind (0), 0) << join::lastError.message ();
+#endif
     ASSERT_EQ (ReactorThread::mlock (), 0) << join::lastError.message ();
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
@@ -304,7 +308,9 @@ TEST_F (ReactorTest, onClose)
     ASSERT_EQ (ReactorThread::affinity (), 0);
     ASSERT_EQ (ReactorThread::priority (1), 0) << join::lastError.message ();
     ASSERT_EQ (ReactorThread::priority (), 1);
+#ifdef JOIN_HAS_NUMA
     ASSERT_EQ (ReactorThread::mbind (0), 0) << join::lastError.message ();
+#endif
     ASSERT_EQ (ReactorThread::mlock (), 0) << join::lastError.message ();
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
@@ -338,7 +344,9 @@ TEST_F (ReactorTest, onError)
     ASSERT_EQ (ReactorThread::affinity (), 0);
     ASSERT_EQ (ReactorThread::priority (1), 0) << join::lastError.message ();
     ASSERT_EQ (ReactorThread::priority (), 1);
+#ifdef JOIN_HAS_NUMA
     ASSERT_EQ (ReactorThread::mbind (0), 0) << join::lastError.message ();
+#endif
     ASSERT_EQ (ReactorThread::mlock (), 0) << join::lastError.message ();
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 

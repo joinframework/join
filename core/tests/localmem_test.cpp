@@ -33,6 +33,9 @@
 
 using join::LocalMem;
 
+/**
+ * @brief test create.
+ */
 TEST (LocalMem, create)
 {
     ASSERT_THROW (LocalMem (0), std::system_error);
@@ -45,6 +48,9 @@ TEST (LocalMem, create)
     ASSERT_NE (mem2.get (), nullptr);
 }
 
+/**
+ * @brief test get.
+ */
 TEST (LocalMem, get)
 {
     LocalMem mem1 (4096);
@@ -63,6 +69,10 @@ TEST (LocalMem, get)
     EXPECT_THROW (cmem1.get (), std::runtime_error);
 }
 
+#ifdef JOIN_HAS_NUMA
+/**
+ * @brief test mbind.
+ */
 TEST (LocalMem, mbind)
 {
     LocalMem mem (4096);
@@ -71,7 +81,11 @@ TEST (LocalMem, mbind)
     ASSERT_EQ (join::mbind (nullptr, 4096, 0), -1);
     ASSERT_EQ (join::mbind (mem.get (), 4096, 9999), -1);
 }
+#endif
 
+/**
+ * @brief test mlock.
+ */
 TEST (LocalMem, mlock)
 {
     LocalMem mem (4096);

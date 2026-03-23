@@ -23,12 +23,15 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/allocator.hpp>
 #include <join/thread.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::LocalMem;
 using join::Thread;
 
@@ -55,7 +58,7 @@ TEST (LocalAlloc, move)
 }
 
 /**
- * @brief test the allocate method.
+ * @brief test allocate.
  */
 TEST (LocalAlloc, allocate)
 {
@@ -87,7 +90,7 @@ TEST (LocalAlloc, allocate)
 }
 
 /**
- * @brief test the tryAllocate method.
+ * @brief test tryAllocate.
  */
 TEST (LocalAlloc, tryAllocate)
 {
@@ -119,7 +122,7 @@ TEST (LocalAlloc, tryAllocate)
 }
 
 /**
- * @brief test the deallocate method.
+ * @brief test deallocate.
  */
 TEST (LocalAlloc, deallocate)
 {
@@ -140,17 +143,19 @@ TEST (LocalAlloc, deallocate)
     EXPECT_NO_THROW (allocator.deallocate (dummyPtr));
 }
 
+#ifdef JOIN_HAS_NUMA
 /**
- * @brief test the mbind method.
+ * @brief test mbind.
  */
 TEST (LocalAlloc, mbind)
 {
     LocalMem::Allocator<1, 64> allocator;
     ASSERT_EQ (allocator.mbind (0), 0) << join::lastError.message ();
 }
+#endif
 
 /**
- * @brief test the mlock method.
+ * @brief test mlock.
  */
 TEST (LocalAlloc, mlock)
 {
@@ -163,26 +168,43 @@ TEST (LocalAlloc, mlock)
  */
 TEST (LocalAlloc, benchmark)
 {
-    join::LocalMem::Allocator<100, 64> allocator;
-    const int iterations = 10000;
+    const int iterations = 100000;
     const int numThreads = 4;
 
-    auto worker = [&] () {
-        for (int i = 0; i < iterations; ++i)
-        {
-            void* p = allocator.allocate (64);
-            if (p)
-            {
-                std::this_thread::yield ();
-                allocator.deallocate (p);
-            }
-        }
-    };
+    join::LocalMem::Allocator<iterations, 64> allocator;
+    allocator.mlock ();
 
     std::vector<Thread> threads;
-    for (int i = 0; i < numThreads; ++i)
+    for (int i = 0; i < numThreads - 1; ++i)
     {
-        threads.emplace_back (worker);
+        threads.emplace_back ([&] () {
+            for (int j = 0; j < iterations; ++j)
+            {
+                void* p = allocator.allocate (64);
+                if (p)
+                {
+                    allocator.deallocate (p);
+                }
+            }
+        });
+    }
+
+    Rdtsc::Stats aStats ("allocate");
+    Rdtsc::Stats dStats ("deallocate");
+
+    for (int i = 0; i < iterations; ++i)
+    {
+        void* p = nullptr;
+        {
+            ScopedStats<Rdtsc::Stats> guard (aStats);
+            p = allocator.allocate (64);
+        }
+        EXPECT_NE (p, nullptr);
+        if (p)
+        {
+            ScopedStats<Rdtsc::Stats> guard (dStats);
+            allocator.deallocate (p);
+        }
     }
 
     for (auto& t : threads)
@@ -190,18 +212,9 @@ TEST (LocalAlloc, benchmark)
         t.join ();
     }
 
-    std::vector<void*> pointers;
-    for (int i = 0; i < 100; ++i)
-    {
-        void* p = allocator.allocate (64);
-        ASSERT_NE (p, nullptr);
-        pointers.push_back (p);
-    }
-
-    for (void* p : pointers)
-    {
-        allocator.deallocate (p);
-    }
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (3) << aStats << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (3) << dStats << "\n";
 }
 
 /**

@@ -80,12 +80,22 @@ sudo apt install gcc g++ clang clang-tools libclang-rt-dev cmake ninja-build gdb
 
 Install required libraries and test dependencies:
 ```bash
-sudo apt install libssl-dev libnuma-dev zlib1g-dev libgtest-dev libgmock-dev
+sudo apt install libssl-dev zlib1g-dev libgtest-dev libgmock-dev
 ```
 
 > **Compilers:** Both GCC and Clang are supported. Clang requires `libclang-rt-dev` for coverage instrumentation (`--coverage`).  
-> **libnuma** is required for memory pinning and NUMA affinity in `join-core`.  
 > **OpenSSL** provides the core TLS runtime.
+
+### Optional Dependencies
+
+| Option | Library | Default | Description |
+| :--- | :--- | :---: | :--- |
+| `JOIN_ENABLE_NUMA` | `libnuma-dev` | `OFF` | Enables NUMA aware memory binding for `LocalMem` and `ShmMem`. |
+
+Install as needed:
+```bash
+sudo apt install libnuma-dev    # for JOIN_ENABLE_NUMA
+```
 
 ### Build from Source
 ```bash
@@ -94,6 +104,28 @@ cd join
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DJOIN_ENABLE_TESTS=ON
 cmake --build build
 ```
+
+With optional backends:
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release \
+    -DJOIN_ENABLE_NUMA=ON \
+    -DJOIN_ENABLE_TESTS=ON
+cmake --build build
+```
+
+### Build Options
+
+| Option | Default | Description |
+| :--- | :---: | :--- |
+| `BUILD_SHARED_LIBS` | `ON` | Build as shared libraries. |
+| `JOIN_ENABLE_CRYPTO` | `ON` | Build the crypto module. |
+| `JOIN_ENABLE_DATA` | `ON` | Build the data module. |
+| `JOIN_ENABLE_FABRIC` | `ON` | Build the fabric module. |
+| `JOIN_ENABLE_SERVICES` | `ON` | Build the services module (requires crypto, data, fabric). |
+| `JOIN_ENABLE_NUMA` | `OFF` | Enable NUMA support (requires `libnuma-dev`). |
+| `JOIN_ENABLE_SAMPLES` | `OFF` | Build sample programs. |
+| `JOIN_ENABLE_TESTS` | `OFF` | Build the test suite. |
+| `JOIN_ENABLE_COVERAGE` | `OFF` | Enable code coverage instrumentation (requires Debug build). |
 
 ### Run Tests
 ```bash

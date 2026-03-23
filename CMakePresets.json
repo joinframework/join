@@ -8,6 +8,7 @@
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_VERBOSE_MAKEFILE": "ON",
+        "JOIN_ENABLE_NUMA": "ON",
         "JOIN_ENABLE_SAMPLES": "ON",
         "JOIN_ENABLE_TESTS": "ON"
       }
