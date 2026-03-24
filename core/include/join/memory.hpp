@@ -75,7 +75,7 @@ namespace join
      */
     inline int mbind (void* ptr, size_t size, int numa) noexcept
     {
-        if (ptr == nullptr || numa < 0)
+        if (ptr == nullptr || numa < 0 || numa > (static_cast<int> (sizeof (unsigned long) * 8) - 1))
         {
             lastError = make_error_code (Errc::InvalidParam);
             return -1;
