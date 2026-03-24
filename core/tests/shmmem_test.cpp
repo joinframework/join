@@ -103,7 +103,9 @@ TEST_F (PosixMem, mbind)
 
     ASSERT_EQ (mem.mbind (0), 0) << join::lastError.message ();
     ASSERT_EQ (join::mbind (nullptr, 4096, 0), -1);
+    ASSERT_EQ (join::mbind (mem.get (), 4096, -1), -1);
     ASSERT_EQ (join::mbind (mem.get (), 4096, 9999), -1);
+    ASSERT_EQ (join::mbind (mem.get (), 4096, 63), -1);
 }
 #endif
 
