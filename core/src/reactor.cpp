@@ -113,7 +113,7 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool sync) noexcept
     std::atomic<bool> done{false}, *pdone = nullptr;
     std::atomic<int> errc{0}, *perrc      = nullptr;
 
-    if (JOIN_UNLIKELY (sync))
+    if (JOIN_LIKELY (sync))
     {
         pdone = &done;
         perrc = &errc;
@@ -124,7 +124,7 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool sync) noexcept
         return -1;
     }
 
-    if (JOIN_UNLIKELY (sync))
+    if (JOIN_LIKELY (sync))
     {
         Backoff backoff;
         while (!done.load (std::memory_order_acquire))
@@ -163,7 +163,7 @@ int Reactor::delHandler (int fd, bool sync) noexcept
     std::atomic<bool> done{false}, *pdone = nullptr;
     std::atomic<int> errc{0}, *perrc      = nullptr;
 
-    if (JOIN_UNLIKELY (sync))
+    if (JOIN_LIKELY (sync))
     {
         pdone = &done;
         perrc = &errc;
@@ -174,7 +174,7 @@ int Reactor::delHandler (int fd, bool sync) noexcept
         return -1;
     }
 
-    if (JOIN_UNLIKELY (sync))
+    if (JOIN_LIKELY (sync))
     {
         Backoff backoff;
         while (!done.load (std::memory_order_acquire))
@@ -222,7 +222,7 @@ void Reactor::stop (bool sync) noexcept
 
     writeCommand ({CommandType::Stop, -1, nullptr, nullptr, nullptr});
 
-    if (JOIN_UNLIKELY (sync))
+    if (JOIN_LIKELY (sync))
     {
         Backoff backoff;
         while (_threadId.load (std::memory_order_acquire) != 0)
