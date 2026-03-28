@@ -418,7 +418,8 @@ namespace join
 
                 this->writeResponse ();
                 this->cleanUp ();
-            } while ((this->_max < 0) || (--this->_max != 0));
+            }
+            while ((this->_max < 0) || (--this->_max != 0));
 
             this->endRequest ();
         }

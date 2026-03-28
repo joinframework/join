@@ -80,7 +80,7 @@ sudo apt install gcc g++ clang clang-tools libclang-rt-dev cmake ninja-build gdb
 
 Install required libraries and test dependencies:
 ```bash
-sudo apt install libssl-dev zlib1g-dev libgtest-dev libgmock-dev
+sudo apt install pkg-config libssl-dev zlib1g-dev libgtest-dev libgmock-dev
 ```
 
 > **Compilers:** Both GCC and Clang are supported. Clang requires `libclang-rt-dev` for coverage instrumentation.
