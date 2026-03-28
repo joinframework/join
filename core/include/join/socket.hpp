@@ -59,7 +59,7 @@ namespace join
     class BasicSocket : public EventHandler
     {
     public:
-        using Ptr      = std::unique_ptr<BasicSocket<Protocol>>;
+        using Ptr = std::unique_ptr<BasicSocket<Protocol>>;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -147,9 +147,9 @@ namespace join
         , _handle (other._handle)
         , _protocol (other._protocol)
         {
-            other._state    = State::Closed;
-            other._mode     = Mode::NonBlocking;
-            other._handle   = -1;
+            other._state = State::Closed;
+            other._mode = Mode::NonBlocking;
+            other._handle = -1;
             other._protocol = Protocol ();
         }
 
@@ -162,14 +162,14 @@ namespace join
         {
             this->close ();
 
-            this->_state    = other._state;
-            this->_mode     = other._mode;
-            this->_handle   = other._handle;
+            this->_state = other._state;
+            this->_mode = other._mode;
+            this->_handle = other._handle;
             this->_protocol = other._protocol;
 
-            other._state    = State::Closed;
-            other._mode     = Mode::NonBlocking;
-            other._handle   = -1;
+            other._state = State::Closed;
+            other._mode = Mode::NonBlocking;
+            other._handle = -1;
             other._protocol = Protocol ();
 
             return *this;
@@ -211,7 +211,7 @@ namespace join
                 return -1;
             }
 
-            this->_state    = State::Disconnected;
+            this->_state = State::Disconnected;
             this->_protocol = protocol;
 
             return 0;
@@ -225,7 +225,7 @@ namespace join
             if (this->_state != State::Closed)
             {
                 ::close (this->_handle);
-                this->_state  = State::Closed;
+                this->_state = State::Closed;
                 this->_handle = -1;
             }
         }
@@ -306,14 +306,14 @@ namespace join
         {
             struct iovec iov;
             iov.iov_base = data;
-            iov.iov_len  = maxSize;
+            iov.iov_len = maxSize;
 
             struct msghdr message;
-            message.msg_name       = nullptr;
-            message.msg_namelen    = 0;
-            message.msg_iov        = &iov;
-            message.msg_iovlen     = 1;
-            message.msg_control    = nullptr;
+            message.msg_name = nullptr;
+            message.msg_namelen = 0;
+            message.msg_iov = &iov;
+            message.msg_iovlen = 1;
+            message.msg_control = nullptr;
             message.msg_controllen = 0;
 
             int size = ::recvmsg (this->_handle, &message, 0);
@@ -353,14 +353,14 @@ namespace join
         {
             struct iovec iov;
             iov.iov_base = const_cast<char*> (data);
-            iov.iov_len  = maxSize;
+            iov.iov_len = maxSize;
 
             struct msghdr message;
-            message.msg_name       = nullptr;
-            message.msg_namelen    = 0;
-            message.msg_iov        = &iov;
-            message.msg_iovlen     = 1;
-            message.msg_control    = nullptr;
+            message.msg_name = nullptr;
+            message.msg_namelen = 0;
+            message.msg_iov = &iov;
+            message.msg_iovlen = 1;
+            message.msg_control = nullptr;
             message.msg_controllen = 0;
 
             int result = ::sendmsg (this->_handle, &message, 0);
@@ -412,42 +412,42 @@ namespace join
             {
                 case Option::KeepAlive:
                     optlevel = SOL_SOCKET;
-                    optname  = SO_KEEPALIVE;
+                    optname = SO_KEEPALIVE;
                     break;
 
                 case Option::SndBuffer:
                     optlevel = SOL_SOCKET;
-                    optname  = SO_SNDBUF;
+                    optname = SO_SNDBUF;
                     break;
 
                 case Option::RcvBuffer:
                     optlevel = SOL_SOCKET;
-                    optname  = SO_RCVBUF;
+                    optname = SO_RCVBUF;
                     break;
 
                 case Option::TimeStamp:
                     optlevel = SOL_SOCKET;
-                    optname  = SO_TIMESTAMP;
+                    optname = SO_TIMESTAMP;
                     break;
 
                 case Option::ReuseAddr:
                     optlevel = SOL_SOCKET;
-                    optname  = SO_REUSEADDR;
+                    optname = SO_REUSEADDR;
                     break;
 
                 case Option::ReusePort:
                     optlevel = SOL_SOCKET;
-                    optname  = SO_REUSEPORT;
+                    optname = SO_REUSEPORT;
                     break;
 
                 case Option::Broadcast:
                     optlevel = SOL_SOCKET;
-                    optname  = SO_BROADCAST;
+                    optname = SO_BROADCAST;
                     break;
 
                 case Option::AuxData:
                     optlevel = SOL_PACKET;
-                    optname  = PACKET_AUXDATA;
+                    optname = PACKET_AUXDATA;
                     break;
 
                 default:
@@ -644,10 +644,10 @@ namespace join
     class BasicDatagramSocket : public BasicSocket<Protocol>
     {
     public:
-        using Ptr      = std::unique_ptr<BasicDatagramSocket<Protocol>>;
-        using Mode     = typename BasicSocket<Protocol>::Mode;
-        using Option   = typename BasicSocket<Protocol>::Option;
-        using State    = typename BasicSocket<Protocol>::State;
+        using Ptr = std::unique_ptr<BasicDatagramSocket<Protocol>>;
+        using Mode = typename BasicSocket<Protocol>::Mode;
+        using Option = typename BasicSocket<Protocol>::Option;
+        using State = typename BasicSocket<Protocol>::State;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -703,7 +703,7 @@ namespace join
             BasicSocket<Protocol>::operator= (std::move (other));
 
             _remote = std::move (other._remote);
-            _ttl    = other._ttl;
+            _ttl = other._ttl;
 
             other._ttl = 60;
 
@@ -812,7 +812,7 @@ namespace join
 
             int result = ::connect (this->_handle, endpoint.addr (), endpoint.length ());
 
-            this->_state  = State::Connecting;
+            this->_state = State::Connecting;
             this->_remote = endpoint;
 
             if (result == -1)
@@ -854,7 +854,7 @@ namespace join
                     }
                 }
 
-                this->_state  = State::Disconnected;
+                this->_state = State::Disconnected;
                 this->_remote = {};
             }
 
@@ -902,7 +902,7 @@ namespace join
                 }
                 else
                 {
-                    lastError    = make_error_code (Errc::ConnectionClosed);
+                    lastError = make_error_code (Errc::ConnectionClosed);
                     this->_state = State::Disconnected;
                 }
 
@@ -974,12 +974,12 @@ namespace join
                     if (this->family () == AF_INET6)
                     {
                         optlevel = IPPROTO_IPV6;
-                        optname  = IPV6_UNICAST_HOPS;
+                        optname = IPV6_UNICAST_HOPS;
                     }
                     else
                     {
                         optlevel = IPPROTO_IP;
-                        optname  = IP_TTL;
+                        optname = IP_TTL;
                     }
                     break;
 
@@ -987,12 +987,12 @@ namespace join
                     if (this->family () == AF_INET6)
                     {
                         optlevel = IPPROTO_IPV6;
-                        optname  = IPV6_MULTICAST_LOOP;
+                        optname = IPV6_MULTICAST_LOOP;
                     }
                     else
                     {
                         optlevel = IPPROTO_IP;
-                        optname  = IP_MULTICAST_LOOP;
+                        optname = IP_MULTICAST_LOOP;
                     }
                     break;
 
@@ -1000,12 +1000,12 @@ namespace join
                     if (this->family () == AF_INET6)
                     {
                         optlevel = IPPROTO_IPV6;
-                        optname  = IPV6_MULTICAST_HOPS;
+                        optname = IPV6_MULTICAST_HOPS;
                     }
                     else
                     {
                         optlevel = IPPROTO_IP;
-                        optname  = IP_MULTICAST_TTL;
+                        optname = IP_MULTICAST_TTL;
                     }
                     break;
 
@@ -1013,12 +1013,12 @@ namespace join
                     if (this->family () == AF_INET6)
                     {
                         optlevel = IPPROTO_IPV6;
-                        optname  = IPV6_MTU_DISCOVER;
+                        optname = IPV6_MTU_DISCOVER;
                     }
                     else
                     {
                         optlevel = IPPROTO_IP;
-                        optname  = IP_MTU_DISCOVER;
+                        optname = IP_MTU_DISCOVER;
                     }
                     break;
 
@@ -1026,12 +1026,12 @@ namespace join
                     if (this->family () == AF_INET6)
                     {
                         optlevel = IPPROTO_IPV6;
-                        optname  = IPV6_RECVERR;
+                        optname = IPV6_RECVERR;
                     }
                     else
                     {
                         optlevel = IPPROTO_IP;
-                        optname  = IP_RECVERR;
+                        optname = IP_RECVERR;
                     }
                     break;
 
@@ -1141,10 +1141,10 @@ namespace join
     class BasicStreamSocket : public BasicDatagramSocket<Protocol>
     {
     public:
-        using Ptr      = std::unique_ptr<BasicStreamSocket<Protocol>>;
-        using Mode     = typename BasicDatagramSocket<Protocol>::Mode;
-        using Option   = typename BasicDatagramSocket<Protocol>::Option;
-        using State    = typename BasicDatagramSocket<Protocol>::State;
+        using Ptr = std::unique_ptr<BasicStreamSocket<Protocol>>;
+        using Mode = typename BasicDatagramSocket<Protocol>::Mode;
+        using Option = typename BasicDatagramSocket<Protocol>::Option;
+        using State = typename BasicDatagramSocket<Protocol>::State;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -1285,7 +1285,7 @@ namespace join
                     return false;
                 }
 
-                auto start  = std::chrono::steady_clock::now ();
+                auto start = std::chrono::steady_clock::now ();
                 int elapsed = 0;
 
                 while ((lastError == Errc::TemporaryError) && (elapsed <= timeout))
@@ -1409,22 +1409,22 @@ namespace join
             {
                 case Option::NoDelay:
                     optlevel = IPPROTO_TCP;
-                    optname  = TCP_NODELAY;
+                    optname = TCP_NODELAY;
                     break;
 
                 case Option::KeepIdle:
                     optlevel = IPPROTO_TCP;
-                    optname  = TCP_KEEPIDLE;
+                    optname = TCP_KEEPIDLE;
                     break;
 
                 case Option::KeepIntvl:
                     optlevel = IPPROTO_TCP;
-                    optname  = TCP_KEEPINTVL;
+                    optname = TCP_KEEPINTVL;
                     break;
 
                 case Option::KeepCount:
                     optlevel = IPPROTO_TCP;
-                    optname  = TCP_KEEPCNT;
+                    optname = TCP_KEEPCNT;
                     break;
 
                 default:
@@ -1551,10 +1551,10 @@ namespace join
     class BasicTlsSocket : public BasicStreamSocket<Protocol>
     {
     public:
-        using Ptr      = std::unique_ptr<BasicTlsSocket<Protocol>>;
-        using Mode     = typename BasicStreamSocket<Protocol>::Mode;
-        using Option   = typename BasicStreamSocket<Protocol>::Option;
-        using State    = typename BasicStreamSocket<Protocol>::State;
+        using Ptr = std::unique_ptr<BasicTlsSocket<Protocol>>;
+        using Mode = typename BasicStreamSocket<Protocol>::Mode;
+        using Option = typename BasicStreamSocket<Protocol>::Option;
+        using State = typename BasicStreamSocket<Protocol>::State;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -1668,8 +1668,8 @@ namespace join
             BasicStreamSocket<Protocol>::operator= (std::move (other));
 
             this->_tlsContext = std::move (other._tlsContext);
-            this->_tlsHandle  = std::move (other._tlsHandle);
-            this->_tlsState   = other._tlsState;
+            this->_tlsHandle = std::move (other._tlsHandle);
+            this->_tlsState = other._tlsState;
 
             if (this->_tlsHandle)
             {
@@ -1831,9 +1831,9 @@ namespace join
                                     case 0:
                                     case ECONNRESET:
                                     case EPIPE:
-                                        lastError       = make_error_code (Errc::ConnectionClosed);
+                                        lastError = make_error_code (Errc::ConnectionClosed);
                                         this->_tlsState = TlsState::NonEncrypted;
-                                        this->_state    = State::Disconnected;
+                                        this->_state = State::Disconnected;
                                         break;
                                     default:
                                         lastError = std::error_code (errno, std::generic_category ());
@@ -1948,9 +1948,9 @@ namespace join
                                 case 0:
                                 case ECONNRESET:
                                 case EPIPE:
-                                    lastError       = make_error_code (Errc::ConnectionClosed);
+                                    lastError = make_error_code (Errc::ConnectionClosed);
                                     this->_tlsState = TlsState::NonEncrypted;
-                                    this->_state    = State::Disconnected;
+                                    this->_state = State::Disconnected;
                                     break;
                                 default:
                                     lastError = std::error_code (errno, std::generic_category ());
@@ -2030,9 +2030,9 @@ namespace join
                                 case 0:
                                 case ECONNRESET:
                                 case EPIPE:
-                                    lastError       = make_error_code (Errc::ConnectionClosed);
+                                    lastError = make_error_code (Errc::ConnectionClosed);
                                     this->_tlsState = TlsState::NonEncrypted;
-                                    this->_state    = State::Disconnected;
+                                    this->_state = State::Disconnected;
                                     break;
                                 default:
                                     lastError = std::error_code (errno, std::generic_category ());
@@ -2231,7 +2231,7 @@ namespace join
                             case 0:
                             case ECONNRESET:
                             case EPIPE:
-                                lastError    = make_error_code (Errc::ConnectionClosed);
+                                lastError = make_error_code (Errc::ConnectionClosed);
                                 this->_state = State::Disconnected;
                                 break;
                             default:
@@ -2346,7 +2346,7 @@ namespace join
         int verifyCallback (int preverified, X509_STORE_CTX* context) const
         {
             int maxDepth = SSL_get_verify_depth (this->_tlsHandle.get ());
-            int dpth     = X509_STORE_CTX_get_error_depth (context);
+            int dpth = X509_STORE_CTX_get_error_depth (context);
 
 #ifdef DEBUG
             std::cout << "verification started at depth=" << dpth << std::endl;
@@ -2409,7 +2409,7 @@ namespace join
          */
         int verifyCert (X509_STORE_CTX* context) const
         {
-            int depth  = X509_STORE_CTX_get_error_depth (context);
+            int depth = X509_STORE_CTX_get_error_depth (context);
             X509* cert = X509_STORE_CTX_get_current_cert (context);
 
             char buf[256];
@@ -2457,7 +2457,7 @@ namespace join
                     {
                         // get data and length.
                         const char* host = reinterpret_cast<const char*> (ASN1_STRING_get0_data (current_name->d.ia5));
-                        size_t len       = size_t (ASN1_STRING_length (current_name->d.ia5));
+                        size_t len = size_t (ASN1_STRING_length (current_name->d.ia5));
                         std::string pattern (host, host + len), serverName (this->_remote.hostname ());
 
                         // strip off trailing dots.

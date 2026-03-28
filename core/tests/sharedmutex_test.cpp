@@ -50,8 +50,8 @@ const std::string _name = "/test_mutex";
 TEST (SharedMutex, lock)
 {
     SharedMutex* mutex = nullptr;
-    void* shm          = nullptr;
-    pid_t child        = -1;
+    void* shm = nullptr;
+    pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
@@ -115,8 +115,8 @@ cleanup:
 TEST (SharedMutex, tryLock)
 {
     SharedMutex* mutex = nullptr;
-    void* shm          = nullptr;
-    pid_t child        = -1;
+    void* shm = nullptr;
+    pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
@@ -179,8 +179,8 @@ cleanup:
 TEST (SharedMutex, scopedLock)
 {
     SharedMutex* mutex = nullptr;
-    void* shm          = nullptr;
-    pid_t child        = -1;
+    void* shm = nullptr;
+    pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);

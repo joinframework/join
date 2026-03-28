@@ -51,7 +51,7 @@ namespace join
     struct QuestionRecord
     {
         std::string host;      /**< host name. */
-        uint16_t type     = 0; /**< resource record type. */
+        uint16_t type = 0;     /**< resource record type. */
         uint16_t dnsclass = 0; /**< DNS class. */
     };
 
@@ -64,12 +64,12 @@ namespace join
         IpAddress addr;       /**< address. */
         std::string name;     /**< canonical, server or mail exchanger name. */
         std::string mail;     /**< server mail. */
-        uint32_t serial  = 0; /**< serial number. */
+        uint32_t serial = 0;  /**< serial number. */
         uint32_t refresh = 0; /**< refresh interval. */
-        uint32_t retry   = 0; /**< retry interval. */
-        uint32_t expire  = 0; /**< upper limit before zone is no longer authoritative. */
+        uint32_t retry = 0;   /**< retry interval. */
+        uint32_t expire = 0;  /**< upper limit before zone is no longer authoritative. */
         uint32_t minimum = 0; /**< minimum TTL. */
-        uint16_t mxpref  = 0; /**< mail exchange preference. */
+        uint16_t mxpref = 0;  /**< mail exchange preference. */
     };
 
     /**
@@ -97,13 +97,13 @@ namespace join
          */
         enum RecordType : uint16_t
         {
-            A     = 1,  /**< IPv4 host address. */
-            NS    = 2,  /**< Authoritative name server. */
-            CNAME = 5,  /**< Canonical name for an alias. */
-            SOA   = 6,  /**< Start of a zone of authority. */
-            PTR   = 12, /**< Domain name pointer. */
-            MX    = 15, /**< Mail exchange. */
-            AAAA  = 28, /**< IPv6 host address. */
+            A = 1,     /**< IPv4 host address. */
+            NS = 2,    /**< Authoritative name server. */
+            CNAME = 5, /**< Canonical name for an alias. */
+            SOA = 6,   /**< Start of a zone of authority. */
+            PTR = 12,  /**< Domain name pointer. */
+            MX = 15,   /**< Mail exchange. */
+            AAAA = 28, /**< IPv6 host address. */
         };
 
         /**

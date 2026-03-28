@@ -178,15 +178,15 @@ namespace join
             };
 
             struct sock_fprog bpf;
-            bpf.len    = 6;
+            bpf.len = 6;
             bpf.filter = code;
 
             // best effort, validation is done in onReceive anyway.
             ::setsockopt (handle (), SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof (bpf));
 
-            Packet out              = {};
+            Packet out = {};
             const MacAddress srcMac = MacAddress::address (_interface);
-            const IpAddress srcIp   = IpAddress::ipv4Address (_interface);
+            const IpAddress srcIp = IpAddress::ipv4Address (_interface);
 
             ::memcpy (out.eth.h_dest, MacAddress::broadcast.addr (), ETH_ALEN);
             ::memcpy (out.eth.h_source, srcMac.addr (), ETH_ALEN);
@@ -196,7 +196,7 @@ namespace join
             out.arp.ar_pro = ::htons (ETH_P_IP);
             out.arp.ar_hln = ETH_ALEN;
             out.arp.ar_pln = 4;
-            out.arp.ar_op  = ::htons (ARPOP_REQUEST);
+            out.arp.ar_op = ::htons (ARPOP_REQUEST);
             ::memcpy (out.arp.ar_sha, srcMac.addr (), ETH_ALEN);
             ::memcpy (&out.arp.ar_sip, srcIp.addr (), sizeof (uint32_t));
             ::memcpy (out.arp.ar_tha, MacAddress::wildcard.addr (), ETH_ALEN);

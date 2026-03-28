@@ -294,8 +294,8 @@ TEST_F (ShmMpsc, popBatch)
 TEST_F (ShmMpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num      = 1000000;
-    uint64_t data           = 0;
+    const uint64_t num = 1000000;
+    uint64_t data = 0;
 
     pid_t child = fork ();
     if (child == 0)
@@ -369,8 +369,8 @@ TEST_F (ShmMpsc, pushBenchmark)
 TEST_F (ShmMpsc, popBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num      = 1000000;
-    uint64_t data           = 0;
+    const uint64_t num = 1000000;
+    uint64_t data = 0;
 
     pid_t child = fork ();
     if (child == 0)

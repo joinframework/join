@@ -63,8 +63,8 @@ Reactor::Reactor ()
     _deleted.reserve (_deletedReserve);
 
     struct epoll_event ev = {};
-    ev.events             = EPOLLIN;
-    ev.data.fd            = _wakeup;
+    ev.events = EPOLLIN;
+    ev.data.fd = _wakeup;
 
     if (epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev) == -1)
     {
@@ -111,7 +111,7 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool sync) noexcept
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
-    std::atomic<int> errc{0}, *perrc      = nullptr;
+    std::atomic<int> errc{0}, *perrc = nullptr;
 
     if (JOIN_LIKELY (sync))
     {
@@ -161,7 +161,7 @@ int Reactor::delHandler (int fd, bool sync) noexcept
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
-    std::atomic<int> errc{0}, *perrc      = nullptr;
+    std::atomic<int> errc{0}, *perrc = nullptr;
 
     if (JOIN_LIKELY (sync))
     {
@@ -270,8 +270,8 @@ int Reactor::registerHandler (int fd, EventHandler* handler) noexcept
     _deleted.erase (fd);
 
     struct epoll_event ev = {};
-    ev.events             = EPOLLIN | EPOLLRDHUP;
-    ev.data.fd            = fd;
+    ev.events = EPOLLIN | EPOLLRDHUP;
+    ev.data.fd = fd;
 
     if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, fd, &ev) == -1))
     {
@@ -311,7 +311,7 @@ int Reactor::writeCommand (const Command& cmd) noexcept
         return -1;
     }
 
-    uint64_t value                 = 1;
+    uint64_t value = 1;
     [[maybe_unused]] ssize_t bytes = ::write (_wakeup, &value, sizeof (uint64_t));
 
     return 0;

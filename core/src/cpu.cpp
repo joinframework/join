@@ -93,7 +93,7 @@ void CpuTopology::dump () const
 
         for (auto const& it : sockets)
         {
-            int socketId              = it.first;
+            int socketId = it.first;
             const auto& coresInSocket = it.second;
 
             std::cout << "  Socket " << socketId << ":" << std::endl;
@@ -199,7 +199,7 @@ void CpuTopology::detect ()
 
             int coreId = readInt (cpuPath + "/topology/core_id");
             int socket = readInt (cpuPath + "/topology/physical_package_id");
-            int numa   = findNuma (cpuPath);
+            int numa = findNuma (cpuPath);
 
             auto coreKey = std::make_tuple (socket, coreId, numa);
             size_t coreIndex;

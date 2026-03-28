@@ -55,7 +55,7 @@ TEST (Condition, wait)
         ready = true;
         condition.signal ();
     });
-    auto beg  = std::chrono::high_resolution_clock::now ();
+    auto beg = std::chrono::high_resolution_clock::now ();
     condition.wait (lock, [&] () {
         return ready;
     });
@@ -80,7 +80,7 @@ TEST (Condition, timedWait)
         ready = true;
         condition.broadcast ();
     });
-    auto beg  = std::chrono::high_resolution_clock::now ();
+    auto beg = std::chrono::high_resolution_clock::now ();
     EXPECT_FALSE (condition.timedWait (lock, 2ms));
     EXPECT_FALSE (condition.timedWait (lock, 2ms, [&] () {
         return ready;

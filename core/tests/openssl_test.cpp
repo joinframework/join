@@ -148,8 +148,8 @@ protected:
 };
 
 const std::string Openssl::_rootcert = "/tmp/tlssocket_test_root.cert";
-const std::string Openssl::_cert     = "/tmp/tlssocket_test.cert";
-const std::string Openssl::_key      = "/tmp/tlssocket_test.key";
+const std::string Openssl::_cert = "/tmp/tlssocket_test.cert";
+const std::string Openssl::_key = "/tmp/tlssocket_test.key";
 
 /**
  * @brief BigNumPtr test.

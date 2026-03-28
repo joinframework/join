@@ -49,7 +49,7 @@ namespace join
     class BasicStats
     {
     public:
-        using Duration  = typename ClockPolicy::Duration;
+        using Duration = typename ClockPolicy::Duration;
         using TimePoint = typename ClockPolicy::TimePoint;
 
         /**
@@ -234,7 +234,7 @@ namespace join
         double throughput () const noexcept
         {
             const auto count = _count.load (std::memory_order_acquire);
-            const auto sum   = _sum.load (std::memory_order_acquire);
+            const auto sum = _sum.load (std::memory_order_acquire);
 
             if (count == 0 || sum == 0)
             {
@@ -258,7 +258,7 @@ namespace join
             }
 
             const uint64_t target = static_cast<uint64_t> (p / 100.0 * static_cast<double> (total));
-            uint64_t cumulative   = 0;
+            uint64_t cumulative = 0;
 
             for (int i = 0; i < _countsLen; ++i)
             {
@@ -318,8 +318,8 @@ namespace join
                 ns = 1;  // LCOV_EXCL_LINE
             }
 
-            const int bi  = hdrBucketIndex (ns);
-            const int si  = static_cast<int> (ns >> bi);
+            const int bi = hdrBucketIndex (ns);
+            const int si = static_cast<int> (ns >> bi);
             const int idx = (bi + 1) * _subBucketHalfCount + si - _subBucketHalfCount;
 
             if (JOIN_UNLIKELY (idx >= _buckets))
@@ -562,7 +562,7 @@ namespace join
         }();
 
         const double dlscale = static_cast<double> (lscale);
-        const char* lunit    = "ns";
+        const char* lunit = "ns";
         if (lscale == 1'000'000'000)
         {
             lunit = "s";
@@ -583,7 +583,7 @@ namespace join
         }();
 
         const double dtscale = static_cast<double> (tscale);
-        const char* tunit    = "ops/s";
+        const char* tunit = "ops/s";
         if (tscale == 1'000'000'000)
         {
             tunit = "Gops/s";
@@ -599,13 +599,13 @@ namespace join
 
         // format statistics.
         const auto count = statistics.count ();
-        const auto min   = statistics.min ();
-        const auto mean  = statistics.mean ();
-        const auto max   = statistics.max ();
-        const auto thr   = statistics.throughput ();
-        const auto p50   = statistics.percentile (50.0);
-        const auto p90   = statistics.percentile (90.0);
-        const auto p99   = statistics.percentile (99.0);
+        const auto min = statistics.min ();
+        const auto mean = statistics.mean ();
+        const auto max = statistics.max ();
+        const auto thr = statistics.throughput ();
+        const auto p50 = statistics.percentile (50.0);
+        const auto p90 = statistics.percentile (90.0);
+        const auto p99 = statistics.percentile (99.0);
 
         auto printLatCol = [&] (double v) {
             std::ostringstream ss;

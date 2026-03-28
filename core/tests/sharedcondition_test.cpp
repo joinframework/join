@@ -59,8 +59,8 @@ struct ConditionSync
 TEST (SharedCondition, wait)
 {
     ConditionSync* sync = nullptr;
-    void* shm           = nullptr;
-    pid_t child         = -1;
+    void* shm = nullptr;
+    pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
@@ -132,8 +132,8 @@ cleanup:
 TEST (SharedCondition, timedWait)
 {
     ConditionSync* sync = nullptr;
-    void* shm           = nullptr;
-    pid_t child         = -1;
+    void* shm = nullptr;
+    pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);

@@ -39,10 +39,10 @@ namespace join
      */
     enum class NeighborChangeType : uint32_t
     {
-        Added        = 1L << 0, /**< entry did not exist before. */
-        Deleted      = 1L << 1, /**< entry was removed. */
-        Modified     = 1L << 2, /**< entry was updated. */
-        MacChanged   = 1L << 3, /**< MAC address changed. */
+        Added = 1L << 0,        /**< entry did not exist before. */
+        Deleted = 1L << 1,      /**< entry was removed. */
+        Modified = 1L << 2,     /**< entry was updated. */
+        MacChanged = 1L << 3,   /**< MAC address changed. */
         StateChanged = 1L << 4, /**< NUD state changed. */
     };
 

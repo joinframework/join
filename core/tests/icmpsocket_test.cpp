@@ -46,12 +46,12 @@ public:
     {
         _data = std::make_unique<char[]> (sizeof (struct icmphdr));
 
-        struct icmphdr* icmp   = reinterpret_cast<struct icmphdr*> (_data.get ());
-        icmp->type             = ICMP_ECHO;
-        icmp->code             = 0;
-        icmp->checksum         = 0;
+        struct icmphdr* icmp = reinterpret_cast<struct icmphdr*> (_data.get ());
+        icmp->type = ICMP_ECHO;
+        icmp->code = 0;
+        icmp->checksum = 0;
         icmp->un.echo.sequence = htons (1);
-        icmp->un.echo.id       = htons (getpid () & 0xFFFF);
+        icmp->un.echo.id = htons (getpid () & 0xFFFF);
         icmp->checksum = Icmp::Socket::checksum (reinterpret_cast<uint16_t*> (icmp), sizeof (struct icmphdr), 0);
     }
 
@@ -67,7 +67,7 @@ protected:
 };
 
 const std::string IcmpSocket::_host = "127.0.0.1";
-const int IcmpSocket::_timeout      = 1000;
+const int IcmpSocket::_timeout = 1000;
 std::unique_ptr<char[]> IcmpSocket::_data;
 
 /**

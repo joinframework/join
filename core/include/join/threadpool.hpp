@@ -199,9 +199,9 @@ namespace join
             // determine number of threads and tasks per thread to run.
             int concurrency = int (CpuTopology::instance ()->cores ().size ());
             // no need to create more threads than tasks.
-            concurrency  = std::min (concurrency, count);
+            concurrency = std::min (concurrency, count);
             int elements = count / concurrency;
-            int rest     = count % concurrency;
+            int rest = count % concurrency;
             // distribute tasks to threads.
             std::vector<int> tasks (concurrency, elements);
             for (int i = 0; i < rest; ++i)

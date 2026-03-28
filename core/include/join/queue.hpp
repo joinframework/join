@@ -164,7 +164,7 @@ namespace join
                 _segment->_sync._head.store (0, std::memory_order_relaxed);
                 _segment->_sync._tail.store (0, std::memory_order_relaxed);
                 _segment->_sync._capacity = _capacity;
-                _segment->_sync._mask     = _capacity - 1;
+                _segment->_sync._mask = _capacity - 1;
 
                 initSlots<needs_seq<SyncPolicy>::value> ();
 
@@ -506,7 +506,7 @@ namespace join
     template <typename Type, typename Backend>
     struct Spsc
     {
-        using Queue   = BasicQueue<Type, Backend, Spsc>;
+        using Queue = BasicQueue<Type, Backend, Spsc>;
         using Segment = QueueSegment<Type, QueueSlotLight<Type>>;
 
         /**
@@ -525,7 +525,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            auto& sync    = segment->_sync;
+            auto& sync = segment->_sync;
             uint64_t head = sync._head.load (std::memory_order_relaxed);
             uint64_t tail = sync._tail.load (std::memory_order_acquire);
 
@@ -556,9 +556,9 @@ namespace join
                 return -1;
             }
 
-            auto& sync       = segment->_sync;
-            uint64_t head    = sync._head.load (std::memory_order_relaxed);
-            uint64_t tail    = sync._tail.load (std::memory_order_acquire);
+            auto& sync = segment->_sync;
+            uint64_t head = sync._head.load (std::memory_order_relaxed);
+            uint64_t tail = sync._tail.load (std::memory_order_acquire);
             uint64_t toWrite = std::min (static_cast<uint64_t> (size), sync._capacity - (head - tail));
 
             if (JOIN_UNLIKELY (toWrite == 0))
@@ -593,7 +593,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            auto& sync    = segment->_sync;
+            auto& sync = segment->_sync;
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
             uint64_t head = sync._head.load (std::memory_order_acquire);
 
@@ -624,9 +624,9 @@ namespace join
                 return -1;
             }
 
-            auto& sync      = segment->_sync;
-            uint64_t tail   = sync._tail.load (std::memory_order_relaxed);
-            uint64_t head   = sync._head.load (std::memory_order_acquire);
+            auto& sync = segment->_sync;
+            uint64_t tail = sync._tail.load (std::memory_order_relaxed);
+            uint64_t head = sync._head.load (std::memory_order_acquire);
             uint64_t toRead = std::min (static_cast<uint64_t> (size), head - tail);
 
             if (JOIN_UNLIKELY (toRead == 0))
@@ -652,7 +652,7 @@ namespace join
     template <typename Type, typename Backend>
     struct Mpsc
     {
-        using Queue   = BasicQueue<Type, Backend, Mpsc>;
+        using Queue = BasicQueue<Type, Backend, Mpsc>;
         using Segment = QueueSegment<Type, QueueSlotFull<Type>>;
 
         /**
@@ -671,13 +671,13 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            auto& sync    = segment->_sync;
+            auto& sync = segment->_sync;
             uint64_t head = sync._head.load (std::memory_order_relaxed);
             Backoff backoff;
 
             for (;;)
             {
-                auto* slot   = &segment->_elements[head & sync._mask];
+                auto* slot = &segment->_elements[head & sync._mask];
                 uint64_t seq = slot->_seq.load (std::memory_order_acquire);
 
                 if (seq == head)
@@ -719,12 +719,12 @@ namespace join
             }
 
             Backoff backoff;
-            auto& sync    = segment->_sync;
+            auto& sync = segment->_sync;
             uint64_t head = sync._head.load (std::memory_order_relaxed);
 
             for (;;)
             {
-                uint64_t tail    = sync._tail.load (std::memory_order_acquire);
+                uint64_t tail = sync._tail.load (std::memory_order_acquire);
                 uint64_t toWrite = std::min (static_cast<uint64_t> (size), sync._capacity - (head - tail));
 
                 if (JOIN_UNLIKELY (toWrite == 0))
@@ -766,10 +766,10 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            auto& sync    = segment->_sync;
+            auto& sync = segment->_sync;
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
-            auto* slot    = &segment->_elements[tail & sync._mask];
-            uint64_t seq  = slot->_seq.load (std::memory_order_acquire);
+            auto* slot = &segment->_elements[tail & sync._mask];
+            uint64_t seq = slot->_seq.load (std::memory_order_acquire);
 
             if (JOIN_UNLIKELY (seq != tail + 1))
             {
@@ -799,9 +799,9 @@ namespace join
                 return -1;
             }
 
-            auto& sync      = segment->_sync;
-            uint64_t tail   = sync._tail.load (std::memory_order_relaxed);
-            uint64_t head   = sync._head.load (std::memory_order_acquire);
+            auto& sync = segment->_sync;
+            uint64_t tail = sync._tail.load (std::memory_order_relaxed);
+            uint64_t head = sync._head.load (std::memory_order_acquire);
             uint64_t toRead = std::min (static_cast<uint64_t> (size), head - tail);
             uint64_t popped = 0;
 
@@ -836,7 +836,7 @@ namespace join
     template <typename Type, typename Backend>
     struct Mpmc
     {
-        using Queue   = BasicQueue<Type, Backend, Mpmc>;
+        using Queue = BasicQueue<Type, Backend, Mpmc>;
         using Segment = QueueSegment<Type, QueueSlotFull<Type>>;
 
         /**
@@ -878,13 +878,13 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            auto& sync    = segment->_sync;
+            auto& sync = segment->_sync;
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
             Backoff backoff;
 
             for (;;)
             {
-                auto* slot   = &segment->_elements[tail & sync._mask];
+                auto* slot = &segment->_elements[tail & sync._mask];
                 uint64_t seq = slot->_seq.load (std::memory_order_acquire);
 
                 if (seq == (tail + 1))
@@ -926,12 +926,12 @@ namespace join
             }
 
             Backoff backoff;
-            auto& sync    = segment->_sync;
+            auto& sync = segment->_sync;
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
 
             for (;;)
             {
-                uint64_t head   = sync._head.load (std::memory_order_acquire);
+                uint64_t head = sync._head.load (std::memory_order_acquire);
                 uint64_t toRead = std::min (static_cast<uint64_t> (size), head - tail);
 
                 if (JOIN_UNLIKELY (toRead == 0))
@@ -961,7 +961,7 @@ namespace join
                 {
                     for (uint64_t i = 0; i < ready; ++i)
                     {
-                        auto* slot  = &segment->_elements[(tail + i) & sync._mask];
+                        auto* slot = &segment->_elements[(tail + i) & sync._mask];
                         elements[i] = slot->data;
                         slot->_seq.store (tail + i + sync._capacity, std::memory_order_release);
                     }

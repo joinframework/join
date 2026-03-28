@@ -108,13 +108,13 @@ IpAddressList Resolver::resolveAllHost (const std::string& host, int family, con
     IpAddressList addresses;
 
     DnsPacket packet;
-    packet.src  = IpAddress (server.family ());
+    packet.src = IpAddress (server.family ());
     packet.dest = server;
     packet.port = port;
 
     QuestionRecord question;
-    question.host     = host;
-    question.type     = (family == AF_INET6) ? RecordType::AAAA : RecordType::A;
+    question.host = host;
+    question.type = (family == AF_INET6) ? RecordType::AAAA : RecordType::A;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -254,13 +254,13 @@ AliasList Resolver::resolveAllAddress (const IpAddress& address, const IpAddress
     AliasList aliases;
 
     DnsPacket packet;
-    packet.src  = IpAddress (server.family ());
+    packet.src = IpAddress (server.family ());
     packet.dest = server;
     packet.port = port;
 
     QuestionRecord question;
-    question.host     = address.toArpa ();
-    question.type     = RecordType::PTR;
+    question.host = address.toArpa ();
+    question.type = RecordType::PTR;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -336,13 +336,13 @@ ServerList Resolver::resolveAllNameServer (const std::string& host, const IpAddr
     ServerList names;
 
     DnsPacket packet;
-    packet.src  = IpAddress (server.family ());
+    packet.src = IpAddress (server.family ());
     packet.dest = server;
     packet.port = port;
 
     QuestionRecord question;
-    question.host     = host;
-    question.type     = RecordType::NS;
+    question.host = host;
+    question.type = RecordType::NS;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -416,13 +416,13 @@ std::string Resolver::resolveNameServer (const std::string& host)
 std::string Resolver::resolveAuthority (const std::string& host, const IpAddress& server, uint16_t port, int timeout)
 {
     DnsPacket packet;
-    packet.src  = IpAddress (server.family ());
+    packet.src = IpAddress (server.family ());
     packet.dest = server;
     packet.port = port;
 
     QuestionRecord question;
-    question.host     = host;
-    question.type     = RecordType::SOA;
+    question.host = host;
+    question.type = RecordType::SOA;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -469,13 +469,13 @@ ExchangerList Resolver::resolveAllMailExchanger (const std::string& host, const 
     ExchangerList exchangers;
 
     DnsPacket packet;
-    packet.src  = IpAddress (server.family ());
+    packet.src = IpAddress (server.family ());
     packet.dest = server;
     packet.port = port;
 
     QuestionRecord question;
-    question.host     = host;
-    question.type     = RecordType::MX;
+    question.host = host;
+    question.type = RecordType::MX;
     question.dnsclass = RecordClass::IN;
 
     packet.questions.push_back (question);
@@ -833,7 +833,7 @@ std::string Resolver::decodeName (std::stringstream& data)
 std::string Resolver::decodeMail (std::stringstream& data)
 {
     std::string mail = decodeName (data);
-    std::size_t pos  = 0;
+    std::size_t pos = 0;
 
     while ((pos = mail.find (".", pos)) != std::string::npos)
     {

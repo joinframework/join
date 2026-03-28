@@ -252,7 +252,7 @@ TEST (LocalMpsc, popBatch)
 TEST (LocalMpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num      = 1000000;
+    const uint64_t num = 1000000;
 
     LocalMem::Mpsc::Queue<uint64_t> queue (capacity);
     std::atomic<bool> ready{false};
@@ -283,7 +283,7 @@ TEST (LocalMpsc, pushBenchmark)
     const int numProducers = 4;
     std::vector<Thread> producers;
     const uint64_t msgPerProducer = num / numProducers;
-    uint64_t data                 = 0;
+    uint64_t data = 0;
     // pre-fill the buffer
     for (uint64_t i = 0; i < capacity; ++i)
     {
@@ -318,9 +318,9 @@ TEST (LocalMpsc, pushBenchmark)
  */
 TEST (LocalMpsc, popBenchmark)
 {
-    const uint64_t capacity       = 512;
-    const uint64_t num            = 1000000;
-    const int numProducers        = 4;
+    const uint64_t capacity = 512;
+    const uint64_t num = 1000000;
+    const int numProducers = 4;
     const uint64_t msgPerProducer = num / numProducers;
 
     LocalMem::Mpsc::Queue<uint64_t> queue (capacity);

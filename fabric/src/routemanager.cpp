@@ -189,19 +189,19 @@ int RouteManager::addRoute (uint32_t index, const IpAddress& dest, uint32_t pref
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct rtmsg));
-    nlh->nlmsg_type      = RTM_NEWROUTE;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtmsg));
+    nlh->nlmsg_type = RTM_NEWROUTE;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
+    nlh->nlmsg_seq = ++_seq;
 
     // routing message.
     struct rtmsg* rtm = reinterpret_cast<struct rtmsg*> (NLMSG_DATA (nlh));
-    rtm->rtm_family   = dest.family ();
-    rtm->rtm_dst_len  = prefix;
-    rtm->rtm_table    = RT_TABLE_MAIN;
+    rtm->rtm_family = dest.family ();
+    rtm->rtm_dst_len = prefix;
+    rtm->rtm_table = RT_TABLE_MAIN;
     rtm->rtm_protocol = RTPROT_STATIC;
-    rtm->rtm_scope    = RT_SCOPE_UNIVERSE;
-    rtm->rtm_type     = RTN_UNICAST;
+    rtm->rtm_scope = RT_SCOPE_UNIVERSE;
+    rtm->rtm_type = RTN_UNICAST;
 
     // add destination.
     addAttributes (nlh, RTA_DST, dest.addr (), dest.length ());
@@ -251,19 +251,19 @@ int RouteManager::removeRoute (uint32_t index, const IpAddress& dest, uint32_t p
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct rtmsg));
-    nlh->nlmsg_type      = RTM_DELROUTE;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtmsg));
+    nlh->nlmsg_type = RTM_DELROUTE;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    nlh->nlmsg_seq = ++_seq;
 
     // routing message.
     struct rtmsg* rtm = reinterpret_cast<struct rtmsg*> (NLMSG_DATA (nlh));
-    rtm->rtm_family   = dest.family ();
-    rtm->rtm_dst_len  = prefix;
-    rtm->rtm_table    = RT_TABLE_MAIN;
+    rtm->rtm_family = dest.family ();
+    rtm->rtm_dst_len = prefix;
+    rtm->rtm_table = RT_TABLE_MAIN;
     rtm->rtm_protocol = RTPROT_STATIC;
-    rtm->rtm_scope    = RT_SCOPE_UNIVERSE;
-    rtm->rtm_type     = RTN_UNICAST;
+    rtm->rtm_scope = RT_SCOPE_UNIVERSE;
+    rtm->rtm_type = RTN_UNICAST;
 
     // add destination.
     addAttributes (nlh, RTA_DST, dest.addr (), dest.length ());
@@ -335,19 +335,19 @@ int RouteManager::setRoute (uint32_t index, const IpAddress& dest, uint32_t pref
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct rtmsg));
-    nlh->nlmsg_type      = RTM_NEWROUTE;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_REPLACE;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtmsg));
+    nlh->nlmsg_type = RTM_NEWROUTE;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_REPLACE;
+    nlh->nlmsg_seq = ++_seq;
 
     // routing message.
     struct rtmsg* rtm = reinterpret_cast<struct rtmsg*> (NLMSG_DATA (nlh));
-    rtm->rtm_family   = dest.family ();
-    rtm->rtm_dst_len  = prefix;
-    rtm->rtm_table    = RT_TABLE_MAIN;
+    rtm->rtm_family = dest.family ();
+    rtm->rtm_dst_len = prefix;
+    rtm->rtm_table = RT_TABLE_MAIN;
     rtm->rtm_protocol = RTPROT_STATIC;
-    rtm->rtm_scope    = RT_SCOPE_UNIVERSE;
-    rtm->rtm_type     = RTN_UNICAST;
+    rtm->rtm_scope = RT_SCOPE_UNIVERSE;
+    rtm->rtm_type = RTN_UNICAST;
 
     // add destination.
     addAttributes (nlh, RTA_DST, dest.addr (), dest.length ());
@@ -380,14 +380,14 @@ int RouteManager::dumpRoutes (bool sync)
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct rtgenmsg));
-    nlh->nlmsg_type      = RTM_GETROUTE;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_DUMP;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtgenmsg));
+    nlh->nlmsg_type = RTM_GETROUTE;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    nlh->nlmsg_seq = ++_seq;
 
     // general message.
     struct rtgenmsg* rtgen = reinterpret_cast<struct rtgenmsg*> (NLMSG_DATA (nlh));
-    rtgen->rtgen_family    = AF_UNSPEC;
+    rtgen->rtgen_family = AF_UNSPEC;
 
     return sendRequest (nlh, sync);
 }
@@ -416,9 +416,9 @@ void RouteManager::onMessage (struct nlmsghdr* nlh)
 // =========================================================================
 void RouteManager::onRouteMessage (struct nlmsghdr* nlh)
 {
-    struct rtmsg* rtm  = reinterpret_cast<struct rtmsg*> (NLMSG_DATA (nlh));
+    struct rtmsg* rtm = reinterpret_cast<struct rtmsg*> (NLMSG_DATA (nlh));
     struct rtattr* rta = RTM_RTA (rtm);
-    int len            = RTM_PAYLOAD (nlh);
+    int len = RTM_PAYLOAD (nlh);
 
     if (rtm->rtm_family != AF_INET && rtm->rtm_family != AF_INET6)
     {

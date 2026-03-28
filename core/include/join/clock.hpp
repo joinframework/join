@@ -45,11 +45,11 @@ namespace join
      */
     struct NanoClock
     {
-        using rep                         = int64_t;
-        using period                      = std::nano;
-        using duration                    = std::chrono::nanoseconds;
-        using time_point                  = std::chrono::time_point<NanoClock>;
-        static constexpr bool is_steady   = true;
+        using rep = int64_t;
+        using period = std::nano;
+        using duration = std::chrono::nanoseconds;
+        using time_point = std::chrono::time_point<NanoClock>;
+        static constexpr bool is_steady = true;
         static time_point now () noexcept = delete;
     };
 
@@ -82,10 +82,10 @@ namespace join
     class Monotonic
     {
     public:
-        using Duration  = std::chrono::nanoseconds;
+        using Duration = std::chrono::nanoseconds;
         using TimePoint = std::chrono::time_point<NanoClock>;
-        using Timer     = BasicTimer<Monotonic>;
-        using Stats     = BasicStats<Monotonic>;
+        using Timer = BasicTimer<Monotonic>;
+        using Stats = BasicStats<Monotonic>;
 
         /**
          * @brief default constructor.
@@ -119,9 +119,9 @@ namespace join
     class MonotonicRaw
     {
     public:
-        using Duration  = std::chrono::nanoseconds;
+        using Duration = std::chrono::nanoseconds;
         using TimePoint = std::chrono::time_point<NanoClock>;
-        using Stats     = BasicStats<MonotonicRaw>;
+        using Stats = BasicStats<MonotonicRaw>;
 
         /**
          * @brief default constructor.
@@ -155,9 +155,9 @@ namespace join
     class Rdtsc
     {
     public:
-        using Duration  = std::chrono::nanoseconds;
+        using Duration = std::chrono::nanoseconds;
         using TimePoint = std::chrono::time_point<NanoClock>;
-        using Stats     = BasicStats<Rdtsc>;
+        using Stats = BasicStats<Rdtsc>;
 
         /**
          * @brief default constructor.
@@ -225,7 +225,7 @@ namespace join
                 ::clock_gettime (CLOCK_MONOTONIC, &t1);
                 const uint64_t c1 = readCycles ();
 
-                const int64_t ns      = (t1.tv_sec - t0.tv_sec) * 1'000'000'000LL + (t1.tv_nsec - t0.tv_nsec);
+                const int64_t ns = (t1.tv_sec - t0.tv_sec) * 1'000'000'000LL + (t1.tv_nsec - t0.tv_nsec);
                 const uint64_t cycles = c1 - c0;
 
                 cycleToNs () = (static_cast<uint64_t> (ns) << 32) / cycles;

@@ -185,14 +185,14 @@ int InterfaceManager::createDummyInterface (const std::string& interfaceName, bo
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifinfomsg));
-    nlh->nlmsg_type      = RTM_NEWLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
+    nlh->nlmsg_type = RTM_NEWLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
+    nlh->nlmsg_seq = ++_seq;
 
     // info message.
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    ifi->ifi_family       = AF_UNSPEC;
+    ifi->ifi_family = AF_UNSPEC;
 
     // set interface name.
     addAttributes (nlh, IFLA_IFNAME, interfaceName.c_str (), interfaceName.length () + 1);
@@ -221,14 +221,14 @@ int InterfaceManager::createBridgeInterface (const std::string& interfaceName, b
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifinfomsg));
-    nlh->nlmsg_type      = RTM_NEWLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
+    nlh->nlmsg_type = RTM_NEWLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
+    nlh->nlmsg_seq = ++_seq;
 
     // info message.
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    ifi->ifi_family       = AF_UNSPEC;
+    ifi->ifi_family = AF_UNSPEC;
 
     // set interface name.
     addAttributes (nlh, IFLA_IFNAME, interfaceName.c_str (), interfaceName.length () + 1);
@@ -264,14 +264,14 @@ int InterfaceManager::createVlanInterface (const std::string& interfaceName, uin
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifinfomsg));
-    nlh->nlmsg_type      = RTM_NEWLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
+    nlh->nlmsg_type = RTM_NEWLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
+    nlh->nlmsg_seq = ++_seq;
 
     // info message.
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    ifi->ifi_family       = AF_UNSPEC;
+    ifi->ifi_family = AF_UNSPEC;
 
     // set interface name.
     addAttributes (nlh, IFLA_IFNAME, interfaceName.c_str (), interfaceName.length () + 1);
@@ -327,14 +327,14 @@ int InterfaceManager::createVethInterface (const std::string& hostName, const st
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifinfomsg));
-    nlh->nlmsg_type      = RTM_NEWLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
+    nlh->nlmsg_type = RTM_NEWLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
+    nlh->nlmsg_seq = ++_seq;
 
     // info message.
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    ifi->ifi_family       = AF_UNSPEC;
+    ifi->ifi_family = AF_UNSPEC;
 
     // add pid if specified.
     if (pid && (*pid > 0))
@@ -386,14 +386,14 @@ int InterfaceManager::createGreInterface (const std::string& tunnelName, uint32_
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifinfomsg));
-    nlh->nlmsg_type      = RTM_NEWLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
+    nlh->nlmsg_type = RTM_NEWLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
+    nlh->nlmsg_seq = ++_seq;
 
     // interface informations.
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    ifi->ifi_family       = AF_UNSPEC;
+    ifi->ifi_family = AF_UNSPEC;
 
     // set tunnel name.
     addAttributes (nlh, IFLA_IFNAME, tunnelName.c_str (), tunnelName.length () + 1);
@@ -489,15 +489,15 @@ int InterfaceManager::removeInterface (uint32_t interfaceIndex, bool sync)
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifinfomsg));
-    nlh->nlmsg_type      = RTM_DELLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
+    nlh->nlmsg_type = RTM_DELLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    nlh->nlmsg_seq = ++_seq;
 
     // info message.
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    ifi->ifi_family       = AF_UNSPEC;
-    ifi->ifi_index        = interfaceIndex;
+    ifi->ifi_family = AF_UNSPEC;
+    ifi->ifi_index = interfaceIndex;
 
     // send request.
     return sendRequest (nlh, sync);
@@ -523,7 +523,7 @@ void InterfaceManager::addPeerInfoData (struct nlmsghdr* nlh, const std::string&
 
     // peer info message.
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (reinterpret_cast<char*> (nlh) + nlh->nlmsg_len);
-    ifi->ifi_family       = AF_UNSPEC;
+    ifi->ifi_family = AF_UNSPEC;
 
     nlh->nlmsg_len += NLMSG_ALIGN (sizeof (struct ifinfomsg));
 
@@ -544,15 +544,15 @@ int InterfaceManager::mtu (uint32_t interfaceIndex, uint32_t mtuBytes, bool sync
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifinfomsg));
-    nlh->nlmsg_type      = RTM_SETLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
+    nlh->nlmsg_type = RTM_SETLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    nlh->nlmsg_seq = ++_seq;
 
     // info message.
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    ifi->ifi_family       = AF_UNSPEC;
-    ifi->ifi_index        = interfaceIndex;
+    ifi->ifi_family = AF_UNSPEC;
+    ifi->ifi_index = interfaceIndex;
 
     // add mtu.
     addAttributes (nlh, IFLA_MTU, &mtuBytes, sizeof (uint32_t));
@@ -571,15 +571,15 @@ int InterfaceManager::mac (uint32_t interfaceIndex, const MacAddress& macAddress
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifinfomsg));
-    nlh->nlmsg_type      = RTM_SETLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
+    nlh->nlmsg_type = RTM_SETLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    nlh->nlmsg_seq = ++_seq;
 
     // info message.
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    ifi->ifi_family       = AF_UNSPEC;
-    ifi->ifi_index        = interfaceIndex;
+    ifi->ifi_family = AF_UNSPEC;
+    ifi->ifi_index = interfaceIndex;
 
     // add mac address.
     addAttributes (nlh, IFLA_ADDRESS, macAddress.addr (), macAddress.length ());
@@ -598,14 +598,14 @@ int InterfaceManager::addToBridge (uint32_t interfaceIndex, const uint32_t maste
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifinfomsg));
-    nlh->nlmsg_type      = RTM_SETLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
+    nlh->nlmsg_type = RTM_SETLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    nlh->nlmsg_seq = ++_seq;
 
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    ifi->ifi_family       = AF_UNSPEC;
-    ifi->ifi_index        = interfaceIndex;
+    ifi->ifi_family = AF_UNSPEC;
+    ifi->ifi_index = interfaceIndex;
 
     // add bridge index.
     addAttributes (nlh, IFLA_MASTER, &masterIndex, sizeof (uint32_t));
@@ -633,17 +633,17 @@ int InterfaceManager::enable (uint32_t interfaceIndex, bool enabled, bool sync)
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifinfomsg));
-    nlh->nlmsg_type      = RTM_SETLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifinfomsg));
+    nlh->nlmsg_type = RTM_SETLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    nlh->nlmsg_seq = ++_seq;
 
     // info message.
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    ifi->ifi_family       = AF_UNSPEC;
-    ifi->ifi_index        = interfaceIndex;
-    ifi->ifi_flags        = enabled ? IFF_UP : 0;
-    ifi->ifi_change       = IFF_UP;
+    ifi->ifi_family = AF_UNSPEC;
+    ifi->ifi_index = interfaceIndex;
+    ifi->ifi_flags = enabled ? IFF_UP : 0;
+    ifi->ifi_change = IFF_UP;
 
     // send request.
     return sendRequest (nlh, sync);
@@ -660,16 +660,16 @@ int InterfaceManager::addAddress (uint32_t interfaceIndex, const IpAddress& ipAd
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifaddrmsg));
-    nlh->nlmsg_type      = RTM_NEWADDR;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifaddrmsg));
+    nlh->nlmsg_type = RTM_NEWADDR;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
+    nlh->nlmsg_seq = ++_seq;
 
     // address message.
     struct ifaddrmsg* ifa = reinterpret_cast<struct ifaddrmsg*> (NLMSG_DATA (nlh));
-    ifa->ifa_family       = ipAddress.family ();
-    ifa->ifa_prefixlen    = prefix;
-    ifa->ifa_index        = interfaceIndex;
+    ifa->ifa_family = ipAddress.family ();
+    ifa->ifa_prefixlen = prefix;
+    ifa->ifa_index = interfaceIndex;
 
     // add local address.
     addAttributes (nlh, IFA_LOCAL, ipAddress.addr (), ipAddress.length ());
@@ -698,16 +698,16 @@ int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& i
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ifaddrmsg));
-    nlh->nlmsg_type      = RTM_DELADDR;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ifaddrmsg));
+    nlh->nlmsg_type = RTM_DELADDR;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    nlh->nlmsg_seq = ++_seq;
 
     // address message.
     struct ifaddrmsg* ifa = reinterpret_cast<struct ifaddrmsg*> (NLMSG_DATA (nlh));
-    ifa->ifa_family       = ipAddress.family ();
-    ifa->ifa_prefixlen    = prefix;
-    ifa->ifa_index        = interfaceIndex;
+    ifa->ifa_family = ipAddress.family ();
+    ifa->ifa_prefixlen = prefix;
+    ifa->ifa_index = interfaceIndex;
 
     // add local address.
     addAttributes (nlh, IFA_LOCAL, ipAddress.addr (), ipAddress.length ());
@@ -735,14 +735,14 @@ int InterfaceManager::dumpLink (bool sync)
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct rtgenmsg));
-    nlh->nlmsg_type      = RTM_GETLINK;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_DUMP;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtgenmsg));
+    nlh->nlmsg_type = RTM_GETLINK;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    nlh->nlmsg_seq = ++_seq;
 
     // general message.
     struct rtgenmsg* rtgen = reinterpret_cast<struct rtgenmsg*> (NLMSG_DATA (nlh));
-    rtgen->rtgen_family    = AF_UNSPEC;
+    rtgen->rtgen_family = AF_UNSPEC;
 
     // send request.
     return sendRequest (nlh, sync);
@@ -758,14 +758,14 @@ int InterfaceManager::dumpAddress (bool sync)
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct rtgenmsg));
-    nlh->nlmsg_type      = RTM_GETADDR;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_DUMP;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtgenmsg));
+    nlh->nlmsg_type = RTM_GETADDR;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    nlh->nlmsg_seq = ++_seq;
 
     // general message.
     struct rtgenmsg* rtgen = reinterpret_cast<struct rtgenmsg*> (NLMSG_DATA (nlh));
-    rtgen->rtgen_family    = AF_UNSPEC;
+    rtgen->rtgen_family = AF_UNSPEC;
 
     // send request.
     return sendRequest (nlh, sync);
@@ -801,8 +801,8 @@ void InterfaceManager::onMessage (struct nlmsghdr* nlh)
 void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
 {
     struct ifinfomsg* ifi = reinterpret_cast<struct ifinfomsg*> (NLMSG_DATA (nlh));
-    struct rtattr* rta    = IFLA_RTA (ifi);
-    int len               = IFLA_PAYLOAD (nlh);
+    struct rtattr* rta = IFLA_RTA (ifi);
+    int len = IFLA_PAYLOAD (nlh);
 
     if (ifi->ifi_family == AF_BRIDGE)
     {
@@ -891,7 +891,7 @@ void InterfaceManager::onLinkMessage (struct nlmsghdr* nlh)
 void InterfaceManager::onLinkInfoMessage (Interface::Ptr& iface, struct rtattr* rta, InterfaceChangeType& flags)
 {
     struct rtattr* attr = reinterpret_cast<struct rtattr*> (RTA_DATA (rta));
-    int len             = RTA_PAYLOAD (rta);
+    int len = RTA_PAYLOAD (rta);
 
     while (RTA_OK (attr, len))
     {
@@ -917,13 +917,13 @@ void InterfaceManager::onLinkInfoMessage (Interface::Ptr& iface, struct rtattr* 
 void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
 {
     struct ifaddrmsg* ifa = reinterpret_cast<struct ifaddrmsg*> (NLMSG_DATA (nlh));
-    struct rtattr* rta    = IFA_RTA (ifa);
-    int len               = IFA_PAYLOAD (nlh);
+    struct rtattr* rta = IFA_RTA (ifa);
+    int len = IFA_PAYLOAD (nlh);
 
     socklen_t addrlen = (ifa->ifa_family == AF_INET6) ? IpAddress::ipv6Length : IpAddress::ipv4Length;
 
     AddressInfo info{};
-    info.address.prefix    = ifa->ifa_prefixlen;
+    info.address.prefix = ifa->ifa_prefixlen;
     info.address.broadcast = IpAddress (ifa->ifa_family);
 
     while (RTA_OK (rta, len))
@@ -970,7 +970,7 @@ void InterfaceManager::onAddressMessage (struct nlmsghdr* nlh)
 
             if (it != info.interface->_addresses.end ())
             {
-                it->prefix    = info.address.prefix;
+                it->prefix = info.address.prefix;
                 it->broadcast = info.address.broadcast;
                 info.flags |= InterfaceChangeType::Modified;
             }
@@ -1042,7 +1042,7 @@ Interface::Ptr InterfaceManager::acquire (uint32_t index, LinkInfo& info)
 
     Interface::Ptr iface (new Interface (this, index));
     _interfaces[index] = iface;
-    info.interface     = iface;
+    info.interface = iface;
     info.flags |= InterfaceChangeType::Added;
 
     return iface;

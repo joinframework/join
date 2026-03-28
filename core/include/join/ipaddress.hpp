@@ -470,7 +470,7 @@ namespace std
     {
         size_t operator() (const join::IpAddress& ipAddress) const noexcept
         {
-            size_t h             = 0;
+            size_t h = 0;
             const uint8_t* bytes = reinterpret_cast<const uint8_t*> (ipAddress.addr ());
             for (socklen_t i = 0; i < ipAddress.length (); ++i)
             {

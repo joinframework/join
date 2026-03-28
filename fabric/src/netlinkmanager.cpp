@@ -187,7 +187,7 @@ void NetlinkManager::addAttributes (struct nlmsghdr* nlh, int type, const void* 
     struct rtattr* rta =
         reinterpret_cast<struct rtattr*> (reinterpret_cast<char*> (nlh) + NLMSG_ALIGN (nlh->nlmsg_len));
     rta->rta_type = type;
-    rta->rta_len  = len;
+    rta->rta_len = len;
     memcpy (RTA_DATA (rta), data, alen);
     nlh->nlmsg_len = NLMSG_ALIGN (nlh->nlmsg_len) + RTA_ALIGN (len);
 }

@@ -193,11 +193,11 @@ protected:
     static const std::string _invalidKey;
 };
 
-const IpAddress TlsAcceptor::_hostip       = "::1";
-const uint16_t TlsAcceptor::_port          = 5000;
-const std::string TlsAcceptor::_root       = "/tmp/tlsserver_test_root.cert";
-const std::string TlsAcceptor::_cert       = "/tmp/tlsserver_test.cert";
-const std::string TlsAcceptor::_key        = "/tmp/tlsserver_test.key";
+const IpAddress TlsAcceptor::_hostip = "::1";
+const uint16_t TlsAcceptor::_port = 5000;
+const std::string TlsAcceptor::_root = "/tmp/tlsserver_test_root.cert";
+const std::string TlsAcceptor::_cert = "/tmp/tlsserver_test.cert";
+const std::string TlsAcceptor::_key = "/tmp/tlsserver_test.key";
 const std::string TlsAcceptor::_invalidKey = "/tmp/tlsserver_test_invalid.key";
 
 /**

@@ -163,7 +163,7 @@ namespace join
 
             _jobs.push (&job);
 
-            uint64_t v                     = 1;
+            uint64_t v = 1;
             [[maybe_unused]] ssize_t bytes = ::write (_wakeup, &v, sizeof (v));
 
             Backoff backoff;

@@ -65,7 +65,7 @@ namespace join
             if ((length <= kk) && (kk <= 21))
             {
                 memset (buffer + length, '0', kk - length);
-                buffer[kk]     = '.';
+                buffer[kk] = '.';
                 buffer[kk + 1] = '0';
                 return &buffer[kk + 2];
             }
@@ -92,7 +92,7 @@ namespace join
             else
             {
                 memmove (&buffer[2], &buffer[1], length - 1);
-                buffer[1]          = '.';
+                buffer[1] = '.';
                 buffer[length + 1] = 'e';
                 return writeExponent (&buffer[length + 2], kk - 1);
             }
@@ -137,10 +137,10 @@ namespace join
         {
             const DiyFp one (static_cast<uint64_t> (1) << -Mp._exponent, Mp._exponent);
             const DiyFp wp_w = Mp - W;
-            uint32_t p1      = static_cast<uint32_t> (Mp._mantissa >> -one._exponent);
-            uint64_t p2      = Mp._mantissa & (one._mantissa - 1);
-            int kappa        = digitsCount (p1);
-            length           = 0;
+            uint32_t p1 = static_cast<uint32_t> (Mp._mantissa >> -one._exponent);
+            uint64_t p2 = Mp._mantissa & (one._mantissa - 1);
+            int kappa = digitsCount (p1);
+            length = 0;
 
             while (kappa > 0)
             {
@@ -191,7 +191,7 @@ namespace join
             val.normalizedBoundaries (minus, plus);
 
             const int expr = -59 - (plus._exponent + 64) + 63;
-            const int mk   = (expr * 30103 + 99999) / 100000;
+            const int mk = (expr * 30103 + 99999) / 100000;
 
             assert (mk + 343 >= 0 && mk + 343 < 687);
             const DiyFp& c_mk = dtoapow[mk + 343];

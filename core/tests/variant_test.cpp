@@ -78,7 +78,7 @@ TEST (Variant, copyConstruction)
     EXPECT_EQ (*var1.getIf<0> (), 6);
 
     volatile int volatileInt = 8;
-    var                      = volatileInt;
+    var = volatileInt;
     Variant<int, double, std::string, bool, std::nullptr_t> var2 (var);
     ASSERT_TRUE (var2.is<int> ());
     EXPECT_EQ (var2.get<int> (), 8);
@@ -158,7 +158,7 @@ TEST (Variant, moveConstruction)
     EXPECT_EQ (*var1.getIf<0> (), 6);
 
     volatile int volatileInt = 8;
-    var                      = volatileInt;
+    var = volatileInt;
     Variant<int, double, std::string, bool, std::nullptr_t> var2 (std::move (var));
     ASSERT_TRUE (var2.is<int> ());
     EXPECT_EQ (var2.get<int> (), 8);

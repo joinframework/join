@@ -38,8 +38,8 @@ namespace join
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
-        using Socket   = typename Protocol::Socket;
-        using Stream   = typename Protocol::Stream;
+        using Socket = typename Protocol::Socket;
+        using Stream = typename Protocol::Stream;
 
         /**
          * @brief create the acceptor instance.
@@ -67,7 +67,7 @@ namespace join
         : _handle (other._handle)
         , _protocol (other._protocol)
         {
-            other._handle   = -1;
+            other._handle = -1;
             other._protocol = Protocol ();
         }
 
@@ -80,10 +80,10 @@ namespace join
         {
             this->close ();
 
-            this->_handle   = other._handle;
+            this->_handle = other._handle;
             this->_protocol = other._protocol;
 
-            other._handle   = -1;
+            other._handle = -1;
             other._protocol = Protocol ();
 
             return *this;
@@ -192,7 +192,7 @@ namespace join
             }
 
             sock._remote = Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len);
-            sock._state  = Socket::Connected;
+            sock._state = Socket::Connected;
 
             if (sock.protocol () == IPPROTO_TCP)
             {
@@ -293,8 +293,8 @@ namespace join
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
-        using Socket   = typename Protocol::Socket;
-        using Stream   = typename Protocol::Stream;
+        using Socket = typename Protocol::Socket;
+        using Stream = typename Protocol::Stream;
 
         /**
          * @brief create the acceptor instance.
@@ -395,8 +395,8 @@ namespace join
         BasicTlsAcceptor& operator= (BasicTlsAcceptor&& other)
         {
             BasicStreamAcceptor<Protocol>::operator= (std::move (other));
-            _tlsContext      = std::move (other._tlsContext);
-            _sessionId       = other._sessionId;
+            _tlsContext = std::move (other._tlsContext);
+            _sessionId = other._sessionId;
             other._sessionId = 0;
             return *this;
         }
@@ -420,7 +420,7 @@ namespace join
             }
 
             sock._remote = Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len);
-            sock._state  = Socket::Connected;
+            sock._state = Socket::Connected;
 
             sock.setOption (Socket::NoDelay, 1);
             sock.setMode (Socket::NonBlocking);

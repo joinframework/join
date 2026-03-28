@@ -62,7 +62,7 @@ namespace join
     struct BasicHttpContent
     {
         using Handler = std::function<void (typename Protocol::Worker*)>;
-        using Access  = std::function<bool (const std::string&, const std::string&, std::error_code&)>;
+        using Access = std::function<bool (const std::string&, const std::string&, std::error_code&)>;
 
         HttpMethod methods;    /**< allowed methods. */
         HttpContentType type;  /**< content type (root, alias etc...). */
@@ -81,7 +81,7 @@ namespace join
     {
     public:
         using Content = BasicHttpContent<Protocol>;
-        using Server  = BasicHttpServer<Protocol>;
+        using Server = BasicHttpServer<Protocol>;
 
         /**
          * @brief create the worker instance.
@@ -379,12 +379,12 @@ namespace join
                     ScopedLock<Mutex> lock (this->_server->_mutex);
 
                     fd_set fdset = setfd;
-                    int nset     = ::select (fdmax + 1, &fdset, nullptr, nullptr, nullptr);
+                    int nset = ::select (fdmax + 1, &fdset, nullptr, nullptr, nullptr);
                     if (nset > 0)
                     {
                         if (FD_ISSET (this->_server->_event, &fdset))
                         {
-                            uint64_t val                   = 0;
+                            uint64_t val = 0;
                             [[maybe_unused]] ssize_t bytes = ::read (this->_server->_event, &val, sizeof (uint64_t));
                             return;
                         }
@@ -580,17 +580,17 @@ namespace join
                 if (encoding.find ("gzip") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Gzip, this->_wrapped);
-                    this->_wrapped   = true;
+                    this->_wrapped = true;
                 }
                 else if (encoding.find ("deflate") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Deflate, this->_wrapped);
-                    this->_wrapped   = true;
+                    this->_wrapped = true;
                 }
                 else if (encoding.find ("chunked") != std::string::npos)
                 {
                     this->_streambuf = new Chunkstreambuf (this->_streambuf, this->_wrapped);
-                    this->_wrapped   = true;
+                    this->_wrapped = true;
                 }
             }
 
@@ -609,7 +609,7 @@ namespace join
             }
 
             this->_streambuf = &this->_sockbuf;
-            this->_wrapped   = false;
+            this->_wrapped = false;
 
             this->set_rdbuf (this->_streambuf);
         }
@@ -643,12 +643,12 @@ namespace join
     class BasicHttpServer
     {
     public:
-        using Worker   = BasicHttpWorker<Protocol>;
-        using Content  = BasicHttpContent<Protocol>;
-        using Handler  = typename Content::Handler;
-        using Access   = typename Content::Access;
+        using Worker = BasicHttpWorker<Protocol>;
+        using Content = BasicHttpContent<Protocol>;
+        using Handler = typename Content::Handler;
+        using Access = typename Content::Access;
         using Endpoint = typename Protocol::Endpoint;
-        using Socket   = typename Protocol::Socket;
+        using Socket = typename Protocol::Socket;
         using Acceptor = typename Protocol::Acceptor;
 
         /**
@@ -725,7 +725,7 @@ namespace join
          */
         void close () noexcept
         {
-            uint64_t val                   = this->_nworkers;
+            uint64_t val = this->_nworkers;
             [[maybe_unused]] ssize_t bytes = ::write (this->_event, &val, sizeof (uint64_t));
             this->_workers.clear ();
             this->_acceptor.close ();
@@ -773,7 +773,7 @@ namespace join
         void keepAlive (std::chrono::seconds timeout, int max = 1000)
         {
             this->_keepTimeout = timeout;
-            this->_keepMax     = max;
+            this->_keepMax = max;
         }
 
         /**
@@ -815,12 +815,12 @@ namespace join
             Content* newEntry = new Content;
             if (newEntry != nullptr)
             {
-                newEntry->methods   = Head | Get;
-                newEntry->type      = Root;
+                newEntry->methods = Head | Get;
+                newEntry->type = Root;
                 newEntry->directory = dir;
-                newEntry->name      = name;
-                newEntry->handler   = nullptr;
-                newEntry->access    = access;
+                newEntry->name = name;
+                newEntry->handler = nullptr;
+                newEntry->access = access;
                 this->_contents.emplace_back (newEntry);
             }
 
@@ -841,13 +841,13 @@ namespace join
             Content* newEntry = new Content;
             if (newEntry != nullptr)
             {
-                newEntry->methods   = Head | Get;
-                newEntry->type      = Alias;
+                newEntry->methods = Head | Get;
+                newEntry->type = Alias;
                 newEntry->directory = dir;
-                newEntry->name      = name;
-                newEntry->alias     = alias;
-                newEntry->handler   = nullptr;
-                newEntry->access    = access;
+                newEntry->name = name;
+                newEntry->alias = alias;
+                newEntry->handler = nullptr;
+                newEntry->access = access;
                 this->_contents.emplace_back (newEntry);
             }
 
@@ -869,12 +869,12 @@ namespace join
             Content* newEntry = new Content;
             if (newEntry != nullptr)
             {
-                newEntry->methods   = methods;
-                newEntry->type      = Exec;
+                newEntry->methods = methods;
+                newEntry->type = Exec;
                 newEntry->directory = dir;
-                newEntry->name      = name;
-                newEntry->handler   = handler;
-                newEntry->access    = access;
+                newEntry->name = name;
+                newEntry->handler = handler;
+                newEntry->access = access;
                 this->_contents.emplace_back (newEntry);
             }
 
@@ -895,13 +895,13 @@ namespace join
             Content* newEntry = new Content;
             if (newEntry != nullptr)
             {
-                newEntry->methods   = Head | Get | Put | Post | Delete;
-                newEntry->type      = Redirect;
+                newEntry->methods = Head | Get | Put | Post | Delete;
+                newEntry->type = Redirect;
                 newEntry->directory = dir;
-                newEntry->name      = name;
-                newEntry->alias     = location;
-                newEntry->handler   = nullptr;
-                newEntry->access    = access;
+                newEntry->name = name;
+                newEntry->alias = location;
+                newEntry->handler = nullptr;
+                newEntry->access = access;
                 this->_contents.emplace_back (newEntry);
             }
 
@@ -918,7 +918,7 @@ namespace join
         Content* findContent (HttpMethod method, const std::string& path) const
         {
             std::string directory = join::base (path);
-            std::string name      = join::filename (path);
+            std::string name = join::filename (path);
 
             for (auto const& content : this->_contents)
             {
@@ -978,12 +978,12 @@ namespace join
     class BasicHttpSecureServer : public BasicHttpServer<Protocol>
     {
     public:
-        using Worker   = BasicHttpWorker<Protocol>;
-        using Content  = BasicHttpContent<Protocol>;
-        using Handler  = typename Content::Handler;
-        using Access   = typename Content::Access;
+        using Worker = BasicHttpWorker<Protocol>;
+        using Content = BasicHttpContent<Protocol>;
+        using Handler = typename Content::Handler;
+        using Access = typename Content::Access;
         using Endpoint = typename Protocol::Endpoint;
-        using Socket   = typename Protocol::Socket;
+        using Socket = typename Protocol::Socket;
         using Acceptor = typename Protocol::Acceptor;
 
         /**

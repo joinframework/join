@@ -99,7 +99,7 @@ TEST (Thread, affinity)
     ASSERT_EQ (th.affinity (), 0);
     th.cancel ();
 
-    th       = Thread ([] {
+    th = Thread ([] {
         std::this_thread::sleep_for (std::chrono::seconds (1));
     });
     int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
