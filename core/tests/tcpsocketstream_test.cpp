@@ -98,9 +98,9 @@ protected:
     static const uint16_t _invalid_port;
 };
 
-const int TcpSocketStream::_timeout           = 1000;
-const std::string TcpSocketStream::_host      = "127.0.0.1";
-const uint16_t TcpSocketStream::_port         = 5000;
+const int TcpSocketStream::_timeout = 1000;
+const std::string TcpSocketStream::_host = "127.0.0.1";
+const uint16_t TcpSocketStream::_port = 5000;
 const uint16_t TcpSocketStream::_invalid_port = 5032;
 
 /**

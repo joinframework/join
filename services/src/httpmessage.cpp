@@ -396,8 +396,8 @@ HttpRequest& HttpRequest::operator= (const HttpRequest& other)
 {
     HttpMessage::operator= (other);
 
-    _method     = other._method;
-    _path       = other._path;
+    _method = other._method;
+    _path = other._path;
     _parameters = other._parameters;
 
     return *this;
@@ -414,7 +414,7 @@ HttpRequest::HttpRequest (HttpRequest&& other)
 , _parameters (std::move (other._parameters))
 {
     other._method = Get;
-    other._path   = "/";
+    other._path = "/";
 }
 
 // =========================================================================
@@ -425,12 +425,12 @@ HttpRequest& HttpRequest::operator= (HttpRequest&& other)
 {
     HttpMessage::operator= (std::move (other));
 
-    _method     = other._method;
-    _path       = std::move (other._path);
+    _method = other._method;
+    _path = std::move (other._path);
     _parameters = std::move (other._parameters);
 
     other._method = Get;
-    other._path   = "/";
+    other._path = "/";
 
     return *this;
 }
@@ -639,7 +639,7 @@ std::string HttpRequest::auth () const
 std::string HttpRequest::credentials () const
 {
     std::string authorization = header ("Authorization");
-    auto beg                  = authorization.find (" ");
+    auto beg = authorization.find (" ");
     if (beg == std::string::npos)
     {
         return {};
@@ -655,7 +655,7 @@ void HttpRequest::clear ()
 {
     HttpMessage::clear ();
     _method = Get;
-    _path   = "/";
+    _path = "/";
     _parameters.clear ();
 }
 
@@ -1007,8 +1007,8 @@ int HttpResponse::parseFirstLine (const std::string& line)
     }
 
     _version = line.substr (0, pos1++);
-    _status  = line.substr (pos1, pos2 - pos1);
-    _reason  = line.substr (++pos2);
+    _status = line.substr (pos1, pos2 - pos1);
+    _reason = line.substr (++pos2);
 
     return 0;
 }

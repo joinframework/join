@@ -165,7 +165,7 @@ TEST_F (NeighborManagerTest, addNeighborListener)
     NeighborManager mgr;
 
     bool called = false;
-    auto cb     = [&] (const auto& /*info*/) {
+    auto cb = [&] (const auto& /*info*/) {
         called = true;
     };
 

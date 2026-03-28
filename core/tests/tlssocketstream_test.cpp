@@ -257,14 +257,14 @@ protected:
     static const std::string _invalidKey;
 };
 
-const std::string TlsSocketStream::_host       = "127.0.0.1";
-const uint16_t TlsSocketStream::_port          = 5000;
-const uint16_t TlsSocketStream::_invalid_port  = 5032;
-const int TlsSocketStream::_timeout            = 1000;
-const std::string TlsSocketStream::_rootcert   = "/tmp/tlssocket_test_root.cert";
-const std::string TlsSocketStream::_certPath   = "/tmp/certs";
-const std::string TlsSocketStream::_certFile   = _certPath + "/tlssocket_test.cert";
-const std::string TlsSocketStream::_key        = "/tmp/tlssocket_test.key";
+const std::string TlsSocketStream::_host = "127.0.0.1";
+const uint16_t TlsSocketStream::_port = 5000;
+const uint16_t TlsSocketStream::_invalid_port = 5032;
+const int TlsSocketStream::_timeout = 1000;
+const std::string TlsSocketStream::_rootcert = "/tmp/tlssocket_test_root.cert";
+const std::string TlsSocketStream::_certPath = "/tmp/certs";
+const std::string TlsSocketStream::_certFile = _certPath + "/tlssocket_test.cert";
+const std::string TlsSocketStream::_key = "/tmp/tlssocket_test.key";
 const std::string TlsSocketStream::_invalidKey = "/tmp/tlssocket_test_invalid.key";
 
 /**

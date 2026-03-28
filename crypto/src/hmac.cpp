@@ -95,7 +95,7 @@ Hmacbuf& Hmacbuf::operator= (Hmacbuf&& other)
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
     _md = other._md;
 #else
-    _mac  = std::move (other._mac);
+    _mac = std::move (other._mac);
     _algo = std::move (other._algo);
 #endif
     _ctx = std::move (other._ctx);

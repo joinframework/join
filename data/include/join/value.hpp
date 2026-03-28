@@ -68,15 +68,15 @@ namespace join
          */
         enum Index : size_t
         {
-            Null        = 0, /**< index of the std::nullptr_t alternative. */
-            Boolean     = 1, /**< index of the boolean alternative. */
-            Integer     = 2, /**< index of the 32 bits integer alternative. */
-            Unsigned    = 3, /**< index of the 32 bits unsigned integer alternative. */
-            Integer64   = 4, /**< index of the 64 bits integer alternative. */
-            Unsigned64  = 5, /**< index of the 64 bits unsigned integer alternative. */
-            Real        = 6, /**< index of the real alternative. */
-            String      = 7, /**< index of the std::string alternative. */
-            ArrayValue  = 8, /**< index of the Array alternative. */
+            Null = 0,        /**< index of the std::nullptr_t alternative. */
+            Boolean = 1,     /**< index of the boolean alternative. */
+            Integer = 2,     /**< index of the 32 bits integer alternative. */
+            Unsigned = 3,    /**< index of the 32 bits unsigned integer alternative. */
+            Integer64 = 4,   /**< index of the 64 bits integer alternative. */
+            Unsigned64 = 5,  /**< index of the 64 bits unsigned integer alternative. */
+            Real = 6,        /**< index of the real alternative. */
+            String = 7,      /**< index of the std::string alternative. */
+            ArrayValue = 8,  /**< index of the Array alternative. */
             ObjectValue = 9, /**< index of the Object alternative. */
         };
 

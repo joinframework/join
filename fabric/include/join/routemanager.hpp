@@ -39,13 +39,13 @@ namespace join
      */
     enum class RouteChangeType : uint32_t
     {
-        Added           = 1L << 0, /**< entry did not exist before. */
-        Deleted         = 1L << 1, /**< entry was removed. */
-        Modified        = 1L << 2, /**< entry was updated. */
-        GatewayChanged  = 1L << 3, /**< gateway address changed. */
-        MetricChanged   = 1L << 4, /**< metric changed. */
-        TypeChanged     = 1L << 5, /**< type changed. */
-        ScopeChanged    = 1L << 6, /**< scope changed. */
+        Added = 1L << 0,           /**< entry did not exist before. */
+        Deleted = 1L << 1,         /**< entry was removed. */
+        Modified = 1L << 2,        /**< entry was updated. */
+        GatewayChanged = 1L << 3,  /**< gateway address changed. */
+        MetricChanged = 1L << 4,   /**< metric changed. */
+        TypeChanged = 1L << 5,     /**< type changed. */
+        ScopeChanged = 1L << 6,    /**< scope changed. */
         ProtocolChanged = 1L << 7, /**< protocol changed. */
     };
 

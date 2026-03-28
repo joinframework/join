@@ -45,7 +45,7 @@ SpaceAfterTemplateKeyword: true
 
 # --- Assignments & Alignments ---
 AlignConsecutiveAssignments:
-  Enabled: true
+  Enabled: false
 AlignConsecutiveDeclarations: false
 
 # --- Switch/Case ---

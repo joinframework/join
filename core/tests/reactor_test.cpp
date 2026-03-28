@@ -158,8 +158,8 @@ protected:
 Tcp::Acceptor ReactorTest::_acceptor;
 Tcp::Socket ReactorTest::_client (Tcp::Socket::Blocking);
 Tcp::Socket ReactorTest::_server;
-std::string ReactorTest::_host  = "127.0.0.1";
-uint16_t ReactorTest::_port     = 5000;
+std::string ReactorTest::_host = "127.0.0.1";
+uint16_t ReactorTest::_port = 5000;
 const int ReactorTest::_timeout = 1000;
 Condition ReactorTest::_cond;
 Mutex ReactorTest::_mut;

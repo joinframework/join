@@ -88,7 +88,7 @@ TEST (JsonCanonicalizer, french)
     value["peach"] = "This sorting order";
     value["péché"] = "is wrong according to French";
     value["pêche"] = "but canonicalization MUST";
-    value["sin"]   = "ignore locale";
+    value["sin"] = "ignore locale";
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
@@ -104,12 +104,12 @@ TEST (JsonCanonicalizer, french)
 TEST (JsonCanonicalizer, structures)
 {
     Value value;
-    value["1"]   = Object{{"f", Object{{"f", "hi"}, {"F", 5}}}, {"\n", 56.0}};
-    value["10"]  = Object{};
-    value[""]    = "empty";
-    value["a"]   = Object{};
+    value["1"] = Object{{"f", Object{{"f", "hi"}, {"F", 5}}}, {"\n", 56.0}};
+    value["10"] = Object{};
+    value[""] = "empty";
+    value["a"] = Object{};
     value["111"] = Array{Object{{"e", "yes"}, {"E", "no"}}};
-    value["A"]   = Object{};
+    value["A"] = Object{};
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
@@ -139,8 +139,8 @@ TEST (JsonCanonicalizer, unicode)
 TEST (JsonCanonicalizer, values)
 {
     Value value;
-    value["numbers"]  = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
-    value["string"]   = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
+    value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
+    value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
     value["literals"] = Array{nullptr, true, false};
 
     std::stringstream out;
@@ -157,15 +157,15 @@ TEST (JsonCanonicalizer, values)
 TEST (JsonCanonicalizer, weird)
 {
     Value value;
-    value["\u20ac"]     = "Euro Sign";
-    value["\r"]         = "Carriage Return";
-    value["\u000a"]     = "Newline";
-    value["1"]          = "One";
-    value["\u0080"]     = "Control\u007f";
+    value["\u20ac"] = "Euro Sign";
+    value["\r"] = "Carriage Return";
+    value["\u000a"] = "Newline";
+    value["1"] = "One";
+    value["\u0080"] = "Control\u007f";
     value["\U0001f602"] = "Smiley";
-    value["\u00f6"]     = "Latin Small Letter O With Diaeresis";
-    value["\ufb33"]     = "Hebrew Letter Dalet With Dagesh";
-    value["</script>"]  = "Browser Challenge";
+    value["\u00f6"] = "Latin Small Letter O With Diaeresis";
+    value["\ufb33"] = "Hebrew Letter Dalet With Dagesh";
+    value["</script>"] = "Browser Challenge";
 
     std::stringstream out;
     JsonCanonicalizer writer (out);

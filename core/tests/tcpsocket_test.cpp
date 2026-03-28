@@ -100,8 +100,8 @@ protected:
 
 const std::string TcpSocket::_hostv4 = "127.0.0.1";
 const std::string TcpSocket::_hostv6 = "::1";
-const uint16_t TcpSocket::_port      = 5000;
-const int TcpSocket::_timeout        = 1000;
+const uint16_t TcpSocket::_port = 5000;
+const int TcpSocket::_timeout = 1000;
 
 /**
  * @brief Test move.

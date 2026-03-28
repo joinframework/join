@@ -52,7 +52,7 @@ namespace join
                 {
                     data[i] = 1;
                 }
-                data['"']  = 1;
+                data['"'] = 1;
                 data['\\'] = 1;
             }
         };
@@ -69,7 +69,7 @@ namespace join
                 data['\t'] = 1;
                 data['\n'] = 1;
                 data['\r'] = 1;
-                data[' ']  = 1;
+                data[' '] = 1;
             }
         };
 
@@ -219,7 +219,7 @@ namespace join
         inline size_t read (char* buf, size_t count) noexcept
         {
             const size_t available = _end - _cur;
-            const size_t nread     = (count < available) ? count : available;
+            const size_t nread = (count < available) ? count : available;
             std::memcpy (buf, _cur, nread);
             _cur += nread;
             return nread;
@@ -312,7 +312,7 @@ namespace join
                 {
                     ++cur;
                     const char* p = static_cast<const char*> (memchr (cur, '\n', end - cur));
-                    cur           = p ? p : end;
+                    cur = p ? p : end;
                 }
                 else
                 {

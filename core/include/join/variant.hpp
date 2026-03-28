@@ -356,7 +356,7 @@ namespace join
         static_assert (all<!std::is_array<Ts>::value...>::value, "Variant must have no array alternative.");
         static_assert (all<!std::is_reference<Ts>::value...>::value, "Variant must have no reference alternative");
 
-        using Base           = details::VariantStorage<Ts...>;
+        using Base = details::VariantStorage<Ts...>;
         using DefaultEnabler = EnableDefault<details::is_first_default_constructible<Ts...>::value, Variant<Ts...>>;
 
         /**

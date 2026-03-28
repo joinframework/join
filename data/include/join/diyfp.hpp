@@ -152,8 +152,8 @@ namespace join
             plus.normalizeBoundary ();
 
             const bool special = __builtin_expect (_mantissa == _hiddenBit, 0);
-            minus._mantissa    = (_mantissa << (special ? 2 : 1)) - 1;
-            minus._exponent    = _exponent - (special ? 2 : 1);
+            minus._mantissa = (_mantissa << (special ? 2 : 1)) - 1;
+            minus._exponent = _exponent - (special ? 2 : 1);
 
             const int diff = minus._exponent - plus._exponent;
             minus._mantissa <<= diff;
@@ -180,7 +180,7 @@ namespace join
         {
 #if defined(__SIZEOF_INT128__)
             __uint128_t product = static_cast<__uint128_t> (_mantissa) * static_cast<__uint128_t> (rhs._mantissa);
-            _mantissa           = static_cast<uint64_t> ((product >> 64) + ((product >> 63) & 1));
+            _mantissa = static_cast<uint64_t> ((product >> 64) + ((product >> 63) & 1));
 #else
             uint64_t M32 = 0xFFFFFFFFU;
 
@@ -195,7 +195,7 @@ namespace join
             uint64_t bd = b * d;
 
             uint64_t tmp = (bd >> 32) + (ad & M32) + (bc & M32) + (1U << 31);
-            _mantissa    = ac + (ad >> 32) + (bc >> 32) + (tmp >> 32);
+            _mantissa = ac + (ad >> 32) + (bc >> 32) + (tmp >> 32);
 #endif
             _exponent += rhs._exponent + 64;
 

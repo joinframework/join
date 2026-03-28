@@ -250,10 +250,10 @@ TEST (LocalMpmc, popBatch)
  */
 TEST (LocalMpmc, pushBenchmark)
 {
-    const uint64_t capacity       = 512;
-    const uint64_t num            = 1000000;
-    const int numProducers        = 4;
-    const int numConsumers        = 4;
+    const uint64_t capacity = 512;
+    const uint64_t num = 1000000;
+    const int numProducers = 4;
+    const int numConsumers = 4;
     const uint64_t msgPerProducer = num / numProducers;
     const uint64_t msgPerConsumer = num / numConsumers;
 
@@ -333,10 +333,10 @@ TEST (LocalMpmc, pushBenchmark)
  */
 TEST (LocalMpmc, popBenchmark)
 {
-    const uint64_t capacity       = 512;
-    const uint64_t num            = 1000000;
-    const int numProducers        = 4;
-    const int numConsumers        = 4;
+    const uint64_t capacity = 512;
+    const uint64_t num = 1000000;
+    const int numProducers = 4;
+    const int numConsumers = 4;
     const uint64_t msgPerProducer = num / numProducers;
     const uint64_t msgPerConsumer = num / numConsumers;
 

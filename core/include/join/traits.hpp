@@ -290,16 +290,16 @@ namespace join
     template <bool _Switch, typename _Tag = void>
     struct EnableDefault
     {
-        constexpr EnableDefault () noexcept                     = default;
+        constexpr EnableDefault () noexcept = default;
         constexpr EnableDefault (EnableDefault const&) noexcept = default;
-        constexpr EnableDefault (EnableDefault&&) noexcept      = default;
+        constexpr EnableDefault (EnableDefault&&) noexcept = default;
 
         constexpr explicit EnableDefault (EnableDefaultTag)
         {
         }
 
         EnableDefault& operator= (EnableDefault const&) noexcept = default;
-        EnableDefault& operator= (EnableDefault&&) noexcept      = default;
+        EnableDefault& operator= (EnableDefault&&) noexcept = default;
     };
 
     /**
@@ -308,16 +308,16 @@ namespace join
     template <typename _Tag>
     struct EnableDefault<false, _Tag>
     {
-        constexpr EnableDefault () noexcept                     = delete;
+        constexpr EnableDefault () noexcept = delete;
         constexpr EnableDefault (EnableDefault const&) noexcept = default;
-        constexpr EnableDefault (EnableDefault&&) noexcept      = default;
+        constexpr EnableDefault (EnableDefault&&) noexcept = default;
 
         constexpr explicit EnableDefault (EnableDefaultTag)
         {
         }
 
         EnableDefault& operator= (EnableDefault const&) noexcept = default;
-        EnableDefault& operator= (EnableDefault&&) noexcept      = default;
+        EnableDefault& operator= (EnableDefault&&) noexcept = default;
     };
 }
 

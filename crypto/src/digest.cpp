@@ -129,7 +129,7 @@ Digestbuf& Digestbuf::operator= (Digestbuf&& other)
 {
     std::streambuf::operator= (std::move (other));
     _buf = std::move (other._buf);
-    _md  = other._md;
+    _md = other._md;
     _ctx = std::move (other._ctx);
     return *this;
 }

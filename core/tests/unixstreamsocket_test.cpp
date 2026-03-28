@@ -96,7 +96,7 @@ protected:
 
 const std::string UnixStreamSocket::_serverpath = "/tmp/unixserver_test.sock";
 const std::string UnixStreamSocket::_clientpath = "/tmp/unixclient_test.sock";
-const int UnixStreamSocket::_timeout            = 1000;
+const int UnixStreamSocket::_timeout = 1000;
 
 /**
  * @brief Test open method.

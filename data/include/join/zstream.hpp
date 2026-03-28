@@ -125,9 +125,9 @@ namespace join
          */
         enum Format
         {
-            Deflate = -MAX_WBITS,     /**< use the deflate compressed data format. */
-            Zlib    = MAX_WBITS,      /**< use the zlib compressed data format. */
-            Gzip    = MAX_WBITS + 16, /**< use the gzip compressed data format. */
+            Deflate = -MAX_WBITS,  /**< use the deflate compressed data format. */
+            Zlib = MAX_WBITS,      /**< use the zlib compressed data format. */
+            Gzip = MAX_WBITS + 16, /**< use the gzip compressed data format. */
         };
 
         /**

@@ -258,15 +258,15 @@ protected:
     static const std::string _invalidKey;
 };
 
-const std::string TlsSocket::_hostv4     = "127.0.0.1";
-const std::string TlsSocket::_hostv6     = "::1";
-const uint16_t TlsSocket::_port          = 5000;
-const uint16_t TlsSocket::_invalid_port  = 5032;
-const int TlsSocket::_timeout            = 1000;
-const std::string TlsSocket::_rootcert   = "/tmp/tlssocket_test_root.cert";
-const std::string TlsSocket::_certPath   = "/tmp/certs";
-const std::string TlsSocket::_certFile   = _certPath + "/tlssocket_test.cert";
-const std::string TlsSocket::_key        = "/tmp/tlssocket_test.key";
+const std::string TlsSocket::_hostv4 = "127.0.0.1";
+const std::string TlsSocket::_hostv6 = "::1";
+const uint16_t TlsSocket::_port = 5000;
+const uint16_t TlsSocket::_invalid_port = 5032;
+const int TlsSocket::_timeout = 1000;
+const std::string TlsSocket::_rootcert = "/tmp/tlssocket_test_root.cert";
+const std::string TlsSocket::_certPath = "/tmp/certs";
+const std::string TlsSocket::_certFile = _certPath + "/tlssocket_test.cert";
+const std::string TlsSocket::_key = "/tmp/tlssocket_test.key";
 const std::string TlsSocket::_invalidKey = "/tmp/tlssocket_test_invalid.key";
 
 /**
