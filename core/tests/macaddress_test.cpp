@@ -535,7 +535,7 @@ TEST (MacAddress, notOperation)
 {
     MacAddress mac, result;
 
-    mac    = "02:42:64:2f:6a:d0";
+    mac = "02:42:64:2f:6a:d0";
     result = ~mac;
     ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:2f");
 }
@@ -793,19 +793,19 @@ TEST (MacAddress, and)
 {
     MacAddress mac1, mac2, result;
 
-    mac1   = "02:42:64:2f:6a:d0";
-    mac2   = "ff:ff:ff:ff:ff:00";
+    mac1 = "02:42:64:2f:6a:d0";
+    mac2 = "ff:ff:ff:ff:ff:00";
     result = mac1 & mac2;
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
 
-    mac1   = "02:42:64:2f:6a:d0";
+    mac1 = "02:42:64:2f:6a:d0";
     result = mac1 & "ff:ff:ff:ff:ff:00";
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
 
-    mac2   = "ff:ff:ff:ff:ff:00";
+    mac2 = "ff:ff:ff:ff:ff:00";
     result = "02:42:64:2f:6a:d0" & mac2;
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "02:42:64:2f:6a:00");
@@ -818,19 +818,19 @@ TEST (MacAddress, or)
 {
     MacAddress mac1, mac2, result;
 
-    mac1   = "02:42:64:2f:6a:d0";
-    mac2   = "ff:ff:ff:ff:ff:00";
+    mac1 = "02:42:64:2f:6a:d0";
+    mac2 = "ff:ff:ff:ff:ff:00";
     result = mac1 | mac2;
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
 
-    mac1   = "02:42:64:2f:6a:d0";
+    mac1 = "02:42:64:2f:6a:d0";
     result = mac1 | "ff:ff:ff:ff:ff:00";
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
 
-    mac2   = "ff:ff:ff:ff:ff:00";
+    mac2 = "ff:ff:ff:ff:ff:00";
     result = "02:42:64:2f:6a:d0" | mac2;
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "ff:ff:ff:ff:ff:d0");
@@ -843,19 +843,19 @@ TEST (MacAddress, xor)
 {
     MacAddress mac1, mac2, result;
 
-    mac1   = "02:42:64:2f:6a:d0";
-    mac2   = "ff:ff:ff:ff:ff:00";
+    mac1 = "02:42:64:2f:6a:d0";
+    mac2 = "ff:ff:ff:ff:ff:00";
     result = mac1 ^ mac2;
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
 
-    mac1   = "02:42:64:2f:6a:d0";
+    mac1 = "02:42:64:2f:6a:d0";
     result = mac1 ^ "ff:ff:ff:ff:ff:00";
     ASSERT_STREQ (mac1.toString ().c_str (), "02:42:64:2f:6a:d0");
     ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");
 
-    mac2   = "ff:ff:ff:ff:ff:00";
+    mac2 = "ff:ff:ff:ff:ff:00";
     result = "02:42:64:2f:6a:d0" ^ mac2;
     ASSERT_STREQ (mac2.toString ().c_str (), "ff:ff:ff:ff:ff:00");
     ASSERT_STREQ (result.toString ().c_str (), "fd:bd:9b:d0:95:d0");

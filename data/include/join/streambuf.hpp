@@ -71,7 +71,7 @@ namespace join
         , _own (other._own)
         {
             other._innerbuf = nullptr;
-            other._own      = false;
+            other._own = false;
         }
 
         /**
@@ -82,10 +82,10 @@ namespace join
         StreambufDecorator& operator= (StreambufDecorator&& other)
         {
             std::streambuf::operator= (std::move (other));
-            _innerbuf       = other._innerbuf;
-            _own            = other._own;
+            _innerbuf = other._innerbuf;
+            _own = other._own;
             other._innerbuf = nullptr;
-            other._own      = false;
+            other._own = false;
             return *this;
         }
 

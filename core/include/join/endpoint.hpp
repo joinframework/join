@@ -296,8 +296,8 @@ namespace join
         , _protocol (protocol.protocol ())
         {
             struct sockaddr_nl* nl = reinterpret_cast<struct sockaddr_nl*> (&this->_addr);
-            nl->nl_pid             = pid;
-            nl->nl_groups          = groups;
+            nl->nl_pid = pid;
+            nl->nl_groups = groups;
         }
 
         /**
@@ -697,16 +697,16 @@ namespace join
             if (ip.family () == AF_INET6)
             {
                 struct sockaddr_in6* sa = reinterpret_cast<struct sockaddr_in6*> (&this->_addr);
-                sa->sin6_family         = AF_INET6;
-                sa->sin6_port           = htons (port);
+                sa->sin6_family = AF_INET6;
+                sa->sin6_port = htons (port);
                 memcpy (&sa->sin6_addr, ip.addr (), ip.length ());
                 sa->sin6_scope_id = ip.scope ();
             }
             else
             {
                 struct sockaddr_in* sa = reinterpret_cast<struct sockaddr_in*> (&this->_addr);
-                sa->sin_family         = AF_INET;
-                sa->sin_port           = htons (port);
+                sa->sin_family = AF_INET;
+                sa->sin_port = htons (port);
                 memcpy (&sa->sin_addr, ip.addr (), ip.length ());
             }
         }
@@ -742,14 +742,14 @@ namespace join
             if (protocol.family () == AF_INET6)
             {
                 struct sockaddr_in6* sa = reinterpret_cast<struct sockaddr_in6*> (&this->_addr);
-                sa->sin6_family         = AF_INET6;
-                sa->sin6_port           = htons (port);
+                sa->sin6_family = AF_INET6;
+                sa->sin6_port = htons (port);
             }
             else
             {
                 struct sockaddr_in* sa = reinterpret_cast<struct sockaddr_in*> (&this->_addr);
-                sa->sin_family         = AF_INET;
-                sa->sin_port           = htons (port);
+                sa->sin_family = AF_INET;
+                sa->sin_port = htons (port);
             }
         }
 
@@ -780,14 +780,14 @@ namespace join
             if (ip.family () == AF_INET6)
             {
                 struct sockaddr_in6* sa = reinterpret_cast<struct sockaddr_in6*> (&this->_addr);
-                sa->sin6_family         = AF_INET6;
+                sa->sin6_family = AF_INET6;
                 memcpy (&sa->sin6_addr, ip.addr (), ip.length ());
                 sa->sin6_scope_id = ip.scope ();
             }
             else
             {
                 struct sockaddr_in* sa = reinterpret_cast<struct sockaddr_in*> (&this->_addr);
-                sa->sin_family         = AF_INET;
+                sa->sin_family = AF_INET;
                 memcpy (&sa->sin_addr, ip.addr (), ip.length ());
             }
         }

@@ -1477,55 +1477,55 @@ TEST (IpAddress, isIpAddress)
  */
 TEST (IpAddress, toIpv4)
 {
-    IpAddress ip   = "0.0.0.0";
+    IpAddress ip = "0.0.0.0";
     IpAddress ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "0.0.0.0");
 
-    ip   = "127.0.0.1";
+    ip = "127.0.0.1";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "127.0.0.1");
 
-    ip   = "10.41.45.2";
+    ip = "10.41.45.2";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "10.41.45.2");
 
-    ip   = "::127.0.0.1";
+    ip = "::127.0.0.1";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "127.0.0.1");
 
-    ip   = "::10.41.45.2";
+    ip = "::10.41.45.2";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "10.41.45.2");
 
-    ip   = "::ffff:0.0.0.0";
+    ip = "::ffff:0.0.0.0";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "0.0.0.0");
 
-    ip   = "::ffff:127.0.0.1";
+    ip = "::ffff:127.0.0.1";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "127.0.0.1");
 
-    ip   = "::ffff:10.41.45.2";
+    ip = "::ffff:10.41.45.2";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "10.41.45.2");
 
-    ip   = "::";
+    ip = "::";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "::");
 
-    ip   = "0:0:0:0:0:0:0:0";
+    ip = "0:0:0:0:0:0:0:0";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "::");
 
-    ip   = "0::0";
+    ip = "0::0";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "::");
 
-    ip   = "::1";
+    ip = "::1";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "::1");
 
-    ip   = "fe80::57f3:baa4:fc3a:890a";
+    ip = "fe80::57f3:baa4:fc3a:890a";
     ipv4 = ip.toIpv4 ();
     ASSERT_STREQ (ipv4.toString ().c_str (), "fe80::57f3:baa4:fc3a:890a");
 }
@@ -1535,35 +1535,35 @@ TEST (IpAddress, toIpv4)
  */
 TEST (IpAddress, toIpv6)
 {
-    IpAddress ip   = "0.0.0.0";
+    IpAddress ip = "0.0.0.0";
     IpAddress ipv6 = ip.toIpv6 ();
     ASSERT_STREQ (ipv6.toString ().c_str (), "::ffff:0.0.0.0");
 
-    ip   = "127.0.0.1";
+    ip = "127.0.0.1";
     ipv6 = ip.toIpv6 ();
     ASSERT_STREQ (ipv6.toString ().c_str (), "::ffff:127.0.0.1");
 
-    ip   = "10.41.45.2";
+    ip = "10.41.45.2";
     ipv6 = ip.toIpv6 ();
     ASSERT_STREQ (ipv6.toString ().c_str (), "::ffff:10.41.45.2");
 
-    ip   = "::";
+    ip = "::";
     ipv6 = ip.toIpv6 ();
     ASSERT_STREQ (ipv6.toString ().c_str (), "::");
 
-    ip   = "0:0:0:0:0:0:0:0";
+    ip = "0:0:0:0:0:0:0:0";
     ipv6 = ip.toIpv6 ();
     ASSERT_STREQ (ipv6.toString ().c_str (), "::");
 
-    ip   = "0::0";
+    ip = "0::0";
     ipv6 = ip.toIpv6 ();
     ASSERT_STREQ (ipv6.toString ().c_str (), "::");
 
-    ip   = "::1";
+    ip = "::1";
     ipv6 = ip.toIpv6 ();
     ASSERT_STREQ (ipv6.toString ().c_str (), "::1");
 
-    ip   = "fe80::57f3:baa4:fc3a:890a";
+    ip = "fe80::57f3:baa4:fc3a:890a";
     ipv6 = ip.toIpv6 ();
     ASSERT_STREQ (ipv6.toString ().c_str (), "fe80::57f3:baa4:fc3a:890a");
 }
@@ -1726,10 +1726,10 @@ TEST (IpAddress, at)
     ASSERT_THROW (((const IpAddress*)&ip4)->operator[] (4), std::out_of_range);
 
     IpAddress ip6 (AF_INET6);
-    ip6[0]  = 0xfe;
-    ip6[1]  = 0x80;
-    ip6[8]  = 0x57;
-    ip6[9]  = 0xf3;
+    ip6[0] = 0xfe;
+    ip6[1] = 0x80;
+    ip6[8] = 0x57;
+    ip6[9] = 0xf3;
     ip6[10] = 0xba;
     ip6[11] = 0xa4;
     ip6[12] = 0xfc;
@@ -2233,8 +2233,8 @@ TEST (IpAddress, and)
 {
     IpAddress ip1, ip2, result;
 
-    ip1    = "192.168.13.31";
-    ip2    = IpAddress (24, AF_INET);
+    ip1 = "192.168.13.31";
+    ip2 = IpAddress (24, AF_INET);
     result = ip1 & ip2;
     ASSERT_STREQ (result.toString ().c_str (), "192.168.13.0");
 
@@ -2244,8 +2244,8 @@ TEST (IpAddress, and)
     result = "255.255.255.0" & ip1;
     ASSERT_STREQ (result.toString ().c_str (), "192.168.13.0");
 
-    ip1    = "2001:db8:abcd:12::1";
-    ip2    = IpAddress (64, AF_INET6);
+    ip1 = "2001:db8:abcd:12::1";
+    ip2 = IpAddress (64, AF_INET6);
     result = ip1 & ip2;
     ASSERT_STREQ (result.toString ().c_str (), "2001:db8:abcd:12::");
 
@@ -2267,8 +2267,8 @@ TEST (IpAddress, or)
 {
     IpAddress ip1, ip2, result;
 
-    ip1    = "192.168.13.31";
-    ip2    = IpAddress (24, AF_INET);
+    ip1 = "192.168.13.31";
+    ip2 = IpAddress (24, AF_INET);
     result = ip1 | ip2;
     ASSERT_STREQ (result.toString ().c_str (), "255.255.255.31");
 
@@ -2278,8 +2278,8 @@ TEST (IpAddress, or)
     result = "255.255.255.0" | ip1;
     ASSERT_STREQ (result.toString ().c_str (), "255.255.255.31");
 
-    ip1    = "2001:db8:abcd:12::1";
-    ip2    = IpAddress (64, AF_INET6);
+    ip1 = "2001:db8:abcd:12::1";
+    ip2 = IpAddress (64, AF_INET6);
     result = ip1 | ip2;
     ASSERT_STREQ (result.toString ().c_str (), "ffff:ffff:ffff:ffff::1");
 
@@ -2301,8 +2301,8 @@ TEST (IpAddress, xor)
 {
     IpAddress ip1, ip2, result;
 
-    ip1    = "192.168.13.31";
-    ip2    = IpAddress (24, AF_INET);
+    ip1 = "192.168.13.31";
+    ip2 = IpAddress (24, AF_INET);
     result = ip1 ^ ip2;
     ASSERT_STREQ (result.toString ().c_str (), "63.87.242.31");
 
@@ -2312,8 +2312,8 @@ TEST (IpAddress, xor)
     result = "255.255.255.0" ^ ip1;
     ASSERT_STREQ (result.toString ().c_str (), "63.87.242.31");
 
-    ip1    = "2001:db8:abcd:12::1";
-    ip2    = IpAddress (64, AF_INET6);
+    ip1 = "2001:db8:abcd:12::1";
+    ip2 = IpAddress (64, AF_INET6);
     result = ip1 ^ ip2;
     ASSERT_STREQ (result.toString ().c_str (), "dffe:f247:5432:ffed::1");
 
@@ -2335,11 +2335,11 @@ TEST (IpAddress, not )
 {
     IpAddress ip, result;
 
-    ip     = "192.168.13.31";
+    ip = "192.168.13.31";
     result = ~ip;
     ASSERT_STREQ (result.toString ().c_str (), "63.87.242.224");
 
-    ip     = "2001:db8:abcd:12::1";
+    ip = "2001:db8:abcd:12::1";
     result = ~ip;
     ASSERT_STREQ (result.toString ().c_str (), "dffe:f247:5432:ffed:ffff:ffff:ffff:fffe");
 }

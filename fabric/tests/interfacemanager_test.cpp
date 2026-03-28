@@ -80,7 +80,7 @@ TEST (InterfaceManager, addLinkListener)
     InterfaceManager mgr;
 
     bool called = false;
-    auto cb     = [&] (const auto& /*info*/) {
+    auto cb = [&] (const auto& /*info*/) {
         called = true;
     };
 
@@ -105,7 +105,7 @@ TEST (InterfaceManager, addAddressListener)
     InterfaceManager mgr;
 
     bool called = false;
-    auto cb     = [&] (const auto& /*info*/) {
+    auto cb = [&] (const auto& /*info*/) {
         called = true;
     };
 

@@ -57,8 +57,8 @@ TEST (SharedSemaphore, create)
 TEST (SharedSemaphore, wait)
 {
     SharedSemaphore* sem = nullptr;
-    void* shm            = nullptr;
-    pid_t child          = -1;
+    void* shm = nullptr;
+    pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
@@ -120,8 +120,8 @@ cleanup:
 TEST (SharedSemaphore, tryWait)
 {
     SharedSemaphore* sem = nullptr;
-    void* shm            = nullptr;
-    pid_t child          = -1;
+    void* shm = nullptr;
+    pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
@@ -183,8 +183,8 @@ cleanup:
 TEST (SharedSemaphore, timedWait)
 {
     SharedSemaphore* sem = nullptr;
-    void* shm            = nullptr;
-    pid_t child          = -1;
+    void* shm = nullptr;
+    pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
@@ -244,8 +244,8 @@ cleanup:
 TEST (SharedSemaphore, value)
 {
     SharedSemaphore* sem = nullptr;
-    void* shm            = nullptr;
-    pid_t child          = -1;
+    void* shm = nullptr;
+    pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);

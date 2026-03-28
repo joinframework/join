@@ -135,9 +135,9 @@ namespace join
          */
         explicit LocalMem (uint64_t size)
         {
-            long sc           = sysconf (_SC_PAGESIZE);
+            long sc = sysconf (_SC_PAGESIZE);
             uint64_t pageSize = (sc > 0) ? static_cast<uint64_t> (sc) : _defaultPageSize;
-            _size             = (size + pageSize - 1) & ~(pageSize - 1);
+            _size = (size + pageSize - 1) & ~(pageSize - 1);
 
             create ();
         }
@@ -164,7 +164,7 @@ namespace join
         , _ptr (other._ptr)
         {
             other._size = 0;
-            other._ptr  = nullptr;
+            other._ptr = nullptr;
         }
 
         /**
@@ -177,10 +177,10 @@ namespace join
             cleanup ();
 
             _size = other._size;
-            _ptr  = other._ptr;
+            _ptr = other._ptr;
 
             other._size = 0;
-            other._ptr  = nullptr;
+            other._ptr = nullptr;
 
             return *this;
         }
@@ -325,9 +325,9 @@ namespace join
         explicit ShmMem (uint64_t size, const std::string& name)
         : _name (name)
         {
-            long sc           = sysconf (_SC_PAGESIZE);
+            long sc = sysconf (_SC_PAGESIZE);
             uint64_t pageSize = (sc > 0) ? static_cast<uint64_t> (sc) : _defaultPageSize;
-            _size             = (size + pageSize - 1) & ~(pageSize - 1);
+            _size = (size + pageSize - 1) & ~(pageSize - 1);
 
             if (_size > static_cast<uint64_t> (std::numeric_limits<off_t>::max ()))
             {
@@ -361,8 +361,8 @@ namespace join
         , _fd (other._fd)
         {
             other._size = 0;
-            other._ptr  = nullptr;
-            other._fd   = -1;
+            other._ptr = nullptr;
+            other._fd = -1;
         }
 
         /**
@@ -376,12 +376,12 @@ namespace join
 
             _size = other._size;
             _name = std::move (other._name);
-            _ptr  = other._ptr;
-            _fd   = other._fd;
+            _ptr = other._ptr;
+            _fd = other._fd;
 
             other._size = 0;
-            other._ptr  = nullptr;
-            other._fd   = -1;
+            other._ptr = nullptr;
+            other._fd = -1;
 
             return *this;
         }
@@ -492,7 +492,7 @@ namespace join
             if ((_fd == -1) && (errno == EEXIST))
             {
                 created = false;
-                _fd     = ::shm_open (_name.c_str (), O_RDWR | O_CLOEXEC, 0644);
+                _fd = ::shm_open (_name.c_str (), O_RDWR | O_CLOEXEC, 0644);
             }
 
             if (_fd == -1)

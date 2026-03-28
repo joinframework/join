@@ -85,7 +85,7 @@ protected:
 
 const std::string UnixDgramSocket::_serverpath = "/tmp/unixserver_test.sock";
 const std::string UnixDgramSocket::_clientpath = "/tmp/unixclient_test.sock";
-const int UnixDgramSocket::_timeout            = 1000;
+const int UnixDgramSocket::_timeout = 1000;
 
 /**
  * @brief Test open method.

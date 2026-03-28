@@ -121,7 +121,7 @@ namespace join
         bool timedWait (Lock& lock, std::chrono::duration<Rep, Period> timeout)
         {
             struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
-            int err            = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
+            int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
             if (err != 0)
             {
                 lastError = std::error_code (err, std::generic_category ());
@@ -241,7 +241,7 @@ namespace join
         bool timedWait (ScopedLock<SharedMutex>& lock, std::chrono::duration<Rep, Period> timeout)
         {
             struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
-            int err            = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
+            int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
             if (err != 0)
             {
                 lastError = std::error_code (err, std::generic_category ());

@@ -190,18 +190,18 @@ int NeighborManager::addNeighbor (uint32_t index, const IpAddress& ipAddress, co
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ndmsg));
-    nlh->nlmsg_type      = RTM_NEWNEIGH;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ndmsg));
+    nlh->nlmsg_type = RTM_NEWNEIGH;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_EXCL;
+    nlh->nlmsg_seq = ++_seq;
 
     // neighbor message.
     struct ndmsg* ndm = reinterpret_cast<struct ndmsg*> (NLMSG_DATA (nlh));
-    ndm->ndm_family   = ipAddress.family ();
-    ndm->ndm_ifindex  = static_cast<int> (index);
-    ndm->ndm_state    = state;
-    ndm->ndm_flags    = 0;
-    ndm->ndm_type     = RTN_UNICAST;
+    ndm->ndm_family = ipAddress.family ();
+    ndm->ndm_ifindex = static_cast<int> (index);
+    ndm->ndm_state = state;
+    ndm->ndm_flags = 0;
+    ndm->ndm_type = RTN_UNICAST;
 
     // ip address.
     addAttributes (nlh, NDA_DST, ipAddress.addr (), ipAddress.length ());
@@ -232,15 +232,15 @@ int NeighborManager::removeNeighbor (uint32_t index, const IpAddress& ipAddress,
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ndmsg));
-    nlh->nlmsg_type      = RTM_DELNEIGH;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ndmsg));
+    nlh->nlmsg_type = RTM_DELNEIGH;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    nlh->nlmsg_seq = ++_seq;
 
     // neighbor message.
     struct ndmsg* ndm = reinterpret_cast<struct ndmsg*> (NLMSG_DATA (nlh));
-    ndm->ndm_family   = ipAddress.family ();
-    ndm->ndm_ifindex  = static_cast<int> (index);
+    ndm->ndm_family = ipAddress.family ();
+    ndm->ndm_ifindex = static_cast<int> (index);
 
     // ip address.
     addAttributes (nlh, NDA_DST, ipAddress.addr (), ipAddress.length ());
@@ -297,18 +297,18 @@ int NeighborManager::setNeighbor (uint32_t index, const IpAddress& ipAddress, co
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ndmsg));
-    nlh->nlmsg_type      = RTM_NEWNEIGH;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_REPLACE;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ndmsg));
+    nlh->nlmsg_type = RTM_NEWNEIGH;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_REPLACE;
+    nlh->nlmsg_seq = ++_seq;
 
     // neighbor message.
     struct ndmsg* ndm = reinterpret_cast<struct ndmsg*> (NLMSG_DATA (nlh));
-    ndm->ndm_family   = ipAddress.family ();
-    ndm->ndm_ifindex  = static_cast<int> (index);
-    ndm->ndm_state    = state;
-    ndm->ndm_flags    = 0;
-    ndm->ndm_type     = RTN_UNICAST;
+    ndm->ndm_family = ipAddress.family ();
+    ndm->ndm_ifindex = static_cast<int> (index);
+    ndm->ndm_state = state;
+    ndm->ndm_flags = 0;
+    ndm->ndm_type = RTN_UNICAST;
 
     // ip address.
     addAttributes (nlh, NDA_DST, ipAddress.addr (), ipAddress.length ());
@@ -329,14 +329,14 @@ int NeighborManager::dumpNeighbors (bool sync)
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
-    nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct ndmsg));
-    nlh->nlmsg_type      = RTM_GETNEIGH;
-    nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_DUMP;
-    nlh->nlmsg_seq       = ++_seq;
+    nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct ndmsg));
+    nlh->nlmsg_type = RTM_GETNEIGH;
+    nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    nlh->nlmsg_seq = ++_seq;
 
     // request all families.
     struct ndmsg* ndm = reinterpret_cast<struct ndmsg*> (NLMSG_DATA (nlh));
-    ndm->ndm_family   = AF_UNSPEC;
+    ndm->ndm_family = AF_UNSPEC;
 
     return sendRequest (nlh, sync);
 }
@@ -365,10 +365,10 @@ void NeighborManager::onMessage (struct nlmsghdr* nlh)
 // =========================================================================
 void NeighborManager::onNeighborMessage (struct nlmsghdr* nlh)
 {
-    struct ndmsg* ndm  = reinterpret_cast<struct ndmsg*> (NLMSG_DATA (nlh));
+    struct ndmsg* ndm = reinterpret_cast<struct ndmsg*> (NLMSG_DATA (nlh));
     struct rtattr* rta = reinterpret_cast<struct rtattr*> (reinterpret_cast<char*> (NLMSG_DATA (nlh)) +
                                                            NLMSG_ALIGN (sizeof (struct ndmsg)));
-    int len            = static_cast<int> (NLMSG_PAYLOAD (nlh, sizeof (struct ndmsg)));
+    int len = static_cast<int> (NLMSG_PAYLOAD (nlh, sizeof (struct ndmsg)));
 
     if (ndm->ndm_ifindex <= 0)
     {
@@ -428,7 +428,7 @@ void NeighborManager::onNeighborMessage (struct nlmsghdr* nlh)
         {
             NeighborInfo info{};
             info.neighbor = neighbor;
-            info.flags    = NeighborChangeType::Deleted;
+            info.flags = NeighborChangeType::Deleted;
             notifyNeighborUpdate (info);
         }
 

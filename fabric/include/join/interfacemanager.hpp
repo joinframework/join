@@ -42,16 +42,16 @@ namespace join
      */
     enum class InterfaceChangeType : uint32_t
     {
-        Added             = 1L << 0, /**< interface did not exist before. */
-        Deleted           = 1L << 1, /**< interface was removed. */
-        Modified          = 1L << 2, /**< interface was updated. */
+        Added = 1L << 0,             /**< interface did not exist before. */
+        Deleted = 1L << 1,           /**< interface was removed. */
+        Modified = 1L << 2,          /**< interface was updated. */
         AdminStateChanged = 1L << 3, /**< interface admin status was updated. */
-        OperStateChanged  = 1L << 4, /**< interface operational status was updated. */
-        MacChanged        = 1L << 5, /**< interface MAC address changed. */
-        NameChanged       = 1L << 6, /**< interface name changed. */
-        MtuChanged        = 1L << 7, /**< interface MTU changed. */
-        KindChanged       = 1L << 8, /**< interface kind changed. */
-        MasterChanged     = 1L << 9, /**< interface master bridge changed. */
+        OperStateChanged = 1L << 4,  /**< interface operational status was updated. */
+        MacChanged = 1L << 5,        /**< interface MAC address changed. */
+        NameChanged = 1L << 6,       /**< interface name changed. */
+        MtuChanged = 1L << 7,        /**< interface MTU changed. */
+        KindChanged = 1L << 8,       /**< interface kind changed. */
+        MasterChanged = 1L << 9,     /**< interface master bridge changed. */
     };
 
     /**
@@ -153,7 +153,7 @@ namespace join
     class InterfaceManager : public NetlinkManager
     {
     public:
-        using LinkNotify    = std::function<void (const LinkInfo& info)>;
+        using LinkNotify = std::function<void (const LinkInfo& info)>;
         using AddressNotify = std::function<void (const AddressInfo& info)>;
 
         /**

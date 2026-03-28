@@ -71,7 +71,7 @@ MailSender::MailSender (const MailSender& other)
 MailSender& MailSender::operator= (const MailSender& other)
 {
     _address = other._address;
-    _name    = other._name;
+    _name = other._name;
     return *this;
 }
 
@@ -92,7 +92,7 @@ MailSender::MailSender (MailSender&& other)
 MailSender& MailSender::operator= (MailSender&& other)
 {
     _address = std::move (other._address);
-    _name    = std::move (other._name);
+    _name = std::move (other._name);
     return *this;
 }
 
@@ -248,10 +248,10 @@ MailMessage::MailMessage (const MailMessage& other)
 // =========================================================================
 MailMessage& MailMessage::operator= (const MailMessage& other)
 {
-    _sender     = other._sender;
+    _sender = other._sender;
     _recipients = other._recipients;
-    _subject    = other._subject;
-    _content    = other._content;
+    _subject = other._subject;
+    _content = other._content;
     return *this;
 }
 
@@ -273,10 +273,10 @@ MailMessage::MailMessage (MailMessage&& other)
 // =========================================================================
 MailMessage& MailMessage::operator= (MailMessage&& other)
 {
-    _sender     = std::move (other._sender);
+    _sender = std::move (other._sender);
     _recipients = std::move (other._recipients);
-    _subject    = std::move (other._subject);
-    _content    = std::move (other._content);
+    _subject = std::move (other._subject);
+    _content = std::move (other._content);
     return *this;
 }
 

@@ -239,8 +239,8 @@ IpAddress MacAddress::toIpv6 (const IpAddress& prefix, int len) const
 {
     IpAddress address = prefix & IpAddress (len, AF_INET6);
 
-    address[8]  = _mac[0] ^ (1 << 1);
-    address[9]  = _mac[1];
+    address[8] = _mac[0] ^ (1 << 1);
+    address[9] = _mac[1];
     address[10] = _mac[2];
     address[11] = 0xff;
     address[12] = 0xfe;
@@ -433,9 +433,9 @@ MacAddress& MacAddress::operator+= (int value)
 {
     for (int pos = _mac.size () - 1; pos >= 0 && value != 0; --pos)
     {
-        int val   = _mac[pos] + value;
+        int val = _mac[pos] + value;
         _mac[pos] = val % 256;
-        value     = val / 256;
+        value = val / 256;
     }
 
     return *this;

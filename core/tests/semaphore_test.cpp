@@ -57,7 +57,7 @@ TEST (Semaphore, wait)
         std::this_thread::sleep_for (10ms);
         unnamed.post ();
     });
-    auto beg  = std::chrono::high_resolution_clock::now ();
+    auto beg = std::chrono::high_resolution_clock::now ();
     unnamed.wait ();
     auto end = std::chrono::high_resolution_clock::now ();
     EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
@@ -68,7 +68,7 @@ TEST (Semaphore, wait)
         std::this_thread::sleep_for (10ms);
         named.post ();
     });
-    beg  = std::chrono::high_resolution_clock::now ();
+    beg = std::chrono::high_resolution_clock::now ();
     named.wait ();
     end = std::chrono::high_resolution_clock::now ();
     EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);

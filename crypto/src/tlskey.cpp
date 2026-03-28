@@ -64,7 +64,7 @@ TlsKey::TlsKey (TlsKey&& other)
 TlsKey& TlsKey::operator= (TlsKey&& other)
 {
     _type = other._type;
-    _key  = std::move (other._key);
+    _key = std::move (other._key);
     return *this;
 }
 

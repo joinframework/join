@@ -111,8 +111,8 @@ namespace join
     enum HttpMethod
     {
         Head = 1L << 0,   /**< retrieve informations identified by the Request-URI without message-body. */
-        Get  = 1L << 1,   /**< retrieve informations identified by the Request-URI. */
-        Put  = 1L << 2,   /**< request that the enclosed entity be stored under the supplied Request-URI. */
+        Get = 1L << 1,    /**< retrieve informations identified by the Request-URI. */
+        Put = 1L << 2,    /**< request that the enclosed entity be stored under the supplied Request-URI. */
         Post = 1L << 3,   /**< request that the enclosed entity is accepted as a new subordinate of the resource
                              identified by the Request-URI. */
         Delete = 1L << 4, /**< request that the server delete the resource identified by the Request-URI. */

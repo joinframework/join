@@ -124,14 +124,14 @@ protected:
 };
 
 Cache CacheTest::cache;
-const std::string CacheTest::base         = "/tmp/";
-const std::string CacheTest::stem         = "join_cache_test";
-const std::string CacheTest::ext          = "txt";
-const std::string CacheTest::name         = stem + "." + ext;
-const std::string CacheTest::path         = base + name;
-const std::string CacheTest::content      = "test string";
-const std::string CacheTest::bad          = base + stem + ".bad";
-const std::string CacheTest::other        = base + stem + ".other";
+const std::string CacheTest::base = "/tmp/";
+const std::string CacheTest::stem = "join_cache_test";
+const std::string CacheTest::ext = "txt";
+const std::string CacheTest::name = stem + "." + ext;
+const std::string CacheTest::path = base + name;
+const std::string CacheTest::content = "test string";
+const std::string CacheTest::bad = base + stem + ".bad";
+const std::string CacheTest::other = base + stem + ".other";
 const std::string CacheTest::otherContent = "other test string";
 
 /**

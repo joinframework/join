@@ -33,7 +33,7 @@ using join::IpAddress;
 using join::Tcp;
 
 IpAddress address = "::1";
-uint16_t port     = 5000;
+uint16_t port = 5000;
 
 /**
  * @brief Assign by move.

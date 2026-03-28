@@ -44,7 +44,7 @@ namespace join
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
-        using Socket   = typename Protocol::Socket;
+        using Socket = typename Protocol::Socket;
 
         /**
          * @brief default constructor.
@@ -90,9 +90,9 @@ namespace join
             this->close ();
 
             std::streambuf::operator= (std::move (other));
-            this->_buf     = std::move (other._buf);
+            this->_buf = std::move (other._buf);
             this->_timeout = other._timeout;
-            this->_socket  = std::move (other._socket);
+            this->_socket = std::move (other._socket);
 
             return *this;
         }
@@ -329,8 +329,8 @@ namespace join
     {
     public:
         using SocketStreambuf = BasicSocketStreambuf<Protocol>;
-        using Endpoint        = typename Protocol::Endpoint;
-        using Socket          = typename Protocol::Socket;
+        using Endpoint = typename Protocol::Endpoint;
+        using Socket = typename Protocol::Socket;
 
         /**
          * @brief default constructor.
@@ -513,8 +513,8 @@ namespace join
     {
     public:
         using SocketStreambuf = BasicSocketStreambuf<Protocol>;
-        using Endpoint        = typename Protocol::Endpoint;
-        using Socket          = typename Protocol::Socket;
+        using Endpoint = typename Protocol::Endpoint;
+        using Socket = typename Protocol::Socket;
 
         /**
          * @brief default constructor.

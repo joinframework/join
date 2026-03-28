@@ -62,7 +62,7 @@ protected:
 
 const std::string FileSystem::base = "/tmp/";
 const std::string FileSystem::stem = "file_test";
-const std::string FileSystem::ext  = "txt";
+const std::string FileSystem::ext = "txt";
 const std::string FileSystem::name = stem + "." + ext;
 const std::string FileSystem::path = base + name;
 

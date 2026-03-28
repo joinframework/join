@@ -307,16 +307,16 @@ protected:
     static const std::string _password;
 };
 
-const std::string SmtpClient::_host       = "localhost";
-const uint16_t SmtpClient::_port          = 5000;
-const int SmtpClient::_timeout            = 1000;
-const std::string SmtpClient::_rootcert   = "/tmp/tlssocket_test_root.cert";
-const std::string SmtpClient::_certPath   = "/tmp/certs";
-const std::string SmtpClient::_certFile   = _certPath + "/tlssocket_test.cert";
-const std::string SmtpClient::_key        = "/tmp/tlssocket_test.key";
+const std::string SmtpClient::_host = "localhost";
+const uint16_t SmtpClient::_port = 5000;
+const int SmtpClient::_timeout = 1000;
+const std::string SmtpClient::_rootcert = "/tmp/tlssocket_test_root.cert";
+const std::string SmtpClient::_certPath = "/tmp/certs";
+const std::string SmtpClient::_certFile = _certPath + "/tlssocket_test.cert";
+const std::string SmtpClient::_key = "/tmp/tlssocket_test.key";
 const std::string SmtpClient::_invalidKey = "/tmp/tlssocket_test_invalid.key";
-const std::string SmtpClient::_user       = "admin";
-const std::string SmtpClient::_password   = "12345";
+const std::string SmtpClient::_user = "admin";
+const std::string SmtpClient::_password = "12345";
 
 /**
  * @brief Test move.

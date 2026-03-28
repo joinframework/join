@@ -136,7 +136,7 @@ TEST_F (RouteManagerTest, addRouteListener)
     RouteManager mgr;
 
     bool called = false;
-    auto cb     = [&] (const auto& /*info*/) {
+    auto cb = [&] (const auto& /*info*/) {
         called = true;
     };
 

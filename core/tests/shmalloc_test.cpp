@@ -194,7 +194,7 @@ TEST_F (PosixAlloc, mlock)
  */
 TEST_F (PosixAlloc, benchmark)
 {
-    const int iterations   = 100000;
+    const int iterations = 100000;
     const int numProcesses = 4;
 
     ShmMem::Allocator<iterations, 64> allocator (_name);

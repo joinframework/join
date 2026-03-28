@@ -211,7 +211,7 @@ TEST (Utils, benchmark)
  */
 TEST (Utils, toTimespec)
 {
-    auto tp     = std::chrono::time_point<std::chrono::system_clock> (std::chrono::seconds (1234));
+    auto tp = std::chrono::time_point<std::chrono::system_clock> (std::chrono::seconds (1234));
     timespec ts = join::toTimespec (tp);
     EXPECT_EQ (ts.tv_sec, 1234);
     EXPECT_EQ (ts.tv_nsec, 0);

@@ -114,10 +114,10 @@ namespace join
         template <class Rep, class Period, typename Func>
         void setOneShot (std::chrono::duration<Rep, Period> duration, Func&& callback)
         {
-            auto ns   = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
+            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
             _callback = std::forward<Func> (callback);
-            _oneShot  = true;
-            _ns       = std::chrono::nanoseconds::zero ();
+            _oneShot = true;
+            _ns = std::chrono::nanoseconds::zero ();
 
             auto ts = toTimerSpec (ns);
             timerfd_settime (handle (), 0, &ts, nullptr);
@@ -138,10 +138,10 @@ namespace join
                 "Clock type mismatch timer policy");
 
             auto elapsed = timePoint.time_since_epoch ();
-            auto ns      = std::chrono::duration_cast<std::chrono::nanoseconds> (elapsed);
-            _callback    = std::forward<Func> (callback);
-            _oneShot     = true;
-            _ns          = std::chrono::nanoseconds::zero ();
+            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (elapsed);
+            _callback = std::forward<Func> (callback);
+            _oneShot = true;
+            _ns = std::chrono::nanoseconds::zero ();
 
             auto ts = toTimerSpec (ns);
             timerfd_settime (handle (), TFD_TIMER_ABSTIME, &ts, nullptr);
@@ -155,10 +155,10 @@ namespace join
         template <class Rep, class Period, typename Func>
         void setInterval (std::chrono::duration<Rep, Period> duration, Func&& callback)
         {
-            auto ns   = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
+            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
             _callback = std::forward<Func> (callback);
-            _oneShot  = false;
-            _ns       = ns;
+            _oneShot = false;
+            _ns = ns;
 
             auto ts = toTimerSpec (ns, true);
             timerfd_settime (handle (), 0, &ts, nullptr);
@@ -170,8 +170,8 @@ namespace join
         void cancel () noexcept
         {
             _callback = nullptr;
-            _oneShot  = true;
-            _ns       = std::chrono::nanoseconds::zero ();
+            _oneShot = true;
+            _ns = std::chrono::nanoseconds::zero ();
 
             struct itimerspec ts = {};
             timerfd_settime (handle (), 0, &ts, nullptr);
@@ -185,7 +185,7 @@ namespace join
         {
             struct itimerspec ts = {};
             timerfd_gettime (handle (), &ts);
-            const bool hasValue    = (ts.it_value.tv_sec != 0 || ts.it_value.tv_nsec != 0);
+            const bool hasValue = (ts.it_value.tv_sec != 0 || ts.it_value.tv_nsec != 0);
             const bool hasInterval = (ts.it_interval.tv_sec != 0 || ts.it_interval.tv_nsec != 0);
             return hasValue || hasInterval;
         }
@@ -255,11 +255,11 @@ namespace join
         static constexpr itimerspec toTimerSpec (std::chrono::nanoseconds ns, bool periodic = false) noexcept
         {
             itimerspec ts{};
-            ts.it_value.tv_sec  = ns.count () / _nsPerSec;
+            ts.it_value.tv_sec = ns.count () / _nsPerSec;
             ts.it_value.tv_nsec = ns.count () % _nsPerSec;
             if (periodic)
             {
-                ts.it_interval.tv_sec  = ts.it_value.tv_sec;
+                ts.it_interval.tv_sec = ts.it_value.tv_sec;
                 ts.it_interval.tv_nsec = ts.it_value.tv_nsec;
             }
             return ts;

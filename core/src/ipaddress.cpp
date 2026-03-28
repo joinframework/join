@@ -1005,13 +1005,13 @@ IpAddress::IpAddress (const struct sockaddr& address)
     if (address.sa_family == AF_INET6)
     {
         const struct sockaddr_in6* sa = reinterpret_cast<const struct sockaddr_in6*> (&address);
-        _ip                           = std::make_unique<Ipv6Address> (&sa->sin6_addr, sa->sin6_scope_id);
+        _ip = std::make_unique<Ipv6Address> (&sa->sin6_addr, sa->sin6_scope_id);
         return;
     }
     else if (address.sa_family == AF_INET)
     {
         const struct sockaddr_in* sa = reinterpret_cast<const struct sockaddr_in*> (&address);
-        _ip                          = std::make_unique<Ipv4Address> (&sa->sin_addr);
+        _ip = std::make_unique<Ipv4Address> (&sa->sin_addr);
         return;
     }
 
@@ -1224,12 +1224,12 @@ IpAddress& IpAddress::operator= (const struct sockaddr& address)
     if (address.sa_family == AF_INET6)
     {
         const struct sockaddr_in6* sa = reinterpret_cast<const struct sockaddr_in6*> (&address);
-        _ip                           = std::make_unique<Ipv6Address> (&sa->sin6_addr, sa->sin6_scope_id);
+        _ip = std::make_unique<Ipv6Address> (&sa->sin6_addr, sa->sin6_scope_id);
     }
     else if (address.sa_family == AF_INET)
     {
         const struct sockaddr_in* sa = reinterpret_cast<const struct sockaddr_in*> (&address);
-        _ip                          = std::make_unique<Ipv4Address> (&sa->sin_addr);
+        _ip = std::make_unique<Ipv4Address> (&sa->sin_addr);
     }
 
     return *this;

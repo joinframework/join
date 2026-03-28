@@ -101,7 +101,7 @@ namespace join
         explicit Route (RouteManager* manager, const RouteKey& key);
 
     public:
-        using Ptr  = std::shared_ptr<Route>;
+        using Ptr = std::shared_ptr<Route>;
         using List = std::vector<Ptr>;
 
         /**

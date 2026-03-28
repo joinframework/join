@@ -41,7 +41,7 @@ namespace join
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
-        using Stream   = typename Protocol::Stream;
+        using Stream = typename Protocol::Stream;
 
         /**
          * @brief create the basic SMTP client instance.
@@ -97,10 +97,10 @@ namespace join
          */
         BasicSmtpClient& operator= (BasicSmtpClient&& other)
         {
-            this->_stream   = std::move (other._stream);
-            this->_host     = std::move (other._host);
-            this->_port     = other._port;
-            this->_login    = std::move (other._login);
+            this->_stream = std::move (other._stream);
+            this->_host = std::move (other._host);
+            this->_port = other._port;
+            this->_login = std::move (other._login);
             this->_password = std::move (other._password);
             return *this;
         }
@@ -178,7 +178,7 @@ namespace join
          */
         void credentials (const std::string& login, const std::string& password)
         {
-            this->_login    = login;
+            this->_login = login;
             this->_password = password;
         }
 

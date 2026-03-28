@@ -47,14 +47,14 @@ public:
 
         // netlink header.
         struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (_data.get ());
-        nlh->nlmsg_len       = NLMSG_LENGTH (sizeof (struct rtgenmsg));
-        nlh->nlmsg_type      = RTM_GETLINK;
-        nlh->nlmsg_flags     = NLM_F_REQUEST | NLM_F_DUMP;
-        nlh->nlmsg_seq       = 1;
+        nlh->nlmsg_len = NLMSG_LENGTH (sizeof (struct rtgenmsg));
+        nlh->nlmsg_type = RTM_GETLINK;
+        nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+        nlh->nlmsg_seq = 1;
 
         // general message.
         struct rtgenmsg* rtgen = reinterpret_cast<struct rtgenmsg*> (NLMSG_DATA (nlh));
-        rtgen->rtgen_family    = AF_UNSPEC;
+        rtgen->rtgen_family = AF_UNSPEC;
     }
 
 protected:
@@ -69,7 +69,7 @@ protected:
 };
 
 const uint32_t NetlinkSocket::_groups = RTMGRP_LINK;
-const int NetlinkSocket::_timeout     = 1000;
+const int NetlinkSocket::_timeout = 1000;
 std::unique_ptr<char[]> NetlinkSocket::_data;
 
 /**

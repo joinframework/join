@@ -97,7 +97,7 @@ TEST_F (RouteTest, dest)
     RouteManager mgr;
 
     uint32_t idx = if_nametoindex ("veth0");
-    auto r       = mgr.findByIndex (idx, "192.168.100.0", 24);
+    auto r = mgr.findByIndex (idx, "192.168.100.0", 24);
     ASSERT_NE (r, nullptr);
     ASSERT_EQ (r->dest (), IpAddress ("192.168.100.0"));
 }
@@ -110,7 +110,7 @@ TEST_F (RouteTest, prefix)
     RouteManager mgr;
 
     uint32_t idx = if_nametoindex ("veth0");
-    auto r       = mgr.findByIndex (idx, "192.168.100.0", 24);
+    auto r = mgr.findByIndex (idx, "192.168.100.0", 24);
     ASSERT_NE (r, nullptr);
     ASSERT_EQ (r->prefix (), 24);
 }

@@ -79,9 +79,9 @@ void* Cache::get (const std::string& fileName, struct stat& sbuf)
         std::unique_ptr<CacheEntry> entry = std::make_unique<CacheEntry> ();
         if (entry != nullptr)
         {
-            entry->size      = sbuf.st_size;
+            entry->size = sbuf.st_size;
             entry->modifTime = sbuf.st_ctim;
-            entry->addr      = mmap (0, entry->size, PROT_READ, MAP_PRIVATE, fd, 0);
+            entry->addr = mmap (0, entry->size, PROT_READ, MAP_PRIVATE, fd, 0);
             if (entry->addr != MAP_FAILED)
             {
                 ptr = _entries.emplace (fileName, std::move (entry)).first->second->addr;

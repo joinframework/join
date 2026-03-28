@@ -252,7 +252,7 @@ TEST (LocalSpsc, popBatch)
 TEST (LocalSpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num      = 1000000;
+    const uint64_t num = 1000000;
 
     LocalMem::Spsc::Queue<uint64_t> queue (capacity);
     std::atomic<bool> ready{false};
@@ -313,7 +313,7 @@ TEST (LocalSpsc, pushBenchmark)
 TEST (LocalSpsc, popBenchmark)
 {
     const uint64_t capacity = 512;
-    const uint64_t num      = 1000000;
+    const uint64_t num = 1000000;
 
     LocalMem::Spsc::Queue<uint64_t> queue (capacity);
     std::atomic<bool> producerReady{false};
