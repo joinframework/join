@@ -44,9 +44,9 @@ using join::ProactorThread;
 IoOperation IoOperation::makeTimeout (const __kernel_timespec& ts, uint32_t flags, CompletionHandler* handler) noexcept
 {
     IoOperation op;
-    op.code               = IORING_OP_TIMEOUT;
-    op.handler            = handler;
-    op.data.timeout.ts    = ts;
+    op.code = IORING_OP_TIMEOUT;
+    op.handler = handler;
+    op.data.timeout.ts = ts;
     op.data.timeout.flags = flags;
     return op;
 }
@@ -58,11 +58,11 @@ IoOperation IoOperation::makeTimeout (const __kernel_timespec& ts, uint32_t flag
 IoOperation IoOperation::makeRead (int fd, void* buf, uint32_t len, CompletionHandler* handler) noexcept
 {
     IoOperation op;
-    op.code          = IORING_OP_READ;
-    op.handler       = handler;
-    op.data.rw.fd    = fd;
-    op.data.rw.buf   = buf;
-    op.data.rw.len   = len;
+    op.code = IORING_OP_READ;
+    op.handler = handler;
+    op.data.rw.fd = fd;
+    op.data.rw.buf = buf;
+    op.data.rw.len = len;
     op.data.rw.index = 0;
     op.data.rw.fixed = false;
     return op;
@@ -76,11 +76,11 @@ IoOperation IoOperation::makeReadFixed (int fd, void* buf, uint32_t len, uint16_
                                         CompletionHandler* handler) noexcept
 {
     IoOperation op;
-    op.code          = IORING_OP_READ_FIXED;
-    op.handler       = handler;
-    op.data.rw.fd    = fd;
-    op.data.rw.buf   = buf;
-    op.data.rw.len   = len;
+    op.code = IORING_OP_READ_FIXED;
+    op.handler = handler;
+    op.data.rw.fd = fd;
+    op.data.rw.buf = buf;
+    op.data.rw.len = len;
     op.data.rw.index = buf_index;
     op.data.rw.fixed = true;
     return op;
@@ -93,11 +93,11 @@ IoOperation IoOperation::makeReadFixed (int fd, void* buf, uint32_t len, uint16_
 IoOperation IoOperation::makeWrite (int fd, const void* buf, uint32_t len, CompletionHandler* handler) noexcept
 {
     IoOperation op;
-    op.code          = IORING_OP_WRITE;
-    op.handler       = handler;
-    op.data.rw.fd    = fd;
-    op.data.rw.buf   = const_cast<void*> (buf);
-    op.data.rw.len   = len;
+    op.code = IORING_OP_WRITE;
+    op.handler = handler;
+    op.data.rw.fd = fd;
+    op.data.rw.buf = const_cast<void*> (buf);
+    op.data.rw.len = len;
     op.data.rw.index = 0;
     op.data.rw.fixed = false;
     return op;
@@ -111,11 +111,11 @@ IoOperation IoOperation::makeWriteFixed (int fd, const void* buf, uint32_t len, 
                                          CompletionHandler* handler) noexcept
 {
     IoOperation op;
-    op.code          = IORING_OP_WRITE_FIXED;
-    op.handler       = handler;
-    op.data.rw.fd    = fd;
-    op.data.rw.buf   = const_cast<void*> (buf);
-    op.data.rw.len   = len;
+    op.code = IORING_OP_WRITE_FIXED;
+    op.handler = handler;
+    op.data.rw.fd = fd;
+    op.data.rw.buf = const_cast<void*> (buf);
+    op.data.rw.len = len;
     op.data.rw.index = index;
     op.data.rw.fixed = true;
     return op;
@@ -128,10 +128,10 @@ IoOperation IoOperation::makeWriteFixed (int fd, const void* buf, uint32_t len, 
 IoOperation IoOperation::makeSendmsg (int fd, msghdr* msg, uint32_t flags, CompletionHandler* handler) noexcept
 {
     IoOperation op;
-    op.code           = IORING_OP_SENDMSG;
-    op.handler        = handler;
-    op.data.msg.fd    = fd;
-    op.data.msg.msg   = msg;
+    op.code = IORING_OP_SENDMSG;
+    op.handler = handler;
+    op.data.msg.fd = fd;
+    op.data.msg.msg = msg;
     op.data.msg.flags = flags;
     return op;
 }
@@ -143,10 +143,10 @@ IoOperation IoOperation::makeSendmsg (int fd, msghdr* msg, uint32_t flags, Compl
 IoOperation IoOperation::makeRecvmsg (int fd, msghdr* msg, uint32_t flags, CompletionHandler* handler) noexcept
 {
     IoOperation op;
-    op.code           = IORING_OP_RECVMSG;
-    op.handler        = handler;
-    op.data.msg.fd    = fd;
-    op.data.msg.msg   = msg;
+    op.code = IORING_OP_RECVMSG;
+    op.handler = handler;
+    op.data.msg.fd = fd;
+    op.data.msg.msg = msg;
     op.data.msg.flags = flags;
     return op;
 }
@@ -159,12 +159,12 @@ IoOperation IoOperation::makeAccept (int fd, sockaddr* addr, socklen_t* addrlen,
                                      CompletionHandler* handler) noexcept
 {
     IoOperation op;
-    op.code                = IORING_OP_ACCEPT;
-    op.handler             = handler;
-    op.data.accept.fd      = fd;
-    op.data.accept.addr    = addr;
+    op.code = IORING_OP_ACCEPT;
+    op.handler = handler;
+    op.data.accept.fd = fd;
+    op.data.accept.addr = addr;
     op.data.accept.addrlen = addrlen;
-    op.data.accept.flags   = flags;
+    op.data.accept.flags = flags;
     return op;
 }
 
@@ -235,7 +235,7 @@ int Proactor::submit (IoOperation* op, bool sync) noexcept
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
-    std::atomic<int> errc{0}, *perrc      = nullptr;
+    std::atomic<int> errc{0}, *perrc = nullptr;
 
     if (JOIN_LIKELY (sync))
     {
@@ -285,7 +285,7 @@ int Proactor::cancel (IoOperation* op, bool sync) noexcept
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
-    std::atomic<int> errc{0}, *perrc      = nullptr;
+    std::atomic<int> errc{0}, *perrc = nullptr;
 
     if (JOIN_LIKELY (sync))
     {
@@ -477,7 +477,7 @@ int Proactor::writeCommand (const Command& cmd) noexcept
         return -1;
     }
 
-    uint64_t value                 = 1;
+    uint64_t value = 1;
     [[maybe_unused]] ssize_t bytes = ::write (_wakeup, &value, sizeof (uint64_t));
 
     return 0;
@@ -619,7 +619,7 @@ void Proactor::prepareSqe (const IoOperation& op, io_uring_sqe* sqe) const noexc
 void Proactor::dispatchOperation (IoOperation* op, int result) noexcept
 {
     const IoOperation::State prev = op->state;
-    op->state                     = IoOperation::State::Idle;
+    op->state = IoOperation::State::Idle;
 
     if (op->handler == nullptr)
     {
@@ -647,7 +647,7 @@ void Proactor::eventLoop ()
         io_uring_submit (&_ring);
 
         io_uring_cqe* cqe = nullptr;
-        int ret           = io_uring_wait_cqe (&_ring, &cqe);
+        int ret = io_uring_wait_cqe (&_ring, &cqe);
         if (JOIN_UNLIKELY (ret < 0))
         {
             continue;
