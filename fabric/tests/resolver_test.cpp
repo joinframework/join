@@ -204,10 +204,12 @@ TEST (Resolver, resolveAllAddress)
     aliases = Resolver ().resolveAllAddress ("::1", "255.255.255.255");
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = Resolver ().resolveAllAddress (Resolver::resolveHost ("joinframework.net", AF_INET), "8.8.8.8", Resolver::dnsPort, 1);
+    aliases = Resolver ().resolveAllAddress (Resolver::resolveHost ("joinframework.net", AF_INET), "8.8.8.8",
+                                             Resolver::dnsPort, 1);
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = Resolver ().resolveAllAddress (Resolver::resolveHost ("joinframework.net", AF_INET6), "8.8.8.8", Resolver::dnsPort, 1);
+    aliases = Resolver ().resolveAllAddress (Resolver::resolveHost ("joinframework.net", AF_INET6), "8.8.8.8",
+                                             Resolver::dnsPort, 1);
     EXPECT_EQ (aliases.size (), 0);
 }
 
@@ -249,10 +251,12 @@ TEST (Resolver, resolveAddress)
     alias = Resolver ().resolveAddress ("::1", "255.255.255.255");
     EXPECT_TRUE (alias.empty ());
 
-    alias = Resolver ().resolveAddress (Resolver::resolveHost ("joinframework.net", AF_INET), "8.8.8.8", Resolver::dnsPort, 1);
+    alias = Resolver ().resolveAddress (Resolver::resolveHost ("joinframework.net", AF_INET), "8.8.8.8",
+                                        Resolver::dnsPort, 1);
     EXPECT_TRUE (alias.empty ());
 
-    alias = Resolver ().resolveAddress (Resolver::resolveHost ("joinframework.net", AF_INET6), "8.8.8.8", Resolver::dnsPort, 1);
+    alias = Resolver ().resolveAddress (Resolver::resolveHost ("joinframework.net", AF_INET6), "8.8.8.8",
+                                        Resolver::dnsPort, 1);
     EXPECT_TRUE (alias.empty ());
 }
 
@@ -496,7 +500,7 @@ TEST (Resolver, className)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

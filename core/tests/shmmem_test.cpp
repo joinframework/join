@@ -67,7 +67,7 @@ TEST_F (PosixMem, create)
 
     ASSERT_THROW (ShmMem (0, _name), std::system_error);
     ASSERT_THROW (ShmMem (4096, ""), std::system_error);
-    ASSERT_THROW (ShmMem (static_cast <uint64_t> (std::numeric_limits <off_t>::max ()) + 1, _name), std::overflow_error);
+    ASSERT_THROW (ShmMem (static_cast<uint64_t> (std::numeric_limits<off_t>::max ()) + 1, _name), std::overflow_error);
 
     ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
     ShmMem mem1 (4096, _name);
@@ -83,8 +83,8 @@ TEST_F (PosixMem, get)
     ShmMem mem1 (4096, _name);
     const ShmMem& cmem1 = mem1;
 
-    EXPECT_THROW (mem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
-    EXPECT_THROW (cmem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
+    EXPECT_THROW (mem1.get (std::numeric_limits<uint64_t>::max ()), std::out_of_range);
+    EXPECT_THROW (cmem1.get (std::numeric_limits<uint64_t>::max ()), std::out_of_range);
 
     ASSERT_NE (mem1.get (), nullptr);
     ASSERT_NE (cmem1.get (), nullptr);
@@ -96,14 +96,18 @@ TEST_F (PosixMem, get)
     EXPECT_THROW (cmem1.get (), std::runtime_error);
 }
 
+#ifdef JOIN_HAS_NUMA
 TEST_F (PosixMem, mbind)
 {
     ShmMem mem (4096, _name);
 
     ASSERT_EQ (mem.mbind (0), 0) << join::lastError.message ();
     ASSERT_EQ (join::mbind (nullptr, 4096, 0), -1);
+    ASSERT_EQ (join::mbind (mem.get (), 4096, -1), -1);
     ASSERT_EQ (join::mbind (mem.get (), 4096, 9999), -1);
+    ASSERT_EQ (join::mbind (mem.get (), 4096, 63), -1);
 }
+#endif
 
 TEST_F (PosixMem, mlock)
 {
@@ -116,7 +120,7 @@ TEST_F (PosixMem, mlock)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
- 
+
 // libjoin.
 #include <join/error.hpp>
 
@@ -46,7 +46,7 @@ const char* ErrorCategory::name () const noexcept
 // =========================================================================
 std::string ErrorCategory::message (int code) const noexcept
 {
-    switch (static_cast <Errc> (code))
+    switch (static_cast<Errc> (code))
     {
         case Errc::InUse:
             return "already in use";
@@ -85,52 +85,39 @@ std::string ErrorCategory::message (int code) const noexcept
 // =========================================================================
 bool ErrorCategory::equivalent (const std::error_code& code, int condition) const noexcept
 {
-    switch (static_cast <Errc> (condition))
+    switch (static_cast<Errc> (condition))
     {
         case Errc::InUse:
-            return code == std::errc::already_connected ||
-                   code == std::errc::connection_already_in_progress ||
-                   code == std::errc::address_in_use ||
-                   code == std::errc::file_exists;
+            return code == std::errc::already_connected || code == std::errc::connection_already_in_progress ||
+                   code == std::errc::address_in_use || code == std::errc::file_exists;
         case Errc::InvalidParam:
-            return code == std::errc::no_such_file_or_directory ||
-                   code == std::errc::address_family_not_supported ||
-                   code == std::errc::invalid_argument ||
-                   code == std::errc::protocol_not_supported ||
-                   code == std::errc::not_a_socket ||
-                   code == std::errc::bad_address ||
-                   code == std::errc::no_protocol_option ||
-                   code == std::errc::destination_address_required ||
+            return code == std::errc::no_such_file_or_directory || code == std::errc::address_family_not_supported ||
+                   code == std::errc::invalid_argument || code == std::errc::protocol_not_supported ||
+                   code == std::errc::not_a_socket || code == std::errc::bad_address ||
+                   code == std::errc::no_protocol_option || code == std::errc::destination_address_required ||
                    code == std::errc::operation_not_supported;
         case Errc::ConnectionRefused:
-            return code == std::errc::connection_refused ||
-                   code == std::errc::network_unreachable;
+            return code == std::errc::connection_refused || code == std::errc::network_unreachable;
         case Errc::ConnectionClosed:
-            return code == std::errc::connection_reset ||
-                   code == std::errc::not_connected ||
+            return code == std::errc::connection_reset || code == std::errc::not_connected ||
                    code == std::errc::broken_pipe;
         case Errc::TimedOut:
             return code == std::errc::timed_out;
         case Errc::PermissionDenied:
-            return code == std::errc::permission_denied ||
-                   code == std::errc::operation_not_permitted;
+            return code == std::errc::permission_denied || code == std::errc::operation_not_permitted;
         case Errc::OutOfMemory:
-            return code == std::errc::too_many_files_open ||
-                   code == std::errc::too_many_files_open_in_system ||
-                   code == std::errc::no_buffer_space ||
-                   code == std::errc::not_enough_memory ||
+            return code == std::errc::too_many_files_open || code == std::errc::too_many_files_open_in_system ||
+                   code == std::errc::no_buffer_space || code == std::errc::not_enough_memory ||
                    code == std::errc::no_lock_available;
         case Errc::OperationFailed:
             return code == std::errc::bad_file_descriptor;
         case Errc::MessageUnknown:
-            return code == std::errc::no_message ||
-                   code == std::errc::bad_message ||
+            return code == std::errc::no_message || code == std::errc::bad_message ||
                    code == std::errc::no_message_available;
         case Errc::MessageTooLong:
             return code == std::errc::message_size;
         case Errc::TemporaryError:
-            return code == std::errc::interrupted ||
-                   code == std::errc::resource_unavailable_try_again ||
+            return code == std::errc::interrupted || code == std::errc::resource_unavailable_try_again ||
                    code == std::errc::operation_in_progress;
         default:
             return false;
@@ -143,7 +130,7 @@ bool ErrorCategory::equivalent (const std::error_code& code, int condition) cons
 // =========================================================================
 bool ErrorCategory::equivalent (int code, const std::error_condition& condition) const noexcept
 {
-    return *this == condition.category () && static_cast <int> (condition.value ()) == code;
+    return *this == condition.category () && static_cast<int> (condition.value ()) == code;
 }
 
 // =========================================================================
@@ -162,7 +149,7 @@ const std::error_category& join::getErrorCategory () noexcept
 // =========================================================================
 std::error_code join::make_error_code (join::Errc code) noexcept
 {
-    return std::error_code (static_cast <int> (code), getErrorCategory ());
+    return std::error_code (static_cast<int> (code), getErrorCategory ());
 }
 
 // =========================================================================
@@ -171,5 +158,5 @@ std::error_code join::make_error_code (join::Errc code) noexcept
 // =========================================================================
 std::error_condition join::make_error_condition (join::Errc code) noexcept
 {
-    return std::error_condition (static_cast <int> (code), getErrorCategory ());
+    return std::error_condition (static_cast<int> (code), getErrorCategory ());
 }

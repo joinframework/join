@@ -44,15 +44,15 @@ public:
      */
     static void SetUpTestCase ()
     {
-        _data = std::make_unique <char[]> (sizeof (struct icmphdr));
+        _data = std::make_unique<char[]> (sizeof (struct icmphdr));
 
-        struct icmphdr *icmp = reinterpret_cast <struct icmphdr *> (_data.get ());
+        struct icmphdr* icmp = reinterpret_cast<struct icmphdr*> (_data.get ());
         icmp->type = ICMP_ECHO;
         icmp->code = 0;
         icmp->checksum = 0;
         icmp->un.echo.sequence = htons (1);
         icmp->un.echo.id = htons (getpid () & 0xFFFF);
-        icmp->checksum = Icmp::Socket::checksum (reinterpret_cast <uint16_t *> (icmp), sizeof (struct icmphdr), 0);
+        icmp->checksum = Icmp::Socket::checksum (reinterpret_cast<uint16_t*> (icmp), sizeof (struct icmphdr), 0);
     }
 
 protected:
@@ -63,12 +63,12 @@ protected:
     static const int _timeout;
 
     /// data.
-    static std::unique_ptr <char[]> _data;
+    static std::unique_ptr<char[]> _data;
 };
 
-const std::string        IcmpSocket::_host = "127.0.0.1";
-const int                IcmpSocket::_timeout = 1000;
-std::unique_ptr <char[]> IcmpSocket::_data;
+const std::string IcmpSocket::_host = "127.0.0.1";
+const int IcmpSocket::_timeout = 1000;
+std::unique_ptr<char[]> IcmpSocket::_data;
 
 /**
  * @brief Test open method.
@@ -434,7 +434,7 @@ TEST_F (IcmpSocket, localEndpoint)
 {
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
-    ASSERT_EQ (icmpSocket.localEndpoint (), Icmp::Endpoint {});
+    ASSERT_EQ (icmpSocket.localEndpoint (), Icmp::Endpoint{});
     ASSERT_EQ (icmpSocket.bind (_host), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.connect (_host), 0) << join::lastError.message ();
     ASSERT_EQ (icmpSocket.localEndpoint ().ip (), IpAddress (_host)) << join::lastError.message ();
@@ -464,7 +464,7 @@ TEST_F (IcmpSocket, connected)
 
     ASSERT_FALSE (icmpSocket.connected ());
     ASSERT_EQ (icmpSocket.connect (_host), 0) << join::lastError.message ();
-    ASSERT_TRUE (icmpSocket.connected());
+    ASSERT_TRUE (icmpSocket.connected ());
     icmpSocket.close ();
     ASSERT_FALSE (icmpSocket.connected ());
 }
@@ -572,7 +572,7 @@ TEST_F (IcmpSocket, checksum)
 {
     std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
 
-    ASSERT_EQ (Icmp::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+    ASSERT_EQ (Icmp::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**
@@ -599,7 +599,7 @@ TEST_F (IcmpSocket, lower)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

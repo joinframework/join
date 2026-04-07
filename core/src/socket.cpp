@@ -43,7 +43,7 @@ const char* TlsCategory::name () const noexcept
 // =========================================================================
 std::string TlsCategory::message (int code) const
 {
-    switch (static_cast <TlsErrc> (code))
+    switch (static_cast<TlsErrc> (code))
     {
         case TlsErrc::TlsCloseNotifyAlert:
             return "TLS close notify alert received";
@@ -70,7 +70,7 @@ const std::error_category& join::getTlsCategory ()
 // =========================================================================
 std::error_code join::make_error_code (TlsErrc code)
 {
-    return std::error_code (static_cast <int> (code), getTlsCategory ());
+    return std::error_code (static_cast<int> (code), getTlsCategory ());
 }
 
 // =========================================================================
@@ -79,5 +79,5 @@ std::error_code join::make_error_code (TlsErrc code)
 // =========================================================================
 std::error_condition join::make_error_condition (TlsErrc code)
 {
-    return std::error_condition (static_cast <int> (code), getTlsCategory ());
+    return std::error_condition (static_cast<int> (code), getTlsCategory ());
 }

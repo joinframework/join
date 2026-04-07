@@ -37,7 +37,7 @@ public:
     /**
      * @brief tear down test case.
      */
-    static void TearDownTestCase()
+    static void TearDownTestCase ()
     {
         // remove all files before ending the test.
         ::remove (path.c_str ());
@@ -62,7 +62,7 @@ protected:
 
 const std::string FileSystem::base = "/tmp/";
 const std::string FileSystem::stem = "file_test";
-const std::string FileSystem::ext  = "txt";
+const std::string FileSystem::ext = "txt";
 const std::string FileSystem::name = stem + "." + ext;
 const std::string FileSystem::path = base + name;
 
@@ -170,7 +170,7 @@ TEST_F (FileSystem, exists)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

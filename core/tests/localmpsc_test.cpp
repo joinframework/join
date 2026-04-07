@@ -23,18 +23,24 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::LocalMem;
 using join::Thread;
 
+/**
+ * @brief test tryPush.
+ */
 TEST (LocalMpsc, tryPush)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (512);
+    LocalMem::Mpsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -50,9 +56,43 @@ TEST (LocalMpsc, tryPush)
     ASSERT_EQ (queue.available (), 0);
 }
 
+/**
+ * @brief test batch tryPush.
+ */
+TEST (LocalMpsc, tryPushBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Mpsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.available (), full);
+    ASSERT_EQ (queue.tryPush (nullptr, half), -1);
+    ASSERT_EQ (queue.tryPush (in, half), half) << join::lastError.message ();
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.available (), half);
+    ASSERT_EQ (queue.tryPush (in + half, half), half) << join::lastError.message ();
+    ASSERT_EQ (queue.tryPush (in, 1), -1);
+    ASSERT_TRUE (queue.full ());
+    ASSERT_EQ (queue.available (), 0);
+    ASSERT_EQ (queue.pending (), full);
+}
+
+/**
+ * @brief test push.
+ */
 TEST (LocalMpsc, push)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (512);
+    LocalMem::Mpsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -67,9 +107,41 @@ TEST (LocalMpsc, push)
     ASSERT_EQ (queue.available (), 0);
 }
 
+/**
+ * @brief test batch push.
+ */
+TEST (LocalMpsc, pushBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Mpsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.available (), full);
+    ASSERT_EQ (queue.push (nullptr, half), -1);
+    ASSERT_EQ (queue.push (in, half), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.available (), half);
+    ASSERT_EQ (queue.push (in + half, half), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue.full ());
+    ASSERT_EQ (queue.available (), 0);
+    ASSERT_EQ (queue.pending (), 512);
+}
+
+/**
+ * @brief test tryPop.
+ */
 TEST (LocalMpsc, tryPop)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (512);
+    LocalMem::Mpsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.tryPop (data), -1);
@@ -84,9 +156,49 @@ TEST (LocalMpsc, tryPop)
     ASSERT_EQ (queue.tryPop (data), -1);
 }
 
+/**
+ * @brief test batch tryPop.
+ */
+TEST (LocalMpsc, tryPopBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Mpsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {}, out[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_EQ (queue.tryPop (nullptr, half), -1);
+    ASSERT_EQ (queue.tryPop (out, half), -1);
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPush (in, full), full) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), full);
+    ASSERT_EQ (queue.tryPop (out, half), half) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.tryPop (out + half, half), half) << join::lastError.message ();
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPop (out, 1), -1);
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (out[i], i);
+    }
+}
+
+/**
+ * @brief test pop.
+ */
 TEST (LocalMpsc, pop)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (512);
+    LocalMem::Mpsc::Queue<uint64_t> queue (512);
     uint64_t data = 0;
 
     ASSERT_TRUE (queue.empty ());
@@ -99,13 +211,51 @@ TEST (LocalMpsc, pop)
     ASSERT_EQ (queue.pending (), 0);
 }
 
+/**
+ * @brief test batch pop.
+ */
+TEST (LocalMpsc, popBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Mpsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {}, out[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPush (in, full), full) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), full);
+    ASSERT_EQ (queue.pop (nullptr, half), -1);
+    ASSERT_EQ (queue.pop (out, half), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.pop (out + half, half), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (out[i], i);
+    }
+}
+
+/**
+ * @brief benchmark push.
+ */
 TEST (LocalMpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
     const uint64_t num = 1000000;
 
-    LocalMem::Mpsc::Queue <uint64_t> queue (capacity);
-    std::atomic <bool> ready {false};
+    LocalMem::Mpsc::Queue<uint64_t> queue (capacity);
+    std::atomic<bool> ready{false};
 
     Thread consumer ([&] () {
         uint64_t data = 0;
@@ -131,7 +281,7 @@ TEST (LocalMpsc, pushBenchmark)
     });
 
     const int numProducers = 4;
-    std::vector <Thread> producers;
+    std::vector<Thread> producers;
     const uint64_t msgPerProducer = num / numProducers;
     uint64_t data = 0;
     // pre-fill the buffer
@@ -143,11 +293,13 @@ TEST (LocalMpsc, pushBenchmark)
         }
     }
     ready.store (true, std::memory_order_release);
+    Rdtsc::Stats stats ("MPSC push");
     for (int p = 0; p < numProducers; ++p)
     {
         producers.emplace_back ([&] () {
             for (uint64_t i = 0; i < msgPerProducer; ++i)
             {
+                ScopedStats<Rdtsc::Stats> guard (stats);
                 EXPECT_EQ (queue.push (data), 0) << join::lastError.message ();
             }
         });
@@ -157,8 +309,13 @@ TEST (LocalMpsc, pushBenchmark)
         p.join ();
     }
     consumer.join ();
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
+/**
+ * @brief benchmark pop.
+ */
 TEST (LocalMpsc, popBenchmark)
 {
     const uint64_t capacity = 512;
@@ -166,13 +323,13 @@ TEST (LocalMpsc, popBenchmark)
     const int numProducers = 4;
     const uint64_t msgPerProducer = num / numProducers;
 
-    LocalMem::Mpsc::Queue <uint64_t> queue (capacity);
-    std::atomic <bool> ready {false};
+    LocalMem::Mpsc::Queue<uint64_t> queue (capacity);
+    std::atomic<bool> ready{false};
 
-    std::vector <Thread> producers;
+    std::vector<Thread> producers;
     for (int p = 0; p < numProducers; ++p)
     {
-        producers.emplace_back ([&queue, msgPerProducer, &ready] () {
+        producers.emplace_back ([&] () {
             uint64_t threadData = 0;
 
             while (!ready.load (std::memory_order_acquire))
@@ -191,19 +348,26 @@ TEST (LocalMpsc, popBenchmark)
 
     uint64_t data = 0;
     ready.store (true, std::memory_order_release);
+    Rdtsc::Stats stats ("MPSC pop");
     for (uint64_t i = 0; i < num; ++i)
     {
+        ScopedStats<Rdtsc::Stats> guard (stats);
         EXPECT_EQ (queue.pop (data), 0) << join::lastError.message ();
     }
     for (auto& p : producers)
     {
         p.join ();
     }
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
+/**
+ * @brief test pending.
+ */
 TEST (LocalMpsc, pending)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.pending (), 0);
@@ -211,9 +375,12 @@ TEST (LocalMpsc, pending)
     ASSERT_EQ (queue.pending (), 1);
 }
 
+/**
+ * @brief test available.
+ */
 TEST (LocalMpsc, available)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_EQ (queue.available (), 1);
@@ -221,9 +388,12 @@ TEST (LocalMpsc, available)
     ASSERT_EQ (queue.available (), 0);
 }
 
+/**
+ * @brief test full.
+ */
 TEST (LocalMpsc, full)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_FALSE (queue.full ());
@@ -231,9 +401,12 @@ TEST (LocalMpsc, full)
     ASSERT_TRUE (queue.full ());
 }
 
+/**
+ * @brief test empty.
+ */
 TEST (LocalMpsc, empty)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     uint64_t data = 0;
 
     ASSERT_TRUE (queue.empty ());
@@ -241,22 +414,30 @@ TEST (LocalMpsc, empty)
     ASSERT_FALSE (queue.empty ());
 }
 
+/**
+ * @brief test mlock.
+ */
 TEST (LocalMpsc, mlock)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mlock (), 0) << join::lastError.message ();
 }
 
+#ifdef JOIN_HAS_NUMA
+/**
+ * @brief test mbind.
+ */
 TEST (LocalMpsc, mbind)
 {
-    LocalMem::Mpsc::Queue <uint64_t> queue (0);
+    LocalMem::Mpsc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mbind (0), 0) << join::lastError.message ();
 }
+#endif
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

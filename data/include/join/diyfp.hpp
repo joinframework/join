@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_DIYFP_HPP__
-#define __JOIN_DIYFP_HPP__
+#ifndef JOIN_DATA_DIYFP_HPP
+#define JOIN_DATA_DIYFP_HPP
 
 // C++.
 #include <utility>
@@ -69,7 +69,7 @@ namespace join
             memcpy (&u64, &value, sizeof (double));
 
             _mantissa = u64 & _mantissaMask;
-            _exponent = static_cast <int> ((u64 & _exponentMask) >> _mantissaSize);
+            _exponent = static_cast<int> ((u64 & _exponentMask) >> _mantissaSize);
 
             if (_exponent)
             {
@@ -88,8 +88,8 @@ namespace join
          * @param exponent exponent.
          */
         constexpr DiyFp (uint64_t mantissa, int exponent) noexcept
-        : _mantissa (mantissa),
-          _exponent (exponent)
+        : _mantissa (mantissa)
+        , _exponent (exponent)
         {
         }
 
@@ -111,7 +111,7 @@ namespace join
 
             int shift = __builtin_clzll (_mantissa);
             _mantissa <<= shift;
-            _exponent  -= shift;
+            _exponent -= shift;
 
             return *this;
         }
@@ -129,13 +129,13 @@ namespace join
                 if (shift > 0)
                 {
                     _mantissa <<= shift;
-                    _exponent  -= shift;
+                    _exponent -= shift;
                 }
             }
 
             constexpr int shift = _diyMantissaSize - _mantissaSize - 2;
             _mantissa <<= shift;
-            _exponent  -= shift;
+            _exponent -= shift;
 
             return *this;
         }
@@ -178,10 +178,10 @@ namespace join
          */
         inline constexpr DiyFp& operator*= (const DiyFp& rhs) noexcept
         {
-        #if defined(__SIZEOF_INT128__)
-            __uint128_t product = static_cast <__uint128_t> (_mantissa) * static_cast <__uint128_t> (rhs._mantissa);
-            _mantissa = static_cast <uint64_t> ((product >> 64) + ((product >> 63) & 1));
-        #else
+#if defined(__SIZEOF_INT128__)
+            __uint128_t product = static_cast<__uint128_t> (_mantissa) * static_cast<__uint128_t> (rhs._mantissa);
+            _mantissa = static_cast<uint64_t> ((product >> 64) + ((product >> 63) & 1));
+#else
             uint64_t M32 = 0xFFFFFFFFU;
 
             uint64_t a = _mantissa >> 32;
@@ -196,17 +196,17 @@ namespace join
 
             uint64_t tmp = (bd >> 32) + (ad & M32) + (bc & M32) + (1U << 31);
             _mantissa = ac + (ad >> 32) + (bc >> 32) + (tmp >> 32);
-        #endif
+#endif
             _exponent += rhs._exponent + 64;
 
             return *this;
         }
 
         /// home made double mantissa size.
-        static constexpr int _diyMantissaSize = std::numeric_limits <uint64_t>::digits;
+        static constexpr int _diyMantissaSize = std::numeric_limits<uint64_t>::digits;
 
         /// double mantissa size.
-        static constexpr int _mantissaSize = std::numeric_limits <double>::digits - 1;
+        static constexpr int _mantissaSize = std::numeric_limits<double>::digits - 1;
 
         /// exponent bias.
         static constexpr int _exponentBias = 0x3FF + _mantissaSize;

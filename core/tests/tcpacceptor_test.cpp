@@ -33,7 +33,7 @@ using join::IpAddress;
 using join::Tcp;
 
 IpAddress address = "::1";
-uint16_t  port    = 5000;
+uint16_t port = 5000;
 
 /**
  * @brief Assign by move.
@@ -129,7 +129,7 @@ TEST (TcpAcceptor, localEndpoint)
 {
     Tcp::Acceptor server;
 
-    ASSERT_EQ (server.localEndpoint (), Tcp::Endpoint {});
+    ASSERT_EQ (server.localEndpoint (), Tcp::Endpoint{});
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.create ({address, port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), address);
@@ -204,7 +204,7 @@ TEST (TcpAcceptor, handle)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

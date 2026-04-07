@@ -33,10 +33,13 @@
 
 using join::LocalMem;
 
+/**
+ * @brief test create.
+ */
 TEST (LocalMem, create)
 {
     ASSERT_THROW (LocalMem (0), std::system_error);
-    ASSERT_THROW (LocalMem (std::numeric_limits <uint64_t>::max ()), std::system_error);
+    ASSERT_THROW (LocalMem (UINT64_MAX), std::system_error);
 
     LocalMem mem1 (4096);
     ASSERT_NE (mem1.get (), nullptr);
@@ -45,13 +48,16 @@ TEST (LocalMem, create)
     ASSERT_NE (mem2.get (), nullptr);
 }
 
+/**
+ * @brief test get.
+ */
 TEST (LocalMem, get)
 {
     LocalMem mem1 (4096);
     const LocalMem& cmem1 = mem1;
 
-    EXPECT_THROW (mem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
-    EXPECT_THROW (cmem1.get (std::numeric_limits <uint64_t>::max ()), std::out_of_range);
+    EXPECT_THROW (mem1.get (std::numeric_limits<uint64_t>::max ()), std::out_of_range);
+    EXPECT_THROW (cmem1.get (std::numeric_limits<uint64_t>::max ()), std::out_of_range);
 
     ASSERT_NE (mem1.get (), nullptr);
     ASSERT_NE (cmem1.get (), nullptr);
@@ -63,15 +69,25 @@ TEST (LocalMem, get)
     EXPECT_THROW (cmem1.get (), std::runtime_error);
 }
 
+#ifdef JOIN_HAS_NUMA
+/**
+ * @brief test mbind.
+ */
 TEST (LocalMem, mbind)
 {
     LocalMem mem (4096);
 
     ASSERT_EQ (mem.mbind (0), 0) << join::lastError.message ();
     ASSERT_EQ (join::mbind (nullptr, 4096, 0), -1);
+    ASSERT_EQ (join::mbind (mem.get (), 4096, -1), -1);
     ASSERT_EQ (join::mbind (mem.get (), 4096, 9999), -1);
+    ASSERT_EQ (join::mbind (mem.get (), 4096, 63), -1);
 }
+#endif
 
+/**
+ * @brief test mlock.
+ */
 TEST (LocalMem, mlock)
 {
     LocalMem mem (4096);
@@ -83,7 +99,7 @@ TEST (LocalMem, mlock)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

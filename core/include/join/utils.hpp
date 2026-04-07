@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_UTILS_HPP__
-#define __JOIN_UTILS_HPP__
+#ifndef JOIN_CORE_UTILS_HPP
+#define JOIN_CORE_UTILS_HPP
 
 // libjoin.
 #include <join/error.hpp>
@@ -195,11 +195,9 @@ namespace join
      */
     inline bool compareNoCase (const std::string& a, const std::string& b)
     {
-        return ((a.size () == b.size ()) && std::equal (a.begin (), a.end (), b.begin (),
-                                                        [] (char c1, char c2)
-                                                        {
-                                                            return std::toupper (c1) == std::toupper (c2);
-                                                        }));
+        return ((a.size () == b.size ()) && std::equal (a.begin (), a.end (), b.begin (), [] (char c1, char c2) {
+                    return std::toupper (c1) == std::toupper (c2);
+                }));
     }
 
     /**
@@ -433,7 +431,7 @@ namespace join
     struct timespec toTimespec (std::chrono::time_point<Clock, Duration> timePoint)
     {
         auto secs = std::chrono::time_point_cast<std::chrono::seconds> (timePoint);
-        auto ns   = std::chrono::time_point_cast<std::chrono::nanoseconds> (timePoint) -
+        auto ns = std::chrono::time_point_cast<std::chrono::nanoseconds> (timePoint) -
                   std::chrono::time_point_cast<std::chrono::nanoseconds> (secs);
 
         auto scount = secs.time_since_epoch ().count ();

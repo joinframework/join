@@ -15,10 +15,9 @@ string(REGEX REPLACE "[0-9]+\\.[0-9]+\\.([0-9]+).*" "\\1" JOIN_VERSION_PATCH ${J
 message(STATUS "${PROJECT_NAME} version: ${JOIN_VERSION}")
 configure_file("${PROJECT_SOURCE_DIR}/version.hpp.in" "${PROJECT_SOURCE_DIR}/core/include/join/version.hpp")
 
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+if(NOT DEFINED CMAKE_BUILD_TYPE AND NOT DEFINED CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to Release as none was specified.")
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose build type." FORCE)
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+    set(CMAKE_BUILD_TYPE Release)
 endif()
 
 add_compile_options(
@@ -45,6 +44,7 @@ option(JOIN_ENABLE_CRYPTO "Enable crypto." ON)
 option(JOIN_ENABLE_DATA "Enable data." ON)
 option(JOIN_ENABLE_FABRIC "Enable fabric." ON)
 option(JOIN_ENABLE_SERVICES "Enable services." ON)
+option(JOIN_ENABLE_NUMA "Enable NUMA support." OFF)
 option(JOIN_ENABLE_SAMPLES "Build samples" OFF)
 option(JOIN_ENABLE_TESTS "Enable tests." OFF)
 option(JOIN_ENABLE_COVERAGE "Enable coverage." OFF)
@@ -72,6 +72,7 @@ if(JOIN_ENABLE_COVERAGE)
     endif()
 endif()
 
+find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 

@@ -92,7 +92,7 @@ MacAddress::MacAddress (const uint8_t* address, size_t size)
 //   CLASS     : MacAddress
 //   METHOD    : MacAddress
 // =========================================================================
-MacAddress::MacAddress (const uint8_t (&address) [IFHWADDRLEN])
+MacAddress::MacAddress (const uint8_t (&address)[IFHWADDRLEN])
 {
     std::copy (std::begin (address), std::end (address), std::begin (_mac));
 }
@@ -101,7 +101,7 @@ MacAddress::MacAddress (const uint8_t (&address) [IFHWADDRLEN])
 //   CLASS     : MacAddress
 //   METHOD    : MacAddress
 // =========================================================================
-MacAddress::MacAddress (std::initializer_list <uint8_t> address)
+MacAddress::MacAddress (std::initializer_list<uint8_t> address)
 {
     if (address.size () > _mac.size ())
     {
@@ -117,10 +117,8 @@ MacAddress::MacAddress (std::initializer_list <uint8_t> address)
 // =========================================================================
 MacAddress::MacAddress (const char* address)
 {
-    if (sscanf (address, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
-                &_mac[0], &_mac[1], &_mac[2],
-                &_mac[3], &_mac[4], &_mac[5]) !=
-                static_cast <int> (_mac.size ()))
+    if (sscanf (address, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &_mac[0], &_mac[1], &_mac[2], &_mac[3], &_mac[4], &_mac[5]) !=
+        static_cast<int> (_mac.size ()))
     {
         throw std::invalid_argument ("invalid MAC address");
     }
@@ -183,9 +181,7 @@ socklen_t MacAddress::length () const
 // =========================================================================
 bool MacAddress::isWildcard () const
 {
-    return (_mac[0] == 0 && _mac[1] == 0 &&
-            _mac[2] == 0 && _mac[3] == 0 &&
-            _mac[4] == 0 && _mac[5] == 0);
+    return (_mac[0] == 0 && _mac[1] == 0 && _mac[2] == 0 && _mac[3] == 0 && _mac[4] == 0 && _mac[5] == 0);
 }
 
 // =========================================================================
@@ -194,9 +190,8 @@ bool MacAddress::isWildcard () const
 // =========================================================================
 bool MacAddress::isBroadcast () const
 {
-    return (_mac[0] == 0xff && _mac[1] == 0xff &&
-            _mac[2] == 0xff && _mac[3] == 0xff &&
-            _mac[4] == 0xff && _mac[5] == 0xff);
+    return (_mac[0] == 0xff && _mac[1] == 0xff && _mac[2] == 0xff && _mac[3] == 0xff && _mac[4] == 0xff &&
+            _mac[5] == 0xff);
 }
 
 // =========================================================================
@@ -228,10 +223,10 @@ std::string MacAddress::toString (CaseConvert caseConvert) const
     for (unsigned int i = 0u; i < (_mac.size () - 1); ++i)
     {
         oss << std::hex << caseConvert << std::setw (2);
-        oss << std::setfill ('0') << static_cast <uint32_t> (_mac[i]) << ':';
+        oss << std::setfill ('0') << static_cast<uint32_t> (_mac[i]) << ':';
     }
     oss << std::hex << caseConvert << std::setw (2);
-    oss << std::setfill ('0') << static_cast <uint32_t> (_mac[_mac.size () - 1]);
+    oss << std::setfill ('0') << static_cast<uint32_t> (_mac[_mac.size () - 1]);
 
     return oss.str ();
 }
@@ -244,8 +239,8 @@ IpAddress MacAddress::toIpv6 (const IpAddress& prefix, int len) const
 {
     IpAddress address = prefix & IpAddress (len, AF_INET6);
 
-    address[8]  = _mac[0] ^ (1 << 1);
-    address[9]  = _mac[1];
+    address[8] = _mac[0] ^ (1 << 1);
+    address[9] = _mac[1];
     address[10] = _mac[2];
     address[11] = 0xff;
     address[12] = 0xfe;
@@ -277,15 +272,15 @@ IpAddress MacAddress::toLinkLocalIpv6 () const
 IpAddress MacAddress::toUniqueLocalIpv6 () const
 {
     IpAddress prefix (AF_INET6);
-    std::uniform_int_distribution <int> dist (0, 255);
+    std::uniform_int_distribution<int> dist (0, 255);
     std::random_device rnd;
 
     prefix[0] = 0xfd;
-    prefix[1] = static_cast <uint8_t> (dist (rnd));
-    prefix[2] = static_cast <uint8_t> (dist (rnd));
-    prefix[3] = static_cast <uint8_t> (dist (rnd));
-    prefix[4] = static_cast <uint8_t> (dist (rnd));
-    prefix[5] = static_cast <uint8_t> (dist (rnd));
+    prefix[1] = static_cast<uint8_t> (dist (rnd));
+    prefix[2] = static_cast<uint8_t> (dist (rnd));
+    prefix[3] = static_cast<uint8_t> (dist (rnd));
+    prefix[4] = static_cast<uint8_t> (dist (rnd));
+    prefix[5] = static_cast<uint8_t> (dist (rnd));
 
     return toIpv6 (prefix, 48);
 }
@@ -371,7 +366,7 @@ MacAddress MacAddress::address (const std::string& interface)
 
         if (result != -1)
         {
-            return MacAddress (reinterpret_cast <uint8_t*> (iface.ifr_addr.sa_data), ETH_ALEN);
+            return MacAddress (reinterpret_cast<uint8_t*> (iface.ifr_addr.sa_data), ETH_ALEN);
         }
     }
 
@@ -403,7 +398,7 @@ MacAddress& MacAddress::operator= (MacAddress&& address)
 //   CLASS     : MacAddress
 //   METHOD    : operator=
 // =========================================================================
-MacAddress& MacAddress::operator= (std::initializer_list <uint8_t> address)
+MacAddress& MacAddress::operator= (std::initializer_list<uint8_t> address)
 {
     if (address.size () <= _mac.size ())
     {
@@ -498,7 +493,7 @@ const uint8_t& MacAddress::operator[] (size_t position) const
 //   CLASS     : MacAddress
 //   METHOD    : operator~
 // =========================================================================
-MacAddress MacAddress::operator~ () const
+MacAddress MacAddress::operator~() const
 {
     MacAddress addr (*this);
     addr._mac[0] ^= 0xff;

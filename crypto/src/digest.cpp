@@ -49,7 +49,7 @@ const char* DigestCategory::name () const noexcept
 // =========================================================================
 std::string DigestCategory::message (int code) const
 {
-    switch (static_cast <DigestErrc> (code))
+    switch (static_cast<DigestErrc> (code))
     {
         case DigestErrc::InvalidAlgorithm:
             return "invalid algorithm";
@@ -78,7 +78,7 @@ const std::error_category& join::getDigestCategory ()
 // =========================================================================
 std::error_code join::make_error_code (DigestErrc code)
 {
-    return std::error_code (static_cast <int> (code), getDigestCategory ());
+    return std::error_code (static_cast<int> (code), getDigestCategory ());
 }
 
 // =========================================================================
@@ -87,7 +87,7 @@ std::error_code join::make_error_code (DigestErrc code)
 // =========================================================================
 std::error_condition join::make_error_condition (DigestErrc code)
 {
-    return std::error_condition (static_cast <int> (code), getDigestCategory ());
+    return std::error_condition (static_cast<int> (code), getDigestCategory ());
 }
 
 // =========================================================================
@@ -95,8 +95,8 @@ std::error_condition join::make_error_condition (DigestErrc code)
 //   METHOD    : Digestbuf
 // =========================================================================
 Digestbuf::Digestbuf (const std::string& algo)
-: _buf (std::make_unique <char []> (_bufsize)),
-  _md (EVP_get_digestbyname (algo.c_str ()))
+: _buf (std::make_unique<char[]> (_bufsize))
+, _md (EVP_get_digestbyname (algo.c_str ()))
 {
     if (_buf == nullptr)
     {
@@ -114,10 +114,10 @@ Digestbuf::Digestbuf (const std::string& algo)
 //   METHOD    : Digestbuf
 // =========================================================================
 Digestbuf::Digestbuf (Digestbuf&& other)
-: std::streambuf (std::move (other)),
-  _buf (std::move (other._buf)),
-  _md (other._md),
-  _ctx (std::move (other._ctx))
+: std::streambuf (std::move (other))
+, _buf (std::move (other._buf))
+, _md (other._md)
+, _ctx (std::move (other._ctx))
 {
 }
 
@@ -212,8 +212,8 @@ Digest::Digest (Algorithm algo)
 //   METHOD    : Digest
 // =========================================================================
 Digest::Digest (Digest&& other)
-: std::ostream (std::move (other)),
-  _digestbuf (std::move (other._digestbuf))
+: std::ostream (std::move (other))
+, _digestbuf (std::move (other._digestbuf))
 {
     this->set_rdbuf (&_digestbuf);
 }
@@ -222,7 +222,7 @@ Digest::Digest (Digest&& other)
 //   CLASS     : Digest
 //   METHOD    : Digest
 // =========================================================================
-Digest& Digest::operator=(Digest&& other)
+Digest& Digest::operator= (Digest&& other)
 {
     std::ostream::operator= (std::move (other));
     _digestbuf = std::move (other._digestbuf);
@@ -260,7 +260,7 @@ BytesArray Digest::md5bin (const char* data, std::streamsize size)
 // =========================================================================
 BytesArray Digest::md5bin (const BytesArray& data)
 {
-    return md5bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return md5bin (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -287,7 +287,7 @@ std::string Digest::md5hex (const char* data, std::streamsize size)
 // =========================================================================
 std::string Digest::md5hex (const BytesArray& data)
 {
-    return md5hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return md5hex (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -316,7 +316,7 @@ BytesArray Digest::sha1bin (const char* data, std::streamsize size)
 // =========================================================================
 BytesArray Digest::sha1bin (const BytesArray& data)
 {
-    return sha1bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha1bin (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -343,7 +343,7 @@ std::string Digest::sha1hex (const char* data, std::streamsize size)
 // =========================================================================
 std::string Digest::sha1hex (const BytesArray& data)
 {
-    return sha1hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha1hex (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -372,7 +372,7 @@ BytesArray Digest::sha224bin (const char* data, std::streamsize size)
 // =========================================================================
 BytesArray Digest::sha224bin (const BytesArray& data)
 {
-    return sha224bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha224bin (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -399,7 +399,7 @@ std::string Digest::sha224hex (const char* data, std::streamsize size)
 // =========================================================================
 std::string Digest::sha224hex (const BytesArray& data)
 {
-    return sha224hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha224hex (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -428,7 +428,7 @@ BytesArray Digest::sha256bin (const char* data, std::streamsize size)
 // =========================================================================
 BytesArray Digest::sha256bin (const BytesArray& data)
 {
-    return sha256bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha256bin (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -455,7 +455,7 @@ std::string Digest::sha256hex (const char* data, std::streamsize size)
 // =========================================================================
 std::string Digest::sha256hex (const BytesArray& data)
 {
-    return sha256hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha256hex (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -484,7 +484,7 @@ BytesArray Digest::sha384bin (const char* data, std::streamsize size)
 // =========================================================================
 BytesArray Digest::sha384bin (const BytesArray& data)
 {
-    return sha384bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha384bin (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -511,7 +511,7 @@ std::string Digest::sha384hex (const char* data, std::streamsize size)
 // =========================================================================
 std::string Digest::sha384hex (const BytesArray& data)
 {
-    return sha384hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha384hex (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -540,7 +540,7 @@ BytesArray Digest::sha512bin (const char* data, std::streamsize size)
 // =========================================================================
 BytesArray Digest::sha512bin (const BytesArray& data)
 {
-    return sha512bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha512bin (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -567,7 +567,7 @@ std::string Digest::sha512hex (const char* data, std::streamsize size)
 // =========================================================================
 std::string Digest::sha512hex (const BytesArray& data)
 {
-    return sha512hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sha512hex (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -596,7 +596,7 @@ BytesArray Digest::sm3bin (const char* data, std::streamsize size)
 // =========================================================================
 BytesArray Digest::sm3bin (const BytesArray& data)
 {
-    return sm3bin (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sm3bin (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -623,7 +623,7 @@ std::string Digest::sm3hex (const char* data, std::streamsize size)
 // =========================================================================
 std::string Digest::sm3hex (const BytesArray& data)
 {
-    return sm3hex (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return sm3hex (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================
@@ -641,8 +641,8 @@ std::string Digest::sm3hex (const std::string& data)
 // =========================================================================
 const char* Digest::algorithm (Algorithm algo)
 {
-   switch (algo)
-   {
+    switch (algo)
+    {
         OUT_ENUM (MD5);
         OUT_ENUM (SHA1);
         OUT_ENUM (SHA224);
@@ -650,7 +650,7 @@ const char* Digest::algorithm (Algorithm algo)
         OUT_ENUM (SHA384);
         OUT_ENUM (SHA512);
         OUT_ENUM (SM3);
-   }
+    }
 
-   return "UNKNOWN";
+    return "UNKNOWN";
 }

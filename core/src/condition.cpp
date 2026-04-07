@@ -116,7 +116,7 @@ void SharedCondition::broadcast () noexcept
 //   CLASS     : SharedCondition
 //   METHOD    : wait
 // =========================================================================
-void SharedCondition::wait (ScopedLock <SharedMutex>& lock)
+void SharedCondition::wait (ScopedLock<SharedMutex>& lock)
 {
     pthread_cond_wait (&_handle, lock.mutex ()->handle ());
 }

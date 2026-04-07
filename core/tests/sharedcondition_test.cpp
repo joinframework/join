@@ -76,7 +76,7 @@ TEST (SharedCondition, wait)
         goto cleanup;
     }
 
-    sync = static_cast <ConditionSync*> (shm);
+    sync = static_cast<ConditionSync*> (shm);
     new (&sync->condition) SharedCondition ();
     new (&sync->mutex) SharedMutex ();
     new (&sync->ready) bool (false);
@@ -85,7 +85,7 @@ TEST (SharedCondition, wait)
     if (child == 0)
     {
         std::this_thread::sleep_for (5ms);
-        ScopedLock <SharedMutex> lk (sync->mutex);
+        ScopedLock<SharedMutex> lk (sync->mutex);
         std::this_thread::sleep_for (15ms);
         sync->ready = true;
         sync->condition.signal ();
@@ -98,11 +98,13 @@ TEST (SharedCondition, wait)
         {
             goto cleanup;
         }
-        ScopedLock <SharedMutex> lock (sync->mutex);
+        ScopedLock<SharedMutex> lock (sync->mutex);
         auto beg = std::chrono::high_resolution_clock::now ();
-        sync->condition.wait (lock, [&] () {return sync->ready;});
+        sync->condition.wait (lock, [&] () {
+            return sync->ready;
+        });
         auto end = std::chrono::high_resolution_clock::now ();
-        EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+        EXPECT_GE (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
         sync->condition.signal ();
         int status = -1;
         waitpid (child, &status, 0);
@@ -147,7 +149,7 @@ TEST (SharedCondition, timedWait)
         goto cleanup;
     }
 
-    sync = static_cast <ConditionSync*> (shm);
+    sync = static_cast<ConditionSync*> (shm);
     new (&sync->condition) SharedCondition ();
     new (&sync->mutex) SharedMutex ();
     new (&sync->ready) bool (false);
@@ -156,7 +158,7 @@ TEST (SharedCondition, timedWait)
     if (child == 0)
     {
         std::this_thread::sleep_for (10ms);
-        ScopedLock <SharedMutex> lk (sync->mutex);
+        ScopedLock<SharedMutex> lk (sync->mutex);
         std::this_thread::sleep_for (10ms);
         sync->ready = true;
         sync->condition.broadcast ();
@@ -169,13 +171,17 @@ TEST (SharedCondition, timedWait)
         {
             goto cleanup;
         }
-        ScopedLock <SharedMutex> lock (sync->mutex);
+        ScopedLock<SharedMutex> lock (sync->mutex);
         auto beg = std::chrono::high_resolution_clock::now ();
         EXPECT_FALSE (sync->condition.timedWait (lock, 2ms));
-        EXPECT_FALSE (sync->condition.timedWait (lock, 2ms, [&](){return sync->ready;}));
-        EXPECT_TRUE (sync->condition.timedWait (lock, 50ms, [&](){return sync->ready;})) << join::lastError.message ();
+        EXPECT_FALSE (sync->condition.timedWait (lock, 2ms, [&] () {
+            return sync->ready;
+        }));
+        EXPECT_TRUE (sync->condition.timedWait (lock, 50ms, [&] () {
+            return sync->ready;
+        })) << join::lastError.message ();
         auto end = std::chrono::high_resolution_clock::now ();
-        EXPECT_GE (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+        EXPECT_GE (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
         sync->condition.broadcast ();
         int status = -1;
         waitpid (child, &status, 0);
@@ -200,8 +206,8 @@ cleanup:
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
-   testing::InitGoogleTest (&argc, argv);
-   return RUN_ALL_TESTS ();
+    testing::InitGoogleTest (&argc, argv);
+    return RUN_ALL_TESTS ();
 }

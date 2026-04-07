@@ -70,7 +70,7 @@ public:
     static void TearDownTestCase ()
     {
         unlink (_sampleFile.c_str ());
-        rmdir  (_basePath.c_str ());
+        rmdir (_basePath.c_str ());
     }
 
 protected:
@@ -199,15 +199,15 @@ protected:
     static const int _max;
 };
 
-const std::string HttpTest::_basePath       = "/tmp/www";
-const std::string HttpTest::_sample         = "<html><body><h1>It works!</h1></body></html>";
+const std::string HttpTest::_basePath = "/tmp/www";
+const std::string HttpTest::_sample = "<html><body><h1>It works!</h1></body></html>";
 const std::string HttpTest::_sampleFileName = "sample.html";
-const std::string HttpTest::_sampleFile     = _basePath + "/" + _sampleFileName;
-const std::string HttpTest::_token          = "adlSaJkmBLpgnRRCjkCgQ4uaCagKHsIN";
-const std::string HttpTest::_host           = "localhost";
-const uint16_t    HttpTest::_port           = 5000;
-const int         HttpTest::_timeout        = 5;
-const int         HttpTest::_max            = 20;
+const std::string HttpTest::_sampleFile = _basePath + "/" + _sampleFileName;
+const std::string HttpTest::_token = "adlSaJkmBLpgnRRCjkCgQ4uaCagKHsIN";
+const std::string HttpTest::_host = "localhost";
+const uint16_t HttpTest::_port = 5000;
+const int HttpTest::_timeout = 5;
+const int HttpTest::_max = 20;
 
 /**
  * @brief Test move.
@@ -747,7 +747,7 @@ TEST_F (HttpTest, post)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

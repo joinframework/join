@@ -74,7 +74,7 @@ TEST (SharedSemaphore, wait)
         goto cleanup;
     }
 
-    sem = static_cast <SharedSemaphore*> (shm);
+    sem = static_cast<SharedSemaphore*> (shm);
     new (sem) SharedSemaphore ();
 
     child = fork ();
@@ -94,7 +94,7 @@ TEST (SharedSemaphore, wait)
         auto beg = std::chrono::high_resolution_clock::now ();
         sem->wait ();
         auto end = std::chrono::high_resolution_clock::now ();
-        EXPECT_GT (std::chrono::duration_cast <std::chrono::milliseconds> (end - beg), 5ms);
+        EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
         int status = -1;
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));
@@ -137,7 +137,7 @@ TEST (SharedSemaphore, tryWait)
         goto cleanup;
     }
 
-    sem = static_cast <SharedSemaphore*> (shm);
+    sem = static_cast<SharedSemaphore*> (shm);
     new (sem) SharedSemaphore ();
 
     child = fork ();
@@ -200,7 +200,7 @@ TEST (SharedSemaphore, timedWait)
         goto cleanup;
     }
 
-    sem = static_cast <SharedSemaphore*> (shm);
+    sem = static_cast<SharedSemaphore*> (shm);
     new (sem) SharedSemaphore ();
 
     child = fork ();
@@ -261,7 +261,7 @@ TEST (SharedSemaphore, value)
         goto cleanup;
     }
 
-    sem = static_cast <SharedSemaphore*> (shm);
+    sem = static_cast<SharedSemaphore*> (shm);
     new (sem) SharedSemaphore ();
 
     child = fork ();
@@ -305,7 +305,7 @@ cleanup:
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

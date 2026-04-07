@@ -39,7 +39,7 @@ using join::Decoder;
 //   METHOD    : Encoderbuf
 // =========================================================================
 Encoderbuf::Encoderbuf ()
-: _buf (std::make_unique <char []> (_bufsize))
+: _buf (std::make_unique<char[]> (_bufsize))
 {
 }
 
@@ -48,10 +48,10 @@ Encoderbuf::Encoderbuf ()
 //   METHOD    : Encoderbuf
 // =========================================================================
 Encoderbuf::Encoderbuf (Encoderbuf&& other)
-: std::streambuf (std::move (other)),
-  _buf (std::move (other._buf)),
-  _encodectx (std::move (other._encodectx)),
-  _out (std::move (other._out))
+: std::streambuf (std::move (other))
+, _buf (std::move (other._buf))
+, _encodectx (std::move (other._encodectx))
+, _out (std::move (other._out))
 {
 }
 
@@ -84,7 +84,7 @@ std::string Encoderbuf::get ()
     int reqsz = oldsz + 66;
 
     _out.resize (reqsz);
-    EVP_EncodeFinal (_encodectx.get (), reinterpret_cast <uint8_t *> (&_out[oldsz]), &reqsz);
+    EVP_EncodeFinal (_encodectx.get (), reinterpret_cast<uint8_t*> (&_out[oldsz]), &reqsz);
     _out.resize (oldsz + reqsz);
 
     _encodectx.reset ();
@@ -124,7 +124,8 @@ Encoderbuf::int_type Encoderbuf::overflow (int_type c)
         int reqsz = oldsz + ((((EVP_ENCODE_CTX_num (_encodectx.get ()) + pending) / 48) * 65) + 1);
 
         _out.resize (reqsz);
-        EVP_EncodeUpdate (_encodectx.get (), reinterpret_cast <uint8_t *> (&_out[oldsz]), &reqsz, reinterpret_cast <uint8_t *> (this->pbase ()), pending);
+        EVP_EncodeUpdate (_encodectx.get (), reinterpret_cast<uint8_t*> (&_out[oldsz]), &reqsz,
+                          reinterpret_cast<uint8_t*> (this->pbase ()), pending);
         _out.resize (oldsz + reqsz);
     }
 
@@ -152,8 +153,8 @@ Encoder::Encoder ()
 //   METHOD    : Encoder
 // =========================================================================
 Encoder::Encoder (Encoder&& other)
-: std::ostream (std::move (other)),
-  _encoderbuf (std::move (other._encoderbuf))
+: std::ostream (std::move (other))
+, _encoderbuf (std::move (other._encoderbuf))
 {
     this->set_rdbuf (&_encoderbuf);
 }
@@ -162,7 +163,7 @@ Encoder::Encoder (Encoder&& other)
 //   CLASS     : Encoder
 //   METHOD    : operator=
 // =========================================================================
-Encoder& Encoder::operator=(Encoder&& other)
+Encoder& Encoder::operator= (Encoder&& other)
 {
     std::ostream::operator= (std::move (other));
     _encoderbuf = std::move (other._encoderbuf);
@@ -188,7 +189,7 @@ std::string Encoder::get ()
 //   METHOD    : Decoderbuf
 // =========================================================================
 Decoderbuf::Decoderbuf ()
-: _buf (std::make_unique <char []> (_bufsize))
+: _buf (std::make_unique<char[]> (_bufsize))
 {
 }
 
@@ -197,10 +198,10 @@ Decoderbuf::Decoderbuf ()
 //   METHOD    : Decoderbuf
 // =========================================================================
 Decoderbuf::Decoderbuf (Decoderbuf&& other)
-: std::streambuf (std::move (other)),
-  _buf (std::move (other._buf)),
-  _decodectx (std::move (other._decodectx)),
-  _out (std::move (other._out))
+: std::streambuf (std::move (other))
+, _buf (std::move (other._buf))
+, _decodectx (std::move (other._decodectx))
+, _out (std::move (other._out))
 {
 }
 
@@ -233,7 +234,7 @@ BytesArray Decoderbuf::get ()
     int reqsz = oldsz + 66;
 
     _out.resize (reqsz);
-    EVP_DecodeFinal (_decodectx.get (), reinterpret_cast <uint8_t *> (&_out[oldsz]), &reqsz);
+    EVP_DecodeFinal (_decodectx.get (), reinterpret_cast<uint8_t*> (&_out[oldsz]), &reqsz);
     _out.resize (oldsz + reqsz);
 
     _decodectx.reset ();
@@ -273,7 +274,8 @@ Decoderbuf::int_type Decoderbuf::overflow (int_type c)
         int reqsz = oldsz + pending;
 
         _out.resize (reqsz);
-        if (EVP_DecodeUpdate (_decodectx.get (), &_out[oldsz], &reqsz, reinterpret_cast <uint8_t *> (this->pbase ()), pending) == -1)
+        if (EVP_DecodeUpdate (_decodectx.get (), &_out[oldsz], &reqsz, reinterpret_cast<uint8_t*> (this->pbase ()),
+                              pending) == -1)
         {
             lastError = make_error_code (Errc::InvalidParam);
             return traits_type::eof ();
@@ -305,8 +307,8 @@ Decoder::Decoder ()
 //   METHOD    : Decoder
 // =========================================================================
 Decoder::Decoder (Decoder&& other)
-: std::ostream (std::move (other)),
-  _decoderbuf (std::move (other._decoderbuf))
+: std::ostream (std::move (other))
+, _decoderbuf (std::move (other._decoderbuf))
 {
     this->set_rdbuf (&_decoderbuf);
 }
@@ -315,7 +317,7 @@ Decoder::Decoder (Decoder&& other)
 //   CLASS     : Decoder
 //   METHOD    : operator=
 // =========================================================================
-Decoder& Decoder::operator=(Decoder&& other)
+Decoder& Decoder::operator= (Decoder&& other)
 {
     std::ostream::operator= (std::move (other));
     _decoderbuf = std::move (other._decoderbuf);
@@ -362,7 +364,7 @@ std::string Base64::encode (const std::string& data)
 // =========================================================================
 std::string Base64::encode (const BytesArray& data)
 {
-    return encode (reinterpret_cast <const char*> (data.data ()), data.size ());
+    return encode (reinterpret_cast<const char*> (data.data ()), data.size ());
 }
 
 // =========================================================================

@@ -22,14 +22,15 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_REACTOR_HPP__
-#define __JOIN_REACTOR_HPP__
+#ifndef JOIN_CORE_REACTOR_HPP
+#define JOIN_CORE_REACTOR_HPP
 
 // libjoin.
 #include <join/thread.hpp>
 #include <join/queue.hpp>
 
 // C++.
+#include <unordered_map>
 #include <unordered_set>
 #include <atomic>
 
@@ -80,33 +81,30 @@ namespace join
          */
         virtual ~EventHandler () = default;
 
-        /**
-         * @brief get native handle.
-         * @return native handle.
-         */
-        virtual int handle () const noexcept = 0;
-
     protected:
         /**
          * @brief method called when data are ready to be read on handle.
+         * @param fd file descriptor.
          */
-        virtual void onReceive ()
+        virtual void onReceive ([[maybe_unused]] int fd)
         {
             // do nothing.
         }
 
         /**
          * @brief method called when handle is closed.
+         * @param fd file descriptor.
          */
-        virtual void onClose ()
+        virtual void onClose ([[maybe_unused]] int fd)
         {
             // do nothing.
         }
 
         /**
-         * @brief method called when an error occured on handle.
+         * @brief method called when an error occurred on handle.
+         * @param fd file descriptor.
          */
-        virtual void onError ()
+        virtual void onError ([[maybe_unused]] int fd)
         {
             // do nothing.
         }
@@ -159,19 +157,20 @@ namespace join
 
         /**
          * @brief add handler to reactor.
+         * @param fd file descriptor.
          * @param handler handler pointer.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addHandler (EventHandler* handler, bool sync = true) noexcept;
+        int addHandler (int fd, EventHandler* handler, bool sync = true) noexcept;
 
         /**
          * @brief delete handler from reactor.
-         * @param handler handler pointer.
+         * @param fd file descriptor.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int delHandler (EventHandler* handler, bool sync = true) noexcept;
+        int delHandler (int fd, bool sync = true) noexcept;
 
         /**
          * @brief run the event loop (blocking).
@@ -184,18 +183,26 @@ namespace join
          */
         void stop (bool sync = true) noexcept;
 
+#ifdef JOIN_HAS_NUMA
         /**
          * @brief bind command queue memory to a NUMA node.
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
         int mbind (int numa) const noexcept;
+#endif
 
         /**
          * @brief lock command queue memory in RAM.
          * @return 0 on success, -1 on failure.
          */
         int mlock () const noexcept;
+
+        /**
+         * @brief check if the calling thread is the reactor thread.
+         * @return true if called from the reactor thread.
+         */
+        bool isReactorThread () const noexcept;
 
     private:
         /// deleted handlers reserve size.
@@ -223,6 +230,7 @@ namespace join
         struct alignas (64) Command
         {
             CommandType type;
+            int fd;
             EventHandler* handler;
             std::atomic<bool>* done;
             std::atomic<int>* errc;
@@ -230,17 +238,18 @@ namespace join
 
         /**
          * @brief register handler with epoll.
+         * @param fd file descriptor.
          * @param handler handler pointer.
          * @return 0 on success, -1 on failure.
          */
-        int registerHandler (EventHandler* handler) noexcept;
+        int registerHandler (int fd, EventHandler* handler) noexcept;
 
         /**
          * @brief unregister handler from epoll.
-         * @param handler handler pointer.
+         * @param fd file descriptor.
          * @return 0 on success, -1 on failure.
          */
-        int unregisterHandler (EventHandler* handler) noexcept;
+        int unregisterHandler (int fd) noexcept;
 
         /**
          * @brief write command to queue and wake dispatcher.
@@ -273,10 +282,10 @@ namespace join
 
         /**
          * @brief check if handler is active.
-         * @param handler handler pointer.
+         * @param fd file descriptor.
          * @return true if handler is active, false otherwise.
          */
-        bool isActive (EventHandler* handler) const noexcept;
+        bool isActive (int fd) const noexcept;
 
         /// eventfd descriptor.
         int _wakeup = -1;
@@ -287,8 +296,11 @@ namespace join
         /// command queue
         LocalMem::Mpsc::Queue<Command> _commands;
 
+        /// registered handlers
+        std::unordered_map<int, EventHandler*> _handlers;
+
         /// deleted handlers.
-        std::unordered_set<EventHandler*> _deleted;
+        std::unordered_set<int> _deleted;
 
         /// running flag for dispatcher thread.
         std::atomic<bool> _running{false};
@@ -341,12 +353,14 @@ namespace join
          */
         static pthread_t handle ();
 
+#ifdef JOIN_HAS_NUMA
         /**
          * @brief bind command queue memory to a NUMA node.
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
         static int mbind (int numa);
+#endif
 
         /**
          * @brief lock command queue memory in RAM.

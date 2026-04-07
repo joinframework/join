@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_MUTEX_HPP__
-#define __JOIN_MUTEX_HPP__
+#ifndef JOIN_CORE_MUTEX_HPP
+#define JOIN_CORE_MUTEX_HPP
 
 // C.
 #include <pthread.h>
@@ -169,7 +169,8 @@ namespace join
     };
 
     /**
-     * @brief class used to protect shared data from being simultaneously accessed by multiple process via a shared memory.
+     * @brief class used to protect shared data from being simultaneously accessed by multiple process via a shared
+     * memory.
      */
     class SharedMutex
     {

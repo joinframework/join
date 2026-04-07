@@ -22,19 +22,18 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_INTERFACE_HPP__
-#define __JOIN_INTERFACE_HPP__
+#ifndef JOIN_FABRIC_INTERFACE_HPP
+#define JOIN_FABRIC_INTERFACE_HPP
 
 // libjoin.
 #include <join/macaddress.hpp>
 #include <join/ipaddress.hpp>
+#include <join/mutex.hpp>
 
 // C++.
 #include <string>
 #include <memory>
 #include <vector>
-#include <tuple>
-#include <set>
 
 // C.
 #include <cstdint>
@@ -58,11 +57,19 @@ namespace join
         explicit Interface (InterfaceManager* manager, uint32_t index);
 
     public:
-        using Ptr           = std::shared_ptr <Interface>;
-        using Address       = std::tuple <IpAddress, uint32_t, IpAddress>;
-        using AddressList   = std::vector <Address>;
-        using Route         = std::tuple <IpAddress, uint32_t, IpAddress, uint32_t>;
-        using RouteList     = std::vector <Route>;
+        using Ptr = std::shared_ptr<Interface>;
+
+        /**
+         * @brief IP address entry associated with an interface.
+         */
+        struct Address
+        {
+            IpAddress ip;        /**< IP address. */
+            uint32_t prefix = 0; /**< prefix length. */
+            IpAddress broadcast; /**< broadcast address. */
+        };
+
+        using AddressList = std::vector<Address>;
 
         /**
          * @brief create instance.
@@ -84,13 +91,13 @@ namespace join
          * @brief get master index if bridged.
          * @return master index.
          */
-        uint32_t master () const noexcept;
+        uint32_t master () const;
 
         /**
          * @brief get interface name.
          * @return interface name.
          */
-        const std::string& name () const noexcept;
+        std::string name () const;
 
         /**
          * @brief set interface mtu.
@@ -98,19 +105,19 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int mtu (uint32_t mtuBytes, bool sync = false);
+        int mtu (uint32_t mtuBytes, bool sync = false) const;
 
         /**
          * @brief get interface mtu.
          * @return interface mtu.
          */
-        uint32_t mtu () const noexcept;
+        uint32_t mtu () const;
 
         /**
          * @brief get interface kind.
          * @return interface kind.
          */
-        const std::string& kind () const noexcept;
+        std::string kind () const;
 
         /**
          * @brief set interface mac address.
@@ -118,23 +125,24 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int mac (const MacAddress& macAddress, bool sync = false);
+        int mac (const MacAddress& macAddress, bool sync = false) const;
 
         /**
          * @brief get interface mac address.
          * @return interface mac address.
          */
-        const MacAddress& mac () const noexcept;
+        MacAddress mac () const;
 
         /**
          * @brief add address to interface.
          * @param ipAddress ip address to add.
          * @param prefix prefix length.
-         * @param broadcast broadcast address .
+         * @param broadcast broadcast address.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {}, bool sync = false);
+        int addAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {},
+                        bool sync = false) const;
 
         /**
          * @brief add address to interface.
@@ -142,17 +150,18 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addAddress (const Address& address, bool sync = false);
+        int addAddress (const Address& address, bool sync = false) const;
 
         /**
          * @brief remove address from interface.
          * @param ipAddress ip address to delete.
          * @param prefix prefix length.
-         * @param broadcast broadcast address .
+         * @param broadcast broadcast address.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int removeAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {}, bool sync = false);
+        int removeAddress (const IpAddress& ipAddress, uint32_t prefix, const IpAddress& broadcast = {},
+                           bool sync = false) const;
 
         /**
          * @brief remove address from interface.
@@ -160,87 +169,26 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int removeAddress (const Address& address, bool sync = false);
+        int removeAddress (const Address& address, bool sync = false) const;
 
         /**
          * @brief get interface ip addresses.
          * @return interface ip addresses.
          */
-        const AddressList& addressList () const noexcept;
+        AddressList addressList () const;
 
         /**
          * @brief check if interface has address stored.
-         * @param ipAddress ip address to delete.
-         * @return true if interface has address stored, false otherwise
+         * @param ipAddress ip address to check.
+         * @return true if interface has address stored, false otherwise.
          */
-        bool hasAddress (const IpAddress& ipAddress);
+        bool hasAddress (const IpAddress& ipAddress) const;
 
         /**
          * @brief check if interface has link local address stored.
-         * @return true if interface has link local address stored, false otherwise
+         * @return true if interface has link local address stored, false otherwise.
          */
-        bool hasLocalAddress ();
-
-        /**
-         * @brief add route to interface.
-         * @param dest destination network.
-         * @param prefix prefix length.
-         * @param gateway gateway address.
-         * @param metric route metric.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int addRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway = {}, uint32_t metric = 0, bool sync = false);
-
-        /**
-         * @brief add route to interface.
-         * @param route route.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int addRoute (const Route& route, bool sync = false);
-
-        /**
-         * @brief remove route from interface.
-         * @param dest destination network.
-         * @param prefix prefix length.
-         * @param gateway gateway address.
-         * @param metric route metric.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int removeRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway = {}, uint32_t metric = 0, bool sync = false);
-
-        /**
-         * @brief remove route from interface.
-         * @param route route.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int removeRoute (const Route& route, bool sync = false);
-
-        /**
-         * @brief get interface routes.
-         * @return interface routes.
-         */
-        const RouteList& routeList () const noexcept;
-
-        /**
-         * @brief check if interface has route stored.
-         * @param dest destination network.
-         * @param prefix prefix length.
-         * @param gateway gateway address.
-         * @param metric route metric.
-         * @return 0 on success, -1 on failure.
-         */
-        bool hasRoute (const IpAddress& dest, uint32_t prefix, const IpAddress& gateway, uint32_t metric);
-
-        /**
-         * @brief check if interface has route stored.
-         * @param route route.
-         * @return true if interface has route stored, false otherwise
-         */
-        bool hasRoute (const Route& route);
+        bool hasLocalAddress () const;
 
         /**
          * @brief add interface to bridge.
@@ -248,7 +196,7 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addToBridge (uint32_t masterIndex, bool sync = false);
+        int addToBridge (uint32_t masterIndex, bool sync = false) const;
 
         /**
          * @brief add interface to bridge.
@@ -256,20 +204,20 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addToBridge (const std::string& masterName, bool sync = false);
+        int addToBridge (const std::string& masterName, bool sync = false) const;
 
         /**
          * @brief remove interface from bridge.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int removeFromBridge (bool sync = false);
+        int removeFromBridge (bool sync = false) const;
 
         /**
          * @brief get interface flags.
          * @return interface flags.
          */
-        uint32_t flags () const noexcept;
+        uint32_t flags () const;
 
         /**
          * @brief enable interface.
@@ -277,94 +225,94 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int enable (bool enabled = true, bool sync = false);
+        int enable (bool enabled = true, bool sync = false) const;
 
         /**
          * @brief is interface enabled.
          * @return true if enabled.
          */
-        bool isEnabled () const noexcept;
+        bool isEnabled () const;
 
         /**
          * @brief is interface running.
          * @return true if running.
          */
-        bool isRunning () const noexcept;
+        bool isRunning () const;
 
         /**
          * @brief is interface a loopback interface.
          * @return true if loopback interface.
          */
-        bool isLoopback () const noexcept;
+        bool isLoopback () const;
 
         /**
          * @brief is interface a point to point interface.
          * @return true if point to point interface.
          */
-        bool isPointToPoint () const noexcept;
+        bool isPointToPoint () const;
 
         /**
          * @brief is interface a dummy interface.
          * @return true if dummy interface.
          */
-        bool isDummy () const noexcept;
+        bool isDummy () const;
 
         /**
          * @brief is interface a bridge interface.
          * @return true if bridge interface.
          */
-        bool isBridge () const noexcept;
+        bool isBridge () const;
 
         /**
          * @brief is interface a vlan interface.
          * @return true if vlan interface.
          */
-        bool isVlan () const noexcept;
+        bool isVlan () const;
 
         /**
          * @brief is interface a veth interface.
          * @return true if veth interface.
          */
-        bool isVeth () const noexcept;
+        bool isVeth () const;
 
         /**
          * @brief is interface a gre interface.
          * @return true if gre interface.
          */
-        bool isGre () const noexcept;
+        bool isGre () const;
 
         /**
          * @brief is interface a tun interface.
          * @return true if tun interface.
          */
-        bool isTun () const noexcept;
+        bool isTun () const;
 
         /**
          * @brief is interface supporting broadcast.
          * @return true if supporting broadcast.
          */
-        bool supportsBroadcast () const noexcept;
+        bool supportsBroadcast () const;
 
         /**
          * @brief is interface supporting multicast.
          * @return true if supporting multicast.
          */
-        bool supportsMulticast () const noexcept;
+        bool supportsMulticast () const;
 
         /**
          * @brief is interface supporting IPv4.
          * @return true if supporting IPv4.
          */
-        bool supportsIpv4 ();
+        bool supportsIpv4 () const;
 
         /**
          * @brief is interface supporting IPv6.
          * @return true if supporting IPv6.
          */
-        bool supportsIpv6 ();
+        bool supportsIpv6 () const;
 
     private:
-        /// interface manager
+        /// interface manager.
         InterfaceManager* _manager = nullptr;
 
         /// interface index.
@@ -391,29 +339,26 @@ namespace join
         /// interface addresses.
         AddressList _addresses;
 
-        /// interface routes.
-        RouteList _routes;
-
         /// protection mutex.
-        Mutex _mutex;
+        mutable Mutex _mutex;
 
         // friendship with equal operator.
-        friend bool operator== (const Interface::Ptr& lhs, const Interface::Ptr& rhs);
+        friend bool operator== (const Interface::Ptr& lhs, const Interface::Ptr& rhs) noexcept;
 
-        // friendship with not equal operator.
-        friend bool operator< (const Interface::Ptr& lhs, const Interface::Ptr& rhs);
+        // friendship with less operator.
+        friend bool operator< (const Interface::Ptr& lhs, const Interface::Ptr& rhs) noexcept;
 
         // friendship with interface manager.
         friend class InterfaceManager;
     };
 
     /**
-     * @brief compare if two interfaces are equals.
-     * @param a Interface to compare.
-     * @param b Interface to compare to.
+     * @brief compare if two interfaces are equal.
+     * @param lhs interface to compare.
+     * @param rhs interface to compare to.
      * @return true if equal.
      */
-    inline bool operator== (const Interface::Ptr& lhs, const Interface::Ptr& rhs)
+    inline bool operator== (const Interface::Ptr& lhs, const Interface::Ptr& rhs) noexcept
     {
         if (!lhs && !rhs)
         {
@@ -428,11 +373,11 @@ namespace join
 
     /**
      * @brief compare if interface is inferior.
-     * @param a Interface to compare.
-     * @param b Interface to compare to.
+     * @param lhs interface to compare.
+     * @param rhs interface to compare to.
      * @return true if inferior.
      */
-    inline bool operator< (const Interface::Ptr& lhs, const Interface::Ptr& rhs)
+    inline bool operator< (const Interface::Ptr& lhs, const Interface::Ptr& rhs) noexcept
     {
         if (!lhs)
         {
@@ -446,7 +391,7 @@ namespace join
     }
 
     /// list of interfaces.
-    using InterfaceList = std::set <Interface::Ptr>;
+    using InterfaceList = std::vector<Interface::Ptr>;
 }
 
 #endif

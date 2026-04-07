@@ -248,7 +248,7 @@ int main (int argc, char* argv[])
     }
 
     const std::string scheme = match[1];
-    const std::string host   = match[2];
+    const std::string host = match[2];
     const uint16_t port =
         match[3].length () ? uint16_t (std::stoi (match[3])) : join::Resolver::resolveService (scheme);
     const std::string path = match[4];
@@ -263,8 +263,7 @@ int main (int argc, char* argv[])
 
     BenchmarkContext ctx;
 
-    auto run = [&] ()
-    {
+    auto run = [&] () {
         if (scheme == "https")
             ::benchmark<join::Https::Client> (host, port, request, file, timeout, max, verbose, ctx);
         else
@@ -274,15 +273,13 @@ int main (int argc, char* argv[])
     std::vector<join::Thread> threads;
     threads.reserve (tasks);
 
-    const auto elapsed = join::benchmark (
-        [&] ()
-        {
-            for (int i = 0; i < tasks; ++i)
-                threads.emplace_back (run);
+    const auto elapsed = join::benchmark ([&] () {
+        for (int i = 0; i < tasks; ++i)
+            threads.emplace_back (run);
 
-            for (auto& t : threads)
-                t.join ();
-        });
+        for (auto& t : threads)
+            t.join ();
+    });
 
     const double secs = elapsed.count () / 1000.0;
 

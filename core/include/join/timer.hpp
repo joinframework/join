@@ -22,11 +22,12 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_TIMER_HPP__
-#define __JOIN_TIMER_HPP__
+#ifndef JOIN_CORE_TIMER_HPP
+#define JOIN_CORE_TIMER_HPP
 
 // libjoin.
 #include <join/reactor.hpp>
+#include <join/clock.hpp>
 
 // C++.
 #include <functional>
@@ -39,9 +40,6 @@
 
 namespace join
 {
-    class RealTime;
-    class Monotonic;
-
     /**
      * @brief base timer class.
      */
@@ -53,8 +51,8 @@ namespace join
          * @brief create instance.
          * @param reactor event loop reactor.
          */
-        BasicTimer (Reactor* reactor = nullptr)
-        : _handle (timerfd_create (_policy.type (), TFD_NONBLOCK | TFD_CLOEXEC))
+        explicit BasicTimer (Reactor* reactor = nullptr)
+        : _handle (timerfd_create (ClockPolicy::type (), TFD_NONBLOCK | TFD_CLOEXEC))
         , _reactor (reactor)
         {
             if (_handle == -1)
@@ -67,7 +65,7 @@ namespace join
                 _reactor = ReactorThread::reactor ();
             }
 
-            _reactor->addHandler (this);
+            _reactor->addHandler (_handle, this);
         }
 
         /**
@@ -99,9 +97,9 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicTimer ()
+        ~BasicTimer () noexcept
         {
-            _reactor->delHandler (this);
+            _reactor->delHandler (_handle);
             if (_handle != -1)
             {
                 close (_handle);
@@ -114,15 +112,15 @@ namespace join
          * @param callback function to call when timer expires.
          */
         template <class Rep, class Period, typename Func>
-        void setOneShot (std::chrono::duration <Rep, Period> duration, Func&& callback)
+        void setOneShot (std::chrono::duration<Rep, Period> duration, Func&& callback)
         {
-            auto ns = std::chrono::duration_cast <std::chrono::nanoseconds> (duration);
-            _callback = std::forward <Func> (callback);
+            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
+            _callback = std::forward<Func> (callback);
             _oneShot = true;
             _ns = std::chrono::nanoseconds::zero ();
 
             auto ts = toTimerSpec (ns);
-            timerfd_settime (_handle, 0, &ts, nullptr);
+            timerfd_settime (handle (), 0, &ts, nullptr);
         }
 
         /**
@@ -131,22 +129,22 @@ namespace join
          * @param callback function to call when timer expires.
          */
         template <class Clock, class Duration, typename Func>
-        void setOneShot (std::chrono::time_point <Clock, Duration> timePoint, Func&& callback)
+        void setOneShot (std::chrono::time_point<Clock, Duration> timePoint, Func&& callback)
         {
-            static_assert(
-                (std::is_same <ClockPolicy, RealTime>::value  && std::is_same <Clock, std::chrono::system_clock>::value) ||
-                (std::is_same <ClockPolicy, Monotonic>::value && std::is_same <Clock, std::chrono::steady_clock>::value),
-                "Clock type mismatch timer policy"
-            );
+            static_assert (
+                (std::is_same<ClockPolicy, RealTime>::value && std::is_same<Clock, std::chrono::system_clock>::value) ||
+                    (std::is_same<ClockPolicy, Monotonic>::value &&
+                     std::is_same<Clock, std::chrono::steady_clock>::value),
+                "Clock type mismatch timer policy");
 
             auto elapsed = timePoint.time_since_epoch ();
-            auto ns = std::chrono::duration_cast <std::chrono::nanoseconds> (elapsed);
-            _callback = std::forward <Func> (callback);
+            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (elapsed);
+            _callback = std::forward<Func> (callback);
             _oneShot = true;
             _ns = std::chrono::nanoseconds::zero ();
 
             auto ts = toTimerSpec (ns);
-            timerfd_settime (_handle, TFD_TIMER_ABSTIME, &ts, nullptr);
+            timerfd_settime (handle (), TFD_TIMER_ABSTIME, &ts, nullptr);
         }
 
         /**
@@ -155,38 +153,38 @@ namespace join
          * @param callback function to call on each timer expiration.
          */
         template <class Rep, class Period, typename Func>
-        void setInterval (std::chrono::duration <Rep, Period> duration, Func&& callback)
+        void setInterval (std::chrono::duration<Rep, Period> duration, Func&& callback)
         {
-            auto ns = std::chrono::duration_cast <std::chrono::nanoseconds> (duration);
-            _callback = std::forward <Func> (callback);
+            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
+            _callback = std::forward<Func> (callback);
             _oneShot = false;
             _ns = ns;
 
             auto ts = toTimerSpec (ns, true);
-            timerfd_settime (_handle, 0, &ts, nullptr);
+            timerfd_settime (handle (), 0, &ts, nullptr);
         }
 
         /**
          * @brief cancel the timer.
          */
-        void cancel ()
+        void cancel () noexcept
         {
             _callback = nullptr;
             _oneShot = true;
             _ns = std::chrono::nanoseconds::zero ();
 
-            struct itimerspec ts {};
-            timerfd_settime (_handle, 0, &ts, nullptr);
+            struct itimerspec ts = {};
+            timerfd_settime (handle (), 0, &ts, nullptr);
         }
 
         /**
          * @brief check if timer is running.
          * @return true if timer is active.
          */
-        bool active () const
+        bool active () const noexcept
         {
-            struct itimerspec ts {};
-            timerfd_gettime (_handle, &ts);
+            struct itimerspec ts = {};
+            timerfd_gettime (handle (), &ts);
             const bool hasValue = (ts.it_value.tv_sec != 0 || ts.it_value.tv_nsec != 0);
             const bool hasInterval = (ts.it_interval.tv_sec != 0 || ts.it_interval.tv_nsec != 0);
             return hasValue || hasInterval;
@@ -196,10 +194,10 @@ namespace join
          * @brief get the remaining time until expiration.
          * @return remaining duration.
          */
-        std::chrono::nanoseconds remaining () const
+        std::chrono::nanoseconds remaining () const noexcept
         {
-            struct itimerspec ts {};
-            timerfd_gettime (_handle, &ts);
+            struct itimerspec ts = {};
+            timerfd_gettime (handle (), &ts);
             return std::chrono::seconds (ts.it_value.tv_sec) + std::chrono::nanoseconds (ts.it_value.tv_nsec);
         }
 
@@ -225,19 +223,20 @@ namespace join
          * @brief get the timer type.
          * @return the timer type.
          */
-        int type () const noexcept
+        static constexpr int type () noexcept
         {
-            return _policy.type ();
+            return ClockPolicy::type ();
         }
 
-    protected:
+    private:
         /**
          * @brief method called when data are ready to be read on handle.
+         * @param fd file descriptor.
          */
-        virtual void onReceive () override
+        virtual void onReceive ([[maybe_unused]] int fd) override
         {
             uint64_t expirations;
-            ssize_t result = read (_handle, &expirations, sizeof (expirations));
+            ssize_t result = read (handle (), &expirations, sizeof (expirations));
             if (result == sizeof (expirations) && _callback)
             {
                 for (uint64_t i = 0; i < expirations; ++i)
@@ -253,14 +252,14 @@ namespace join
          * @param periodic specify if periodic.
          * @return itimerspec.
          */
-        static itimerspec toTimerSpec (std::chrono::nanoseconds ns, bool periodic = false) noexcept
+        static constexpr itimerspec toTimerSpec (std::chrono::nanoseconds ns, bool periodic = false) noexcept
         {
-            itimerspec ts {};
-            ts.it_value.tv_sec  = ns.count () / NS_PER_SEC;
-            ts.it_value.tv_nsec = ns.count () % NS_PER_SEC;
+            itimerspec ts{};
+            ts.it_value.tv_sec = ns.count () / _nsPerSec;
+            ts.it_value.tv_nsec = ns.count () % _nsPerSec;
             if (periodic)
             {
-                ts.it_interval.tv_sec  = ts.it_value.tv_sec;
+                ts.it_interval.tv_sec = ts.it_value.tv_sec;
                 ts.it_interval.tv_nsec = ts.it_value.tv_nsec;
             }
             return ts;
@@ -270,23 +269,19 @@ namespace join
          * @brief get native handle.
          * @return native handle.
          */
-        virtual int handle () const noexcept override
+        int handle () const noexcept
         {
             return _handle;
         }
 
-    private:
         /// ns per sec.
-        static constexpr uint64_t NS_PER_SEC = 1000000000ULL;
-
-        /// clock policy.
-        ClockPolicy _policy;
+        static constexpr uint64_t _nsPerSec = 1000000000ULL;
 
         /// callback function
-        std::function <void ()> _callback;
+        std::function<void ()> _callback;
 
         /// interval.
-        std::chrono::nanoseconds _ns {};
+        std::chrono::nanoseconds _ns{};
 
         /// timer type
         bool _oneShot = true;
@@ -296,52 +291,6 @@ namespace join
 
         /// event loop reactor.
         Reactor* _reactor;
-    };
-
-    /**
-     * @brief real time clock policy class.
-     */
-    class RealTime
-    {
-    public:
-        using Timer = BasicTimer <RealTime>;
-
-        /**
-         * @brief construct the timer policy instance by default.
-         */
-        constexpr RealTime () noexcept = default;
-
-        /**
-         * @brief get timer type.
-         * @return the timer type.
-         */
-        constexpr int type () const noexcept
-        {
-            return CLOCK_REALTIME;
-        }
-    };
-
-    /**
-     * @brief monotonic clock policy class.
-     */
-    class Monotonic
-    {
-    public:
-        using Timer = BasicTimer <Monotonic>;
-
-        /**
-         * @brief construct the timer policy instance by default.
-         */
-        constexpr Monotonic () noexcept = default;
-
-        /**
-         * @brief get timer type.
-         * @return the timer type.
-         */
-        constexpr int type () const noexcept
-        {
-            return CLOCK_MONOTONIC;
-        }
     };
 }
 

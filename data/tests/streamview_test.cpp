@@ -21,10 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
- 
+
 // libjoin.
 #include <join/view.hpp>
- 
+
 // libraries.
 #include <gtest/gtest.h>
 
@@ -41,7 +41,7 @@ TEST (StreamView, create)
     std::stringstream msg ("hello world");
     StringStreamView view (msg);
 
-    ASSERT_NE (view.peek (), std::char_traits <char>::eof ());
+    ASSERT_NE (view.peek (), std::char_traits<char>::eof ());
 }
 
 /**
@@ -74,7 +74,7 @@ TEST (StreamView, peek)
     ASSERT_EQ (view.get (), 'l');
     ASSERT_EQ (view.peek (), 'd');
     ASSERT_EQ (view.get (), 'd');
-    ASSERT_EQ (view.peek (), std::char_traits <char>::eof ());
+    ASSERT_EQ (view.peek (), std::char_traits<char>::eof ());
 }
 
 /**
@@ -96,7 +96,7 @@ TEST (StreamView, get)
     ASSERT_EQ (view.get (), 'r');
     ASSERT_EQ (view.get (), 'l');
     ASSERT_EQ (view.get (), 'd');
-    ASSERT_EQ (view.get (), std::char_traits <char>::eof ());
+    ASSERT_EQ (view.get (), std::char_traits<char>::eof ());
 }
 
 /**
@@ -110,9 +110,9 @@ TEST (StreamView, getIf)
     ASSERT_FALSE (view.getIf ('X'));
     ASSERT_FALSE (view.getIf ('x'));
     ASSERT_FALSE (view.getIf ('H'));
-    ASSERT_TRUE  (view.getIf ('h'));
+    ASSERT_TRUE (view.getIf ('h'));
     ASSERT_FALSE (view.getIf ('E'));
-    ASSERT_TRUE  (view.getIf ('e'));
+    ASSERT_TRUE (view.getIf ('e'));
 }
 
 /**
@@ -125,10 +125,10 @@ TEST (StreamView, getIfNoCase)
 
     ASSERT_FALSE (view.getIfNoCase ('x'));
     ASSERT_FALSE (view.getIfNoCase ('X'));
-    ASSERT_TRUE  (view.getIfNoCase ('h'));
-    ASSERT_TRUE  (view.getIfNoCase ('E'));
-    ASSERT_TRUE  (view.getIfNoCase ('l'));
-    ASSERT_TRUE  (view.getIfNoCase ('L'));
+    ASSERT_TRUE (view.getIfNoCase ('h'));
+    ASSERT_TRUE (view.getIfNoCase ('E'));
+    ASSERT_TRUE (view.getIfNoCase ('l'));
+    ASSERT_TRUE (view.getIfNoCase ('L'));
 }
 
 /**
@@ -192,13 +192,13 @@ TEST (StreamView, skipWhitespacesAndComments)
     msg.clear ();
     StringStreamView view3 (msg);
     ASSERT_EQ (view3.skipWhitespacesAndComments (), 0);
-    ASSERT_EQ (view3.peek (), std::char_traits <char>::eof ());
+    ASSERT_EQ (view3.peek (), std::char_traits<char>::eof ());
 
     msg.str ("/* comment */");
     msg.clear ();
     StringStreamView view4 (msg);
     ASSERT_EQ (view4.skipWhitespacesAndComments (), 0);
-    ASSERT_EQ (view4.peek (), std::char_traits <char>::eof ());
+    ASSERT_EQ (view4.peek (), std::char_traits<char>::eof ());
 
     msg.str ("/");
     msg.clear ();
@@ -268,7 +268,7 @@ TEST (StreamView, seek)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

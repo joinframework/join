@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_MACADDRESS_HPP__
-#define __JOIN_MACADDRESS_HPP__
+#ifndef JOIN_CORE_MACADDRESS_HPP
+#define JOIN_CORE_MACADDRESS_HPP
 
 // libjoin.
 #include <join/ipaddress.hpp>
@@ -46,13 +46,13 @@ namespace join
     {
     public:
         /// case conversion function.
-        using CaseConvert = std::ios_base& (std::ios_base&);
+        using CaseConvert = std::ios_base&(std::ios_base&);
 
         /// iterator from nested container.
-        using iterator = std::array <uint8_t, IFHWADDRLEN>::iterator;
+        using iterator = std::array<uint8_t, IFHWADDRLEN>::iterator;
 
         /// constant iterator from nested container.
-        using const_iterator = std::array <uint8_t, IFHWADDRLEN>::const_iterator;
+        using const_iterator = std::array<uint8_t, IFHWADDRLEN>::const_iterator;
 
         /**
          * @brief create the MacAddress instance (wilcard address).
@@ -84,14 +84,14 @@ namespace join
          * @param address MAC address array.
          * @throw invalid_argument if out of range.
          */
-        MacAddress (const uint8_t (&address) [IFHWADDRLEN]);
+        MacAddress (const uint8_t (&address)[IFHWADDRLEN]);
 
         /**
          * @brief create the MacAddress instance using an initialization list.
          * @param address MAC address initialization list.
          * @throw invalid_argument if out of range.
          */
-        MacAddress (std::initializer_list <uint8_t> address);
+        MacAddress (std::initializer_list<uint8_t> address);
 
         /**
          * @brief create the MacAddress instance using a sockaddr structure.
@@ -251,7 +251,7 @@ namespace join
          * @return a reference of the current object.
          * @throw invalid_argument if out of range.
          */
-        MacAddress& operator= (std::initializer_list <uint8_t> address);
+        MacAddress& operator= (std::initializer_list<uint8_t> address);
 
         /**
          * @brief assign the MacAddress using a sockaddr structure.
@@ -288,19 +288,19 @@ namespace join
          */
         uint8_t& operator[] (size_t position);
 
-       /**
-        * @brief returns a reference to the element at the specified location.
-        * @param position position of the element to return.
-        * @return reference to the requested element.
-        * @throw invalid_argument if position is out of range.
-        */
+        /**
+         * @brief returns a reference to the element at the specified location.
+         * @param position position of the element to return.
+         * @return reference to the requested element.
+         * @throw invalid_argument if position is out of range.
+         */
         const uint8_t& operator[] (size_t position) const;
 
         /**
          * @brief perform NOT operation on MAC address.
          * @return result of NOT operation on MacAddress.
          */
-        MacAddress operator~ () const;
+        MacAddress operator~() const;
 
         /// wildcard MAC address.
         static const MacAddress wildcard;
@@ -310,7 +310,7 @@ namespace join
 
     private:
         /// MAC address.
-        std::array <uint8_t, IFHWADDRLEN> _mac = {};
+        std::array<uint8_t, IFHWADDRLEN> _mac = {};
     };
 
     /**

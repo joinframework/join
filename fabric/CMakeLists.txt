@@ -2,17 +2,26 @@ cmake_minimum_required(VERSION 3.22.1)
 
 set(PUBLIC_HEADERS
     include/join/resolver.hpp
-    include/join/dnsclient.hpp
+    include/join/netlinkmanager.hpp
+    include/join/neighbor.hpp
+    include/join/neighbormanager.hpp
     include/join/arp.hpp
     include/join/interface.hpp
     include/join/interfacemanager.hpp
+    include/join/route.hpp
+    include/join/routemanager.hpp
 )
 
 set(SOURCES
     src/resolver.cpp
+    src/netlinkmanager.cpp
+    src/neighbor.cpp
+    src/neighbormanager.cpp
     src/arp.cpp
     src/interface.cpp
     src/interfacemanager.cpp
+    src/route.cpp
+    src/routemanager.cpp
 )
 
 add_library(${JOIN_FABRIC} ${SOURCES})

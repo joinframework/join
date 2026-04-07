@@ -129,8 +129,8 @@ Signature::Signature (Digest::Algorithm algo)
 //   METHOD    : Signature
 // =========================================================================
 Signature::Signature (Signature&& other)
-: std::ostream (std::move (other)),
-  _sigbuf (std::move (other._sigbuf))
+: std::ostream (std::move (other))
+, _sigbuf (std::move (other._sigbuf))
 {
     this->set_rdbuf (&_sigbuf);
 }
@@ -139,7 +139,7 @@ Signature::Signature (Signature&& other)
 //   CLASS     : DigSignatureest
 //   METHOD    : operator=
 // =========================================================================
-Signature& Signature::operator=(Signature&& other)
+Signature& Signature::operator= (Signature&& other)
 {
     std::ostream::operator= (std::move (other));
     _sigbuf = std::move (other._sigbuf);
@@ -180,7 +180,7 @@ BytesArray Signature::sign (const char* data, std::streamsize size, const std::s
 // =========================================================================
 BytesArray Signature::sign (const BytesArray& data, const std::string& privKey, Digest::Algorithm algo)
 {
-    return sign (reinterpret_cast <const char*> (data.data ()), data.size (), privKey, algo);
+    return sign (reinterpret_cast<const char*> (data.data ()), data.size (), privKey, algo);
 }
 
 // =========================================================================
@@ -205,7 +205,8 @@ bool Signature::verify (const BytesArray& signature, const std::string& pubKey)
 //   CLASS     : Signature
 //   METHOD    : verify
 // =========================================================================
-bool Signature::verify (const char* data, std::streamsize size, const BytesArray &signature, const std::string &pubKey, Digest::Algorithm algo)
+bool Signature::verify (const char* data, std::streamsize size, const BytesArray& signature, const std::string& pubKey,
+                        Digest::Algorithm algo)
 {
     try
     {
@@ -224,16 +225,18 @@ bool Signature::verify (const char* data, std::streamsize size, const BytesArray
 //   CLASS     : Signature
 //   METHOD    : verify
 // =========================================================================
-bool Signature::verify (const BytesArray& data, const BytesArray& signature, const std::string& pubKey, Digest::Algorithm algo)
+bool Signature::verify (const BytesArray& data, const BytesArray& signature, const std::string& pubKey,
+                        Digest::Algorithm algo)
 {
-    return verify (reinterpret_cast <const char*> (data.data ()), data.size (), signature, pubKey, algo);
+    return verify (reinterpret_cast<const char*> (data.data ()), data.size (), signature, pubKey, algo);
 }
 
 // =========================================================================
 //   CLASS     : Signature
 //   METHOD    : verify
 // =========================================================================
-bool Signature::verify (const std::string& data, const BytesArray& signature, const std::string& pubKey, Digest::Algorithm algo)
+bool Signature::verify (const std::string& data, const BytesArray& signature, const std::string& pubKey,
+                        Digest::Algorithm algo)
 {
     return verify (BytesArray (data.begin (), data.end ()), signature, pubKey, algo);
 }

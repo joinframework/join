@@ -38,8 +38,8 @@ using join::TlsKey;
 //   METHOD    : TlsKey
 // =========================================================================
 TlsKey::TlsKey (const std::string& keyPath, Type keyType)
-: _type (keyType),
-  _key (readKey (keyPath, keyType))
+: _type (keyType)
+, _key (readKey (keyPath, keyType))
 {
     if (_key == nullptr)
     {
@@ -52,8 +52,8 @@ TlsKey::TlsKey (const std::string& keyPath, Type keyType)
 //   METHOD    : TlsKey
 // =========================================================================
 TlsKey::TlsKey (TlsKey&& other)
-: _type (other._type),
-  _key (std::move (other._key))
+: _type (other._type)
+, _key (std::move (other._key))
 {
 }
 

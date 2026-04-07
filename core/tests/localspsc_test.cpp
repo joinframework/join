@@ -23,15 +23,21 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::LocalMem;
 using join::Thread;
 
+/**
+ * @brief test tryPush.
+ */
 TEST (LocalSpsc, tryPush)
 {
     LocalMem::Spsc::Queue<uint64_t> queue (512);
@@ -50,6 +56,40 @@ TEST (LocalSpsc, tryPush)
     ASSERT_EQ (queue.available (), 0);
 }
 
+/**
+ * @brief test batch tryPush.
+ */
+TEST (LocalSpsc, tryPushBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Spsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.available (), full);
+    ASSERT_EQ (queue.tryPush (nullptr, half), -1);
+    ASSERT_EQ (queue.tryPush (in, half), half) << join::lastError.message ();
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.available (), half);
+    ASSERT_EQ (queue.tryPush (in + half, half), half) << join::lastError.message ();
+    ASSERT_EQ (queue.tryPush (in, 1), -1);
+    ASSERT_TRUE (queue.full ());
+    ASSERT_EQ (queue.available (), 0);
+    ASSERT_EQ (queue.pending (), full);
+}
+
+/**
+ * @brief test push.
+ */
 TEST (LocalSpsc, push)
 {
     LocalMem::Spsc::Queue<uint64_t> queue (512);
@@ -67,6 +107,38 @@ TEST (LocalSpsc, push)
     ASSERT_EQ (queue.available (), 0);
 }
 
+/**
+ * @brief test batch push.
+ */
+TEST (LocalSpsc, pushBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Spsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.available (), full);
+    ASSERT_EQ (queue.push (nullptr, half), -1);
+    ASSERT_EQ (queue.push (in, half), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue.full ());
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.available (), half);
+    ASSERT_EQ (queue.push (in + half, half), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue.full ());
+    ASSERT_EQ (queue.available (), 0);
+    ASSERT_EQ (queue.pending (), 512);
+}
+
+/**
+ * @brief test tryPop.
+ */
 TEST (LocalSpsc, tryPop)
 {
     LocalMem::Spsc::Queue<uint64_t> queue (512);
@@ -84,6 +156,46 @@ TEST (LocalSpsc, tryPop)
     ASSERT_EQ (queue.tryPop (data), -1);
 }
 
+/**
+ * @brief test batch tryPop.
+ */
+TEST (LocalSpsc, tryPopBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Spsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {}, out[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_EQ (queue.tryPop (nullptr, half), -1);
+    ASSERT_EQ (queue.tryPop (out, half), -1);
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPush (in, full), full) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), full);
+    ASSERT_EQ (queue.tryPop (out, half), half) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.tryPop (out + half, half), half) << join::lastError.message ();
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPop (out, 1), -1);
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (out[i], i);
+    }
+}
+
+/**
+ * @brief test pop.
+ */
 TEST (LocalSpsc, pop)
 {
     LocalMem::Spsc::Queue<uint64_t> queue (512);
@@ -99,6 +211,44 @@ TEST (LocalSpsc, pop)
     ASSERT_EQ (queue.pending (), 0);
 }
 
+/**
+ * @brief test batch pop.
+ */
+TEST (LocalSpsc, popBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    LocalMem::Spsc::Queue<uint64_t> queue (full);
+    uint64_t in[full] = {}, out[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+    ASSERT_EQ (queue.tryPush (in, full), full) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), full);
+    ASSERT_EQ (queue.pop (nullptr, half), -1);
+    ASSERT_EQ (queue.pop (out, half), 0) << join::lastError.message ();
+    ASSERT_FALSE (queue.empty ());
+    ASSERT_EQ (queue.pending (), half);
+    ASSERT_EQ (queue.pop (out + half, half), 0) << join::lastError.message ();
+    ASSERT_TRUE (queue.empty ());
+    ASSERT_EQ (queue.pending (), 0);
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (out[i], i);
+    }
+}
+
+/**
+ * @brief test benchmark push.
+ */
 TEST (LocalSpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
@@ -107,32 +257,30 @@ TEST (LocalSpsc, pushBenchmark)
     LocalMem::Spsc::Queue<uint64_t> queue (capacity);
     std::atomic<bool> ready{false};
 
-    std::thread consumer (
-        [&] ()
-        {
-            uint64_t data = 0;
+    std::thread consumer ([&] () {
+        uint64_t data = 0;
 
-            while (!ready.load (std::memory_order_acquire))
+        while (!ready.load (std::memory_order_acquire))
+        {
+            std::this_thread::yield ();
+        }
+
+        for (uint64_t i = 0; i < num; ++i)
+        {
+            while (queue.tryPop (data) == -1)
             {
                 std::this_thread::yield ();
             }
+        }
 
-            for (uint64_t i = 0; i < num; ++i)
+        for (uint64_t i = 0; i < capacity; ++i)
+        {
+            while (queue.tryPop (data) == -1)
             {
-                while (queue.tryPop (data) == -1)
-                {
-                    std::this_thread::yield ();
-                }
+                std::this_thread::yield ();
             }
-
-            for (uint64_t i = 0; i < capacity; ++i)
-            {
-                while (queue.tryPop (data) == -1)
-                {
-                    std::this_thread::yield ();
-                }
-            }
-        });
+        }
+    });
 
     uint64_t data = 0;
 
@@ -146,15 +294,22 @@ TEST (LocalSpsc, pushBenchmark)
     }
 
     ready.store (true, std::memory_order_release);
+    Rdtsc::Stats stats ("SPSC push");
 
     for (uint64_t i = 0; i < num; ++i)
     {
+        ScopedStats<Rdtsc::Stats> guard (stats);
         EXPECT_EQ (queue.push (data), 0) << join::lastError.message ();
     }
 
     consumer.join ();
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
+/**
+ * @brief test benchmark pop.
+ */
 TEST (LocalSpsc, popBenchmark)
 {
     const uint64_t capacity = 512;
@@ -163,21 +318,19 @@ TEST (LocalSpsc, popBenchmark)
     LocalMem::Spsc::Queue<uint64_t> queue (capacity);
     std::atomic<bool> producerReady{false};
 
-    std::thread producer (
-        [&] ()
+    std::thread producer ([&] () {
+        uint64_t data = 0;
+
+        producerReady.store (true, std::memory_order_release);
+
+        for (uint64_t i = 0; i < num; ++i)
         {
-            uint64_t data = 0;
-
-            producerReady.store (true, std::memory_order_release);
-
-            for (uint64_t i = 0; i < num; ++i)
+            while (queue.tryPush (data) == -1)
             {
-                while (queue.tryPush (data) == -1)
-                {
-                    std::this_thread::yield ();
-                }
+                std::this_thread::yield ();
             }
-        });
+        }
+    });
 
     while (!producerReady.load (std::memory_order_acquire))
     {
@@ -185,15 +338,22 @@ TEST (LocalSpsc, popBenchmark)
     }
 
     uint64_t data = 0;
+    Rdtsc::Stats stats ("SPSC pop");
 
     for (uint64_t i = 0; i < num; ++i)
     {
+        ScopedStats<Rdtsc::Stats> guard (stats);
         EXPECT_EQ (queue.pop (data), 0) << join::lastError.message ();
     }
 
     producer.join ();
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
 }
 
+/**
+ * @brief test pending.
+ */
 TEST (LocalSpsc, pending)
 {
     LocalMem::Spsc::Queue<uint64_t> queue (0);
@@ -204,6 +364,9 @@ TEST (LocalSpsc, pending)
     ASSERT_EQ (queue.pending (), 1);
 }
 
+/**
+ * @brief test available.
+ */
 TEST (LocalSpsc, available)
 {
     LocalMem::Spsc::Queue<uint64_t> queue (0);
@@ -214,6 +377,9 @@ TEST (LocalSpsc, available)
     ASSERT_EQ (queue.available (), 0);
 }
 
+/**
+ * @brief test full.
+ */
 TEST (LocalSpsc, full)
 {
     LocalMem::Spsc::Queue<uint64_t> queue (0);
@@ -224,6 +390,9 @@ TEST (LocalSpsc, full)
     ASSERT_TRUE (queue.full ());
 }
 
+/**
+ * @brief test empty.
+ */
 TEST (LocalSpsc, empty)
 {
     LocalMem::Spsc::Queue<uint64_t> queue (0);
@@ -234,17 +403,25 @@ TEST (LocalSpsc, empty)
     ASSERT_FALSE (queue.empty ());
 }
 
+/**
+ * @brief test mlock.
+ */
 TEST (LocalSpsc, mlock)
 {
     LocalMem::Spsc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mlock (), 0) << join::lastError.message ();
 }
 
+#ifdef JOIN_HAS_NUMA
+/**
+ * @brief test mbind.
+ */
 TEST (LocalSpsc, mbind)
 {
     LocalMem::Spsc::Queue<uint64_t> queue (0);
     ASSERT_EQ (queue.mbind (0), 0) << join::lastError.message ();
 }
+#endif
 
 /**
  * @brief main function.

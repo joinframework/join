@@ -47,7 +47,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->bind ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -55,16 +55,17 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 
     /**
      * @brief method called when data are ready to be read on handle.
+     * @param fd file descriptor.
      */
-    virtual void onReceive () override
+    virtual void onReceive ([[maybe_unused]] int fd) override
     {
-        auto buffer = std::make_unique <char []> (this->canRead ());
+        auto buffer = std::make_unique<char[]> (this->canRead ());
         if (buffer)
         {
             Udp::Endpoint from;
@@ -87,8 +88,8 @@ protected:
 };
 
 const std::string UdpSocket::_host = "127.0.0.1";
-const uint16_t    UdpSocket::_port = 5000;
-const int         UdpSocket::_timeout = 1000;
+const uint16_t UdpSocket::_port = 5000;
+const int UdpSocket::_timeout = 1000;
 
 /**
  * @brief Test open method.
@@ -190,7 +191,7 @@ TEST_F (UdpSocket, disconnect)
     ASSERT_EQ (udpSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (udpSocket.connected ());
     udpSocket.close ();
-    ASSERT_FALSE (udpSocket.connected());
+    ASSERT_FALSE (udpSocket.connected ());
 }
 
 /**
@@ -199,7 +200,7 @@ TEST_F (UdpSocket, disconnect)
 TEST_F (UdpSocket, canRead)
 {
     Udp::Socket udpSocket (Udp::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (udpSocket.canRead (), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -217,7 +218,7 @@ TEST_F (UdpSocket, canRead)
 TEST_F (UdpSocket, waitReadyRead)
 {
     Udp::Socket udpSocket;
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_FALSE (udpSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -234,7 +235,7 @@ TEST_F (UdpSocket, waitReadyRead)
 TEST_F (UdpSocket, read)
 {
     Udp::Socket udpSocket (Udp::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (udpSocket.read (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -252,7 +253,7 @@ TEST_F (UdpSocket, read)
 TEST_F (UdpSocket, readFrom)
 {
     Udp::Socket udpSocket (Udp::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
     Udp::Endpoint from;
 
     ASSERT_EQ (udpSocket.readFrom (data, sizeof (data)), -1);
@@ -286,7 +287,7 @@ TEST_F (UdpSocket, waitReadyWrite)
 TEST_F (UdpSocket, write)
 {
     Udp::Socket udpSocket (Udp::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (udpSocket.write (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -303,7 +304,7 @@ TEST_F (UdpSocket, write)
 TEST_F (UdpSocket, writeTo)
 {
     Udp::Socket udpSocket (Udp::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (udpSocket.open (Udp::v6 ()), 0) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
@@ -404,7 +405,7 @@ TEST_F (UdpSocket, localEndpoint)
 {
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
-    ASSERT_EQ (udpSocket.localEndpoint (), Udp::Endpoint {});
+    ASSERT_EQ (udpSocket.localEndpoint (), Udp::Endpoint{});
     ASSERT_EQ (udpSocket.bind ({_host, uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (udpSocket.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (udpSocket.localEndpoint (), Udp::Endpoint (_host, uint16_t (_port + 1))) << join::lastError.message ();
@@ -418,7 +419,7 @@ TEST_F (UdpSocket, remoteEndpoint)
 {
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
-    ASSERT_EQ (udpSocket.remoteEndpoint (), Udp::Endpoint {});
+    ASSERT_EQ (udpSocket.remoteEndpoint (), Udp::Endpoint{});
     ASSERT_EQ (udpSocket.bind ({_host, uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (udpSocket.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (udpSocket.remoteEndpoint (), Udp::Endpoint (_host, _port)) << join::lastError.message ();
@@ -550,7 +551,7 @@ TEST_F (UdpSocket, checksum)
 {
     std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
 
-    ASSERT_EQ (Udp::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+    ASSERT_EQ (Udp::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**
@@ -577,7 +578,7 @@ TEST_F (UdpSocket, lower)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

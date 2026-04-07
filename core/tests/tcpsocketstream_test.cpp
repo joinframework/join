@@ -46,7 +46,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -54,14 +54,15 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 
     /**
      * @brief method called when data are ready to be read on handle.
+     * @param fd file descriptor.
      */
-    virtual void onReceive () override
+    virtual void onReceive ([[maybe_unused]] int fd) override
     {
         Tcp::Socket sock = this->accept ();
         if (sock.connected ())
@@ -97,10 +98,10 @@ protected:
     static const uint16_t _invalid_port;
 };
 
-const int         TcpSocketStream::_timeout = 1000;
+const int TcpSocketStream::_timeout = 1000;
 const std::string TcpSocketStream::_host = "127.0.0.1";
-const uint16_t    TcpSocketStream::_port = 5000;
-const uint16_t    TcpSocketStream::_invalid_port = 5032;
+const uint16_t TcpSocketStream::_port = 5000;
+const uint16_t TcpSocketStream::_invalid_port = 5032;
 
 /**
  * @brief Test default constructor.
@@ -208,7 +209,7 @@ TEST_F (TcpSocketStream, close)
 TEST_F (TcpSocketStream, localEndpoint)
 {
     Tcp::Stream tcpStream;
-    ASSERT_EQ (tcpStream.localEndpoint (), Tcp::Endpoint {});
+    ASSERT_EQ (tcpStream.localEndpoint (), Tcp::Endpoint{});
     ASSERT_EQ (tcpStream.socket ().bind ({_host, uint16_t (_port + 1)}), 0) << join::lastError.message ();
     tcpStream.connect ({_host, _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
@@ -223,7 +224,7 @@ TEST_F (TcpSocketStream, localEndpoint)
 TEST_F (TcpSocketStream, remoteEndpoint)
 {
     Tcp::Stream tcpStream;
-    ASSERT_EQ (tcpStream.remoteEndpoint (), Tcp::Endpoint {});
+    ASSERT_EQ (tcpStream.remoteEndpoint (), Tcp::Endpoint{});
     tcpStream.connect ({_host, _port});
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     ASSERT_TRUE (tcpStream.connected ());
@@ -458,7 +459,7 @@ TEST_F (TcpSocketStream, getline)
     tcpStream.connect ({_host, _port});
     tcpStream.write ("test\n", 5);
     tcpStream.flush ();
-    std::array <char, 32> test = {};
+    std::array<char, 32> test = {};
     tcpStream.getline (test.data (), test.size (), '\n');
     ASSERT_STREQ (test.data (), "test");
     tcpStream.close ();
@@ -473,7 +474,7 @@ TEST_F (TcpSocketStream, ignore)
     tcpStream.connect ({_host, _port});
     tcpStream.write ("test\n", 5);
     tcpStream.flush ();
-    tcpStream.ignore (std::numeric_limits <std::streamsize>::max (), 'e');
+    tcpStream.ignore (std::numeric_limits<std::streamsize>::max (), 'e');
     ASSERT_EQ (tcpStream.get (), 's');
     ASSERT_EQ (tcpStream.get (), 't');
     tcpStream.close ();
@@ -488,7 +489,7 @@ TEST_F (TcpSocketStream, read)
     tcpStream.connect ({_host, _port});
     tcpStream.write ("test", 4);
     tcpStream.flush ();
-    std::array <char, 32> test = {};
+    std::array<char, 32> test = {};
     tcpStream.read (test.data (), 4);
     ASSERT_STREQ (test.data (), "test");
     tcpStream.close ();
@@ -503,7 +504,7 @@ TEST_F (TcpSocketStream, DISABLED_readsome)
     tcpStream.connect ({_host, _port});
     tcpStream.write ("test", 4);
     tcpStream.flush ();
-    std::array <char, 32> test = {};
+    std::array<char, 32> test = {};
     ASSERT_EQ (tcpStream.readsome (test.data (), test.size ()), 4);
     ASSERT_STREQ (test.data (), "test");
     tcpStream.close ();
@@ -518,7 +519,7 @@ TEST_F (TcpSocketStream, gcount)
     tcpStream.connect ({_host, _port});
     tcpStream.write ("test", 4);
     tcpStream.flush ();
-    std::array <char, 32> test = {};
+    std::array<char, 32> test = {};
     tcpStream.read (test.data (), 4);
     ASSERT_EQ (tcpStream.gcount (), 4);
     tcpStream.close ();
@@ -527,7 +528,7 @@ TEST_F (TcpSocketStream, gcount)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

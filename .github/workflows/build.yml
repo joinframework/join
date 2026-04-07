@@ -3,6 +3,12 @@ name: build
 on:
   workflow_call:
     inputs:
+      arch:
+        type: string
+        default: 'all'
+      compiler:
+        type: string
+        default: 'all'
       coverage:
         type: boolean
         default: false
@@ -15,6 +21,20 @@ on:
 
   workflow_dispatch:
     inputs:
+      arch:
+        type: choice
+        options:
+          - all
+          - amd64
+          - arm64
+        default: 'all'
+      compiler:
+        type: choice
+        options:
+          - all
+          - gcc
+          - clang
+        default: 'all'
       coverage:
         type: boolean
         default: false
@@ -26,12 +46,32 @@ on:
         default: false
 
 jobs:
-  build:
+  format:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Check formatting
+        uses: jidicula/clang-format-action@v4.18.0
+        with:
+          clang-format-version: '18'
+          check-path: '.'
+          exclude-regex: 'build'
+
+  scan:
+    if: inputs.scan
+
+    needs: [format]
+
     runs-on: ubuntu-latest
 
     container:
       image: joinframework/join-ci:latest
-      options: --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0
 
     permissions:
       contents: read
@@ -43,67 +83,90 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Build Environment
-        if: ${{ inputs.scan || inputs.coverage }}
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        uses: actions/checkout@v6.0.2
 
       - name: Initialize codeql
-        if: ${{ inputs.scan }}
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4.34.1
+        with:
+          languages: cpp
 
       - name: Configure
-        if: ${{ inputs.scan || inputs.coverage }}
-        run: cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DJOIN_ENABLE_SAMPLES=ON -DJOIN_ENABLE_TESTS=ON -DJOIN_ENABLE_COVERAGE=ON
+        run: cmake --preset gcc-debug
 
       - name: Build
-        if: ${{ inputs.scan || inputs.coverage }}
-        run: cmake --build build --config Debug
+        run: cmake --build --preset gcc-debug
 
       - name: Run codeql scan
-        if: ${{ inputs.scan }}
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4.34.1
 
-      - name: Run tests
-        if: ${{ inputs.coverage }}
-        run: ctest --test-dir build --output-on-failure -C Debug
+  build:
+    needs: [format]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ inputs.arch == 'all' && fromJson('["amd64", "arm64"]') || fromJson(format('["{0}"]', inputs.arch)) }}
+        compiler: ${{ inputs.compiler == 'all' && fromJson('["gcc", "clang"]') || fromJson(format('["{0}"]', inputs.compiler)) }}
+
+    runs-on: ${{ matrix.arch == 'amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+
+    container:
+      image: joinframework/join-ci:latest
+      options: --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Configure (release)
+        run: cmake --preset ${{ matrix.compiler }}-release
+
+      - name: Build (release)
+        run: cmake --build --preset ${{ matrix.compiler }}-release
+
+      - name: Run tests (release)
+        run: ctest --preset ${{ matrix.compiler }}-release
+
+      - name: Configure (debug)
+        run: cmake --preset ${{ matrix.compiler }}-debug
+
+      - name: Build (debug)
+        run: cmake --build --preset ${{ matrix.compiler }}-debug
+
+      - name: Run tests (debug)
+        run: ctest --preset ${{ matrix.compiler }}-debug
 
       - name: Generate coverage report
-        if: ${{ inputs.coverage }}
+        if: inputs.coverage && matrix.arch == 'amd64' && matrix.compiler == 'gcc'
         run: |
-          lcov --directory build --capture --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
+          lcov --directory build/${{ matrix.compiler }}/debug --capture --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
           genhtml lcov.info --prefix $GITHUB_WORKSPACE --output-directory coverage
 
       - name: Upload coverage data to GitHub
-        if: ${{ inputs.coverage }}
-        uses: actions/upload-artifact@v4
+        if: inputs.coverage && matrix.arch == 'amd64' && matrix.compiler == 'gcc'
+        uses: actions/upload-artifact@v7.0.0
         with:
-          name: coverage-data
+          name: ${{ matrix.compiler }}-${{ matrix.arch }}-coverage-data
           path: lcov.info
 
       - name: Upload coverage report to GitHub
-        if: ${{ inputs.coverage }}
-        uses: actions/upload-artifact@v4
+        if: inputs.coverage && matrix.arch == 'amd64' && matrix.compiler == 'gcc'
+        uses: actions/upload-artifact@v7.0.0
         with:
-          name: coverage-report
+          name: ${{ matrix.compiler }}-${{ matrix.arch }}-coverage-report
           path: coverage/
 
-      - name: Run doxygen
-        if: ${{ inputs.doc }}
-        uses: mattnotmitt/doxygen-action@v1
-        with:
-          doxyfile-path: ./doxyfile
-          working-directory: .
+  doc:
+    if: inputs.doc
 
-      - name: Upload documentation to GitHub
-        if: ${{ inputs.doc }}
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./doc/html
-
-  deploy-coverage:
-    if: ${{ inputs.coverage }}
+    needs: [format]
 
     runs-on: ubuntu-latest
 
@@ -113,29 +176,54 @@ jobs:
     permissions:
       contents: read
 
-    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Run doxygen
+        uses: mattnotmitt/doxygen-action@v1.12.0
+        with:
+          doxyfile-path: ./doxyfile
+          working-directory: .
+
+      - name: Upload documentation to GitHub
+        uses: actions/upload-pages-artifact@v4.0.0
+        with:
+          path: ./doc/html
+
+  deploy-coverage:
+    if: inputs.coverage && (inputs.compiler == 'all' || inputs.compiler == 'gcc') && (inputs.arch == 'all' || inputs.arch == 'amd64')
+
+    needs: [build]
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: joinframework/join-ci:latest
+
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
+        uses: actions/checkout@v6.0.2
 
       - name: Download coverage data from GitHub
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7.0.0
         with:
-          name: coverage-data
+          name: gcc-amd64-coverage-data
           path: ./
 
       - name: Deploy coverage report to coveralls
-        uses: coverallsapp/github-action@v2
+        uses: coverallsapp/github-action@v2.3.6
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           files: lcov.info
-          fail-on-error: false
+          fail-on-error: true
 
       - name: Deploy coverage report to codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v5.5.3
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           flags: unittests
@@ -143,31 +231,31 @@ jobs:
           fail_ci_if_error: true
 
       - name: Deploy coverage report to codacy
-        uses: codacy/codacy-coverage-reporter-action@v1
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:
           project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
           coverage-reports: lcov.info
 
   deploy-pages:
-    if: ${{ inputs.doc }}
+    if: inputs.doc
+
+    needs: [doc]
 
     runs-on: ubuntu-latest
 
     container:
       image: joinframework/join-ci:latest
 
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
-    needs: build
+    permissions:
+      pages: write
+      id-token: write
 
     steps:
       - name: Deploy documentation to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v4.0.5

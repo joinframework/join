@@ -108,7 +108,7 @@ TEST (MacAddress, sockaddrConstruct)
     ASSERT_STREQ (mac.toString ().c_str (), "50:7b:9d:13:82:df");
 
     hwaddr.sa_family = ARPHRD_NETROM;
-    ASSERT_THROW (MacAddress {hwaddr}, std::invalid_argument);
+    ASSERT_THROW (MacAddress{hwaddr}, std::invalid_argument);
 }
 
 /**
@@ -242,7 +242,7 @@ TEST (MacAddress, toString)
 TEST (MacAddress, toIpv6)
 {
     MacAddress mac = "00:14:3e:48:d4:5b";
-    ASSERT_TRUE (mac.toIpv6 ("2001:db8::", 32).isGlobal());
+    ASSERT_TRUE (mac.toIpv6 ("2001:db8::", 32).isGlobal ());
     ASSERT_EQ (mac.toIpv6 ("2001:db8::", 32).toString (), "2001:db8::214:3eff:fe48:d45b");
 }
 
@@ -332,7 +332,7 @@ TEST (MacAddress, cend)
  */
 TEST (MacAddress, address)
 {
-    ASSERT_TRUE  (MacAddress::address ("bar0").isWildcard ());
+    ASSERT_TRUE (MacAddress::address ("bar0").isWildcard ());
     ASSERT_FALSE (MacAddress::address ("eth0").isWildcard ()) << join::lastError.message ();
 }
 
@@ -876,8 +876,8 @@ TEST (MacAddress, serialize)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
-   testing::InitGoogleTest (&argc, argv);
-   return RUN_ALL_TESTS ();
+    testing::InitGoogleTest (&argc, argv);
+    return RUN_ALL_TESTS ();
 }

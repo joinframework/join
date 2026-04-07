@@ -23,17 +23,15 @@
  */
 
 // libjoin.
-#include <join/socket.hpp>
+#include <join/error.hpp>
 #include <join/arp.hpp>
 
-// C++.
-#include <chrono>
-
 // C.
-#include <linux/filter.h>
-#include <sys/ioctl.h>
 #include <cstring>
-#include <cerrno>
+
+#ifndef NUD_VALID
+#define NUD_VALID (NUD_PERMANENT | NUD_NOARP | NUD_REACHABLE | NUD_PROBE | NUD_STALE | NUD_DELAY)
+#endif
 
 using join::MacAddress;
 using join::IpAddress;
@@ -44,153 +42,11 @@ using join::Arp;
 //   CLASS     : Arp
 //   METHOD    : Arp
 // =========================================================================
-Arp::Arp (const std::string& interface)
+Arp::Arp (const std::string& interface, NeighborManager* neighbors)
 : _interface (interface)
+, _neighbors (neighbors ? neighbors : &NeighborManager::instance ())
+, _reactor (_neighbors->reactor ())
 {
-}
-
-// =========================================================================
-//   CLASS     : Arp
-//   METHOD    : get
-// =========================================================================
-MacAddress Arp::get (const IpAddress& ip)
-{
-    if (ip.family () != AF_INET)
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return {};
-    }
-
-    if (ip == IpAddress::ipv4Address (_interface))
-    {
-        return MacAddress::address (_interface);
-    }
-
-    MacAddress mac = cache (ip);
-
-    return mac.isWildcard () ? request (ip) : mac;
-}
-
-// =========================================================================
-//   CLASS     : Arp
-//   METHOD    : get
-// =========================================================================
-MacAddress Arp::get (const IpAddress& ip, const std::string& interface)
-{
-    return Arp (interface).get (ip);
-}
-
-// =========================================================================
-//   CLASS     : Arp
-//   METHOD    : request
-// =========================================================================
-MacAddress Arp::request (const IpAddress& ip)
-{
-    if (ip.family () != AF_INET)
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return {};
-    }
-
-    Raw::Socket stream;
-
-    // bind to interface and allow broadcast.
-    if (stream.bind (_interface) == -1 || stream.setOption (Raw::Socket::Broadcast, 1) == -1)
-    {
-        return {};
-    }
-
-    // generated using 'tcpdump -dd arp'
-    struct sock_filter code[] = {
-        { 0x28, 0, 0, 0x0000000c },
-        { 0x15, 0, 1, 0x00000806 },
-        { 0x6,  0, 0, 0x00040000 },
-        { 0x6,  0, 0, 0x00000000 },
-    };
-
-    struct sock_fprog bpf = {
-        .len = 4,
-        .filter = code,
-    };
-
-    // filter ARP only.
-    ::setsockopt (stream.handle (), SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof (bpf));
-
-    Packet out;
-    ::memset (&out, 0, sizeof (Packet));
-
-    ::memcpy (out.eth.h_dest, MacAddress::broadcast.addr (), ETH_ALEN);
-    ::memcpy (out.eth.h_source, MacAddress::address (_interface).addr (), ETH_ALEN);
-    out.eth.h_proto = ::htons (ETH_P_ARP);
-
-    out.arp.ar_hrd  = ::htons (ARPHRD_ETHER);
-    out.arp.ar_pro  = ::htons (ETH_P_IP);
-    out.arp.ar_hln  = ETH_ALEN;
-    out.arp.ar_pln  = 4;
-    out.arp.ar_op   = ::htons (ARPOP_REQUEST);
-    ::memcpy (out.arp.ar_sha, MacAddress::address (_interface).addr (), ETH_ALEN);
-    out.arp.ar_sip  = *reinterpret_cast <const uint32_t *> (IpAddress::ipv4Address (_interface).addr ());
-    ::memcpy (out.arp.ar_tha, MacAddress::wildcard.addr (), ETH_ALEN);
-    out.arp.ar_tip  = *reinterpret_cast <const uint32_t *> (ip.addr ());
-
-    if (stream.write (reinterpret_cast <const char *> (&out), sizeof (Packet)) == -1)
-    {
-        return {};
-    }
-
-    auto elapsed = std::chrono::milliseconds::zero ();
-    int timeout  = 1000;
-
-    for (;;)
-    {
-        auto beg = std::chrono::high_resolution_clock::now ();
-
-        if ((timeout <= elapsed.count ()) || !stream.waitReadyRead (timeout - elapsed.count ()))
-        {
-            lastError = std::make_error_code (std::errc::no_such_device_or_address);
-            break;
-        }
-
-        auto buffer = std::make_unique <char []> (stream.canRead ());
-        if (buffer == nullptr)
-        {
-            lastError = make_error_code (Errc::OutOfMemory);
-            break;
-        }
-
-        int size = stream.read (reinterpret_cast <char *> (buffer.get ()), stream.canRead ());
-        if (size_t (size) < sizeof (Packet))
-        {
-            elapsed += std::chrono::duration_cast <std::chrono::milliseconds> (std::chrono::high_resolution_clock::now () - beg);
-            continue;
-        }
-
-        Packet *in = reinterpret_cast <Packet *> (buffer.get ());
-        if (in->eth.h_proto != htons (ETH_P_ARP)                     ||
-            in->arp.ar_hrd  != htons (ARPHRD_ETHER)                  ||
-            in->arp.ar_pro  != htons (ETH_P_IP)                      ||
-            in->arp.ar_hln  != ETH_ALEN                              ||
-            in->arp.ar_pln  != 4                                     ||
-            in->arp.ar_op   != htons (ARPOP_REPLY)                   ||
-            ::memcmp (in->arp.ar_tha, out.arp.ar_sha, ETH_ALEN) != 0)
-        {
-            elapsed += std::chrono::duration_cast <std::chrono::milliseconds> (std::chrono::high_resolution_clock::now () - beg);
-            continue;
-        }
-
-        return MacAddress (reinterpret_cast <uint8_t*> (in->arp.ar_sha), ETH_ALEN);
-    }
-
-    return {};
-}
-
-// =========================================================================
-//   CLASS     : Arp
-//   METHOD    : request
-// =========================================================================
-MacAddress Arp::request (const IpAddress& ip, const std::string& interface)
-{
-    return Arp (interface).request (ip);
 }
 
 // =========================================================================
@@ -205,39 +61,54 @@ int Arp::add (const MacAddress& mac, const IpAddress& ip)
         return -1;
     }
 
-    int fd = ::socket (AF_INET, SOCK_DGRAM, 0);
-    if (fd != -1)
+    int index = ::if_nametoindex (_interface.c_str ());
+    if (index == 0)
     {
-        struct arpreq areq;
-        ::memset (&areq, 0, sizeof (areq));
-        ::strncpy (areq.arp_dev, _interface.c_str (), IFNAMSIZ - 1);
-        ::memcpy (areq.arp_ha.sa_data, mac.addr (), mac.length ());
-        areq.arp_flags = ATF_PERM | ATF_COM;
-
-        struct sockaddr_in *in = reinterpret_cast <struct sockaddr_in *> (&areq.arp_pa);
-        in->sin_addr.s_addr    = *reinterpret_cast <const uint32_t *> (ip.addr ());
-        in->sin_family         = AF_INET;
-
-        int result = ::ioctl (fd, SIOCSARP, &areq);
-        ::close (fd);
-        
-        if (result != -1)
-        {
-            return 0;
-        }
+        lastError = std::error_code (errno, std::generic_category ());
+        return -1;
     }
 
-    lastError = std::error_code (errno, std::generic_category ());
-    return -1;
+    return _neighbors->addNeighbor (index, ip, mac, NUD_PERMANENT, true);
 }
 
 // =========================================================================
 //   CLASS     : Arp
 //   METHOD    : add
 // =========================================================================
-int Arp::add (const MacAddress& mac, const IpAddress& ip, const std::string& interface)
+int Arp::add (const std::string& interface, const MacAddress& mac, const IpAddress& ip)
 {
     return Arp (interface).add (mac, ip);
+}
+
+// =========================================================================
+//   CLASS     : Arp
+//   METHOD    : remove
+// =========================================================================
+int Arp::remove (const IpAddress& ip)
+{
+    if (ip.family () != AF_INET)
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
+
+    int index = ::if_nametoindex (_interface.c_str ());
+    if (index == 0)
+    {
+        lastError = std::error_code (errno, std::generic_category ());
+        return -1;
+    }
+
+    return _neighbors->removeNeighbor (index, ip, true);
+}
+
+// =========================================================================
+//   CLASS     : Arp
+//   METHOD    : remove
+// =========================================================================
+int Arp::remove (const std::string& interface, const IpAddress& ip)
+{
+    return Arp (interface).remove (ip);
 }
 
 // =========================================================================
@@ -252,41 +123,58 @@ MacAddress Arp::cache (const IpAddress& ip)
         return {};
     }
 
-    int fd = ::socket (AF_INET, SOCK_DGRAM, 0);
-    if (fd != -1)
+    int index = ::if_nametoindex (_interface.c_str ());
+    if (index == 0)
     {
-        struct arpreq areq;
-        ::memset (&areq, 0, sizeof (areq));
-        ::strncpy (areq.arp_dev, _interface.c_str (), IFNAMSIZ - 1);
-
-        struct sockaddr_in *in = reinterpret_cast <struct sockaddr_in *> (&areq.arp_pa);
-        in->sin_addr.s_addr    = *reinterpret_cast <const uint32_t *> (ip.addr ());
-        in->sin_family         = AF_INET;
-
-        int result = ::ioctl (fd, SIOCGARP, &areq);
-        ::close (fd);
-
-        if (result != -1)
-        {
-            if (areq.arp_flags & ATF_COM)
-            {
-                return MacAddress (reinterpret_cast <uint8_t*> (areq.arp_ha.sa_data), ETH_ALEN);
-            }
-
-            lastError = make_error_code (Errc::NotFound);
-            return {};
-        }
+        lastError = std::error_code (errno, std::generic_category ());
+        return {};
     }
 
-    lastError = std::error_code (errno, std::generic_category ());
-    return {};
+    auto neighbor = _neighbors->findByIndex (index, ip);
+    if (!neighbor)
+    {
+        lastError = std::make_error_code (std::errc::no_such_device_or_address);
+        return {};
+    }
+
+    if (!(neighbor->state () & NUD_VALID))
+    {
+        lastError = std::make_error_code (std::errc::no_such_device_or_address);
+        return {};
+    }
+
+    return neighbor->mac ();
 }
 
 // =========================================================================
 //   CLASS     : Arp
 //   METHOD    : cache
 // =========================================================================
-MacAddress Arp::cache (const IpAddress& ip, const std::string& interface)
+MacAddress Arp::cache (const std::string& interface, const IpAddress& ip)
 {
     return Arp (interface).cache (ip);
+}
+
+// =========================================================================
+//   CLASS     : Arp
+//   METHOD    : onReceive
+// =========================================================================
+void Arp::onReceive ([[maybe_unused]] int fd) noexcept
+{
+    Packet in{};
+
+    if (read (reinterpret_cast<char*> (&in), sizeof (in)) == static_cast<int> (sizeof (in)) &&
+        in.eth.h_proto == htons (ETH_P_ARP) && in.arp.ar_hrd == htons (ARPHRD_ETHER) &&
+        in.arp.ar_pro == htons (ETH_P_IP) && in.arp.ar_hln == ETH_ALEN && in.arp.ar_pln == 4 &&
+        in.arp.ar_op == htons (ARPOP_REPLY))
+    {
+        ScopedLock<Mutex> lock (_syncMutex);
+
+        auto it = _pending.find (in.arp.ar_sip);
+        if (it != _pending.end ())
+        {
+            it->second->mac = MacAddress (in.arp.ar_sha, ETH_ALEN);
+            it->second->cond.signal ();
+        }
+    }
 }

@@ -45,7 +45,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->bind (_serverpath), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -53,16 +53,17 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 
     /**
      * @brief method called when data are ready to be read on handle.
+     * @param fd file descriptor.
      */
-    virtual void onReceive () override
+    virtual void onReceive ([[maybe_unused]] int fd) override
     {
-        auto buffer = std::make_unique <char []> (this->canRead ());
+        auto buffer = std::make_unique<char[]> (this->canRead ());
         if (buffer)
         {
             UnixDgram::Endpoint from;
@@ -84,7 +85,7 @@ protected:
 
 const std::string UnixDgramSocket::_serverpath = "/tmp/unixserver_test.sock";
 const std::string UnixDgramSocket::_clientpath = "/tmp/unixclient_test.sock";
-const int         UnixDgramSocket::_timeout = 1000;
+const int UnixDgramSocket::_timeout = 1000;
 
 /**
  * @brief Test open method.
@@ -169,7 +170,7 @@ TEST_F (UnixDgramSocket, disconnect)
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (unixSocket.connected ());
     unixSocket.close ();
-    ASSERT_FALSE (unixSocket.connected());
+    ASSERT_FALSE (unixSocket.connected ());
 }
 
 /**
@@ -178,7 +179,7 @@ TEST_F (UnixDgramSocket, disconnect)
 TEST_F (UnixDgramSocket, canRead)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.canRead (), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -197,7 +198,7 @@ TEST_F (UnixDgramSocket, canRead)
 TEST_F (UnixDgramSocket, waitReadyRead)
 {
     UnixDgram::Socket unixSocket;
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_FALSE (unixSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -215,7 +216,7 @@ TEST_F (UnixDgramSocket, waitReadyRead)
 TEST_F (UnixDgramSocket, read)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.read (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -234,7 +235,7 @@ TEST_F (UnixDgramSocket, read)
 TEST_F (UnixDgramSocket, readFrom)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
     UnixDgram::Endpoint from;
 
     ASSERT_EQ (unixSocket.readFrom (data, sizeof (data)), -1);
@@ -269,7 +270,7 @@ TEST_F (UnixDgramSocket, waitReadyWrite)
 TEST_F (UnixDgramSocket, write)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.write (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -287,7 +288,7 @@ TEST_F (UnixDgramSocket, write)
 TEST_F (UnixDgramSocket, writeTo)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
-    char data [] = { 0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
@@ -369,7 +370,7 @@ TEST_F (UnixDgramSocket, localEndpoint)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.localEndpoint (), UnixDgram::Endpoint {});
+    ASSERT_EQ (unixSocket.localEndpoint (), UnixDgram::Endpoint{});
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.localEndpoint (), UnixDgram::Endpoint (_clientpath)) << join::lastError.message ();
@@ -383,7 +384,7 @@ TEST_F (UnixDgramSocket, remoteEndpoint)
 {
     UnixDgram::Socket unixSocket (UnixDgram::Socket::Blocking);
 
-    ASSERT_EQ (unixSocket.remoteEndpoint (), UnixDgram::Endpoint {});
+    ASSERT_EQ (unixSocket.remoteEndpoint (), UnixDgram::Endpoint{});
     ASSERT_EQ (unixSocket.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (unixSocket.remoteEndpoint (), UnixDgram::Endpoint (_serverpath)) << join::lastError.message ();
@@ -503,7 +504,7 @@ TEST_F (UnixDgramSocket, checksum)
 {
     std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
 
-    ASSERT_EQ (UnixDgram::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+    ASSERT_EQ (UnixDgram::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**
@@ -530,7 +531,7 @@ TEST_F (UnixDgramSocket, lower)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

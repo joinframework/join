@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
- // libjoin.
+// libjoin.
 #include <join/httpmessage.hpp>
 
 // Libraries.
@@ -45,18 +45,19 @@ TEST (HttpCategory, name)
 TEST (HttpCategory, message)
 {
     ASSERT_STREQ (HttpCategory ().message (0).c_str (), "success");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::BadRequest)).c_str (), "bad request");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::Unauthorized)).c_str (), "unauthorized");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::Forbidden)).c_str (),  "forbidden");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::NotFound)).c_str (),  "not found");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::Unsupported)).c_str (), "method not allowed");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::LengthRequired)).c_str (), "length required");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::PayloadTooLarge)).c_str (),  "payload too large");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::UriTooLong)).c_str (),  "URI too long");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::HeaderTooLarge)).c_str (), "request header too large");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::ServerError)).c_str (), "internal server error");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::NotImplemented)).c_str (),  "not implemented");
-    ASSERT_STREQ (HttpCategory ().message (static_cast <int> (HttpErrc::BadGateway)).c_str (),  "bad gateway");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::BadRequest)).c_str (), "bad request");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::Unauthorized)).c_str (), "unauthorized");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::Forbidden)).c_str (), "forbidden");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::NotFound)).c_str (), "not found");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::Unsupported)).c_str (), "method not allowed");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::LengthRequired)).c_str (), "length required");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::PayloadTooLarge)).c_str (), "payload too large");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::UriTooLong)).c_str (), "URI too long");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::HeaderTooLarge)).c_str (),
+                  "request header too large");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::ServerError)).c_str (), "internal server error");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::NotImplemented)).c_str (), "not implemented");
+    ASSERT_STREQ (HttpCategory ().message (static_cast<int> (HttpErrc::BadGateway)).c_str (), "bad gateway");
 }
 
 /**
@@ -64,19 +65,19 @@ TEST (HttpCategory, message)
  */
 TEST (HttpCategory, default_error_condition)
 {
-    ASSERT_EQ (HttpCategory ().default_error_condition (0).message(), "success");
-    ASSERT_EQ (HttpCategory ().default_error_condition (1).message(), "bad request");
-    ASSERT_EQ (HttpCategory ().default_error_condition (2).message(), "unauthorized");
-    ASSERT_EQ (HttpCategory ().default_error_condition (3).message(), "forbidden");
-    ASSERT_EQ (HttpCategory ().default_error_condition (4).message(), "not found");
-    ASSERT_EQ (HttpCategory ().default_error_condition (5).message(), "method not allowed");
-    ASSERT_EQ (HttpCategory ().default_error_condition (6).message(), "length required");
-    ASSERT_EQ (HttpCategory ().default_error_condition (7).message(), "payload too large");
-    ASSERT_EQ (HttpCategory ().default_error_condition (8).message(), "URI too long");
-    ASSERT_EQ (HttpCategory ().default_error_condition (9).message(), "request header too large");
-    ASSERT_EQ (HttpCategory ().default_error_condition (10).message(), "internal server error");
-    ASSERT_EQ (HttpCategory ().default_error_condition (11).message(), "not implemented");
-    ASSERT_EQ (HttpCategory ().default_error_condition (12).message(), "bad gateway");
+    ASSERT_EQ (HttpCategory ().default_error_condition (0).message (), "success");
+    ASSERT_EQ (HttpCategory ().default_error_condition (1).message (), "bad request");
+    ASSERT_EQ (HttpCategory ().default_error_condition (2).message (), "unauthorized");
+    ASSERT_EQ (HttpCategory ().default_error_condition (3).message (), "forbidden");
+    ASSERT_EQ (HttpCategory ().default_error_condition (4).message (), "not found");
+    ASSERT_EQ (HttpCategory ().default_error_condition (5).message (), "method not allowed");
+    ASSERT_EQ (HttpCategory ().default_error_condition (6).message (), "length required");
+    ASSERT_EQ (HttpCategory ().default_error_condition (7).message (), "payload too large");
+    ASSERT_EQ (HttpCategory ().default_error_condition (8).message (), "URI too long");
+    ASSERT_EQ (HttpCategory ().default_error_condition (9).message (), "request header too large");
+    ASSERT_EQ (HttpCategory ().default_error_condition (10).message (), "internal server error");
+    ASSERT_EQ (HttpCategory ().default_error_condition (11).message (), "not implemented");
+    ASSERT_EQ (HttpCategory ().default_error_condition (12).message (), "bad gateway");
 }
 
 /**
@@ -174,7 +175,7 @@ TEST (HttpCategory, make_error_condition)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

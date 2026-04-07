@@ -193,11 +193,11 @@ protected:
     static const std::string _invalidKey;
 };
 
-const IpAddress   TlsAcceptor::_hostip     = "::1";
-const uint16_t    TlsAcceptor::_port       = 5000;
-const std::string TlsAcceptor::_root       = "/tmp/tlsserver_test_root.cert";
-const std::string TlsAcceptor::_cert       = "/tmp/tlsserver_test.cert";
-const std::string TlsAcceptor::_key        = "/tmp/tlsserver_test.key";
+const IpAddress TlsAcceptor::_hostip = "::1";
+const uint16_t TlsAcceptor::_port = 5000;
+const std::string TlsAcceptor::_root = "/tmp/tlsserver_test_root.cert";
+const std::string TlsAcceptor::_cert = "/tmp/tlsserver_test.cert";
+const std::string TlsAcceptor::_key = "/tmp/tlsserver_test.key";
 const std::string TlsAcceptor::_invalidKey = "/tmp/tlsserver_test_invalid.key";
 
 /**
@@ -256,7 +256,7 @@ TEST_F (TlsAcceptor, accept)
     ASSERT_FALSE (server.accept ().connected ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (clientSocket.connect({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (clientSocket.connect ({_hostip, _port}), 0) << join::lastError.message ();
     Tls::Socket serverSocket = server.accept ();
     ASSERT_TRUE (serverSocket.connected ());
     ASSERT_FALSE (serverSocket.encrypted ());
@@ -294,7 +294,7 @@ TEST_F (TlsAcceptor, acceptEncrypted)
     ASSERT_FALSE (server.acceptEncrypted ().connected ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (clientSocket.connect({_hostip, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (clientSocket.connect ({_hostip, _port}), 0) << join::lastError.message ();
     Tls::Socket serverSocket = server.acceptEncrypted ();
     ASSERT_TRUE (serverSocket.connected ());
     ASSERT_TRUE (serverSocket.encrypted ());
@@ -328,7 +328,7 @@ TEST_F (TlsAcceptor, localEndpoint)
 {
     Tls::Acceptor server;
 
-    ASSERT_EQ (server.localEndpoint (), Tls::Endpoint {});
+    ASSERT_EQ (server.localEndpoint (), Tls::Endpoint{});
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (server.create ({_hostip, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (server.localEndpoint ().ip (), _hostip);
@@ -478,7 +478,7 @@ TEST_F (TlsAcceptor, setCurve)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);

@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_PROTOCOL_HPP__
-#define __JOIN_PROTOCOL_HPP__
+#ifndef JOIN_CORE_PROTOCOL_HPP
+#define JOIN_CORE_PROTOCOL_HPP
 
 // libjoin.
 #include <join/endpoint.hpp>
@@ -77,7 +77,7 @@ namespace join
     {
     public:
         using Endpoint = BasicUnixEndpoint<UnixDgram>;
-        using Socket   = BasicDatagramSocket<UnixDgram>;
+        using Socket = BasicDatagramSocket<UnixDgram>;
 
         /**
          * @brief construct the unix datagram protocol instance by default.
@@ -119,8 +119,8 @@ namespace join
     {
     public:
         using Endpoint = BasicUnixEndpoint<UnixStream>;
-        using Socket   = BasicStreamSocket<UnixStream>;
-        using Stream   = BasicSocketStream<UnixStream>;
+        using Socket = BasicStreamSocket<UnixStream>;
+        using Stream = BasicSocketStream<UnixStream>;
         using Acceptor = BasicStreamAcceptor<UnixStream>;
 
         /**
@@ -163,7 +163,7 @@ namespace join
     {
     public:
         using Endpoint = BasicNetlinkEndpoint<Netlink>;
-        using Socket   = BasicDatagramSocket<Netlink>;
+        using Socket = BasicDatagramSocket<Netlink>;
 
         /**
          * @brief construct the netlink protocol instance by default.
@@ -255,7 +255,7 @@ namespace join
     {
     public:
         using Endpoint = BasicLinkLayerEndpoint<Raw>;
-        using Socket   = BasicSocket<Raw>;
+        using Socket = BasicSocket<Raw>;
 
         /**
          * @brief default constructor.
@@ -301,7 +301,7 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint<Udp>;
-        using Socket   = BasicDatagramSocket<Udp>;
+        using Socket = BasicDatagramSocket<Udp>;
 
         /**
          * @brief construct the udp protocol instance.
@@ -393,7 +393,7 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint<Icmp>;
-        using Socket   = BasicDatagramSocket<Icmp>;
+        using Socket = BasicDatagramSocket<Icmp>;
 
         /**
          * @brief create the icmp protocol instance.
@@ -490,8 +490,8 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint<Tcp>;
-        using Socket   = BasicStreamSocket<Tcp>;
-        using Stream   = BasicSocketStream<Tcp>;
+        using Socket = BasicStreamSocket<Tcp>;
+        using Stream = BasicSocketStream<Tcp>;
         using Acceptor = BasicStreamAcceptor<Tcp>;
 
         /**
@@ -584,8 +584,8 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint<Tls>;
-        using Socket   = BasicTlsSocket<Tls>;
-        using Stream   = BasicTlsStream<Tls>;
+        using Socket = BasicTlsSocket<Tls>;
+        using Stream = BasicTlsStream<Tls>;
         using Acceptor = BasicTlsAcceptor<Tls>;
 
         /**
@@ -678,12 +678,12 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint<Http>;
-        using Socket   = BasicStreamSocket<Http>;
-        using Stream   = BasicSocketStream<Http>;
+        using Socket = BasicStreamSocket<Http>;
+        using Stream = BasicSocketStream<Http>;
         using Acceptor = BasicStreamAcceptor<Http>;
-        using Client   = BasicHttpClient<Http>;
-        using Worker   = BasicHttpWorker<Http>;
-        using Server   = BasicHttpServer<Http>;
+        using Client = BasicHttpClient<Http>;
+        using Worker = BasicHttpWorker<Http>;
+        using Server = BasicHttpServer<Http>;
 
         /**
          * @brief create the HTTP protocol  instance.
@@ -775,12 +775,12 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint<Https>;
-        using Socket   = BasicTlsSocket<Https>;
-        using Stream   = BasicTlsStream<Https>;
+        using Socket = BasicTlsSocket<Https>;
+        using Stream = BasicTlsStream<Https>;
         using Acceptor = BasicTlsAcceptor<Https>;
-        using Client   = BasicHttpSecureClient<Https>;
-        using Worker   = BasicHttpWorker<Https>;
-        using Server   = BasicHttpSecureServer<Https>;
+        using Client = BasicHttpSecureClient<Https>;
+        using Worker = BasicHttpWorker<Https>;
+        using Server = BasicHttpSecureServer<Https>;
 
         /**
          * @brief create the HTTPS protocol  instance.
@@ -872,9 +872,9 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint<Smtp>;
-        using Socket   = BasicTlsSocket<Smtp>;
-        using Stream   = BasicTlsStream<Smtp>;
-        using Client   = BasicSmtpClient<Smtp>;
+        using Socket = BasicTlsSocket<Smtp>;
+        using Stream = BasicTlsStream<Smtp>;
+        using Client = BasicSmtpClient<Smtp>;
 
         /**
          * @brief create the SMTP protocol  instance.
@@ -966,9 +966,9 @@ namespace join
     {
     public:
         using Endpoint = BasicInternetEndpoint<Smtps>;
-        using Socket   = BasicTlsSocket<Smtps>;
-        using Stream   = BasicTlsStream<Smtps>;
-        using Client   = BasicSmtpSecureClient<Smtps>;
+        using Socket = BasicTlsSocket<Smtps>;
+        using Stream = BasicTlsStream<Smtps>;
+        using Client = BasicSmtpSecureClient<Smtps>;
 
         /**
          * @brief create the SMTPS protocol  instance.

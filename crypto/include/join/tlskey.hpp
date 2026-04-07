@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __TLS_KEY_HPP__
-#define __TLS_KEY_HPP__
+#ifndef TLS_CRYPTO_KEY_HPP
+#define TLS_CRYPTO_KEY_HPP
 
 // libjoin.
 #include <join/openssl.hpp>
@@ -44,8 +44,8 @@ namespace join
          */
         enum Type
         {
-            Public,             /**< public key. */
-            Private,            /**< private key. */
+            Public,  /**< public key. */
+            Private, /**< private key. */
         };
 
         /**

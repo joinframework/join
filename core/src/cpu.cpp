@@ -57,7 +57,7 @@ const CpuTopology* CpuTopology::instance ()
 //   CLASS     : CpuTopology
 //   METHOD    : cores
 // =========================================================================
-const std::vector <PhysicalCore>& CpuTopology::cores () const noexcept
+const std::vector<PhysicalCore>& CpuTopology::cores () const noexcept
 {
     return _cores;
 }
@@ -66,7 +66,7 @@ const std::vector <PhysicalCore>& CpuTopology::cores () const noexcept
 //   CLASS     : CpuTopology
 //   METHOD    : nodes
 // =========================================================================
-const std::vector <NumaNode>& CpuTopology::nodes () const noexcept
+const std::vector<NumaNode>& CpuTopology::nodes () const noexcept
 {
     return _nodes;
 }
@@ -82,7 +82,7 @@ void CpuTopology::dump () const
     {
         std::cout << "NUMA " << node.id << ":" << std::endl;
 
-        std::map <int, std::vector <const PhysicalCore*>> sockets;
+        std::map<int, std::vector<const PhysicalCore*>> sockets;
         for (const auto& core : _cores)
         {
             if (core.numa == node.id)
@@ -100,7 +100,8 @@ void CpuTopology::dump () const
             for (const auto* c : coresInSocket)
             {
                 std::cout << "     Core " << c->id << ": [ ";
-                for (size_t i = 0; i < c->threads.size (); ++i) {
+                for (size_t i = 0; i < c->threads.size (); ++i)
+                {
                     std::cout << c->threads[i].id << (i == c->threads.size () - 1 ? "" : ", ");
                 }
                 std::cout << " ]" << std::endl;
@@ -172,8 +173,8 @@ void CpuTopology::detect ()
     _cores.clear ();
     _nodes.clear ();
 
-    std::map <std::tuple <int, int, int>, size_t> coreMap;
-    std::map <int, size_t> nodeMap;
+    std::map<std::tuple<int, int, int>, size_t> coreMap;
+    std::map<int, size_t> nodeMap;
 
     DIR* dir = opendir ("/sys/devices/system/cpu");
     if (dir)
@@ -230,12 +231,7 @@ void CpuTopology::detect ()
                 coreIndex = coreIt->second;
             }
 
-            _cores[coreIndex].threads.push_back ({
-                static_cast <int> (cpuId),
-                coreId,
-                socket,
-                numa
-            });
+            _cores[coreIndex].threads.push_back ({static_cast<int> (cpuId), coreId, socket, numa});
         }
 
         std::sort (_cores.begin (), _cores.end (), [] (const PhysicalCore& a, const PhysicalCore& b) {

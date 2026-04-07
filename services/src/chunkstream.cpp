@@ -37,8 +37,8 @@ using join::Chunkstream;
 //   METHOD    : Chunkstreambuf
 // =========================================================================
 Chunkstreambuf::Chunkstreambuf (std::streambuf* streambuf, bool own)
-: StreambufDecorator (streambuf, own),
-  _buf (std::make_unique <char []> (2 * _chunksize))
+: StreambufDecorator (streambuf, own)
+, _buf (std::make_unique<char[]> (2 * _chunksize))
 {
 }
 
@@ -47,9 +47,9 @@ Chunkstreambuf::Chunkstreambuf (std::streambuf* streambuf, bool own)
 //   METHOD    : Chunkstreambuf
 // =========================================================================
 Chunkstreambuf::Chunkstreambuf (std::streambuf* streambuf, std::streamsize chunksize, bool own)
-: StreambufDecorator (streambuf, own),
-  _chunksize (chunksize),
-  _buf (std::make_unique <char []> (2 * _chunksize))
+: StreambufDecorator (streambuf, own)
+, _chunksize (chunksize)
+, _buf (std::make_unique<char[]> (2 * _chunksize))
 {
 }
 
@@ -58,9 +58,9 @@ Chunkstreambuf::Chunkstreambuf (std::streambuf* streambuf, std::streamsize chunk
 //   METHOD    : Chunkstreambuf
 // =========================================================================
 Chunkstreambuf::Chunkstreambuf (Chunkstreambuf&& other)
-: StreambufDecorator (std::move (other)),
-  _chunksize (other._chunksize),
-  _buf (std::move (other._buf))
+: StreambufDecorator (std::move (other))
+, _chunksize (other._chunksize)
+, _buf (std::move (other._buf))
 {
 }
 
@@ -176,9 +176,10 @@ Chunkstreambuf::int_type Chunkstreambuf::overflow (int_type c)
         {
             std::stringstream oss;
             oss << std::hex << pending << std::dec << "\r\n";
-            int res  = (_innerbuf->sputn (oss.str ().c_str (), oss.str ().size ()) == std::streamsize (oss.str ().size ()));
-            res     &= (_innerbuf->sputn (pbase (), pending) == pending);
-            res     &= (_innerbuf->sputn ("\r\n", 2) == 2);
+            int res =
+                (_innerbuf->sputn (oss.str ().c_str (), oss.str ().size ()) == std::streamsize (oss.str ().size ()));
+            res &= (_innerbuf->sputn (pbase (), pending) == pending);
+            res &= (_innerbuf->sputn ("\r\n", 2) == 2);
             if (!res)
             {
                 return traits_type::eof ();
@@ -240,8 +241,8 @@ Chunkstream::Chunkstream (std::iostream& stream, std::streamsize chunksize)
 //   METHOD    : Chunkstream
 // =========================================================================
 Chunkstream::Chunkstream (Chunkstream&& other)
-: std::iostream (std::move (other)),
-  _chunkbuf (std::move (other._chunkbuf))
+: std::iostream (std::move (other))
+, _chunkbuf (std::move (other._chunkbuf))
 {
     set_rdbuf (&_chunkbuf);
 }
@@ -250,7 +251,7 @@ Chunkstream::Chunkstream (Chunkstream&& other)
 //   CLASS     : Chunkstream
 //   METHOD    : operator=
 // =========================================================================
-Chunkstream& Chunkstream::operator=(Chunkstream&& other)
+Chunkstream& Chunkstream::operator= (Chunkstream&& other)
 {
     std::iostream::operator= (std::move (other));
     _chunkbuf = std::move (other._chunkbuf);

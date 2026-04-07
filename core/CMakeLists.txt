@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(NUMA REQUIRED numa)
+if(JOIN_ENABLE_NUMA)
+    pkg_check_modules(NUMA REQUIRED numa)
+endif()
 
 set(PUBLIC_HEADERS
     include/join/version.hpp
@@ -12,7 +13,9 @@ set(PUBLIC_HEADERS
     include/join/variant.hpp
     include/join/reactor.hpp
     include/join/memory.hpp
+    include/join/allocator.hpp
     include/join/queue.hpp
+    include/join/backoff.hpp
     include/join/mutex.hpp
     include/join/condition.hpp
     include/join/semaphore.hpp
@@ -27,6 +30,9 @@ set(PUBLIC_HEADERS
     include/join/acceptor.hpp
     include/join/openssl.hpp
     include/join/cpu.hpp
+    include/join/clock.hpp
+    include/join/timer.hpp
+    include/join/statistics.hpp
 )
 
 set(SOURCES
@@ -57,7 +63,7 @@ target_include_directories(${JOIN_CORE}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
-        ${NUMA_INCLUDE_DIRS}
+        $<$<BOOL:${JOIN_ENABLE_NUMA}>:${NUMA_INCLUDE_DIRS}>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
@@ -67,8 +73,12 @@ target_link_libraries(${JOIN_CORE}
         OpenSSL::SSL
         OpenSSL::Crypto
         Threads::Threads
-        ${NUMA_LIBRARIES}
+        $<$<BOOL:${JOIN_ENABLE_NUMA}>:${NUMA_LIBRARIES}>
 )
+
+if(JOIN_ENABLE_NUMA)
+    target_compile_definitions(${JOIN_CORE} PUBLIC JOIN_HAS_NUMA)
+endif()
 
 install(TARGETS ${JOIN_CORE}
     EXPORT joinTargets

@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_SIGNATURE_HPP__
-#define __JOIN_SIGNATURE_HPP__
+#ifndef JOIN_CRYPTO_SIGNATURE_HPP
+#define JOIN_CRYPTO_SIGNATURE_HPP
 
 // libjoin.
 #include <join/digest.hpp>
@@ -116,7 +116,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Signature& operator=(const Signature& other) = delete;
+        Signature& operator= (const Signature& other) = delete;
 
         /**
          * @brief move constructor.
@@ -129,7 +129,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Signature& operator=(Signature&& other);
+        Signature& operator= (Signature&& other);
 
         /**
          * @brief destroy instance.
@@ -151,7 +151,8 @@ namespace join
          * @param algo the algorithm used for the signature.
          * @return the generated signature on success, an empty bytes array on failure.
          */
-        static BytesArray sign (const char* data, std::streamsize size, const std::string& privKey, Digest::Algorithm algo);
+        static BytesArray sign (const char* data, std::streamsize size, const std::string& privKey,
+                                Digest::Algorithm algo);
 
         /**
          * @brief sign a data with given private key.
@@ -188,7 +189,8 @@ namespace join
          * @param algo the algorithm used for the signature.
          * @return true on success, false otherwise.
          */
-        static bool verify (const char* data, std::streamsize size, const BytesArray& signature, const std::string& pubKey, Digest::Algorithm algo);
+        static bool verify (const char* data, std::streamsize size, const BytesArray& signature,
+                            const std::string& pubKey, Digest::Algorithm algo);
 
         /**
          * @brief verify data signature.
@@ -198,7 +200,8 @@ namespace join
          * @param algo the algorithm used for the signature.
          * @return true on success, false otherwise.
          */
-        static bool verify (const BytesArray& data, const BytesArray& signature, const std::string& pubKey, Digest::Algorithm algo);
+        static bool verify (const BytesArray& data, const BytesArray& signature, const std::string& pubKey,
+                            Digest::Algorithm algo);
 
         /**
          * @brief verify data signature.
@@ -208,7 +211,8 @@ namespace join
          * @param algo the algorithm used for the signature.
          * @return true on success, false otherwise.
          */
-        static bool verify (const std::string& data, const BytesArray& signature, const std::string& pubKey, Digest::Algorithm algo);
+        static bool verify (const std::string& data, const BytesArray& signature, const std::string& pubKey,
+                            Digest::Algorithm algo);
 
     private:
         /// associated signature stream buffer.

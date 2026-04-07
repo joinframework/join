@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_CONDITION_HPP__
-#define __JOIN_CONDITION_HPP__
+#ifndef JOIN_CORE_CONDITION_HPP
+#define JOIN_CORE_CONDITION_HPP
 
 // libjoin.
 #include <join/mutex.hpp>
@@ -118,7 +118,7 @@ namespace join
          * @return true on success, false on timeout.
          */
         template <class Lock, class Rep, class Period>
-        bool timedWait (Lock& lock, std::chrono::duration <Rep, Period> timeout)
+        bool timedWait (Lock& lock, std::chrono::duration<Rep, Period> timeout)
         {
             struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
             int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
@@ -138,7 +138,7 @@ namespace join
          * @return true on success, false on timeout.
          */
         template <class Lock, class Rep, class Period, class Predicate>
-        bool timedWait (Lock& lock, std::chrono::duration <Rep, Period> timeout, Predicate pred)
+        bool timedWait (Lock& lock, std::chrono::duration<Rep, Period> timeout, Predicate pred)
         {
             struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
             while (!pred ())
@@ -215,7 +215,7 @@ namespace join
          * @brief wait on a condition.
          * @param lock mutex previously locked by the calling thread.
          */
-        void wait (ScopedLock <SharedMutex>& lock);
+        void wait (ScopedLock<SharedMutex>& lock);
 
         /**
          * @brief wait on a condition with predicate.
@@ -223,7 +223,7 @@ namespace join
          * @param pred predicate.
          */
         template <class Predicate>
-        void wait (ScopedLock <SharedMutex>& lock, Predicate pred)
+        void wait (ScopedLock<SharedMutex>& lock, Predicate pred)
         {
             while (!pred ())
             {
@@ -238,7 +238,7 @@ namespace join
          * @return true on success, false on timeout.
          */
         template <class Rep, class Period>
-        bool timedWait (ScopedLock <SharedMutex>& lock, std::chrono::duration <Rep, Period> timeout)
+        bool timedWait (ScopedLock<SharedMutex>& lock, std::chrono::duration<Rep, Period> timeout)
         {
             struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
             int err = pthread_cond_timedwait (&_handle, lock.mutex ()->handle (), &ts);
@@ -259,7 +259,7 @@ namespace join
          * @return true on success, false on timeout.
          */
         template <class Rep, class Period, class Predicate>
-        bool timedWait (ScopedLock <SharedMutex>& lock, std::chrono::duration <Rep, Period> timeout, Predicate pred)
+        bool timedWait (ScopedLock<SharedMutex>& lock, std::chrono::duration<Rep, Period> timeout, Predicate pred)
         {
             struct timespec ts = toTimespec (std::chrono::steady_clock::now () + timeout);
             while (!pred ())

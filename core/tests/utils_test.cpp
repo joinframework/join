@@ -77,9 +77,9 @@ TEST (Utils, swap)
  */
 TEST (Utils, compareNoCase)
 {
-    ASSERT_TRUE  (join::compareNoCase ("One", "ONE"));
-    ASSERT_TRUE  (join::compareNoCase ("TWO", "two"));
-    ASSERT_TRUE  (join::compareNoCase ("Three", "ThReE"));
+    ASSERT_TRUE (join::compareNoCase ("One", "ONE"));
+    ASSERT_TRUE (join::compareNoCase ("TWO", "two"));
+    ASSERT_TRUE (join::compareNoCase ("Three", "ThReE"));
     ASSERT_FALSE (join::compareNoCase ("Four", "4"));
 }
 
@@ -182,8 +182,9 @@ TEST (Utils, dump)
     std::stringstream out;
     std::string str ("☺this is a test☺");
     join::dump (str.c_str (), str.size (), out);
-    ASSERT_EQ (out.str (), "00000000: E298BA74 68697320 69732061 20746573 ...this is a tes\n"
-                           "00000010: 74E298BA                            t...\n\n");
+    ASSERT_EQ (out.str (),
+               "00000000: E298BA74 68697320 69732061 20746573 ...this is a tes\n"
+               "00000010: 74E298BA                            t...\n\n");
 }
 
 /**
@@ -191,7 +192,7 @@ TEST (Utils, dump)
  */
 TEST (Utils, randomize)
 {
-    ASSERT_GT (join::randomize <int> (), 0);
+    ASSERT_GT (join::randomize<int> (), 0);
 }
 
 /**
@@ -199,8 +200,7 @@ TEST (Utils, randomize)
  */
 TEST (Utils, benchmark)
 {
-    auto elapsed = join::benchmark ([]
-    {
+    auto elapsed = join::benchmark ([] {
         std::this_thread::sleep_for (10ms);
     });
     ASSERT_GE (elapsed, 10ms);
@@ -211,32 +211,36 @@ TEST (Utils, benchmark)
  */
 TEST (Utils, toTimespec)
 {
-    auto tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (1234));
+    auto tp = std::chrono::time_point<std::chrono::system_clock> (std::chrono::seconds (1234));
     timespec ts = join::toTimespec (tp);
     EXPECT_EQ (ts.tv_sec, 1234);
     EXPECT_EQ (ts.tv_nsec, 0);
 
-    tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (5) + std::chrono::nanoseconds (123456789));
+    tp = std::chrono::time_point<std::chrono::system_clock> (std::chrono::seconds (5) +
+                                                             std::chrono::nanoseconds (123456789));
     ts = join::toTimespec (tp);
     EXPECT_EQ (ts.tv_sec, 5);
     EXPECT_EQ (ts.tv_nsec, 123456789);
 
-    tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (10) + std::chrono::nanoseconds (1500000000));
+    tp = std::chrono::time_point<std::chrono::system_clock> (std::chrono::seconds (10) +
+                                                             std::chrono::nanoseconds (1500000000));
     ts = join::toTimespec (tp);
     EXPECT_EQ (ts.tv_sec, 11);
     EXPECT_EQ (ts.tv_nsec, 500000000);
 
-    tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (10) - std::chrono::nanoseconds (200000000));
+    tp = std::chrono::time_point<std::chrono::system_clock> (std::chrono::seconds (10) -
+                                                             std::chrono::nanoseconds (200000000));
     ts = join::toTimespec (tp);
     EXPECT_EQ (ts.tv_sec, 9);
     EXPECT_EQ (ts.tv_nsec, 800000000);
 
-    tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (10) - std::chrono::nanoseconds (1000000000));
+    tp = std::chrono::time_point<std::chrono::system_clock> (std::chrono::seconds (10) -
+                                                             std::chrono::nanoseconds (1000000000));
     ts = join::toTimespec (tp);
     EXPECT_EQ (ts.tv_sec, 9);
     EXPECT_EQ (ts.tv_nsec, 0);
 
-    tp = std::chrono::time_point <std::chrono::system_clock> (std::chrono::seconds (0));
+    tp = std::chrono::time_point<std::chrono::system_clock> (std::chrono::seconds (0));
     ts = join::toTimespec (tp);
     EXPECT_EQ (ts.tv_sec, 0);
     EXPECT_EQ (ts.tv_nsec, 0);
@@ -245,7 +249,7 @@ TEST (Utils, toTimespec)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

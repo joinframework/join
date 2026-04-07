@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_VALUE_HPP__
-#define __JOIN_VALUE_HPP__
+#ifndef JOIN_DATA_VALUE_HPP
+#define JOIN_DATA_VALUE_HPP
 
 // libjoin.
 #include <join/variant.hpp>
@@ -68,15 +68,15 @@ namespace join
          */
         enum Index : size_t
         {
-            Null        = 0, /**< index of the std::nullptr_t alternative. */
-            Boolean     = 1, /**< index of the boolean alternative. */
-            Integer     = 2, /**< index of the 32 bits integer alternative. */
-            Unsigned    = 3, /**< index of the 32 bits unsigned integer alternative. */
-            Integer64   = 4, /**< index of the 64 bits integer alternative. */
-            Unsigned64  = 5, /**< index of the 64 bits unsigned integer alternative. */
-            Real        = 6, /**< index of the real alternative. */
-            String      = 7, /**< index of the std::string alternative. */
-            ArrayValue  = 8, /**< index of the Array alternative. */
+            Null = 0,        /**< index of the std::nullptr_t alternative. */
+            Boolean = 1,     /**< index of the boolean alternative. */
+            Integer = 2,     /**< index of the 32 bits integer alternative. */
+            Unsigned = 3,    /**< index of the 32 bits unsigned integer alternative. */
+            Integer64 = 4,   /**< index of the 64 bits integer alternative. */
+            Unsigned64 = 5,  /**< index of the 64 bits unsigned integer alternative. */
+            Real = 6,        /**< index of the real alternative. */
+            String = 7,      /**< index of the std::string alternative. */
+            ArrayValue = 8,  /**< index of the Array alternative. */
             ObjectValue = 9, /**< index of the Object alternative. */
         };
 
@@ -960,7 +960,7 @@ namespace join
          * @return converted string value.
          * @throw std::bad_cast.
          */
-        explicit operator const char*() const
+        explicit operator const char* () const
         {
             return getString ().c_str ();
         }

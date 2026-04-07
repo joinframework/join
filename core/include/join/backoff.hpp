@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_BACKOFF_HPP__
-#define __JOIN_BACKOFF_HPP__
+#ifndef JOIN_CORE_BACKOFF_HPP
+#define JOIN_CORE_BACKOFF_HPP
 
 // C++.
 #include <algorithm>
@@ -57,15 +57,15 @@ namespace join
         /**
          * @brief execute one backoff iteration.
          */
-        void operator()() noexcept
+        void operator() () noexcept
         {
             if (_count < _spin)
             {
-            #if defined(__x86_64__) || defined(__i386__)
+#if defined(__x86_64__) || defined(__i386__)
                 _mm_pause ();
-            #elif defined(__aarch64__) || defined(__arm__)
+#elif defined(__aarch64__) || defined(__arm__)
                 __asm__ __volatile__ ("yield" ::: "memory");
-            #endif
+#endif
                 ++_count;
             }
             else

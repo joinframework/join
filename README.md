@@ -1,8 +1,8 @@
 # join
 ### High-Performance Modular Networking for the Linux Ecosystem
 
-[![Test Status](https://github.com/joinframework/join/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/joinframework/join/actions?query=workflow%3Atest+branch%3Amain)
-[![Security Status](https://github.com/joinframework/join/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/joinframework/join/actions?query=workflow%3Asecurity+branch%3Amain)
+[![Test Status](https://github.com/joinframework/join/actions/workflows/cd.yml/badge.svg?branch=main)](https://github.com/joinframework/join/actions?query=workflow%3Acd+branch%3Amain)
+[![Security Status](https://github.com/joinframework/join/actions/workflows/audit.yml/badge.svg?branch=main)](https://github.com/joinframework/join/actions?query=workflow%3Aaudit+branch%3Amain)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/c2eda80c815e43748d10b9bde0be7087)](https://app.codacy.com/gh/joinframework/join/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/c2eda80c815e43748d10b9bde0be7087)](https://app.codacy.com/gh/joinframework/join/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 [![Codecov](https://codecov.io/gh/joinframework/join/branch/main/graph/badge.svg)](https://codecov.io/gh/joinframework/join)
@@ -73,11 +73,29 @@ The framework is a collection of specialized modules that build upon one another
 ## 🛠️ Build & Integration
 
 ### Prerequisites
-Ensure you have `OpenSSL`, `libnuma`, `Zlib`, and `GTest` (for testing) installed on your system:
+Install build tools and compilers:
 ```bash
-sudo apt install libssl-dev libnuma-dev zlib1g-dev libgtest-dev libgmock-dev
+sudo apt install gcc g++ clang clang-tools libclang-rt-dev cmake ninja-build gdb-multiarch
 ```
-> `libnuma` is required for memory pinning and NUMA affinity in `join-core` while `OpenSSL` provides the core TLS runtime.
+
+Install required libraries and test dependencies:
+```bash
+sudo apt install pkg-config libssl-dev zlib1g-dev libgtest-dev libgmock-dev
+```
+
+> **Compilers:** Both GCC and Clang are supported. Clang requires `libclang-rt-dev` for coverage instrumentation (`--coverage`).  
+> **OpenSSL** provides the core TLS runtime.
+
+### Optional Dependencies
+
+| Option | Library | Default | Description |
+| :--- | :--- | :---: | :--- |
+| `JOIN_ENABLE_NUMA` | `libnuma-dev` | `OFF` | Enables NUMA aware memory binding for `LocalMem` and `ShmMem`. |
+
+Install as needed:
+```bash
+sudo apt install libnuma-dev    # for JOIN_ENABLE_NUMA
+```
 
 ### Build from Source
 ```bash
@@ -86,6 +104,28 @@ cd join
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DJOIN_ENABLE_TESTS=ON
 cmake --build build
 ```
+
+With optional backends:
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release \
+    -DJOIN_ENABLE_NUMA=ON \
+    -DJOIN_ENABLE_TESTS=ON
+cmake --build build
+```
+
+### Build Options
+
+| Option | Default | Description |
+| :--- | :---: | :--- |
+| `BUILD_SHARED_LIBS` | `ON` | Build as shared libraries. |
+| `JOIN_ENABLE_CRYPTO` | `ON` | Build the crypto module. |
+| `JOIN_ENABLE_DATA` | `ON` | Build the data module. |
+| `JOIN_ENABLE_FABRIC` | `ON` | Build the fabric module. |
+| `JOIN_ENABLE_SERVICES` | `ON` | Build the services module (requires crypto, data, fabric). |
+| `JOIN_ENABLE_NUMA` | `OFF` | Enable NUMA support (requires `libnuma-dev`). |
+| `JOIN_ENABLE_SAMPLES` | `OFF` | Build sample programs. |
+| `JOIN_ENABLE_TESTS` | `OFF` | Build the test suite. |
+| `JOIN_ENABLE_COVERAGE` | `OFF` | Enable code coverage instrumentation (requires Debug build). |
 
 ### Run Tests
 ```bash

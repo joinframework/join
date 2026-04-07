@@ -43,7 +43,7 @@ TEST (InterfaceManager, findByIndex)
     auto foo = mgr.findByIndex (50000);
     ASSERT_EQ (foo, nullptr);
 
-    auto lo = mgr.findByIndex (if_nametoindex ("lo"));
+    auto lo = InterfaceManager::instance ().findByIndex (if_nametoindex ("lo"));
     ASSERT_NE (lo, nullptr);
 }
 
@@ -57,7 +57,7 @@ TEST (InterfaceManager, findByName)
     auto foo = mgr.findByName ("foo");
     ASSERT_EQ (foo, nullptr);
 
-    auto lo = mgr.findByName ("lo");
+    auto lo = InterfaceManager::instance ().findByName ("lo");
     ASSERT_NE (lo, nullptr);
 }
 
@@ -68,8 +68,8 @@ TEST (InterfaceManager, enumerate)
 {
     InterfaceManager mgr;
 
-    auto addresses = mgr.enumerate ();
-    ASSERT_GT (addresses.size (), 0);
+    auto interfaces = mgr.enumerate ();
+    ASSERT_GT (interfaces.size (), 0);
 }
 
 /**
@@ -80,18 +80,20 @@ TEST (InterfaceManager, addLinkListener)
     InterfaceManager mgr;
 
     bool called = false;
-    auto cb = [&] (const auto& /*info*/) { called = true; };
+    auto cb = [&] (const auto& /*info*/) {
+        called = true;
+    };
 
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
 
-    mgr.addLinkListener (cb);
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    auto id = mgr.addLinkListener (cb);
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_TRUE (called);
 
-    mgr.removeLinkListener (cb);
+    mgr.removeLinkListener (id);
     called = false;
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
 }
 
@@ -103,41 +105,20 @@ TEST (InterfaceManager, addAddressListener)
     InterfaceManager mgr;
 
     bool called = false;
-    auto cb = [&] (const auto& /*info*/) { called = true; };
+    auto cb = [&] (const auto& /*info*/) {
+        called = true;
+    };
 
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
 
-    mgr.addAddressListener (cb);
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    auto id = mgr.addAddressListener (cb);
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_TRUE (called);
 
-    mgr.removeAddressListener (cb);
+    mgr.removeAddressListener (id);
     called = false;
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
-    EXPECT_FALSE (called);
-}
-
-/**
- * @brief test the addRouteListener method.
- */
-TEST (InterfaceManager, addRouteListener)
-{
-    InterfaceManager mgr;
-
-    bool called = false;
-    auto cb = [&] (const auto& /*info*/) { called = true; };
-
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
-    EXPECT_FALSE (called);
-
-    mgr.addRouteListener (cb);
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
-    EXPECT_TRUE (called);
-
-    mgr.removeRouteListener (cb);
-    called = false;
-    EXPECT_EQ (mgr.refresh (true), 0) << lastError.message ();
+    EXPECT_EQ (mgr.refresh (), 0) << lastError.message ();
     EXPECT_FALSE (called);
 }
 
@@ -250,8 +231,10 @@ TEST (InterfaceManager, createGreInterface)
     ASSERT_NE (dm, nullptr);
     ASSERT_EQ (dm->enable (true, true), 0) << lastError.message ();
 
-    ASSERT_EQ (mgr.createGreInterface (gre4, dummy0, "0.0.0.0", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true), -1);
-    ASSERT_EQ (mgr.createGreInterface (gre4, dummy0, "0.0.0.0", "172.217.22.142", &ikey, &okey, 64, true), 0) << lastError.message ();
+    ASSERT_EQ (mgr.createGreInterface (gre4, dummy0, "0.0.0.0", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true),
+               -1);
+    ASSERT_EQ (mgr.createGreInterface (gre4, dummy0, "0.0.0.0", "172.217.22.142", &ikey, &okey, 64, true), 0)
+        << lastError.message ();
     auto gr = mgr.findByName (gre4);
     ASSERT_NE (gr, nullptr);
     ASSERT_TRUE (gr->isGre ());
@@ -259,8 +242,10 @@ TEST (InterfaceManager, createGreInterface)
     ASSERT_EQ (gr->enable (false, true), 0) << lastError.message ();
     EXPECT_EQ (mgr.removeInterface (gre4, true), 0) << lastError.message ();
 
-    ASSERT_EQ (mgr.createGreInterface (gre6, dummy0, "0.0.0.0", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true), -1);
-    ASSERT_EQ (mgr.createGreInterface (gre6, dummy0, "::", "2a00:1450:4007:811::200e", &ikey, &okey, 64, true), 0) << lastError.message ();
+    ASSERT_EQ (mgr.createGreInterface (gre6, dummy0, "0.0.0.0", "2a00:1450:4007:811::200e", nullptr, nullptr, 64, true),
+               -1);
+    ASSERT_EQ (mgr.createGreInterface (gre6, dummy0, "::", "2a00:1450:4007:811::200e", &ikey, &okey, 64, true), 0)
+        << lastError.message ();
     gr = mgr.findByName (gre6);
     ASSERT_NE (gr, nullptr);
     ASSERT_TRUE (gr->isGre ());
@@ -272,9 +257,19 @@ TEST (InterfaceManager, createGreInterface)
 }
 
 /**
+ * @brief test the singleton method.
+ */
+TEST (InterfaceManager, instance)
+{
+    auto& i1 = InterfaceManager::instance ();
+    auto& i2 = InterfaceManager::instance ();
+    ASSERT_EQ (&i1, &i2);
+}
+
+/**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

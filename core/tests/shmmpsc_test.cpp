@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/semaphore.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
@@ -30,6 +31,8 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::Semaphore;
 using join::ShmMem;
 using join::Thread;
@@ -62,15 +65,21 @@ protected:
 
 const std::string ShmMpsc::_name = "/test_mpsc_shm";
 
+/**
+ * @brief test create.
+ */
 TEST_F (ShmMpsc, create)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod1 (0, _name);
-    ASSERT_THROW (ShmMem::Mpsc::Queue <uint64_t> (2, _name), std::runtime_error);
+    ShmMem::Mpsc::Queue<uint64_t> prod1 (0, _name);
+    ASSERT_THROW (ShmMem::Mpsc::Queue<uint64_t> (2, _name), std::runtime_error);
 }
 
+/**
+ * @brief test tryPush.
+ */
 TEST_F (ShmMpsc, tryPush)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (512, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -86,9 +95,42 @@ TEST_F (ShmMpsc, tryPush)
     ASSERT_EQ (prod.available (), 0);
 }
 
+/**
+ * @brief test batch tryPush.
+ */
+TEST_F (ShmMpsc, tryPushBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    ShmMem::Mpsc::Queue<uint64_t> prod (full, _name);
+    uint64_t in[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.available (), full);
+    ASSERT_EQ (prod.tryPush (nullptr, half), -1);
+    ASSERT_EQ (prod.tryPush (in, half), half) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.pending (), half);
+    ASSERT_EQ (prod.available (), half);
+    ASSERT_EQ (prod.tryPush (in + half, half), half) << join::lastError.message ();
+    ASSERT_EQ (prod.tryPush (in, 1), -1);
+    ASSERT_TRUE (prod.full ());
+    ASSERT_EQ (prod.available (), 0);
+    ASSERT_EQ (prod.pending (), full);
+}
+
+/**
+ * @brief test push.
+ */
 TEST_F (ShmMpsc, push)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (512, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -103,10 +145,42 @@ TEST_F (ShmMpsc, push)
     ASSERT_EQ (prod.available (), 0);
 }
 
+/**
+ * @brief test batch push.
+ */
+TEST_F (ShmMpsc, pushBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    ShmMem::Mpsc::Queue<uint64_t> prod (full, _name);
+    uint64_t in[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.available (), full);
+    ASSERT_EQ (prod.push (nullptr, half), -1);
+    ASSERT_EQ (prod.push (in, half), 0) << join::lastError.message ();
+    ASSERT_FALSE (prod.full ());
+    ASSERT_EQ (prod.pending (), half);
+    ASSERT_EQ (prod.available (), half);
+    ASSERT_EQ (prod.push (in + half, half), 0) << join::lastError.message ();
+    ASSERT_TRUE (prod.full ());
+    ASSERT_EQ (prod.available (), 0);
+    ASSERT_EQ (prod.pending (), full);
+}
+
+/**
+ * @brief test tryPop.
+ */
 TEST_F (ShmMpsc, tryPop)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (512, _name);
-    ShmMem::Mpsc::Queue <uint64_t> cons (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> cons (512, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (cons.tryPop (data), -1);
@@ -121,10 +195,51 @@ TEST_F (ShmMpsc, tryPop)
     ASSERT_EQ (cons.tryPop (data), -1);
 }
 
+/**
+ * @brief test batch tryPop.
+ */
+TEST_F (ShmMpsc, tryPopBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    ShmMem::Mpsc::Queue<uint64_t> prod (full, _name);
+    ShmMem::Mpsc::Queue<uint64_t> cons (full, _name);
+    uint64_t in[full] = {}, out[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_EQ (cons.tryPop (nullptr, half), -1);
+    ASSERT_EQ (cons.tryPop (out, half), -1);
+    ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 0);
+    ASSERT_EQ (prod.tryPush (in, full), full) << join::lastError.message ();
+    ASSERT_FALSE (cons.empty ());
+    ASSERT_EQ (cons.pending (), full);
+    ASSERT_EQ (cons.tryPop (out, half), half) << join::lastError.message ();
+    ASSERT_FALSE (cons.empty ());
+    ASSERT_EQ (cons.pending (), half);
+    ASSERT_EQ (cons.tryPop (out + half, half), half) << join::lastError.message ();
+    ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 0);
+    ASSERT_EQ (cons.tryPop (out, 1), -1);
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (out[i], i);
+    }
+}
+
+/**
+ * @brief test pop.
+ */
 TEST_F (ShmMpsc, pop)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (512, _name);
-    ShmMem::Mpsc::Queue <uint64_t> cons (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (512, _name);
+    ShmMem::Mpsc::Queue<uint64_t> cons (512, _name);
     uint64_t data = 0;
 
     ASSERT_TRUE (cons.empty ());
@@ -137,6 +252,45 @@ TEST_F (ShmMpsc, pop)
     ASSERT_EQ (cons.pending (), 0);
 }
 
+/**
+ * @brief test batch pop.
+ */
+TEST_F (ShmMpsc, popBatch)
+{
+    const uint64_t full = 512;
+    const uint64_t half = full >> 1;
+
+    ShmMem::Mpsc::Queue<uint64_t> prod (full, _name);
+    ShmMem::Mpsc::Queue<uint64_t> cons (full, _name);
+    uint64_t in[full] = {}, out[full] = {};
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        in[i] = i;
+    }
+
+    ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 0);
+    ASSERT_EQ (prod.tryPush (in, full), full) << join::lastError.message ();
+    ASSERT_FALSE (cons.empty ());
+    ASSERT_EQ (cons.pending (), full);
+    ASSERT_EQ (cons.pop (nullptr, half), -1);
+    ASSERT_EQ (cons.pop (out, half), 0) << join::lastError.message ();
+    ASSERT_FALSE (cons.empty ());
+    ASSERT_EQ (cons.pending (), half);
+    ASSERT_EQ (cons.pop (out + half, half), 0) << join::lastError.message ();
+    ASSERT_TRUE (cons.empty ());
+    ASSERT_EQ (cons.pending (), 0);
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (out[i], i);
+    }
+}
+
+/**
+ * @brief benchmark push.
+ */
 TEST_F (ShmMpsc, pushBenchmark)
 {
     const uint64_t capacity = 512;
@@ -148,7 +302,7 @@ TEST_F (ShmMpsc, pushBenchmark)
     {
         Semaphore sem (_name);
         sem.wait ();
-        ShmMem::Mpsc::Queue <uint64_t> cons (capacity, _name);
+        ShmMem::Mpsc::Queue<uint64_t> cons (capacity, _name);
         for (uint64_t i = 0; i < num; ++i)
         {
             while (cons.tryPop (data) == -1)
@@ -171,24 +325,26 @@ TEST_F (ShmMpsc, pushBenchmark)
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
         const int numProducers = 4;
-        std::vector <Thread> producers;
+        std::vector<Thread> producers;
         const uint64_t msgPerProducer = num / numProducers;
         // pre-fill the buffer.
         for (uint64_t i = 0; i < capacity; ++i)
         {
-            ShmMem::Mpsc::Queue <uint64_t> prod (capacity, _name);
+            ShmMem::Mpsc::Queue<uint64_t> prod (capacity, _name);
             while (prod.tryPush (data) == -1)
             {
                 std::this_thread::yield ();
             }
         }
         sem.post ();
+        Rdtsc::Stats stats ("MPSC push");
         for (int p = 0; p < numProducers; ++p)
         {
-            producers.emplace_back([&] () {
-                ShmMem::Mpsc::Queue <uint64_t> prod (capacity, _name);
+            producers.emplace_back ([&] () {
+                ShmMem::Mpsc::Queue<uint64_t> prod (capacity, _name);
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
                 {
+                    ScopedStats<Rdtsc::Stats> guard (stats);
                     EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
                 }
             });
@@ -197,6 +353,8 @@ TEST_F (ShmMpsc, pushBenchmark)
         {
             producer.join ();
         }
+        std::cout << join::statsHeader << "\n";
+        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
     }
 
     int status;
@@ -205,6 +363,9 @@ TEST_F (ShmMpsc, pushBenchmark)
     ASSERT_EQ (WEXITSTATUS (status), 0);
 }
 
+/**
+ * @brief benchmark pop.
+ */
 TEST_F (ShmMpsc, popBenchmark)
 {
     const uint64_t capacity = 512;
@@ -216,14 +377,14 @@ TEST_F (ShmMpsc, popBenchmark)
     {
         Semaphore sem (_name);
         const int numProducers = 4;
-        std::vector <Thread> producers;
+        std::vector<Thread> producers;
         const uint64_t msgPerProducer = num / numProducers;
-        ShmMem::Mpsc::Queue <uint64_t> prod0 (capacity, _name);
+        ShmMem::Mpsc::Queue<uint64_t> prod0 (capacity, _name);
         sem.post ();
         for (int p = 0; p < numProducers; ++p)
         {
-            producers.emplace_back([&] () {
-                ShmMem::Mpsc::Queue <uint64_t> prod (capacity, _name);
+            producers.emplace_back ([&] () {
+                ShmMem::Mpsc::Queue<uint64_t> prod (capacity, _name);
                 for (uint64_t i = 0; i < msgPerProducer; ++i)
                 {
                     while (prod.tryPush (data) == -1)
@@ -244,11 +405,15 @@ TEST_F (ShmMpsc, popBenchmark)
         EXPECT_NE (child, -1);
         Semaphore sem (_name);
         sem.wait ();
-        ShmMem::Mpsc::Queue <uint64_t> cons (capacity, _name);
+        ShmMem::Mpsc::Queue<uint64_t> cons (capacity, _name);
+        Rdtsc::Stats stats ("MPSC pop");
         for (uint64_t i = 0; i < num; ++i)
         {
+            ScopedStats<Rdtsc::Stats> guard (stats);
             EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
         }
+        std::cout << join::statsHeader << "\n";
+        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
     }
 
     int status;
@@ -257,9 +422,12 @@ TEST_F (ShmMpsc, popBenchmark)
     ASSERT_EQ (WEXITSTATUS (status), 0);
 }
 
+/**
+ * @brief test pending.
+ */
 TEST_F (ShmMpsc, pending)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (prod.pending (), 0);
@@ -267,9 +435,12 @@ TEST_F (ShmMpsc, pending)
     ASSERT_EQ (prod.pending (), 1);
 }
 
+/**
+ * @brief test available.
+ */
 TEST_F (ShmMpsc, available)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_EQ (prod.available (), 1);
@@ -277,9 +448,12 @@ TEST_F (ShmMpsc, available)
     ASSERT_EQ (prod.available (), 0);
 }
 
+/**
+ * @brief test full.
+ */
 TEST_F (ShmMpsc, full)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_FALSE (prod.full ());
@@ -287,9 +461,12 @@ TEST_F (ShmMpsc, full)
     ASSERT_TRUE (prod.full ());
 }
 
+/**
+ * @brief test empty.
+ */
 TEST_F (ShmMpsc, empty)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     uint64_t data = 0;
 
     ASSERT_TRUE (prod.empty ());
@@ -297,22 +474,30 @@ TEST_F (ShmMpsc, empty)
     ASSERT_FALSE (prod.empty ());
 }
 
+/**
+ * @brief test mlock.
+ */
 TEST_F (ShmMpsc, mlock)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     ASSERT_EQ (prod.mlock (), 0) << join::lastError.message ();
 }
 
+#ifdef JOIN_HAS_NUMA
+/**
+ * @brief test mbind.
+ */
 TEST_F (ShmMpsc, mbind)
 {
-    ShmMem::Mpsc::Queue <uint64_t> prod (0, _name);
+    ShmMem::Mpsc::Queue<uint64_t> prod (0, _name);
     ASSERT_EQ (prod.mbind (0), 0) << join::lastError.message ();
 }
+#endif
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

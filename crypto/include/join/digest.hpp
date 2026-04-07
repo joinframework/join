@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_DIGEST_HPP__
-#define __JOIN_DIGEST_HPP__
+#ifndef JOIN_CRYPTO_DIGEST_HPP
+#define JOIN_CRYPTO_DIGEST_HPP
 
 // libjoin.
 #include <join/openssl.hpp>
@@ -36,9 +36,9 @@ namespace join
      */
     enum class DigestErrc
     {
-        InvalidAlgorithm = 1,   /**< invalid algorithm. */
-        InvalidKey,             /**< invalid key. */
-        InvalidSignature        /**< invalid signature. */
+        InvalidAlgorithm = 1, /**< invalid algorithm. */
+        InvalidKey,           /**< invalid key. */
+        InvalidSignature      /**< invalid signature. */
     };
 
     /**
@@ -145,7 +145,7 @@ namespace join
         static const std::streamsize _bufsize = 256;
 
         /// internal buffer.
-        std::unique_ptr <char []> _buf;
+        std::unique_ptr<char[]> _buf;
 
         /// message digest.
         const EVP_MD* _md;
@@ -165,13 +165,13 @@ namespace join
          */
         enum Algorithm
         {
-            MD5 = 1,    /**< message digest 5 */
-            SHA1,       /**< secure hash algorithm v1 */
-            SHA224,     /**< secure hash algorithm v2 with a 224 bits digest */
-            SHA256,     /**< secure hash algorithm v2 with a 256 bits digest */
-            SHA384,     /**< secure hash algorithm v2 with a 384 bits digest */
-            SHA512,     /**< secure hash algorithm v2 with a 512 bits digest */
-            SM3,        /**< ShangMi 3 */
+            MD5 = 1, /**< message digest 5 */
+            SHA1,    /**< secure hash algorithm v1 */
+            SHA224,  /**< secure hash algorithm v2 with a 224 bits digest */
+            SHA256,  /**< secure hash algorithm v2 with a 256 bits digest */
+            SHA384,  /**< secure hash algorithm v2 with a 384 bits digest */
+            SHA512,  /**< secure hash algorithm v2 with a 512 bits digest */
+            SM3,     /**< ShangMi 3 */
         };
 
         /**
@@ -191,7 +191,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Digest& operator=(const Digest& other) = delete;
+        Digest& operator= (const Digest& other) = delete;
 
         /**
          * @brief move constructor.
@@ -204,7 +204,7 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        Digest& operator=(Digest&& other);
+        Digest& operator= (Digest&& other);
 
         /**
          * @brief destroy digest stream instance.
@@ -547,7 +547,10 @@ namespace join
 namespace std
 {
     /// digest error code specialization.
-    template <> struct is_error_condition_enum <join::DigestErrc> : public true_type {};
+    template <>
+    struct is_error_condition_enum<join::DigestErrc> : public true_type
+    {
+    };
 }
 
 #endif

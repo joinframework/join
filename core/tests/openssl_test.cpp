@@ -189,7 +189,7 @@ TEST_F (Openssl, EvpPkeyPtr)
  */
 TEST_F (Openssl, EvpPkeyCtxPtr)
 {
-    FILE *fkey = fopen (_key.c_str (), "r");
+    FILE* fkey = fopen (_key.c_str (), "r");
     ASSERT_NE (fkey, nullptr);
     join::EvpPkeyPtr evp (PEM_read_PrivateKey (fkey, nullptr, 0, nullptr));
     fclose (fkey);
@@ -240,12 +240,13 @@ TEST_F (Openssl, StackOfX509NamePtr)
  */
 TEST_F (Openssl, StackOfGeneralNamePtr)
 {
-    FILE *file = fopen (_cert.c_str (), "rb");
+    FILE* file = fopen (_cert.c_str (), "rb");
     ASSERT_NE (file, nullptr);
-    X509 *cert = PEM_read_X509 (file, nullptr, nullptr, nullptr);
+    X509* cert = PEM_read_X509 (file, nullptr, nullptr, nullptr);
     fclose (file);
     ASSERT_NE (cert, nullptr);
-    join::StackOfGeneralNamePtr altnames (reinterpret_cast <STACK_OF (GENERAL_NAME)*> (X509_get_ext_d2i (cert, NID_subject_alt_name, 0, 0)));
+    join::StackOfGeneralNamePtr altnames (
+        reinterpret_cast<STACK_OF (GENERAL_NAME)*> (X509_get_ext_d2i (cert, NID_subject_alt_name, 0, 0)));
     X509_free (cert);
     ASSERT_NE (altnames, nullptr);
     altnames.reset ();
@@ -294,7 +295,7 @@ TEST_F (Openssl, EcdhKeyPtr)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);

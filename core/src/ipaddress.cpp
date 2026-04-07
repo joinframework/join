@@ -215,7 +215,7 @@ namespace join
          * @brief create the Ipv4Address instance using IPv4 address structure.
          * @param address address structure to use.
          */
-        Ipv4Address (const void * address)
+        Ipv4Address (const void* address)
         {
             memcpy (&_addr, address, sizeof _addr);
         }
@@ -285,7 +285,7 @@ namespace join
          */
         int prefix () const
         {
-            return std::bitset <32> (ntohl (_addr.s_addr)).count ();
+            return std::bitset<32> (ntohl (_addr.s_addr)).count ();
         }
 
         /**
@@ -312,7 +312,7 @@ namespace join
          */
         bool isLinkLocal () const
         {
-            return (ntohl(_addr.s_addr) & 0xFFFF0000) == 0xA9FE0000;
+            return (ntohl (_addr.s_addr) & 0xFFFF0000) == 0xA9FE0000;
         }
 
         /**
@@ -330,9 +330,9 @@ namespace join
          */
         bool isUniqueLocal () const
         {
-            return (ntohl(_addr.s_addr) & 0xFF000000) == 0x0A000000 ||
-                   (ntohl(_addr.s_addr) & 0xFFFF0000) == 0xC0A80000 ||
-                   (ntohl(_addr.s_addr) >= 0xAC100000 && ntohl(_addr.s_addr) <= 0xAC1FFFFF);
+            return (ntohl (_addr.s_addr) & 0xFF000000) == 0x0A000000 ||
+                   (ntohl (_addr.s_addr) & 0xFFFF0000) == 0xC0A80000 ||
+                   (ntohl (_addr.s_addr) >= 0xAC100000 && ntohl (_addr.s_addr) <= 0xAC1FFFFF);
         }
 
         /**
@@ -364,7 +364,7 @@ namespace join
          */
         bool isMulticast () const
         {
-            return IN_MULTICAST (ntohl(_addr.s_addr));
+            return IN_MULTICAST (ntohl (_addr.s_addr));
         }
 
         /**
@@ -392,7 +392,7 @@ namespace join
         std::string toString () const
         {
             std::string address;
-            char buffer [INET_ADDRSTRLEN];
+            char buffer[INET_ADDRSTRLEN];
             if (inet_ntop (family (), addr (), buffer, INET_ADDRSTRLEN) != nullptr)
             {
                 address.append (buffer);
@@ -407,10 +407,10 @@ namespace join
         std::string toArpa () const
         {
             std::stringstream arpa;
-            arpa << static_cast <int> ((_addr.s_addr & 0xFF000000) >> 24) << ".";
-            arpa << static_cast <int> ((_addr.s_addr & 0x00FF0000) >> 16) << ".";
-            arpa << static_cast <int> ((_addr.s_addr & 0x0000FF00) >> 8) << ".";
-            arpa << static_cast <int> ((_addr.s_addr & 0x000000FF)) << ".";
+            arpa << static_cast<int> ((_addr.s_addr & 0xFF000000) >> 24) << ".";
+            arpa << static_cast<int> ((_addr.s_addr & 0x00FF0000) >> 16) << ".";
+            arpa << static_cast<int> ((_addr.s_addr & 0x0000FF00) >> 8) << ".";
+            arpa << static_cast<int> ((_addr.s_addr & 0x000000FF)) << ".";
             arpa << "in-addr.arpa";
             return arpa.str ();
         }
@@ -475,7 +475,7 @@ namespace join
          * @brief perform NOT operation on IP address.
          * @return result of NOT operation on IpAddress.
          */
-        Ipv4Address operator~ () const
+        Ipv4Address operator~() const
         {
             Ipv4Address addr (*this);
             addr._addr.s_addr ^= 0xffffffff;
@@ -503,7 +503,7 @@ namespace join
                 throw std::out_of_range ("position is out of range");
             }
 
-            return *(reinterpret_cast <uint8_t*> (&_addr) + position);
+            return *(reinterpret_cast<uint8_t*> (&_addr) + position);
         }
 
     private:
@@ -534,7 +534,7 @@ namespace join
             _addr.s6_addr32[0] = 0;
             _addr.s6_addr32[1] = 0;
             _addr.s6_addr32[2] = htonl (0xffff);
-            _addr.s6_addr32[3] = reinterpret_cast <const in_addr*> (address.addr ())->s_addr;
+            _addr.s6_addr32[3] = reinterpret_cast<const in_addr*> (address.addr ())->s_addr;
         }
 
         /**
@@ -594,7 +594,7 @@ namespace join
                 }
                 else
                 {
-                    _addr.s6_addr[i] = (unsigned long) (0xffU << (8 - prefix));
+                    _addr.s6_addr[i] = (unsigned long)(0xffU << (8 - prefix));
                 }
             }
         }
@@ -652,7 +652,7 @@ namespace join
 
             for (int i = 3; i >= 0; --i)
             {
-                uint32_t bits = std::bitset <32> (ntohl (_addr.s6_addr32[i])).count ();
+                uint32_t bits = std::bitset<32> (ntohl (_addr.s6_addr32[i])).count ();
                 if (bits)
                 {
                     return (bitPos - (32 - bits));
@@ -752,7 +752,7 @@ namespace join
         std::string toString () const
         {
             std::string address;
-            char buffer [INET6_ADDRSTRLEN];
+            char buffer[INET6_ADDRSTRLEN];
             if (inet_ntop (family (), addr (), buffer, INET6_ADDRSTRLEN) != nullptr)
             {
                 address.append (buffer);
@@ -784,8 +784,8 @@ namespace join
             while (i--)
             {
                 arpa << std::hex;
-                arpa << static_cast <int> ((_addr.s6_addr[i] & 0x0F)) << ".";
-                arpa << static_cast <int> ((_addr.s6_addr[i] & 0xF0) >> 4) << ".";
+                arpa << static_cast<int> ((_addr.s6_addr[i] & 0x0F)) << ".";
+                arpa << static_cast<int> ((_addr.s6_addr[i] & 0xF0) >> 4) << ".";
             }
             arpa << "ip6.arpa";
             return arpa.str ();
@@ -807,7 +807,7 @@ namespace join
             {
                 unscopedAddress.erase (pos);
                 auto offset = (address.front () == '[') ? 1 : 0;
-                std::string tmp (address, pos + 1, address.size() - pos - offset);
+                std::string tmp (address, pos + 1, address.size () - pos - offset);
                 if (tmp.find_first_not_of ("0123456789") == std::string::npos)
                 {
                     scope = std::stoi (tmp);
@@ -877,7 +877,7 @@ namespace join
          * @brief perform NOT operation on IP address.
          * @return result of NOT operation on IpAddress.
          */
-        Ipv6Address operator~ () const
+        Ipv6Address operator~() const
         {
             Ipv6Address addr (*this);
             addr._addr.s6_addr32[0] ^= 0xffffffff;
@@ -946,7 +946,7 @@ const IpAddress IpAddress::ipv4Broadcast = "255.255.255.255";
 // =========================================================================
 IpAddress::IpAddress ()
 {
-    _ip = std::make_unique <Ipv4Address> ();
+    _ip = std::make_unique<Ipv4Address> ();
 }
 
 // =========================================================================
@@ -957,12 +957,12 @@ IpAddress::IpAddress (int family)
 {
     if (family == AF_INET6)
     {
-        _ip = std::make_unique <Ipv6Address> ();
+        _ip = std::make_unique<Ipv6Address> ();
         return;
     }
     else if (family == AF_INET)
     {
-        _ip = std::make_unique <Ipv4Address> ();
+        _ip = std::make_unique<Ipv4Address> ();
         return;
     }
 
@@ -977,11 +977,11 @@ IpAddress::IpAddress (const IpAddress& address)
 {
     if (address.family () == AF_INET6)
     {
-        _ip = std::make_unique <Ipv6Address> (address.addr (), address.scope ());
+        _ip = std::make_unique<Ipv6Address> (address.addr (), address.scope ());
     }
     else
     {
-        _ip = std::make_unique <Ipv4Address> (address.addr ());
+        _ip = std::make_unique<Ipv4Address> (address.addr ());
     }
 }
 
@@ -993,7 +993,7 @@ IpAddress::IpAddress (IpAddress&& address)
 : _ip (std::move (address._ip))
 {
     // reset other attributes.
-    address._ip = std::make_unique <Ipv6Address> ();
+    address._ip = std::make_unique<Ipv6Address> ();
 }
 
 // =========================================================================
@@ -1004,14 +1004,14 @@ IpAddress::IpAddress (const struct sockaddr& address)
 {
     if (address.sa_family == AF_INET6)
     {
-        const struct sockaddr_in6* sa = reinterpret_cast <const struct sockaddr_in6*> (&address);
-        _ip = std::make_unique <Ipv6Address> (&sa->sin6_addr, sa->sin6_scope_id);
+        const struct sockaddr_in6* sa = reinterpret_cast<const struct sockaddr_in6*> (&address);
+        _ip = std::make_unique<Ipv6Address> (&sa->sin6_addr, sa->sin6_scope_id);
         return;
     }
     else if (address.sa_family == AF_INET)
     {
-        const struct sockaddr_in* sa = reinterpret_cast <const struct sockaddr_in*> (&address);
-        _ip = std::make_unique <Ipv4Address> (&sa->sin_addr);
+        const struct sockaddr_in* sa = reinterpret_cast<const struct sockaddr_in*> (&address);
+        _ip = std::make_unique<Ipv4Address> (&sa->sin_addr);
         return;
     }
 
@@ -1026,12 +1026,12 @@ IpAddress::IpAddress (const void* address, socklen_t length)
 {
     if (length == sizeof (struct in6_addr))
     {
-        _ip = std::make_unique <Ipv6Address> (address);
+        _ip = std::make_unique<Ipv6Address> (address);
         return;
     }
     else if (length == sizeof (struct in_addr))
     {
-        _ip = std::make_unique <Ipv4Address> (address);
+        _ip = std::make_unique<Ipv4Address> (address);
         return;
     }
 
@@ -1046,12 +1046,12 @@ IpAddress::IpAddress (const void* address, socklen_t length, uint32_t scope)
 {
     if (length == sizeof (struct in6_addr))
     {
-        _ip = std::make_unique <Ipv6Address> (address, scope);
+        _ip = std::make_unique<Ipv6Address> (address, scope);
         return;
     }
     else if (length == sizeof (struct in_addr))
     {
-        _ip = std::make_unique <Ipv4Address> (address);
+        _ip = std::make_unique<Ipv4Address> (address);
         return;
     }
 
@@ -1086,21 +1086,21 @@ IpAddress::IpAddress (const char* address, int family)
     {
         if (address == nullptr || strcmp (address, "") == 0)
         {
-            _ip = std::make_unique <Ipv6Address> ();
+            _ip = std::make_unique<Ipv6Address> ();
             return;
         }
 
         Ipv6Address addr6;
         if (Ipv6Address::parse (address, addr6) == true)
         {
-            _ip = std::make_unique <Ipv6Address> (addr6);
+            _ip = std::make_unique<Ipv6Address> (addr6);
             return;
         }
 
         Ipv4Address addr4;
         if (Ipv4Address::parse (address, addr4) == true)
         {
-            _ip = std::make_unique <Ipv6Address> (addr4);
+            _ip = std::make_unique<Ipv6Address> (addr4);
             return;
         }
     }
@@ -1108,14 +1108,14 @@ IpAddress::IpAddress (const char* address, int family)
     {
         if (address == nullptr || strcmp (address, "") == 0)
         {
-            _ip = std::make_unique <Ipv4Address> ();
+            _ip = std::make_unique<Ipv4Address> ();
             return;
         }
 
         Ipv4Address addr4;
         if (Ipv4Address::parse (address, addr4) == true)
         {
-            _ip = std::make_unique <Ipv4Address> (addr4);
+            _ip = std::make_unique<Ipv4Address> (addr4);
             return;
         }
     }
@@ -1131,21 +1131,21 @@ IpAddress::IpAddress (const char* address)
 {
     if (address == nullptr || strcmp (address, "") == 0)
     {
-        _ip = std::make_unique <Ipv6Address> ();
+        _ip = std::make_unique<Ipv6Address> ();
         return;
     }
 
     Ipv6Address addr6;
     if (Ipv6Address::parse (address, addr6) == true)
     {
-        _ip = std::make_unique <Ipv6Address> (addr6);
+        _ip = std::make_unique<Ipv6Address> (addr6);
         return;
     }
 
     Ipv4Address addr4;
     if (Ipv4Address::parse (address, addr4) == true)
     {
-        _ip = std::make_unique <Ipv4Address> (addr4);
+        _ip = std::make_unique<Ipv4Address> (addr4);
         return;
     }
 
@@ -1162,7 +1162,7 @@ IpAddress::IpAddress (int prefix, int family)
     {
         if (prefix >= 0 && prefix <= 128)
         {
-            _ip = std::make_unique <Ipv6Address> (prefix);
+            _ip = std::make_unique<Ipv6Address> (prefix);
             return;
         }
 
@@ -1172,7 +1172,7 @@ IpAddress::IpAddress (int prefix, int family)
     {
         if (prefix >= 0 && prefix <= 32)
         {
-            _ip = std::make_unique <Ipv4Address> (prefix);
+            _ip = std::make_unique<Ipv4Address> (prefix);
             return;
         }
 
@@ -1190,11 +1190,11 @@ IpAddress& IpAddress::operator= (const IpAddress& address)
 {
     if (address.family () == AF_INET6)
     {
-        _ip = std::make_unique <Ipv6Address> (address.addr (), address.scope ());
+        _ip = std::make_unique<Ipv6Address> (address.addr (), address.scope ());
     }
     else
     {
-        _ip = std::make_unique <Ipv4Address> (address.addr ());
+        _ip = std::make_unique<Ipv4Address> (address.addr ());
     }
 
     return *this;
@@ -1210,7 +1210,7 @@ IpAddress& IpAddress::operator= (IpAddress&& address)
     _ip = std::move (address._ip);
 
     // reset other attributes.
-    address._ip = std::make_unique <Ipv6Address> ();
+    address._ip = std::make_unique<Ipv6Address> ();
 
     return *this;
 }
@@ -1223,13 +1223,13 @@ IpAddress& IpAddress::operator= (const struct sockaddr& address)
 {
     if (address.sa_family == AF_INET6)
     {
-        const struct sockaddr_in6* sa = reinterpret_cast <const struct sockaddr_in6*> (&address);
-        _ip = std::make_unique <Ipv6Address> (&sa->sin6_addr, sa->sin6_scope_id);
+        const struct sockaddr_in6* sa = reinterpret_cast<const struct sockaddr_in6*> (&address);
+        _ip = std::make_unique<Ipv6Address> (&sa->sin6_addr, sa->sin6_scope_id);
     }
     else if (address.sa_family == AF_INET)
     {
-        const struct sockaddr_in* sa = reinterpret_cast <const struct sockaddr_in*> (&address);
-        _ip = std::make_unique <Ipv4Address> (&sa->sin_addr);
+        const struct sockaddr_in* sa = reinterpret_cast<const struct sockaddr_in*> (&address);
+        _ip = std::make_unique<Ipv4Address> (&sa->sin_addr);
     }
 
     return *this;
@@ -1256,7 +1256,7 @@ int IpAddress::family () const
 //   CLASS     : IpAddress
 //   METHOD    : addr
 // =========================================================================
-const void * IpAddress::addr () const
+const void* IpAddress::addr () const
 {
     return _ip->addr ();
 }
@@ -1413,7 +1413,6 @@ bool IpAddress::isIpv6Address (const std::string& address)
     return false;
 }
 
-
 // =========================================================================
 //   CLASS     : IpAddress
 //   METHOD    : isIpv4Compat
@@ -1470,7 +1469,7 @@ IpAddress IpAddress::toIpv6 () const
         address.s6_addr32[0] = 0;
         address.s6_addr32[1] = 0;
         address.s6_addr32[2] = htonl (0xffff);
-        address.s6_addr32[3] = reinterpret_cast <const in_addr*> (addr ())->s_addr;
+        address.s6_addr32[3] = reinterpret_cast<const in_addr*> (addr ())->s_addr;
         return IpAddress (&address, sizeof (struct in6_addr));
     }
 
@@ -1486,7 +1485,7 @@ IpAddress IpAddress::toIpv4 () const
     if ((family () == AF_INET6) && (isIpv4Compat () || isIpv4Mapped ()))
     {
         struct in_addr address;
-        address.s_addr = reinterpret_cast <const in6_addr*> (addr ())->s6_addr32[3];
+        address.s_addr = reinterpret_cast<const in6_addr*> (addr ())->s6_addr32[3];
         return IpAddress (&address, sizeof (struct in_addr));
     }
 
@@ -1551,7 +1550,7 @@ IpAddress IpAddress::ipv4Address (const std::string& interface)
 //   CLASS     : IpAddress
 //   METHOD    : operator~
 // =========================================================================
-IpAddress IpAddress::operator~ () const
+IpAddress IpAddress::operator~() const
 {
     if (family () == AF_INET6)
     {
@@ -1563,7 +1562,7 @@ IpAddress IpAddress::operator~ () const
     {
         Ipv4Address first (addr ());
         Ipv4Address result = ~first;
-        return IpAddress (result.addr(), result.length ());
+        return IpAddress (result.addr (), result.length ());
     }
 }
 
@@ -1679,7 +1678,7 @@ IpAddress join::operator& (const IpAddress& a, const IpAddress& b)
             Ipv4Address first (a.addr ());
             Ipv4Address second (b.addr ());
             Ipv4Address result = first & second;
-            return IpAddress (result.addr(), result.length ());
+            return IpAddress (result.addr (), result.length ());
         }
     }
 
@@ -1706,7 +1705,7 @@ IpAddress join::operator| (const IpAddress& a, const IpAddress& b)
             Ipv4Address first (a.addr ());
             Ipv4Address second (b.addr ());
             Ipv4Address result = first | second;
-            return IpAddress (result.addr(), result.length ());
+            return IpAddress (result.addr (), result.length ());
         }
     }
 
@@ -1733,7 +1732,7 @@ IpAddress join::operator^ (const IpAddress& a, const IpAddress& b)
             Ipv4Address first (a.addr ());
             Ipv4Address second (b.addr ());
             Ipv4Address result = first ^ second;
-            return IpAddress (result.addr(), result.length ());
+            return IpAddress (result.addr (), result.length ());
         }
     }
 

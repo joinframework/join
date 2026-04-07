@@ -23,11 +23,14 @@
  */
 
 // libjoin.
+#include <join/statistics.hpp>
 #include <join/allocator.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::ScopedStats;
+using join::Rdtsc;
 using join::ShmMem;
 
 /**
@@ -81,7 +84,7 @@ TEST_F (PosixAlloc, move)
 }
 
 /**
- * @brief test the allocate method.
+ * @brief test allocate.
  */
 TEST_F (PosixAlloc, allocate)
 {
@@ -113,7 +116,7 @@ TEST_F (PosixAlloc, allocate)
 }
 
 /**
- * @brief test the tryAllocate method.
+ * @brief test tryAllocate.
  */
 TEST_F (PosixAlloc, tryAllocate)
 {
@@ -145,7 +148,7 @@ TEST_F (PosixAlloc, tryAllocate)
 }
 
 /**
- * @brief test the deallocate method.
+ * @brief test deallocate.
  */
 TEST_F (PosixAlloc, deallocate)
 {
@@ -166,17 +169,19 @@ TEST_F (PosixAlloc, deallocate)
     EXPECT_NO_THROW (allocator.deallocate (dummyPtr));
 }
 
+#ifdef JOIN_HAS_NUMA
 /**
- * @brief test the mbind method.
+ * @brief test mbind.
  */
 TEST_F (PosixAlloc, mbind)
 {
     ShmMem::Allocator<1, 64> allocator (_name);
     ASSERT_EQ (allocator.mbind (0), 0) << join::lastError.message ();
 }
+#endif
 
 /**
- * @brief test the mlock method.
+ * @brief test mlock.
  */
 TEST_F (PosixAlloc, mlock)
 {
@@ -189,11 +194,14 @@ TEST_F (PosixAlloc, mlock)
  */
 TEST_F (PosixAlloc, benchmark)
 {
-    ShmMem::Allocator<100, 64> allocator (_name);
-    const int iterations = 5000;
+    const int iterations = 100000;
     const int numProcesses = 4;
 
-    for (int i = 0; i < numProcesses; ++i)
+    ShmMem::Allocator<iterations, 64> allocator (_name);
+    allocator.mlock ();
+
+    std::vector<pid_t> pids;
+    for (int i = 0; i < numProcesses - 1; ++i)
     {
         pid_t pid = fork ();
         ASSERT_GE (pid, 0);
@@ -205,33 +213,43 @@ TEST_F (PosixAlloc, benchmark)
                 void* p = allocator.allocate (64);
                 if (p)
                 {
-                    std::this_thread::yield ();
                     allocator.deallocate (p);
                 }
             }
             exit (0);
         }
+
+        pids.push_back (pid);
     }
 
-    int status;
-    for (int i = 0; i < numProcesses; ++i)
+    Rdtsc::Stats aStats ("allocate");
+    Rdtsc::Stats dStats ("deallocate");
+
+    for (int i = 0; i < iterations; ++i)
     {
-        wait (&status);
+        void* p = nullptr;
+        {
+            ScopedStats<Rdtsc::Stats> guard (aStats);
+            p = allocator.allocate (64);
+        }
+        EXPECT_NE (p, nullptr);
+        if (p)
+        {
+            ScopedStats<Rdtsc::Stats> guard (dStats);
+            allocator.deallocate (p);
+        }
+    }
+
+    for (pid_t pid : pids)
+    {
+        int status;
+        waitpid (pid, &status, 0);
         EXPECT_TRUE (WIFEXITED (status) && WEXITSTATUS (status) == 0);
     }
 
-    std::vector<void*> pointers;
-    for (int i = 0; i < 100; ++i)
-    {
-        void* p = allocator.allocate (64);
-        ASSERT_NE (p, nullptr);
-        pointers.push_back (p);
-    }
-
-    for (void* p : pointers)
-    {
-        allocator.deallocate (p);
-    }
+    std::cout << join::statsHeader << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (3) << aStats << "\n";
+    std::cout << join::mops << join::usec << std::fixed << std::setprecision (3) << dStats << "\n";
 }
 
 /**

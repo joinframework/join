@@ -46,7 +46,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -54,14 +54,15 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 
     /**
      * @brief method called when data are ready to be read on handle.
+     * @param fd file descriptor.
      */
-    virtual void onReceive () override
+    virtual void onReceive ([[maybe_unused]] int fd) override
     {
         Tcp::Socket sock = this->accept ();
         if (sock.connected ())
@@ -110,9 +111,9 @@ TEST_F (TcpSocket, move)
     Tcp::Socket tcpSocket1 (Tcp::Socket::Blocking), tcpSocket2;
 
     ASSERT_EQ (tcpSocket1.connect ({_hostv4, _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE (tcpSocket1.connected());
+    ASSERT_TRUE (tcpSocket1.connected ());
     tcpSocket2 = std::move (tcpSocket1);
-    ASSERT_TRUE (tcpSocket2.connected());
+    ASSERT_TRUE (tcpSocket2.connected ());
     tcpSocket2.close ();
 }
 
@@ -143,11 +144,11 @@ TEST_F (TcpSocket, close)
 
     ASSERT_FALSE (tcpSocket.opened ());
     ASSERT_EQ (tcpSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE (tcpSocket.opened());
+    ASSERT_TRUE (tcpSocket.opened ());
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_FALSE (tcpSocket.opened());
+    ASSERT_FALSE (tcpSocket.opened ());
     tcpSocket.close ();
-    ASSERT_FALSE (tcpSocket.opened());
+    ASSERT_FALSE (tcpSocket.opened ());
 }
 
 /**
@@ -274,7 +275,7 @@ TEST_F (TcpSocket, waitDisconnected)
 TEST_F (TcpSocket, canRead)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tcpSocket.canRead (), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -293,7 +294,7 @@ TEST_F (TcpSocket, canRead)
 TEST_F (TcpSocket, waitReadyRead)
 {
     Tcp::Socket tcpSocket;
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_FALSE (tcpSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -319,7 +320,7 @@ TEST_F (TcpSocket, waitReadyRead)
 TEST_F (TcpSocket, read)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tcpSocket.read (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -338,7 +339,7 @@ TEST_F (TcpSocket, read)
 TEST_F (TcpSocket, readExactly)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tcpSocket.readExactly (data, sizeof (data)), -1);
     ASSERT_EQ (tcpSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
@@ -379,7 +380,7 @@ TEST_F (TcpSocket, waitReadyWrite)
 TEST_F (TcpSocket, write)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tcpSocket.write (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -397,7 +398,7 @@ TEST_F (TcpSocket, write)
 TEST_F (TcpSocket, writeExactly)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
-    char data [] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tcpSocket.writeExactly (data, sizeof (data)), -1);
     ASSERT_EQ (tcpSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
@@ -493,7 +494,7 @@ TEST_F (TcpSocket, localEndpoint)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
-    ASSERT_EQ (tcpSocket.localEndpoint (), Tcp::Endpoint {});
+    ASSERT_EQ (tcpSocket.localEndpoint (), Tcp::Endpoint{});
     ASSERT_EQ (tcpSocket.bind ({_hostv4, uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.localEndpoint (), Tcp::Endpoint (_hostv4, uint16_t (_port + 1))) << join::lastError.message ();
@@ -507,7 +508,7 @@ TEST_F (TcpSocket, remoteEndpoint)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
-    ASSERT_EQ (tcpSocket.remoteEndpoint (), Tcp::Endpoint {});
+    ASSERT_EQ (tcpSocket.remoteEndpoint (), Tcp::Endpoint{});
     ASSERT_EQ (tcpSocket.bind ({_hostv4, uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.remoteEndpoint (), Tcp::Endpoint (_hostv4, _port)) << join::lastError.message ();
@@ -539,15 +540,15 @@ TEST_F (TcpSocket, connected)
 {
     Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
 
-    ASSERT_FALSE (tcpSocket.connected());
+    ASSERT_FALSE (tcpSocket.connected ());
     ASSERT_EQ (tcpSocket.open (IpAddress (_hostv4).family ()), 0) << join::lastError.message ();
-    ASSERT_FALSE (tcpSocket.connected());
+    ASSERT_FALSE (tcpSocket.connected ());
     ASSERT_EQ (tcpSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE (tcpSocket.connected());
+    ASSERT_TRUE (tcpSocket.connected ());
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_FALSE (tcpSocket.connected());
+    ASSERT_FALSE (tcpSocket.connected ());
     tcpSocket.close ();
-    ASSERT_FALSE (tcpSocket.connected());
+    ASSERT_FALSE (tcpSocket.connected ());
 }
 
 /**
@@ -653,7 +654,7 @@ TEST_F (TcpSocket, checksum)
 {
     std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
 
-    ASSERT_EQ (Tcp::Socket::checksum (reinterpret_cast <uint16_t *> (&buffer[0]), buffer.size (), 0), 19349);
+    ASSERT_EQ (Tcp::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**
@@ -665,7 +666,7 @@ TEST_F (TcpSocket, lower)
 
     ASSERT_EQ (tcpSocket1.open (IpAddress (_hostv4).family ()), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket2.open (IpAddress (_hostv4).family ()), 0) << join::lastError.message ();
-    if (tcpSocket1.handle() < tcpSocket2.handle())
+    if (tcpSocket1.handle () < tcpSocket2.handle ())
     {
         ASSERT_TRUE (tcpSocket1 < tcpSocket2);
     }
@@ -680,7 +681,7 @@ TEST_F (TcpSocket, lower)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

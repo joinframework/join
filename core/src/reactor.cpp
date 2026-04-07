@@ -32,6 +32,7 @@
 // C.
 #include <sys/eventfd.h>
 #include <unistd.h>
+#include <cassert>
 
 using join::Backoff;
 using join::EventHandler;
@@ -61,9 +62,9 @@ Reactor::Reactor ()
 
     _deleted.reserve (_deletedReserve);
 
-    struct epoll_event ev{};
+    struct epoll_event ev = {};
     ev.events = EPOLLIN;
-    ev.data.ptr = nullptr;
+    ev.data.fd = _wakeup;
 
     if (epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev) == -1)
     {
@@ -90,7 +91,7 @@ Reactor::~Reactor () noexcept
 //   CLASS     : Reactor
 //   METHOD    : addHandler
 // =========================================================================
-int Reactor::addHandler (EventHandler* handler, bool sync) noexcept
+int Reactor::addHandler (int fd, EventHandler* handler, bool sync) noexcept
 {
     if (JOIN_UNLIKELY (handler == nullptr))
     {
@@ -98,32 +99,32 @@ int Reactor::addHandler (EventHandler* handler, bool sync) noexcept
         return -1;
     }
 
-    if (JOIN_UNLIKELY (handler->handle () < 0))
+    if (JOIN_UNLIKELY (fd < 0))
     {
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
-    if (_threadId.load (std::memory_order_acquire) == pthread_self ())
+    if (isReactorThread ())
     {
-        return registerHandler (handler);
+        return registerHandler (fd, handler);
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
     std::atomic<int> errc{0}, *perrc = nullptr;
 
-    if (JOIN_UNLIKELY (sync))
+    if (JOIN_LIKELY (sync))
     {
         pdone = &done;
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Add, handler, pdone, perrc}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Add, fd, handler, pdone, perrc}) == -1))
     {
         return -1;
     }
 
-    if (JOIN_UNLIKELY (sync))
+    if (JOIN_LIKELY (sync))
     {
         Backoff backoff;
         while (!done.load (std::memory_order_acquire))
@@ -146,40 +147,34 @@ int Reactor::addHandler (EventHandler* handler, bool sync) noexcept
 //   CLASS     : Reactor
 //   METHOD    : delHandler
 // =========================================================================
-int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
+int Reactor::delHandler (int fd, bool sync) noexcept
 {
-    if (JOIN_UNLIKELY (handler == nullptr))
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    if (JOIN_UNLIKELY (handler->handle () < 0))
+    if (JOIN_UNLIKELY (fd < 0))
     {
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
-    if (_threadId.load (std::memory_order_acquire) == pthread_self ())
+    if (isReactorThread ())
     {
-        return unregisterHandler (handler);
+        return unregisterHandler (fd);
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
     std::atomic<int> errc{0}, *perrc = nullptr;
 
-    if (JOIN_UNLIKELY (sync))
+    if (JOIN_LIKELY (sync))
     {
         pdone = &done;
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Del, handler, pdone, perrc}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Del, fd, nullptr, pdone, perrc}) == -1))
     {
         return -1;
     }
 
-    if (JOIN_UNLIKELY (sync))
+    if (JOIN_LIKELY (sync))
     {
         Backoff backoff;
         while (!done.load (std::memory_order_acquire))
@@ -220,14 +215,14 @@ void Reactor::stop (bool sync) noexcept
 {
     _running.store (false, std::memory_order_release);
 
-    if (_threadId.load (std::memory_order_acquire) == pthread_self ())
+    if (isReactorThread ())
     {
         return;
     }
 
-    writeCommand ({CommandType::Stop, nullptr, nullptr, nullptr});
+    writeCommand ({CommandType::Stop, -1, nullptr, nullptr, nullptr});
 
-    if (JOIN_UNLIKELY (sync))
+    if (JOIN_LIKELY (sync))
     {
         Backoff backoff;
         while (_threadId.load (std::memory_order_acquire) != 0)
@@ -237,6 +232,7 @@ void Reactor::stop (bool sync) noexcept
     }
 }
 
+#ifdef JOIN_HAS_NUMA
 // =========================================================================
 //   CLASS     : Reactor
 //   METHOD    : mbind
@@ -245,6 +241,7 @@ int Reactor::mbind (int numa) const noexcept
 {
     return _commands.mbind (numa);
 }
+#endif
 
 // =========================================================================
 //   CLASS     : Reactor
@@ -257,22 +254,32 @@ int Reactor::mlock () const noexcept
 
 // =========================================================================
 //   CLASS     : Reactor
+//   METHOD    : isReactorThread
+// =========================================================================
+bool Reactor::isReactorThread () const noexcept
+{
+    return _threadId.load (std::memory_order_acquire) == pthread_self ();
+}
+
+// =========================================================================
+//   CLASS     : Reactor
 //   METHOD    : registerHandler
 // =========================================================================
-int Reactor::registerHandler (EventHandler* handler) noexcept
+int Reactor::registerHandler (int fd, EventHandler* handler) noexcept
 {
-    _deleted.erase (handler);
+    _deleted.erase (fd);
 
-    struct epoll_event ev{};
+    struct epoll_event ev = {};
     ev.events = EPOLLIN | EPOLLRDHUP;
-    ev.data.ptr = handler;
+    ev.data.fd = fd;
 
-    if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, handler->handle (), &ev) == -1))
+    if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, fd, &ev) == -1))
     {
         lastError = std::make_error_code (static_cast<std::errc> (errno));
         return -1;
     }
 
+    _handlers[fd] = handler;
     return 0;
 }
 
@@ -280,16 +287,16 @@ int Reactor::registerHandler (EventHandler* handler) noexcept
 //   CLASS     : Reactor
 //   METHOD    : unregisterHandler
 // =========================================================================
-int Reactor::unregisterHandler (EventHandler* handler) noexcept
+int Reactor::unregisterHandler (int fd) noexcept
 {
-    if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->handle (), nullptr) == -1))
+    if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_DEL, fd, nullptr) == -1))
     {
         lastError = std::make_error_code (static_cast<std::errc> (errno));
-        _deleted.insert (handler);
+        _deleted.insert (fd);
         return -1;
     }
 
-    _deleted.insert (handler);
+    _deleted.insert (fd);
     return 0;
 }
 
@@ -320,16 +327,16 @@ void Reactor::processCommand (const Command& cmd) noexcept
 
     switch (cmd.type)
     {
-    case CommandType::Add:
-        err = registerHandler (cmd.handler);
-        break;
+        case CommandType::Add:
+            err = registerHandler (cmd.fd, cmd.handler);
+            break;
 
-    case CommandType::Del:
-        err = unregisterHandler (cmd.handler);
-        break;
+        case CommandType::Del:
+            err = unregisterHandler (cmd.fd);
+            break;
 
-    case CommandType::Stop:
-        break;
+        case CommandType::Stop:
+            break;
     }
 
     if (JOIN_UNLIKELY (cmd.done))
@@ -364,21 +371,28 @@ void Reactor::readCommands () noexcept
 // =========================================================================
 void Reactor::dispatchEvent (const epoll_event& event)
 {
-    EventHandler* handler = static_cast<EventHandler*> (event.data.ptr);
+    int fd = event.data.fd;
+    assert (fd != _wakeup);
 
-    if (JOIN_LIKELY (isActive (handler)))
+    auto it = _handlers.find (fd);
+    if (JOIN_UNLIKELY (it == _handlers.end ()))
+    {
+        return;
+    }
+
+    if (JOIN_LIKELY (isActive (fd)))
     {
         if (JOIN_UNLIKELY (event.events & EPOLLERR))
         {
-            handler->onError ();
+            it->second->onError (fd);
         }
         else if (JOIN_UNLIKELY (event.events & (EPOLLRDHUP | EPOLLHUP)))
         {
-            handler->onClose ();
+            it->second->onClose (fd);
         }
         else if (JOIN_LIKELY (event.events & EPOLLIN))
         {
-            handler->onReceive ();
+            it->second->onReceive (fd);
         }
     }
 }
@@ -397,7 +411,7 @@ void Reactor::eventLoop ()
 
         for (int i = 0; i < eventCount; ++i)
         {
-            if (JOIN_UNLIKELY (events[i].data.ptr == nullptr))
+            if (JOIN_UNLIKELY (events[i].data.fd == _wakeup))
             {
                 readCommands ();
             }
@@ -405,12 +419,16 @@ void Reactor::eventLoop ()
 
         for (int i = 0; i < eventCount; ++i)
         {
-            if (JOIN_LIKELY (events[i].data.ptr != nullptr))
+            if (JOIN_LIKELY (events[i].data.fd != _wakeup))
             {
                 dispatchEvent (events[i]);
             }
         }
 
+        for (int fd : _deleted)
+        {
+            _handlers.erase (fd);
+        }
         _deleted.clear ();
     }
 }
@@ -419,9 +437,9 @@ void Reactor::eventLoop ()
 //   CLASS     : Reactor
 //   METHOD    : isActive
 // =========================================================================
-bool Reactor::isActive (EventHandler* handler) const noexcept
+bool Reactor::isActive (int fd) const noexcept
 {
-    return _deleted.count (handler) == 0;
+    return _deleted.count (fd) == 0;
 }
 
 // =========================================================================
@@ -478,6 +496,7 @@ pthread_t ReactorThread::handle ()
     return instance ()._dispatcher.handle ();
 }
 
+#ifdef JOIN_HAS_NUMA
 // =========================================================================
 //   CLASS     : ReactorThread
 //   METHOD    : mbind
@@ -486,6 +505,7 @@ int ReactorThread::mbind (int numa)
 {
     return instance ()._reactor.mbind (numa);
 }
+#endif
 
 // =========================================================================
 //   CLASS     : ReactorThread
@@ -512,11 +532,9 @@ ReactorThread& ReactorThread::instance ()
 // =========================================================================
 ReactorThread::ReactorThread ()
 {
-    _dispatcher = Thread (
-        [this] ()
-        {
-            _reactor.run ();
-        });
+    _dispatcher = Thread ([this] () {
+        _reactor.run ();
+    });
 }
 
 // =========================================================================

@@ -156,10 +156,10 @@ public:
     static void TearDownTestCase ()
     {
         unlink (_sampleFile.c_str ());
-        rmdir  (_basePath.c_str ());
+        rmdir (_basePath.c_str ());
         unlink (_rootcert.c_str ());
         unlink (_certFile.c_str ());
-        rmdir  (_certPath.c_str ());
+        rmdir (_certPath.c_str ());
         unlink (_key.c_str ());
     }
 
@@ -304,19 +304,19 @@ protected:
     static const std::string _key;
 };
 
-const std::string HttpsTest::_basePath       = "/tmp/www";
-const std::string HttpsTest::_sample         = "<html><body><h1>It works!</h1></body></html>";
+const std::string HttpsTest::_basePath = "/tmp/www";
+const std::string HttpsTest::_sample = "<html><body><h1>It works!</h1></body></html>";
 const std::string HttpsTest::_sampleFileName = "sample.html";
-const std::string HttpsTest::_sampleFile     = _basePath + "/" + _sampleFileName;
-const std::string HttpsTest::_token          = "adlSaJkmBLpgnRRCjkCgQ4uaCagKHsIN";
-const std::string HttpsTest::_host           = "localhost";
-const uint16_t    HttpsTest::_port           = 5000;
-const int         HttpsTest::_timeout        = 5;
-const int         HttpsTest::_max            = 20;
-const std::string HttpsTest::_rootcert       = "/tmp/https_test_root.cert";
-const std::string HttpsTest::_certPath       = "/tmp/certs";
-const std::string HttpsTest::_certFile       = _certPath + "/https_test.cert";
-const std::string HttpsTest::_key            = "/tmp/https_test.key";
+const std::string HttpsTest::_sampleFile = _basePath + "/" + _sampleFileName;
+const std::string HttpsTest::_token = "adlSaJkmBLpgnRRCjkCgQ4uaCagKHsIN";
+const std::string HttpsTest::_host = "localhost";
+const uint16_t HttpsTest::_port = 5000;
+const int HttpsTest::_timeout = 5;
+const int HttpsTest::_max = 20;
+const std::string HttpsTest::_rootcert = "/tmp/https_test_root.cert";
+const std::string HttpsTest::_certPath = "/tmp/certs";
+const std::string HttpsTest::_certFile = _certPath + "/https_test.cert";
+const std::string HttpsTest::_key = "/tmp/https_test.key";
 
 /**
  * @brief Test move.
@@ -908,7 +908,7 @@ TEST_F (HttpsTest, post)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);

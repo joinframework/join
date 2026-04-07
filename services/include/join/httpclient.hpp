@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_HTTP_CLIENT_HPP__
-#define __JOIN_HTTP_CLIENT_HPP__
+#ifndef JOIN_SERVICES_HTTPCLIENT_HPP
+#define JOIN_SERVICES_HTTPCLIENT_HPP
 
 // libjoin.
 #include <join/version.hpp>
@@ -107,11 +107,11 @@ namespace join
         BasicHttpClient& operator= (BasicHttpClient&& other)
         {
             Protocol::Stream::operator= (std::move (other));
-            this->_host        = std::move (other._host);
-            this->_port        = other._port;
-            this->_keep        = other._keep;
+            this->_host = std::move (other._host);
+            this->_port = other._port;
+            this->_keep = other._keep;
             this->_keepTimeout = other._keepTimeout;
-            this->_keepMax     = other._keepMax;
+            this->_keepMax = other._keepMax;
             return *this;
         }
 
@@ -131,7 +131,7 @@ namespace join
         {
             Protocol::Stream::close ();
             this->_keepTimeout = std::chrono::seconds::zero ();
-            this->_keepMax     = -1;
+            this->_keepMax = -1;
         }
 
         /**
@@ -312,7 +312,7 @@ namespace join
 
             // get connection.
             std::string connection = response.header ("Connection");
-            std::string alive      = response.header ("Keep-Alive");
+            std::string alive = response.header ("Keep-Alive");
 
             // check connection.
             if (join::compareNoCase (connection, "keep-alive"))
@@ -333,7 +333,7 @@ namespace join
             else if (join::compareNoCase (connection, "close"))
             {
                 this->_keepTimeout = std::chrono::seconds::zero ();
-                this->_keepMax     = 0;
+                this->_keepMax = 0;
             }
 
             // set encoding.
@@ -364,17 +364,17 @@ namespace join
                 if (encoding.find ("gzip") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Gzip, this->_wrapped);
-                    this->_wrapped   = true;
+                    this->_wrapped = true;
                 }
                 else if (encoding.find ("deflate") != std::string::npos)
                 {
                     this->_streambuf = new Zstreambuf (this->_streambuf, Zstream::Deflate, this->_wrapped);
-                    this->_wrapped   = true;
+                    this->_wrapped = true;
                 }
                 else if (encoding.find ("chunked") != std::string::npos)
                 {
                     this->_streambuf = new Chunkstreambuf (this->_streambuf, this->_wrapped);
-                    this->_wrapped   = true;
+                    this->_wrapped = true;
                 }
             }
 
@@ -393,7 +393,7 @@ namespace join
             }
 
             this->_streambuf = &this->_sockbuf;
-            this->_wrapped   = false;
+            this->_wrapped = false;
 
             this->set_rdbuf (this->_streambuf);
         }

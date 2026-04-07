@@ -178,7 +178,7 @@ public:
     {
         unlink (_rootcert.c_str ());
         unlink (_certFile.c_str ());
-        rmdir  (_certPath.c_str ());
+        rmdir (_certPath.c_str ());
         unlink (_key.c_str ());
         unlink (_invalidKey.c_str ());
     }
@@ -191,11 +191,11 @@ protected:
     {
         ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    #if OPENSSL_VERSION_NUMBER >= 0x10101000L
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
         ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
-    #endif
+#endif
         ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -203,14 +203,15 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 
     /**
      * @brief method called when data are ready to be read on handle.
+     * @param fd file descriptor.
      */
-    virtual void onReceive () override
+    virtual void onReceive ([[maybe_unused]] int fd) override
     {
         Tls::Stream stream = this->acceptStream ();
         if (stream.connected ())
@@ -262,7 +263,9 @@ protected:
             join::getline (stream, tmp);
             stream << "354 End data with <CR><LF>.<CR><LF>\r\n";
             stream.flush ();
-            while (join::getline (stream, tmp) && tmp != ".") {};
+            while (join::getline (stream, tmp) && tmp != ".")
+            {
+            };
             stream << "250 2.0.0 Ok: queued as 1A208D10002C\r\n";
             stream.flush ();
             join::getline (stream, tmp);
@@ -304,16 +307,16 @@ protected:
     static const std::string _password;
 };
 
-const std::string SmtpClient::_host       = "localhost";
-const uint16_t    SmtpClient::_port       = 5000;
-const int         SmtpClient::_timeout    = 1000;
-const std::string SmtpClient::_rootcert   = "/tmp/tlssocket_test_root.cert";
-const std::string SmtpClient::_certPath   = "/tmp/certs";
-const std::string SmtpClient::_certFile   = _certPath + "/tlssocket_test.cert";
-const std::string SmtpClient::_key        = "/tmp/tlssocket_test.key";
+const std::string SmtpClient::_host = "localhost";
+const uint16_t SmtpClient::_port = 5000;
+const int SmtpClient::_timeout = 1000;
+const std::string SmtpClient::_rootcert = "/tmp/tlssocket_test_root.cert";
+const std::string SmtpClient::_certPath = "/tmp/certs";
+const std::string SmtpClient::_certFile = _certPath + "/tlssocket_test.cert";
+const std::string SmtpClient::_key = "/tmp/tlssocket_test.key";
 const std::string SmtpClient::_invalidKey = "/tmp/tlssocket_test_invalid.key";
-const std::string SmtpClient::_user       = "admin";
-const std::string SmtpClient::_password   = "12345";
+const std::string SmtpClient::_user = "admin";
+const std::string SmtpClient::_password = "12345";
 
 /**
  * @brief Test move.
@@ -321,10 +324,10 @@ const std::string SmtpClient::_password   = "12345";
 TEST_F (SmtpClient, move)
 {
     Smtp::Client tmp (_host, _port);
-    Smtp::Client client1 (std::move (tmp)); 
+    Smtp::Client client1 (std::move (tmp));
     ASSERT_EQ (client1.host (), _host);
 
-    Smtp::Client  client2 ("localhost");
+    Smtp::Client client2 ("localhost");
     ASSERT_EQ (client2.host (), "localhost");
 
     client2 = std::move (client1);
@@ -494,7 +497,7 @@ TEST_F (SmtpClient, send)
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     join::initializeOpenSSL ();
     testing::InitGoogleTest (&argc, argv);

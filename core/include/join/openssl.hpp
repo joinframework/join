@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef __JOIN_OPENSSL_HPP__
-#define __JOIN_OPENSSL_HPP__
+#ifndef JOIN_CORE_OPENSSL_HPP
+#define JOIN_CORE_OPENSSL_HPP
 
 // Libraries.
 #include <openssl/bn.h>
@@ -49,13 +49,13 @@ namespace join
     {
         constexpr BigNumDelete () noexcept = default;
 
-        void operator ()(BIGNUM* num)
+        void operator() (BIGNUM* num)
         {
             BN_free (num);
         }
     };
 
-    using BigNumPtr = std::unique_ptr <BIGNUM, BigNumDelete>;
+    using BigNumPtr = std::unique_ptr<BIGNUM, BigNumDelete>;
 
     /**
      * @brief custom functor for ECDSA_SIG deletion.
@@ -64,13 +64,13 @@ namespace join
     {
         constexpr EcdsaSigDelete () noexcept = default;
 
-        void operator ()(ECDSA_SIG* ecSig)
+        void operator() (ECDSA_SIG* ecSig)
         {
             ECDSA_SIG_free (ecSig);
         }
     };
 
-    using EcdsaSigPtr = std::unique_ptr <ECDSA_SIG, EcdsaSigDelete>;
+    using EcdsaSigPtr = std::unique_ptr<ECDSA_SIG, EcdsaSigDelete>;
 
     /**
      * @brief custom functor for EVP_PKEY deletion.
@@ -79,13 +79,13 @@ namespace join
     {
         constexpr EvpPkeyDelete () noexcept = default;
 
-        void operator ()(EVP_PKEY* evpPkey)
+        void operator() (EVP_PKEY* evpPkey)
         {
             EVP_PKEY_free (evpPkey);
         }
     };
 
-    using EvpPkeyPtr = std::unique_ptr <EVP_PKEY, EvpPkeyDelete>;
+    using EvpPkeyPtr = std::unique_ptr<EVP_PKEY, EvpPkeyDelete>;
 
     /**
      * @brief custom functor for EVP_PKEY_CTX deletion.
@@ -94,13 +94,13 @@ namespace join
     {
         constexpr EvpPkeyCtxDelete () noexcept = default;
 
-        void operator ()(EVP_PKEY_CTX* evpPkeyCtx)
+        void operator() (EVP_PKEY_CTX* evpPkeyCtx)
         {
             EVP_PKEY_CTX_free (evpPkeyCtx);
         }
     };
 
-    using EvpPkeyCtxPtr = std::unique_ptr <EVP_PKEY_CTX, EvpPkeyCtxDelete>;
+    using EvpPkeyCtxPtr = std::unique_ptr<EVP_PKEY_CTX, EvpPkeyCtxDelete>;
 
     /**
      * @brief custom functor for EVP_ENCODE_CTX deletion.
@@ -109,13 +109,13 @@ namespace join
     {
         constexpr EvpEncodeCtxDelete () noexcept = default;
 
-        void operator ()(EVP_ENCODE_CTX* evpEncodeCtx)
+        void operator() (EVP_ENCODE_CTX* evpEncodeCtx)
         {
             EVP_ENCODE_CTX_free (evpEncodeCtx);
         }
     };
 
-    using EvpEncodeCtxPtr = std::unique_ptr <EVP_ENCODE_CTX, EvpEncodeCtxDelete>;
+    using EvpEncodeCtxPtr = std::unique_ptr<EVP_ENCODE_CTX, EvpEncodeCtxDelete>;
 
     /**
      * @brief custom functor for EVP_MD_CTX deletion.
@@ -124,13 +124,13 @@ namespace join
     {
         constexpr EvpMdCtxDelete () noexcept = default;
 
-        void operator ()(EVP_MD_CTX* evpMdCtx)
+        void operator() (EVP_MD_CTX* evpMdCtx)
         {
             EVP_MD_CTX_free (evpMdCtx);
         }
     };
 
-    using EvpMdCtxPtr = std::unique_ptr <EVP_MD_CTX, EvpMdCtxDelete>;
+    using EvpMdCtxPtr = std::unique_ptr<EVP_MD_CTX, EvpMdCtxDelete>;
 
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
     /**
@@ -140,13 +140,13 @@ namespace join
     {
         constexpr HmacCtxDelete () noexcept = default;
 
-        void operator ()(HMAC_CTX* hmacCtx)
+        void operator() (HMAC_CTX* hmacCtx)
         {
             HMAC_CTX_free (hmacCtx);
         }
     };
 
-    using HmacCtxPtr = std::unique_ptr <HMAC_CTX, HmacCtxDelete>;
+    using HmacCtxPtr = std::unique_ptr<HMAC_CTX, HmacCtxDelete>;
 #else
     /**
      * @brief custom functor for EVP_MAC deletion.
@@ -155,13 +155,13 @@ namespace join
     {
         constexpr EvpMacDelete () noexcept = default;
 
-        void operator ()(EVP_MAC* evpMac)
+        void operator() (EVP_MAC* evpMac)
         {
             EVP_MAC_free (evpMac);
         }
     };
 
-    using EvpMacPtr = std::unique_ptr <EVP_MAC, EvpMacDelete>;
+    using EvpMacPtr = std::unique_ptr<EVP_MAC, EvpMacDelete>;
 
     /**
      * @brief custom functor for EVP_MAC_CTX deletion.
@@ -170,13 +170,13 @@ namespace join
     {
         constexpr EvpMacCtxDelete () noexcept = default;
 
-        void operator ()(EVP_MAC_CTX* evpMacCtx)
+        void operator() (EVP_MAC_CTX* evpMacCtx)
         {
             EVP_MAC_CTX_free (evpMacCtx);
         }
     };
 
-    using EvpMacCtxPtr = std::unique_ptr <EVP_MAC_CTX, EvpMacCtxDelete>;
+    using EvpMacCtxPtr = std::unique_ptr<EVP_MAC_CTX, EvpMacCtxDelete>;
 #endif
 
     /**
@@ -186,13 +186,13 @@ namespace join
     {
         constexpr StackOfX509NameDelete () noexcept = default;
 
-        void operator()(STACK_OF (X509_NAME)* stack)
+        void operator() (STACK_OF (X509_NAME) * stack)
         {
             sk_X509_NAME_pop_free (stack, X509_NAME_free);
         }
     };
 
-    using StackOfX509NamePtr = std::unique_ptr <STACK_OF (X509_NAME), StackOfX509NameDelete>;
+    using StackOfX509NamePtr = std::unique_ptr<STACK_OF (X509_NAME), StackOfX509NameDelete>;
 
     /**
      * @brief custom functor for STACK_OF(GENERAL_NAME) deletion.
@@ -201,13 +201,13 @@ namespace join
     {
         constexpr StackOfGeneralNameDelete () noexcept = default;
 
-        void operator ()(STACK_OF (GENERAL_NAME)* stack)
+        void operator() (STACK_OF (GENERAL_NAME) * stack)
         {
             sk_GENERAL_NAME_pop_free (stack, GENERAL_NAME_free);
         }
     };
 
-    using StackOfGeneralNamePtr = std::unique_ptr <STACK_OF (GENERAL_NAME), StackOfGeneralNameDelete>;
+    using StackOfGeneralNamePtr = std::unique_ptr<STACK_OF (GENERAL_NAME), StackOfGeneralNameDelete>;
 
     /**
      * @brief custom functor for SSL handle deletion.
@@ -216,13 +216,13 @@ namespace join
     {
         constexpr SslDelete () noexcept = default;
 
-        void operator ()(SSL* p)
+        void operator() (SSL* p)
         {
             SSL_free (p);
         }
     };
 
-    using SslPtr = std::unique_ptr <SSL, SslDelete>;
+    using SslPtr = std::unique_ptr<SSL, SslDelete>;
 
     /**
      * @brief custom functor for SSL context deletion.
@@ -231,13 +231,13 @@ namespace join
     {
         constexpr SslCtxDelete () noexcept = default;
 
-        void operator ()(SSL_CTX* p)
+        void operator() (SSL_CTX* p)
         {
             SSL_CTX_free (p);
         }
     };
 
-    using SslCtxPtr = std::unique_ptr <SSL_CTX, SslCtxDelete>;
+    using SslCtxPtr = std::unique_ptr<SSL_CTX, SslCtxDelete>;
 
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
     /**
@@ -247,13 +247,13 @@ namespace join
     {
         constexpr DhKeyDelete () noexcept = default;
 
-        void operator()(DH* p)
+        void operator() (DH* p)
         {
             DH_free (p);
         }
     };
 
-    using DhKeyPtr = std::unique_ptr <DH, DhKeyDelete>;
+    using DhKeyPtr = std::unique_ptr<DH, DhKeyDelete>;
 
     /**
      * @brief Custom functor for ECDH key deletion.
@@ -262,13 +262,13 @@ namespace join
     {
         constexpr EcdhKeyDelete () noexcept = default;
 
-        void operator()(EC_KEY* p)
+        void operator() (EC_KEY* p)
         {
             EC_KEY_free (p);
         }
     };
 
-    using EcdhKeyPtr = std::unique_ptr <EC_KEY, EcdhKeyDelete>;
+    using EcdhKeyPtr = std::unique_ptr<EC_KEY, EcdhKeyDelete>;
 #endif
 
     /**

@@ -54,6 +54,7 @@ TEST (CpuTopology, nodes)
     ASSERT_GE (CpuTopology::instance ()->nodes ().size (), 1);
 }
 
+#ifdef DEBUG
 /**
  * @brief test dump.
  */
@@ -61,12 +62,13 @@ TEST (CpuTopology, dump)
 {
     ASSERT_NO_THROW (CpuTopology::instance ()->dump ());
 }
+#endif
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
-   testing::InitGoogleTest (&argc, argv);
-   return RUN_ALL_TESTS ();
+    testing::InitGoogleTest (&argc, argv);
+    return RUN_ALL_TESTS ();
 }
