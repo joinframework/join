@@ -407,10 +407,10 @@ namespace join
         std::string toArpa () const
         {
             std::stringstream arpa;
-            arpa << static_cast<int> ((_addr.s_addr & 0x000000FF)) << ".";
-            arpa << static_cast<int> ((_addr.s_addr & 0x0000FF00) >> 8) << ".";
-            arpa << static_cast<int> ((_addr.s_addr & 0x00FF0000) >> 16) << ".";
             arpa << static_cast<int> ((_addr.s_addr & 0xFF000000) >> 24) << ".";
+            arpa << static_cast<int> ((_addr.s_addr & 0x00FF0000) >> 16) << ".";
+            arpa << static_cast<int> ((_addr.s_addr & 0x0000FF00) >> 8) << ".";
+            arpa << static_cast<int> ((_addr.s_addr & 0x000000FF)) << ".";
             arpa << "in-addr.arpa";
             return arpa.str ();
         }
