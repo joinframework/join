@@ -26,12 +26,12 @@
 #define JOIN_SERVICES_HTTPCLIENT_HPP
 
 // libjoin.
-#include <join/version.hpp>
-#include <join/zstream.hpp>
-#include <join/resolver.hpp>
-#include <join/chunkstream.hpp>
-#include <join/httpmessage.hpp>
 #include <join/socketstream.hpp>
+#include <join/httpmessage.hpp>
+#include <join/chunkstream.hpp>
+#include <join/zstream.hpp>
+#include <join/version.hpp>
+#include <join/dns.hpp>
 
 // C++.
 #include <chrono>
@@ -178,7 +178,7 @@ namespace join
                 auth += this->host ();
             }
 
-            if (this->port () != Resolver::resolveService (this->scheme ()))
+            if (this->port () != Dns::Resolver::resolveService (this->scheme ()))
             {
                 auth += ":" + std::to_string (this->port ());
             }
@@ -244,7 +244,7 @@ namespace join
             // check if reconnection is required.
             if (this->needReconnection ())
             {
-                Endpoint endpoint{Resolver::resolveHost (this->host ()), this->port ()};
+                Endpoint endpoint{Dns::Resolver::lookupName (this->host ()), this->port ()};
                 endpoint.hostname (this->host ());
 
                 this->reconnect (endpoint);
