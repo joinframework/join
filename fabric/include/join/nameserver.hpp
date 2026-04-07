@@ -72,10 +72,10 @@ namespace join
          * @brief reply to a DNS query.
          * @return 0 on success, -1 on error.
          */
-        int reply (const DnsPacket& response)
-        {
-            return -1;
-        }
+        // int reply (const DnsPacket& response)
+        // {
+        //     return -1;
+        // }
 
         /**
          * @brief method called when a DNS query is received.
