@@ -43,6 +43,7 @@ namespace join
 {
     /// forward declarations.
     class Dns;
+    class Dot;
 
     /// list of alias.
     using AliasList = std::unordered_set<std::string>;

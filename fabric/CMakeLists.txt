@@ -4,6 +4,7 @@ set(PUBLIC_HEADERS
     include/join/dnsbase.hpp
     include/join/resolver.hpp
     include/join/dns.hpp
+    include/join/dot.hpp
     include/join/netlinkmanager.hpp
     include/join/neighbor.hpp
     include/join/neighbormanager.hpp
