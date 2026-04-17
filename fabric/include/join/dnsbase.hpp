@@ -245,20 +245,20 @@ namespace join
                 encodeQuestion (question, data);
             }
 
-            for (auto const& answer : packet.answers)
-            {
-                encodeResource (answer, data);
-            }
+            // for (auto const& answer : packet.answers)
+            // {
+            //     encodeResource (answer, data);
+            // }
 
-            for (auto const& authority : packet.authorities)
-            {
-                encodeResource (authority, data);
-            }
+            // for (auto const& authority : packet.authorities)
+            // {
+            //     encodeResource (authority, data);
+            // }
 
-            for (auto const& additional : packet.additionals)
-            {
-                encodeResource (additional, data);
-            }
+            // for (auto const& additional : packet.additionals)
+            // {
+            //     encodeResource (additional, data);
+            // }
 
             return 0;
         }
@@ -410,17 +410,17 @@ namespace join
          * @param data output stream.
          * @return 0 on success, -1 on error.
          */
-        int encodeMail (const std::string& mail, std::stringstream& data) const
-        {
-            std::string encodedMail = mail;
-            size_t atPos = encodedMail.find ('@');
-            if (atPos != std::string::npos)
-            {
-                encodedMail.replace (atPos, 1, ".");
-            }
-            encodeName (encodedMail, data);
-            return 0;
-        }
+        // int encodeMail (const std::string& mail, std::stringstream& data) const
+        // {
+        //     std::string encodedMail = mail;
+        //     size_t atPos = encodedMail.find ('@');
+        //     if (atPos != std::string::npos)
+        //     {
+        //         encodedMail.replace (atPos, 1, ".");
+        //     }
+        //     encodeName (encodedMail, data);
+        //     return 0;
+        // }
 
         /**
          * @brief decode a mail address from a byte stream.
@@ -483,105 +483,105 @@ namespace join
          * @param data output stream.
          * @return 0 on success, -1 on error.
          */
-        int encodeResource (const ResourceRecord& resource, std::stringstream& data) const
-        {
-            encodeName (resource.host, data);
+        // int encodeResource (const ResourceRecord& resource, std::stringstream& data) const
+        // {
+        //     encodeName (resource.host, data);
 
-            uint16_t type = htons (resource.type);
-            data.write (reinterpret_cast<const char*> (&type), sizeof (type));
+        //     uint16_t type = htons (resource.type);
+        //     data.write (reinterpret_cast<const char*> (&type), sizeof (type));
 
-            uint16_t dnsclass = htons (resource.dnsclass);
-            data.write (reinterpret_cast<const char*> (&dnsclass), sizeof (dnsclass));
+        //     uint16_t dnsclass = htons (resource.dnsclass);
+        //     data.write (reinterpret_cast<const char*> (&dnsclass), sizeof (dnsclass));
 
-            uint32_t ttl = htonl (resource.ttl);
-            data.write (reinterpret_cast<const char*> (&ttl), sizeof (ttl));
+        //     uint32_t ttl = htonl (resource.ttl);
+        //     data.write (reinterpret_cast<const char*> (&ttl), sizeof (ttl));
 
-            uint16_t dataLen = 0;
-            auto dataLenPos = data.tellp ();
-            data.write (reinterpret_cast<const char*> (&dataLen), sizeof (dataLen));
+        //     uint16_t dataLen = 0;
+        //     auto dataLenPos = data.tellp ();
+        //     data.write (reinterpret_cast<const char*> (&dataLen), sizeof (dataLen));
 
-            auto dataBegPos = data.tellp ();
+        //     auto dataBegPos = data.tellp ();
 
-            if (resource.type == RecordType::A)
-            {
-                data.write (reinterpret_cast<const char*> (resource.addr.addr ()), sizeof (in_addr));
-            }
-            else if (resource.type == RecordType::AAAA)
-            {
-                data.write (reinterpret_cast<const char*> (resource.addr.addr ()), sizeof (in6_addr));
-            }
-            else if (resource.type == RecordType::NS)
-            {
-                encodeName (resource.name, data);
-            }
-            else if (resource.type == RecordType::CNAME)
-            {
-                encodeName (resource.name, data);
-            }
-            else if (resource.type == RecordType::PTR)
-            {
-                encodeName (resource.name, data);
-            }
-            else if (resource.type == RecordType::MX)
-            {
-                uint16_t mxpref = htons (resource.mxpref);
-                data.write (reinterpret_cast<const char*> (&mxpref), sizeof (mxpref));
+        //     if (resource.type == RecordType::A)
+        //     {
+        //         data.write (reinterpret_cast<const char*> (resource.addr.addr ()), sizeof (in_addr));
+        //     }
+        //     else if (resource.type == RecordType::AAAA)
+        //     {
+        //         data.write (reinterpret_cast<const char*> (resource.addr.addr ()), sizeof (in6_addr));
+        //     }
+        //     else if (resource.type == RecordType::NS)
+        //     {
+        //         encodeName (resource.name, data);
+        //     }
+        //     else if (resource.type == RecordType::CNAME)
+        //     {
+        //         encodeName (resource.name, data);
+        //     }
+        //     else if (resource.type == RecordType::PTR)
+        //     {
+        //         encodeName (resource.name, data);
+        //     }
+        //     else if (resource.type == RecordType::MX)
+        //     {
+        //         uint16_t mxpref = htons (resource.mxpref);
+        //         data.write (reinterpret_cast<const char*> (&mxpref), sizeof (mxpref));
 
-                encodeName (resource.name, data);
-            }
-            else if (resource.type == RecordType::SOA)
-            {
-                encodeName (resource.name, data);
-                encodeMail (resource.mail, data);
+        //         encodeName (resource.name, data);
+        //     }
+        //     else if (resource.type == RecordType::SOA)
+        //     {
+        //         encodeName (resource.name, data);
+        //         encodeMail (resource.mail, data);
 
-                uint32_t serial = htonl (resource.serial);
-                data.write (reinterpret_cast<const char*> (&serial), sizeof (serial));
+        //         uint32_t serial = htonl (resource.serial);
+        //         data.write (reinterpret_cast<const char*> (&serial), sizeof (serial));
 
-                uint32_t refresh = htonl (resource.refresh);
-                data.write (reinterpret_cast<const char*> (&refresh), sizeof (refresh));
+        //         uint32_t refresh = htonl (resource.refresh);
+        //         data.write (reinterpret_cast<const char*> (&refresh), sizeof (refresh));
 
-                uint32_t retry = htonl (resource.retry);
-                data.write (reinterpret_cast<const char*> (&retry), sizeof (retry));
+        //         uint32_t retry = htonl (resource.retry);
+        //         data.write (reinterpret_cast<const char*> (&retry), sizeof (retry));
 
-                uint32_t expire = htonl (resource.expire);
-                data.write (reinterpret_cast<const char*> (&expire), sizeof (expire));
+        //         uint32_t expire = htonl (resource.expire);
+        //         data.write (reinterpret_cast<const char*> (&expire), sizeof (expire));
 
-                uint32_t minimum = htonl (resource.minimum);
-                data.write (reinterpret_cast<const char*> (&minimum), sizeof (minimum));
-            }
-            else if (resource.type == RecordType::TXT)
-            {
-                for (const auto& txt : resource.txts)
-                {
-                    uint8_t size = static_cast<uint8_t> (txt.size ());
-                    data.write (reinterpret_cast<const char*> (&size), sizeof (size));
-                    data.write (txt.data (), size);
-                }
-            }
-            else if (resource.type == RecordType::SRV)
-            {
-                uint16_t priority = htons (resource.priority);
-                data.write (reinterpret_cast<const char*> (&priority), sizeof (priority));
+        //         uint32_t minimum = htonl (resource.minimum);
+        //         data.write (reinterpret_cast<const char*> (&minimum), sizeof (minimum));
+        //     }
+        //     else if (resource.type == RecordType::TXT)
+        //     {
+        //         for (const auto& txt : resource.txts)
+        //         {
+        //             uint8_t size = static_cast<uint8_t> (txt.size ());
+        //             data.write (reinterpret_cast<const char*> (&size), sizeof (size));
+        //             data.write (txt.data (), size);
+        //         }
+        //     }
+        //     else if (resource.type == RecordType::SRV)
+        //     {
+        //         uint16_t priority = htons (resource.priority);
+        //         data.write (reinterpret_cast<const char*> (&priority), sizeof (priority));
 
-                uint16_t weight = htons (resource.weight);
-                data.write (reinterpret_cast<const char*> (&weight), sizeof (weight));
+        //         uint16_t weight = htons (resource.weight);
+        //         data.write (reinterpret_cast<const char*> (&weight), sizeof (weight));
 
-                uint16_t port = htons (resource.port);
-                data.write (reinterpret_cast<const char*> (&port), sizeof (port));
+        //         uint16_t port = htons (resource.port);
+        //         data.write (reinterpret_cast<const char*> (&port), sizeof (port));
 
-                encodeName (resource.name, data);
-            }
+        //         encodeName (resource.name, data);
+        //     }
 
-            auto dataEndPos = data.tellp ();
-            dataLen = static_cast<uint16_t> (dataEndPos - dataBegPos);
+        //     auto dataEndPos = data.tellp ();
+        //     dataLen = static_cast<uint16_t> (dataEndPos - dataBegPos);
 
-            data.seekp (dataLenPos);
-            dataLen = htons (dataLen);
-            data.write (reinterpret_cast<const char*> (&dataLen), sizeof (dataLen));
-            data.seekp (dataEndPos);
+        //     data.seekp (dataLenPos);
+        //     dataLen = htons (dataLen);
+        //     data.write (reinterpret_cast<const char*> (&dataLen), sizeof (dataLen));
+        //     data.seekp (dataEndPos);
 
-            return 0;
-        }
+        //     return 0;
+        // }
 
         /**
          * @brief decode a resource record from a byte stream.
