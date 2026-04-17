@@ -66,21 +66,13 @@ namespace join
         int create (EventHandler* handler, const std::string& interface, const IpAddress& server,
                     uint16_t port = defaultPort, Reactor* reactor = nullptr)
         {
+            _handler = handler;
+            _interface = interface;
+            _server = server;
+            _port = port;
             _reactor = reactor ? reactor : ReactorThread::reactor ();
 
-            if ((_socket.bind ({IpAddress (server.family ()), 0}) == -1) || (_socket.bindToDevice (interface) == -1))
-            {
-                _socket.close ();
-                return -1;
-            }
-
-            if (_socket.connect ({server, port}) == -1)
-            {
-                _socket.close ();
-                return -1;
-            }
-
-            return _reactor->addHandler (_socket.handle (), handler);
+            return reconnect ();
         }
 
         /**
@@ -97,12 +89,35 @@ namespace join
         }
 
         /**
+         * @brief reconnect to the remote DNS server.
+         * @return 0 on success, -1 on failure.
+         */
+        int reconnect ()
+        {
+            close ();
+
+            if ((_socket.bind ({IpAddress (_server.family ()), 0}) == -1) || (_socket.bindToDevice (_interface) == -1))
+            {
+                _socket.close ();
+                return -1;
+            }
+
+            if (_socket.connect ({_server, _port}) == -1)
+            {
+                _socket.close ();
+                return -1;
+            }
+
+            return _reactor->addHandler (_socket.handle (), _handler);
+        }
+
+        /**
          * @brief read DNS message from UDP stream.
          * @param buffer destination buffer.
          * @param maxSize maximum number of bytes to read.
          * @return number of bytes read, or -1 on error.
          */
-        int read (uint8_t* buffer, size_t maxSize)
+        int read (uint8_t* buffer, size_t maxSize) noexcept
         {
             return _socket.read (reinterpret_cast<char*> (buffer), maxSize);
         }
@@ -119,10 +134,19 @@ namespace join
         }
 
         /**
+         * @brief determine if the socket is connected.
+         * @return true if connected, false otherwise.
+         */
+        bool connected () noexcept
+        {
+            return _socket.connected ();
+        }
+
+        /**
          * @brief get the IP address family.
          * @return the IP address family.
          */
-        int family () const
+        int family () const noexcept
         {
             return _socket.family ();
         }
@@ -131,7 +155,7 @@ namespace join
          * @brief determine the local endpoint associated with this transport.
          * @return local endpoint.
          */
-        Endpoint localEndpoint () const
+        Endpoint localEndpoint () const noexcept
         {
             return _socket.localEndpoint ();
         }
@@ -140,7 +164,7 @@ namespace join
          * @brief determine the remote endpoint associated with this transport.
          * @return remote endpoint.
          */
-        Endpoint remoteEndpoint () const
+        Endpoint remoteEndpoint () const noexcept
         {
             return _socket.remoteEndpoint ();
         }
@@ -152,11 +176,23 @@ namespace join
         static constexpr size_t maxMsgSize = 8192;
 
     private:
-        /// socket.
-        Socket _socket;
+        /// event handler registered in the reactor.
+        EventHandler* _handler = nullptr;
+
+        /// network interface to bind the socket to.
+        std::string _interface;
+
+        /// remote DNS server address.
+        IpAddress _server;
+
+        /// remote DNS server port.
+        uint16_t _port = defaultPort;
 
         /// event loop reactor.
         Reactor* _reactor = nullptr;
+
+        /// UDP socket.
+        Socket _socket;
     };
 }
 

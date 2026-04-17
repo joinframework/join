@@ -469,7 +469,7 @@ namespace join
          * @brief determine the local endpoint associated with this socket.
          * @return local endpoint.
          */
-        Endpoint localEndpoint () const
+        Endpoint localEndpoint () const noexcept
         {
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
@@ -1053,7 +1053,7 @@ namespace join
          * @brief determine the remote endpoint associated with this socket.
          * @return remote endpoint.
          */
-        const Endpoint& remoteEndpoint () const
+        const Endpoint& remoteEndpoint () const noexcept
         {
             return this->_remote;
         }
@@ -1365,7 +1365,7 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int writeExactly (const char* data, unsigned long size, int timeout = 0)
+        int writeExactly (const char* data, unsigned long size, int timeout = 0) noexcept
         {
             unsigned long numWrite = 0;
 

@@ -677,6 +677,12 @@ namespace join
          */
         int query (DnsPacket& packet, std::chrono::milliseconds timeout)
         {
+            if (!this->_transport.connected () && (this->_transport.reconnect () == -1))
+            {
+                notify (_onFailure, packet);
+                return -1;
+            }
+
             packet.src = this->_transport.localEndpoint ().ip ();
             packet.dest = this->_transport.remoteEndpoint ().ip ();
             packet.port = this->_transport.remoteEndpoint ().port ();
@@ -773,6 +779,15 @@ namespace join
                     }
                 }
             }
+        }
+
+        /**
+         * @brief method called when handle is closed.
+         * @param fd file descriptor.
+         */
+        void onClose ([[maybe_unused]] int fd) override final
+        {
+            this->_transport.close ();
         }
 
 #ifdef DEBUG
