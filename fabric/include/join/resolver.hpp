@@ -743,34 +743,32 @@ namespace join
         void onReceive ([[maybe_unused]] int fd) override final
         {
             int size = this->_transport.read (this->_buffer.get (), TransportPolicy::maxMsgSize);
-            if (size < 12)
+            if (size >= 12)
             {
-                return;
-            }
+                std::stringstream data;
+                data.rdbuf ()->pubsetbuf (reinterpret_cast<char*> (this->_buffer.get ()), size);
 
-            std::stringstream data;
-            data.rdbuf ()->pubsetbuf (reinterpret_cast<char*> (this->_buffer.get ()), size);
+                DnsPacket packet;
+                this->deserialize (packet, data);
+                packet.src = this->_transport.localEndpoint ().ip ();
+                packet.dest = this->_transport.remoteEndpoint ().ip ();
+                packet.port = this->_transport.remoteEndpoint ().port ();
 
-            DnsPacket packet;
-            this->deserialize (packet, data);
-            packet.src = this->_transport.localEndpoint ().ip ();
-            packet.dest = this->_transport.remoteEndpoint ().ip ();
-            packet.port = this->_transport.remoteEndpoint ().port ();
-
-            if (packet.flags & 0x8000)
-            {
-                ScopedLock<Mutex> lock (_syncMutex);
-
-                auto it = _pending.find (packet.id);
-                if (it != _pending.end ())
+                if (packet.flags & 0x8000)
                 {
-                    it->second->packet = packet;
-                    it->second->ec = this->decodeError (packet.flags & 0x000F);
-                    if ((packet.flags & 0x0200) && it->second->ec == std::error_code{})
+                    ScopedLock<Mutex> lock (_syncMutex);
+
+                    auto it = _pending.find (packet.id);
+                    if (it != _pending.end ())
                     {
-                        it->second->ec = make_error_code (Errc::MessageTooLong);
+                        it->second->packet = packet;
+                        it->second->ec = this->decodeError (packet.flags & 0x000F);
+                        if ((packet.flags & 0x0200) && it->second->ec == std::error_code{})
+                        {
+                            it->second->ec = make_error_code (Errc::MessageTooLong);
+                        }
+                        it->second->cond.signal ();
                     }
-                    it->second->cond.signal ();
                 }
             }
         }

@@ -429,6 +429,7 @@ TEST_F (DnsTest, resolveMailExchanger)
  */
 TEST_F (DnsTest, resolveService)
 {
+    EXPECT_EQ (Dns::Resolver::resolveService ("foo"), 0);
     EXPECT_EQ (Dns::Resolver::resolveService ("ssh"), 22);
     EXPECT_EQ (Dns::Resolver::resolveService ("smtp"), 25);
     EXPECT_EQ (Dns::Resolver::resolveService ("smtps"), 465);
@@ -448,6 +449,7 @@ TEST_F (DnsTest, typeName)
     EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::SOA), "SOA");
     EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::PTR), "PTR");
     EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::MX), "MX");
+    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::TXT), "TXT");
     EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::AAAA), "AAAA");
     EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::SRV), "SRV");
     EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::ANY), "ANY");
