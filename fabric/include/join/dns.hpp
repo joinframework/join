@@ -26,6 +26,7 @@
 #define JOIN_FABRIC_DNS_HPP
 
 // libjoin.
+#include <join/nameserver.hpp>
 #include <join/resolver.hpp>
 #include <join/socket.hpp>
 
@@ -40,6 +41,7 @@ namespace join
         using Socket = Udp::Socket;
         using Endpoint = Udp::Endpoint;
         using Resolver = BasicDnsResolver<Dns>;
+        using NameServer = BasicDnsNameServer<Dns>;
 
         /**
          * @brief default constructor.
