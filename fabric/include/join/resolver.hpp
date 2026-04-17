@@ -118,10 +118,12 @@ namespace join
                     {
                         addressList.emplace_back (&res.nsaddr_list[i].sin_addr, sizeof (struct in_addr));
                     }
+                    // LCOV_EXCL_START: requires specific host IPv6 configuration.
                     else if (res._u._ext.nsaddrs[i] != nullptr && res._u._ext.nsaddrs[i]->sin6_family == AF_INET6)
                     {
                         addressList.emplace_back (&res._u._ext.nsaddrs[i]->sin6_addr, sizeof (struct in6_addr));
                     }
+                    // LCOV_EXCL_STOP
                 }
                 res_nclose (&res);
             }
