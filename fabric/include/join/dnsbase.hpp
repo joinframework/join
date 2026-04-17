@@ -360,7 +360,7 @@ namespace join
         {
             if (depth > 10)
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE: requires malicious DNS packet.
             }
 
             for (;;)
