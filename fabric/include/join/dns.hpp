@@ -77,9 +77,8 @@ namespace join
 
         /**
          * @brief close the DNS over UDP transport.
-         * @param handler event handler to unregister from the reactor.
          */
-        void close ([[maybe_unused]] EventHandler* handler) noexcept
+        void close () noexcept
         {
             if (_reactor && _socket.handle () != -1)
             {

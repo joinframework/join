@@ -77,7 +77,7 @@ namespace join
          */
         virtual ~BasicDnsResolver () noexcept
         {
-            this->_transport.close (this);
+            this->_transport.close ();
         }
 
         /**
