@@ -194,7 +194,7 @@ protected:
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
         ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 #endif
-        ASSERT_EQ (this->create ({Dns::Resolver::lookupName (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({Dns::Resolver::lookupAddress (_host), _port}), 0) << join::lastError.message ();
         ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
     }
 

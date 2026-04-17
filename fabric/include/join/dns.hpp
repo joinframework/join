@@ -47,6 +47,14 @@ namespace join
         Dns () noexcept = default;
 
         /**
+         * @brief destroy instance.
+         */
+        ~Dns () noexcept
+        {
+            close ();
+        }
+
+        /**
          * @brief create the DNS over UDP transport.
          * @param handler event handler to register to the reactor.
          * @param interface network interface to bind the socket to.

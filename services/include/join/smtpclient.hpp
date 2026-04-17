@@ -250,7 +250,7 @@ namespace join
          */
         int send (const MailMessage& mail)
         {
-            Endpoint endpoint{Dns::Resolver::lookupName (this->host ()), this->port ()};
+            Endpoint endpoint{Dns::Resolver::lookupAddress (this->host ()), this->port ()};
             endpoint.hostname (this->host ());
 
             if (this->connect (endpoint) == -1)

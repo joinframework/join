@@ -58,11 +58,12 @@ namespace join
          */
         template <typename... Args>
         explicit BasicDnsResolver (const std::string& interface = "", Args&&... args)
+        : BasicDns<TransportPolicy> ()
 #ifdef DEBUG
-        : _onSuccess (defaultOnSuccess)
+        , _onSuccess (defaultOnSuccess)
         , _onFailure (defaultOnFailure)
 #else
-        : _onSuccess (nullptr)
+        , _onSuccess (nullptr)
         , _onFailure (nullptr)
 #endif
         {
@@ -71,6 +72,26 @@ namespace join
                 throw std::system_error (lastError);
             }
         }
+
+        /**
+         * @brief create instance by copy.
+         */
+        BasicDnsResolver (const BasicDnsResolver&) = delete;
+
+        /**
+         * @brief create instance by move.
+         */
+        BasicDnsResolver& operator= (const BasicDnsResolver&) = delete;
+
+        /**
+         * @brief assign instance by copy.
+         */
+        BasicDnsResolver (BasicDnsResolver&&) = delete;
+
+        /**
+         * @brief assign instance by move.
+         */
+        BasicDnsResolver& operator= (BasicDnsResolver&&) = delete;
 
         /**
          * @brief destroy instance.

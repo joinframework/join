@@ -244,7 +244,7 @@ namespace join
             // check if reconnection is required.
             if (this->needReconnection ())
             {
-                Endpoint endpoint{Dns::Resolver::lookupName (this->host ()), this->port ()};
+                Endpoint endpoint{Dns::Resolver::lookupAddress (this->host ()), this->port ()};
                 endpoint.hostname (this->host ());
 
                 this->reconnect (endpoint);
