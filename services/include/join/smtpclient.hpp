@@ -28,8 +28,8 @@
 // libjoin.
 #include <join/socketstream.hpp>
 #include <join/mailmessage.hpp>
-#include <join/resolver.hpp>
 #include <join/base64.hpp>
+#include <join/dns.hpp>
 
 namespace join
 {
@@ -154,7 +154,7 @@ namespace join
                 auth += this->host ();
             }
 
-            if (this->port () != Resolver::resolveService (this->scheme ()))
+            if (this->port () != Dns::Resolver::resolveService (this->scheme ()))
             {
                 auth += ":" + std::to_string (this->port ());
             }
@@ -250,7 +250,7 @@ namespace join
          */
         int send (const MailMessage& mail)
         {
-            Endpoint endpoint{Resolver::resolveHost (this->host ()), this->port ()};
+            Endpoint endpoint{Dns::Resolver::lookupName (this->host ()), this->port ()};
             endpoint.hostname (this->host ());
 
             if (this->connect (endpoint) == -1)

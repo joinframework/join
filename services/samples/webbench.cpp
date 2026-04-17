@@ -250,7 +250,7 @@ int main (int argc, char* argv[])
     const std::string scheme = match[1];
     const std::string host = match[2];
     const uint16_t port =
-        match[3].length () ? uint16_t (std::stoi (match[3])) : join::Resolver::resolveService (scheme);
+        match[3].length () ? uint16_t (std::stoi (match[3])) : join::Dns::Resolver::resolveService (scheme);
     const std::string path = match[4];
 
     request.path (path);
