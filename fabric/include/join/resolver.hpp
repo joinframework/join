@@ -58,26 +58,47 @@ namespace join
          */
         template <typename... Args>
         explicit BasicDnsResolver (const std::string& interface = "", Args&&... args)
+        : BasicDns<TransportPolicy> ()
 #ifdef DEBUG
-        : _onSuccess (defaultOnSuccess)
+        , _onSuccess (defaultOnSuccess)
         , _onFailure (defaultOnFailure)
 #else
-        : _onSuccess (nullptr)
+        , _onSuccess (nullptr)
         , _onFailure (nullptr)
 #endif
         {
             if (this->_transport.create (this, interface, std::forward<Args> (args)...) == -1)
             {
-                throw std::system_error (lastError);  // LCOV_EXCL_LINE
+                throw std::system_error (lastError);
             }
         }
+
+        /**
+         * @brief create instance by copy.
+         */
+        BasicDnsResolver (const BasicDnsResolver&) = delete;
+
+        /**
+         * @brief create instance by move.
+         */
+        BasicDnsResolver& operator= (const BasicDnsResolver&) = delete;
+
+        /**
+         * @brief assign instance by copy.
+         */
+        BasicDnsResolver (BasicDnsResolver&&) = delete;
+
+        /**
+         * @brief assign instance by move.
+         */
+        BasicDnsResolver& operator= (BasicDnsResolver&&) = delete;
 
         /**
          * @brief destroy instance.
          */
         virtual ~BasicDnsResolver () noexcept
         {
-            this->_transport.close (this);
+            this->_transport.close ();
         }
 
         /**
@@ -97,10 +118,12 @@ namespace join
                     {
                         addressList.emplace_back (&res.nsaddr_list[i].sin_addr, sizeof (struct in_addr));
                     }
+                    // LCOV_EXCL_START: requires specific host IPv6 configuration.
                     else if (res._u._ext.nsaddrs[i] != nullptr && res._u._ext.nsaddrs[i]->sin6_family == AF_INET6)
                     {
                         addressList.emplace_back (&res._u._ext.nsaddrs[i]->sin6_addr, sizeof (struct in6_addr));
                     }
+                    // LCOV_EXCL_STOP
                 }
                 res_nclose (&res);
             }
@@ -118,13 +141,19 @@ namespace join
         IpAddressList resolveAllAddress (const std::string& host, int family,
                                          std::chrono::milliseconds timeout = std::chrono::seconds (5))
         {
+            if (host.empty ())
+            {
+                return {};
+            }
+
             DnsPacket packet{};
             packet.id = join::randomize<uint16_t> ();
             packet.flags = 1 << 8;
 
             QuestionRecord question;
             question.host = host;
-            question.type = (family == AF_INET6) ? RecordType::AAAA : RecordType::A;
+            RecordType expected = (family == AF_INET6) ? RecordType::AAAA : RecordType::A;
+            question.type = expected;
             question.dnsclass = RecordClass::IN;
 
             packet.questions.push_back (question);
@@ -138,7 +167,7 @@ namespace join
 
             for (auto const& answer : packet.answers)
             {
-                if (!answer.addr.isWildcard ())
+                if (!answer.addr.isWildcard () && (answer.type == expected))
                 {
                     addresses.push_back (answer.addr);
                 }
@@ -281,6 +310,11 @@ namespace join
         AliasList resolveAllName (const IpAddress& address,
                                   std::chrono::milliseconds timeout = std::chrono::seconds (5))
         {
+            if (address.isWildcard ())
+            {
+                return {};
+            }
+
             DnsPacket packet{};
             packet.id = join::randomize<uint16_t> ();
             packet.flags = 1 << 8;
@@ -301,7 +335,7 @@ namespace join
 
             for (auto const& answer : packet.answers)
             {
-                if (!answer.name.empty ())
+                if (!answer.name.empty () && (answer.type == RecordType::PTR))
                 {
                     aliases.insert (answer.name);
                 }
@@ -369,6 +403,11 @@ namespace join
         ServerList resolveAllNameServer (const std::string& host,
                                          std::chrono::milliseconds timeout = std::chrono::seconds (5))
         {
+            if (host.empty ())
+            {
+                return {};
+            }
+
             DnsPacket packet{};
             packet.id = join::randomize<uint16_t> ();
             packet.flags = 1 << 8;
@@ -388,7 +427,7 @@ namespace join
 
             for (auto const& answer : packet.answers)
             {
-                if (!answer.name.empty ())
+                if (!answer.name.empty () && (answer.type == RecordType::NS))
                 {
                     servers.insert (answer.name);
                 }
@@ -457,6 +496,11 @@ namespace join
         std::string resolveAuthority (const std::string& host,
                                       std::chrono::milliseconds timeout = std::chrono::seconds (5))
         {
+            if (host.empty ())
+            {
+                return {};
+            }
+
             DnsPacket packet{};
             packet.id = join::randomize<uint16_t> ();
             packet.flags = 1 << 8;
@@ -474,7 +518,7 @@ namespace join
 
             for (auto const& answer : packet.answers)
             {
-                if (!answer.name.empty ())
+                if (!answer.name.empty () && (answer.type == RecordType::SOA))
                 {
                     return answer.name;
                 }
@@ -511,6 +555,11 @@ namespace join
         ExchangerList resolveAllMailExchanger (const std::string& host,
                                                std::chrono::milliseconds timeout = std::chrono::seconds (5))
         {
+            if (host.empty ())
+            {
+                return {};
+            }
+
             DnsPacket packet{};
             packet.id = join::randomize<uint16_t> ();
             packet.flags = 1 << 8;
@@ -530,7 +579,7 @@ namespace join
 
             for (auto const& answer : packet.answers)
             {
-                if (!answer.name.empty ())
+                if (!answer.name.empty () && (answer.type == RecordType::MX))
                 {
                     exchangers.insert (answer.name);
                 }
@@ -696,34 +745,32 @@ namespace join
         void onReceive ([[maybe_unused]] int fd) override final
         {
             int size = this->_transport.read (this->_buffer.get (), TransportPolicy::maxMsgSize);
-            if (size < 12)
+            if (size >= 12)
             {
-                return;
-            }
+                std::stringstream data;
+                data.rdbuf ()->pubsetbuf (reinterpret_cast<char*> (this->_buffer.get ()), size);
 
-            std::stringstream data;
-            data.rdbuf ()->pubsetbuf (reinterpret_cast<char*> (this->_buffer.get ()), size);
+                DnsPacket packet;
+                this->deserialize (packet, data);
+                packet.src = this->_transport.localEndpoint ().ip ();
+                packet.dest = this->_transport.remoteEndpoint ().ip ();
+                packet.port = this->_transport.remoteEndpoint ().port ();
 
-            DnsPacket packet;
-            this->deserialize (packet, data);
-            packet.src = this->_transport.localEndpoint ().ip ();
-            packet.dest = this->_transport.remoteEndpoint ().ip ();
-            packet.port = this->_transport.remoteEndpoint ().port ();
-
-            if (packet.flags & 0x8000)
-            {
-                ScopedLock<Mutex> lock (_syncMutex);
-
-                auto it = _pending.find (packet.id);
-                if (it != _pending.end ())
+                if (packet.flags & 0x8000)
                 {
-                    it->second->packet = packet;
-                    it->second->ec = this->decodeError (packet.flags & 0x000F);
-                    if ((packet.flags & 0x0200) && it->second->ec == std::error_code{})
+                    ScopedLock<Mutex> lock (_syncMutex);
+
+                    auto it = _pending.find (packet.id);
+                    if (it != _pending.end ())
                     {
-                        it->second->ec = make_error_code (Errc::MessageTooLong);
+                        it->second->packet = packet;
+                        it->second->ec = this->decodeError (packet.flags & 0x000F);
+                        if ((packet.flags & 0x0200) && it->second->ec == std::error_code{})
+                        {
+                            it->second->ec = make_error_code (Errc::MessageTooLong);
+                        }
+                        it->second->cond.signal ();
                     }
-                    it->second->cond.signal ();
                 }
             }
         }

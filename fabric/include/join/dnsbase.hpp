@@ -197,7 +197,7 @@ namespace join
                 OUT_ENUM (ANY);
             }
 
-            return "UNKNOWN (" + std::to_string (recordType) + ")";
+            return "UNKNOWN";
         }
 
         /**
@@ -212,7 +212,7 @@ namespace join
                 OUT_ENUM (IN);
             }
 
-            return "UNKNOWN (" + std::to_string (recordClass) + ")";
+            return "UNKNOWN";
         }
 
     protected:
@@ -362,7 +362,7 @@ namespace join
         {
             if (depth > 10)
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE: requires malicious DNS packet.
             }
 
             for (;;)

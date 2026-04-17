@@ -30,9 +30,6 @@
 #include <join/resolver.hpp>
 #include <join/socket.hpp>
 
-// C.
-// #include <linux/filter.h>
-
 namespace join
 {
     /**
@@ -50,6 +47,14 @@ namespace join
          * @brief default constructor.
          */
         Dns () noexcept = default;
+
+        /**
+         * @brief destroy instance.
+         */
+        ~Dns () noexcept
+        {
+            close ();
+        }
 
         /**
          * @brief create the DNS over UDP transport.
@@ -82,9 +87,8 @@ namespace join
 
         /**
          * @brief close the DNS over UDP transport.
-         * @param handler event handler to unregister from the reactor.
          */
-        void close ([[maybe_unused]] EventHandler* handler) noexcept
+        void close () noexcept
         {
             if (_reactor && _socket.handle () != -1)
             {
