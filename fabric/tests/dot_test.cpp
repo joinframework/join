@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/dot.hpp>
+#include <join/resolver.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>

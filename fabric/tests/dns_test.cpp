@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/dns.hpp>
+#include <join/resolver.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -81,9 +81,11 @@ TEST_F (DnsTest, resolveAllAddress)
     addresses = Dns::Resolver::lookupAllAddress ("localhost");
     EXPECT_GT (addresses.size (), 0);
 
-    EXPECT_THROW (Dns::Resolver ("foo", _servers.front ()), std::system_error);
+    addresses = Dns::Resolver ("foo", _servers.front ()).resolveAllAddress ("localhost", AF_INET);
+    EXPECT_EQ (addresses.size (), 0);
 
-    EXPECT_THROW (Dns::Resolver ("", "255.255.255.255"), std::system_error);
+    addresses = Dns::Resolver ("", "255.255.255.255").resolveAllAddress ("localhost", AF_INET);
+    EXPECT_EQ (addresses.size (), 0);
 
     addresses = Dns::Resolver ("", "8.8.8.8", 53).resolveAllAddress ("joinframework.net", AF_INET, 1ms);
     EXPECT_EQ (addresses.size (), 0);
@@ -132,9 +134,11 @@ TEST_F (DnsTest, resolveAddress)
     address = Dns::Resolver::lookupAddress ("localhost");
     EXPECT_TRUE (address.isLoopBack ());
 
-    EXPECT_THROW (Dns::Resolver ("foo", _servers.front ()), std::system_error);
+    address = Dns::Resolver ("foo", _servers.front ()).resolveAddress ("localhost", AF_INET);
+    EXPECT_TRUE (address.isWildcard ());
 
-    EXPECT_THROW (Dns::Resolver ("", "255.255.255.255"), std::system_error);
+    address = Dns::Resolver ("", "255.255.255.255").resolveAddress ("localhost", AF_INET);
+    EXPECT_TRUE (address.isWildcard ());
 
     address = Dns::Resolver ("", "8.8.8.8", 53).resolveAddress ("joinframework.net", AF_INET, 1ms);
     EXPECT_TRUE (address.isWildcard ());
@@ -187,9 +191,17 @@ TEST_F (DnsTest, resolveAllName)
     aliases = Dns::Resolver::lookupAllName ("::1");
     EXPECT_GT (aliases.size (), 0);
 
-    EXPECT_THROW (Dns::Resolver ("foo", _servers.front ()), std::system_error);
+    aliases = Dns::Resolver ("foo", _servers.front ()).resolveAllName ("127.0.0.1");
+    EXPECT_EQ (aliases.size (), 0);
 
-    EXPECT_THROW (Dns::Resolver ("", "255.255.255.255"), std::system_error);
+    aliases = Dns::Resolver ("foo", _servers.front ()).resolveAllName ("::1");
+    EXPECT_EQ (aliases.size (), 0);
+
+    aliases = Dns::Resolver ("", "255.255.255.255").resolveAllName ("127.0.0.1");
+    EXPECT_EQ (aliases.size (), 0);
+
+    aliases = Dns::Resolver ("", "255.255.255.255").resolveAllName ("::1");
+    EXPECT_EQ (aliases.size (), 0);
 
     aliases = Dns::Resolver ("", "8.8.8.8", 53)
                   .resolveAllName (Dns::Resolver::lookupAddress ("joinframework.net", AF_INET), 1ms);
@@ -235,9 +247,17 @@ TEST_F (DnsTest, resolveName)
     alias = Dns::Resolver::lookupName ("::1");
     EXPECT_FALSE (alias.empty ());
 
-    EXPECT_THROW (Dns::Resolver ("foo", _servers.front ()), std::system_error);
+    alias = Dns::Resolver ("foo", _servers.front ()).resolveName ("127.0.0.1");
+    EXPECT_TRUE (alias.empty ());
 
-    EXPECT_THROW (Dns::Resolver ("", "255.255.255.255"), std::system_error);
+    alias = Dns::Resolver ("foo", _servers.front ()).resolveName ("::1");
+    EXPECT_TRUE (alias.empty ());
+
+    alias = Dns::Resolver ("", "255.255.255.255").resolveName ("127.0.0.1");
+    EXPECT_TRUE (alias.empty ());
+
+    alias = Dns::Resolver ("", "255.255.255.255").resolveName ("::1");
+    EXPECT_TRUE (alias.empty ());
 
     alias = Dns::Resolver ("", "8.8.8.8", 53)
                 .resolveName (Dns::Resolver::lookupAddress ("joinframework.net", AF_INET), 1ms);
@@ -265,9 +285,11 @@ TEST_F (DnsTest, resolveAllNameServer)
     names = Dns::Resolver::lookupAllNameServer ("localhost");
     EXPECT_EQ (names.size (), 0);
 
-    EXPECT_THROW (Dns::Resolver ("foo", _servers.front ()), std::system_error);
+    names = Dns::Resolver ("foo", _servers.front ()).resolveAllNameServer ("localhost");
+    EXPECT_EQ (names.size (), 0);
 
-    EXPECT_THROW (Dns::Resolver ("", "255.255.255.255"), std::system_error);
+    names = Dns::Resolver ("", "255.255.255.255").resolveAllNameServer ("localhost");
+    EXPECT_EQ (names.size (), 0);
 
     names = Dns::Resolver ("", "8.8.8.8", 53).resolveAllNameServer ("joinframework.net", 1ms);
     EXPECT_EQ (names.size (), 0);
@@ -302,9 +324,11 @@ TEST_F (DnsTest, resolveNameServer)
     name = Dns::Resolver::lookupNameServer ("localhost");
     EXPECT_TRUE (name.empty ());
 
-    EXPECT_THROW (Dns::Resolver ("foo", _servers.front ()), std::system_error);
+    name = Dns::Resolver ("foo", _servers.front ()).resolveNameServer ("localhost");
+    EXPECT_TRUE (name.empty ());
 
-    EXPECT_THROW (Dns::Resolver ("", "255.255.255.255"), std::system_error);
+    name = Dns::Resolver ("", "255.255.255.255").resolveNameServer ("localhost");
+    EXPECT_TRUE (name.empty ());
 
     name = Dns::Resolver ("", "8.8.8.8", 53).resolveNameServer ("joinframework.net", 1ms);
     EXPECT_TRUE (name.empty ());
@@ -339,9 +363,11 @@ TEST_F (DnsTest, resolveAuthority)
     name = Dns::Resolver::lookupAuthority ("localhost");
     EXPECT_TRUE (name.empty ());
 
-    EXPECT_THROW (Dns::Resolver ("foo", _servers.front ()), std::system_error);
+    name = Dns::Resolver ("foo", _servers.front ()).resolveAuthority ("localhost");
+    EXPECT_TRUE (name.empty ());
 
-    EXPECT_THROW (Dns::Resolver ("", "255.255.255.255"), std::system_error);
+    name = Dns::Resolver ("", "255.255.255.255").resolveAuthority ("localhost");
+    EXPECT_TRUE (name.empty ());
 
     name = Dns::Resolver ("", "8.8.8.8", 53).resolveAuthority ("joinframework.net", 1ms);
     EXPECT_TRUE (name.empty ());
@@ -373,9 +399,11 @@ TEST_F (DnsTest, resolveAllMailExchanger)
     exchangers = Dns::Resolver::lookupAllMailExchanger ("localhost");
     EXPECT_EQ (exchangers.size (), 0);
 
-    EXPECT_THROW (Dns::Resolver ("foo", _servers.front ()), std::system_error);
+    exchangers = Dns::Resolver ("foo", _servers.front ()).resolveAllMailExchanger ("localhost");
+    EXPECT_EQ (exchangers.size (), 0);
 
-    EXPECT_THROW (Dns::Resolver ("", "255.255.255.255"), std::system_error);
+    exchangers = Dns::Resolver ("", "255.255.255.255").resolveAllMailExchanger ("localhost");
+    EXPECT_EQ (exchangers.size (), 0);
 
     exchangers = Dns::Resolver ("", "8.8.8.8", 53).resolveAllMailExchanger ("joinframework.net", 1ms);
     EXPECT_EQ (exchangers.size (), 0);
@@ -407,9 +435,11 @@ TEST_F (DnsTest, resolveMailExchanger)
     exchanger = Dns::Resolver::lookupMailExchanger ("localhost");
     EXPECT_TRUE (exchanger.empty ());
 
-    EXPECT_THROW (Dns::Resolver ("foo", _servers.front ()), std::system_error);
+    exchanger = Dns::Resolver ("foo", _servers.front ()).resolveMailExchanger ("localhost");
+    EXPECT_TRUE (exchanger.empty ());
 
-    EXPECT_THROW (Dns::Resolver ("", "255.255.255.255"), std::system_error);
+    exchanger = Dns::Resolver ("", "255.255.255.255").resolveMailExchanger ("localhost");
+    EXPECT_TRUE (exchanger.empty ());
 
     exchanger = Dns::Resolver ("", "8.8.8.8", 53).resolveMailExchanger ("joinframework.net", 1ms);
     EXPECT_TRUE (exchanger.empty ());
@@ -435,33 +465,6 @@ TEST_F (DnsTest, resolveService)
     EXPECT_EQ (Dns::Resolver::resolveService ("smtps"), 465);
     EXPECT_EQ (Dns::Resolver::resolveService ("http"), 80);
     EXPECT_EQ (Dns::Resolver::resolveService ("https"), 443);
-}
-
-/**
- * @brief test the typeName method.
- */
-TEST_F (DnsTest, typeName)
-{
-    EXPECT_EQ (Dns::Resolver::typeName (0), "UNKNOWN");
-    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::A), "A");
-    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::NS), "NS");
-    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::CNAME), "CNAME");
-    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::SOA), "SOA");
-    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::PTR), "PTR");
-    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::MX), "MX");
-    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::TXT), "TXT");
-    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::AAAA), "AAAA");
-    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::SRV), "SRV");
-    EXPECT_EQ (Dns::Resolver::typeName (Dns::Resolver::ANY), "ANY");
-}
-
-/**
- * @brief test the className method.
- */
-TEST_F (DnsTest, className)
-{
-    EXPECT_EQ (Dns::Resolver::className (0), "UNKNOWN");
-    EXPECT_EQ (Dns::Resolver::className (Dns::Resolver::IN), "IN");
 }
 
 /**

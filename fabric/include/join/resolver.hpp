@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2023 Mathieu Rabine
+ * Copyright (c) 2021 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,11 +26,14 @@
 #define JOIN_FABRIC_RESOLVER_HPP
 
 // libjoin.
+#include <join/dnsmessage.hpp>
 #include <join/condition.hpp>
-#include <join/dnsbase.hpp>
+#include <join/socket.hpp>
 
 // C++.
+#include <unordered_map>
 #include <chrono>
+#include <memory>
 
 // C.
 #include <arpa/nameser.h>
@@ -41,24 +44,27 @@
 namespace join
 {
     /**
-     * @brief .
+     * @brief basic DNS resolver over datagram socket.
      */
-    template <typename TransportPolicy>
-    class BasicDnsResolver : public BasicDns<TransportPolicy>
+    template <class Protocol>
+    class BasicDatagramResolver : public Protocol::Socket
     {
     public:
-        using Endpoint = typename BasicDns<TransportPolicy>::Endpoint;
-        using RecordType = typename BasicDns<TransportPolicy>::RecordType;
-        using RecordClass = typename BasicDns<TransportPolicy>::RecordClass;
+        using Socket = typename Protocol::Socket;
+        using Endpoint = typename Protocol::Endpoint;
+        using State = typename Socket::State;
 
+    public:
         /**
-         * @brief create the resolver instance binded to the given interface.
-         * @param interface interface to use.
-         * @param args additional arguments (see. transport policies ::create).
+         * @brief construct the resolver instance.
+         * @param interface network interface to bind to.
+         * @param server remote DNS server address.
+         * @param port remote DNS server port.
+         * @param reactor reactor instance.
          */
-        template <typename... Args>
-        explicit BasicDnsResolver (const std::string& interface = "", Args&&... args)
-        : BasicDns<TransportPolicy> ()
+        explicit BasicDatagramResolver (const std::string& interface = {}, const IpAddress& server = {},
+                                        uint16_t port = Protocol::defaultPort, Reactor* reactor = nullptr)
+        : Socket ()
 #ifdef DEBUG
         , _onSuccess (defaultOnSuccess)
         , _onFailure (defaultOnFailure)
@@ -66,39 +72,103 @@ namespace join
         , _onSuccess (nullptr)
         , _onFailure (nullptr)
 #endif
+        , _interface (interface)
+        , _server ({server, port})
+        , _reactor (reactor ? reactor : ReactorThread::reactor ())
+        , _buffer (std::make_unique<char[]> (Protocol::maxMsgSize))
         {
-            if (this->_transport.create (this, interface, std::forward<Args> (args)...) == -1)
-            {
-                throw std::system_error (lastError);
-            }
         }
 
         /**
-         * @brief create instance by copy.
+         * @brief copy constructor.
+         * @param other other object to copy.
          */
-        BasicDnsResolver (const BasicDnsResolver&) = delete;
+        BasicDatagramResolver (const BasicDatagramResolver& other) = delete;
 
         /**
-         * @brief create instance by move.
+         * @brief copy assignment operator.
+         * @param other other object to copy.
+         * @return a reference to the current object.
          */
-        BasicDnsResolver& operator= (const BasicDnsResolver&) = delete;
+        BasicDatagramResolver& operator= (const BasicDatagramResolver& other) = delete;
 
         /**
-         * @brief assign instance by copy.
+         * @brief move constructor.
+         * @param other other object to move.
          */
-        BasicDnsResolver (BasicDnsResolver&&) = delete;
+        BasicDatagramResolver (BasicDatagramResolver&& other) = delete;
 
         /**
-         * @brief assign instance by move.
+         * @brief move assignment operator.
+         * @param other other object to move.
+         * @return a reference to the current object.
          */
-        BasicDnsResolver& operator= (BasicDnsResolver&&) = delete;
+        BasicDatagramResolver& operator= (BasicDatagramResolver&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicDnsResolver () noexcept
+        virtual ~BasicDatagramResolver () noexcept = default;
+
+        /**
+         * @brief make a connection to the given endpoint.
+         * @param endpoint endpoint to connect to.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int connect (const Endpoint& endpoint) override
         {
-            this->_transport.close ();
+            if ((this->_state != State::Closed) && (this->_state != State::Disconnected))
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            if ((this->_state == State::Closed) && (this->open (endpoint.protocol ()) == -1))
+            {
+                return -1;
+            }
+
+            if (this->bind ({IpAddress (endpoint.protocol ().family ()), 0}) == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            if (this->bindToDevice (_interface) == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            if (Socket::connect (endpoint) == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            _server = endpoint;
+
+            if (_reactor->addHandler (this->handle (), this) == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief shutdown the connection.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int disconnect () override
+        {
+            if (_reactor && (this->_state == State::Connected))
+            {
+                _reactor->delHandler (this->_handle);
+            }
+
+            return Socket::disconnect ();
         }
 
         /**
@@ -132,7 +202,7 @@ namespace join
         }
 
         /**
-         * @brief resolve host name and return all IP address found.
+         * @brief resolve host name and return all IP addresses found.
          * @param host host name to resolve.
          * @param family address family.
          * @param timeout timeout in milliseconds (default: 5000).
@@ -152,13 +222,11 @@ namespace join
 
             QuestionRecord question;
             question.host = host;
-            RecordType expected = (family == AF_INET6) ? RecordType::AAAA : RecordType::A;
-            question.type = expected;
-            question.dnsclass = RecordClass::IN;
-
+            question.type = (family == AF_INET6) ? DnsMessage::RecordType::AAAA : DnsMessage::RecordType::A;
+            question.dnsclass = DnsMessage::RecordClass::IN;
             packet.questions.push_back (question);
 
-            if (this->query (packet, timeout) == -1)
+            if (query (packet, timeout) == -1)
             {
                 return {};
             }
@@ -167,7 +235,7 @@ namespace join
 
             for (auto const& answer : packet.answers)
             {
-                if (!answer.addr.isWildcard () && (answer.type == expected))
+                if (!answer.addr.isWildcard () && (answer.type == question.type))
                 {
                     addresses.push_back (answer.addr);
                 }
@@ -186,8 +254,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                IpAddressList addresses =
-                    BasicDnsResolver<TransportPolicy> ("", server).resolveAllAddress (host, family);
+                IpAddressList addresses = BasicDatagramResolver<Protocol> ({}, server).resolveAllAddress (host, family);
                 if (!addresses.empty ())
                 {
                     return addresses;
@@ -198,7 +265,7 @@ namespace join
         }
 
         /**
-         * @brief resolve host name and return all IP address found.
+         * @brief resolve host name and return all IP addresses found.
          * @param host host name to resolve.
          * @param timeout timeout in milliseconds (default: 5000).
          * @return the resolved IP address list.
@@ -226,7 +293,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                IpAddressList addresses = BasicDnsResolver<TransportPolicy> ("", server).resolveAllAddress (host);
+                IpAddressList addresses = BasicDatagramResolver<Protocol> ({}, server).resolveAllAddress (host);
                 if (!addresses.empty ())
                 {
                     return addresses;
@@ -321,12 +388,11 @@ namespace join
 
             QuestionRecord question;
             question.host = address.toArpa ();
-            question.type = RecordType::PTR;
-            question.dnsclass = RecordClass::IN;
-
+            question.type = DnsMessage::RecordType::PTR;
+            question.dnsclass = DnsMessage::RecordClass::IN;
             packet.questions.push_back (question);
 
-            if (this->query (packet, timeout) == -1)
+            if (query (packet, timeout) == -1)
             {
                 return {};
             }
@@ -335,7 +401,7 @@ namespace join
 
             for (auto const& answer : packet.answers)
             {
-                if (!answer.name.empty () && (answer.type == RecordType::PTR))
+                if (!answer.name.empty () && (answer.type == DnsMessage::RecordType::PTR))
                 {
                     aliases.insert (answer.name);
                 }
@@ -353,7 +419,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                AliasList aliases = BasicDnsResolver<TransportPolicy> ("", server).resolveAllName (address);
+                AliasList aliases = BasicDatagramResolver<Protocol> ({}, server).resolveAllName (address);
                 if (!aliases.empty ())
                 {
                     return aliases;
@@ -414,11 +480,11 @@ namespace join
 
             QuestionRecord question;
             question.host = host;
-            question.type = RecordType::NS;
-            question.dnsclass = RecordClass::IN;
+            question.type = DnsMessage::RecordType::NS;
+            question.dnsclass = DnsMessage::RecordClass::IN;
             packet.questions.push_back (question);
 
-            if (this->query (packet, timeout) == -1)
+            if (query (packet, timeout) == -1)
             {
                 return {};
             }
@@ -427,7 +493,7 @@ namespace join
 
             for (auto const& answer : packet.answers)
             {
-                if (!answer.name.empty () && (answer.type == RecordType::NS))
+                if (!answer.name.empty () && (answer.type == DnsMessage::RecordType::NS))
                 {
                     servers.insert (answer.name);
                 }
@@ -445,7 +511,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                ServerList servers = BasicDnsResolver<TransportPolicy> ("", server).resolveAllNameServer (host);
+                ServerList servers = BasicDatagramResolver<Protocol> ({}, server).resolveAllNameServer (host);
                 if (!servers.empty ())
                 {
                     return servers;
@@ -507,18 +573,18 @@ namespace join
 
             QuestionRecord question;
             question.host = host;
-            question.type = RecordType::SOA;
-            question.dnsclass = RecordClass::IN;
+            question.type = DnsMessage::RecordType::SOA;
+            question.dnsclass = DnsMessage::RecordClass::IN;
             packet.questions.push_back (question);
 
-            if (this->query (packet, timeout) == -1)
+            if (query (packet, timeout) == -1)
             {
                 return {};
             }
 
             for (auto const& answer : packet.answers)
             {
-                if (!answer.name.empty () && (answer.type == RecordType::SOA))
+                if (!answer.name.empty () && (answer.type == DnsMessage::RecordType::SOA))
                 {
                     return answer.name;
                 }
@@ -536,7 +602,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                std::string authority = BasicDnsResolver<TransportPolicy> ("", server).resolveAuthority (host);
+                std::string authority = BasicDatagramResolver<Protocol> ({}, server).resolveAuthority (host);
                 if (!authority.empty ())
                 {
                     return authority;
@@ -566,20 +632,19 @@ namespace join
 
             QuestionRecord question;
             question.host = host;
-            question.type = RecordType::MX;
-            question.dnsclass = RecordClass::IN;
+            question.type = DnsMessage::RecordType::MX;
+            question.dnsclass = DnsMessage::RecordClass::IN;
             packet.questions.push_back (question);
 
-            if (this->query (packet, timeout) == -1)
+            if (query (packet, timeout) == -1)
             {
                 return {};
             }
 
             ExchangerList exchangers;
-
             for (auto const& answer : packet.answers)
             {
-                if (!answer.name.empty () && (answer.type == RecordType::MX))
+                if (!answer.name.empty () && (answer.type == DnsMessage::RecordType::MX))
                 {
                     exchangers.insert (answer.name);
                 }
@@ -597,8 +662,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                ExchangerList exchangers =
-                    BasicDnsResolver<TransportPolicy> ("", server).resolveAllMailExchanger (host);
+                ExchangerList exchangers = BasicDatagramResolver<Protocol> ({}, server).resolveAllMailExchanger (host);
                 if (!exchangers.empty ())
                 {
                     return exchangers;
@@ -670,6 +734,21 @@ namespace join
 
     private:
         /**
+         * @brief reconnect to the remote DNS server.
+         * @return 0 on success, -1 on failure.
+         */
+        int reconnect ()
+        {
+            if ((this->_state != State::Closed) && (this->_state != State::Disconnected))
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            return this->connect (_server);
+        }
+
+        /**
          * @brief serialize and send a DNS query, waiting for a response.
          * @param packet DNS packet to send, filled with the response on success.
          * @param timeout query timeout.
@@ -677,18 +756,17 @@ namespace join
          */
         int query (DnsPacket& packet, std::chrono::milliseconds timeout)
         {
-            if (!this->_transport.connected () && (this->_transport.reconnect () == -1))
+            if (!Socket::connected () && (reconnect () == -1))
             {
-                notify (_onFailure, packet);
                 return -1;
             }
 
-            packet.src = this->_transport.localEndpoint ().ip ();
-            packet.dest = this->_transport.remoteEndpoint ().ip ();
-            packet.port = this->_transport.remoteEndpoint ().port ();
+            packet.src = Socket::localEndpoint ().ip ();
+            packet.dest = Socket::remoteEndpoint ().ip ();
+            packet.port = Socket::remoteEndpoint ().port ();
 
             std::stringstream data;
-            if (this->serialize (packet, data) == -1)
+            if (_message.serialize (packet, data) == -1)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 notify (_onFailure, packet);
@@ -696,7 +774,7 @@ namespace join
             }
 
             std::string buffer = data.str ();
-            if (buffer.size () > TransportPolicy::maxMsgSize)
+            if (buffer.size () > Protocol::maxMsgSize)
             {
                 lastError = make_error_code (Errc::MessageTooLong);
                 notify (_onFailure, packet);
@@ -713,7 +791,7 @@ namespace join
                 return -1;
             }
 
-            if (this->_transport.write (reinterpret_cast<const uint8_t*> (buffer.data ()), buffer.size ()) == -1)
+            if (Socket::write (buffer.data (), buffer.size ()) == -1)
             {
                 _pending.erase (inserted.first);
                 notify (_onFailure, packet);
@@ -750,33 +828,35 @@ namespace join
          */
         void onReceive ([[maybe_unused]] int fd) override final
         {
-            int size = this->_transport.read (this->_buffer.get (), TransportPolicy::maxMsgSize);
-            if (size >= 12)
+            int size = Socket::read (_buffer.get (), Protocol::maxMsgSize);
+            if (size < 12)
             {
-                std::stringstream data;
-                data.rdbuf ()->pubsetbuf (reinterpret_cast<char*> (this->_buffer.get ()), size);
+                return;
+            }
 
-                DnsPacket packet;
-                this->deserialize (packet, data);
-                packet.src = this->_transport.localEndpoint ().ip ();
-                packet.dest = this->_transport.remoteEndpoint ().ip ();
-                packet.port = this->_transport.remoteEndpoint ().port ();
+            std::stringstream data;
+            data.rdbuf ()->pubsetbuf (_buffer.get (), size);
 
-                if (packet.flags & 0x8000)
+            DnsPacket packet;
+            _message.deserialize (packet, data);
+            packet.src = Socket::localEndpoint ().ip ();
+            packet.dest = Socket::remoteEndpoint ().ip ();
+            packet.port = Socket::remoteEndpoint ().port ();
+
+            if (packet.flags & 0x8000)
+            {
+                ScopedLock<Mutex> lock (_syncMutex);
+
+                auto it = _pending.find (packet.id);
+                if (it != _pending.end ())
                 {
-                    ScopedLock<Mutex> lock (_syncMutex);
-
-                    auto it = _pending.find (packet.id);
-                    if (it != _pending.end ())
+                    it->second->packet = packet;
+                    it->second->ec = DnsMessage::decodeError (packet.flags & 0x000F);
+                    if ((packet.flags & 0x0200) && it->second->ec == std::error_code{})
                     {
-                        it->second->packet = packet;
-                        it->second->ec = this->decodeError (packet.flags & 0x000F);
-                        if ((packet.flags & 0x0200) && it->second->ec == std::error_code{})
-                        {
-                            it->second->ec = make_error_code (Errc::MessageTooLong);
-                        }
-                        it->second->cond.signal ();
+                        it->second->ec = make_error_code (Errc::MessageTooLong);
                     }
+                    it->second->cond.signal ();
                 }
             }
         }
@@ -787,7 +867,7 @@ namespace join
          */
         void onClose ([[maybe_unused]] int fd) override final
         {
-            this->_transport.close ();
+            this->disconnect ();
         }
 
 #ifdef DEBUG
@@ -805,8 +885,8 @@ namespace join
             for (auto const& question : packet.questions)
             {
                 std::cout << question.host;
-                std::cout << "  " << BasicDns<TransportPolicy>::typeName (question.type);
-                std::cout << "  " << BasicDns<TransportPolicy>::className (question.dnsclass);
+                std::cout << "  " << DnsMessage::typeName (question.type);
+                std::cout << "  " << DnsMessage::className (question.dnsclass);
                 std::cout << std::endl;
             }
 
@@ -815,22 +895,22 @@ namespace join
             for (auto const& answer : packet.answers)
             {
                 std::cout << answer.host;
-                std::cout << "  " << BasicDns<TransportPolicy>::typeName (answer.type);
-                std::cout << "  " << BasicDns<TransportPolicy>::className (answer.dnsclass);
+                std::cout << "  " << DnsMessage::typeName (answer.type);
+                std::cout << "  " << DnsMessage::className (answer.dnsclass);
                 std::cout << "  " << answer.ttl;
-                if (answer.type == RecordType::A)
+                if (answer.type == DnsMessage::RecordType::A)
                 {
                     std::cout << "  " << answer.addr;
                 }
-                else if (answer.type == RecordType::NS)
+                else if (answer.type == DnsMessage::RecordType::NS)
                 {
                     std::cout << "  " << answer.name;
                 }
-                else if (answer.type == RecordType::CNAME)
+                else if (answer.type == DnsMessage::RecordType::CNAME)
                 {
                     std::cout << "  " << answer.name;
                 }
-                else if (answer.type == RecordType::SOA)
+                else if (answer.type == DnsMessage::RecordType::SOA)
                 {
                     std::cout << "  " << answer.name;
                     std::cout << "  " << answer.mail;
@@ -840,16 +920,16 @@ namespace join
                     std::cout << "  " << answer.expire;
                     std::cout << "  " << answer.minimum;
                 }
-                else if (answer.type == RecordType::PTR)
+                else if (answer.type == DnsMessage::RecordType::PTR)
                 {
                     std::cout << "  " << answer.name;
                 }
-                else if (answer.type == RecordType::MX)
+                else if (answer.type == DnsMessage::RecordType::MX)
                 {
                     std::cout << "  " << answer.mxpref;
                     std::cout << "  " << answer.name;
                 }
-                else if (answer.type == RecordType::AAAA)
+                else if (answer.type == DnsMessage::RecordType::AAAA)
                 {
                     std::cout << "  " << answer.addr;
                 }
@@ -871,8 +951,8 @@ namespace join
             for (auto const& question : packet.questions)
             {
                 std::cout << question.host;
-                std::cout << "  " << BasicDns<TransportPolicy>::typeName (question.type);
-                std::cout << "  " << BasicDns<TransportPolicy>::className (question.dnsclass);
+                std::cout << "  " << DnsMessage::typeName (question.type);
+                std::cout << "  " << DnsMessage::className (question.dnsclass);
                 std::cout << std::endl;
             }
 
@@ -894,6 +974,21 @@ namespace join
             }
         }
 
+        /// DNS message codec.
+        DnsMessage _message;
+
+        /// network interface to bind to.
+        std::string _interface;
+
+        /// remote DNS server endpoint.
+        Endpoint _server;
+
+        /// event loop reactor.
+        Reactor* _reactor;
+
+        /// reception buffer.
+        std::unique_ptr<char[]> _buffer{std::make_unique<char[]> (Protocol::maxMsgSize)};
+
         /// pending synchronous request.
         struct PendingRequest
         {
@@ -907,6 +1002,227 @@ namespace join
 
         /// protection mutex.
         Mutex _syncMutex;
+    };
+
+    /**
+     * @brief basic DNS resolver over TLS socket (DNS over TLS).
+     */
+    template <class Protocol>
+    class BasicTlsResolver : public BasicDatagramResolver<Protocol>
+    {
+    public:
+        using Socket = typename Protocol::Socket;
+        using Endpoint = typename Protocol::Endpoint;
+        using State = typename Socket::State;
+
+        /**
+         * @brief construct the DoT resolver instance.
+         * @param interface network interface to bind to.
+         * @param server remote DNS server address.
+         * @param port remote DNS server port.
+         * @param reactor reactor instance.
+         */
+        explicit BasicTlsResolver (const std::string& interface = {}, const IpAddress& server = {},
+                                   uint16_t port = Protocol::defaultPort, Reactor* reactor = nullptr)
+        : BasicDatagramResolver<Protocol> (interface, server, port, reactor)
+        {
+        }
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        BasicTlsResolver (const BasicTlsResolver& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to copy.
+         * @return a reference to the current object.
+         */
+        BasicTlsResolver& operator= (const BasicTlsResolver& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        BasicTlsResolver (BasicTlsResolver&& other) = delete;
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to move.
+         * @return a reference to the current object.
+         */
+        BasicTlsResolver& operator= (BasicTlsResolver&& other) = delete;
+
+        /**
+         * @brief destroy instance.
+         */
+        virtual ~BasicTlsResolver () noexcept = default;
+
+        /**
+         * @brief connect to the remote DNS server with TLS handshake.
+         * @param endpoint remote endpoint.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int connect (const Endpoint& endpoint) override
+        {
+            if ((this->_state != State::Closed) && (this->_state != State::Disconnected))
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            if ((this->_state == State::Closed) && (this->open (endpoint.protocol ()) == -1))
+            {
+                return -1;
+            }
+
+            if (this->bind ({IpAddress (endpoint.family ()), 0}) == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            if (this->bindToDevice (this->_interface) == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            if (Socket::connectEncrypted (endpoint) == -1)
+            {
+                if (lastError != Errc::TemporaryError)
+                {
+                    this->close ();
+                    return -1;
+                }
+
+                if (!Socket::waitEncrypted ())
+                {
+                    this->close ();
+                    return -1;
+                }
+            }
+
+            this->_server = endpoint;
+
+            if (this->_reactor->addHandler (this->handle (), this) == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief close the TLS connection and reset framing state.
+         */
+        virtual void close () noexcept override
+        {
+            Socket::close ();
+            _size = 0;
+            _offset = 0;
+        }
+
+        /**
+         * @brief read a framed DoT message (2-byte length prefix).
+         * @param data destination buffer.
+         * @param maxSize maximum number of bytes to read.
+         * @return number of bytes read, or -1 on error.
+         */
+        virtual int read (char* data, unsigned long maxSize) noexcept override
+        {
+            if (_offset < _headerSize)
+            {
+                int nread = Socket::read (data + _offset, _headerSize - _offset);
+                if (nread == -1)
+                {
+                    if (lastError != Errc::TemporaryError)
+                    {
+                        _offset = 0;
+                        _size = 0;
+                    }
+                    return -1;
+                }
+
+                _offset += static_cast<size_t> (nread);
+
+                if (_offset < _headerSize)
+                {
+                    lastError = make_error_code (Errc::TemporaryError);
+                    return -1;
+                }
+
+                _size = ntohs (*reinterpret_cast<uint16_t*> (data));
+
+                if (_size > maxSize)
+                {
+                    lastError = make_error_code (Errc::MessageTooLong);
+                    _offset = 0;
+                    _size = 0;
+                    return -1;
+                }
+            }
+
+            int nread = Socket::read (data + (_offset - _headerSize), _size - (_offset - _headerSize));
+            if (nread == -1)
+            {
+                if (lastError != Errc::TemporaryError)
+                {
+                    _offset = 0;
+                    _size = 0;
+                }
+                return -1;
+            }
+
+            _offset += static_cast<size_t> (nread);
+
+            if (_offset < (_size + _headerSize))
+            {
+                lastError = make_error_code (Errc::TemporaryError);
+                return -1;
+            }
+
+            int msgLen = static_cast<int> (_size);
+            _offset = 0;
+            _size = 0;
+
+            return msgLen;
+        }
+
+        /**
+         * @brief write a framed DoT message (2-byte length prefix).
+         * @param data source buffer.
+         * @param size number of bytes to write.
+         * @return number of bytes written, or -1 on error.
+         */
+        virtual int write (const char* data, unsigned long size) noexcept override
+        {
+            uint16_t msgLength = htons (static_cast<uint16_t> (size));
+
+            if (Socket::writeExactly (reinterpret_cast<const char*> (&msgLength), sizeof (msgLength)) == -1)
+            {
+                return -1;
+            }
+
+            if (Socket::writeExactly (data, size) == -1)
+            {
+                return -1;
+            }
+
+            return static_cast<int> (size);
+        }
+
+    private:
+        /// DOT framing header size.
+        static constexpr size_t _headerSize = 2;
+
+        /// total expected payload size.
+        size_t _size = 0;
+
+        /// current position in the buffer.
+        size_t _offset = 0;
     };
 }
 
