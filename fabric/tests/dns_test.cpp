@@ -45,7 +45,7 @@ protected:
         _servers = Dns::Resolver::nameServers ();
         ASSERT_GT (_servers.size (), 0);
 
-        _resolver = std::make_unique<Dns::Resolver> ("", _servers.front ());
+        _resolver = std::make_unique<Dns::Resolver> ("", _servers.front ().toString ());
     }
 
     IpAddressList _servers;
@@ -81,7 +81,7 @@ TEST_F (DnsTest, resolveAllAddress)
     addresses = Dns::Resolver::lookupAllAddress ("localhost");
     EXPECT_GT (addresses.size (), 0);
 
-    addresses = Dns::Resolver ("foo", _servers.front ()).resolveAllAddress ("localhost", AF_INET);
+    addresses = Dns::Resolver ("foo", _servers.front ().toString ()).resolveAllAddress ("localhost", AF_INET);
     EXPECT_EQ (addresses.size (), 0);
 
     addresses = Dns::Resolver ("", "255.255.255.255").resolveAllAddress ("localhost", AF_INET);
@@ -93,13 +93,13 @@ TEST_F (DnsTest, resolveAllAddress)
     addresses = Dns::Resolver ("", "8.8.8.8", 53).resolveAllAddress ("joinframework.net", 1ms);
     EXPECT_EQ (addresses.size (), 0);
 
-    addresses = Dns::Resolver::lookupAllAddress ("www.netflix.com");
+    addresses = Dns::Resolver::lookupAllAddress ("google.com");
     EXPECT_GT (addresses.size (), 0);
 
-    addresses = _resolver->resolveAllAddress ("www.google.com");
+    addresses = _resolver->resolveAllAddress ("google.com");
     EXPECT_GT (addresses.size (), 0);
 
-    addresses = Dns::Resolver::lookupAllAddress ("www.amazon.com");
+    addresses = Dns::Resolver::lookupAllAddress ("google.com");
     EXPECT_GT (addresses.size (), 0);
 }
 
@@ -134,7 +134,7 @@ TEST_F (DnsTest, resolveAddress)
     address = Dns::Resolver::lookupAddress ("localhost");
     EXPECT_TRUE (address.isLoopBack ());
 
-    address = Dns::Resolver ("foo", _servers.front ()).resolveAddress ("localhost", AF_INET);
+    address = Dns::Resolver ("foo", _servers.front ().toString ()).resolveAddress ("localhost", AF_INET);
     EXPECT_TRUE (address.isWildcard ());
 
     address = Dns::Resolver ("", "255.255.255.255").resolveAddress ("localhost", AF_INET);
@@ -146,13 +146,13 @@ TEST_F (DnsTest, resolveAddress)
     address = Dns::Resolver ("", "8.8.8.8", 53).resolveAddress ("joinframework.net", 1ms);
     EXPECT_TRUE (address.isWildcard ());
 
-    address = Dns::Resolver::lookupAddress ("www.netflix.com");
+    address = Dns::Resolver::lookupAddress ("google.com");
     EXPECT_FALSE (address.isWildcard ());
 
-    address = _resolver->resolveAddress ("www.google.com");
+    address = _resolver->resolveAddress ("google.com");
     EXPECT_FALSE (address.isWildcard ());
 
-    address = Dns::Resolver::lookupAddress ("www.amazon.com");
+    address = Dns::Resolver::lookupAddress ("google.com");
     EXPECT_FALSE (address.isWildcard ());
 }
 
@@ -191,10 +191,10 @@ TEST_F (DnsTest, resolveAllName)
     aliases = Dns::Resolver::lookupAllName ("::1");
     EXPECT_GT (aliases.size (), 0);
 
-    aliases = Dns::Resolver ("foo", _servers.front ()).resolveAllName ("127.0.0.1");
+    aliases = Dns::Resolver ("foo", _servers.front ().toString ()).resolveAllName ("127.0.0.1");
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = Dns::Resolver ("foo", _servers.front ()).resolveAllName ("::1");
+    aliases = Dns::Resolver ("foo", _servers.front ().toString ()).resolveAllName ("::1");
     EXPECT_EQ (aliases.size (), 0);
 
     aliases = Dns::Resolver ("", "255.255.255.255").resolveAllName ("127.0.0.1");
@@ -247,10 +247,10 @@ TEST_F (DnsTest, resolveName)
     alias = Dns::Resolver::lookupName ("::1");
     EXPECT_FALSE (alias.empty ());
 
-    alias = Dns::Resolver ("foo", _servers.front ()).resolveName ("127.0.0.1");
+    alias = Dns::Resolver ("foo", _servers.front ().toString ()).resolveName ("127.0.0.1");
     EXPECT_TRUE (alias.empty ());
 
-    alias = Dns::Resolver ("foo", _servers.front ()).resolveName ("::1");
+    alias = Dns::Resolver ("foo", _servers.front ().toString ()).resolveName ("::1");
     EXPECT_TRUE (alias.empty ());
 
     alias = Dns::Resolver ("", "255.255.255.255").resolveName ("127.0.0.1");
@@ -285,7 +285,7 @@ TEST_F (DnsTest, resolveAllNameServer)
     names = Dns::Resolver::lookupAllNameServer ("localhost");
     EXPECT_EQ (names.size (), 0);
 
-    names = Dns::Resolver ("foo", _servers.front ()).resolveAllNameServer ("localhost");
+    names = Dns::Resolver ("foo", _servers.front ().toString ()).resolveAllNameServer ("localhost");
     EXPECT_EQ (names.size (), 0);
 
     names = Dns::Resolver ("", "255.255.255.255").resolveAllNameServer ("localhost");
@@ -294,16 +294,17 @@ TEST_F (DnsTest, resolveAllNameServer)
     names = Dns::Resolver ("", "8.8.8.8", 53).resolveAllNameServer ("joinframework.net", 1ms);
     EXPECT_EQ (names.size (), 0);
 
-    names = Dns::Resolver::lookupAllNameServer ("netflix.com");
+    names = Dns::Resolver::lookupAllNameServer ("google.com");
     EXPECT_GT (names.size (), 0);
 
     names = _resolver->resolveAllNameServer ("google.com");
     EXPECT_GT (names.size (), 0);
 
-    names = Dns::Resolver ("", Dns::Resolver::lookupAddress ("a.gtld-servers.net")).resolveAllNameServer ("google.com");
+    names = Dns::Resolver ("", Dns::Resolver::lookupAddress ("a.gtld-servers.net").toString ())
+                .resolveAllNameServer ("google.com");
     EXPECT_EQ (names.size (), 0);
 
-    names = Dns::Resolver::lookupAllNameServer ("amazon.com");
+    names = Dns::Resolver::lookupAllNameServer ("google.com");
     EXPECT_GT (names.size (), 0);
 }
 
@@ -324,7 +325,7 @@ TEST_F (DnsTest, resolveNameServer)
     name = Dns::Resolver::lookupNameServer ("localhost");
     EXPECT_TRUE (name.empty ());
 
-    name = Dns::Resolver ("foo", _servers.front ()).resolveNameServer ("localhost");
+    name = Dns::Resolver ("foo", _servers.front ().toString ()).resolveNameServer ("localhost");
     EXPECT_TRUE (name.empty ());
 
     name = Dns::Resolver ("", "255.255.255.255").resolveNameServer ("localhost");
@@ -333,16 +334,17 @@ TEST_F (DnsTest, resolveNameServer)
     name = Dns::Resolver ("", "8.8.8.8", 53).resolveNameServer ("joinframework.net", 1ms);
     EXPECT_TRUE (name.empty ());
 
-    name = Dns::Resolver::lookupNameServer ("netflix.com");
+    name = Dns::Resolver::lookupNameServer ("google.com");
     EXPECT_FALSE (name.empty ());
 
     name = _resolver->resolveNameServer ("google.com");
     EXPECT_FALSE (name.empty ());
 
-    name = Dns::Resolver ("", Dns::Resolver::lookupAddress ("a.gtld-servers.net")).resolveNameServer ("google.com");
+    name = Dns::Resolver ("", Dns::Resolver::lookupAddress ("a.gtld-servers.net").toString ())
+               .resolveNameServer ("google.com");
     EXPECT_TRUE (name.empty ());
 
-    name = Dns::Resolver::lookupNameServer ("amazon.com");
+    name = Dns::Resolver::lookupNameServer ("google.com");
     EXPECT_FALSE (name.empty ());
 }
 
@@ -363,7 +365,7 @@ TEST_F (DnsTest, resolveAuthority)
     name = Dns::Resolver::lookupAuthority ("localhost");
     EXPECT_TRUE (name.empty ());
 
-    name = Dns::Resolver ("foo", _servers.front ()).resolveAuthority ("localhost");
+    name = Dns::Resolver ("foo", _servers.front ().toString ()).resolveAuthority ("localhost");
     EXPECT_TRUE (name.empty ());
 
     name = Dns::Resolver ("", "255.255.255.255").resolveAuthority ("localhost");
@@ -372,13 +374,13 @@ TEST_F (DnsTest, resolveAuthority)
     name = Dns::Resolver ("", "8.8.8.8", 53).resolveAuthority ("joinframework.net", 1ms);
     EXPECT_TRUE (name.empty ());
 
-    name = Dns::Resolver::lookupAuthority ("netflix.com");
+    name = Dns::Resolver::lookupAuthority ("google.com");
     EXPECT_FALSE (name.empty ());
 
     name = _resolver->resolveAuthority ("google.com");
     EXPECT_FALSE (name.empty ());
 
-    name = Dns::Resolver::lookupAuthority ("amazon.com");
+    name = Dns::Resolver::lookupAuthority ("google.com");
     EXPECT_FALSE (name.empty ());
 }
 
@@ -399,7 +401,7 @@ TEST_F (DnsTest, resolveAllMailExchanger)
     exchangers = Dns::Resolver::lookupAllMailExchanger ("localhost");
     EXPECT_EQ (exchangers.size (), 0);
 
-    exchangers = Dns::Resolver ("foo", _servers.front ()).resolveAllMailExchanger ("localhost");
+    exchangers = Dns::Resolver ("foo", _servers.front ().toString ()).resolveAllMailExchanger ("localhost");
     EXPECT_EQ (exchangers.size (), 0);
 
     exchangers = Dns::Resolver ("", "255.255.255.255").resolveAllMailExchanger ("localhost");
@@ -408,13 +410,13 @@ TEST_F (DnsTest, resolveAllMailExchanger)
     exchangers = Dns::Resolver ("", "8.8.8.8", 53).resolveAllMailExchanger ("joinframework.net", 1ms);
     EXPECT_EQ (exchangers.size (), 0);
 
-    exchangers = Dns::Resolver::lookupAllMailExchanger ("netflix.com");
+    exchangers = Dns::Resolver::lookupAllMailExchanger ("google.com");
     EXPECT_GT (exchangers.size (), 0);
 
     exchangers = _resolver->resolveAllMailExchanger ("google.com");
     EXPECT_GT (exchangers.size (), 0);
 
-    exchangers = Dns::Resolver::lookupAllMailExchanger ("amazon.com");
+    exchangers = Dns::Resolver::lookupAllMailExchanger ("google.com");
     EXPECT_GT (exchangers.size (), 0);
 }
 
@@ -435,7 +437,7 @@ TEST_F (DnsTest, resolveMailExchanger)
     exchanger = Dns::Resolver::lookupMailExchanger ("localhost");
     EXPECT_TRUE (exchanger.empty ());
 
-    exchanger = Dns::Resolver ("foo", _servers.front ()).resolveMailExchanger ("localhost");
+    exchanger = Dns::Resolver ("foo", _servers.front ().toString ()).resolveMailExchanger ("localhost");
     EXPECT_TRUE (exchanger.empty ());
 
     exchanger = Dns::Resolver ("", "255.255.255.255").resolveMailExchanger ("localhost");
@@ -444,13 +446,13 @@ TEST_F (DnsTest, resolveMailExchanger)
     exchanger = Dns::Resolver ("", "8.8.8.8", 53).resolveMailExchanger ("joinframework.net", 1ms);
     EXPECT_TRUE (exchanger.empty ());
 
-    exchanger = Dns::Resolver::lookupMailExchanger ("netflix.com");
+    exchanger = Dns::Resolver::lookupMailExchanger ("google.com");
     EXPECT_FALSE (exchanger.empty ());
 
     exchanger = _resolver->resolveMailExchanger ("google.com");
     EXPECT_FALSE (exchanger.empty ());
 
-    exchanger = Dns::Resolver::lookupMailExchanger ("amazon.com");
+    exchanger = Dns::Resolver::lookupMailExchanger ("google.com");
     EXPECT_FALSE (exchanger.empty ());
 }
 

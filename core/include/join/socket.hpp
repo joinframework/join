@@ -590,7 +590,7 @@ namespace join
                 handle.events |= POLLOUT;
             }
 
-            int nset = (handle.fd > -1) ? ::poll (&handle, 1, timeout) : -1;
+            int nset = (handle.fd > -1) ? ::poll (&handle, 1, timeout == 0 ? -1 : timeout) : -1;
             if (nset != 1)
             {
                 if (nset == -1)
@@ -2183,6 +2183,32 @@ namespace join
         {
             if (((this->_tlsHandle) ? SSL_set_ciphersuites (this->_tlsHandle.get (), cipher.c_str ())
                                     : SSL_CTX_set_ciphersuites (this->_tlsContext.get (), cipher.c_str ())) == 0)
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief set the ALPN protocols list.
+         * @param protocols list of protocol names (ex. {"h2", "http/1.1"}).
+         * @return 0 on success, -1 on failure.
+         */
+        int setAlpnProtocols (const std::vector<std::string>& protocols)
+        {
+            std::vector<uint8_t> wire;
+            wire.reserve (256);
+
+            for (auto const& proto : protocols)
+            {
+                wire.push_back (static_cast<uint8_t> (proto.size ()));
+                wire.insert (wire.end (), proto.begin (), proto.end ());
+            }
+
+            if (SSL_CTX_set_alpn_protos (this->_tlsContext.get (), wire.data (),
+                                         static_cast<unsigned int> (wire.size ())) != 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;

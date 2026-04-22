@@ -54,15 +54,14 @@ namespace join
         using Endpoint = typename Protocol::Endpoint;
         using State = typename Socket::State;
 
-    public:
         /**
          * @brief construct the resolver instance.
          * @param interface network interface to bind to.
-         * @param server remote DNS server address.
+         * @param server remote DNS server hostname or IP address.
          * @param port remote DNS server port.
          * @param reactor reactor instance.
          */
-        explicit BasicDatagramResolver (const std::string& interface = {}, const IpAddress& server = {},
+        explicit BasicDatagramResolver (const std::string& interface = {}, const std::string& server = {},
                                         uint16_t port = Protocol::defaultPort, Reactor* reactor = nullptr)
         : Socket ()
 #ifdef DEBUG
@@ -73,7 +72,8 @@ namespace join
         , _onFailure (nullptr)
 #endif
         , _interface (interface)
-        , _server ({server, port})
+        , _serverHostname (server)
+        , _port (port)
         , _reactor (reactor ? reactor : ReactorThread::reactor ())
         , _buffer (std::make_unique<char[]> (Protocol::maxMsgSize))
         {
@@ -146,7 +146,9 @@ namespace join
                 return -1;
             }
 
-            _server = endpoint;
+            _serverHostname = endpoint.hostname ().empty () ? endpoint.ip ().toString () : endpoint.hostname ();
+            _serverIp = endpoint.ip ();
+            _port = endpoint.port ();
 
             if (_reactor->addHandler (this->handle (), this) == -1)
             {
@@ -175,7 +177,7 @@ namespace join
          * @brief get IP address of the currently configured name servers.
          * @return a list of configured name servers.
          */
-        static IpAddressList nameServers ()
+        static IpAddressList nameServers () noexcept
         {
             IpAddressList addressList;
 
@@ -254,7 +256,8 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                IpAddressList addresses = BasicDatagramResolver<Protocol> ({}, server).resolveAllAddress (host, family);
+                IpAddressList addresses =
+                    BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAllAddress (host, family);
                 if (!addresses.empty ())
                 {
                     return addresses;
@@ -293,7 +296,8 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                IpAddressList addresses = BasicDatagramResolver<Protocol> ({}, server).resolveAllAddress (host);
+                IpAddressList addresses =
+                    BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAllAddress (host);
                 if (!addresses.empty ())
                 {
                     return addresses;
@@ -419,7 +423,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                AliasList aliases = BasicDatagramResolver<Protocol> ({}, server).resolveAllName (address);
+                AliasList aliases = BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAllName (address);
                 if (!aliases.empty ())
                 {
                     return aliases;
@@ -511,7 +515,8 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                ServerList servers = BasicDatagramResolver<Protocol> ({}, server).resolveAllNameServer (host);
+                ServerList servers =
+                    BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAllNameServer (host);
                 if (!servers.empty ())
                 {
                     return servers;
@@ -602,7 +607,8 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                std::string authority = BasicDatagramResolver<Protocol> ({}, server).resolveAuthority (host);
+                std::string authority =
+                    BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAuthority (host);
                 if (!authority.empty ())
                 {
                     return authority;
@@ -662,7 +668,8 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                ExchangerList exchangers = BasicDatagramResolver<Protocol> ({}, server).resolveAllMailExchanger (host);
+                ExchangerList exchangers =
+                    BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAllMailExchanger (host);
                 if (!exchangers.empty ())
                 {
                     return exchangers;
@@ -732,20 +739,26 @@ namespace join
         /// callback called when a lookup sequence failed.
         DnsNotify _onFailure;
 
-    private:
+    protected:
+        /**
+         * @brief check if client must reconnect.
+         * @return true if reconnection is required.
+         */
+        bool needReconnection () noexcept
+        {
+            return !this->connected ();
+        }
+
         /**
          * @brief reconnect to the remote DNS server.
+         * @param endpoint endpoint to connect to.
          * @return 0 on success, -1 on failure.
          */
-        int reconnect ()
+        int reconnect (const Endpoint& endpoint)
         {
-            if ((this->_state != State::Closed) && (this->_state != State::Disconnected))
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            return this->connect (_server);
+            this->disconnect ();
+            this->close ();
+            return this->connect (endpoint);
         }
 
         /**
@@ -756,14 +769,41 @@ namespace join
          */
         int query (DnsPacket& packet, std::chrono::milliseconds timeout)
         {
-            if (!Socket::connected () && (reconnect () == -1))
+            if (_serverIp.isWildcard ())
             {
+                if (!IpAddress::isIpAddress (_serverHostname))
+                {
+                    _serverIp = Dns::Resolver::lookupAddress (_serverHostname);
+                }
+                else
+                {
+                    _serverIp = IpAddress (_serverHostname);
+                }
+            }
+
+            if (_serverIp.isWildcard ())
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                notify (_onFailure, packet);
                 return -1;
             }
 
-            packet.src = Socket::localEndpoint ().ip ();
-            packet.dest = Socket::remoteEndpoint ().ip ();
-            packet.port = Socket::remoteEndpoint ().port ();
+            packet.dest = _serverIp;
+            packet.port = _port;
+
+            if (this->needReconnection ())
+            {
+                Endpoint endpoint{packet.dest, packet.port};
+                endpoint.hostname (_serverHostname);
+
+                if (this->reconnect (endpoint) == -1)
+                {
+                    notify (_onFailure, packet);
+                    return -1;
+                }
+            }
+
+            packet.src = this->localEndpoint ().ip ();
 
             std::stringstream data;
             if (_message.serialize (packet, data) == -1)
@@ -791,7 +831,7 @@ namespace join
                 return -1;
             }
 
-            if (Socket::write (buffer.data (), buffer.size ()) == -1)
+            if (this->write (buffer.data (), buffer.size ()) == -1)
             {
                 _pending.erase (inserted.first);
                 notify (_onFailure, packet);
@@ -828,7 +868,7 @@ namespace join
          */
         void onReceive ([[maybe_unused]] int fd) override final
         {
-            int size = Socket::read (_buffer.get (), Protocol::maxMsgSize);
+            int size = this->read (_buffer.get (), Protocol::maxMsgSize);
             if (size < 12)
             {
                 return;
@@ -839,9 +879,9 @@ namespace join
 
             DnsPacket packet;
             _message.deserialize (packet, data);
-            packet.src = Socket::localEndpoint ().ip ();
-            packet.dest = Socket::remoteEndpoint ().ip ();
-            packet.port = Socket::remoteEndpoint ().port ();
+            packet.src = this->localEndpoint ().ip ();
+            packet.dest = this->remoteEndpoint ().ip ();
+            packet.port = this->remoteEndpoint ().port ();
 
             if (packet.flags & 0x8000)
             {
@@ -966,7 +1006,7 @@ namespace join
          * @param func function to call.
          * @param packet DNS packet.
          */
-        void notify (const DnsNotify& func, const DnsPacket& packet) const
+        void notify (const DnsNotify& func, const DnsPacket& packet) const noexcept
         {
             if (func)
             {
@@ -980,8 +1020,14 @@ namespace join
         /// network interface to bind to.
         std::string _interface;
 
-        /// remote DNS server endpoint.
-        Endpoint _server;
+        /// remote DNS server host name.
+        std::string _serverHostname;
+
+        /// remote DNS server IP address.
+        IpAddress _serverIp;
+
+        /// remote DNS server port.
+        uint16_t _port;
 
         /// event loop reactor.
         Reactor* _reactor;
@@ -1022,7 +1068,7 @@ namespace join
          * @param port remote DNS server port.
          * @param reactor reactor instance.
          */
-        explicit BasicTlsResolver (const std::string& interface = {}, const IpAddress& server = {},
+        explicit BasicTlsResolver (const std::string& interface = {}, const std::string& server = {},
                                    uint16_t port = Protocol::defaultPort, Reactor* reactor = nullptr)
         : BasicDatagramResolver<Protocol> (interface, server, port, reactor)
         {
@@ -1077,7 +1123,7 @@ namespace join
                 return -1;
             }
 
-            if (this->bind ({IpAddress (endpoint.family ()), 0}) == -1)
+            if (this->bind ({IpAddress (endpoint.protocol ().family ()), 0}) == -1)
             {
                 this->close ();
                 return -1;
@@ -1089,7 +1135,13 @@ namespace join
                 return -1;
             }
 
-            if (Socket::connectEncrypted (endpoint) == -1)
+            if (this->setAlpnProtocols ({"dot"}) == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            if (this->connectEncrypted (endpoint) == -1)
             {
                 if (lastError != Errc::TemporaryError)
                 {
@@ -1097,14 +1149,16 @@ namespace join
                     return -1;
                 }
 
-                if (!Socket::waitEncrypted ())
+                if (!this->waitEncrypted ())
                 {
                     this->close ();
                     return -1;
                 }
             }
 
-            this->_server = endpoint;
+            this->_serverHostname = endpoint.hostname ().empty () ? endpoint.ip ().toString () : endpoint.hostname ();
+            this->_serverIp = endpoint.ip ();
+            this->_port = endpoint.port ();
 
             if (this->_reactor->addHandler (this->handle (), this) == -1)
             {
@@ -1200,19 +1254,125 @@ namespace join
         virtual int write (const char* data, unsigned long size) noexcept override
         {
             uint16_t msgLength = htons (static_cast<uint16_t> (size));
+            const char* p = reinterpret_cast<const char*> (&msgLength);
+            unsigned long remaining = sizeof (msgLength);
 
-            if (Socket::writeExactly (reinterpret_cast<const char*> (&msgLength), sizeof (msgLength)) == -1)
+            while (remaining > 0)
             {
-                return -1;
+                int result = Socket::write (p, remaining);
+                if (result == -1)
+                {
+                    if (lastError == Errc::TemporaryError)
+                    {
+                        if (this->waitReadyWrite ())
+                            continue;
+                    }
+                    return -1;
+                }
+                p += result;
+                remaining -= result;
             }
 
-            if (Socket::writeExactly (data, size) == -1)
+            p = data;
+            remaining = size;
+
+            while (remaining > 0)
             {
-                return -1;
+                int result = Socket::write (p, remaining);
+                if (result == -1)
+                {
+                    if (lastError == Errc::TemporaryError)
+                    {
+                        if (this->waitReadyWrite ())
+                            continue;
+                    }
+                    return -1;
+                }
+                p += result;
+                remaining -= result;
             }
 
             return static_cast<int> (size);
         }
+
+        /**
+         * @brief resolve host name using system name servers and return all IP addresses found.
+         * @param host host name to resolve.
+         * @param family address family.
+         * @return the resolved IP address list, empty on error.
+         */
+        static IpAddressList lookupAllAddress (const std::string& host, int family) = delete;
+
+        /**
+         * @brief resolve host name using system name servers and return all IP addresses found.
+         * @param host host name to resolve.
+         * @return the resolved IP address list, empty on error.
+         */
+        static IpAddressList lookupAllAddress (const std::string& host) = delete;
+
+        /**
+         * @brief resolve host name using system name servers.
+         * @param host host name to resolve.
+         * @param family address family.
+         * @return the first resolved IP address found, wildcard address on error.
+         */
+        static IpAddress lookupAddress (const std::string& host, int family) = delete;
+
+        /**
+         * @brief resolve host name using system name servers.
+         * @param host host name to resolve.
+         * @return the first resolved IP address found, wildcard address on error.
+         */
+        static IpAddress lookupAddress (const std::string& host) = delete;
+
+        /**
+         * @brief resolve all host address.
+         * @param address host address to resolve.
+         * @return the resolved alias list.
+         */
+        static AliasList lookupAllName (const IpAddress& address) = delete;
+
+        /**
+         * @brief resolve host address.
+         * @param address host address to resolve.
+         * @return the first resolved alias.
+         */
+        static std::string lookupName (const IpAddress& address) = delete;
+
+        /**
+         * @brief resolve all host name server.
+         * @param host host name to resolve.
+         * @return the resolved name server list.
+         */
+        static ServerList lookupAllNameServer (const std::string& host) = delete;
+
+        /**
+         * @brief resolve host name server.
+         * @param host host name to resolve.
+         * @return the first resolved name server.
+         */
+        static std::string lookupNameServer (const std::string& host) = delete;
+
+        /**
+         * @brief resolve host start of authority name server.
+         * @param host host name to resolve.
+         * @return the start of authority name server.
+         */
+        static std::string lookupAuthority (const std::string& host) = delete;
+
+        /**
+         * @brief resolve all host mail exchanger.
+         * @param host host name to resolve.
+         * @return the resolved mail exchanger list.
+         */
+        static ExchangerList lookupAllMailExchanger (const std::string& host) = delete;
+
+        /**
+         * @brief resolve host mail exchanger.
+         * @param host host name to resolve.
+         * @return the first resolved mail exchanger.
+         */
+        static std::string lookupMailExchanger (const std::string& host) = delete;
 
     private:
         /// DOT framing header size.

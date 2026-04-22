@@ -1036,6 +1036,23 @@ TEST_F (TlsSocket, setCipher_1_3)
 }
 
 /**
+ * @brief Test setAlpnProtocols method.
+ */
+TEST_F (TlsSocket, setAlpnProtocols)
+{
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
+
+    ASSERT_EQ (tlsSocket.setAlpnProtocols ({""}), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsSocket.setAlpnProtocols ({"http/1.1", "h2"}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({_hostv4, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setAlpnProtocols ({"http/1.1", "h2"}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setAlpnProtocols ({"http/1.1", "h2"}), 0) << join::lastError.message ();
+    tlsSocket.close ();
+}
+
+/**
  * @brief Test is lower method.
  */
 TEST_F (TlsSocket, isLower)
