@@ -28,6 +28,7 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::lastError;
 using join::Dns;
 using join::IpAddress;
 using join::IpAddressList;
@@ -46,6 +47,12 @@ protected:
         ASSERT_GT (_servers.size (), 0);
 
         _resolver = std::make_unique<Dns::Resolver> ("", _servers.front ().toString ());
+        ASSERT_NE (_resolver, nullptr);
+    }
+
+    void TearDown () override
+    {
+        EXPECT_EQ (_resolver->disconnect (), 0) << lastError.message ();
     }
 
     IpAddressList _servers;

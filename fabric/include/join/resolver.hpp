@@ -1170,6 +1170,35 @@ namespace join
         }
 
         /**
+         * @brief shutdown the connection.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int disconnect () override
+        {
+            if (this->_reactor && (this->_state == State::Connected))
+            {
+                this->_reactor->delHandler (this->_handle);
+            }
+
+            if (Socket::disconnect () == -1)
+            {
+                if (lastError != Errc::TemporaryError)
+                {
+                    this->close ();
+                    return -1;
+                }
+
+                if (!this->waitDisconnected ())
+                {
+                    this->close ();
+                    return -1;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
          * @brief close the TLS connection and reset framing state.
          */
         virtual void close () noexcept override

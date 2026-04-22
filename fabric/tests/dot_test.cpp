@@ -28,6 +28,7 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::lastError;
 using join::Dot;
 using join::IpAddress;
 using join::IpAddressList;
@@ -43,6 +44,12 @@ protected:
     void SetUp () override
     {
         _resolver = std::make_unique<Dot::Resolver> ("", "dns.google");
+        ASSERT_NE (_resolver, nullptr);
+    }
+
+    void TearDown () override
+    {
+        EXPECT_EQ (_resolver->disconnect (), 0) << lastError.message ();
     }
 
     std::unique_ptr<Dot::Resolver> _resolver;
