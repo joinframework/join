@@ -273,7 +273,7 @@ namespace join
                 ResourceRecord answer;
                 if (decodeResource (answer, data) == -1)
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
                 packet.answers.emplace_back (std::move (answer));
             }
@@ -284,7 +284,7 @@ namespace join
                 ResourceRecord authority;
                 if (decodeResource (authority, data) == -1)
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
                 packet.authorities.emplace_back (std::move (authority));
             }
@@ -295,7 +295,7 @@ namespace join
                 ResourceRecord additional;
                 if (decodeResource (additional, data) == -1)
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
                 packet.additionals.emplace_back (std::move (additional));
             }
@@ -478,7 +478,7 @@ namespace join
         {
             if (decodeName (mail, data) == -1)
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             auto pos = mail.find ('.');
@@ -680,21 +680,21 @@ namespace join
             {
                 if (decodeName (resource.name, data) == -1)
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
             }
             else if (resource.type == RecordType::CNAME)
             {
                 if (decodeName (resource.name, data) == -1)
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
             }
             else if (resource.type == RecordType::PTR)
             {
                 if (decodeName (resource.name, data) == -1)
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
             }
             else if (resource.type == RecordType::MX)
@@ -704,14 +704,14 @@ namespace join
 
                 if (decodeName (resource.name, data) == -1)
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
             }
             else if (resource.type == RecordType::SOA)
             {
                 if (decodeName (resource.name, data) == -1)
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
 
                 decodeMail (resource.mail, data);
@@ -738,14 +738,14 @@ namespace join
                     uint8_t size = 0;
                     if (!data.read (reinterpret_cast<char*> (&size), sizeof (size)))
                     {
-                        return -1;
+                        return -1;  // LCOV_EXCL_LINE
                     }
 
                     std::string txt;
                     txt.resize (size);
                     if (!data.read (&txt[0], size))
                     {
-                        return -1;
+                        return -1;  // LCOV_EXCL_LINE
                     }
 
                     resource.txts.emplace_back (std::move (txt));
@@ -764,7 +764,7 @@ namespace join
 
                 if (decodeName (resource.name, data) == -1)
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
             }
             else

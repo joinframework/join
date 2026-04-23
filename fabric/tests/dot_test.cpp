@@ -43,7 +43,7 @@ class DotTest : public ::testing::Test
 protected:
     void SetUp () override
     {
-        _resolver = std::make_unique<Dot::Resolver> ("8.8.4.4" /*"dns.google"*/);
+        _resolver = std::make_unique<Dot::Resolver> ("dns.google");
         ASSERT_NE (_resolver, nullptr);
     }
 
@@ -54,6 +54,7 @@ protected:
             ASSERT_EQ (join::lastError, join::Errc::TemporaryError) << join::lastError.message ();
         }
         ASSERT_TRUE (_resolver->waitDisconnected ()) << join::lastError.message ();
+
         _resolver->close ();
     }
 

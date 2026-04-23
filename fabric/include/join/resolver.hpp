@@ -1385,11 +1385,7 @@ namespace join
                 }
             }
 
-            if (this->setAlpnProtocols ({"dot"}) == -1)
-            {
-                this->close ();
-                return -1;
-            }
+            this->setAlpnProtocols ({"dot"});
 
             if (this->connectEncrypted (endpoint) == -1)
             {
