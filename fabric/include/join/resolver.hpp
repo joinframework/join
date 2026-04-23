@@ -56,13 +56,12 @@ namespace join
 
         /**
          * @brief construct the resolver instance.
-         * @param interface network interface to bind to.
          * @param server remote DNS server hostname or IP address.
          * @param port remote DNS server port.
          * @param reactor reactor instance.
          */
-        explicit BasicDatagramResolver (const std::string& interface = {}, const std::string& server = {},
-                                        uint16_t port = Protocol::defaultPort, Reactor* reactor = nullptr)
+        explicit BasicDatagramResolver (const std::string& server = {}, uint16_t port = Protocol::defaultPort,
+                                        Reactor* reactor = nullptr)
         : Socket ()
 #ifdef DEBUG
         , _onSuccess (defaultOnSuccess)
@@ -71,8 +70,7 @@ namespace join
         , _onSuccess (nullptr)
         , _onFailure (nullptr)
 #endif
-        , _interface (interface)
-        , _serverHostname (server)
+        , _server (server)
         , _port (port)
         , _reactor (reactor ? reactor : ReactorThread::reactor ())
         , _buffer (std::make_unique<char[]> (Protocol::maxMsgSize))
@@ -117,44 +115,19 @@ namespace join
          */
         virtual int connect (const Endpoint& endpoint) override
         {
-            if ((this->_state != State::Closed) && (this->_state != State::Disconnected))
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            if ((this->_state == State::Closed) && (this->open (endpoint.protocol ()) == -1))
-            {
-                return -1;
-            }
-
-            if (this->bind ({IpAddress (endpoint.protocol ().family ()), 0}) == -1)
-            {
-                this->close ();
-                return -1;
-            }
-
-            if (this->bindToDevice (_interface) == -1)
-            {
-                this->close ();
-                return -1;
-            }
-
             if (Socket::connect (endpoint) == -1)
             {
-                this->close ();
                 return -1;
             }
 
-            _serverHostname = endpoint.hostname ().empty () ? endpoint.ip ().toString () : endpoint.hostname ();
-            _serverIp = endpoint.ip ();
+            _server = endpoint.hostname ();
+            if (_server.empty ())
+            {
+                _server = endpoint.ip ().toString ();
+            }
             _port = endpoint.port ();
 
-            if (_reactor->addHandler (this->handle (), this) == -1)
-            {
-                this->close ();
-                return -1;
-            }
+            this->_reactor->addHandler (this->handle (), this);
 
             return 0;
         }
@@ -165,42 +138,14 @@ namespace join
          */
         virtual int disconnect () override
         {
-            if (_reactor && (this->_state == State::Connected))
+            this->_reactor->delHandler (this->_handle);
+
+            if (Socket::disconnect () == -1)
             {
-                _reactor->delHandler (this->_handle);
+                return -1;
             }
 
-            return Socket::disconnect ();
-        }
-
-        /**
-         * @brief get IP address of the currently configured name servers.
-         * @return a list of configured name servers.
-         */
-        static IpAddressList nameServers () noexcept
-        {
-            IpAddressList addressList;
-
-            struct __res_state res;
-            if (res_ninit (&res) == 0)
-            {
-                for (int i = 0; i < res.nscount; ++i)
-                {
-                    if (res.nsaddr_list[i].sin_family == AF_INET)
-                    {
-                        addressList.emplace_back (&res.nsaddr_list[i].sin_addr, sizeof (struct in_addr));
-                    }
-                    // LCOV_EXCL_START: requires specific host IPv6 configuration.
-                    else if (res._u._ext.nsaddrs[i] != nullptr && res._u._ext.nsaddrs[i]->sin6_family == AF_INET6)
-                    {
-                        addressList.emplace_back (&res._u._ext.nsaddrs[i]->sin6_addr, sizeof (struct in6_addr));
-                    }
-                    // LCOV_EXCL_STOP
-                }
-                res_nclose (&res);
-            }
-
-            return addressList;
+            return 0;
         }
 
         /**
@@ -257,7 +202,7 @@ namespace join
             for (auto const& server : nameServers ())
             {
                 IpAddressList addresses =
-                    BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAllAddress (host, family);
+                    BasicDatagramResolver<Protocol> (server.toString ()).resolveAllAddress (host, family);
                 if (!addresses.empty ())
                 {
                     return addresses;
@@ -296,8 +241,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                IpAddressList addresses =
-                    BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAllAddress (host);
+                IpAddressList addresses = BasicDatagramResolver<Protocol> (server.toString ()).resolveAllAddress (host);
                 if (!addresses.empty ())
                 {
                     return addresses;
@@ -423,7 +367,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                AliasList aliases = BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAllName (address);
+                AliasList aliases = BasicDatagramResolver<Protocol> (server.toString ()).resolveAllName (address);
                 if (!aliases.empty ())
                 {
                     return aliases;
@@ -515,8 +459,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                ServerList servers =
-                    BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAllNameServer (host);
+                ServerList servers = BasicDatagramResolver<Protocol> (server.toString ()).resolveAllNameServer (host);
                 if (!servers.empty ())
                 {
                     return servers;
@@ -607,8 +550,7 @@ namespace join
         {
             for (auto const& server : nameServers ())
             {
-                std::string authority =
-                    BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAuthority (host);
+                std::string authority = BasicDatagramResolver<Protocol> (server.toString ()).resolveAuthority (host);
                 if (!authority.empty ())
                 {
                     return authority;
@@ -669,7 +611,7 @@ namespace join
             for (auto const& server : nameServers ())
             {
                 ExchangerList exchangers =
-                    BasicDatagramResolver<Protocol> ({}, server.toString ()).resolveAllMailExchanger (host);
+                    BasicDatagramResolver<Protocol> (server.toString ()).resolveAllMailExchanger (host);
                 if (!exchangers.empty ())
                 {
                     return exchangers;
@@ -709,6 +651,36 @@ namespace join
             }
 
             return {};
+        }
+
+        /**
+         * @brief get IP address of the currently configured name servers.
+         * @return a list of configured name servers.
+         */
+        static IpAddressList nameServers () noexcept
+        {
+            IpAddressList addressList;
+
+            struct __res_state res;
+            if (res_ninit (&res) == 0)
+            {
+                for (int i = 0; i < res.nscount; ++i)
+                {
+                    if (res.nsaddr_list[i].sin_family == AF_INET)
+                    {
+                        addressList.emplace_back (&res.nsaddr_list[i].sin_addr, sizeof (struct in_addr));
+                    }
+                    // LCOV_EXCL_START: requires specific host IPv6 configuration.
+                    else if (res._u._ext.nsaddrs[i] != nullptr && res._u._ext.nsaddrs[i]->sin6_family == AF_INET6)
+                    {
+                        addressList.emplace_back (&res._u._ext.nsaddrs[i]->sin6_addr, sizeof (struct in6_addr));
+                    }
+                    // LCOV_EXCL_STOP
+                }
+                res_nclose (&res);
+            }
+
+            return addressList;
         }
 
         /**
@@ -752,13 +724,24 @@ namespace join
         /**
          * @brief reconnect to the remote DNS server.
          * @param endpoint endpoint to connect to.
+         * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int reconnect (const Endpoint& endpoint)
+        virtual int reconnect (const Endpoint& endpoint, [[maybe_unused]] std::chrono::milliseconds timeout)
         {
-            this->disconnect ();
-            this->close ();
-            return this->connect (endpoint);
+            if (this->disconnect () == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            if (this->connect (endpoint) == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            return 0;
         }
 
         /**
@@ -769,34 +752,31 @@ namespace join
          */
         int query (DnsPacket& packet, std::chrono::milliseconds timeout)
         {
-            if (_serverIp.isWildcard ())
+            if (this->_remote.ip ().isWildcard ())
             {
-                if (!IpAddress::isIpAddress (_serverHostname))
+                IpAddress ip = IpAddress::isIpAddress (_server) ? IpAddress (_server)
+                                                                : Dns::Resolver::lookupAddress (_server, AF_INET);
+
+                if (ip.isWildcard ())
                 {
-                    _serverIp = Dns::Resolver::lookupAddress (_serverHostname);
+                    lastError = make_error_code (Errc::InvalidParam);
+                    notify (_onFailure, packet);
+                    return -1;
                 }
-                else
-                {
-                    _serverIp = IpAddress (_serverHostname);
-                }
+
+                this->_remote.ip (ip);
+                this->_remote.port (_port);
             }
 
-            if (_serverIp.isWildcard ())
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                notify (_onFailure, packet);
-                return -1;
-            }
-
-            packet.dest = _serverIp;
-            packet.port = _port;
+            packet.dest = this->_remote.ip ();
+            packet.port = this->_remote.port ();
 
             if (this->needReconnection ())
             {
                 Endpoint endpoint{packet.dest, packet.port};
-                endpoint.hostname (_serverHostname);
+                endpoint.hostname (_server);
 
-                if (this->reconnect (endpoint) == -1)
+                if (this->reconnect (endpoint, timeout) == -1)
                 {
                     notify (_onFailure, packet);
                     return -1;
@@ -1017,14 +997,8 @@ namespace join
         /// DNS message codec.
         DnsMessage _message;
 
-        /// network interface to bind to.
-        std::string _interface;
-
-        /// remote DNS server host name.
-        std::string _serverHostname;
-
-        /// remote DNS server IP address.
-        IpAddress _serverIp;
+        /// remote DNS server.
+        std::string _server;
 
         /// remote DNS server port.
         uint16_t _port;
@@ -1033,7 +1007,7 @@ namespace join
         Reactor* _reactor;
 
         /// reception buffer.
-        std::unique_ptr<char[]> _buffer{std::make_unique<char[]> (Protocol::maxMsgSize)};
+        std::unique_ptr<char[]> _buffer;
 
         /// pending synchronous request.
         struct PendingRequest
@@ -1063,14 +1037,13 @@ namespace join
 
         /**
          * @brief construct the DoT resolver instance.
-         * @param interface network interface to bind to.
          * @param server remote DNS server address.
          * @param port remote DNS server port.
          * @param reactor reactor instance.
          */
-        explicit BasicTlsResolver (const std::string& interface = {}, const std::string& server = {},
-                                   uint16_t port = Protocol::defaultPort, Reactor* reactor = nullptr)
-        : BasicDatagramResolver<Protocol> (interface, server, port, reactor)
+        explicit BasicTlsResolver (const std::string& server = {}, uint16_t port = Protocol::defaultPort,
+                                   Reactor* reactor = nullptr)
+        : BasicDatagramResolver<Protocol> (server, port, reactor)
         {
         }
 
@@ -1106,96 +1079,81 @@ namespace join
         virtual ~BasicTlsResolver () noexcept = default;
 
         /**
-         * @brief connect to the remote DNS server with TLS handshake.
-         * @param endpoint remote endpoint.
+         * @brief make a connection to the given endpoint.
+         * @param endpoint endpoint to connect to.
          * @return 0 on success, -1 on failure.
          */
         virtual int connect (const Endpoint& endpoint) override
         {
-            if ((this->_state != State::Closed) && (this->_state != State::Disconnected))
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            if ((this->_state == State::Closed) && (this->open (endpoint.protocol ()) == -1))
+            if (Socket::connect (endpoint) == -1)
             {
                 return -1;
             }
 
-            if (this->bind ({IpAddress (endpoint.protocol ().family ()), 0}) == -1)
+            this->_server = this->_remote.hostname ();
+            if (this->_server.empty ())
             {
-                this->close ();
-                return -1;
+                this->_server = this->_remote.ip ().toString ();
             }
-
-            if (this->bindToDevice (this->_interface) == -1)
-            {
-                this->close ();
-                return -1;
-            }
-
-            if (this->setAlpnProtocols ({"dot"}) == -1)
-            {
-                this->close ();
-                return -1;
-            }
-
-            if (this->connectEncrypted (endpoint) == -1)
-            {
-                if (lastError != Errc::TemporaryError)
-                {
-                    this->close ();
-                    return -1;
-                }
-
-                if (!this->waitEncrypted ())
-                {
-                    this->close ();
-                    return -1;
-                }
-            }
-
-            this->_serverHostname = endpoint.hostname ().empty () ? endpoint.ip ().toString () : endpoint.hostname ();
-            this->_serverIp = endpoint.ip ();
-            this->_port = endpoint.port ();
-
-            if (this->_reactor->addHandler (this->handle (), this) == -1)
-            {
-                this->close ();
-                return -1;
-            }
+            this->_port = this->_remote.port ();
 
             return 0;
         }
 
         /**
-         * @brief shutdown the connection.
+         * @brief make an encrypted connection to the given endpoint.
+         * @param endpoint endpoint to connect to.
          * @return 0 on success, -1 on failure.
          */
-        virtual int disconnect () override
+        virtual int connectEncrypted (const Endpoint& endpoint) override
         {
-            if (this->_reactor && (this->_state == State::Connected))
+            if (Socket::connectEncrypted (endpoint) == -1)
             {
-                this->_reactor->delHandler (this->_handle);
+                return -1;
             }
 
-            if (Socket::disconnect () == -1)
-            {
-                if (lastError != Errc::TemporaryError)
-                {
-                    this->close ();
-                    return -1;
-                }
-
-                if (!this->waitDisconnected ())
-                {
-                    this->close ();
-                    return -1;
-                }
-            }
+            this->_reactor->addHandler (this->handle (), this);
 
             return 0;
+        }
+
+        /**
+         * @brief wait until TLS handshake is performed or timeout occur (non blocking socket).
+         * @param timeout timeout in milliseconds (0: infinite).
+         * return true on success, false otherwise.
+         */
+        virtual bool waitEncrypted (int timeout = 0) override
+        {
+            if (!Socket::waitEncrypted (timeout))
+            {
+                return false;
+            }
+
+            this->_reactor->addHandler (this->handle (), this);
+
+            return true;
+        }
+
+        /**
+         * @brief block until connected.
+         * @param timeout timeout in milliseconds.
+         * @return true if connected, false otherwise.
+         */
+        virtual bool waitConnected (int timeout = 0) override
+        {
+            if (!Socket::waitConnected (timeout))
+            {
+                return false;
+            }
+
+            this->_server = this->_remote.hostname ();
+            if (this->_server.empty ())
+            {
+                this->_server = this->_remote.ip ().toString ();
+            }
+            this->_port = this->_remote.port ();
+
+            return true;
         }
 
         /**
@@ -1404,6 +1362,53 @@ namespace join
         static std::string lookupMailExchanger (const std::string& host) = delete;
 
     private:
+        /**
+         * @brief reconnect to the remote DNS server.
+         * @param endpoint endpoint to connect to.
+         * @param timeout timeout in milliseconds.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int reconnect (const Endpoint& endpoint, std::chrono::milliseconds timeout) override
+        {
+            if (this->disconnect () == -1)
+            {
+                if (lastError != Errc::TemporaryError)
+                {
+                    this->close ();
+                    return -1;
+                }
+
+                if (!this->waitDisconnected (timeout.count ()))
+                {
+                    this->close ();
+                    return -1;
+                }
+            }
+
+            if (this->setAlpnProtocols ({"dot"}) == -1)
+            {
+                this->close ();
+                return -1;
+            }
+
+            if (this->connectEncrypted (endpoint) == -1)
+            {
+                if (lastError != Errc::TemporaryError)
+                {
+                    this->close ();
+                    return -1;
+                }
+
+                if (!this->waitEncrypted (timeout.count ()))
+                {
+                    this->close ();
+                    return -1;
+                }
+            }
+
+            return 0;
+        }
+
         /// DOT framing header size.
         static constexpr size_t _headerSize = 2;
 

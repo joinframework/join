@@ -43,13 +43,18 @@ class DotTest : public ::testing::Test
 protected:
     void SetUp () override
     {
-        _resolver = std::make_unique<Dot::Resolver> ("", "dns.google");
+        _resolver = std::make_unique<Dot::Resolver> ("8.8.4.4" /*"dns.google"*/);
         ASSERT_NE (_resolver, nullptr);
     }
 
     void TearDown () override
     {
-        EXPECT_EQ (_resolver->disconnect (), 0) << lastError.message ();
+        if (_resolver->disconnect () == -1)
+        {
+            ASSERT_EQ (join::lastError, join::Errc::TemporaryError) << join::lastError.message ();
+        }
+        ASSERT_TRUE (_resolver->waitDisconnected ()) << join::lastError.message ();
+        _resolver->close ();
     }
 
     std::unique_ptr<Dot::Resolver> _resolver;
@@ -78,16 +83,13 @@ TEST_F (DotTest, resolveAllAddress)
     addresses = _resolver->resolveAllAddress ("localhost");
     EXPECT_EQ (addresses.size (), 0);
 
-    addresses = Dot::Resolver ("foo", "dns.google").resolveAllAddress ("google.com", AF_INET);
+    addresses = Dot::Resolver ("255.255.255.255").resolveAllAddress ("google.com", AF_INET);
     EXPECT_EQ (addresses.size (), 0);
 
-    addresses = Dot::Resolver ("", "255.255.255.255").resolveAllAddress ("google.com", AF_INET);
+    addresses = Dot::Resolver ("8.8.8.8", 853).resolveAllAddress ("joinframework.net", AF_INET, 1ms);
     EXPECT_EQ (addresses.size (), 0);
 
-    addresses = Dot::Resolver ("", "8.8.8.8", 853).resolveAllAddress ("joinframework.net", AF_INET, 1ms);
-    EXPECT_EQ (addresses.size (), 0);
-
-    addresses = Dot::Resolver ("", "8.8.8.8", 853).resolveAllAddress ("joinframework.net", 1ms);
+    addresses = Dot::Resolver ("8.8.8.8", 853).resolveAllAddress ("joinframework.net", 1ms);
     EXPECT_EQ (addresses.size (), 0);
 
     addresses = _resolver->resolveAllAddress ("joinframework.net", AF_INET);
@@ -126,16 +128,13 @@ TEST_F (DotTest, resolveAddress)
     address = _resolver->resolveAddress ("localhost");
     EXPECT_TRUE (address.isWildcard ());
 
-    address = Dot::Resolver ("foo", "dns.google").resolveAddress ("google.com", AF_INET);
+    address = Dot::Resolver ("255.255.255.255").resolveAddress ("google.com", AF_INET);
     EXPECT_TRUE (address.isWildcard ());
 
-    address = Dot::Resolver ("", "255.255.255.255").resolveAddress ("google.com", AF_INET);
+    address = Dot::Resolver ("8.8.8.8", 853).resolveAddress ("joinframework.net", AF_INET, 1ms);
     EXPECT_TRUE (address.isWildcard ());
 
-    address = Dot::Resolver ("", "8.8.8.8", 853).resolveAddress ("joinframework.net", AF_INET, 1ms);
-    EXPECT_TRUE (address.isWildcard ());
-
-    address = Dot::Resolver ("", "8.8.8.8", 853).resolveAddress ("joinframework.net", 1ms);
+    address = Dot::Resolver ("8.8.8.8", 853).resolveAddress ("joinframework.net", 1ms);
     EXPECT_TRUE (address.isWildcard ());
 
     address = _resolver->resolveAddress ("joinframework.net", AF_INET);
@@ -167,14 +166,11 @@ TEST_F (DotTest, resolveAllName)
     aliases = _resolver->resolveAllName ("192.168.24.32");
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = Dot::Resolver ("foo", "dns.google").resolveAllName ("1.1.1.1");
+    aliases = Dot::Resolver ("255.255.255.255").resolveAllName ("1.1.1.1");
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = Dot::Resolver ("", "255.255.255.255").resolveAllName ("1.1.1.1");
-    EXPECT_EQ (aliases.size (), 0);
-
-    aliases = Dot::Resolver ("", "8.8.8.8", 853)
-                  .resolveAllName (_resolver->resolveAddress ("joinframework.net", AF_INET), 1ms);
+    aliases =
+        Dot::Resolver ("8.8.8.8", 853).resolveAllName (_resolver->resolveAddress ("joinframework.net", AF_INET), 1ms);
     EXPECT_EQ (aliases.size (), 0);
 
     aliases = _resolver->resolveAllName ("1.1.1.1");
@@ -195,14 +191,10 @@ TEST_F (DotTest, resolveName)
     alias = _resolver->resolveName ("192.168.24.32");
     EXPECT_TRUE (alias.empty ());
 
-    alias = Dot::Resolver ("foo", "dns.google").resolveName ("1.1.1.1");
+    alias = Dot::Resolver ("255.255.255.255").resolveName ("1.1.1.1");
     EXPECT_TRUE (alias.empty ());
 
-    alias = Dot::Resolver ("", "255.255.255.255").resolveName ("1.1.1.1");
-    EXPECT_TRUE (alias.empty ());
-
-    alias =
-        Dot::Resolver ("", "8.8.8.8", 853).resolveName (_resolver->resolveAddress ("joinframework.net", AF_INET), 1ms);
+    alias = Dot::Resolver ("8.8.8.8", 853).resolveName (_resolver->resolveAddress ("joinframework.net", AF_INET), 1ms);
     EXPECT_TRUE (alias.empty ());
 
     alias = _resolver->resolveName ("1.1.1.1");
@@ -220,13 +212,10 @@ TEST_F (DotTest, resolveAllNameServer)
     servers = _resolver->resolveAllNameServer ("localhost");
     EXPECT_EQ (servers.size (), 0);
 
-    servers = Dot::Resolver ("foo", "dns.google").resolveAllNameServer ("google.com");
+    servers = Dot::Resolver ("255.255.255.255").resolveAllNameServer ("google.com");
     EXPECT_EQ (servers.size (), 0);
 
-    servers = Dot::Resolver ("", "255.255.255.255").resolveAllNameServer ("google.com");
-    EXPECT_EQ (servers.size (), 0);
-
-    servers = Dot::Resolver ("", "8.8.8.8", 853).resolveAllNameServer ("joinframework.net", 1ms);
+    servers = Dot::Resolver ("8.8.8.8", 853).resolveAllNameServer ("joinframework.net", 1ms);
     EXPECT_EQ (servers.size (), 0);
 
     servers = _resolver->resolveAllNameServer ("google.com");
@@ -247,13 +236,10 @@ TEST_F (DotTest, resolveNameServer)
     server = _resolver->resolveNameServer ("localhost");
     EXPECT_TRUE (server.empty ());
 
-    server = Dot::Resolver ("foo", "dns.google").resolveNameServer ("google.com");
+    server = Dot::Resolver ("255.255.255.255").resolveNameServer ("google.com");
     EXPECT_TRUE (server.empty ());
 
-    server = Dot::Resolver ("", "255.255.255.255").resolveNameServer ("google.com");
-    EXPECT_TRUE (server.empty ());
-
-    server = Dot::Resolver ("", "8.8.8.8", 853).resolveNameServer ("joinframework.net", 1ms);
+    server = Dot::Resolver ("8.8.8.8", 853).resolveNameServer ("joinframework.net", 1ms);
     EXPECT_TRUE (server.empty ());
 
     server = _resolver->resolveNameServer ("google.com");
@@ -274,13 +260,10 @@ TEST_F (DotTest, resolveAuthority)
     authority = _resolver->resolveAuthority ("localhost");
     EXPECT_TRUE (authority.empty ());
 
-    authority = Dot::Resolver ("foo", "dns.google").resolveAuthority ("google.com");
+    authority = Dot::Resolver ("255.255.255.255").resolveAuthority ("google.com");
     EXPECT_TRUE (authority.empty ());
 
-    authority = Dot::Resolver ("", "255.255.255.255").resolveAuthority ("google.com");
-    EXPECT_TRUE (authority.empty ());
-
-    authority = Dot::Resolver ("", "8.8.8.8", 853).resolveAuthority ("joinframework.net", 1ms);
+    authority = Dot::Resolver ("8.8.8.8", 853).resolveAuthority ("joinframework.net", 1ms);
     EXPECT_TRUE (authority.empty ());
 
     authority = _resolver->resolveAuthority ("google.com");
@@ -301,13 +284,10 @@ TEST_F (DotTest, resolveAllMailExchanger)
     exchangers = _resolver->resolveAllMailExchanger ("localhost");
     EXPECT_EQ (exchangers.size (), 0);
 
-    exchangers = Dot::Resolver ("foo", "dns.google").resolveAllMailExchanger ("google.com");
+    exchangers = Dot::Resolver ("255.255.255.255").resolveAllMailExchanger ("google.com");
     EXPECT_EQ (exchangers.size (), 0);
 
-    exchangers = Dot::Resolver ("", "255.255.255.255").resolveAllMailExchanger ("google.com");
-    EXPECT_EQ (exchangers.size (), 0);
-
-    exchangers = Dot::Resolver ("", "8.8.8.8", 853).resolveAllMailExchanger ("joinframework.net", 1ms);
+    exchangers = Dot::Resolver ("8.8.8.8", 853).resolveAllMailExchanger ("joinframework.net", 1ms);
     EXPECT_EQ (exchangers.size (), 0);
 
     exchangers = _resolver->resolveAllMailExchanger ("google.com");
@@ -325,13 +305,10 @@ TEST_F (DotTest, resolveMailExchanger)
     exchanger = _resolver->resolveMailExchanger ("localhost");
     EXPECT_TRUE (exchanger.empty ());
 
-    exchanger = Dot::Resolver ("foo", "dns.google").resolveMailExchanger ("google.com");
+    exchanger = Dot::Resolver ("255.255.255.255").resolveMailExchanger ("google.com");
     EXPECT_TRUE (exchanger.empty ());
 
-    exchanger = Dot::Resolver ("", "255.255.255.255").resolveMailExchanger ("google.com");
-    EXPECT_TRUE (exchanger.empty ());
-
-    exchanger = Dot::Resolver ("", "8.8.8.8", 853).resolveMailExchanger ("joinframework.net", 1ms);
+    exchanger = Dot::Resolver ("8.8.8.8", 853).resolveMailExchanger ("joinframework.net", 1ms);
     EXPECT_TRUE (exchanger.empty ());
 
     exchanger = _resolver->resolveMailExchanger ("google.com");

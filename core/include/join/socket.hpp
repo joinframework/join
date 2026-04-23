@@ -1109,7 +1109,7 @@ namespace join
          * @brief returns the Time-To-Live value.
          * @return The Time-To-Live value.
          */
-        int ttl () const
+        int ttl () const noexcept
         {
             return this->_ttl;
         }
@@ -1365,7 +1365,7 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int writeExactly (const char* data, unsigned long size, int timeout = 0) noexcept
+        int writeExactly (const char* data, unsigned long size, int timeout = 0)
         {
             unsigned long numWrite = 0;
 
@@ -1691,16 +1691,19 @@ namespace join
          * @param endpoint endpoint to connect to.
          * @return 0 on success, -1 on failure.
          */
-        int connectEncrypted (const Endpoint& endpoint)
+        virtual int connectEncrypted (const Endpoint& endpoint)
         {
-            if (BasicStreamSocket<Protocol>::connect (endpoint) == -1)
+            if (this->connect (endpoint) == -1)
             {
                 return -1;
             }
 
             if (this->startEncryption () == -1)
             {
-                this->close ();
+                if (lastError != Errc::TemporaryError)
+                {
+                    this->close ();
+                }
                 return -1;
             }
 
@@ -1763,7 +1766,7 @@ namespace join
          * @param timeout timeout in milliseconds (0: infinite).
          * return true on success, false otherwise.
          */
-        bool waitEncrypted (int timeout = 0)
+        virtual bool waitEncrypted (int timeout = 0)
         {
             if (this->encrypted () == false)
             {
@@ -2144,7 +2147,7 @@ namespace join
          * @param verify Enable peer verification if set to true, false otherwise.
          * @param depth The maximum certificate verification depth (default: no limit).
          */
-        void setVerify (bool verify, int depth = -1)
+        void setVerify (bool verify, int depth = -1) noexcept
         {
             if (verify == true)
             {
