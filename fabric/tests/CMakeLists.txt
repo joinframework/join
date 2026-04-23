@@ -2,10 +2,20 @@ cmake_minimum_required(VERSION 3.22.1)
 
 find_package(GTest REQUIRED)
 
+add_executable(dnsmessage.gtest dnsmessage_test.cpp)
+target_link_libraries(dnsmessage.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME dnsmessage.gtest COMMAND dnsmessage.gtest)
+install(TARGETS dnsmessage.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(dns.gtest dns_test.cpp)
 target_link_libraries(dns.gtest ${JOIN_FABRIC} GTest::gtest_main)
 add_test(NAME dns.gtest COMMAND dns.gtest)
 install(TARGETS dns.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(dot.gtest dot_test.cpp)
+target_link_libraries(dot.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME dot.gtest COMMAND dot.gtest)
+install(TARGETS dot.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(neighbor.gtest neighbor_test.cpp)
 target_link_libraries(neighbor.gtest ${JOIN_FABRIC} GTest::gtest_main)

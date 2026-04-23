@@ -22,17 +22,18 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_FABRIC_DNSBASE_HPP
-#define JOIN_FABRIC_DNSBASE_HPP
+#ifndef JOIN_FABRIC_DNSMESSAGE_HPP
+#define JOIN_FABRIC_DNSMESSAGE_HPP
 
 // libjoin.
 #include <join/ipaddress.hpp>
-#include <join/reactor.hpp>
+#include <join/utils.hpp>
+#include <join/error.hpp>
 
 // C++.
 #include <unordered_set>
+#include <system_error>
 #include <sstream>
-#include <memory>
 #include <vector>
 #include <string>
 
@@ -41,10 +42,7 @@
 
 namespace join
 {
-    /// forward declarations.
-    class Dns;
-
-    /// list of alias.
+    /// list of aliases.
     using AliasList = std::unordered_set<std::string>;
 
     /// list of name servers.
@@ -73,8 +71,8 @@ namespace join
         std::string name;              /**< canonical, server or mail exchanger name. */
         uint16_t priority = 0;         /**< SRV priority. */
         uint16_t weight = 0;           /**< SRV weight. */
-        uint16_t port = 0;             /**< SRV port (ex: 8009 pour Nest). */
-        std::vector<std::string> txts; /**< TXT records (ex: "fn=Salon"). */
+        uint16_t port = 0;             /**< SRV port. */
+        std::vector<std::string> txts; /**< TXT records. */
         std::string mail;              /**< server mail. */
         uint32_t serial = 0;           /**< serial number. */
         uint32_t refresh = 0;          /**< refresh interval. */
@@ -91,9 +89,9 @@ namespace join
     {
         uint16_t id = 0;                         /**< transaction ID. */
         uint16_t flags = 0;                      /**< transaction flags. */
-        IpAddress src;                           /**< source IP address.*/
-        IpAddress dest;                          /**< destination IP address.*/
-        uint16_t port = 0;                       /**< port.*/
+        IpAddress src;                           /**< source IP address. */
+        IpAddress dest;                          /**< destination IP address. */
+        uint16_t port = 0;                       /**< port. */
         std::vector<QuestionRecord> questions;   /**< question records. */
         std::vector<ResourceRecord> answers;     /**< answer records. */
         std::vector<ResourceRecord> authorities; /**< authority records. */
@@ -101,15 +99,11 @@ namespace join
     };
 
     /**
-     * @brief basic domain name resolution class.
+     * @brief DNS message codec.
      */
-    template <typename TransportPolicy>
-    class BasicDns : public EventHandler
+    class DnsMessage
     {
     public:
-        using Socket = typename TransportPolicy::Socket;
-        using Endpoint = typename Socket::Endpoint;
-
         /**
          * @brief DNS record types.
          */
@@ -136,43 +130,203 @@ namespace join
         };
 
         /**
-         * @brief create the DNS base instance.
+         * @brief create the DnsMessage instance.
          */
-        explicit BasicDns ()
-        : _buffer (std::make_unique<uint8_t[]> (TransportPolicy::maxMsgSize))
-        {
-        }
+        DnsMessage () noexcept = default;
 
         /**
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicDns (const BasicDns& other) = delete;
+        DnsMessage (const DnsMessage& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to copy.
          * @return a reference to the current object.
          */
-        BasicDns& operator= (const BasicDns& other) = delete;
+        DnsMessage& operator= (const DnsMessage& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicDns (BasicDns&& other) = delete;
+        DnsMessage (DnsMessage&& other) = delete;
 
         /**
          * @brief move assignment operator.
          * @param other other object to move.
          * @return a reference to the current object.
          */
-        BasicDns& operator= (BasicDns&& other) = delete;
+        DnsMessage& operator= (DnsMessage&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicDns () noexcept = default;
+        ~DnsMessage () noexcept = default;
+
+        /**
+         * @brief serialize a DNS packet into a byte stream.
+         * @param packet DNS packet to serialize.
+         * @param data output stream.
+         * @return 0 on success, -1 on error.
+         */
+        int serialize (const DnsPacket& packet, std::stringstream& data) const
+        {
+            uint16_t id = htons (packet.id);
+            data.write (reinterpret_cast<const char*> (&id), sizeof (id));
+
+            uint16_t flags = htons (packet.flags);
+            data.write (reinterpret_cast<const char*> (&flags), sizeof (flags));
+
+            uint16_t qcount = htons (static_cast<uint16_t> (packet.questions.size ()));
+            data.write (reinterpret_cast<const char*> (&qcount), sizeof (qcount));
+
+            uint16_t ancount = htons (static_cast<uint16_t> (packet.answers.size ()));
+            data.write (reinterpret_cast<const char*> (&ancount), sizeof (ancount));
+
+            uint16_t nscount = htons (static_cast<uint16_t> (packet.authorities.size ()));
+            data.write (reinterpret_cast<const char*> (&nscount), sizeof (nscount));
+
+            uint16_t arcount = htons (static_cast<uint16_t> (packet.additionals.size ()));
+            data.write (reinterpret_cast<const char*> (&arcount), sizeof (arcount));
+
+            for (auto const& question : packet.questions)
+            {
+                if (encodeQuestion (question, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
+            }
+
+            for (auto const& answer : packet.answers)
+            {
+                if (encodeResource (answer, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
+            }
+
+            for (auto const& authority : packet.authorities)
+            {
+                if (encodeResource (authority, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
+            }
+
+            for (auto const& additional : packet.additionals)
+            {
+                if (encodeResource (additional, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief deserialize a DNS packet from a byte stream.
+         * @param packet DNS packet to fill.
+         * @param data input stream.
+         * @return 0 on success, -1 on error.
+         */
+        int deserialize (DnsPacket& packet, std::stringstream& data) const
+        {
+            data.read (reinterpret_cast<char*> (&packet.id), sizeof (packet.id));
+            packet.id = ntohs (packet.id);
+
+            data.read (reinterpret_cast<char*> (&packet.flags), sizeof (packet.flags));
+            packet.flags = ntohs (packet.flags);
+
+            uint16_t qcount = 0;
+            data.read (reinterpret_cast<char*> (&qcount), sizeof (qcount));
+            qcount = ntohs (qcount);
+
+            uint16_t ancount = 0;
+            data.read (reinterpret_cast<char*> (&ancount), sizeof (ancount));
+            ancount = ntohs (ancount);
+
+            uint16_t nscount = 0;
+            data.read (reinterpret_cast<char*> (&nscount), sizeof (nscount));
+            nscount = ntohs (nscount);
+
+            uint16_t arcount = 0;
+            data.read (reinterpret_cast<char*> (&arcount), sizeof (arcount));
+            arcount = ntohs (arcount);
+
+            packet.questions.clear ();
+            for (uint16_t i = 0; i < qcount; ++i)
+            {
+                QuestionRecord question;
+                if (decodeQuestion (question, data) == -1)
+                {
+                    return -1;
+                }
+                packet.questions.emplace_back (std::move (question));
+            }
+
+            packet.answers.clear ();
+            for (uint16_t i = 0; i < ancount; ++i)
+            {
+                ResourceRecord answer;
+                if (decodeResource (answer, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
+                packet.answers.emplace_back (std::move (answer));
+            }
+
+            packet.authorities.clear ();
+            for (uint16_t i = 0; i < nscount; ++i)
+            {
+                ResourceRecord authority;
+                if (decodeResource (authority, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
+                packet.authorities.emplace_back (std::move (authority));
+            }
+
+            packet.additionals.clear ();
+            for (uint16_t i = 0; i < arcount; ++i)
+            {
+                ResourceRecord additional;
+                if (decodeResource (additional, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
+                packet.additionals.emplace_back (std::move (additional));
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief convert DNS error to system error code.
+         * @param error DNS error number.
+         * @return system error.
+         */
+        static std::error_code decodeError (uint16_t error) noexcept
+        {
+            switch (error)
+            {
+                case 0:
+                    return {};
+                case 1:
+                case 4:
+                    return make_error_code (Errc::InvalidParam);
+                case 2:
+                    return make_error_code (Errc::OperationFailed);
+                case 3:
+                    return make_error_code (Errc::NotFound);
+                case 5:
+                    return make_error_code (Errc::PermissionDenied);
+                default:
+                    return make_error_code (Errc::UnknownError);
+            }
+        }
 
         /**
          * @brief get record type name.
@@ -213,121 +367,7 @@ namespace join
             return "UNKNOWN";
         }
 
-    protected:
-        /**
-         * @brief serialize a DNS packet into a byte stream.
-         * @param packet DNS packet to serialize.
-         * @param data output stream.
-         * @return 0 on success, -1 on error.
-         */
-        int serialize (const DnsPacket& packet, std::stringstream& data) const
-        {
-            uint16_t id = htons (packet.id);
-            data.write (reinterpret_cast<const char*> (&id), sizeof (id));
-
-            uint16_t flags = htons (packet.flags);
-            data.write (reinterpret_cast<const char*> (&flags), sizeof (flags));
-
-            uint16_t qcount = htons (static_cast<uint16_t> (packet.questions.size ()));
-            data.write (reinterpret_cast<const char*> (&qcount), sizeof (qcount));
-
-            uint16_t ancount = htons (static_cast<uint16_t> (packet.answers.size ()));
-            data.write (reinterpret_cast<const char*> (&ancount), sizeof (ancount));
-
-            uint16_t nscount = htons (static_cast<uint16_t> (packet.authorities.size ()));
-            data.write (reinterpret_cast<const char*> (&nscount), sizeof (nscount));
-
-            uint16_t arcount = htons (static_cast<uint16_t> (packet.additionals.size ()));
-            data.write (reinterpret_cast<const char*> (&arcount), sizeof (arcount));
-
-            for (auto const& question : packet.questions)
-            {
-                encodeQuestion (question, data);
-            }
-
-            // for (auto const& answer : packet.answers)
-            // {
-            //     encodeResource (answer, data);
-            // }
-
-            // for (auto const& authority : packet.authorities)
-            // {
-            //     encodeResource (authority, data);
-            // }
-
-            // for (auto const& additional : packet.additionals)
-            // {
-            //     encodeResource (additional, data);
-            // }
-
-            return 0;
-        }
-
-        /**
-         * @brief deserialize a DNS packet from a byte stream.
-         * @param packet DNS packet to fill.
-         * @param data input stream.
-         * @return 0 on success, -1 on error.
-         */
-        int deserialize (DnsPacket& packet, std::stringstream& data) const
-        {
-            data.read (reinterpret_cast<char*> (&packet.id), sizeof (packet.id));
-            packet.id = ntohs (packet.id);
-
-            data.read (reinterpret_cast<char*> (&packet.flags), sizeof (packet.flags));
-            packet.flags = ntohs (packet.flags);
-
-            uint16_t qcount = 0;
-            data.read (reinterpret_cast<char*> (&qcount), sizeof (qcount));
-            qcount = ntohs (qcount);
-
-            uint16_t ancount = 0;
-            data.read (reinterpret_cast<char*> (&ancount), sizeof (ancount));
-            ancount = ntohs (ancount);
-
-            uint16_t nscount = 0;
-            data.read (reinterpret_cast<char*> (&nscount), sizeof (nscount));
-            nscount = ntohs (nscount);
-
-            uint16_t arcount = 0;
-            data.read (reinterpret_cast<char*> (&arcount), sizeof (arcount));
-            arcount = ntohs (arcount);
-
-            packet.questions.clear ();
-            for (uint16_t i = 0; i < qcount; ++i)
-            {
-                QuestionRecord question;
-                decodeQuestion (question, data);
-                packet.questions.emplace_back (std::move (question));
-            }
-
-            packet.answers.clear ();
-            for (uint16_t i = 0; i < ancount; ++i)
-            {
-                ResourceRecord answer;
-                decodeResource (answer, data);
-                packet.answers.emplace_back (std::move (answer));
-            }
-
-            packet.authorities.clear ();
-            for (uint16_t i = 0; i < nscount; ++i)
-            {
-                ResourceRecord authority;
-                decodeResource (authority, data);
-                packet.authorities.emplace_back (std::move (authority));
-            }
-
-            packet.additionals.clear ();
-            for (uint16_t i = 0; i < arcount; ++i)
-            {
-                ResourceRecord additional;
-                decodeResource (additional, data);
-                packet.additionals.emplace_back (std::move (additional));
-            }
-
-            return 0;
-        }
-
+    private:
         /**
          * @brief encode a DNS name into a byte stream.
          * @param name DNS name to encode.
@@ -360,7 +400,7 @@ namespace join
         {
             if (depth > 10)
             {
-                return -1;  // LCOV_EXCL_LINE: requires malicious DNS packet.
+                return -1;
             }
 
             for (;;)
@@ -375,7 +415,10 @@ namespace join
                 {
                     pos = data.tellg ();
                     data.seekg (offset & 0x3FFF);
-                    decodeName (name, data, depth + 1);
+                    if (decodeName (name, data, depth + 1) == -1)
+                    {
+                        return -1;
+                    }
                     data.seekg (pos);
                     break;
                 }
@@ -410,17 +453,20 @@ namespace join
          * @param data output stream.
          * @return 0 on success, -1 on error.
          */
-        // int encodeMail (const std::string& mail, std::stringstream& data) const
-        // {
-        //     std::string encodedMail = mail;
-        //     size_t atPos = encodedMail.find ('@');
-        //     if (atPos != std::string::npos)
-        //     {
-        //         encodedMail.replace (atPos, 1, ".");
-        //     }
-        //     encodeName (encodedMail, data);
-        //     return 0;
-        // }
+        int encodeMail (const std::string& mail, std::stringstream& data) const
+        {
+            std::string encodedMail = mail;
+            size_t atPos = encodedMail.find ('@');
+
+            if (atPos != std::string::npos)
+            {
+                encodedMail.replace (atPos, 1, ".");
+            }
+
+            encodeName (encodedMail, data);
+
+            return 0;
+        }
 
         /**
          * @brief decode a mail address from a byte stream.
@@ -430,12 +476,17 @@ namespace join
          */
         int decodeMail (std::string& mail, std::stringstream& data) const
         {
-            decodeName (mail, data);
+            if (decodeName (mail, data) == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
+
             auto pos = mail.find ('.');
             if (pos != std::string::npos)
             {
                 mail[pos] = '@';
             }
+
             return 0;
         }
 
@@ -466,7 +517,10 @@ namespace join
          */
         int decodeQuestion (QuestionRecord& question, std::stringstream& data) const
         {
-            decodeName (question.host, data);
+            if (decodeName (question.host, data) == -1)
+            {
+                return -1;
+            }
 
             data.read (reinterpret_cast<char*> (&question.type), sizeof (question.type));
             question.type = ntohs (question.type);
@@ -483,105 +537,104 @@ namespace join
          * @param data output stream.
          * @return 0 on success, -1 on error.
          */
-        // int encodeResource (const ResourceRecord& resource, std::stringstream& data) const
-        // {
-        //     encodeName (resource.host, data);
+        int encodeResource (const ResourceRecord& resource, std::stringstream& data) const
+        {
+            encodeName (resource.host, data);
 
-        //     uint16_t type = htons (resource.type);
-        //     data.write (reinterpret_cast<const char*> (&type), sizeof (type));
+            uint16_t type = htons (resource.type);
+            data.write (reinterpret_cast<const char*> (&type), sizeof (type));
 
-        //     uint16_t dnsclass = htons (resource.dnsclass);
-        //     data.write (reinterpret_cast<const char*> (&dnsclass), sizeof (dnsclass));
+            uint16_t dnsclass = htons (resource.dnsclass);
+            data.write (reinterpret_cast<const char*> (&dnsclass), sizeof (dnsclass));
 
-        //     uint32_t ttl = htonl (resource.ttl);
-        //     data.write (reinterpret_cast<const char*> (&ttl), sizeof (ttl));
+            uint32_t ttl = htonl (resource.ttl);
+            data.write (reinterpret_cast<const char*> (&ttl), sizeof (ttl));
 
-        //     uint16_t dataLen = 0;
-        //     auto dataLenPos = data.tellp ();
-        //     data.write (reinterpret_cast<const char*> (&dataLen), sizeof (dataLen));
+            uint16_t dataLen = 0;
+            auto dataLenPos = data.tellp ();
+            data.write (reinterpret_cast<const char*> (&dataLen), sizeof (dataLen));
 
-        //     auto dataBegPos = data.tellp ();
+            auto dataBegPos = data.tellp ();
 
-        //     if (resource.type == RecordType::A)
-        //     {
-        //         data.write (reinterpret_cast<const char*> (resource.addr.addr ()), sizeof (in_addr));
-        //     }
-        //     else if (resource.type == RecordType::AAAA)
-        //     {
-        //         data.write (reinterpret_cast<const char*> (resource.addr.addr ()), sizeof (in6_addr));
-        //     }
-        //     else if (resource.type == RecordType::NS)
-        //     {
-        //         encodeName (resource.name, data);
-        //     }
-        //     else if (resource.type == RecordType::CNAME)
-        //     {
-        //         encodeName (resource.name, data);
-        //     }
-        //     else if (resource.type == RecordType::PTR)
-        //     {
-        //         encodeName (resource.name, data);
-        //     }
-        //     else if (resource.type == RecordType::MX)
-        //     {
-        //         uint16_t mxpref = htons (resource.mxpref);
-        //         data.write (reinterpret_cast<const char*> (&mxpref), sizeof (mxpref));
+            if (resource.type == RecordType::A)
+            {
+                data.write (reinterpret_cast<const char*> (resource.addr.addr ()), sizeof (in_addr));
+            }
+            else if (resource.type == RecordType::AAAA)
+            {
+                data.write (reinterpret_cast<const char*> (resource.addr.addr ()), sizeof (in6_addr));
+            }
+            else if (resource.type == RecordType::NS)
+            {
+                encodeName (resource.name, data);
+            }
+            else if (resource.type == RecordType::CNAME)
+            {
+                encodeName (resource.name, data);
+            }
+            else if (resource.type == RecordType::PTR)
+            {
+                encodeName (resource.name, data);
+            }
+            else if (resource.type == RecordType::MX)
+            {
+                uint16_t mxpref = htons (resource.mxpref);
+                data.write (reinterpret_cast<const char*> (&mxpref), sizeof (mxpref));
+                encodeName (resource.name, data);
+            }
+            else if (resource.type == RecordType::SOA)
+            {
+                encodeName (resource.name, data);
+                encodeMail (resource.mail, data);
 
-        //         encodeName (resource.name, data);
-        //     }
-        //     else if (resource.type == RecordType::SOA)
-        //     {
-        //         encodeName (resource.name, data);
-        //         encodeMail (resource.mail, data);
+                uint32_t serial = htonl (resource.serial);
+                data.write (reinterpret_cast<const char*> (&serial), sizeof (serial));
 
-        //         uint32_t serial = htonl (resource.serial);
-        //         data.write (reinterpret_cast<const char*> (&serial), sizeof (serial));
+                uint32_t refresh = htonl (resource.refresh);
+                data.write (reinterpret_cast<const char*> (&refresh), sizeof (refresh));
 
-        //         uint32_t refresh = htonl (resource.refresh);
-        //         data.write (reinterpret_cast<const char*> (&refresh), sizeof (refresh));
+                uint32_t retry = htonl (resource.retry);
+                data.write (reinterpret_cast<const char*> (&retry), sizeof (retry));
 
-        //         uint32_t retry = htonl (resource.retry);
-        //         data.write (reinterpret_cast<const char*> (&retry), sizeof (retry));
+                uint32_t expire = htonl (resource.expire);
+                data.write (reinterpret_cast<const char*> (&expire), sizeof (expire));
 
-        //         uint32_t expire = htonl (resource.expire);
-        //         data.write (reinterpret_cast<const char*> (&expire), sizeof (expire));
+                uint32_t minimum = htonl (resource.minimum);
+                data.write (reinterpret_cast<const char*> (&minimum), sizeof (minimum));
+            }
+            else if (resource.type == RecordType::TXT)
+            {
+                for (auto const& txt : resource.txts)
+                {
+                    uint8_t size = static_cast<uint8_t> (txt.size ());
+                    data.write (reinterpret_cast<const char*> (&size), sizeof (size));
+                    data.write (txt.data (), size);
+                }
+            }
+            else if (resource.type == RecordType::SRV)
+            {
+                uint16_t priority = htons (resource.priority);
+                data.write (reinterpret_cast<const char*> (&priority), sizeof (priority));
 
-        //         uint32_t minimum = htonl (resource.minimum);
-        //         data.write (reinterpret_cast<const char*> (&minimum), sizeof (minimum));
-        //     }
-        //     else if (resource.type == RecordType::TXT)
-        //     {
-        //         for (const auto& txt : resource.txts)
-        //         {
-        //             uint8_t size = static_cast<uint8_t> (txt.size ());
-        //             data.write (reinterpret_cast<const char*> (&size), sizeof (size));
-        //             data.write (txt.data (), size);
-        //         }
-        //     }
-        //     else if (resource.type == RecordType::SRV)
-        //     {
-        //         uint16_t priority = htons (resource.priority);
-        //         data.write (reinterpret_cast<const char*> (&priority), sizeof (priority));
+                uint16_t weight = htons (resource.weight);
+                data.write (reinterpret_cast<const char*> (&weight), sizeof (weight));
 
-        //         uint16_t weight = htons (resource.weight);
-        //         data.write (reinterpret_cast<const char*> (&weight), sizeof (weight));
+                uint16_t port = htons (resource.port);
+                data.write (reinterpret_cast<const char*> (&port), sizeof (port));
 
-        //         uint16_t port = htons (resource.port);
-        //         data.write (reinterpret_cast<const char*> (&port), sizeof (port));
+                encodeName (resource.name, data);
+            }
 
-        //         encodeName (resource.name, data);
-        //     }
+            auto dataEndPos = data.tellp ();
+            dataLen = static_cast<uint16_t> (dataEndPos - dataBegPos);
 
-        //     auto dataEndPos = data.tellp ();
-        //     dataLen = static_cast<uint16_t> (dataEndPos - dataBegPos);
+            data.seekp (dataLenPos);
+            dataLen = htons (dataLen);
+            data.write (reinterpret_cast<const char*> (&dataLen), sizeof (dataLen));
+            data.seekp (dataEndPos);
 
-        //     data.seekp (dataLenPos);
-        //     dataLen = htons (dataLen);
-        //     data.write (reinterpret_cast<const char*> (&dataLen), sizeof (dataLen));
-        //     data.seekp (dataEndPos);
-
-        //     return 0;
-        // }
+            return 0;
+        }
 
         /**
          * @brief decode a resource record from a byte stream.
@@ -591,7 +644,10 @@ namespace join
          */
         int decodeResource (ResourceRecord& resource, std::stringstream& data) const
         {
-            decodeName (resource.host, data);
+            if (decodeName (resource.host, data) == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
 
             data.read (reinterpret_cast<char*> (&resource.type), sizeof (resource.type));
             resource.type = ntohs (resource.type);
@@ -622,26 +678,42 @@ namespace join
             }
             else if (resource.type == RecordType::NS)
             {
-                decodeName (resource.name, data);
+                if (decodeName (resource.name, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
             }
             else if (resource.type == RecordType::CNAME)
             {
-                decodeName (resource.name, data);
+                if (decodeName (resource.name, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
             }
             else if (resource.type == RecordType::PTR)
             {
-                decodeName (resource.name, data);
+                if (decodeName (resource.name, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
             }
             else if (resource.type == RecordType::MX)
             {
                 data.read (reinterpret_cast<char*> (&resource.mxpref), sizeof (resource.mxpref));
                 resource.mxpref = ntohs (resource.mxpref);
 
-                decodeName (resource.name, data);
+                if (decodeName (resource.name, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
             }
             else if (resource.type == RecordType::SOA)
             {
-                decodeName (resource.name, data);
+                if (decodeName (resource.name, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
+
                 decodeMail (resource.mail, data);
 
                 data.read (reinterpret_cast<char*> (&resource.serial), sizeof (resource.serial));
@@ -661,14 +733,21 @@ namespace join
             }
             else if (resource.type == RecordType::TXT)
             {
-                while (data.tellg () - dataBegPos < dataLen)
+                while (data.tellg () != -1 && (data.tellg () - dataBegPos < dataLen))
                 {
                     uint8_t size = 0;
-                    data.read (reinterpret_cast<char*> (&size), sizeof (size));
+                    if (!data.read (reinterpret_cast<char*> (&size), sizeof (size)))
+                    {
+                        return -1;  // LCOV_EXCL_LINE
+                    }
 
                     std::string txt;
                     txt.resize (size);
-                    data.read (&txt[0], size);
+                    if (!data.read (&txt[0], size))
+                    {
+                        return -1;  // LCOV_EXCL_LINE
+                    }
+
                     resource.txts.emplace_back (std::move (txt));
                 }
             }
@@ -683,7 +762,10 @@ namespace join
                 data.read (reinterpret_cast<char*> (&resource.port), sizeof (resource.port));
                 resource.port = ntohs (resource.port);
 
-                decodeName (resource.name, data);
+                if (decodeName (resource.name, data) == -1)
+                {
+                    return -1;  // LCOV_EXCL_LINE
+                }
             }
             else
             {
@@ -692,37 +774,6 @@ namespace join
 
             return 0;
         }
-
-        /**
-         * @brief convert DNS error to system error code.
-         * @param error DNS error number.
-         * @return system error.
-         */
-        static std::error_code decodeError (uint16_t error) noexcept
-        {
-            switch (error)
-            {
-                case 0:
-                    return {};
-                case 1:
-                case 4:
-                    return make_error_code (Errc::InvalidParam);
-                case 2:
-                    return make_error_code (Errc::OperationFailed);
-                case 3:
-                    return make_error_code (Errc::NotFound);
-                case 5:
-                    return make_error_code (Errc::PermissionDenied);
-                default:
-                    return make_error_code (Errc::UnknownError);
-            }
-        }
-
-        /// reception buffer.
-        std::unique_ptr<uint8_t[]> _buffer;
-
-        /// transport policy.
-        TransportPolicy _transport;
     };
 }
 

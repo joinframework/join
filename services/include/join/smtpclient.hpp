@@ -28,8 +28,8 @@
 // libjoin.
 #include <join/socketstream.hpp>
 #include <join/mailmessage.hpp>
+#include <join/resolver.hpp>
 #include <join/base64.hpp>
-#include <join/dns.hpp>
 
 namespace join
 {

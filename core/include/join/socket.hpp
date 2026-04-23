@@ -469,7 +469,7 @@ namespace join
          * @brief determine the local endpoint associated with this socket.
          * @return local endpoint.
          */
-        Endpoint localEndpoint () const
+        Endpoint localEndpoint () const noexcept
         {
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
@@ -590,7 +590,7 @@ namespace join
                 handle.events |= POLLOUT;
             }
 
-            int nset = (handle.fd > -1) ? ::poll (&handle, 1, timeout) : -1;
+            int nset = (handle.fd > -1) ? ::poll (&handle, 1, timeout == 0 ? -1 : timeout) : -1;
             if (nset != 1)
             {
                 if (nset == -1)
@@ -1053,7 +1053,7 @@ namespace join
          * @brief determine the remote endpoint associated with this socket.
          * @return remote endpoint.
          */
-        const Endpoint& remoteEndpoint () const
+        const Endpoint& remoteEndpoint () const noexcept
         {
             return this->_remote;
         }
@@ -1109,7 +1109,7 @@ namespace join
          * @brief returns the Time-To-Live value.
          * @return The Time-To-Live value.
          */
-        int ttl () const
+        int ttl () const noexcept
         {
             return this->_ttl;
         }
@@ -1691,16 +1691,19 @@ namespace join
          * @param endpoint endpoint to connect to.
          * @return 0 on success, -1 on failure.
          */
-        int connectEncrypted (const Endpoint& endpoint)
+        virtual int connectEncrypted (const Endpoint& endpoint)
         {
-            if (BasicStreamSocket<Protocol>::connect (endpoint) == -1)
+            if (this->connect (endpoint) == -1)
             {
                 return -1;
             }
 
             if (this->startEncryption () == -1)
             {
-                this->close ();
+                if (lastError != Errc::TemporaryError)
+                {
+                    this->close ();
+                }
                 return -1;
             }
 
@@ -1763,7 +1766,7 @@ namespace join
          * @param timeout timeout in milliseconds (0: infinite).
          * return true on success, false otherwise.
          */
-        bool waitEncrypted (int timeout = 0)
+        virtual bool waitEncrypted (int timeout = 0)
         {
             if (this->encrypted () == false)
             {
@@ -2144,7 +2147,7 @@ namespace join
          * @param verify Enable peer verification if set to true, false otherwise.
          * @param depth The maximum certificate verification depth (default: no limit).
          */
-        void setVerify (bool verify, int depth = -1)
+        void setVerify (bool verify, int depth = -1) noexcept
         {
             if (verify == true)
             {
@@ -2183,6 +2186,32 @@ namespace join
         {
             if (((this->_tlsHandle) ? SSL_set_ciphersuites (this->_tlsHandle.get (), cipher.c_str ())
                                     : SSL_CTX_set_ciphersuites (this->_tlsContext.get (), cipher.c_str ())) == 0)
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief set the ALPN protocols list.
+         * @param protocols list of protocol names (ex. {"h2", "http/1.1"}).
+         * @return 0 on success, -1 on failure.
+         */
+        int setAlpnProtocols (const std::vector<std::string>& protocols)
+        {
+            std::vector<uint8_t> wire;
+            wire.reserve (256);
+
+            for (auto const& proto : protocols)
+            {
+                wire.push_back (static_cast<uint8_t> (proto.size ()));
+                wire.insert (wire.end (), proto.begin (), proto.end ());
+            }
+
+            if (SSL_CTX_set_alpn_protos (this->_tlsContext.get (), wire.data (),
+                                         static_cast<unsigned int> (wire.size ())) != 0)
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;

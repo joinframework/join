@@ -29,9 +29,9 @@
 #include <join/socketstream.hpp>
 #include <join/httpmessage.hpp>
 #include <join/chunkstream.hpp>
+#include <join/resolver.hpp>
 #include <join/zstream.hpp>
 #include <join/version.hpp>
-#include <join/dns.hpp>
 
 // C++.
 #include <chrono>
