@@ -849,34 +849,32 @@ namespace join
         void onReceive ([[maybe_unused]] int fd) override final
         {
             int size = this->read (_buffer.get (), Protocol::maxMsgSize);
-            if (size < 12)
+            if (size >= int (_headerSize))
             {
-                return;
-            }
+                std::stringstream data;
+                data.rdbuf ()->pubsetbuf (_buffer.get (), size);
 
-            std::stringstream data;
-            data.rdbuf ()->pubsetbuf (_buffer.get (), size);
+                DnsPacket packet;
+                _message.deserialize (packet, data);
+                packet.src = this->localEndpoint ().ip ();
+                packet.dest = this->remoteEndpoint ().ip ();
+                packet.port = this->remoteEndpoint ().port ();
 
-            DnsPacket packet;
-            _message.deserialize (packet, data);
-            packet.src = this->localEndpoint ().ip ();
-            packet.dest = this->remoteEndpoint ().ip ();
-            packet.port = this->remoteEndpoint ().port ();
-
-            if (packet.flags & 0x8000)
-            {
-                ScopedLock<Mutex> lock (_syncMutex);
-
-                auto it = _pending.find (packet.id);
-                if (it != _pending.end ())
+                if (packet.flags & 0x8000)
                 {
-                    it->second->packet = packet;
-                    it->second->ec = DnsMessage::decodeError (packet.flags & 0x000F);
-                    if ((packet.flags & 0x0200) && it->second->ec == std::error_code{})
+                    ScopedLock<Mutex> lock (_syncMutex);
+
+                    auto it = _pending.find (packet.id);
+                    if (it != _pending.end ())
                     {
-                        it->second->ec = make_error_code (Errc::MessageTooLong);
+                        it->second->packet = packet;
+                        it->second->ec = DnsMessage::decodeError (packet.flags & 0x000F);
+                        if ((packet.flags & 0x0200) && it->second->ec == std::error_code{})
+                        {
+                            it->second->ec = make_error_code (Errc::MessageTooLong);
+                        }
+                        it->second->cond.signal ();
                     }
-                    it->second->cond.signal ();
                 }
             }
         }
@@ -993,6 +991,9 @@ namespace join
                 func (packet);
             }
         }
+
+        /// DNS message header size.
+        static constexpr size_t _headerSize = 12;
 
         /// DNS message codec.
         DnsMessage _message;
@@ -1174,9 +1175,9 @@ namespace join
          */
         virtual int read (char* data, unsigned long maxSize) noexcept override
         {
-            if (_offset < _headerSize)
+            if (_offset < _frameHeaderSize)
             {
-                int nread = Socket::read (data + _offset, _headerSize - _offset);
+                int nread = Socket::read (data + _offset, _frameHeaderSize - _offset);
                 if (nread == -1)
                 {
                     if (lastError != Errc::TemporaryError)
@@ -1189,7 +1190,7 @@ namespace join
 
                 _offset += static_cast<size_t> (nread);
 
-                if (_offset < _headerSize)
+                if (_offset < _frameHeaderSize)
                 {
                     lastError = make_error_code (Errc::TemporaryError);
                     return -1;
@@ -1206,7 +1207,7 @@ namespace join
                 }
             }
 
-            int nread = Socket::read (data + (_offset - _headerSize), _size - (_offset - _headerSize));
+            int nread = Socket::read (data + (_offset - _frameHeaderSize), _size - (_offset - _frameHeaderSize));
             if (nread == -1)
             {
                 if (lastError != Errc::TemporaryError)
@@ -1219,7 +1220,7 @@ namespace join
 
             _offset += static_cast<size_t> (nread);
 
-            if (_offset < (_size + _headerSize))
+            if (_offset < (_size + _frameHeaderSize))
             {
                 lastError = make_error_code (Errc::TemporaryError);
                 return -1;
@@ -1406,7 +1407,7 @@ namespace join
         }
 
         /// DOT framing header size.
-        static constexpr size_t _headerSize = 2;
+        static constexpr size_t _frameHeaderSize = 2;
 
         /// total expected payload size.
         size_t _size = 0;

@@ -646,7 +646,7 @@ namespace join
         {
             if (decodeName (resource.host, data) == -1)
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             data.read (reinterpret_cast<char*> (&resource.type), sizeof (resource.type));
