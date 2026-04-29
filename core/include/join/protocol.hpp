@@ -59,6 +59,9 @@ namespace join
     class BasicTlsResolver;
 
     template <class Protocol>
+    class BasicDatagramNameServer;
+
+    template <class Protocol>
     class BasicHttpClient;
     template <class Protocol>
     class BasicHttpSecureClient;
@@ -685,6 +688,7 @@ namespace join
         using Endpoint = BasicInternetEndpoint<Dns>;
         using Socket = BasicDatagramSocket<Dns>;
         using Resolver = BasicDatagramResolver<Dns>;
+        using NameServer = BasicDatagramNameServer<Dns>;
 
         /**
          * @brief construct the DNS protocol instance.

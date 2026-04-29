@@ -380,8 +380,9 @@ namespace join
 
             for (std::string token; std::getline (iss, token, '.');)
             {
-                data << static_cast<uint8_t> (token.size ());
-                data << token;
+                uint8_t len = static_cast<uint8_t> (token.size ());
+                data.write (reinterpret_cast<const char*> (&len), 1);
+                data.write (token.data (), len);
             }
 
             data << '\0';
@@ -405,43 +406,48 @@ namespace join
 
             for (;;)
             {
-                auto pos = data.tellg ();
-
-                uint16_t offset = 0;
-                data.read (reinterpret_cast<char*> (&offset), sizeof (offset));
-                offset = ntohs (offset);
-
-                if (offset & 0xC000)
+                uint8_t first = 0;
+                if (!data.read (reinterpret_cast<char*> (&first), sizeof (first)))
                 {
-                    pos = data.tellg ();
-                    data.seekg (offset & 0x3FFF);
+                    return -1;
+                }
+
+                if ((first & 0xC0) == 0xC0)
+                {
+                    uint8_t second = 0;
+                    if (!data.read (reinterpret_cast<char*> (&second), sizeof (second)))
+                    {
+                        return -1;
+                    }
+
+                    uint16_t ptr = ((first & 0x3F) << 8) | second;
+                    auto saved = data.tellg ();
+
+                    data.seekg (ptr);
                     if (decodeName (name, data, depth + 1) == -1)
                     {
                         return -1;
                     }
-                    data.seekg (pos);
+                    data.seekg (saved);
                     break;
                 }
-                else
+
+                if (first == 0)
                 {
-                    data.seekg (pos);
-
-                    uint8_t size = 0;
-                    data.read (reinterpret_cast<char*> (&size), sizeof (size));
-
-                    if (size == 0)
+                    if (!name.empty () && name.back () == '.')
                     {
-                        if (!name.empty () && name.back () == '.')
-                        {
-                            name.pop_back ();
-                        }
-                        break;
+                        name.pop_back ();
                     }
-
-                    name.resize (name.size () + size);
-                    data.read (&name[name.size () - size], size);
-                    name += '.';
+                    break;
                 }
+
+                name.reserve (name.size () + first + 1);
+                name.resize (name.size () + first);
+                if (!data.read (&name[name.size () - first], first))
+                {
+                    return -1;
+                }
+                name += '.';
             }
 
             return 0;
