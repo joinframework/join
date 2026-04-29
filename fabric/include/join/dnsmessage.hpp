@@ -445,7 +445,7 @@ namespace join
                 name.resize (name.size () + first);
                 if (!data.read (&name[name.size () - first], first))
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
                 name += '.';
             }

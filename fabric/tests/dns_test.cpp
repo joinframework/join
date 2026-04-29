@@ -319,9 +319,6 @@ TEST_F (DnsTest, resolveAllName)
     aliases = Dns::Resolver::lookupAllName ("::");
     EXPECT_EQ (aliases.size (), 0);
 
-    // aliases = _resolver->resolveAllName ("192.168.24.32");
-    // EXPECT_EQ (aliases.size (), 0);
-
     aliases = Dns::Resolver::lookupAllName ("192.168.24.32");
     EXPECT_EQ (aliases.size (), 0);
 
@@ -369,9 +366,6 @@ TEST_F (DnsTest, resolveName)
     alias = Dns::Resolver::lookupName ("::");
     EXPECT_TRUE (alias.empty ());
 
-    // alias = _resolver->resolveName ("192.168.24.32");
-    // EXPECT_TRUE (alias.empty ());
-
     alias = Dns::Resolver::lookupName ("192.168.24.32");
     EXPECT_TRUE (alias.empty ());
 
@@ -413,9 +407,6 @@ TEST_F (DnsTest, resolveAllNameServer)
     names = Dns::Resolver::lookupAllNameServer ("");
     EXPECT_EQ (names.size (), 0);
 
-    // names = _resolver->resolveAllNameServer ("localhost");
-    // EXPECT_EQ (names.size (), 0);
-
     names = Dns::Resolver::lookupAllNameServer ("localhost");
     EXPECT_EQ (names.size (), 0);
 
@@ -449,9 +440,6 @@ TEST_F (DnsTest, resolveNameServer)
 
     name = Dns::Resolver::lookupNameServer ("");
     EXPECT_TRUE (name.empty ());
-
-    // name = _resolver->resolveNameServer ("localhost");
-    // EXPECT_TRUE (name.empty ());
 
     name = Dns::Resolver::lookupNameServer ("localhost");
     EXPECT_TRUE (name.empty ());
@@ -487,9 +475,6 @@ TEST_F (DnsTest, resolveAuthority)
     name = Dns::Resolver::lookupAuthority ("");
     EXPECT_TRUE (name.empty ());
 
-    // name = _resolver->resolveAuthority ("localhost");
-    // EXPECT_TRUE (name.empty ());
-
     name = Dns::Resolver::lookupAuthority ("localhost");
     EXPECT_TRUE (name.empty ());
 
@@ -520,9 +505,6 @@ TEST_F (DnsTest, resolveAllMailExchanger)
     exchangers = Dns::Resolver::lookupAllMailExchanger ("");
     EXPECT_EQ (exchangers.size (), 0);
 
-    // exchangers = _resolver->resolveAllMailExchanger ("localhost");
-    // EXPECT_EQ (exchangers.size (), 0);
-
     exchangers = Dns::Resolver::lookupAllMailExchanger ("localhost");
     EXPECT_EQ (exchangers.size (), 0);
 
@@ -552,9 +534,6 @@ TEST_F (DnsTest, resolveMailExchanger)
 
     exchanger = Dns::Resolver::lookupMailExchanger ("");
     EXPECT_TRUE (exchanger.empty ());
-
-    // exchanger = _resolver->resolveMailExchanger ("localhost");
-    // EXPECT_TRUE (exchanger.empty ());
 
     exchanger = Dns::Resolver::lookupMailExchanger ("localhost");
     EXPECT_TRUE (exchanger.empty ());

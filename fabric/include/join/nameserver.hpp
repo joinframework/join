@@ -91,7 +91,7 @@ namespace join
         {
             if (Socket::bind (endpoint) == -1)
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             _reactor->addHandler (this->handle (), this);
@@ -146,7 +146,7 @@ namespace join
             Endpoint to (query.src, query.port);
             if (this->writeTo (buffer.data (), buffer.size (), to) == -1)
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             return 0;
