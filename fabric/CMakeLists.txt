@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22.1)
 set(PUBLIC_HEADERS
     include/join/dnsmessage.hpp
     include/join/resolver.hpp
+    include/join/nameserver.hpp
     include/join/netlinkmanager.hpp
     include/join/neighbor.hpp
     include/join/neighbormanager.hpp
