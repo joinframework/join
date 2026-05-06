@@ -132,15 +132,19 @@ namespace join
             std::stringstream data;
             if (_message.serialize (response, data) == -1)
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             std::string buffer = data.str ();
             if (buffer.size () > Protocol::maxMsgSize)
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::MessageTooLong);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             Endpoint to (query.src, query.port);
