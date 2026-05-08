@@ -36,6 +36,7 @@ using join::Icmp;
 using join::Tcp;
 using join::Tls;
 using join::Dns;
+using join::Mdns;
 using join::Dot;
 using join::Http;
 using join::Https;
@@ -66,6 +67,9 @@ TEST (Protocol, family)
     ASSERT_EQ (Dns ().family (), AF_INET);
     ASSERT_EQ (Dns::v6 ().family (), AF_INET6);
     ASSERT_EQ (Dns::v4 ().family (), AF_INET);
+    ASSERT_EQ (Mdns ().family (), AF_INET);
+    ASSERT_EQ (Mdns::v6 ().family (), AF_INET6);
+    ASSERT_EQ (Mdns::v4 ().family (), AF_INET);
     ASSERT_EQ (Dot ().family (), AF_INET);
     ASSERT_EQ (Dot::v6 ().family (), AF_INET6);
     ASSERT_EQ (Dot::v4 ().family (), AF_INET);
@@ -97,6 +101,7 @@ TEST (Protocol, type)
     ASSERT_EQ (Tcp ().type (), SOCK_STREAM);
     ASSERT_EQ (Tls ().type (), SOCK_STREAM);
     ASSERT_EQ (Dns ().type (), SOCK_DGRAM);
+    ASSERT_EQ (Mdns ().type (), SOCK_DGRAM);
     ASSERT_EQ (Dot ().type (), SOCK_STREAM);
     ASSERT_EQ (Http ().type (), SOCK_STREAM);
     ASSERT_EQ (Https ().type (), SOCK_STREAM);
@@ -119,6 +124,7 @@ TEST (Protocol, protocol)
     ASSERT_EQ (Tcp ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Tls ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Dns ().protocol (), IPPROTO_UDP);
+    ASSERT_EQ (Mdns ().protocol (), IPPROTO_UDP);
     ASSERT_EQ (Dot ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Http ().protocol (), IPPROTO_TCP);
     ASSERT_EQ (Https ().protocol (), IPPROTO_TCP);
@@ -158,6 +164,11 @@ TEST (Protocol, equal)
     ASSERT_NE (Dns::v4 (), Dns::v6 ());
     ASSERT_EQ (Dns::v6 (), Dns::v6 ());
     ASSERT_NE (Dns::v6 (), Dns::v4 ());
+
+    ASSERT_EQ (Mdns::v4 (), Mdns::v4 ());
+    ASSERT_NE (Mdns::v4 (), Mdns::v6 ());
+    ASSERT_EQ (Mdns::v6 (), Mdns::v6 ());
+    ASSERT_NE (Mdns::v6 (), Mdns::v4 ());
 
     ASSERT_EQ (Dot::v4 (), Dot::v4 ());
     ASSERT_NE (Dot::v4 (), Dot::v6 ());
