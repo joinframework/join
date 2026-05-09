@@ -731,8 +731,10 @@ namespace join
         {
             if (this->disconnect () == -1)
             {
+                // LCOV_EXCL_START
                 this->close ();
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             if (this->connect (endpoint) == -1)
@@ -806,16 +808,20 @@ namespace join
             auto inserted = _pending.emplace (packet.id, std::make_unique<PendingRequest> ());
             if (!inserted.second)
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::OperationFailed);
                 notify (onFailure, packet);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             if (this->write (buffer.data (), buffer.size ()) == -1)
             {
+                // LCOV_EXCL_START
                 _pending.erase (inserted.first);
                 notify (onFailure, packet);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             if (!inserted.first->second->cond.timedWait (lock, timeout))

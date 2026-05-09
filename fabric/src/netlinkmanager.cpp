@@ -98,7 +98,7 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
     {
         if (write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len) == -1)
         {
-            return -1;
+            return -1;  // LCOV_EXCL_LINE
         }
 
         return 0;
@@ -109,14 +109,18 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
     auto inserted = _pending.emplace (nlh->nlmsg_seq, std::make_unique<PendingRequest> ());
     if (!inserted.second)
     {
+        // LCOV_EXCL_START
         lastError = make_error_code (Errc::OperationFailed);
         return -1;
+        // LCOV_EXCL_STOP
     }
 
     if (write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len) == -1)
     {
+        // LCOV_EXCL_START
         _pending.erase (inserted.first);
         return -1;
+        // LCOV_EXCL_STOP
     }
 
     if (!inserted.first->second->cond.timedWait (lock, timeout))

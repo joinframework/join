@@ -351,25 +351,23 @@ namespace join
             }
             else
             {
+                // LCOV_EXCL_START: IPv4 multicast not supported by github action containers.
                 ip_mreqn mreq{};
                 ::memcpy (&mreq.imr_multiaddr, maddress.addr (), maddress.length ());
                 mreq.imr_ifindex = static_cast<int> (_ifindex);
                 if (::setsockopt (this->handle (), IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof (mreq)) == -1)
                 {
-                    // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
-                    // LCOV_EXCL_STOP
                 }
                 if (::setsockopt (this->handle (), IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof (mreq)) == -1)
                 {
-                    // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
-                    // LCOV_EXCL_STOP
                 }
+                // LCOV_EXCL_STOP
             }
 
 #ifndef DEBUG

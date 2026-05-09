@@ -221,10 +221,12 @@ namespace join
 
             if (write (reinterpret_cast<const char*> (&out), sizeof (Packet)) == -1)
             {
+                // LCOV_EXCL_START
                 _pending.erase (inserted.first);
                 _reactor->delHandler (handle ());
                 close ();
                 return {};
+                // LCOV_EXCL_STOP
             }
 
             if (!inserted.first->second->cond.timedWait (lock, timeout))
