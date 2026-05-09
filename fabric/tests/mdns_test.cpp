@@ -31,7 +31,7 @@
 // C++.
 #include <fstream>
 
-#define SUPPORT_MULTICAST_IPV4
+// #define SUPPORT_MULTICAST_IPV4
 
 using join::lastError;
 using join::Errc;

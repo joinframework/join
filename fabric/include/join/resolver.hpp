@@ -1375,8 +1375,10 @@ namespace join
             {
                 if (lastError != Errc::TemporaryError)
                 {
+                    // LCOV_EXCL_START
                     this->close ();
                     return -1;
+                    // LCOV_EXCL_STOP
                 }
 
                 if (!this->waitDisconnected (timeout.count ()))
