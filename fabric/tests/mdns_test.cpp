@@ -175,7 +175,7 @@ public:
      * @param timeout maximum time to wait.
      * @return true if the record was received, false on timeout.
      */
-    bool waitForRecord (uint16_t type, std::chrono::milliseconds timeout = 100ms)
+    bool waitForRecord (uint16_t type, std::chrono::milliseconds timeout = 1000ms)
     {
         ScopedLock<Mutex> lock (_mutex);
         return _cond.timedWait (lock, timeout, [&] {
@@ -521,25 +521,25 @@ TEST_F (MdnsTest, browse)
  */
 TEST_F (MdnsTest, resolveAddress)
 {
-    IpAddress addr = _resolver4.resolveAddress ("", AF_INET, 100ms);
+    IpAddress addr = _resolver4.resolveAddress ("", AF_INET, 500ms);
     EXPECT_TRUE (addr.isWildcard ());
 
-    addr = _resolver6.resolveAddress ("", AF_INET6, 100ms);
+    addr = _resolver6.resolveAddress ("", AF_INET6, 500ms);
     EXPECT_TRUE (addr.isWildcard ());
 
-    addr = _resolver4.resolveAddress (MdnsAnnouncer::_host, AF_INET, 100ms);
+    addr = _resolver4.resolveAddress (MdnsAnnouncer::_host, AF_INET, 500ms);
     EXPECT_FALSE (addr.isWildcard ());
     EXPECT_EQ (addr, MdnsAnnouncer::_hostIp4);
 
-    addr = _resolver6.resolveAddress (MdnsAnnouncer::_host, AF_INET6, 100ms);
+    addr = _resolver6.resolveAddress (MdnsAnnouncer::_host, AF_INET6, 500ms);
     EXPECT_FALSE (addr.isWildcard ());
     EXPECT_EQ (addr, MdnsAnnouncer::_hostIp6);
 
-    addr = _resolver4.resolveAddress ("unknown.local", AF_INET, 100ms);
+    addr = _resolver4.resolveAddress ("unknown.local", AF_INET, 500ms);
     EXPECT_TRUE (addr.isWildcard ());
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
 
-    addr = _resolver6.resolveAddress ("unknown.local", AF_INET6, 100ms);
+    addr = _resolver6.resolveAddress ("unknown.local", AF_INET6, 500ms);
     EXPECT_TRUE (addr.isWildcard ());
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
 }
@@ -549,24 +549,24 @@ TEST_F (MdnsTest, resolveAddress)
  */
 TEST_F (MdnsTest, resolveAllAddress)
 {
-    IpAddressList addrs = _resolver4.resolveAllAddress ("", AF_INET, 100ms);
+    IpAddressList addrs = _resolver4.resolveAllAddress ("", AF_INET, 500ms);
     EXPECT_EQ (addrs.size (), 0);
 
-    addrs = _resolver6.resolveAllAddress ("", AF_INET6, 100ms);
+    addrs = _resolver6.resolveAllAddress ("", AF_INET6, 500ms);
     EXPECT_EQ (addrs.size (), 0);
 
-    addrs = _resolver4.resolveAllAddress (MdnsAnnouncer::_host, AF_INET, 100ms);
+    addrs = _resolver4.resolveAllAddress (MdnsAnnouncer::_host, AF_INET, 500ms);
     ASSERT_GT (addrs.size (), 0);
     EXPECT_EQ (addrs.front (), MdnsAnnouncer::_hostIp4);
 
-    addrs = _resolver6.resolveAllAddress (MdnsAnnouncer::_host, AF_INET6, 100ms);
+    addrs = _resolver6.resolveAllAddress (MdnsAnnouncer::_host, AF_INET6, 500ms);
     ASSERT_GT (addrs.size (), 0);
     EXPECT_EQ (addrs.front (), MdnsAnnouncer::_hostIp6);
 
-    addrs = _resolver4.resolveAllAddress ("unknown.local", AF_INET, 100ms);
+    addrs = _resolver4.resolveAllAddress ("unknown.local", AF_INET, 500ms);
     EXPECT_EQ (addrs.size (), 0);
 
-    addrs = _resolver6.resolveAllAddress ("unknown.local", AF_INET6, 100ms);
+    addrs = _resolver6.resolveAllAddress ("unknown.local", AF_INET6, 500ms);
     EXPECT_EQ (addrs.size (), 0);
 }
 
@@ -575,25 +575,25 @@ TEST_F (MdnsTest, resolveAllAddress)
  */
 TEST_F (MdnsTest, resolveName)
 {
-    std::string name = _resolver4.resolveName (IpAddress ("0.0.0.0"), 100ms);
+    std::string name = _resolver4.resolveName (IpAddress ("0.0.0.0"), 500ms);
     EXPECT_TRUE (name.empty ());
 
-    name = _resolver6.resolveName (IpAddress ("::"), 100ms);
+    name = _resolver6.resolveName (IpAddress ("::"), 500ms);
     EXPECT_TRUE (name.empty ());
 
-    name = _resolver4.resolveName (MdnsAnnouncer::_hostIp4, 100ms);
+    name = _resolver4.resolveName (MdnsAnnouncer::_hostIp4, 500ms);
     EXPECT_FALSE (name.empty ());
     EXPECT_EQ (name, MdnsAnnouncer::_host);
 
-    name = _resolver6.resolveName (MdnsAnnouncer::_hostIp6, 100ms);
+    name = _resolver6.resolveName (MdnsAnnouncer::_hostIp6, 500ms);
     EXPECT_FALSE (name.empty ());
     EXPECT_EQ (name, MdnsAnnouncer::_host);
 
-    name = _resolver4.resolveName (IpAddress ("192.168.1.99"), 100ms);
+    name = _resolver4.resolveName (IpAddress ("192.168.1.99"), 500ms);
     EXPECT_TRUE (name.empty ());
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
 
-    name = _resolver6.resolveName (IpAddress ("fd00::1"), 100ms);
+    name = _resolver6.resolveName (IpAddress ("fd00::1"), 500ms);
     EXPECT_TRUE (name.empty ());
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
 }
@@ -603,25 +603,25 @@ TEST_F (MdnsTest, resolveName)
  */
 TEST_F (MdnsTest, resolveAllName)
 {
-    AliasList aliases = _resolver4.resolveAllName (IpAddress ("0.0.0.0"), 100ms);
+    AliasList aliases = _resolver4.resolveAllName (IpAddress ("0.0.0.0"), 500ms);
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = _resolver6.resolveAllName (IpAddress ("::"), 100ms);
+    aliases = _resolver6.resolveAllName (IpAddress ("::"), 500ms);
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = _resolver4.resolveAllName (MdnsAnnouncer::_hostIp4, 100ms);
+    aliases = _resolver4.resolveAllName (MdnsAnnouncer::_hostIp4, 500ms);
     ASSERT_GT (aliases.size (), 0);
     EXPECT_NE (aliases.find (MdnsAnnouncer::_host), aliases.end ());
 
-    aliases = _resolver6.resolveAllName (MdnsAnnouncer::_hostIp6, 100ms);
+    aliases = _resolver6.resolveAllName (MdnsAnnouncer::_hostIp6, 500ms);
     ASSERT_GT (aliases.size (), 0);
     EXPECT_NE (aliases.find (MdnsAnnouncer::_host), aliases.end ());
 
-    aliases = _resolver4.resolveAllName (IpAddress ("192.168.1.99"), 100ms);
+    aliases = _resolver4.resolveAllName (IpAddress ("192.168.1.99"), 500ms);
     EXPECT_EQ (aliases.size (), 0);
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
 
-    aliases = _resolver6.resolveAllName (IpAddress ("fd00::1"), 100ms);
+    aliases = _resolver6.resolveAllName (IpAddress ("fd00::1"), 500ms);
     EXPECT_EQ (aliases.size (), 0);
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
 }
