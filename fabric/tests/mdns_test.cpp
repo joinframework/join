@@ -28,6 +28,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <fstream>
+
 using join::lastError;
 using join::Errc;
 using join::Mdns;
@@ -248,19 +251,24 @@ protected:
         result = ::system ("ip route add 224.0.0.0/4 dev veth0");
         result = ::system ("ip route add 224.0.0.0/4 dev veth1");
 
-        result = ::system ("uname -r >&2");
-        result = ::system ("ip link show veth0 >&2");
-        result = ::system ("ip link show veth1 >&2");
-        result = ::system ("ip addr show veth0 >&2");
-        result = ::system ("ip addr show veth1 >&2");
-        result = ::system ("ip route show >&2");
-        result = ::system ("ip maddr show dev veth0 >&2");
-        result = ::system ("ip maddr show dev veth1 >&2");
-        result = ::system ("grep 'E4' /proc/net/if_inet6 >&2");
-        result = ::system ("cat /proc/net/igmp >&2");
-        result = ::system ("cat /proc/sys/net/ipv4/conf/veth0/mc_forwarding >&2");
-        result = ::system ("cat /proc/sys/net/ipv4/conf/veth1/mc_forwarding >&2");
-        result = ::system ("cat /proc/sys/net/ipv4/conf/all/mc_forwarding >&2");
+        // check IPv4 multicast availability after full setup.
+        {
+            MdnsAnnouncer peer;
+            if (peer.bind (AF_INET) == 0)
+            {
+                std::ifstream igmp ("/proc/net/igmp");
+                std::string line;
+                while (std::getline (igmp, line))
+                {
+                    if (line.find ("FB0000E0") != std::string::npos)
+                    {
+                        _ipv4MulticastAvailable = true;
+                        break;
+                    }
+                }
+                peer.close ();
+            }
+        }
     }
 
     /**
@@ -278,55 +286,6 @@ protected:
      */
     void SetUp () override
     {
-        // IPv4 records
-        _resolver4._received.clear ();
-
-        ResourceRecord a;
-        a.host = MdnsAnnouncer::_host;
-        a.type = DnsMessage::RecordType::A;
-        a.dnsclass = DnsMessage::RecordClass::IN;
-        a.ttl = 120;
-        a.addr = MdnsAnnouncer::_hostIp4;
-        _announcer4._records[a.host + "/A"] = a;
-
-        ResourceRecord ptr_arpa4;
-        ptr_arpa4.host = MdnsAnnouncer::_hostIp4.toArpa ();
-        ptr_arpa4.type = DnsMessage::RecordType::PTR;
-        ptr_arpa4.dnsclass = DnsMessage::RecordClass::IN;
-        ptr_arpa4.ttl = 120;
-        ptr_arpa4.name = MdnsAnnouncer::_host;
-        _announcer4._records[ptr_arpa4.host + "/PTR"] = ptr_arpa4;
-
-        ResourceRecord ptr4;
-        ptr4.host = MdnsAnnouncer::_serviceType;
-        ptr4.type = DnsMessage::RecordType::PTR;
-        ptr4.dnsclass = DnsMessage::RecordClass::IN;
-        ptr4.ttl = 120;
-        ptr4.name = MdnsAnnouncer::_service;
-        _announcer4._records[ptr4.host + "/PTR"] = ptr4;
-
-        ResourceRecord srv4;
-        srv4.host = MdnsAnnouncer::_service;
-        srv4.type = DnsMessage::RecordType::SRV;
-        srv4.dnsclass = DnsMessage::RecordClass::IN;
-        srv4.ttl = 120;
-        srv4.priority = 0;
-        srv4.weight = 0;
-        srv4.port = 80;
-        srv4.name = MdnsAnnouncer::_host;
-        _announcer4._records[srv4.host + "/SRV"] = srv4;
-
-        ResourceRecord txt4;
-        txt4.host = MdnsAnnouncer::_service;
-        txt4.type = DnsMessage::RecordType::TXT;
-        txt4.dnsclass = DnsMessage::RecordClass::IN;
-        txt4.ttl = 120;
-        txt4.txts = {"path=/", "version=1.0"};
-        _announcer4._records[txt4.host + "/TXT"] = txt4;
-
-        ASSERT_EQ (_announcer4.bind (AF_INET), 0) << lastError.message ();
-        ASSERT_EQ (_resolver4.bind (AF_INET), 0) << lastError.message ();
-
         // IPv6 records
         _resolver6._received.clear ();
 
@@ -375,6 +334,55 @@ protected:
 
         ASSERT_EQ (_announcer6.bind (AF_INET6), 0) << lastError.message ();
         ASSERT_EQ (_resolver6.bind (AF_INET6), 0) << lastError.message ();
+
+        // IPv4 records
+        _resolver4._received.clear ();
+
+        ResourceRecord a;
+        a.host = MdnsAnnouncer::_host;
+        a.type = DnsMessage::RecordType::A;
+        a.dnsclass = DnsMessage::RecordClass::IN;
+        a.ttl = 120;
+        a.addr = MdnsAnnouncer::_hostIp4;
+        _announcer4._records[a.host + "/A"] = a;
+
+        ResourceRecord ptr_arpa4;
+        ptr_arpa4.host = MdnsAnnouncer::_hostIp4.toArpa ();
+        ptr_arpa4.type = DnsMessage::RecordType::PTR;
+        ptr_arpa4.dnsclass = DnsMessage::RecordClass::IN;
+        ptr_arpa4.ttl = 120;
+        ptr_arpa4.name = MdnsAnnouncer::_host;
+        _announcer4._records[ptr_arpa4.host + "/PTR"] = ptr_arpa4;
+
+        ResourceRecord ptr4;
+        ptr4.host = MdnsAnnouncer::_serviceType;
+        ptr4.type = DnsMessage::RecordType::PTR;
+        ptr4.dnsclass = DnsMessage::RecordClass::IN;
+        ptr4.ttl = 120;
+        ptr4.name = MdnsAnnouncer::_service;
+        _announcer4._records[ptr4.host + "/PTR"] = ptr4;
+
+        ResourceRecord srv4;
+        srv4.host = MdnsAnnouncer::_service;
+        srv4.type = DnsMessage::RecordType::SRV;
+        srv4.dnsclass = DnsMessage::RecordClass::IN;
+        srv4.ttl = 120;
+        srv4.priority = 0;
+        srv4.weight = 0;
+        srv4.port = 80;
+        srv4.name = MdnsAnnouncer::_host;
+        _announcer4._records[srv4.host + "/SRV"] = srv4;
+
+        ResourceRecord txt4;
+        txt4.host = MdnsAnnouncer::_service;
+        txt4.type = DnsMessage::RecordType::TXT;
+        txt4.dnsclass = DnsMessage::RecordClass::IN;
+        txt4.ttl = 120;
+        txt4.txts = {"path=/", "version=1.0"};
+        _announcer4._records[txt4.host + "/TXT"] = txt4;
+
+        ASSERT_EQ (_announcer4.bind (AF_INET), 0) << lastError.message ();
+        ASSERT_EQ (_resolver4.bind (AF_INET), 0) << lastError.message ();
     }
 
     /**
@@ -382,12 +390,18 @@ protected:
      */
     void TearDown () override
     {
-        _announcer4.close ();
-        _resolver4.close ();
-
         _announcer6.close ();
         _resolver6.close ();
+
+        _announcer4.close ();
+        _resolver4.close ();
     }
+
+    /// mDNS IPv6 announcer instance.
+    MdnsAnnouncer _announcer6;
+
+    /// mDNS IPv6 resolver instance.
+    MdnsResolver _resolver6;
 
     /// mDNS IPv4 announcer instance.
     MdnsAnnouncer _announcer4;
@@ -395,25 +409,17 @@ protected:
     /// mDNS IPv4 resolver instance.
     MdnsResolver _resolver4;
 
-    /// mDNS IPv6 announcer instance.
-    MdnsAnnouncer _announcer6;
-
-    /// mDNS IPv6 resolver instance.
-    MdnsResolver _resolver6;
+    /// whether IPv4 multicast is available on this system.
+    static bool _ipv4MulticastAvailable;
 };
+
+bool MdnsTest::_ipv4MulticastAvailable = false;
 
 /**
  * @brief test the probe method.
  */
 TEST_F (MdnsTest, probe)
 {
-    std::vector<ResourceRecord> records4;
-    for (auto const& kv : _announcer4._records)
-    {
-        records4.push_back (kv.second);
-    }
-    EXPECT_EQ (_announcer4.probe (records4), 0) << lastError.message ();
-
     std::vector<ResourceRecord> records6;
     for (auto const& kv : _announcer6._records)
     {
@@ -421,10 +427,17 @@ TEST_F (MdnsTest, probe)
     }
     EXPECT_EQ (_announcer6.probe (records6), 0) << lastError.message ();
 
+    std::vector<ResourceRecord> records4;
+    for (auto const& kv : _announcer4._records)
+    {
+        records4.push_back (kv.second);
+    }
+    EXPECT_EQ (_announcer4.probe (records4), 0) << lastError.message ();
+
     std::vector<ResourceRecord> empty;
-    EXPECT_EQ (_announcer4.probe (empty), -1);
-    EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
     EXPECT_EQ (_announcer6.probe (empty), -1);
+    EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
+    EXPECT_EQ (_announcer4.probe (empty), -1);
     EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
 }
 
@@ -433,14 +446,6 @@ TEST_F (MdnsTest, probe)
  */
 TEST_F (MdnsTest, announce)
 {
-    std::vector<ResourceRecord> records4;
-    for (auto const& kv : _announcer4._records)
-    {
-        records4.push_back (kv.second);
-    }
-    EXPECT_EQ (_announcer4.announce (records4), 0) << lastError.message ();
-    EXPECT_TRUE (_resolver4.waitForRecord (DnsMessage::RecordType::A));
-
     std::vector<ResourceRecord> records6;
     for (auto const& kv : _announcer6._records)
     {
@@ -449,10 +454,21 @@ TEST_F (MdnsTest, announce)
     EXPECT_EQ (_announcer6.announce (records6), 0) << lastError.message ();
     EXPECT_TRUE (_resolver6.waitForRecord (DnsMessage::RecordType::AAAA));
 
+    std::vector<ResourceRecord> records4;
+    for (auto const& kv : _announcer4._records)
+    {
+        records4.push_back (kv.second);
+    }
+    EXPECT_EQ (_announcer4.announce (records4), 0) << lastError.message ();
+    if (_ipv4MulticastAvailable)
+    {
+        EXPECT_TRUE (_resolver4.waitForRecord (DnsMessage::RecordType::A));
+    }
+
     std::vector<ResourceRecord> empty;
-    EXPECT_EQ (_announcer4.announce (empty), -1);
-    EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
     EXPECT_EQ (_announcer6.announce (empty), -1);
+    EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
+    EXPECT_EQ (_announcer4.announce (empty), -1);
     EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
 }
 
@@ -461,21 +477,6 @@ TEST_F (MdnsTest, announce)
  */
 TEST_F (MdnsTest, goodbye)
 {
-    std::vector<ResourceRecord> records4;
-    for (auto const& kv : _announcer4._records)
-    {
-        records4.push_back (kv.second);
-    }
-    EXPECT_EQ (_announcer4.goodbye (records4), 0) << lastError.message ();
-    EXPECT_TRUE (_resolver4.waitForRecord (DnsMessage::RecordType::A));
-    for (auto const& r : _resolver4._received)
-    {
-        if (r.type == DnsMessage::RecordType::A)
-        {
-            EXPECT_EQ (r.ttl, 0u);
-        }
-    }
-
     std::vector<ResourceRecord> records6;
     for (auto const& kv : _announcer6._records)
     {
@@ -491,10 +492,28 @@ TEST_F (MdnsTest, goodbye)
         }
     }
 
+    std::vector<ResourceRecord> records4;
+    for (auto const& kv : _announcer4._records)
+    {
+        records4.push_back (kv.second);
+    }
+    EXPECT_EQ (_announcer4.goodbye (records4), 0) << lastError.message ();
+    if (_ipv4MulticastAvailable)
+    {
+        EXPECT_TRUE (_resolver4.waitForRecord (DnsMessage::RecordType::A));
+        for (auto const& r : _resolver4._received)
+        {
+            if (r.type == DnsMessage::RecordType::A)
+            {
+                EXPECT_EQ (r.ttl, 0u);
+            }
+        }
+    }
+
     std::vector<ResourceRecord> empty;
-    EXPECT_EQ (_announcer4.goodbye (empty), -1);
-    EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
     EXPECT_EQ (_announcer6.goodbye (empty), -1);
+    EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
+    EXPECT_EQ (_announcer4.goodbye (empty), -1);
     EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
 }
 
@@ -503,19 +522,6 @@ TEST_F (MdnsTest, goodbye)
  */
 TEST_F (MdnsTest, browse)
 {
-    EXPECT_EQ (_resolver4.browse (MdnsAnnouncer::_serviceType), 0) << lastError.message ();
-    EXPECT_TRUE (_resolver4.waitForRecord (DnsMessage::RecordType::PTR));
-    bool found4 = false;
-    for (auto const& r : _resolver4._received)
-    {
-        if (r.type == DnsMessage::RecordType::PTR && r.name == MdnsAnnouncer::_service)
-        {
-            found4 = true;
-            break;
-        }
-    }
-    EXPECT_TRUE (found4);
-
     EXPECT_EQ (_resolver6.browse (MdnsAnnouncer::_serviceType), 0) << lastError.message ();
     EXPECT_TRUE (_resolver6.waitForRecord (DnsMessage::RecordType::PTR));
     bool found6 = false;
@@ -529,10 +535,26 @@ TEST_F (MdnsTest, browse)
     }
     EXPECT_TRUE (found6);
 
-    EXPECT_EQ (_resolver4.browse (""), -1);
-    EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
+    EXPECT_EQ (_resolver4.browse (MdnsAnnouncer::_serviceType), 0) << lastError.message ();
+    if (_ipv4MulticastAvailable)
+    {
+        EXPECT_TRUE (_resolver4.waitForRecord (DnsMessage::RecordType::PTR));
+        bool found4 = false;
+        for (auto const& r : _resolver4._received)
+        {
+            if (r.type == DnsMessage::RecordType::PTR && r.name == MdnsAnnouncer::_service)
+            {
+                found4 = true;
+                break;
+            }
+        }
+        EXPECT_TRUE (found4);
+    }
 
     EXPECT_EQ (_resolver6.browse (""), -1);
+    EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
+
+    EXPECT_EQ (_resolver4.browse (""), -1);
     EXPECT_EQ (lastError, make_error_code (Errc::InvalidParam));
 }
 
@@ -541,27 +563,30 @@ TEST_F (MdnsTest, browse)
  */
 TEST_F (MdnsTest, resolveAddress)
 {
-    IpAddress addr = _resolver4.resolveAddress ("", AF_INET, 500ms);
+    IpAddress addr = _resolver6.resolveAddress ("", AF_INET6, 500ms);
     EXPECT_TRUE (addr.isWildcard ());
-
-    addr = _resolver6.resolveAddress ("", AF_INET6, 500ms);
-    EXPECT_TRUE (addr.isWildcard ());
-
-    addr = _resolver4.resolveAddress (MdnsAnnouncer::_host, AF_INET, 500ms);
-    EXPECT_FALSE (addr.isWildcard ());
-    EXPECT_EQ (addr, MdnsAnnouncer::_hostIp4);
 
     addr = _resolver6.resolveAddress (MdnsAnnouncer::_host, AF_INET6, 500ms);
     EXPECT_FALSE (addr.isWildcard ());
     EXPECT_EQ (addr, MdnsAnnouncer::_hostIp6);
 
-    addr = _resolver4.resolveAddress ("unknown.local", AF_INET, 500ms);
-    EXPECT_TRUE (addr.isWildcard ());
-    EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
-
     addr = _resolver6.resolveAddress ("unknown.local", AF_INET6, 500ms);
     EXPECT_TRUE (addr.isWildcard ());
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
+
+    if (_ipv4MulticastAvailable)
+    {
+        addr = _resolver4.resolveAddress ("", AF_INET, 500ms);
+        EXPECT_TRUE (addr.isWildcard ());
+
+        addr = _resolver4.resolveAddress (MdnsAnnouncer::_host, AF_INET, 500ms);
+        EXPECT_FALSE (addr.isWildcard ());
+        EXPECT_EQ (addr, MdnsAnnouncer::_hostIp4);
+
+        addr = _resolver4.resolveAddress ("unknown.local", AF_INET, 500ms);
+        EXPECT_TRUE (addr.isWildcard ());
+        EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
+    }
 }
 
 /**
@@ -569,25 +594,28 @@ TEST_F (MdnsTest, resolveAddress)
  */
 TEST_F (MdnsTest, resolveAllAddress)
 {
-    IpAddressList addrs = _resolver4.resolveAllAddress ("", AF_INET, 500ms);
+    IpAddressList addrs = _resolver6.resolveAllAddress ("", AF_INET6, 500ms);
     EXPECT_EQ (addrs.size (), 0);
-
-    addrs = _resolver6.resolveAllAddress ("", AF_INET6, 500ms);
-    EXPECT_EQ (addrs.size (), 0);
-
-    addrs = _resolver4.resolveAllAddress (MdnsAnnouncer::_host, AF_INET, 500ms);
-    ASSERT_GT (addrs.size (), 0);
-    EXPECT_EQ (addrs.front (), MdnsAnnouncer::_hostIp4);
 
     addrs = _resolver6.resolveAllAddress (MdnsAnnouncer::_host, AF_INET6, 500ms);
     ASSERT_GT (addrs.size (), 0);
     EXPECT_EQ (addrs.front (), MdnsAnnouncer::_hostIp6);
 
-    addrs = _resolver4.resolveAllAddress ("unknown.local", AF_INET, 500ms);
-    EXPECT_EQ (addrs.size (), 0);
-
     addrs = _resolver6.resolveAllAddress ("unknown.local", AF_INET6, 500ms);
     EXPECT_EQ (addrs.size (), 0);
+
+    if (_ipv4MulticastAvailable)
+    {
+        addrs = _resolver4.resolveAllAddress ("", AF_INET, 500ms);
+        EXPECT_EQ (addrs.size (), 0);
+
+        addrs = _resolver4.resolveAllAddress (MdnsAnnouncer::_host, AF_INET, 500ms);
+        ASSERT_GT (addrs.size (), 0);
+        EXPECT_EQ (addrs.front (), MdnsAnnouncer::_hostIp4);
+
+        addrs = _resolver4.resolveAllAddress ("unknown.local", AF_INET, 500ms);
+        EXPECT_EQ (addrs.size (), 0);
+    }
 }
 
 /**
@@ -595,27 +623,30 @@ TEST_F (MdnsTest, resolveAllAddress)
  */
 TEST_F (MdnsTest, resolveName)
 {
-    std::string name = _resolver4.resolveName (IpAddress ("0.0.0.0"), 500ms);
+    std::string name = _resolver6.resolveName (IpAddress ("::"), 500ms);
     EXPECT_TRUE (name.empty ());
-
-    name = _resolver6.resolveName (IpAddress ("::"), 500ms);
-    EXPECT_TRUE (name.empty ());
-
-    name = _resolver4.resolveName (MdnsAnnouncer::_hostIp4, 500ms);
-    EXPECT_FALSE (name.empty ());
-    EXPECT_EQ (name, MdnsAnnouncer::_host);
 
     name = _resolver6.resolveName (MdnsAnnouncer::_hostIp6, 500ms);
     EXPECT_FALSE (name.empty ());
     EXPECT_EQ (name, MdnsAnnouncer::_host);
 
-    name = _resolver4.resolveName (IpAddress ("192.168.1.99"), 500ms);
-    EXPECT_TRUE (name.empty ());
-    EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
-
     name = _resolver6.resolveName (IpAddress ("fd00::1"), 500ms);
     EXPECT_TRUE (name.empty ());
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
+
+    if (_ipv4MulticastAvailable)
+    {
+        name = _resolver4.resolveName (IpAddress ("0.0.0.0"), 500ms);
+        EXPECT_TRUE (name.empty ());
+
+        name = _resolver4.resolveName (MdnsAnnouncer::_hostIp4, 500ms);
+        EXPECT_FALSE (name.empty ());
+        EXPECT_EQ (name, MdnsAnnouncer::_host);
+
+        name = _resolver4.resolveName (IpAddress ("192.168.1.99"), 500ms);
+        EXPECT_TRUE (name.empty ());
+        EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
+    }
 }
 
 /**
@@ -623,27 +654,30 @@ TEST_F (MdnsTest, resolveName)
  */
 TEST_F (MdnsTest, resolveAllName)
 {
-    AliasList aliases = _resolver4.resolveAllName (IpAddress ("0.0.0.0"), 500ms);
+    AliasList aliases = _resolver6.resolveAllName (IpAddress ("::"), 500ms);
     EXPECT_EQ (aliases.size (), 0);
-
-    aliases = _resolver6.resolveAllName (IpAddress ("::"), 500ms);
-    EXPECT_EQ (aliases.size (), 0);
-
-    aliases = _resolver4.resolveAllName (MdnsAnnouncer::_hostIp4, 500ms);
-    ASSERT_GT (aliases.size (), 0);
-    EXPECT_NE (aliases.find (MdnsAnnouncer::_host), aliases.end ());
 
     aliases = _resolver6.resolveAllName (MdnsAnnouncer::_hostIp6, 500ms);
     ASSERT_GT (aliases.size (), 0);
     EXPECT_NE (aliases.find (MdnsAnnouncer::_host), aliases.end ());
 
-    aliases = _resolver4.resolveAllName (IpAddress ("192.168.1.99"), 500ms);
-    EXPECT_EQ (aliases.size (), 0);
-    EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
-
     aliases = _resolver6.resolveAllName (IpAddress ("fd00::1"), 500ms);
     EXPECT_EQ (aliases.size (), 0);
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
+
+    if (_ipv4MulticastAvailable)
+    {
+        aliases = _resolver4.resolveAllName (IpAddress ("0.0.0.0"), 500ms);
+        EXPECT_EQ (aliases.size (), 0);
+
+        aliases = _resolver4.resolveAllName (MdnsAnnouncer::_hostIp4, 500ms);
+        ASSERT_GT (aliases.size (), 0);
+        EXPECT_NE (aliases.find (MdnsAnnouncer::_host), aliases.end ());
+
+        aliases = _resolver4.resolveAllName (IpAddress ("192.168.1.99"), 500ms);
+        EXPECT_EQ (aliases.size (), 0);
+        EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
+    }
 }
 
 /**
