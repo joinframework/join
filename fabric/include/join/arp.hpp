@@ -204,17 +204,45 @@ namespace join
 
             ScopedLock<Mutex> lock (_syncMutex);
 
+            _reactor->addHandler (handle (), this);
+
+            uint32_t tip;
+            ::memcpy (&tip, &out.arp.ar_tip, sizeof (tip));
+            auto inserted = _pending.emplace (tip, std::make_unique<PendingRequest> ());
+            if (!inserted.second)
+            {
+                // LCOV_EXCL_START
+                _reactor->delHandler (handle ());
+                close ();
+                lastError = make_error_code (Errc::OperationFailed);
+                return {};
+                // LCOV_EXCL_STOP
+            }
+
             if (write (reinterpret_cast<const char*> (&out), sizeof (Packet)) == -1)
             {
+                // LCOV_EXCL_START
+                _pending.erase (inserted.first);
+                _reactor->delHandler (handle ());
                 close ();
+                return {};
+                // LCOV_EXCL_STOP
+            }
+
+            if (!inserted.first->second->cond.timedWait (lock, timeout))
+            {
+                _pending.erase (inserted.first);
+                _reactor->delHandler (handle ());
+                close ();
+                lastError = std::make_error_code (std::errc::no_such_device_or_address);
                 return {};
             }
 
-            _reactor->addHandler (handle (), this);
-            MacAddress mac = waitResponse (lock, out.arp.ar_tip, timeout);
+            MacAddress mac = inserted.first->second->mac;
+            _pending.erase (inserted.first);
             _reactor->delHandler (handle ());
-
             close ();
+
             return mac;
         }
 
@@ -325,38 +353,6 @@ namespace join
             struct ethhdr eth;
             ArpPacket arp;
         };
-
-        /**
-         * @brief wait for ARP response.
-         * @param lock mutex previously locked by the calling thread.
-         * @param tip target IP.
-         * @param timeout wait timeout.
-         * @return the MAC address.
-         */
-        template <typename Rep, typename Period>
-        MacAddress waitResponse (ScopedLock<Mutex>& lock, uint32_t tip, std::chrono::duration<Rep, Period> timeout)
-        {
-            auto inserted = _pending.emplace (tip, std::make_unique<PendingRequest> ());
-            if (!inserted.second)
-            {
-                // LCOV_EXCL_START
-                lastError = make_error_code (Errc::OperationFailed);
-                return {};
-                // LCOV_EXCL_STOP
-            }
-
-            if (!inserted.first->second->cond.timedWait (lock, timeout))
-            {
-                _pending.erase (inserted.first);
-                lastError = std::make_error_code (std::errc::no_such_device_or_address);
-                return {};
-            }
-
-            MacAddress mac = inserted.first->second->mac;
-            _pending.erase (inserted.first);
-
-            return mac;
-        }
 
         /**
          * @brief method called when data are ready to be read.

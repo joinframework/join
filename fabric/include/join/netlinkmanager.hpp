@@ -109,42 +109,6 @@ namespace join
         int sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::milliseconds timeout = std::chrono::seconds (5));
 
         /**
-         * @brief wait for specific netlink response.
-         * @param lock mutex previously locked by the calling thread.
-         * @param seq sequence number to wait for.
-         * @param timeout maximum wait duration.
-         * @return 0 on success, -1 on failure.
-         */
-        template <class Rep, class Period>
-        int waitResponse (ScopedLock<Mutex>& lock, uint32_t seq, std::chrono::duration<Rep, Period> timeout)
-        {
-            auto inserted = _pending.emplace (seq, std::make_unique<PendingRequest> ());
-            if (!inserted.second)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
-            if (!inserted.first->second->cond.timedWait (lock, timeout))
-            {
-                _pending.erase (inserted.first);
-                lastError = make_error_code (Errc::TimedOut);
-                return -1;
-            }
-
-            if (inserted.first->second->error != 0)
-            {
-                int err = inserted.first->second->error;
-                _pending.erase (inserted.first);
-                lastError = std::error_code (err, std::generic_category ());
-                return -1;
-            }
-
-            _pending.erase (inserted.first);
-            return 0;
-        }
-
-        /**
          * @brief push a job to be executed on the reactor thread.
          * @param func function to execute on the reactor thread.
          * @param args arguments to bind to the function.

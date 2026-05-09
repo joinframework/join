@@ -12,6 +12,11 @@ target_link_libraries(dns.gtest ${JOIN_FABRIC} GTest::gtest_main)
 add_test(NAME dns.gtest COMMAND dns.gtest)
 install(TARGETS dns.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(mdns.gtest mdns_test.cpp)
+target_link_libraries(mdns.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME mdns.gtest COMMAND mdns.gtest)
+install(TARGETS mdns.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(dot.gtest dot_test.cpp)
 target_link_libraries(dot.gtest ${JOIN_FABRIC} GTest::gtest_main)
 add_test(NAME dot.gtest COMMAND dot.gtest)
