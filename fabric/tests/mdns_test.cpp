@@ -31,7 +31,7 @@
 // C++.
 #include <fstream>
 
-// #define SUPPORT_MULTICAST_IPV4
+#define SUPPORT_MULTICAST_IPV4
 
 using join::lastError;
 using join::Errc;
@@ -81,6 +81,7 @@ public:
             for (auto const& kv : _records)
             {
                 const ResourceRecord& record = kv.second;
+
                 if (record.host == question.host &&
                     (question.type == DnsMessage::RecordType::ANY || record.type == question.type))
                 {
@@ -592,6 +593,19 @@ TEST_F (MdnsTest, resolveAddress)
     EXPECT_TRUE (addr.isWildcard ());
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
 
+    addr = _resolver6.resolveAddress ("", 500ms);
+    EXPECT_TRUE (addr.isWildcard ());
+
+    addr = _resolver6.resolveAddress (MdnsAnnouncer::_host, 500ms);
+    EXPECT_FALSE (addr.isWildcard ());
+
+    addr = _resolver6.resolveAddress (MdnsAnnouncer::_host, 500ms);
+    EXPECT_FALSE (addr.isWildcard ());
+
+    addr = _resolver6.resolveAddress ("unknown.local", 500ms);
+    EXPECT_TRUE (addr.isWildcard ());
+    EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
+
 #ifdef SUPPORT_MULTICAST_IPV4
     addr = _resolver4.resolveAddress ("", AF_INET, 500ms);
     EXPECT_TRUE (addr.isWildcard ());
@@ -605,6 +619,19 @@ TEST_F (MdnsTest, resolveAddress)
     EXPECT_EQ (addr, MdnsAnnouncer::_hostIp4);
 
     addr = _resolver4.resolveAddress ("unknown.local", AF_INET, 500ms);
+    EXPECT_TRUE (addr.isWildcard ());
+    EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
+
+    addr = _resolver4.resolveAddress ("", 500ms);
+    EXPECT_TRUE (addr.isWildcard ());
+
+    addr = _resolver4.resolveAddress (MdnsAnnouncer::_host, 500ms);
+    EXPECT_FALSE (addr.isWildcard ());
+
+    addr = _resolver4.resolveAddress (MdnsAnnouncer::_host, 500ms);
+    EXPECT_FALSE (addr.isWildcard ());
+
+    addr = _resolver4.resolveAddress ("unknown.local", 500ms);
     EXPECT_TRUE (addr.isWildcard ());
     EXPECT_EQ (lastError, make_error_code (Errc::TimedOut));
 #endif
@@ -622,18 +649,54 @@ TEST_F (MdnsTest, resolveAllAddress)
     ASSERT_GT (addrs.size (), 0);
     EXPECT_FALSE (addrs.front ().isWildcard ());
 
+    addrs = _resolver6.resolveAllAddress (MdnsAnnouncer::_host, AF_INET, 500ms);
+    ASSERT_GT (addrs.size (), 0);
+    EXPECT_FALSE (addrs.front ().isWildcard ());
+
     addrs = _resolver6.resolveAllAddress ("unknown.local", AF_INET6, 500ms);
+    EXPECT_EQ (addrs.size (), 0);
+
+    addrs = _resolver6.resolveAllAddress ("", 500ms);
+    EXPECT_EQ (addrs.size (), 0);
+
+    addrs = _resolver6.resolveAllAddress (MdnsAnnouncer::_host, 500ms);
+    ASSERT_GT (addrs.size (), 0);
+    EXPECT_FALSE (addrs.front ().isWildcard ());
+
+    addrs = _resolver6.resolveAllAddress (MdnsAnnouncer::_host, 500ms);
+    ASSERT_GT (addrs.size (), 0);
+    EXPECT_FALSE (addrs.front ().isWildcard ());
+
+    addrs = _resolver6.resolveAllAddress ("unknown.local", 500ms);
     EXPECT_EQ (addrs.size (), 0);
 
 #ifdef SUPPORT_MULTICAST_IPV4
     addrs = _resolver4.resolveAllAddress ("", AF_INET, 500ms);
     EXPECT_EQ (addrs.size (), 0);
 
+    addrs = _resolver4.resolveAllAddress (MdnsAnnouncer::_host, AF_INET6, 500ms);
+    ASSERT_GT (addrs.size (), 0);
+    EXPECT_FALSE (addrs.front ().isWildcard ());
+
     addrs = _resolver4.resolveAllAddress (MdnsAnnouncer::_host, AF_INET, 500ms);
     ASSERT_GT (addrs.size (), 0);
     EXPECT_FALSE (addrs.front ().isWildcard ());
 
     addrs = _resolver4.resolveAllAddress ("unknown.local", AF_INET, 500ms);
+    EXPECT_EQ (addrs.size (), 0);
+
+    addrs = _resolver4.resolveAllAddress ("", 500ms);
+    EXPECT_EQ (addrs.size (), 0);
+
+    addrs = _resolver4.resolveAllAddress (MdnsAnnouncer::_host, 500ms);
+    ASSERT_GT (addrs.size (), 0);
+    EXPECT_FALSE (addrs.front ().isWildcard ());
+
+    addrs = _resolver4.resolveAllAddress (MdnsAnnouncer::_host, 500ms);
+    ASSERT_GT (addrs.size (), 0);
+    EXPECT_FALSE (addrs.front ().isWildcard ());
+
+    addrs = _resolver4.resolveAllAddress ("unknown.local", 500ms);
     EXPECT_EQ (addrs.size (), 0);
 #endif
 }

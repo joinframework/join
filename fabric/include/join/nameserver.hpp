@@ -308,19 +308,23 @@ namespace join
 
             if ((this->_state == Socket::State::Closed) && (this->open (endpoint.protocol ()) == -1))
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             if (this->setOption (Socket::ReusePort, 1) == -1)
             {
+                // LCOV_EXCL_START
                 this->close ();
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             if (Socket::bind (endpoint) == -1)
             {
+                // LCOV_EXCL_START
                 this->close ();
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             if (endpoint.protocol ().family () == AF_INET6)
@@ -330,15 +334,19 @@ namespace join
                 mreq.ipv6mr_interface = _ifindex;
                 if (::setsockopt (this->handle (), IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq, sizeof (mreq)) == -1)
                 {
+                    // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
+                    // LCOV_EXCL_STOP
                 }
                 if (::setsockopt (this->handle (), IPPROTO_IPV6, IPV6_MULTICAST_IF, &_ifindex, sizeof (_ifindex)) == -1)
                 {
+                    // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
+                    // LCOV_EXCL_STOP
                 }
             }
             else
@@ -348,23 +356,29 @@ namespace join
                 mreq.imr_ifindex = static_cast<int> (_ifindex);
                 if (::setsockopt (this->handle (), IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof (mreq)) == -1)
                 {
+                    // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
+                    // LCOV_EXCL_STOP
                 }
                 if (::setsockopt (this->handle (), IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof (mreq)) == -1)
                 {
+                    // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
+                    // LCOV_EXCL_STOP
                 }
             }
 
 #ifndef DEBUG
             if (this->setOption (Socket::MulticastLoop, 0) == -1)
             {
+                // LCOV_EXCL_START
                 this->close ();
                 return -1;
+                // LCOV_EXCL_STOP
             }
 #endif
 
@@ -841,24 +855,30 @@ namespace join
             auto inserted = _pending.emplace (packet.id, std::make_unique<PendingRequest> ());
             if (!inserted.second)
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::OperationFailed);
                 notify (onFailure, packet);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             if (this->writeTo (buffer.data (), buffer.size (), {packet.dest, packet.port}) == -1)
             {
+                // LCOV_EXCL_START
                 _pending.erase (inserted.first);
                 notify (onFailure, packet);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             if (!inserted.first->second->cond.timedWait (lock, timeout))
             {
+                // LCOV_EXCL_START
                 _pending.erase (inserted.first);
                 lastError = make_error_code (Errc::TimedOut);
                 notify (onFailure, packet);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             auto pendingReq = std::move (inserted.first->second);
@@ -866,9 +886,11 @@ namespace join
 
             if (pendingReq->ec)
             {
+                // LCOV_EXCL_START
                 lastError = pendingReq->ec;
                 notify (onFailure, packet);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             packet = std::move (pendingReq->packet);
