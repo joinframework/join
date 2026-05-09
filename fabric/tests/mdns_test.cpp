@@ -248,7 +248,9 @@ protected:
      */
     static void TearDownTestSuite ()
     {
-        ::system ("ip link del veth0 2>/dev/null");
+        [[maybe_unused]] int result;
+
+        result = ::system ("ip link del veth0 2>/dev/null");
     }
 
     /**

@@ -54,6 +54,15 @@ namespace join
         using Endpoint = typename Protocol::Endpoint;
         using State = typename Socket::State;
 
+        /// notification callback definition.
+        using DnsNotify = std::function<void (const DnsPacket&)>;
+
+        /// callback called when a lookup sequence succeed.
+        DnsNotify onSuccess;
+
+        /// callback called when a lookup sequence failed.
+        DnsNotify onFailure;
+
         /**
          * @brief construct the resolver instance.
          * @param server remote DNS server hostname or IP address.
@@ -64,11 +73,11 @@ namespace join
                                         Reactor* reactor = nullptr)
         : Socket ()
 #ifdef DEBUG
-        , _onSuccess (defaultOnSuccess)
-        , _onFailure (defaultOnFailure)
+        , onSuccess (defaultOnSuccess)
+        , onFailure (defaultOnFailure)
 #else
-        , _onSuccess (nullptr)
-        , _onFailure (nullptr)
+        , onSuccess (nullptr)
+        , onFailure (nullptr)
 #endif
         , _server (server)
         , _port (port)
@@ -702,15 +711,6 @@ namespace join
             return 0;
         }
 
-        /// notification callback definition.
-        using DnsNotify = std::function<void (const DnsPacket&)>;
-
-        /// callback called when a lookup sequence succeed.
-        DnsNotify _onSuccess;
-
-        /// callback called when a lookup sequence failed.
-        DnsNotify _onFailure;
-
     protected:
         /**
          * @brief check if client must reconnect.
@@ -760,7 +760,7 @@ namespace join
                 if (ip.isWildcard ())
                 {
                     lastError = make_error_code (Errc::InvalidParam);
-                    notify (_onFailure, packet);
+                    notify (onFailure, packet);
                     return -1;
                 }
 
@@ -778,7 +778,7 @@ namespace join
 
                 if (this->reconnect (endpoint, timeout) == -1)
                 {
-                    notify (_onFailure, packet);
+                    notify (onFailure, packet);
                     return -1;
                 }
             }
@@ -789,7 +789,7 @@ namespace join
             if (_message.serialize (packet, data) == -1)
             {
                 lastError = make_error_code (Errc::InvalidParam);
-                notify (_onFailure, packet);
+                notify (onFailure, packet);
                 return -1;
             }
 
@@ -797,7 +797,7 @@ namespace join
             if (buffer.size () > Protocol::maxMsgSize)
             {
                 lastError = make_error_code (Errc::MessageTooLong);
-                notify (_onFailure, packet);
+                notify (onFailure, packet);
                 return -1;
             }
 
@@ -807,14 +807,14 @@ namespace join
             if (!inserted.second)
             {
                 lastError = make_error_code (Errc::OperationFailed);
-                notify (_onFailure, packet);
+                notify (onFailure, packet);
                 return -1;
             }
 
             if (this->write (buffer.data (), buffer.size ()) == -1)
             {
                 _pending.erase (inserted.first);
-                notify (_onFailure, packet);
+                notify (onFailure, packet);
                 return -1;
             }
 
@@ -822,7 +822,7 @@ namespace join
             {
                 _pending.erase (inserted.first);
                 lastError = make_error_code (Errc::TimedOut);
-                notify (_onFailure, packet);
+                notify (onFailure, packet);
                 return -1;
             }
 
@@ -832,12 +832,12 @@ namespace join
             if (pendingReq->ec)
             {
                 lastError = pendingReq->ec;
-                notify (_onFailure, packet);
+                notify (onFailure, packet);
                 return -1;
             }
 
             packet = std::move (pendingReq->packet);
-            notify (_onSuccess, packet);
+            notify (onSuccess, packet);
 
             return 0;
         }

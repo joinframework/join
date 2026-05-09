@@ -808,7 +808,7 @@ namespace join
 
         /**
          * @brief serialize and send a DNS query, waiting for a response.
-         * @param packet DNS packet to send.
+         * @param packet DNS packet to send, filled with the response on success
          * @param timeout query timeout.
          * @return 0 on success, -1 on error.
          */
