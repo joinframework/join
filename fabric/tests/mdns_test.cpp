@@ -505,7 +505,7 @@ TEST_F (MdnsTest, goodbye)
     {
         if (r.type == DnsMessage::RecordType::AAAA)
         {
-            EXPECT_EQ (r.ttl, 0u);
+            EXPECT_EQ (r.ttl, 0);
         }
     }
 
@@ -524,7 +524,7 @@ TEST_F (MdnsTest, goodbye)
     {
         if (r.type == DnsMessage::RecordType::A)
         {
-            EXPECT_EQ (r.ttl, 0u);
+            EXPECT_EQ (r.ttl, 0);
         }
     }
 

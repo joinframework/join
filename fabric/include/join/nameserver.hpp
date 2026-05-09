@@ -768,17 +768,6 @@ namespace join
                 {
                     std::cout << "  " << answer.addr;
                 }
-                else if (answer.type == DnsMessage::RecordType::SRV)
-                {
-                    std::cout << "  " << answer.name << ":" << answer.port;
-                }
-                else if (answer.type == DnsMessage::RecordType::TXT)
-                {
-                    for (auto const& txt : answer.txts)
-                    {
-                        std::cout << "  " << txt;
-                    }
-                }
                 std::cout << std::endl;
             }
         }
