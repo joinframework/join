@@ -242,6 +242,12 @@ protected:
         result = ::system ("sysctl -w net.ipv4.conf.veth0.rp_filter=0");
         result = ::system ("sysctl -w net.ipv4.conf.veth1.rp_filter=0");
 
+        result = ::system ("modprobe ip_mr 2>/dev/null");
+        result = ::system ("echo 1 > /proc/sys/net/ipv4/conf/veth0/mc_forwarding 2>/dev/null");
+        result = ::system ("echo 1 > /proc/sys/net/ipv4/conf/veth1/mc_forwarding 2>/dev/null");
+        result = ::system ("ip route add 224.0.0.0/4 dev veth0");
+        result = ::system ("ip route add 224.0.0.0/4 dev veth1");
+
         result = ::system ("uname -r >&2");
         result = ::system ("ip link show veth0 >&2");
         result = ::system ("ip link show veth1 >&2");
