@@ -241,6 +241,20 @@ protected:
         result = ::system ("sysctl -w net.ipv6.conf.veth1.accept_ra=0");
         result = ::system ("sysctl -w net.ipv4.conf.veth0.rp_filter=0");
         result = ::system ("sysctl -w net.ipv4.conf.veth1.rp_filter=0");
+
+        result = ::system ("uname -r >&2");
+        result = ::system ("ip link show veth0 >&2");
+        result = ::system ("ip link show veth1 >&2");
+        result = ::system ("ip addr show veth0 >&2");
+        result = ::system ("ip addr show veth1 >&2");
+        result = ::system ("ip route show >&2");
+        result = ::system ("ip maddr show dev veth0 >&2");
+        result = ::system ("ip maddr show dev veth1 >&2");
+        result = ::system ("grep 'E4' /proc/net/if_inet6 >&2");
+        result = ::system ("cat /proc/net/igmp >&2");
+        result = ::system ("cat /proc/sys/net/ipv4/conf/veth0/mc_forwarding >&2");
+        result = ::system ("cat /proc/sys/net/ipv4/conf/veth1/mc_forwarding >&2");
+        result = ::system ("cat /proc/sys/net/ipv4/conf/all/mc_forwarding >&2");
     }
 
     /**
