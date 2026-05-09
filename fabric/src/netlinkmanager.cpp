@@ -106,12 +106,37 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 
     ScopedLock<Mutex> lock (_syncMutex);
 
-    if (write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len) == -1)
+    auto inserted = _pending.emplace (nlh->nlmsg_seq, std::make_unique<PendingRequest> ());
+    if (!inserted.second)
     {
+        lastError = make_error_code (Errc::OperationFailed);
         return -1;
     }
 
-    return waitResponse (lock, nlh->nlmsg_seq, timeout);
+    if (write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len) == -1)
+    {
+        _pending.erase (inserted.first);
+        return -1;
+    }
+
+    if (!inserted.first->second->cond.timedWait (lock, timeout))
+    {
+        _pending.erase (inserted.first);
+        lastError = make_error_code (Errc::TimedOut);
+        return -1;
+    }
+
+    if (inserted.first->second->error != 0)
+    {
+        int err = inserted.first->second->error;
+        _pending.erase (inserted.first);
+        lastError = std::error_code (err, std::generic_category ());
+        return -1;
+    }
+
+    _pending.erase (inserted.first);
+
+    return 0;
 }
 
 // =========================================================================
