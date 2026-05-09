@@ -123,15 +123,18 @@ namespace join
                    const std::vector<ResourceRecord>& authorities = {},
                    const std::vector<ResourceRecord>& additionals = {}, uint16_t rcode = 0)
         {
-            DnsPacket response{};
-            response.id = query.id;
-            response.flags = (uint16_t (1) << 15) | (query.flags & 0x7800) | (uint16_t (1) << 10) | (rcode & 0x000F);
-            response.questions = query.questions;
-            response.answers = answers;
-            response.authorities = authorities;
-            response.additionals = additionals;
+            DnsPacket packet{};
+            packet.id = query.id;
+            packet.flags = (uint16_t (1) << 15) | (query.flags & 0x7800) | (uint16_t (1) << 10) | (rcode & 0x000F);
+            packet.dest = query.src;
+            packet.port = query.port;
 
-            return send (response, {query.src, query.port});
+            packet.questions = query.questions;
+            packet.answers = answers;
+            packet.authorities = authorities;
+            packet.additionals = additionals;
+
+            return send (packet);
         }
 
         /**
@@ -157,8 +160,8 @@ namespace join
                 DnsPacket packet;
                 _message.deserialize (packet, data);
                 packet.src = from.ip ();
-                packet.port = from.port ();
                 packet.dest = this->localEndpoint ().ip ();
+                packet.port = from.port ();
 
                 if ((packet.flags & 0x8000) == 0)
                 {
@@ -170,10 +173,9 @@ namespace join
         /**
          * @brief serialize and send a DNS packet.
          * @param packet DNS packet to send.
-         * @param to destination endpoint.
          * @return 0 on success, -1 on error.
          */
-        int send (DnsPacket& packet, const Endpoint& to)
+        int send (DnsPacket& packet)
         {
             std::stringstream data;
             if (_message.serialize (packet, data) == -1)
@@ -193,7 +195,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (this->writeTo (buffer.data (), buffer.size (), to) == -1)
+            if (this->writeTo (buffer.data (), buffer.size (), {packet.dest, packet.port}) == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
@@ -221,31 +223,43 @@ namespace join
     class BasicDatagramPeer : public BasicDatagramNameServer<Protocol>
     {
     public:
-        using Socket = typename Protocol::Socket;
-        using Endpoint = typename Protocol::Endpoint;
+        using Socket = typename BasicDatagramNameServer<Protocol>::Socket;
+        using Endpoint = typename BasicDatagramNameServer<Protocol>::Endpoint;
+
+        /// DNS notification callback type.
         using DnsNotify = std::function<void (const DnsPacket&)>;
 
         /// callback called when a lookup sequence succeed.
-        DnsNotify _onSuccess;
+        DnsNotify onSuccess;
 
         /// callback called when a lookup sequence failed.
-        DnsNotify _onFailure;
+        DnsNotify onFailure;
 
         /**
          * @brief construct the mDNS peer instance.
+         * @param ifindex interface index.
          * @param reactor event loop reactor.
-         * @param interface interface name to bind to.
          */
-        explicit BasicDatagramPeer (const std::string& interface, Reactor* reactor = nullptr)
+        explicit BasicDatagramPeer (unsigned int ifindex, Reactor* reactor = nullptr)
         : BasicDatagramNameServer<Protocol> (reactor)
 #ifdef DEBUG
-        , _onSuccess (defaultOnSuccess)
-        , _onFailure (defaultOnFailure)
+        , onSuccess (defaultOnSuccess)
+        , onFailure (defaultOnFailure)
 #else
-        , _onSuccess (nullptr)
-        , _onFailure (nullptr)
+        , onSuccess (nullptr)
+        , onFailure (nullptr)
 #endif
-        , _interface (interface)
+        , _ifindex (ifindex)
+        {
+        }
+
+        /**
+         * @brief construct the mDNS peer instance.
+         * @param interface interface name.
+         * @param reactor event loop reactor.
+         */
+        explicit BasicDatagramPeer (const std::string& interface, Reactor* reactor = nullptr)
+        : BasicDatagramPeer<Protocol> (if_nametoindex (interface.c_str ()), reactor)
         {
         }
 
@@ -283,12 +297,13 @@ namespace join
         using BasicDatagramNameServer<Protocol>::bind;
 
         /**
-         * @brief bind the socket to specified multicast address family.
-         * @param family address family to bind to.
+         * @brief bind the socket to specified address family.
+         * @param family address family.
          * @return 0 on success, -1 on failure.
          */
         int bind (int family) noexcept
         {
+            IpAddress maddress = Protocol::multicastAddress (family);
             Endpoint endpoint{IpAddress (family), Protocol::defaultPort};
 
             if ((this->_state == Socket::State::Closed) && (this->open (endpoint.protocol ()) == -1))
@@ -308,27 +323,18 @@ namespace join
                 return -1;
             }
 
-            unsigned int ifindex = ::if_nametoindex (_interface.c_str ());
-            if (ifindex == 0)
-            {
-                lastError = std::make_error_code (static_cast<std::errc> (errno));
-                this->close ();
-                return -1;
-            }
-
             if (endpoint.protocol ().family () == AF_INET6)
             {
                 ipv6_mreq mreq{};
-                IpAddress maddress = Protocol::multicastAddress (AF_INET6);
                 ::memcpy (&mreq.ipv6mr_multiaddr, maddress.addr (), maddress.length ());
-                mreq.ipv6mr_interface = ifindex;
+                mreq.ipv6mr_interface = _ifindex;
                 if (::setsockopt (this->handle (), IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq, sizeof (mreq)) == -1)
                 {
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
                 }
-                if (::setsockopt (this->handle (), IPPROTO_IPV6, IPV6_MULTICAST_IF, &ifindex, sizeof (ifindex)) == -1)
+                if (::setsockopt (this->handle (), IPPROTO_IPV6, IPV6_MULTICAST_IF, &_ifindex, sizeof (_ifindex)) == -1)
                 {
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
@@ -338,9 +344,8 @@ namespace join
             else
             {
                 ip_mreqn mreq{};
-                IpAddress maddress = Protocol::multicastAddress (AF_INET);
                 ::memcpy (&mreq.imr_multiaddr, maddress.addr (), maddress.length ());
-                mreq.imr_ifindex = static_cast<int> (ifindex);
+                mreq.imr_ifindex = static_cast<int> (_ifindex);
                 if (::setsockopt (this->handle (), IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof (mreq)) == -1)
                 {
                     lastError = std::error_code (errno, std::generic_category ());
@@ -355,11 +360,13 @@ namespace join
                 }
             }
 
+#ifndef DEBUG
             if (this->setOption (Socket::MulticastLoop, 0) == -1)
             {
                 this->close ();
                 return -1;
             }
+#endif
 
             this->_reactor->addHandler (this->handle (), this);
 
@@ -382,6 +389,9 @@ namespace join
             DnsPacket packet{};
             packet.id = 0;
             packet.flags = 0;
+            IpAddress mcast = Protocol::multicastAddress (this->family ());
+            packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
+            packet.port = Protocol::defaultPort;
 
             for (auto const& record : records)
             {
@@ -394,7 +404,7 @@ namespace join
                 packet.authorities.push_back (record);
             }
 
-            return this->send (packet, {Protocol::multicastAddress (this->family ()), Protocol::defaultPort});
+            return this->send (packet);
         }
 
         /**
@@ -413,13 +423,16 @@ namespace join
             DnsPacket packet{};
             packet.id = 0;
             packet.flags = (uint16_t (1) << 15) | (uint16_t (1) << 10);
+            IpAddress mcast = Protocol::multicastAddress (this->family ());
+            packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
+            packet.port = Protocol::defaultPort;
 
             for (auto const& record : records)
             {
                 packet.answers.push_back (record);
             }
 
-            return this->send (packet, {Protocol::multicastAddress (this->family ()), Protocol::defaultPort});
+            return this->send (packet);
         }
 
         /**
@@ -438,6 +451,9 @@ namespace join
             DnsPacket packet{};
             packet.id = 0;
             packet.flags = (uint16_t (1) << 15) | (uint16_t (1) << 10);
+            IpAddress mcast = Protocol::multicastAddress (this->family ());
+            packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
+            packet.port = Protocol::defaultPort;
 
             for (auto const& record : records)
             {
@@ -446,7 +462,7 @@ namespace join
                 packet.answers.push_back (goodbye);
             }
 
-            return this->send (packet, {Protocol::multicastAddress (this->family ()), Protocol::defaultPort});
+            return this->send (packet);
         }
 
         /**
@@ -465,6 +481,9 @@ namespace join
             DnsPacket packet{};
             packet.id = 0;
             packet.flags = 0;
+            IpAddress mcast = Protocol::multicastAddress (this->family ());
+            packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
+            packet.port = Protocol::defaultPort;
 
             QuestionRecord question;
             question.host = serviceType;
@@ -472,7 +491,7 @@ namespace join
             question.dnsclass = DnsMessage::RecordClass::IN;
             packet.questions.push_back (question);
 
-            return this->send (packet, {Protocol::multicastAddress (this->family ()), Protocol::defaultPort});
+            return this->send (packet);
         }
 
         /**
@@ -652,12 +671,28 @@ namespace join
 
                 DnsPacket packet;
                 this->_message.deserialize (packet, data);
+                IpAddress mcast = Protocol::multicastAddress (this->family ());
                 packet.src = from.ip ();
+                packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
                 packet.port = from.port ();
-                packet.dest = this->localEndpoint ().ip ();
 
                 if ((packet.flags & 0x8000) == 0)
                 {
+                    bool unicast = false;
+                    for (auto const& q : packet.questions)
+                    {
+                        if (q.dnsclass & 0x8000)
+                        {
+                            unicast = true;
+                            break;
+                        }
+                    }
+
+                    if (!unicast)
+                    {
+                        packet.src = IpAddress (mcast.addr (), mcast.length (), _ifindex);
+                    }
+
                     this->onQuery (packet);
                     return;
                 }
@@ -779,8 +814,12 @@ namespace join
          */
         int query (DnsPacket& packet, std::chrono::milliseconds timeout)
         {
+            IpAddress mcast = Protocol::multicastAddress (this->family ());
+            packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
+            packet.port = Protocol::defaultPort;
+
             std::stringstream data;
-            if (_message.serialize (packet, data) == -1)
+            if (this->_message.serialize (packet, data) == -1)
             {
                 // LCOV_EXCL_START
                 lastError = make_error_code (Errc::InvalidParam);
@@ -803,15 +842,14 @@ namespace join
             if (!inserted.second)
             {
                 lastError = make_error_code (Errc::OperationFailed);
-                notify (_onFailure, packet);
+                notify (onFailure, packet);
                 return -1;
             }
 
-            Endpoint dest{Protocol::multicastAddress (this->family ()), Protocol::defaultPort};
-            if (this->writeTo (buffer.data (), buffer.size (), dest) == -1)
+            if (this->writeTo (buffer.data (), buffer.size (), {packet.dest, packet.port}) == -1)
             {
                 _pending.erase (inserted.first);
-                notify (_onFailure, packet);
+                notify (onFailure, packet);
                 return -1;
             }
 
@@ -819,7 +857,7 @@ namespace join
             {
                 _pending.erase (inserted.first);
                 lastError = make_error_code (Errc::TimedOut);
-                notify (_onFailure, packet);
+                notify (onFailure, packet);
                 return -1;
             }
 
@@ -829,25 +867,25 @@ namespace join
             if (pendingReq->ec)
             {
                 lastError = pendingReq->ec;
-                notify (_onFailure, packet);
+                notify (onFailure, packet);
                 return -1;
             }
 
             packet = std::move (pendingReq->packet);
-            notify (_onSuccess, packet);
+            notify (onSuccess, packet);
 
             return 0;
         }
 
-        /// interface name to bind to.
-        std::string _interface;
+        /// interface index.
+        unsigned int _ifindex;
 
         /// pending synchronous request.
         struct PendingRequest
         {
-            Condition cond;
-            DnsPacket packet;
-            std::error_code ec;
+            Condition cond;     /**< condition variable to signal response reception. */
+            DnsPacket packet;   /**< received response packet. */
+            std::error_code ec; /**< error code from the response. */
         };
 
         /// synchronous requests indexed by sequence number.
