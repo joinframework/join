@@ -216,28 +216,31 @@ protected:
      */
     static void SetUpTestSuite ()
     {
-        ::system ("ip link del veth0 2>/dev/null");
-        ::system ("ip link add veth0 address 06:d8:b9:37:c2:76 type veth peer name veth1 address 52:37:c5:9d:1d:b6");
+        [[maybe_unused]] int result;
 
-        ::system ("sysctl -w net.ipv6.conf.veth0.accept_dad=0");
-        ::system ("ip addr add 192.168.10.1/24 dev veth0");
-        ::system ("ip link set veth0 multicast on");
-        ::system ("ip link set veth0 up");
+        result = ::system ("ip link del veth0 2>/dev/null");
+        result = ::system (
+            "ip link add veth0 address 06:d8:b9:37:c2:76 type veth peer name veth1 address 52:37:c5:9d:1d:b6");
 
-        ::system ("sysctl -w net.ipv6.conf.veth1.accept_dad=0");
-        ::system ("ip addr add 192.168.10.2/24 dev veth1");
-        ::system ("ip link set veth1 multicast on");
-        ::system ("ip link set veth1 up");
+        result = ::system ("sysctl -w net.ipv6.conf.veth0.accept_dad=0");
+        result = ::system ("ip addr add 192.168.10.1/24 dev veth0");
+        result = ::system ("ip link set veth0 multicast on");
+        result = ::system ("ip link set veth0 up");
 
-        ::system ("ip neigh add 192.168.10.2 lladdr 52:37:c5:9d:1d:b6 dev veth0");
-        ::system ("ip neigh add fe80::5037:c5ff:fe9d:1db6 lladdr 52:37:c5:9d:1d:b6 dev veth0");
+        result = ::system ("sysctl -w net.ipv6.conf.veth1.accept_dad=0");
+        result = ::system ("ip addr add 192.168.10.2/24 dev veth1");
+        result = ::system ("ip link set veth1 multicast on");
+        result = ::system ("ip link set veth1 up");
 
-        ::system ("ip neigh add 192.168.10.1 lladdr 06:d8:b9:37:c2:76 dev veth1");
-        ::system ("ip neigh add fe80::4d8:b9ff:fe37:c276 lladdr 06:d8:b9:37:c2:76 dev veth1");
+        result = ::system ("ip neigh add 192.168.10.2 lladdr 52:37:c5:9d:1d:b6 dev veth0");
+        result = ::system ("ip neigh add fe80::5037:c5ff:fe9d:1db6 lladdr 52:37:c5:9d:1d:b6 dev veth0");
 
-        ::system ("sysctl -w net.ipv6.conf.veth1.accept_ra=0");
-        ::system ("sysctl -w net.ipv4.conf.veth0.rp_filter=0");
-        ::system ("sysctl -w net.ipv4.conf.veth1.rp_filter=0");
+        result = ::system ("ip neigh add 192.168.10.1 lladdr 06:d8:b9:37:c2:76 dev veth1");
+        result = ::system ("ip neigh add fe80::4d8:b9ff:fe37:c276 lladdr 06:d8:b9:37:c2:76 dev veth1");
+
+        result = ::system ("sysctl -w net.ipv6.conf.veth1.accept_ra=0");
+        result = ::system ("sysctl -w net.ipv4.conf.veth0.rp_filter=0");
+        result = ::system ("sysctl -w net.ipv4.conf.veth1.rp_filter=0");
     }
 
     /**
