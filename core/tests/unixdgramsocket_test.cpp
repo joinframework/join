@@ -45,7 +45,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->bind (_serverpath), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addReadHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -61,7 +61,7 @@ protected:
      * @brief method called when data are ready to be read on handle.
      * @param fd file descriptor.
      */
-    virtual void onReceive ([[maybe_unused]] int fd) override
+    virtual void onReadable ([[maybe_unused]] int fd) override
     {
         auto buffer = std::make_unique<char[]> (this->canRead ());
         if (buffer)

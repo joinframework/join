@@ -65,7 +65,7 @@ namespace join
                 _reactor = ReactorThread::reactor ();
             }
 
-            _reactor->addHandler (_handle, this);
+            _reactor->addReadHandler (_handle, this);
         }
 
         /**
@@ -233,7 +233,7 @@ namespace join
          * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.
          */
-        virtual void onReceive ([[maybe_unused]] int fd) override
+        virtual void onReadable ([[maybe_unused]] int fd) override
         {
             uint64_t expirations;
             ssize_t result = read (handle (), &expirations, sizeof (expirations));

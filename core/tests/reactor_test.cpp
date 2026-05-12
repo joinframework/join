@@ -67,12 +67,12 @@ protected:
      * @brief method called when data are ready to be read/accepted on handle.
      * @param fd file descriptor.
      */
-    virtual void onReceive (int fd) override
+    virtual void onReadable (int fd) override
     {
         {
             ScopedLock<Mutex> lock (_mut);
             _server.readExactly (_event, _server.canRead ());
-            EventHandler::onReceive (fd);
+            EventHandler::onReadable (fd);
         }
 
         _cond.signal ();
@@ -85,7 +85,7 @@ protected:
     virtual void onClose (int fd) override
     {
         ReactorThread::reactor ()->delHandler (handle ());
-        ReactorThread::reactor ()->addHandler (handle (), this);
+        ReactorThread::reactor ()->addReadHandler (handle (), this);
         ReactorThread::reactor ()->delHandler (handle ());
         _server.close ();
 
@@ -105,7 +105,7 @@ protected:
     virtual void onError (int fd) override
     {
         ReactorThread::reactor ()->delHandler (handle ());
-        ReactorThread::reactor ()->addHandler (handle (), this);
+        ReactorThread::reactor ()->addReadHandler (handle (), this);
         ReactorThread::reactor ()->delHandler (handle ());
         _server.close ();
 
@@ -166,9 +166,9 @@ Mutex ReactorTest::_mut;
 std::string ReactorTest::_event;
 
 /**
- * @brief Test addHandler.
+ * @brief Test addReadHandler.
  */
-TEST_F (ReactorTest, addHandler)
+TEST_F (ReactorTest, addReadHandler)
 {
     Reactor reactor;
     Thread th ([&reactor] () {
@@ -176,11 +176,11 @@ TEST_F (ReactorTest, addHandler)
     });
 
     // test invalid parameter.
-    ASSERT_EQ (reactor.addHandler (handle (), nullptr), -1);
+    ASSERT_EQ (reactor.addReadHandler (handle (), nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     // test invalid handle.
-    ASSERT_EQ (reactor.addHandler (handle (), this), -1);
+    ASSERT_EQ (reactor.addReadHandler (handle (), this), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     // connect socket.
@@ -188,10 +188,10 @@ TEST_F (ReactorTest, addHandler)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (reactor.addHandler (handle (), this), 0) << join::lastError.message ();
+    ASSERT_EQ (reactor.addReadHandler (handle (), this), 0) << join::lastError.message ();
 
     // test already in use.
-    ASSERT_EQ (reactor.addHandler (handle (), this), -1);
+    ASSERT_EQ (reactor.addReadHandler (handle (), this), -1);
     ASSERT_EQ (join::lastError, std::errc::file_exists) << join::lastError.message ();
 
     // delete handler
@@ -220,7 +220,7 @@ TEST_F (ReactorTest, delHandler)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (reactor.addHandler (handle (), this), 0) << join::lastError.message ();
+    ASSERT_EQ (reactor.addReadHandler (handle (), this), 0) << join::lastError.message ();
 
     // delete handler
     ASSERT_EQ (reactor.delHandler (handle ()), 0) << join::lastError.message ();
@@ -276,7 +276,7 @@ TEST_F (ReactorTest, onReceive)
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ()->addReadHandler (handle (), this), 0) << join::lastError.message ();
 
     // write random data.
     ASSERT_EQ (_client.writeExactly ("onReceive", strlen ("onReceive"), _timeout), 0) << join::lastError.message ();
@@ -315,7 +315,7 @@ TEST_F (ReactorTest, onClose)
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ()->addReadHandler (handle (), this), 0) << join::lastError.message ();
 
     // close immediately.
     _client.close ();
@@ -351,7 +351,7 @@ TEST_F (ReactorTest, onError)
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ()->addReadHandler (handle (), this), 0) << join::lastError.message ();
 
     // reset connection.
     struct linger sl

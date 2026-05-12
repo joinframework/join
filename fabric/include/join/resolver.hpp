@@ -136,7 +136,7 @@ namespace join
             }
             _port = endpoint.port ();
 
-            this->_reactor->addHandler (this->handle (), this);
+            this->_reactor->addReadHandler (this->handle (), this);
 
             return 0;
         }
@@ -852,7 +852,7 @@ namespace join
          * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.
          */
-        void onReceive ([[maybe_unused]] int fd) override final
+        void onReadable ([[maybe_unused]] int fd) override final
         {
             int size = this->read (_buffer.get (), Protocol::maxMsgSize);
             if (size >= int (_headerSize))
@@ -1119,7 +1119,7 @@ namespace join
                 return -1;
             }
 
-            this->_reactor->addHandler (this->handle (), this);
+            this->_reactor->addReadHandler (this->handle (), this);
 
             return 0;
         }
@@ -1136,7 +1136,7 @@ namespace join
                 return false;
             }
 
-            this->_reactor->addHandler (this->handle (), this);
+            this->_reactor->addReadHandler (this->handle (), this);
 
             return true;
         }

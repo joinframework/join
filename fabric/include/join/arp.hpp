@@ -204,7 +204,7 @@ namespace join
 
             ScopedLock<Mutex> lock (_syncMutex);
 
-            _reactor->addHandler (handle (), this);
+            _reactor->addReadHandler (handle (), this);
 
             uint32_t tip;
             ::memcpy (&tip, &out.arp.ar_tip, sizeof (tip));
@@ -358,7 +358,7 @@ namespace join
          * @brief method called when data are ready to be read.
          * @param fd file descriptor.
          */
-        void onReceive (int fd) noexcept override;
+        void onReadable (int fd) noexcept override;
 
         /// buffer size.
         static constexpr size_t _bufferSize = 4096;

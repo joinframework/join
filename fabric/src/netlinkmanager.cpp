@@ -74,8 +74,8 @@ Reactor* NetlinkManager::reactor () const noexcept
 // =========================================================================
 void NetlinkManager::start ()
 {
-    _reactor->addHandler (_wakeup, this);
-    _reactor->addHandler (handle (), this);
+    _reactor->addReadHandler (_wakeup, this);
+    _reactor->addReadHandler (handle (), this);
 }
 
 // =========================================================================
@@ -145,9 +145,9 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 
 // =========================================================================
 //   CLASS     : NetlinkManager
-//   METHOD    : onReceive
+//   METHOD    : onReadable
 // =========================================================================
-void NetlinkManager::onReceive (int fd)
+void NetlinkManager::onReadable (int fd)
 {
     if (fd == _wakeup)
     {

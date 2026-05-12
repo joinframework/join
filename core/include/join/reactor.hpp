@@ -83,10 +83,19 @@ namespace join
 
     protected:
         /**
+         * @brief method called when handle is ready to write.
+         * @param fd file descriptor.
+         */
+        virtual void onWriteable ([[maybe_unused]] int fd)
+        {
+            // do nothing.
+        }
+
+        /**
          * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.
          */
-        virtual void onReceive ([[maybe_unused]] int fd)
+        virtual void onReadable ([[maybe_unused]] int fd)
         {
             // do nothing.
         }
@@ -156,13 +165,22 @@ namespace join
         ~Reactor () noexcept;
 
         /**
-         * @brief add handler to reactor.
+         * @brief add write handler to reactor.
          * @param fd file descriptor.
          * @param handler handler pointer.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addHandler (int fd, EventHandler* handler, bool sync = true) noexcept;
+        int addWriteHandler (int fd, EventHandler* handler, bool sync = true) noexcept;
+
+        /**
+         * @brief add read handler to reactor.
+         * @param fd file descriptor.
+         * @param handler handler pointer.
+         * @param sync wait for operation completion if true.
+         * @return 0 on success, -1 on failure.
+         */
+        int addReadHandler (int fd, EventHandler* handler, bool sync = true) noexcept;
 
         /**
          * @brief delete handler from reactor.
@@ -231,6 +249,7 @@ namespace join
         {
             CommandType type;
             int fd;
+            uint32_t events;
             EventHandler* handler;
             std::atomic<bool>* done;
             std::atomic<int>* errc;
@@ -240,9 +259,10 @@ namespace join
          * @brief register handler with epoll.
          * @param fd file descriptor.
          * @param handler handler pointer.
+         * @param events epoll event mask.
          * @return 0 on success, -1 on failure.
          */
-        int registerHandler (int fd, EventHandler* handler) noexcept;
+        int registerHandler (int fd, EventHandler* handler, uint32_t events) noexcept;
 
         /**
          * @brief unregister handler from epoll.
