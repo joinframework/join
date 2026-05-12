@@ -100,6 +100,7 @@ protected:
     virtual void onClose (int fd) override
     {
         ReactorThread::reactor ()->delHandler (handle ());
+        ReactorThread::reactor ()->addWriteHandler (handle (), this);
         ReactorThread::reactor ()->addReadHandler (handle (), this);
         ReactorThread::reactor ()->delHandler (handle ());
         _server.close ();
@@ -120,6 +121,7 @@ protected:
     virtual void onError (int fd) override
     {
         ReactorThread::reactor ()->delHandler (handle ());
+        ReactorThread::reactor ()->addWriteHandler (handle (), this);
         ReactorThread::reactor ()->addReadHandler (handle (), this);
         ReactorThread::reactor ()->delHandler (handle ());
         _server.close ();

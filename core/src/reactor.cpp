@@ -50,14 +50,16 @@ Reactor::Reactor ()
 {
     if (_wakeup == -1)
     {
-        throw std::system_error (errno, std::system_category (), "eventfd failed");
+        throw std::system_error (errno, std::system_category (), "eventfd failed");  // LCOV_EXECL_LINE
     }
 
     if (_epoll == -1)
     {
+        // LCOV_EXECL_START
         int err = errno;
         ::close (_wakeup);
         throw std::system_error (err, std::system_category (), "epoll_create1 failed");
+        // LCOV_EXECL_STOP
     }
 
     _deleted.reserve (_deletedReserve);
@@ -68,10 +70,12 @@ Reactor::Reactor ()
 
     if (epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev) == -1)
     {
+        // LCOV_EXECL_START
         int err = errno;
         ::close (_epoll);
         ::close (_wakeup);
         throw std::system_error (err, std::system_category (), "epoll_ctl failed");
+        // LCOV_EXECL_STOP
     }
 }
 
