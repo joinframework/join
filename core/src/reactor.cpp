@@ -125,7 +125,7 @@ int Reactor::addWriteHandler (int fd, EventHandler* handler, bool sync) noexcept
 
     if (JOIN_UNLIKELY (writeCommand ({CommandType::Add, fd, EPOLLOUT, handler, pdone, perrc}) == -1))
     {
-        return -1;
+        return -1;  // LCOV_EXCL_LINE
     }
 
     if (JOIN_LIKELY (sync))
@@ -181,7 +181,7 @@ int Reactor::addReadHandler (int fd, EventHandler* handler, bool sync) noexcept
 
     if (JOIN_UNLIKELY (writeCommand ({CommandType::Add, fd, EPOLLIN | EPOLLRDHUP, handler, pdone, perrc}) == -1))
     {
-        return -1;
+        return -1;  // LCOV_EXCL_LINE
     }
 
     if (JOIN_LIKELY (sync))
@@ -231,7 +231,7 @@ int Reactor::delHandler (int fd, bool sync) noexcept
 
     if (JOIN_UNLIKELY (writeCommand ({CommandType::Del, fd, 0, nullptr, pdone, perrc}) == -1))
     {
-        return -1;
+        return -1;  // LCOV_EXCL_LINE
     }
 
     if (JOIN_LIKELY (sync))
@@ -368,7 +368,7 @@ int Reactor::writeCommand (const Command& cmd) noexcept
 {
     if (_commands.push (cmd) == -1)
     {
-        return -1;
+        return -1;  // LCOV_EXCL_LINE
     }
 
     uint64_t value = 1;
