@@ -206,7 +206,7 @@ protected:
      * @brief method called when data are ready to be read on handle.
      * @param fd file descriptor.
      */
-    virtual void onReceive ([[maybe_unused]] int fd) override
+    virtual void onReadable ([[maybe_unused]] int fd) override
     {
         Tls::Socket sock = this->acceptEncrypted ();
         if (sock.connected ())

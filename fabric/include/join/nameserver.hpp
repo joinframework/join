@@ -148,7 +148,7 @@ namespace join
          * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.
          */
-        virtual void onReceive ([[maybe_unused]] int fd) override
+        virtual void onReadable ([[maybe_unused]] int fd) override
         {
             Endpoint from;
             int size = this->readFrom (_buffer.get (), Protocol::maxMsgSize, &from);
@@ -672,7 +672,7 @@ namespace join
          * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.
          */
-        void onReceive ([[maybe_unused]] int fd) override final
+        void onReadable ([[maybe_unused]] int fd) override final
         {
             Endpoint from;
             int size = this->readFrom (this->_buffer.get (), Protocol::maxMsgSize, &from);

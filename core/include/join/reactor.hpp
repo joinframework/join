@@ -83,16 +83,25 @@ namespace join
 
     protected:
         /**
-         * @brief method called when data are ready to be read on handle.
+         * @brief method called when data are ready to be written on handle.
          * @param fd file descriptor.
          */
-        virtual void onReceive ([[maybe_unused]] int fd)
+        virtual void onWriteable ([[maybe_unused]] int fd)
         {
             // do nothing.
         }
 
         /**
-         * @brief method called when handle is closed.
+         * @brief method called when data are ready to be read on handle.
+         * @param fd file descriptor.
+         */
+        virtual void onReadable ([[maybe_unused]] int fd)
+        {
+            // do nothing.
+        }
+
+        /**
+         * @brief method called when handle was closed by the peer.
          * @param fd file descriptor.
          */
         virtual void onClose ([[maybe_unused]] int fd)
@@ -159,10 +168,13 @@ namespace join
          * @brief add handler to reactor.
          * @param fd file descriptor.
          * @param handler handler pointer.
+         * @param wantRead subscribe to read events.
+         * @param wantWrite subscribe to write events.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addHandler (int fd, EventHandler* handler, bool sync = true) noexcept;
+        int addHandler (int fd, EventHandler* handler, bool wantRead = true, bool wantWrite = false,
+                        bool sync = true) noexcept;
 
         /**
          * @brief delete handler from reactor.
@@ -231,18 +243,20 @@ namespace join
         {
             CommandType type;
             int fd;
+            uint32_t events;
             EventHandler* handler;
             std::atomic<bool>* done;
             std::atomic<int>* errc;
         };
 
         /**
-         * @brief register handler with epoll.
+         * @brief register or update handler with epoll.
          * @param fd file descriptor.
          * @param handler handler pointer.
+         * @param events epoll event mask.
          * @return 0 on success, -1 on failure.
          */
-        int registerHandler (int fd, EventHandler* handler) noexcept;
+        int registerHandler (int fd, EventHandler* handler, uint32_t events) noexcept;
 
         /**
          * @brief unregister handler from epoll.
@@ -305,8 +319,11 @@ namespace join
         /// running flag for dispatcher thread.
         std::atomic<bool> _running{false};
 
+        /// invalid thread ID constant.
+        static constexpr pthread_t _invalidThreadId = static_cast<pthread_t> (-1);
+
         /// event loop thread ID.
-        std::atomic<pthread_t> _threadId{0};
+        std::atomic<pthread_t> _threadId{_invalidThreadId};
     };
 
     /**

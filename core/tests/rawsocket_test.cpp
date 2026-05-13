@@ -104,7 +104,7 @@ protected:
      * @brief method called when data are ready to be read on handle.
      * @param fd file descriptor.
      */
-    virtual void onReceive ([[maybe_unused]] int fd) override
+    virtual void onReadable ([[maybe_unused]] int fd) override
     {
         auto buffer = std::make_unique<char[]> (this->canRead ());
         if (buffer)

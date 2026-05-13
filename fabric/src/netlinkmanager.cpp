@@ -145,9 +145,9 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 
 // =========================================================================
 //   CLASS     : NetlinkManager
-//   METHOD    : onReceive
+//   METHOD    : onReadable
 // =========================================================================
-void NetlinkManager::onReceive (int fd)
+void NetlinkManager::onReadable (int fd)
 {
     if (fd == _wakeup)
     {

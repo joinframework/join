@@ -181,7 +181,7 @@ namespace join
             bpf.len = 6;
             bpf.filter = code;
 
-            // best effort, validation is done in onReceive anyway.
+            // best effort, validation is done in onReadable anyway.
             ::setsockopt (handle (), SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof (bpf));
 
             Packet out = {};
@@ -358,7 +358,7 @@ namespace join
          * @brief method called when data are ready to be read.
          * @param fd file descriptor.
          */
-        void onReceive (int fd) noexcept override;
+        void onReadable (int fd) noexcept override;
 
         /// buffer size.
         static constexpr size_t _bufferSize = 4096;

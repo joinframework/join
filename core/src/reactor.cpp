@@ -50,14 +50,18 @@ Reactor::Reactor ()
 {
     if (_wakeup == -1)
     {
+        // LCOV_EXCL_START
         throw std::system_error (errno, std::system_category (), "eventfd failed");
+        // LCOV_EXCL_STOP
     }
 
     if (_epoll == -1)
     {
+        // LCOV_EXCL_START
         int err = errno;
         ::close (_wakeup);
         throw std::system_error (err, std::system_category (), "epoll_create1 failed");
+        // LCOV_EXCL_STOP
     }
 
     _deleted.reserve (_deletedReserve);
@@ -68,10 +72,12 @@ Reactor::Reactor ()
 
     if (epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev) == -1)
     {
+        // LCOV_EXCL_START
         int err = errno;
         ::close (_epoll);
         ::close (_wakeup);
         throw std::system_error (err, std::system_category (), "epoll_ctl failed");
+        // LCOV_EXCL_STOP
     }
 }
 
@@ -91,7 +97,7 @@ Reactor::~Reactor () noexcept
 //   CLASS     : Reactor
 //   METHOD    : addHandler
 // =========================================================================
-int Reactor::addHandler (int fd, EventHandler* handler, bool sync) noexcept
+int Reactor::addHandler (int fd, EventHandler* handler, bool wantRead, bool wantWrite, bool sync) noexcept
 {
     if (JOIN_UNLIKELY (handler == nullptr))
     {
@@ -105,9 +111,27 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool sync) noexcept
         return -1;
     }
 
+    uint32_t events = 0;
+
+    if (wantRead)
+    {
+        events |= EPOLLIN | EPOLLRDHUP;
+    }
+
+    if (wantWrite)
+    {
+        events |= EPOLLOUT;
+    }
+
+    if (JOIN_UNLIKELY (events == 0))
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
+
     if (isReactorThread ())
     {
-        return registerHandler (fd, handler);
+        return registerHandler (fd, handler, events);
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
@@ -119,9 +143,9 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool sync) noexcept
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Add, fd, handler, pdone, perrc}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Add, fd, events, handler, pdone, perrc}) == -1))
     {
-        return -1;
+        return -1;  // LCOV_EXCL_LINE
     }
 
     if (JOIN_LIKELY (sync))
@@ -169,9 +193,9 @@ int Reactor::delHandler (int fd, bool sync) noexcept
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Del, fd, nullptr, pdone, perrc}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Del, fd, 0, nullptr, pdone, perrc}) == -1))
     {
-        return -1;
+        return -1;  // LCOV_EXCL_LINE
     }
 
     if (JOIN_LIKELY (sync))
@@ -204,7 +228,7 @@ void Reactor::run ()
     _running.store (true, std::memory_order_release);
     eventLoop ();
 
-    _threadId.store (0, std::memory_order_release);
+    _threadId.store (_invalidThreadId, std::memory_order_release);
 }
 
 // =========================================================================
@@ -220,12 +244,12 @@ void Reactor::stop (bool sync) noexcept
         return;
     }
 
-    writeCommand ({CommandType::Stop, -1, nullptr, nullptr, nullptr});
+    writeCommand ({CommandType::Stop, -1, 0, nullptr, nullptr, nullptr});
 
     if (JOIN_LIKELY (sync))
     {
         Backoff backoff;
-        while (_threadId.load (std::memory_order_acquire) != 0)
+        while (_threadId.load (std::memory_order_acquire) != _invalidThreadId)
         {
             backoff ();
         }
@@ -265,21 +289,36 @@ bool Reactor::isReactorThread () const noexcept
 //   CLASS     : Reactor
 //   METHOD    : registerHandler
 // =========================================================================
-int Reactor::registerHandler (int fd, EventHandler* handler) noexcept
+int Reactor::registerHandler (int fd, EventHandler* handler, uint32_t events) noexcept
 {
-    _deleted.erase (fd);
-
     struct epoll_event ev = {};
-    ev.events = EPOLLIN | EPOLLRDHUP;
+    ev.events = events;
     ev.data.fd = fd;
 
     if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, fd, &ev) == -1))
     {
-        lastError = std::make_error_code (static_cast<std::errc> (errno));
-        return -1;
+        if (JOIN_LIKELY (errno == EEXIST))
+        {
+            if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_MOD, fd, &ev) == -1))
+            {
+                // LCOV_EXCL_START
+                lastError = std::make_error_code (static_cast<std::errc> (errno));
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+        }
+        else
+        {
+            // LCOV_EXCL_START
+            lastError = std::make_error_code (static_cast<std::errc> (errno));
+            return -1;
+            // LCOV_EXCL_STOP
+        }
     }
 
+    _deleted.erase (fd);
     _handlers[fd] = handler;
+
     return 0;
 }
 
@@ -291,12 +330,16 @@ int Reactor::unregisterHandler (int fd) noexcept
 {
     if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_DEL, fd, nullptr) == -1))
     {
+        if (errno == EBADF || errno == ENOENT)
+        {
+            _deleted.insert (fd);
+        }
         lastError = std::make_error_code (static_cast<std::errc> (errno));
-        _deleted.insert (fd);
         return -1;
     }
 
     _deleted.insert (fd);
+
     return 0;
 }
 
@@ -308,11 +351,14 @@ int Reactor::writeCommand (const Command& cmd) noexcept
 {
     if (_commands.push (cmd) == -1)
     {
-        return -1;
+        return -1;  // LCOV_EXCL_LINE
     }
 
     uint64_t value = 1;
-    [[maybe_unused]] ssize_t bytes = ::write (_wakeup, &value, sizeof (uint64_t));
+    if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
 
     return 0;
 }
@@ -328,7 +374,7 @@ void Reactor::processCommand (const Command& cmd) noexcept
     switch (cmd.type)
     {
         case CommandType::Add:
-            err = registerHandler (cmd.fd, cmd.handler);
+            err = registerHandler (cmd.fd, cmd.handler, cmd.events);
             break;
 
         case CommandType::Del:
@@ -356,7 +402,10 @@ void Reactor::processCommand (const Command& cmd) noexcept
 void Reactor::readCommands () noexcept
 {
     uint64_t count;
-    [[maybe_unused]] ssize_t bytesRead = ::read (_wakeup, &count, sizeof (count));
+    if (JOIN_UNLIKELY (::read (_wakeup, &count, sizeof (count)) == -1))
+    {
+        return;  // LCOV_EXCL_LINE
+    }
 
     Command cmd;
     while (_commands.tryPop (cmd) == 0)
@@ -392,7 +441,11 @@ void Reactor::dispatchEvent (const epoll_event& event)
         }
         else if (JOIN_LIKELY (event.events & EPOLLIN))
         {
-            it->second->onReceive (fd);
+            it->second->onReadable (fd);
+        }
+        else if (event.events & EPOLLOUT)
+        {
+            it->second->onWriteable (fd);
         }
     }
 }
@@ -408,6 +461,10 @@ void Reactor::eventLoop ()
     while (_running.load (std::memory_order_acquire))
     {
         int eventCount = epoll_wait (_epoll, events.data (), events.size (), -1);
+        if (JOIN_UNLIKELY ((eventCount < 0) && (errno == EINTR)))
+        {
+            continue;
+        }
 
         for (int i = 0; i < eventCount; ++i)
         {
@@ -429,6 +486,7 @@ void Reactor::eventLoop ()
         {
             _handlers.erase (fd);
         }
+
         _deleted.clear ();
     }
 }
