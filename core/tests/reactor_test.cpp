@@ -210,8 +210,7 @@ TEST_F (ReactorTest, addWriteHandler)
     ASSERT_EQ (reactor.addHandler (handle (), this, false, true), 0) << join::lastError.message ();
 
     // test already in use.
-    ASSERT_EQ (reactor.addHandler (handle (), this, false, true), -1);
-    ASSERT_EQ (join::lastError, std::errc::file_exists) << join::lastError.message ();
+    ASSERT_EQ (reactor.addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // delete handler.
     ASSERT_EQ (reactor.delHandler (handle ()), 0) << join::lastError.message ();
@@ -250,8 +249,7 @@ TEST_F (ReactorTest, addReadHandler)
     ASSERT_EQ (reactor.addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // test already in use.
-    ASSERT_EQ (reactor.addHandler (handle (), this, true, false), -1);
-    ASSERT_EQ (join::lastError, std::errc::file_exists) << join::lastError.message ();
+    ASSERT_EQ (reactor.addHandler (handle (), this, false, true), 0) << join::lastError.message ();
 
     // delete handler
     ASSERT_EQ (reactor.delHandler (handle ()), 0) << join::lastError.message ();
@@ -317,7 +315,7 @@ TEST_F (ReactorTest, mlock)
 /**
  * @brief Test onWriteable.
  */
-TEST_F (ReactorTest, onSend)
+TEST_F (ReactorTest, onWriteable)
 {
     // connect socket.
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();

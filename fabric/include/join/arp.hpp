@@ -181,7 +181,7 @@ namespace join
             bpf.len = 6;
             bpf.filter = code;
 
-            // best effort, validation is done in onReceive anyway.
+            // best effort, validation is done in onReadable anyway.
             ::setsockopt (handle (), SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof (bpf));
 
             Packet out = {};

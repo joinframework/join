@@ -250,7 +250,7 @@ namespace join
         };
 
         /**
-         * @brief register handler with epoll.
+         * @brief register or update handler with epoll.
          * @param fd file descriptor.
          * @param handler handler pointer.
          * @param events epoll event mask.

@@ -295,8 +295,23 @@ int Reactor::registerHandler (int fd, EventHandler* handler, uint32_t events) no
 
     if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, fd, &ev) == -1))
     {
-        lastError = std::make_error_code (static_cast<std::errc> (errno));
-        return -1;
+        if (JOIN_LIKELY (errno == EEXIST))
+        {
+            if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_MOD, fd, &ev) == -1))
+            {
+                // LCOV_EXCL_START
+                lastError = std::make_error_code (static_cast<std::errc> (errno));
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+        }
+        else
+        {
+            // LCOV_EXCL_START
+            lastError = std::make_error_code (static_cast<std::errc> (errno));
+            return -1;
+            // LCOV_EXCL_STOP
+        }
     }
 
     _deleted.erase (fd);
@@ -444,7 +459,7 @@ void Reactor::eventLoop ()
     while (_running.load (std::memory_order_acquire))
     {
         int eventCount = epoll_wait (_epoll, events.data (), events.size (), -1);
-        if (JOIN_UNLIKELY (eventCount < 0 && errno == EINTR))
+        if (JOIN_UNLIKELY ((eventCount < 0) && (errno == EINTR)))
         {
             continue;
         }
