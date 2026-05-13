@@ -74,8 +74,8 @@ Reactor* NetlinkManager::reactor () const noexcept
 // =========================================================================
 void NetlinkManager::start ()
 {
-    _reactor->addReadHandler (_wakeup, this);
-    _reactor->addReadHandler (handle (), this);
+    _reactor->addHandler (_wakeup, this);
+    _reactor->addHandler (handle (), this);
 }
 
 // =========================================================================

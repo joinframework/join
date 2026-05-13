@@ -46,7 +46,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addReadHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**

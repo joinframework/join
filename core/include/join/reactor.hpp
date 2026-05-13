@@ -165,22 +165,16 @@ namespace join
         ~Reactor () noexcept;
 
         /**
-         * @brief add write handler to reactor.
+         * @brief add handler to reactor.
          * @param fd file descriptor.
          * @param handler handler pointer.
+         * @param wantRead subscribe to read events.
+         * @param wantWrite subscribe to write events.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int addWriteHandler (int fd, EventHandler* handler, bool sync = true) noexcept;
-
-        /**
-         * @brief add read handler to reactor.
-         * @param fd file descriptor.
-         * @param handler handler pointer.
-         * @param sync wait for operation completion if true.
-         * @return 0 on success, -1 on failure.
-         */
-        int addReadHandler (int fd, EventHandler* handler, bool sync = true) noexcept;
+        int addHandler (int fd, EventHandler* handler, bool wantRead = true, bool wantWrite = false,
+                        bool sync = true) noexcept;
 
         /**
          * @brief delete handler from reactor.
@@ -325,8 +319,11 @@ namespace join
         /// running flag for dispatcher thread.
         std::atomic<bool> _running{false};
 
+        /// invalid thread ID constant.
+        static constexpr pthread_t _invalidThreadId = static_cast<pthread_t> (-1);
+
         /// event loop thread ID.
-        std::atomic<pthread_t> _threadId{0};
+        std::atomic<pthread_t> _threadId{_invalidThreadId};
     };
 
     /**

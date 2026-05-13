@@ -96,7 +96,7 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            _reactor->addReadHandler (this->handle (), this);
+            _reactor->addHandler (this->handle (), this);
 
             return 0;
         }
@@ -380,7 +380,7 @@ namespace join
             }
 #endif
 
-            this->_reactor->addReadHandler (this->handle (), this);
+            this->_reactor->addHandler (this->handle (), this);
 
             return 0;
         }

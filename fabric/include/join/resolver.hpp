@@ -136,7 +136,7 @@ namespace join
             }
             _port = endpoint.port ();
 
-            this->_reactor->addReadHandler (this->handle (), this);
+            this->_reactor->addHandler (this->handle (), this);
 
             return 0;
         }
@@ -1119,7 +1119,7 @@ namespace join
                 return -1;
             }
 
-            this->_reactor->addReadHandler (this->handle (), this);
+            this->_reactor->addHandler (this->handle (), this);
 
             return 0;
         }
@@ -1136,7 +1136,7 @@ namespace join
                 return false;
             }
 
-            this->_reactor->addReadHandler (this->handle (), this);
+            this->_reactor->addHandler (this->handle (), this);
 
             return true;
         }

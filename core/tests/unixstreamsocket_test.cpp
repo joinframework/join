@@ -45,7 +45,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->create (_serverpath), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addReadHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**

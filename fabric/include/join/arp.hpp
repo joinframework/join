@@ -204,7 +204,7 @@ namespace join
 
             ScopedLock<Mutex> lock (_syncMutex);
 
-            _reactor->addReadHandler (handle (), this);
+            _reactor->addHandler (handle (), this);
 
             uint32_t tip;
             ::memcpy (&tip, &out.arp.ar_tip, sizeof (tip));

@@ -65,7 +65,7 @@ namespace join
                 _reactor = ReactorThread::reactor ();
             }
 
-            _reactor->addReadHandler (_handle, this);
+            _reactor->addHandler (_handle, this);
         }
 
         /**
