@@ -152,7 +152,9 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool wantRead, bool want
     {
         Backoff backoff;
         while (!done.load (std::memory_order_acquire))
+        {
             backoff ();
+        }
 
         int err = errc.load (std::memory_order_acquire);
         if (JOIN_UNLIKELY (err != 0))
