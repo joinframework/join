@@ -83,7 +83,7 @@ namespace join
 
     protected:
         /**
-         * @brief method called when handle is ready to write.
+         * @brief method called when data are ready to be written on handle.
          * @param fd file descriptor.
          */
         virtual void onWriteable ([[maybe_unused]] int fd)
@@ -101,7 +101,7 @@ namespace join
         }
 
         /**
-         * @brief method called when handle is closed.
+         * @brief method called when handle was closed by the peer.
          * @param fd file descriptor.
          */
         virtual void onClose ([[maybe_unused]] int fd)
