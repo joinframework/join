@@ -57,15 +57,12 @@ IoOperation IoOperation::makeAccept (int fd, sockaddr* addr, socklen_t* addrlen,
 //   CLASS     : IoOperation
 //   METHOD    : makeConnect
 // =========================================================================
-IoOperation IoOperation::makeConnect (int fd, const sockaddr* addr, socklen_t addrlen,
-                                      CompletionHandler* handler) noexcept
+IoOperation IoOperation::makeConnect (int fd, CompletionHandler* handler) noexcept
 {
     IoOperation op;
     op.fd = fd;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Connect);
     op.handler = handler;
-    op.data.connect.addr = addr;
-    op.data.connect.addrlen = addrlen;
     return op;
 }
 
@@ -417,6 +414,7 @@ int Proactor::cancelOperation (IoOperation* op) noexcept
         return -1;
     }
 
+    op->state = IoOperation::State::Cancelling;
     bool isWrite = isWriteOp (op->code);
 
     if (JOIN_UNLIKELY ((isWrite && (_writeOps[op->fd] != op)) || (!isWrite && (_readOps[op->fd] != op))))
@@ -434,8 +432,6 @@ int Proactor::cancelOperation (IoOperation* op) noexcept
         _readOps[op->fd] = nullptr;
     }
 
-    op->state = IoOperation::State::Idle;
-
     if (_readOps[op->fd] == nullptr && _writeOps[op->fd] == nullptr)
     {
         _reactor.delHandler (op->fd);
@@ -449,6 +445,8 @@ int Proactor::cancelOperation (IoOperation* op) noexcept
     {
         op->handler->onCancel (op, -ECANCELED);
     }
+
+    op->state = IoOperation::State::Idle;
 
     return 0;
 }
@@ -568,12 +566,13 @@ int Proactor::executeOperation (IoOperation* op) noexcept
 
             case IoOperation::Opcode::Connect:
                 {
-                    int err = ::connect (op->fd, op->data.connect.addr, op->data.connect.addrlen);
-                    if (err == -1 && errno == EINTR)
+                    int err = 0;
+                    socklen_t len = sizeof (err);
+                    if (::getsockopt (op->fd, SOL_SOCKET, SO_ERROR, &err, &len) == -1)
                     {
-                        continue;  // LCOV_EXCL_LINE
+                        return -errno;
                     }
-                    return err == -1 ? -errno : 0;
+                    return err ? -err : 0;
                 }
 
             case IoOperation::Opcode::Read:
@@ -678,7 +677,7 @@ void Proactor::onReadable (int fd)
 
     if (_writeOps[fd])
     {
-        _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
+        _reactor.addHandler (fd, this, false, true);
     }
     else
     {
@@ -711,7 +710,7 @@ void Proactor::onWriteable (int fd)
 
     if (_readOps[fd])
     {
-        _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
+        _reactor.addHandler (fd, this, true, false);
     }
     else
     {

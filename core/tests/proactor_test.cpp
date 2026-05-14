@@ -92,6 +92,9 @@ protected:
      */
     void onCancel (IoOperation* op, int result) override
     {
+        ProactorThread::proactor ()->submit (op);
+        ProactorThread::proactor ()->cancel (op);
+
         {
             ScopedLock<Mutex> lock (_mut);
             _result = result;
@@ -172,16 +175,11 @@ TEST_F (ProactorTest, makeAccept)
  */
 TEST_F (ProactorTest, makeConnect)
 {
-    sockaddr_storage addr = {};
-    socklen_t addrlen = sizeof (addr);
-
-    auto op = IoOperation::makeConnect (8, reinterpret_cast<sockaddr*> (&addr), addrlen, this);
+    auto op = IoOperation::makeConnect (8, this);
 
     ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Connect));
     ASSERT_EQ (op.handler, this);
-    ASSERT_EQ (op.data.connect.addr, reinterpret_cast<sockaddr*> (&addr));
-    ASSERT_EQ (op.data.connect.addrlen, addrlen);
 }
 
 /**
@@ -468,6 +466,34 @@ TEST_F (ProactorTest, asyncAccept)
         _op = nullptr;
         _result = 0;
     }
+}
+
+/**
+ * @brief Test async connect.
+ */
+TEST_F (ProactorTest, asyncConnect)
+{
+    ASSERT_EQ (_client.open (Tcp::v4 ()), 0) << join::lastError.message ();
+    _client.setMode (Tcp::Socket::NonBlocking);
+
+    ASSERT_EQ (_client.connect ({_host, _port}), -1);
+    ASSERT_EQ (join::lastError, Errc::TemporaryError);
+
+    auto op = IoOperation::makeConnect (_client.handle (), this);
+    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0);
+
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &op && _result == 0;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    _client.setMode (Tcp::Socket::Blocking);
 }
 
 /**

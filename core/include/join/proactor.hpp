@@ -154,18 +154,6 @@ namespace join
         };
 
         /**
-         * @brief payload for connect.
-         */
-        struct ConnectData
-        {
-            /// peer address.
-            const sockaddr* addr;
-
-            /// peer address length.
-            socklen_t addrlen;
-        };
-
-        /**
          * @brief payload for read / read fixed / write / write fixed.
          */
         struct RwData
@@ -198,7 +186,6 @@ namespace join
         union Data
         {
             AcceptData accept;
-            ConnectData connect;
             RwData rw;
             MsgData msg;
         };
@@ -218,13 +205,10 @@ namespace join
         /**
          * @brief build a connect operation.
          * @param fd socket file descriptor.
-         * @param addr peer address.
-         * @param addrlen peer address length.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.
          */
-        static IoOperation makeConnect (int fd, const sockaddr* addr, socklen_t addrlen,
-                                        CompletionHandler* handler) noexcept;
+        static IoOperation makeConnect (int fd, CompletionHandler* handler) noexcept;
 
         /**
          * @brief build a regular read operation.
