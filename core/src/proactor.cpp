@@ -546,7 +546,7 @@ int Proactor::executeOperation (IoOperation* op) noexcept
                     int fd = ::accept4 (op->fd, op->data.accept.addr, op->data.accept.addrlen, op->data.accept.flags);
                     if ((fd == -1) && (errno == EINTR))
                     {
-                        continue;
+                        continue;  // LCOV_EXCL_LINE
                     }
                     return (fd == -1) ? -errno : fd;
                 }
@@ -557,7 +557,7 @@ int Proactor::executeOperation (IoOperation* op) noexcept
                     ssize_t n = ::read (op->fd, op->data.rw.buf, op->data.rw.len);
                     if ((n == -1) && (errno == EINTR))
                     {
-                        continue;
+                        continue;  // LCOV_EXCL_LINE
                     }
                     return (n == -1) ? -errno : static_cast<int> (n);
                 }
@@ -568,7 +568,7 @@ int Proactor::executeOperation (IoOperation* op) noexcept
                     ssize_t n = ::write (op->fd, op->data.rw.buf, op->data.rw.len);
                     if ((n == -1) && (errno == EINTR))
                     {
-                        continue;
+                        continue;  // LCOV_EXCL_LINE
                     }
                     return (n == -1) ? -errno : static_cast<int> (n);
                 }
@@ -578,7 +578,7 @@ int Proactor::executeOperation (IoOperation* op) noexcept
                     ssize_t n = ::recvmsg (op->fd, op->data.msg.msg, op->data.msg.flags);
                     if ((n == -1) && (errno == EINTR))
                     {
-                        continue;
+                        continue;  // LCOV_EXCL_LINE
                     }
                     return (n == -1) ? -errno : static_cast<int> (n);
                 }
@@ -588,7 +588,7 @@ int Proactor::executeOperation (IoOperation* op) noexcept
                     ssize_t n = ::sendmsg (op->fd, op->data.msg.msg, op->data.msg.flags);
                     if ((n == -1) && (errno == EINTR))
                     {
-                        continue;
+                        continue;  // LCOV_EXCL_LINE
                     }
                     return (n == -1) ? -errno : static_cast<int> (n);
                 }

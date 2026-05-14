@@ -30,9 +30,6 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-// C.
-#include <arpa/inet.h>
-
 using join::Errc;
 using join::Mutex;
 using join::Condition;
@@ -79,6 +76,7 @@ protected:
             ScopedLock<Mutex> lock (_mut);
             _result = result;
             _op = op;
+            CompletionHandler::onComplete (op, result);
         }
 
         _cond.signal ();
@@ -95,6 +93,7 @@ protected:
             ScopedLock<Mutex> lock (_mut);
             _result = result;
             _op = op;
+            CompletionHandler::onCancel (op, result);
         }
 
         _cond.signal ();
@@ -147,6 +146,128 @@ int ProactorTest::_result = 0;
 char ProactorTest::_buf[256] = {};
 
 /**
+ * @brief Test makeAccept.
+ */
+TEST_F (ProactorTest, makeAccept)
+{
+    sockaddr_storage addr = {};
+    socklen_t addrlen = sizeof (addr);
+
+    auto op =
+        IoOperation::makeAccept (8, reinterpret_cast<sockaddr*> (&addr), &addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC, this);
+
+    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Accept));
+    ASSERT_EQ (op.handler, this);
+    ASSERT_EQ (op.data.accept.addr, reinterpret_cast<sockaddr*> (&addr));
+    ASSERT_EQ (op.data.accept.addrlen, &addrlen);
+    ASSERT_EQ (op.data.accept.flags, SOCK_NONBLOCK | SOCK_CLOEXEC);
+}
+
+/**
+ * @brief Test makeRead.
+ */
+TEST_F (ProactorTest, makeRead)
+{
+    auto op = IoOperation::makeRead (8, _buf, sizeof (_buf), this);
+
+    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Read));
+    ASSERT_EQ (op.handler, this);
+    ASSERT_EQ (op.data.rw.buf, _buf);
+    ASSERT_EQ (op.data.rw.len, sizeof (_buf));
+    ASSERT_EQ (op.data.rw.index, 0);
+    ASSERT_EQ (op.data.rw.fixed, false);
+}
+
+/**
+ * @brief Test makeWrite.
+ */
+TEST_F (ProactorTest, makeWrite)
+{
+    auto op = IoOperation::makeWrite (8, _buf, sizeof (_buf), this);
+
+    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Write));
+    ASSERT_EQ (op.handler, this);
+    ASSERT_EQ (op.data.rw.buf, _buf);
+    ASSERT_EQ (op.data.rw.len, sizeof (_buf));
+    ASSERT_EQ (op.data.rw.index, 0);
+    ASSERT_EQ (op.data.rw.fixed, false);
+}
+
+/**
+ * @brief Test makeReadFixed.
+ */
+TEST_F (ProactorTest, makeReadFixed)
+{
+    auto op = IoOperation::makeReadFixed (8, _buf, sizeof (_buf), 6, this);
+
+    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::ReadFixed));
+    ASSERT_EQ (op.handler, this);
+    ASSERT_EQ (op.data.rw.buf, _buf);
+    ASSERT_EQ (op.data.rw.len, sizeof (_buf));
+    ASSERT_EQ (op.data.rw.index, 6);
+    ASSERT_EQ (op.data.rw.fixed, true);
+}
+
+/**
+ * @brief Test makeWriteFixed.
+ */
+TEST_F (ProactorTest, makeWriteFixed)
+{
+    auto op = IoOperation::makeWriteFixed (8, _buf, sizeof (_buf), 6, this);
+
+    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::WriteFixed));
+    ASSERT_EQ (op.handler, this);
+    ASSERT_EQ (op.data.rw.buf, _buf);
+    ASSERT_EQ (op.data.rw.len, sizeof (_buf));
+    ASSERT_EQ (op.data.rw.index, 6);
+    ASSERT_EQ (op.data.rw.fixed, true);
+}
+
+/**
+ * @brief Test makeRecvmsg.
+ */
+TEST_F (ProactorTest, makeRecvmsg)
+{
+    iovec iov = {};
+    msghdr msg = {};
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+
+    auto op = IoOperation::makeRecvmsg (8, &msg, MSG_DONTWAIT, this);
+
+    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::RecvMsg));
+    ASSERT_EQ (op.handler, this);
+    ASSERT_EQ (op.data.msg.msg, &msg);
+    ASSERT_EQ (op.data.msg.flags, MSG_DONTWAIT);
+}
+
+/**
+ * @brief Test makeSendmsg.
+ */
+TEST_F (ProactorTest, makeSendmsg)
+{
+    const char* payload = "makeSendmsg";
+    iovec iov = {.iov_base = const_cast<char*> (payload), .iov_len = strlen (payload)};
+    msghdr msg = {};
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+
+    auto op = IoOperation::makeSendmsg (8, &msg, MSG_DONTWAIT, this);
+
+    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::SendMsg));
+    ASSERT_EQ (op.handler, this);
+    ASSERT_EQ (op.data.msg.msg, &msg);
+    ASSERT_EQ (op.data.msg.flags, MSG_DONTWAIT);
+}
+
+/**
  * @brief Test flush.
  */
 TEST_F (ProactorTest, flush)
@@ -194,7 +315,7 @@ TEST_F (ProactorTest, submit)
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    op1 = IoOperation::makeReadFixed (_server.handle (), _buf, sizeof (_buf), 0, this);
+    op1 = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
     op1.state = IoOperation::State::Submitted;
     ASSERT_EQ (proactor.submit (&op1), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -240,7 +361,7 @@ TEST_F (ProactorTest, cancel)
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    op1 = IoOperation::makeReadFixed (_server.handle (), _buf, sizeof (_buf), 0, this);
+    op1 = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.cancel (&op1), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 

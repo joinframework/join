@@ -99,18 +99,6 @@ Reactor::~Reactor () noexcept
 // =========================================================================
 int Reactor::addHandler (int fd, EventHandler* handler, bool wantRead, bool wantWrite, bool sync) noexcept
 {
-    if (JOIN_UNLIKELY (handler == nullptr))
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    if (JOIN_UNLIKELY (fd < 0))
-    {
-        lastError = std::make_error_code (std::errc::bad_file_descriptor);
-        return -1;
-    }
-
     uint32_t events = 0;
 
     if (wantRead)
@@ -121,12 +109,6 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool wantRead, bool want
     if (wantWrite)
     {
         events |= EPOLLOUT;
-    }
-
-    if (JOIN_UNLIKELY (events == 0))
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
     }
 
     if (isReactorThread ())
@@ -172,12 +154,6 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool wantRead, bool want
 // =========================================================================
 int Reactor::delHandler (int fd, bool sync) noexcept
 {
-    if (JOIN_UNLIKELY (fd < 0))
-    {
-        lastError = std::make_error_code (std::errc::bad_file_descriptor);
-        return -1;
-    }
-
     if (isReactorThread ())
     {
         return unregisterHandler (fd);
@@ -289,6 +265,24 @@ bool Reactor::isReactorThread () const noexcept
 // =========================================================================
 int Reactor::registerHandler (int fd, EventHandler* handler, uint32_t events) noexcept
 {
+    if (JOIN_UNLIKELY (handler == nullptr))
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY (fd < 0))
+    {
+        lastError = std::make_error_code (std::errc::bad_file_descriptor);
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY (events == 0))
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
+
     struct epoll_event ev = {};
     ev.events = events;
     ev.data.fd = fd;
@@ -326,6 +320,12 @@ int Reactor::registerHandler (int fd, EventHandler* handler, uint32_t events) no
 // =========================================================================
 int Reactor::unregisterHandler (int fd) noexcept
 {
+    if (JOIN_UNLIKELY (fd < 0))
+    {
+        lastError = std::make_error_code (std::errc::bad_file_descriptor);
+        return -1;
+    }
+
     if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_DEL, fd, nullptr) == -1))
     {
         if (errno == EBADF || errno == ENOENT)
