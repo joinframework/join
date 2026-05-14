@@ -83,19 +83,19 @@ namespace join
 
     protected:
         /**
-         * @brief method called when data are ready to be written on handle.
+         * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.
          */
-        virtual void onWriteable ([[maybe_unused]] int fd)
+        virtual void onReadable ([[maybe_unused]] int fd)
         {
             // do nothing.
         }
 
         /**
-         * @brief method called when data are ready to be read on handle.
+         * @brief method called when data are ready to be written on handle.
          * @param fd file descriptor.
          */
-        virtual void onReadable ([[maybe_unused]] int fd)
+        virtual void onWriteable ([[maybe_unused]] int fd)
         {
             // do nothing.
         }
@@ -246,7 +246,7 @@ namespace join
             uint32_t events;
             EventHandler* handler;
             std::atomic<bool>* done;
-            std::atomic<int>* errc;
+            std::error_code* errc;
         };
 
         /**

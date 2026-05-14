@@ -64,21 +64,6 @@ protected:
     }
 
     /**
-     * @brief method called when handle is ready to write.
-     * @param fd file descriptor.
-     */
-    virtual void onWriteable (int fd) override
-    {
-        {
-            ScopedLock<Mutex> lock (_mut);
-            _event = "onWriteable";
-            EventHandler::onWriteable (fd);
-        }
-
-        _cond.signal ();
-    }
-
-    /**
      * @brief method called when data are ready to be read/accepted on handle.
      * @param fd file descriptor.
      */
@@ -88,6 +73,21 @@ protected:
             ScopedLock<Mutex> lock (_mut);
             _server.readExactly (_event, _server.canRead ());
             EventHandler::onReadable (fd);
+        }
+
+        _cond.signal ();
+    }
+
+    /**
+     * @brief method called when handle is ready to write.
+     * @param fd file descriptor.
+     */
+    virtual void onWriteable (int fd) override
+    {
+        {
+            ScopedLock<Mutex> lock (_mut);
+            _event = "onWriteable";
+            EventHandler::onWriteable (fd);
         }
 
         _cond.signal ();
@@ -313,42 +313,6 @@ TEST_F (ReactorTest, mlock)
 }
 
 /**
- * @brief Test onWriteable.
- */
-TEST_F (ReactorTest, onWriteable)
-{
-    // connect socket.
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
-
-    // tun thread
-    ASSERT_EQ (ReactorThread::affinity (0), 0) << join::lastError.message ();
-    ASSERT_EQ (ReactorThread::affinity (), 0);
-    ASSERT_EQ (ReactorThread::priority (1), 0) << join::lastError.message ();
-    ASSERT_EQ (ReactorThread::priority (), 1);
-#ifdef JOIN_HAS_NUMA
-    ASSERT_EQ (ReactorThread::mbind (0), 0) << join::lastError.message ();
-#endif
-    ASSERT_EQ (ReactorThread::mlock (), 0) << join::lastError.message ();
-    ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
-
-    // add write handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this, false, true), 0) << join::lastError.message ();
-
-    // wait for the onWriteable notification.
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _event == "onWriteable";
-        }));
-        _event.clear ();
-    }
-
-    /// delete handler.
-    ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
-}
-
-/**
  * @brief Test onReadable.
  */
 TEST_F (ReactorTest, onReadable)
@@ -384,6 +348,42 @@ TEST_F (ReactorTest, onReadable)
     }
 
     // delete handler.
+    ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test onWriteable.
+ */
+TEST_F (ReactorTest, onWriteable)
+{
+    // connect socket.
+    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    // tun thread
+    ASSERT_EQ (ReactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::affinity (), 0);
+    ASSERT_EQ (ReactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::priority (), 1);
+#ifdef JOIN_HAS_NUMA
+    ASSERT_EQ (ReactorThread::mbind (0), 0) << join::lastError.message ();
+#endif
+    ASSERT_EQ (ReactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
+
+    // add write handler.
+    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this, false, true), 0) << join::lastError.message ();
+
+    // wait for the onWriteable notification.
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _event == "onWriteable";
+        }));
+        _event.clear ();
+    }
+
+    /// delete handler.
     ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
 }
 

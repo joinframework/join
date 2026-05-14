@@ -55,7 +55,7 @@ namespace join
          * @param groups netlink multicast group bitmask to subscribe to.
          * @param reactor event loop reactor.
          */
-        NetlinkManager (uint32_t groups, Reactor* reactor = nullptr);
+        NetlinkManager (uint32_t groups, Reactor* reactor = ReactorThread::reactor ());
 
         /**
          * @brief create instance by copy.
@@ -242,7 +242,7 @@ namespace join
         int _wakeup = -1;
 
         /// event loop reactor.
-        Reactor* _reactor;
+        Reactor* _reactor = nullptr;
     };
 }
 
