@@ -634,7 +634,7 @@ void Proactor::abortOperations (int fd, int result, bool cancelled) noexcept
 {
     if (JOIN_UNLIKELY (fd < 0 || static_cast<size_t> (fd) >= _readOps.size ()))
     {
-        return;
+        return;  // LCOV_EXCL_LINE
     }
 
     _reactor.delHandler (fd);
