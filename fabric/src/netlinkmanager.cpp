@@ -44,10 +44,6 @@ NetlinkManager::NetlinkManager (uint32_t groups, Reactor* reactor)
 {
     open (Netlink::rt ());
     bind (groups);
-    if (_reactor == nullptr)
-    {
-        _reactor = ReactorThread::reactor ();
-    }
 }
 
 // =========================================================================

@@ -70,7 +70,7 @@ namespace join
          * @param reactor reactor instance.
          */
         explicit BasicDatagramResolver (const std::string& server = {}, uint16_t port = Protocol::defaultPort,
-                                        Reactor* reactor = nullptr)
+                                        Reactor* reactor = ReactorThread::reactor ())
         : Socket ()
 #ifdef DEBUG
         , onSuccess (defaultOnSuccess)
@@ -81,7 +81,7 @@ namespace join
 #endif
         , _server (server)
         , _port (port)
-        , _reactor (reactor ? reactor : ReactorThread::reactor ())
+        , _reactor (reactor)
         , _buffer (std::make_unique<char[]> (Protocol::maxMsgSize))
         {
         }
@@ -1011,7 +1011,7 @@ namespace join
         uint16_t _port;
 
         /// event loop reactor.
-        Reactor* _reactor;
+        Reactor* _reactor = nullptr;
 
         /// reception buffer.
         std::unique_ptr<char[]> _buffer;
@@ -1049,7 +1049,7 @@ namespace join
          * @param reactor reactor instance.
          */
         explicit BasicTlsResolver (const std::string& server = {}, uint16_t port = Protocol::defaultPort,
-                                   Reactor* reactor = nullptr)
+                                   Reactor* reactor = ReactorThread::reactor ())
         : BasicDatagramResolver<Protocol> (server, port, reactor)
         {
         }
