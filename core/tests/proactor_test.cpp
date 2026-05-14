@@ -569,6 +569,48 @@ TEST_F (ProactorTest, asyncWrite)
 }
 
 /**
+ * @brief Test async read and write.
+ */
+TEST_F (ProactorTest, asyncReadWrite)
+{
+    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    const char* msg = "asyncReadWrite";
+    auto readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    auto writeOp = IoOperation::makeWrite (_server.handle (), msg, strlen (msg), this);
+
+    ASSERT_EQ (ProactorThread::proactor ()->submit (&readOp), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ()->submit (&writeOp), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &writeOp && _result > 0;
+        }));
+        ASSERT_EQ (_result, static_cast<int> (strlen (msg)));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (_client.writeExactly (msg, strlen (msg), _timeout), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &readOp && _result > 0;
+        }));
+        ASSERT_EQ (std::string (_buf, _result), msg);
+        _op = nullptr;
+        _result = 0;
+    }
+
+    char rbuf[256] = {};
+    ASSERT_EQ (_client.readExactly (rbuf, strlen (msg), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (std::string (rbuf, strlen (msg)), msg);
+}
+
+/**
  * @brief Test async recvmsg.
  */
 TEST_F (ProactorTest, asyncRecvmsg)

@@ -275,7 +275,7 @@ namespace join
         static IoOperation makeSendmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler) noexcept;
 
         /// file descriptor.
-        int fd;
+        int fd = -1;
 
         /// operation code.
         uint8_t code = 0;
@@ -455,8 +455,9 @@ namespace join
          * @brief abort both pending operations for fd with the given result.
          * @param fd file descriptor.
          * @param result negative errno to deliver to handlers.
+         * @param cancelled if true, dispatch to onCancel; otherwise to onComplete.
          */
-        void abortOperations (int fd, int result) noexcept;
+        void abortOperations (int fd, int result, bool cancelled = false) noexcept;
 
         /**
          * @brief method called when data are ready to be read on handle.

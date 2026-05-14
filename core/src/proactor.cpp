@@ -419,6 +419,7 @@ int Proactor::cancelOperation (IoOperation* op) noexcept
 
     if (JOIN_UNLIKELY ((isWrite && (_writeOps[op->fd] != op)) || (!isWrite && (_readOps[op->fd] != op))))
     {
+        op->state = IoOperation::State::Submitted;
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
@@ -432,13 +433,15 @@ int Proactor::cancelOperation (IoOperation* op) noexcept
         _readOps[op->fd] = nullptr;
     }
 
+    int ret = 0;
+
     if (_readOps[op->fd] == nullptr && _writeOps[op->fd] == nullptr)
     {
-        _reactor.delHandler (op->fd);
+        ret = _reactor.delHandler (op->fd);
     }
     else
     {
-        _reactor.addHandler (op->fd, this, _readOps[op->fd] != nullptr, _writeOps[op->fd] != nullptr);
+        ret = _reactor.addHandler (op->fd, this, _readOps[op->fd] != nullptr, _writeOps[op->fd] != nullptr);
     }
 
     if (op->handler)
@@ -448,7 +451,7 @@ int Proactor::cancelOperation (IoOperation* op) noexcept
 
     op->state = IoOperation::State::Idle;
 
-    return 0;
+    return ret;
 }
 
 // =========================================================================
@@ -497,7 +500,7 @@ void Proactor::processCommand (const Command& cmd) noexcept
             {
                 if (_readOps[fd] || _writeOps[fd])
                 {
-                    abortOperations (fd, -ECANCELED);
+                    abortOperations (fd, -ECANCELED, true);
                 }
             }
             break;
@@ -627,7 +630,7 @@ int Proactor::executeOperation (IoOperation* op) noexcept
 //   CLASS     : Proactor
 //   METHOD    : abortOperations
 // =========================================================================
-void Proactor::abortOperations (int fd, int result) noexcept
+void Proactor::abortOperations (int fd, int result, bool cancelled) noexcept
 {
     if (JOIN_UNLIKELY (fd < 0 || static_cast<size_t> (fd) >= _readOps.size ()))
     {
@@ -649,7 +652,14 @@ void Proactor::abortOperations (int fd, int result) noexcept
             op->state = IoOperation::State::Idle;
             if (op->handler)
             {
-                op->handler->onComplete (op, result);
+                if (cancelled)
+                {
+                    op->handler->onCancel (op, result);
+                }
+                else
+                {
+                    op->handler->onComplete (op, result);
+                }
             }
         }
     }
