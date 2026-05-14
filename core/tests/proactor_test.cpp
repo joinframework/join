@@ -168,6 +168,23 @@ TEST_F (ProactorTest, makeAccept)
 }
 
 /**
+ * @brief Test makeConnect.
+ */
+TEST_F (ProactorTest, makeConnect)
+{
+    sockaddr_storage addr = {};
+    socklen_t addrlen = sizeof (addr);
+
+    auto op = IoOperation::makeConnect (8, reinterpret_cast<sockaddr*> (&addr), addrlen, this);
+
+    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Connect));
+    ASSERT_EQ (op.handler, this);
+    ASSERT_EQ (op.data.connect.addr, reinterpret_cast<sockaddr*> (&addr));
+    ASSERT_EQ (op.data.connect.addrlen, addrlen);
+}
+
+/**
  * @brief Test makeRead.
  */
 TEST_F (ProactorTest, makeRead)

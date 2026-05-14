@@ -55,6 +55,22 @@ IoOperation IoOperation::makeAccept (int fd, sockaddr* addr, socklen_t* addrlen,
 
 // =========================================================================
 //   CLASS     : IoOperation
+//   METHOD    : makeConnect
+// =========================================================================
+IoOperation IoOperation::makeConnect (int fd, const sockaddr* addr, socklen_t addrlen,
+                                      CompletionHandler* handler) noexcept
+{
+    IoOperation op;
+    op.fd = fd;
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::Connect);
+    op.handler = handler;
+    op.data.connect.addr = addr;
+    op.data.connect.addrlen = addrlen;
+    return op;
+}
+
+// =========================================================================
+//   CLASS     : IoOperation
 //   METHOD    : makeRead
 // =========================================================================
 IoOperation IoOperation::makeRead (int fd, void* buf, uint32_t len, CompletionHandler* handler) noexcept
@@ -374,9 +390,7 @@ int Proactor::submitOperation (IoOperation* op) noexcept
 
     op->state = IoOperation::State::Submitted;
 
-    _reactor.addHandler (op->fd, this, _readOps[op->fd] != nullptr, _writeOps[op->fd] != nullptr);
-
-    return 0;
+    return _reactor.addHandler (op->fd, this, _readOps[op->fd] != nullptr, _writeOps[op->fd] != nullptr);
 }
 
 // =========================================================================
@@ -526,7 +540,8 @@ void Proactor::readCommands () noexcept
 // =========================================================================
 bool Proactor::isWriteOp (uint8_t code) noexcept
 {
-    return code == static_cast<uint8_t> (IoOperation::Opcode::Write) ||
+    return code == static_cast<uint8_t> (IoOperation::Opcode::Connect) ||
+           code == static_cast<uint8_t> (IoOperation::Opcode::Write) ||
            code == static_cast<uint8_t> (IoOperation::Opcode::WriteFixed) ||
            code == static_cast<uint8_t> (IoOperation::Opcode::SendMsg);
 }
@@ -549,6 +564,16 @@ int Proactor::executeOperation (IoOperation* op) noexcept
                         continue;  // LCOV_EXCL_LINE
                     }
                     return (fd == -1) ? -errno : fd;
+                }
+
+            case IoOperation::Opcode::Connect:
+                {
+                    int err = ::connect (op->fd, op->data.connect.addr, op->data.connect.addrlen);
+                    if (err == -1 && errno == EINTR)
+                    {
+                        continue;  // LCOV_EXCL_LINE
+                    }
+                    return err == -1 ? -errno : 0;
                 }
 
             case IoOperation::Opcode::Read:
@@ -624,7 +649,9 @@ void Proactor::abortOperations (int fd, int result) noexcept
         {
             op->state = IoOperation::State::Idle;
             if (op->handler)
+            {
                 op->handler->onComplete (op, result);
+            }
         }
     }
 }

@@ -129,6 +129,7 @@ namespace join
         enum class Opcode : uint8_t
         {
             Accept,
+            Connect,
             Read,
             Write,
             ReadFixed,
@@ -142,7 +143,7 @@ namespace join
          */
         struct AcceptData
         {
-            /// peer address output buffer.
+            /// peer address.
             sockaddr* addr;
 
             /// peer address length.
@@ -150,6 +151,18 @@ namespace join
 
             /// accept flags.
             int flags;
+        };
+
+        /**
+         * @brief payload for connect.
+         */
+        struct ConnectData
+        {
+            /// peer address.
+            const sockaddr* addr;
+
+            /// peer address length.
+            socklen_t addrlen;
         };
 
         /**
@@ -185,6 +198,7 @@ namespace join
         union Data
         {
             AcceptData accept;
+            ConnectData connect;
             RwData rw;
             MsgData msg;
         };
@@ -192,14 +206,25 @@ namespace join
         /**
          * @brief build an accept operation.
          * @param fd listening socket file descriptor.
-         * @param addr peer address output buffer.
-         * @param addrlen peer address length output.
+         * @param addr peer address.
+         * @param addrlen peer address length.
          * @param flags accept flags.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.
          */
         static IoOperation makeAccept (int fd, sockaddr* addr, socklen_t* addrlen, int flags,
                                        CompletionHandler* handler) noexcept;
+
+        /**
+         * @brief build a connect operation.
+         * @param fd socket file descriptor.
+         * @param addr peer address.
+         * @param addrlen peer address length.
+         * @param handler handler to notify on completion.
+         * @return initialized IoOperation.
+         */
+        static IoOperation makeConnect (int fd, const sockaddr* addr, socklen_t addrlen,
+                                        CompletionHandler* handler) noexcept;
 
         /**
          * @brief build a regular read operation.
