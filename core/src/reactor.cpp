@@ -135,7 +135,7 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool wantRead, bool want
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
-    std::atomic<int> errc{0}, *perrc = nullptr;
+    std::error_code errc, *perrc = nullptr;
 
     if (JOIN_LIKELY (sync))
     {
@@ -156,10 +156,9 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool wantRead, bool want
             backoff ();
         }
 
-        int err = errc.load (std::memory_order_acquire);
-        if (JOIN_UNLIKELY (err != 0))
+        if (JOIN_UNLIKELY (errc))
         {
-            lastError = std::make_error_code (static_cast<std::errc> (err));
+            lastError = errc;
             return -1;
         }
     }
@@ -185,7 +184,7 @@ int Reactor::delHandler (int fd, bool sync) noexcept
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
-    std::atomic<int> errc{0}, *perrc = nullptr;
+    std::error_code errc, *perrc = nullptr;
 
     if (JOIN_LIKELY (sync))
     {
@@ -206,10 +205,9 @@ int Reactor::delHandler (int fd, bool sync) noexcept
             backoff ();
         }
 
-        int err = errc.load (std::memory_order_acquire);
-        if (JOIN_UNLIKELY (err != 0))
+        if (JOIN_UNLIKELY (errc))
         {
-            lastError = std::make_error_code (static_cast<std::errc> (err));
+            lastError = errc;
             return -1;
         }
     }
@@ -389,7 +387,7 @@ void Reactor::processCommand (const Command& cmd) noexcept
     {
         if (cmd.errc && (err != 0))
         {
-            cmd.errc->store (lastError.value (), std::memory_order_release);
+            *cmd.errc = lastError;
         }
         cmd.done->store (true, std::memory_order_release);
     }

@@ -32,6 +32,11 @@ target_link_libraries(reactor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME reactor.gtest COMMAND reactor.gtest)
 install(TARGETS reactor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(proactor.gtest proactor_test.cpp)
+target_link_libraries(proactor.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME proactor.gtest COMMAND proactor.gtest)
+install(TARGETS proactor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(realtimetimer.gtest realtimetimer_test.cpp)
 target_link_libraries(realtimetimer.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME realtimetimer.gtest COMMAND realtimetimer.gtest)

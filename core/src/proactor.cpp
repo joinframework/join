@@ -38,7 +38,7 @@ using join::ProactorThread;
 
 // =========================================================================
 //   CLASS     : IoOperation
-//   METHOD    : makeRead
+//   METHOD    : makeAccept
 // =========================================================================
 IoOperation IoOperation::makeAccept (int fd, sockaddr* addr, socklen_t* addrlen, int flags,
                                      CompletionHandler* handler) noexcept
@@ -190,19 +190,13 @@ Proactor::~Proactor () noexcept
 // =========================================================================
 int Proactor::submit (IoOperation* op, bool sync) noexcept
 {
-    if (JOIN_UNLIKELY (op == nullptr))
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
     if (isProactorThread ())
     {
         return submitOperation (op);
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
-    std::atomic<int> errc{0}, *perrc = nullptr;
+    std::error_code errc, *perrc = nullptr;
 
     if (JOIN_LIKELY (sync))
     {
@@ -223,10 +217,9 @@ int Proactor::submit (IoOperation* op, bool sync) noexcept
             backoff ();
         }
 
-        int err = errc.load (std::memory_order_acquire);
-        if (JOIN_UNLIKELY (err != 0))
+        if (JOIN_UNLIKELY (errc))
         {
-            lastError = std::make_error_code (static_cast<std::errc> (err));
+            lastError = errc;
             return -1;
         }
     }
@@ -240,19 +233,13 @@ int Proactor::submit (IoOperation* op, bool sync) noexcept
 // =========================================================================
 int Proactor::cancel (IoOperation* op, bool sync) noexcept
 {
-    if (JOIN_UNLIKELY (op == nullptr))
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
     if (isProactorThread ())
     {
         return cancelOperation (op);
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
-    std::atomic<int> errc{0}, *perrc = nullptr;
+    std::error_code errc, *perrc = nullptr;
 
     if (JOIN_LIKELY (sync))
     {
@@ -273,10 +260,9 @@ int Proactor::cancel (IoOperation* op, bool sync) noexcept
             backoff ();
         }
 
-        int err = errc.load (std::memory_order_acquire);
-        if (JOIN_UNLIKELY (err != 0))
+        if (JOIN_UNLIKELY (errc))
         {
-            lastError = std::make_error_code (static_cast<std::errc> (err));
+            lastError = errc;
             return -1;
         }
     }
@@ -509,7 +495,7 @@ void Proactor::processCommand (const Command& cmd) noexcept
     {
         if (cmd.errc && (err != 0))
         {
-            cmd.errc->store (lastError.value (), std::memory_order_release);
+            *cmd.errc = lastError;
         }
         cmd.done->store (true, std::memory_order_release);
     }
@@ -540,16 +526,9 @@ void Proactor::readCommands () noexcept
 // =========================================================================
 bool Proactor::isWriteOp (uint8_t code) noexcept
 {
-    switch (static_cast<IoOperation::Opcode> (code))
-    {
-        case IoOperation::Opcode::Write:
-        case IoOperation::Opcode::WriteFixed:
-        case IoOperation::Opcode::SendMsg:
-            return true;
-
-        default:
-            return false;
-    }
+    return code == static_cast<uint8_t> (IoOperation::Opcode::Write) ||
+           code == static_cast<uint8_t> (IoOperation::Opcode::WriteFixed) ||
+           code == static_cast<uint8_t> (IoOperation::Opcode::SendMsg);
 }
 
 // =========================================================================

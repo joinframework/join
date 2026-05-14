@@ -246,7 +246,7 @@ namespace join
             uint32_t events;
             EventHandler* handler;
             std::atomic<bool>* done;
-            std::atomic<int>* errc;
+            std::error_code* errc;
         };
 
         /**

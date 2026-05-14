@@ -190,6 +190,17 @@ namespace join
         };
 
         /**
+         * @brief build a connect operation.
+         * @param fd socket file descriptor.
+         * @param addr peer address.
+         * @param addrlen peer address length.
+         * @param handler handler to notify on completion.
+         * @return initialized IoOperation.
+         */
+        static IoOperation makeConnect (int fd, const sockaddr* addr, socklen_t addrlen,
+                                        CompletionHandler* handler) noexcept;
+
+        /**
          * @brief build an accept operation.
          * @param fd listening socket file descriptor.
          * @param addr peer address output buffer.
@@ -393,7 +404,7 @@ namespace join
             CommandType type;
             IoOperation* op;
             std::atomic<bool>* done;
-            std::atomic<int>* errc;
+            std::error_code* errc;
         };
 
         /**
