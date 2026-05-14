@@ -58,7 +58,7 @@ namespace join
          * @param interface interface name.
          * @param neighbors neighbor manager to use (uses NeighborManager::instance if nullptr).
          */
-        Arp (const std::string& interface, NeighborManager* neighbors = nullptr);
+        Arp (const std::string& interface, NeighborManager& neighbors = NeighborManager::instance ());
 
         /**
          * @brief create instance by copy.
@@ -382,7 +382,7 @@ namespace join
         const std::string _interface;
 
         /// neighbor manager
-        NeighborManager* _neighbors = nullptr;
+        NeighborManager& _neighbors;
 
         /// event loop reactor.
         Reactor* const _reactor = nullptr;
