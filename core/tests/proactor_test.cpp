@@ -315,6 +315,10 @@ TEST_F (ProactorTest, submit)
     ASSERT_EQ (proactor.submit (&op1), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
+    op1 = IoOperation::makeRead (2048, _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (&op1), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
@@ -359,6 +363,10 @@ TEST_F (ProactorTest, cancel)
 
     auto op1 = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.cancel (&op1), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    op1 = IoOperation::makeRead (2048, _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (&op1), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
