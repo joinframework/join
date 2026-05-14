@@ -72,6 +72,9 @@ protected:
      */
     void onComplete (IoOperation* op, int result) override
     {
+        ProactorThread::proactor ()->submit (op);
+        ProactorThread::proactor ()->cancel (op);
+
         {
             ScopedLock<Mutex> lock (_mut);
             _result = result;
