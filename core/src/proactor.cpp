@@ -125,21 +125,6 @@ IoOperation IoOperation::makeWriteFixed (int fd, const void* buf, uint32_t len, 
 
 // =========================================================================
 //   CLASS     : IoOperation
-//   METHOD    : makeSendmsg
-// =========================================================================
-IoOperation IoOperation::makeSendmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler) noexcept
-{
-    IoOperation op;
-    op.fd = fd;
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::SendMsg);
-    op.handler = handler;
-    op.data.msg.msg = msg;
-    op.data.msg.flags = flags;
-    return op;
-}
-
-// =========================================================================
-//   CLASS     : IoOperation
 //   METHOD    : makeRecvmsg
 // =========================================================================
 IoOperation IoOperation::makeRecvmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler) noexcept
@@ -154,14 +139,29 @@ IoOperation IoOperation::makeRecvmsg (int fd, msghdr* msg, int flags, Completion
 }
 
 // =========================================================================
+//   CLASS     : IoOperation
+//   METHOD    : makeSendmsg
+// =========================================================================
+IoOperation IoOperation::makeSendmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler) noexcept
+{
+    IoOperation op;
+    op.fd = fd;
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::SendMsg);
+    op.handler = handler;
+    op.data.msg.msg = msg;
+    op.data.msg.flags = flags;
+    return op;
+}
+
+// =========================================================================
 //   CLASS     : Proactor
 //   METHOD    : Proactor
 // =========================================================================
 Proactor::Proactor ()
 : _wakeup (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
 , _commands (_queueSize)
-, _writeOps (256, nullptr)
 , _readOps (256, nullptr)
+, _writeOps (256, nullptr)
 {
     if (_wakeup == -1)
     {
@@ -613,50 +613,18 @@ void Proactor::abortOperations (int fd, int result) noexcept
     _reactor.delHandler (fd);
 
     IoOperation* rOp = _readOps[fd];
-    IoOperation* wOp = _writeOps[fd];
     _readOps[fd] = nullptr;
+
+    IoOperation* wOp = _writeOps[fd];
     _writeOps[fd] = nullptr;
 
-    for (IoOperation* op : {rOp, wOp})
+    for (IoOperation* op : {wOp, rOp})
     {
         if (op)
         {
             op->state = IoOperation::State::Idle;
             if (op->handler)
                 op->handler->onComplete (op, result);
-        }
-    }
-}
-
-// =========================================================================
-//   CLASS     : Proactor
-//   METHOD    : onWriteable
-// =========================================================================
-void Proactor::onWriteable (int fd)
-{
-    if (JOIN_UNLIKELY (fd < 0 || static_cast<size_t> (fd) >= _readOps.size ()))
-    {
-        return;  // LCOV_EXCL_LINE
-    }
-
-    IoOperation* op = _writeOps[fd];
-    _writeOps[fd] = nullptr;
-
-    if (_readOps[fd])
-    {
-        _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
-    }
-    else
-    {
-        _reactor.delHandler (fd);
-    }
-
-    if (op)
-    {
-        op->state = IoOperation::State::Idle;
-        if (op->handler)
-        {
-            op->handler->onComplete (op, executeOperation (op));
         }
     }
 }
@@ -682,6 +650,39 @@ void Proactor::onReadable (int fd)
     _readOps[fd] = nullptr;
 
     if (_writeOps[fd])
+    {
+        _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
+    }
+    else
+    {
+        _reactor.delHandler (fd);
+    }
+
+    if (op)
+    {
+        op->state = IoOperation::State::Idle;
+        if (op->handler)
+        {
+            op->handler->onComplete (op, executeOperation (op));
+        }
+    }
+}
+
+// =========================================================================
+//   CLASS     : Proactor
+//   METHOD    : onWriteable
+// =========================================================================
+void Proactor::onWriteable (int fd)
+{
+    if (JOIN_UNLIKELY (fd < 0 || static_cast<size_t> (fd) >= _readOps.size ()))
+    {
+        return;  // LCOV_EXCL_LINE
+    }
+
+    IoOperation* op = _writeOps[fd];
+    _writeOps[fd] = nullptr;
+
+    if (_readOps[fd])
     {
         _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
     }

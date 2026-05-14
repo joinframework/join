@@ -153,7 +153,7 @@ namespace join
         };
 
         /**
-         * @brief payload for read / write / ReadFixed / WriteFixed.
+         * @brief payload for read / read fixed / write / write fixed.
          */
         struct RwData
         {
@@ -188,17 +188,6 @@ namespace join
             RwData rw;
             MsgData msg;
         };
-
-        /**
-         * @brief build a connect operation.
-         * @param fd socket file descriptor.
-         * @param addr peer address.
-         * @param addrlen peer address length.
-         * @param handler handler to notify on completion.
-         * @return initialized IoOperation.
-         */
-        static IoOperation makeConnect (int fd, const sockaddr* addr, socklen_t addrlen,
-                                        CompletionHandler* handler) noexcept;
 
         /**
          * @brief build an accept operation.
@@ -257,16 +246,6 @@ namespace join
                                            CompletionHandler* handler) noexcept;
 
         /**
-         * @brief build a send-message operation.
-         * @param fd socket file descriptor.
-         * @param msg message header.
-         * @param flags send flags.
-         * @param handler handler to notify on completion.
-         * @return initialized IoOperation.
-         */
-        static IoOperation makeSendmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler) noexcept;
-
-        /**
          * @brief build a receive-message operation.
          * @param fd socket file descriptor.
          * @param msg message header.
@@ -275,6 +254,16 @@ namespace join
          * @return initialized IoOperation.
          */
         static IoOperation makeRecvmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler) noexcept;
+
+        /**
+         * @brief build a send-message operation.
+         * @param fd socket file descriptor.
+         * @param msg message header.
+         * @param flags send flags.
+         * @param handler handler to notify on completion.
+         * @return initialized IoOperation.
+         */
+        static IoOperation makeSendmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler) noexcept;
 
         /// file descriptor.
         int fd;
@@ -461,16 +450,16 @@ namespace join
         void abortOperations (int fd, int result) noexcept;
 
         /**
-         * @brief method called when data are ready to be written on handle.
-         * @param fd file descriptor.
-         */
-        void onWriteable (int fd) override;
-
-        /**
          * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.
          */
         void onReadable (int fd) override;
+
+        /**
+         * @brief method called when data are ready to be written on handle.
+         * @param fd file descriptor.
+         */
+        void onWriteable (int fd) override;
 
         /**
          * @brief method called when handle was closed by the peer.
@@ -493,11 +482,11 @@ namespace join
         /// running flag.
         std::atomic<bool> _running{false};
 
-        /// pending write operations.
-        std::vector<IoOperation*> _writeOps;
-
         /// pending read operations.
         std::vector<IoOperation*> _readOps;
+
+        /// pending write operations.
+        std::vector<IoOperation*> _writeOps;
 
         /// reactor instance.
         Reactor _reactor;

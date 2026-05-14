@@ -322,6 +322,40 @@ TEST_F (ProactorTest, asyncAccept)
 }
 
 /**
+ * @brief Test async read.
+ */
+TEST_F (ProactorTest, asyncRead)
+{
+    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::affinity (), 0);
+    ASSERT_EQ (ProactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::priority (), 1);
+#ifdef JOIN_HAS_NUMA
+    ASSERT_EQ (ProactorThread::mbind (0), 0) << join::lastError.message ();
+#endif
+    ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (ProactorThread::handle (), 0);
+
+    auto op = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+
+    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("asyncRead", strlen ("asyncRead"), _timeout), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &op && _result > 0;
+        }));
+        ASSERT_EQ (std::string (_buf, _result), "asyncRead");
+        _op = nullptr;
+        _result = 0;
+    }
+}
+
+/**
  * @brief Test async write.
  */
 TEST_F (ProactorTest, asyncWrite)
@@ -360,9 +394,9 @@ TEST_F (ProactorTest, asyncWrite)
 }
 
 /**
- * @brief Test async read.
+ * @brief Test async recvmsg.
  */
-TEST_F (ProactorTest, asyncRead)
+TEST_F (ProactorTest, asyncRecvmsg)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
@@ -377,17 +411,22 @@ TEST_F (ProactorTest, asyncRead)
     ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
     ASSERT_GT (ProactorThread::handle (), 0);
 
-    auto op = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    iovec iov = {.iov_base = _buf, .iov_len = sizeof (_buf)};
+    msghdr msg = {};
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    auto op = IoOperation::makeRecvmsg (_server.handle (), &msg, 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0) << join::lastError.message ();
-    ASSERT_EQ (_client.writeExactly ("asyncRead", strlen ("asyncRead"), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("asyncRecvmsg", strlen ("asyncRecvmsg"), _timeout), 0)
+        << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
             return _op == &op && _result > 0;
         }));
-        ASSERT_EQ (std::string (_buf, _result), "asyncRead");
+        ASSERT_EQ (std::string (_buf, _result), "asyncRecvmsg");
         _op = nullptr;
         _result = 0;
     }
@@ -433,45 +472,6 @@ TEST_F (ProactorTest, asyncSendmsg)
     char rbuf[256] = {};
     ASSERT_EQ (_client.readExactly (rbuf, strlen (payload), _timeout), 0) << join::lastError.message ();
     ASSERT_EQ (std::string (rbuf, strlen (payload)), payload);
-}
-
-/**
- * @brief Test async recvmsg.
- */
-TEST_F (ProactorTest, asyncRecvmsg)
-{
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
-
-    ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::affinity (), 0);
-    ASSERT_EQ (ProactorThread::priority (1), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::priority (), 1);
-#ifdef JOIN_HAS_NUMA
-    ASSERT_EQ (ProactorThread::mbind (0), 0) << join::lastError.message ();
-#endif
-    ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
-    ASSERT_GT (ProactorThread::handle (), 0);
-
-    iovec iov = {.iov_base = _buf, .iov_len = sizeof (_buf)};
-    msghdr msg = {};
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;
-    auto op = IoOperation::makeRecvmsg (_server.handle (), &msg, 0, this);
-
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0) << join::lastError.message ();
-    ASSERT_EQ (_client.writeExactly ("asyncRecvmsg", strlen ("asyncRecvmsg"), _timeout), 0)
-        << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _op == &op && _result > 0;
-        }));
-        ASSERT_EQ (std::string (_buf, _result), "asyncRecvmsg");
-        _op = nullptr;
-        _result = 0;
-    }
 }
 
 /**
