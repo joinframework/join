@@ -336,7 +336,7 @@ namespace join
          * @brief get the global Reactor instance.
          * @return reference to the singleton Reactor.
          */
-        static Reactor* reactor ();
+        static Reactor& reactor ();
 
         /**
          * @brief set reactor thread affinity.

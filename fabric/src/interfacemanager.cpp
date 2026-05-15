@@ -38,7 +38,7 @@ using join::InterfaceManager;
 //   CLASS     : InterfaceManager
 //   METHOD    : InterfaceManager
 // =========================================================================
-InterfaceManager::InterfaceManager (Reactor* reactor)
+InterfaceManager::InterfaceManager (Reactor& reactor)
 : NetlinkManager (RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR, reactor)
 {
     start ();

@@ -29,7 +29,6 @@
 #include <join/protocol.hpp>
 #include <join/endpoint.hpp>
 #include <join/openssl.hpp>
-#include <join/reactor.hpp>
 #include <join/utils.hpp>
 #include <join/error.hpp>
 
@@ -56,7 +55,7 @@ namespace join
      * @brief basic socket class.
      */
     template <class Protocol>
-    class BasicSocket : public EventHandler
+    class BasicSocket
     {
     public:
         using Ptr = std::unique_ptr<BasicSocket<Protocol>>;

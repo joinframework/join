@@ -45,7 +45,7 @@ namespace join
     /**
      * @brief ARP protocol class.
      */
-    class Arp : public Raw::Socket
+    class Arp : public Raw::Socket, public EventHandler
     {
     public:
         /**
@@ -204,7 +204,7 @@ namespace join
 
             ScopedLock<Mutex> lock (_syncMutex);
 
-            _reactor->addHandler (handle (), this);
+            _reactor.addHandler (handle (), this);
 
             uint32_t tip;
             ::memcpy (&tip, &out.arp.ar_tip, sizeof (tip));
@@ -212,7 +212,7 @@ namespace join
             if (!inserted.second)
             {
                 // LCOV_EXCL_START
-                _reactor->delHandler (handle ());
+                _reactor.delHandler (handle ());
                 close ();
                 lastError = make_error_code (Errc::OperationFailed);
                 return {};
@@ -223,7 +223,7 @@ namespace join
             {
                 // LCOV_EXCL_START
                 _pending.erase (inserted.first);
-                _reactor->delHandler (handle ());
+                _reactor.delHandler (handle ());
                 close ();
                 return {};
                 // LCOV_EXCL_STOP
@@ -232,7 +232,7 @@ namespace join
             if (!inserted.first->second->cond.timedWait (lock, timeout))
             {
                 _pending.erase (inserted.first);
-                _reactor->delHandler (handle ());
+                _reactor.delHandler (handle ());
                 close ();
                 lastError = std::make_error_code (std::errc::no_such_device_or_address);
                 return {};
@@ -240,7 +240,7 @@ namespace join
 
             MacAddress mac = inserted.first->second->mac;
             _pending.erase (inserted.first);
-            _reactor->delHandler (handle ());
+            _reactor.delHandler (handle ());
             close ();
 
             return mac;
@@ -385,7 +385,7 @@ namespace join
         NeighborManager& _neighbors;
 
         /// event loop reactor.
-        Reactor* const _reactor = nullptr;
+        Reactor& _reactor;
     };
 }
 

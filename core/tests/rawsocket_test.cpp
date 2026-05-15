@@ -38,12 +38,13 @@ using join::Errc;
 using join::MacAddress;
 using join::IpAddress;
 using join::ReactorThread;
+using join::EventHandler;
 using join::Raw;
 
 /**
  * @brief Class used to test the raw socket API.
  */
-class RawSocket : public Raw::Socket, public ::testing::Test
+class RawSocket : public Raw::Socket, public EventHandler, public ::testing::Test
 {
 public:
     /**
@@ -88,7 +89,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->bind (_interface), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -96,7 +97,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 

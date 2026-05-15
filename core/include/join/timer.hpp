@@ -51,7 +51,7 @@ namespace join
          * @brief create instance.
          * @param reactor event loop reactor.
          */
-        explicit BasicTimer (Reactor* reactor = ReactorThread::reactor ())
+        explicit BasicTimer (Reactor& reactor = ReactorThread::reactor ())
         : _handle (timerfd_create (ClockPolicy::type (), TFD_NONBLOCK | TFD_CLOEXEC))
         , _reactor (reactor)
         {
@@ -60,7 +60,7 @@ namespace join
                 throw std::system_error (errno, std::system_category (), "timerfd_create failed");
             }
 
-            _reactor->addHandler (_handle, this);
+            _reactor.addHandler (_handle, this);
         }
 
         /**
@@ -94,7 +94,7 @@ namespace join
          */
         ~BasicTimer () noexcept
         {
-            _reactor->delHandler (_handle);
+            _reactor.delHandler (_handle);
             if (_handle != -1)
             {
                 close (_handle);
@@ -285,7 +285,7 @@ namespace join
         int _handle = -1;
 
         /// event loop reactor.
-        Reactor* _reactor = nullptr;
+        Reactor& _reactor;
     };
 }
 

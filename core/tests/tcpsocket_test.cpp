@@ -32,12 +32,13 @@
 using join::Errc;
 using join::IpAddress;
 using join::ReactorThread;
+using join::EventHandler;
 using join::Tcp;
 
 /**
  * @brief Class used to test the TCP socket API.
  */
-class TcpSocket : public Tcp::Acceptor, public ::testing::Test
+class TcpSocket : public Tcp::Acceptor, public EventHandler, public ::testing::Test
 {
 protected:
     /**
@@ -46,7 +47,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -54,7 +55,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 

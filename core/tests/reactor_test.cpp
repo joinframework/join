@@ -99,9 +99,9 @@ protected:
      */
     virtual void onClose (int fd) override
     {
-        ReactorThread::reactor ()->delHandler (handle ());
-        ReactorThread::reactor ()->addHandler (handle (), this, true, false);
-        ReactorThread::reactor ()->delHandler (handle ());
+        ReactorThread::reactor ().delHandler (handle ());
+        ReactorThread::reactor ().addHandler (handle (), this, true, false);
+        ReactorThread::reactor ().delHandler (handle ());
         _server.close ();
 
         {
@@ -119,9 +119,9 @@ protected:
      */
     virtual void onError (int fd) override
     {
-        ReactorThread::reactor ()->delHandler (handle ());
-        ReactorThread::reactor ()->addHandler (handle (), this, true, false);
-        ReactorThread::reactor ()->delHandler (handle ());
+        ReactorThread::reactor ().delHandler (handle ());
+        ReactorThread::reactor ().addHandler (handle (), this, true, false);
+        ReactorThread::reactor ().delHandler (handle ());
         _server.close ();
 
         {
@@ -333,7 +333,7 @@ TEST_F (ReactorTest, onReadable)
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add read handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this, true, false), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // write random data.
     ASSERT_EQ (_client.writeExactly ("onReadable", strlen ("onReadable"), _timeout), 0) << join::lastError.message ();
@@ -348,7 +348,7 @@ TEST_F (ReactorTest, onReadable)
     }
 
     // delete handler.
-    ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
 }
 
 /**
@@ -372,7 +372,7 @@ TEST_F (ReactorTest, onWriteable)
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add write handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this, false, true), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this, false, true), 0) << join::lastError.message ();
 
     // wait for the onWriteable notification.
     {
@@ -384,7 +384,7 @@ TEST_F (ReactorTest, onWriteable)
     }
 
     /// delete handler.
-    ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
 }
 
 /**
@@ -408,7 +408,7 @@ TEST_F (ReactorTest, onClose)
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this, true, false), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // close immediately.
     _client.close ();
@@ -444,7 +444,7 @@ TEST_F (ReactorTest, onError)
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this, true, false), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // reset connection.
     struct linger sl
