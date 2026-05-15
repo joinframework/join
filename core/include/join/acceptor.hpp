@@ -306,7 +306,8 @@ namespace join
             socklen_t sa_len = sizeof (struct sockaddr_storage);
             Socket sock;
 
-            sock._handle = ::accept (this->_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len);
+            sock._handle = ::accept4 (this->_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len,
+                                      SOCK_NONBLOCK | SOCK_CLOEXEC);
             if (sock._handle == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
@@ -320,7 +321,6 @@ namespace join
             {
                 sock.setOption (Socket::NoDelay, 1);
             }
-            sock.setMode (Socket::NonBlocking);
 
             return sock;
         }
