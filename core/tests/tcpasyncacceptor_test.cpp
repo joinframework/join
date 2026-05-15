@@ -32,10 +32,9 @@
 using join::Errc;
 using join::IpAddress;
 using join::Tcp;
+using join::Thread;
 using join::Condition;
 using join::Mutex;
-using join::Thread;
-using join::Proactor;
 
 IpAddress address = "::1";
 uint16_t port = 5000;
@@ -95,11 +94,6 @@ TEST (TcpAsyncAcceptor, close)
  */
 TEST (TcpAsyncAcceptor, accept)
 {
-    Proactor proactor;
-    Thread th ([&proactor] () {
-        proactor.run ();
-    });
-
     Tcp::AsyncSocket clientSocket (Tcp::AsyncSocket::Blocking);
     Tcp::AsyncAcceptor server;
     AcceptContext context;
@@ -126,9 +120,6 @@ TEST (TcpAsyncAcceptor, accept)
     clientSocket.close ();
     context.socket.close ();
     server.close ();
-
-    proactor.stop ();
-    th.join ();
 }
 
 /**
@@ -136,11 +127,6 @@ TEST (TcpAsyncAcceptor, accept)
  */
 TEST (TcpAsyncAcceptor, cancelAccept)
 {
-    Proactor proactor;
-    Thread th ([&proactor] () {
-        proactor.run ();
-    });
-
     Tcp::AsyncAcceptor server;
     AcceptContext context;
 
@@ -162,9 +148,6 @@ TEST (TcpAsyncAcceptor, cancelAccept)
     }
     ASSERT_FALSE (context.socket.connected ());
     server.close ();
-
-    proactor.stop ();
-    th.join ();
 }
 
 /**

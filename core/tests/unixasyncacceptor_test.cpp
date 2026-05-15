@@ -32,10 +32,9 @@
 using join::Errc;
 using join::IpAddress;
 using join::UnixStream;
+using join::Thread;
 using join::Condition;
 using join::Mutex;
-using join::Thread;
-using join::Proactor;
 
 std::string path = "/tmp/unixasyncacceptor_test.sock";
 
@@ -92,11 +91,6 @@ TEST (UnixAsyncAcceptor, close)
  */
 TEST (UnixAsyncAcceptor, accept)
 {
-    Proactor proactor;
-    Thread th ([&proactor] () {
-        proactor.run ();
-    });
-
     UnixStream::AsyncSocket clientSocket (UnixStream::AsyncSocket::Blocking);
     UnixStream::AsyncAcceptor server;
     AcceptContext context;
@@ -122,9 +116,6 @@ TEST (UnixAsyncAcceptor, accept)
     clientSocket.close ();
     context.socket.close ();
     server.close ();
-
-    proactor.stop ();
-    th.join ();
 }
 
 /**
@@ -132,11 +123,6 @@ TEST (UnixAsyncAcceptor, accept)
  */
 TEST (UnixAsyncAcceptor, cancelAccept)
 {
-    Proactor proactor;
-    Thread th ([&proactor] () {
-        proactor.run ();
-    });
-
     UnixStream::AsyncAcceptor server;
     AcceptContext context;
 
@@ -158,9 +144,6 @@ TEST (UnixAsyncAcceptor, cancelAccept)
     }
     ASSERT_FALSE (context.socket.connected ());
     server.close ();
-
-    proactor.stop ();
-    th.join ();
 }
 
 /**
