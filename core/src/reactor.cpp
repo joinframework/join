@@ -502,9 +502,9 @@ bool Reactor::isActive (int fd) const noexcept
 //   CLASS     : ReactorThread
 //   METHOD    : reactor
 // =========================================================================
-Reactor* ReactorThread::reactor ()
+Reactor& ReactorThread::reactor ()
 {
-    return &instance ()._reactor;
+    return instance ()._reactor;
 }
 
 // =========================================================================

@@ -512,7 +512,7 @@ namespace join
          * @brief get the global Proactor instance.
          * @return pointer to the singleton Proactor.
          */
-        static Proactor* proactor ();
+        static Proactor& proactor ();
 
         /**
          * @brief set proactor thread affinity.

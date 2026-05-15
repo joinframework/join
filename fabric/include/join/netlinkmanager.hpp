@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/condition.hpp>
+#include <join/reactor.hpp>
 #include <join/socket.hpp>
 #include <join/queue.hpp>
 
@@ -47,7 +48,7 @@ namespace join
     /**
      * @brief base class for netlink-based managers.
      */
-    class NetlinkManager : private Netlink::Socket
+    class NetlinkManager : private Netlink::Socket, public EventHandler
     {
     public:
         /**
@@ -55,7 +56,7 @@ namespace join
          * @param groups netlink multicast group bitmask to subscribe to.
          * @param reactor event loop reactor.
          */
-        NetlinkManager (uint32_t groups, Reactor* reactor = ReactorThread::reactor ());
+        NetlinkManager (uint32_t groups, Reactor& reactor = ReactorThread::reactor ());
 
         /**
          * @brief create instance by copy.
@@ -84,9 +85,9 @@ namespace join
 
         /**
          * @brief get the event loop reactor.
-         * @return pointer to the reactor.
+         * @return reference to the reactor.
          */
-        Reactor* reactor () const noexcept;
+        Reactor& reactor () const noexcept;
 
     protected:
         /**
@@ -119,7 +120,7 @@ namespace join
             Job job;
             job.func = std::bind (std::forward<Func> (func), std::forward<Args> (args)...);
 
-            if (_reactor->isReactorThread ())
+            if (_reactor.isReactorThread ())
             {
                 job.func ();
                 return;
@@ -242,7 +243,7 @@ namespace join
         int _wakeup = -1;
 
         /// event loop reactor.
-        Reactor* _reactor = nullptr;
+        Reactor& _reactor;
     };
 }
 

@@ -28,6 +28,7 @@
 // libjoin.
 #include <join/dnsmessage.hpp>
 #include <join/condition.hpp>
+#include <join/reactor.hpp>
 #include <join/socket.hpp>
 
 // C++.
@@ -47,7 +48,7 @@ namespace join
      * @brief basic DNS resolver over datagram socket.
      */
     template <class Protocol>
-    class BasicDatagramResolver : public Protocol::Socket
+    class BasicDatagramResolver : public Protocol::Socket, public EventHandler
     {
     public:
         using Socket = typename Protocol::Socket;
@@ -70,7 +71,7 @@ namespace join
          * @param reactor reactor instance.
          */
         explicit BasicDatagramResolver (const std::string& server = {}, uint16_t port = Protocol::defaultPort,
-                                        Reactor* reactor = ReactorThread::reactor ())
+                                        Reactor& reactor = ReactorThread::reactor ())
         : Socket ()
 #ifdef DEBUG
         , onSuccess (defaultOnSuccess)
@@ -136,7 +137,7 @@ namespace join
             }
             _port = endpoint.port ();
 
-            this->_reactor->addHandler (this->handle (), this);
+            this->_reactor.addHandler (this->handle (), this);
 
             return 0;
         }
@@ -147,7 +148,7 @@ namespace join
          */
         virtual int disconnect () override
         {
-            this->_reactor->delHandler (this->_handle);
+            this->_reactor.delHandler (this->_handle);
 
             if (Socket::disconnect () == -1)
             {
@@ -1011,7 +1012,7 @@ namespace join
         uint16_t _port;
 
         /// event loop reactor.
-        Reactor* _reactor = nullptr;
+        Reactor& _reactor;
 
         /// reception buffer.
         std::unique_ptr<char[]> _buffer;
@@ -1049,7 +1050,7 @@ namespace join
          * @param reactor reactor instance.
          */
         explicit BasicTlsResolver (const std::string& server = {}, uint16_t port = Protocol::defaultPort,
-                                   Reactor* reactor = ReactorThread::reactor ())
+                                   Reactor& reactor = ReactorThread::reactor ())
         : BasicDatagramResolver<Protocol> (server, port, reactor)
         {
         }
@@ -1119,7 +1120,7 @@ namespace join
                 return -1;
             }
 
-            this->_reactor->addHandler (this->handle (), this);
+            this->_reactor.addHandler (this->handle (), this);
 
             return 0;
         }
@@ -1136,7 +1137,7 @@ namespace join
                 return false;
             }
 
-            this->_reactor->addHandler (this->handle (), this);
+            this->_reactor.addHandler (this->handle (), this);
 
             return true;
         }

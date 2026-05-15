@@ -28,6 +28,7 @@
 // libjoin.
 #include <join/dnsmessage.hpp>
 #include <join/condition.hpp>
+#include <join/reactor.hpp>
 #include <join/socket.hpp>
 
 namespace join
@@ -36,7 +37,7 @@ namespace join
      * @brief basic DNS name server over datagram socket.
      */
     template <typename Protocol>
-    class BasicDatagramNameServer : public Protocol::Socket
+    class BasicDatagramNameServer : public Protocol::Socket, public EventHandler
     {
     public:
         using Socket = typename Protocol::Socket;
@@ -46,7 +47,7 @@ namespace join
          * @brief construct the name server instance.
          * @param reactor event loop reactor.
          */
-        explicit BasicDatagramNameServer (Reactor* reactor = ReactorThread::reactor ())
+        explicit BasicDatagramNameServer (Reactor& reactor = ReactorThread::reactor ())
         : Socket ()
         , _reactor (reactor)
         , _buffer (std::make_unique<char[]> (Protocol::maxMsgSize))
@@ -96,7 +97,7 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            _reactor->addHandler (this->handle (), this);
+            _reactor.addHandler (this->handle (), this);
 
             return 0;
         }
@@ -106,7 +107,7 @@ namespace join
          */
         virtual void close () noexcept override
         {
-            _reactor->delHandler (this->handle ());
+            _reactor.delHandler (this->handle ());
             Socket::close ();
         }
 
@@ -210,7 +211,7 @@ namespace join
         DnsMessage _message;
 
         /// event loop reactor.
-        Reactor* _reactor = nullptr;
+        Reactor& _reactor;
 
         /// reception buffer.
         std::unique_ptr<char[]> _buffer;
@@ -240,7 +241,7 @@ namespace join
          * @param ifindex interface index.
          * @param reactor event loop reactor.
          */
-        explicit BasicDatagramPeer (unsigned int ifindex, Reactor* reactor = ReactorThread::reactor ())
+        explicit BasicDatagramPeer (unsigned int ifindex, Reactor& reactor = ReactorThread::reactor ())
         : BasicDatagramNameServer<Protocol> (reactor)
 #ifdef DEBUG
         , onSuccess (defaultOnSuccess)
@@ -258,7 +259,7 @@ namespace join
          * @param interface interface name.
          * @param reactor event loop reactor.
          */
-        explicit BasicDatagramPeer (const std::string& interface, Reactor* reactor = ReactorThread::reactor ())
+        explicit BasicDatagramPeer (const std::string& interface, Reactor& reactor = ReactorThread::reactor ())
         : BasicDatagramPeer<Protocol> (if_nametoindex (interface.c_str ()), reactor)
         {
         }
@@ -380,7 +381,7 @@ namespace join
             }
 #endif
 
-            this->_reactor->addHandler (this->handle (), this);
+            this->_reactor.addHandler (this->handle (), this);
 
             return 0;
         }

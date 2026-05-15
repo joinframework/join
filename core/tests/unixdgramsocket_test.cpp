@@ -31,12 +31,13 @@
 
 using join::Errc;
 using join::ReactorThread;
+using join::EventHandler;
 using join::UnixDgram;
 
 /**
  * @brief Class used to test the unix datagram socket API.
  */
-class UnixDgramSocket : public UnixDgram::Socket, public ::testing::Test
+class UnixDgramSocket : public UnixDgram::Socket, public EventHandler, public ::testing::Test
 {
 protected:
     /**
@@ -45,7 +46,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->bind (_serverpath), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -53,7 +54,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 

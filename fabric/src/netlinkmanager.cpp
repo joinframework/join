@@ -35,7 +35,7 @@ using join::NetlinkManager;
 //   CLASS     : NetlinkManager
 //   METHOD    : NetlinkManager
 // =========================================================================
-NetlinkManager::NetlinkManager (uint32_t groups, Reactor* reactor)
+NetlinkManager::NetlinkManager (uint32_t groups, Reactor& reactor)
 : _buffer (std::make_unique<char[]> (_bufferSize))
 , _seq (0)
 , _jobs (_jobQueueSize)
@@ -59,7 +59,7 @@ NetlinkManager::~NetlinkManager ()
 //   CLASS     : NetlinkManager
 //   METHOD    : reactor
 // =========================================================================
-Reactor* NetlinkManager::reactor () const noexcept
+Reactor& NetlinkManager::reactor () const noexcept
 {
     return _reactor;
 }
@@ -70,8 +70,8 @@ Reactor* NetlinkManager::reactor () const noexcept
 // =========================================================================
 void NetlinkManager::start ()
 {
-    _reactor->addHandler (_wakeup, this);
-    _reactor->addHandler (handle (), this);
+    _reactor.addHandler (_wakeup, this);
+    _reactor.addHandler (handle (), this);
 }
 
 // =========================================================================
@@ -80,8 +80,8 @@ void NetlinkManager::start ()
 // =========================================================================
 void NetlinkManager::stop ()
 {
-    _reactor->delHandler (handle ());
-    _reactor->delHandler (_wakeup);
+    _reactor.delHandler (handle ());
+    _reactor.delHandler (_wakeup);
 }
 
 // =========================================================================

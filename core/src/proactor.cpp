@@ -769,9 +769,9 @@ void Proactor::onError (int fd)
 //   CLASS     : ProactorThread
 //   METHOD    : proactor
 // =========================================================================
-Proactor* ProactorThread::proactor ()
+Proactor& ProactorThread::proactor ()
 {
-    return &instance ()._proactor;
+    return instance ()._proactor;
 }
 
 // =========================================================================

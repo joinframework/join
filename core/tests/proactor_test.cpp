@@ -72,8 +72,8 @@ protected:
      */
     void onComplete (IoOperation* op, int result) override
     {
-        ProactorThread::proactor ()->submit (op);
-        ProactorThread::proactor ()->cancel (op);
+        ProactorThread::proactor ().submit (op);
+        ProactorThread::proactor ().cancel (op);
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -92,8 +92,8 @@ protected:
      */
     void onCancel (IoOperation* op, int result) override
     {
-        ProactorThread::proactor ()->submit (op);
-        ProactorThread::proactor ()->cancel (op);
+        ProactorThread::proactor ().submit (op);
+        ProactorThread::proactor ().cancel (op);
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -454,7 +454,7 @@ TEST_F (ProactorTest, asyncAccept)
     auto op = IoOperation::makeAccept (_acceptor.handle (), reinterpret_cast<sockaddr*> (&addr), &addrlen,
                                        SOCK_NONBLOCK | SOCK_CLOEXEC, this);
 
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ().submit (&op), 0) << join::lastError.message ();
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
 
     {
@@ -480,7 +480,7 @@ TEST_F (ProactorTest, asyncConnect)
     ASSERT_EQ (join::lastError, Errc::TemporaryError);
 
     auto op = IoOperation::makeConnect (_client.handle (), this);
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0);
+    ASSERT_EQ (ProactorThread::proactor ().submit (&op), 0);
 
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
@@ -516,7 +516,7 @@ TEST_F (ProactorTest, asyncRead)
 
     auto op = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
 
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ().submit (&op), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRead", strlen ("asyncRead"), _timeout), 0) << join::lastError.message ();
 
     {
@@ -551,7 +551,7 @@ TEST_F (ProactorTest, asyncWrite)
     const char* msg = "asyncWrite";
     auto op = IoOperation::makeWrite (_server.handle (), msg, strlen (msg), this);
 
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ().submit (&op), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -580,8 +580,8 @@ TEST_F (ProactorTest, asyncReadWrite)
     auto readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
     auto writeOp = IoOperation::makeWrite (_server.handle (), msg, strlen (msg), this);
 
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&readOp), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&writeOp), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ().submit (&readOp), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ().submit (&writeOp), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -634,7 +634,7 @@ TEST_F (ProactorTest, asyncRecvmsg)
     msg.msg_iovlen = 1;
     auto op = IoOperation::makeRecvmsg (_server.handle (), &msg, 0, this);
 
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ().submit (&op), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRecvmsg", strlen ("asyncRecvmsg"), _timeout), 0)
         << join::lastError.message ();
 
@@ -674,7 +674,7 @@ TEST_F (ProactorTest, asyncSendmsg)
     msg.msg_iovlen = 1;
     auto op = IoOperation::makeSendmsg (_server.handle (), &msg, 0, this);
 
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ().submit (&op), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -711,7 +711,7 @@ TEST_F (ProactorTest, onClose)
 
     auto op = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
 
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ().submit (&op), 0) << join::lastError.message ();
     _client.close ();
 
     {
@@ -744,7 +744,7 @@ TEST_F (ProactorTest, onError)
 
     auto op = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
 
-    ASSERT_EQ (ProactorThread::proactor ()->submit (&op), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ().submit (&op), 0) << join::lastError.message ();
     linger sl{.l_onoff = 1, .l_linger = 0};
     ASSERT_EQ (setsockopt (_client.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
     _client.close ();

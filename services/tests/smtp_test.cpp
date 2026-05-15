@@ -36,6 +36,7 @@
 using join::Errc;
 using join::Dns;
 using join::ReactorThread;
+using join::EventHandler;
 using join::MailMessage;
 using join::Smtp;
 using join::Tls;
@@ -43,7 +44,7 @@ using join::Tls;
 /**
  * @brief Class used to test the SMTP client.
  */
-class SmtpClient : public Tls::Acceptor, public ::testing::Test
+class SmtpClient : public Tls::Acceptor, public EventHandler, public ::testing::Test
 {
 public:
     /**
@@ -195,7 +196,7 @@ protected:
         ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 #endif
         ASSERT_EQ (this->create ({Dns::Resolver::lookupAddress (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -203,7 +204,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 

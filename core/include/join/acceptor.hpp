@@ -34,7 +34,7 @@ namespace join
      * @brief basic stream acceptor class.
      */
     template <class Protocol>
-    class BasicStreamAcceptor : public EventHandler
+    class BasicStreamAcceptor
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
