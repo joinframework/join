@@ -134,6 +134,7 @@ namespace join
         using Socket = BasicStreamSocket<UnixStream>;
         using Stream = BasicSocketStream<UnixStream>;
         using Acceptor = BasicStreamAcceptor<UnixStream>;
+        using AsyncSocket = BasicStreamSocket<UnixStream>;
         using AsyncAcceptor = BasicAsyncStreamAcceptor<UnixStream>;
 
         /**
@@ -506,6 +507,7 @@ namespace join
         using Socket = BasicStreamSocket<Tcp>;
         using Stream = BasicSocketStream<Tcp>;
         using Acceptor = BasicStreamAcceptor<Tcp>;
+        using AsyncSocket = BasicStreamSocket<Tcp>;
         using AsyncAcceptor = BasicAsyncStreamAcceptor<Tcp>;
 
         /**

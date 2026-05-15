@@ -39,9 +39,9 @@ namespace join
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
-        using Socket = typename Protocol::Socket;
+        using AsyncSocket = typename Protocol::AsyncSocket;
         using Stream = typename Protocol::Stream;
-        using AcceptCb = void (*) (Socket&&, void*);
+        using AcceptCb = void (*) (AsyncSocket&&, void*);
 
         /**
          * @brief create the asynchronous acceptor instance.
@@ -182,17 +182,17 @@ namespace join
             _callback = nullptr;
             _ctx = nullptr;
 
-            Socket sock;
+            AsyncSocket sock;
 
             if (JOIN_LIKELY (result >= 0))
             {
                 sock._handle = result;
                 sock._remote = Endpoint (reinterpret_cast<sockaddr*> (&_peerAddr), _peerAddrLen);
-                sock._state = Socket::Connected;
+                sock._state = AsyncSocket::Connected;
 
                 if (sock.protocol () == IPPROTO_TCP)
                 {
-                    sock.setOption (Socket::NoDelay, 1);
+                    sock.setOption (AsyncSocket::NoDelay, 1);
                 }
             }
             else
@@ -220,7 +220,7 @@ namespace join
 
             if (cb)
             {
-                cb (Socket{}, ctx);
+                cb (AsyncSocket{}, ctx);
             }
         }
 

@@ -45,7 +45,7 @@ uint16_t port = 5000;
  */
 struct AcceptContext
 {
-    Tcp::Socket socket;
+    Tcp::AsyncSocket socket;
     bool called = false;
     Condition cv;
     Mutex mtx;
@@ -54,7 +54,7 @@ struct AcceptContext
 /**
  * @brief Static callback for acceptance.
  */
-static void onAccept (Tcp::Socket&& sock, void* ctx) noexcept
+static void onAccept (Tcp::AsyncSocket&& sock, void* ctx) noexcept
 {
     auto* context = static_cast<AcceptContext*> (ctx);
     join::ScopedLock<Mutex> lock (context->mtx);
@@ -100,7 +100,7 @@ TEST (TcpAsyncAcceptor, accept)
         proactor.run ();
     });
 
-    Tcp::Socket clientSocket (Tcp::Socket::Blocking);
+    Tcp::AsyncSocket clientSocket (Tcp::AsyncSocket::Blocking);
     Tcp::AsyncAcceptor server;
     AcceptContext context;
 

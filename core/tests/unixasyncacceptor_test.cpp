@@ -44,7 +44,7 @@ std::string path = "/tmp/unixasyncacceptor_test.sock";
  */
 struct AcceptContext
 {
-    UnixStream::Socket socket;
+    UnixStream::AsyncSocket socket;
     bool called = false;
     Condition cv;
     Mutex mtx;
@@ -53,7 +53,7 @@ struct AcceptContext
 /**
  * @brief Static callback for acceptance.
  */
-static void onAccept (UnixStream::Socket&& sock, void* ctx) noexcept
+static void onAccept (UnixStream::AsyncSocket&& sock, void* ctx) noexcept
 {
     auto* context = static_cast<AcceptContext*> (ctx);
     join::ScopedLock<Mutex> lock (context->mtx);
@@ -97,7 +97,7 @@ TEST (UnixAsyncAcceptor, accept)
         proactor.run ();
     });
 
-    UnixStream::Socket clientSocket (UnixStream::Socket::Blocking);
+    UnixStream::AsyncSocket clientSocket (UnixStream::AsyncSocket::Blocking);
     UnixStream::AsyncAcceptor server;
     AcceptContext context;
 
