@@ -182,6 +182,11 @@ target_link_libraries(unixdgramsocket.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME unixdgramsocket.gtest COMMAND unixdgramsocket.gtest)
 install(TARGETS unixdgramsocket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(unixstreamsocket.gtest unixstreamsocket_test.cpp)
+target_link_libraries(unixstreamsocket.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME unixstreamsocket.gtest COMMAND unixstreamsocket.gtest)
+install(TARGETS unixstreamsocket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(unixacceptor.gtest unixacceptor_test.cpp)
 target_link_libraries(unixacceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME unixacceptor.gtest COMMAND unixacceptor.gtest)
@@ -191,11 +196,6 @@ add_executable(unixasyncacceptor.gtest unixasyncacceptor_test.cpp)
 target_link_libraries(unixasyncacceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME unixasyncacceptor.gtest COMMAND unixasyncacceptor.gtest)
 install(TARGETS unixasyncacceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(unixstreamsocket.gtest unixstreamsocket_test.cpp)
-target_link_libraries(unixstreamsocket.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME unixstreamsocket.gtest COMMAND unixstreamsocket.gtest)
-install(TARGETS unixstreamsocket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(netlinksocket.gtest netlinksocket_test.cpp)
 target_link_libraries(netlinksocket.gtest ${JOIN_CORE} GTest::gtest_main)
