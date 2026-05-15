@@ -31,10 +31,222 @@
 namespace join
 {
     /**
+     * @brief basic acceptor class.
+     */
+    template <class Protocol>
+    class BasicAcceptor
+    {
+    public:
+        using Endpoint = typename Protocol::Endpoint;
+
+        /**
+         * @brief create the acceptor instance.
+         */
+        BasicAcceptor () = default;
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        BasicAcceptor (const BasicAcceptor& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to assign.
+         * @return assigned object.
+         */
+        BasicAcceptor& operator= (const BasicAcceptor& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        BasicAcceptor (BasicAcceptor&& other)
+        : _handle (other._handle)
+        , _protocol (other._protocol)
+        {
+            other._handle = -1;
+            other._protocol = Protocol ();
+        }
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to assign.
+         * @return assigned object.
+         */
+        BasicAcceptor& operator= (BasicAcceptor&& other)
+        {
+            this->close ();
+
+            this->_handle = other._handle;
+            this->_protocol = other._protocol;
+
+            other._handle = -1;
+            other._protocol = Protocol ();
+
+            return *this;
+        }
+
+        /**
+         * @brief destroy instance.
+         */
+        virtual ~BasicAcceptor ()
+        {
+            close ();
+        }
+
+        /**
+         * @brief create acceptor
+         * @param endpoint endpoint to assign to the acceptor.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int create (const Endpoint& endpoint) noexcept
+        {
+            if (opened ())
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            _handle = ::socket (endpoint.protocol ().family (), endpoint.protocol ().type () | SOCK_CLOEXEC,
+                                endpoint.protocol ().protocol ());
+            if (_handle == -1)
+            {
+                lastError = std::error_code (errno, std::generic_category ());
+                this->close ();
+                return -1;
+            }
+
+            if (endpoint.protocol ().family () == AF_INET6)
+            {
+                int off = 0;
+
+                if (::setsockopt (_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1)
+                {
+                    lastError = std::error_code (errno, std::generic_category ());
+                    this->close ();
+                    return -1;
+                }
+            }
+
+            if (endpoint.protocol ().family () == AF_UNIX)
+            {
+                ::unlink (endpoint.device ().c_str ());
+            }
+            else if (endpoint.protocol ().protocol () == IPPROTO_TCP)
+            {
+                int on = 1;
+
+                if (::setsockopt (_handle, SOL_SOCKET, SO_REUSEADDR, &on, sizeof (on)) == -1)
+                {
+                    lastError = std::error_code (errno, std::generic_category ());
+                    this->close ();
+                    return -1;
+                }
+            }
+
+            if ((::bind (_handle, endpoint.addr (), endpoint.length ()) == -1) || (::listen (_handle, SOMAXCONN) == -1))
+            {
+                lastError = std::error_code (errno, std::generic_category ());
+                this->close ();
+                return -1;
+            }
+
+            _protocol = endpoint.protocol ();
+
+            return 0;
+        }
+
+        /**
+         * @brief close acceptor.
+         */
+        virtual void close () noexcept
+        {
+            if (_handle != -1)
+            {
+                ::close (_handle);
+                _handle = -1;
+            }
+
+            _protocol = Protocol ();
+        }
+
+        /**
+         * @brief determine the local endpoint associated with this socket.
+         * @return local endpoint.
+         */
+        Endpoint localEndpoint () const noexcept
+        {
+            struct sockaddr_storage sa;
+            socklen_t sa_len = sizeof (struct sockaddr_storage);
+
+            if (::getsockname (_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len) == -1)
+            {
+                lastError = std::error_code (errno, std::generic_category ());
+                return {};
+            }
+
+            return Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len);
+        }
+
+        /**
+         * @brief check if the socket is opened.
+         * @return true if opened, false otherwise.
+         */
+        bool opened () const noexcept
+        {
+            return (_handle != -1);
+        }
+
+        /**
+         * @brief get address family.
+         * @return address family.
+         */
+        int family () const noexcept
+        {
+            return _protocol.family ();
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        int type () const noexcept
+        {
+            return _protocol.type ();
+        }
+
+        /**
+         * @brief get acceptor protocol.
+         * @return acceptor protocol.
+         */
+        int protocol () const noexcept
+        {
+            return _protocol.protocol ();
+        }
+
+        /**
+         * @brief get socket native handle.
+         * @return socket native handle.
+         */
+        int handle () const noexcept
+        {
+            return _handle;
+        }
+
+    protected:
+        /// socket handle.
+        int _handle = -1;
+
+        /// protocol.
+        Protocol _protocol;
+    };
+
+    /**
      * @brief basic stream acceptor class.
      */
     template <class Protocol>
-    class BasicStreamAcceptor
+    class BasicStreamAcceptor : public BasicAcceptor<Protocol>
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
@@ -64,11 +276,8 @@ namespace join
          * @param other other object to move.
          */
         BasicStreamAcceptor (BasicStreamAcceptor&& other)
-        : _handle (other._handle)
-        , _protocol (other._protocol)
+        : BasicAcceptor<Protocol> (std::move (other))
         {
-            other._handle = -1;
-            other._protocol = Protocol ();
         }
 
         /**
@@ -78,107 +287,20 @@ namespace join
          */
         BasicStreamAcceptor& operator= (BasicStreamAcceptor&& other)
         {
-            this->close ();
-
-            this->_handle = other._handle;
-            this->_protocol = other._protocol;
-
-            other._handle = -1;
-            other._protocol = Protocol ();
-
+            BasicAcceptor<Protocol>::operator= (std::move (other));
             return *this;
         }
 
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicStreamAcceptor ()
-        {
-            this->close ();
-        }
-
-        /**
-         * @brief create acceptor
-         * @param endpoint endpoint to assign to the acceptor.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int create (const Endpoint& endpoint) noexcept
-        {
-            if (this->opened ())
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            this->_handle = ::socket (endpoint.protocol ().family (), endpoint.protocol ().type () | SOCK_CLOEXEC,
-                                      endpoint.protocol ().protocol ());
-            if (this->_handle == -1)
-            {
-                lastError = std::error_code (errno, std::generic_category ());
-                this->close ();
-                return -1;
-            }
-
-            if (endpoint.protocol ().family () == AF_INET6)
-            {
-                int off = 0;
-
-                if (::setsockopt (this->_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1)
-                {
-                    lastError = std::error_code (errno, std::generic_category ());
-                    this->close ();
-                    return -1;
-                }
-            }
-
-            if (endpoint.protocol ().family () == AF_UNIX)
-            {
-                ::unlink (endpoint.device ().c_str ());
-            }
-            else if (endpoint.protocol ().protocol () == IPPROTO_TCP)
-            {
-                int on = 1;
-
-                if (::setsockopt (this->_handle, SOL_SOCKET, SO_REUSEADDR, &on, sizeof (on)) == -1)
-                {
-                    lastError = std::error_code (errno, std::generic_category ());
-                    this->close ();
-                    return -1;
-                }
-            }
-
-            if ((::bind (this->_handle, endpoint.addr (), endpoint.length ()) == -1) ||
-                (::listen (this->_handle, SOMAXCONN) == -1))
-            {
-                lastError = std::error_code (errno, std::generic_category ());
-                this->close ();
-                return -1;
-            }
-
-            this->_protocol = endpoint.protocol ();
-
-            return 0;
-        }
-
-        /**
-         * @brief close acceptor.
-         */
-        virtual void close () noexcept
-        {
-            if (this->_handle != -1)
-            {
-                ::close (this->_handle);
-                this->_handle = -1;
-            }
-
-            this->_protocol = Protocol ();
-        }
+        virtual ~BasicStreamAcceptor () = default;
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return the accepted client socket object.
          */
-        virtual Socket accept () const
+        virtual Socket accept () const noexcept
         {
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
@@ -207,82 +329,12 @@ namespace join
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return The client stream object on success, nullptr on failure.
          */
-        virtual Stream acceptStream () const
+        virtual Stream acceptStream () const noexcept
         {
             Stream stream;
             stream.socket () = this->accept ();
             return stream;
         }
-
-        /**
-         * @brief determine the local endpoint associated with this socket.
-         * @return local endpoint.
-         */
-        Endpoint localEndpoint () const
-        {
-            struct sockaddr_storage sa;
-            socklen_t sa_len = sizeof (struct sockaddr_storage);
-
-            if (::getsockname (this->_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len) == -1)
-            {
-                lastError = std::error_code (errno, std::generic_category ());
-                return {};
-            }
-
-            return Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len);
-        }
-
-        /**
-         * @brief check if the socket is opened.
-         * @return true if opened, false otherwise.
-         */
-        bool opened () const noexcept
-        {
-            return (this->_handle != -1);
-        }
-
-        /**
-         * @brief get address family.
-         * @return address family.
-         */
-        int family () const noexcept
-        {
-            return this->_protocol.family ();
-        }
-
-        /**
-         * @brief get the protocol communication semantic.
-         * @return the protocol communication semantic.
-         */
-        int type () const noexcept
-        {
-            return this->_protocol.type ();
-        }
-
-        /**
-         * @brief get acceptor protocol.
-         * @return acceptor protocol.
-         */
-        int protocol () const noexcept
-        {
-            return this->_protocol.protocol ();
-        }
-
-        /**
-         * @brief get socket native handle.
-         * @return socket native handle.
-         */
-        int handle () const noexcept
-        {
-            return this->_handle;
-        }
-
-    protected:
-        /// socket handle.
-        int _handle = -1;
-
-        /// protocol.
-        Protocol _protocol;
     };
 
     /**
@@ -405,7 +457,7 @@ namespace join
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return the accepted client socket object.
          */
-        virtual Socket accept () const override
+        Socket accept () const noexcept override
         {
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
@@ -432,7 +484,7 @@ namespace join
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return the accepted client socket object.
          */
-        virtual Socket acceptEncrypted () const
+        Socket acceptEncrypted () const noexcept
         {
             Socket sock = this->accept ();
             if (!sock.connected ())
@@ -464,7 +516,7 @@ namespace join
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return The client stream object on success, nullptr on failure.
          */
-        virtual Stream acceptStreamEncrypted () const
+        Stream acceptStreamEncrypted () const noexcept
         {
             Stream stream;
             stream.socket () = this->acceptEncrypted ();
@@ -477,7 +529,7 @@ namespace join
          * @param key private key path.
          * @return 0 on success, -1 on failure.
          */
-        int setCertificate (const std::string& cert, const std::string& key = "")
+        int setCertificate (const std::string& cert, const std::string& key = "") noexcept
         {
             if (SSL_CTX_use_certificate_file (this->_tlsContext.get (), cert.c_str (), SSL_FILETYPE_PEM) == 0)
             {
@@ -510,7 +562,7 @@ namespace join
          * @param caFile path of the trusted CA certificate file.
          * @return 0 on success, -1 on failure.
          */
-        int setCaCertificate (const std::string& caFile)
+        int setCaCertificate (const std::string& caFile) noexcept
         {
             join::StackOfX509NamePtr certNames (SSL_load_client_CA_file (caFile.c_str ()));
             if (certNames == nullptr)
@@ -530,7 +582,7 @@ namespace join
          * @param verify Enable peer verification if set to true, false otherwise.
          * @param depth The maximum certificate verification depth (default: no limit).
          */
-        void setVerify (bool verify, int depth = -1)
+        void setVerify (bool verify, int depth = -1) noexcept
         {
             if (verify)
             {
@@ -551,7 +603,7 @@ namespace join
          * @param cipher the cipher list.
          * @return 0 on success, -1 on failure.
          */
-        int setCipher (const std::string& cipher)
+        int setCipher (const std::string& cipher) noexcept
         {
             if (SSL_CTX_set_cipher_list (this->_tlsContext.get (), cipher.c_str ()) == 0)
             {
@@ -567,7 +619,7 @@ namespace join
          * @param cipher the cipher list.
          * @return 0 on success, -1 on failure.
          */
-        int setCipher_1_3 (const std::string& cipher)
+        int setCipher_1_3 (const std::string& cipher) noexcept
         {
             if (SSL_CTX_set_ciphersuites (this->_tlsContext.get (), cipher.c_str ()) == 0)
             {
@@ -584,7 +636,7 @@ namespace join
          * @param curves curve list.
          * @return 0 on success, -1 on failure.
          */
-        int setCurve (const std::string& curves)
+        int setCurve (const std::string& curves) noexcept
         {
             if (SSL_CTX_set1_groups_list (this->_tlsContext.get (), curves.c_str ()) == 0)
             {
@@ -602,7 +654,7 @@ namespace join
          * @note random Diffie-Hellman parameters generated using the command "openssl dhparam -C 2236".
          * @return Diffie-Hellman parameters.
          */
-        static DH* getDh2236 ()
+        static DH* getDh2236 () noexcept
         {
             static unsigned char dhp_2236[] = {
                 0x0C, 0xA5, 0x51, 0x2B, 0x8F, 0xF7, 0xA8, 0x74, 0x4D, 0x52, 0xD7, 0xED, 0x97, 0x83, 0xA4, 0xD2, 0x8B,

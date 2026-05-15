@@ -1480,6 +1480,9 @@ namespace join
 
         /// friendship with basic stream acceptor
         friend class BasicStreamAcceptor<Protocol>;
+
+        /// friendship with basic asynchronous stream acceptor
+        friend class BasicAsyncStreamAcceptor<Protocol>;
     };
 
     /**
