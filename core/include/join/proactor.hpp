@@ -510,7 +510,7 @@ namespace join
     public:
         /**
          * @brief get the global Proactor instance.
-         * @return pointer to the singleton Proactor.
+         * @return reference to the singleton Proactor.
          */
         static Proactor& proactor ();
 
