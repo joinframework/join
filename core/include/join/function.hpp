@@ -193,10 +193,10 @@ namespace join
         using InvokerFunc = Return (*) (void*, Args&&...);
 
         /// relocation function pointer type.
-        using ManagerFunc = void (*) (void*, void*) noexcept;
+        using ManagerFunc = void (*) (void*, void*);
 
         /// destructor function pointer type.
-        using DestructorFunc = void (*) (void*) noexcept;
+        using DestructorFunc = void (*) (void*);
 
         /**
          * @brief destroy the stored callable and reset all pointers.

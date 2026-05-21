@@ -49,10 +49,6 @@ struct Multiplier
     }
 };
 
-/**
- * @brief RAII guard that sets a flag on destruction.
- *        Move clears the source flag to avoid double-reporting.
- */
 struct DestructGuard
 {
     bool* flag;
