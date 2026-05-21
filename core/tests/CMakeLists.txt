@@ -157,6 +157,11 @@ target_link_libraries(sharedfutex.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME sharedfutex.gtest COMMAND sharedfutex.gtest)
 install(TARGETS sharedfutex.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(function.gtest function_test.cpp)
+target_link_libraries(function.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME function.gtest COMMAND function.gtest)
+install(TARGETS function.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(thread.gtest thread_test.cpp)
 target_link_libraries(thread.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME thread.gtest COMMAND thread.gtest)

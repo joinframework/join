@@ -21,6 +21,7 @@ set(PUBLIC_HEADERS
     include/join/condition.hpp
     include/join/semaphore.hpp
     include/join/futex.hpp
+    include/join/function.hpp
     include/join/thread.hpp
     include/join/threadpool.hpp
     include/join/macaddress.hpp
