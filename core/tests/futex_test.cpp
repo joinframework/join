@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2021 Mathieu Rabine
+ * Copyright (c) 2026 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/mutex.hpp>
+#include <join/futex.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -32,7 +32,7 @@
 #include <future>
 #include <thread>
 
-using join::Mutex;
+using join::Futex;
 using join::ScopedLock;
 
 using namespace std::chrono_literals;
@@ -40,68 +40,68 @@ using namespace std::chrono_literals;
 /**
  * @brief test lock.
  */
-TEST (Mutex, lock)
+TEST (Futex, lock)
 {
-    Mutex mutex;
-    auto task = std::async (std::launch::async, [&mutex] () {
-        mutex.lock ();
+    Futex futex;
+    auto task = std::async (std::launch::async, [&futex] () {
+        futex.lock ();
         std::this_thread::sleep_for (15ms);
-        mutex.unlock ();
+        futex.unlock ();
     });
     std::this_thread::sleep_for (5ms);
     auto beg = std::chrono::high_resolution_clock::now ();
-    mutex.lock ();
+    futex.lock ();
     auto end = std::chrono::high_resolution_clock::now ();
     EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
-    mutex.unlock ();
+    futex.unlock ();
     task.wait ();
 }
 
 /**
  * @brief test tryLock.
  */
-TEST (Mutex, tryLock)
+TEST (Futex, tryLock)
 {
-    Mutex mutex;
-    auto task = std::async (std::launch::async, [&mutex] () {
-        mutex.lock ();
+    Futex futex;
+    auto task = std::async (std::launch::async, [&futex] () {
+        futex.lock ();
         std::this_thread::sleep_for (15ms);
-        mutex.unlock ();
+        futex.unlock ();
     });
     std::this_thread::sleep_for (5ms);
-    EXPECT_FALSE (mutex.tryLock ());
+    EXPECT_FALSE (futex.tryLock ());
     std::this_thread::sleep_for (15ms);
-    EXPECT_TRUE (mutex.tryLock ());
-    mutex.unlock ();
+    EXPECT_TRUE (futex.tryLock ());
+    futex.unlock ();
     task.wait ();
 }
 
 /**
  * @brief test scoped lock.
  */
-TEST (Mutex, scopedLock)
+TEST (Futex, scopedLock)
 {
-    Mutex mutex;
-    auto task = std::async (std::launch::async, [&mutex] () {
-        ScopedLock<Mutex> lock (mutex);
+    Futex futex;
+    auto task = std::async (std::launch::async, [&futex] () {
+        ScopedLock<Futex> lock (futex);
         std::this_thread::sleep_for (15ms);
     });
     std::this_thread::sleep_for (5ms);
     auto beg = std::chrono::high_resolution_clock::now ();
-    mutex.lock ();
+    futex.lock ();
     auto end = std::chrono::high_resolution_clock::now ();
     EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
-    mutex.unlock ();
+    futex.unlock ();
     task.wait ();
 }
 
 /**
  * @brief test handle.
  */
-TEST (Mutex, handle)
+TEST (Futex, handle)
 {
-    Mutex mutex;
-    EXPECT_NE (mutex.handle (), nullptr);
+    Futex futex;
+    EXPECT_NE (futex.handle (), nullptr);
 }
 
 /**

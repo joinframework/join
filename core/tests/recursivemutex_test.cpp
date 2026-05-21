@@ -96,6 +96,15 @@ TEST (RecursiveMutex, scopedLock)
 }
 
 /**
+ * @brief test handle.
+ */
+TEST (RecursiveMutex, handle)
+{
+    RecursiveMutex mutex;
+    EXPECT_NE (mutex.handle (), nullptr);
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char** argv)
