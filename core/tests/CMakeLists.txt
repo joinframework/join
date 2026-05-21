@@ -147,6 +147,16 @@ target_link_libraries(sharedsemaphore.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME sharedsemaphore.gtest COMMAND sharedsemaphore.gtest)
 install(TARGETS sharedsemaphore.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(futex.gtest futex_test.cpp)
+target_link_libraries(futex.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME futex.gtest COMMAND futex.gtest)
+install(TARGETS futex.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(sharedfutex.gtest sharedfutex_test.cpp)
+target_link_libraries(sharedfutex.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME sharedfutex.gtest COMMAND sharedfutex.gtest)
+install(TARGETS sharedfutex.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(thread.gtest thread_test.cpp)
 target_link_libraries(thread.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME thread.gtest COMMAND thread.gtest)
