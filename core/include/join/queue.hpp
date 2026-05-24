@@ -73,9 +73,6 @@ namespace join
     {
         /// stored element data.
         Type data;
-
-        /// padding to prevent false sharing.
-        char _padding[(64 - (sizeof (Type) % 64)) % 64];
     };
 
     /**
