@@ -766,6 +766,11 @@ namespace join
                     for (uint64_t i = 0; i < toWrite; ++i)
                     {
                         auto* slot = &segment->_elements[(head + i) & sync._mask];
+                        Backoff slotBackoff;
+                        while (slot->_seq.load (std::memory_order_acquire) != head + i)
+                        {
+                            slotBackoff ();
+                        }
                         slot->data = elements[i];
                         slot->_seq.store (head + i + 1, std::memory_order_release);
                     }
@@ -921,10 +926,11 @@ namespace join
 
                 if (seq == (tail + 1))
                 {
+                    Type local = slot->data;
                     if (JOIN_LIKELY (sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire,
                                                                        std::memory_order_relaxed)))
                     {
-                        element = slot->data;
+                        element = local;
                         slot->_seq.store (tail + sync._capacity, std::memory_order_release);
                         return 0;
                     }
@@ -976,11 +982,12 @@ namespace join
                 uint64_t ready = 0;
                 for (; ready < toRead; ++ready)
                 {
-                    if (JOIN_UNLIKELY (segment->_elements[(tail + ready) & sync._mask]._seq.load (
-                                           std::memory_order_acquire) != tail + ready + 1))
+                    auto* slot = &segment->_elements[(tail + ready) & sync._mask];
+                    if (JOIN_UNLIKELY (slot->_seq.load (std::memory_order_acquire) != tail + ready + 1))
                     {
                         break;
                     }
+                    elements[ready] = slot->data;
                 }
 
                 if (JOIN_UNLIKELY (ready == 0))
@@ -994,9 +1001,8 @@ namespace join
                 {
                     for (uint64_t i = 0; i < ready; ++i)
                     {
-                        auto* slot = &segment->_elements[(tail + i) & sync._mask];
-                        elements[i] = slot->data;
-                        slot->_seq.store (tail + i + sync._capacity, std::memory_order_release);
+                        segment->_elements[(tail + i) & sync._mask]._seq.store (tail + i + sync._capacity,
+                                                                                std::memory_order_release);
                     }
 
                     return static_cast<ssize_t> (ready);

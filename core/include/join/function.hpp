@@ -109,11 +109,11 @@ namespace join
          * @brief construct with a callable object.
          * @param callable callable object.
          */
-        template <
-            typename Func, typename DecayedFunc = std::decay_t<Func>,
-            typename = std::enable_if_t<!std::is_same<DecayedFunc, Function>::value &&
-                                        (std::is_void<Return>::value ||
-                                         std::is_convertible<std::result_of_t<DecayedFunc&(Args...)>, Return>::value)>>
+        template <typename Func, typename DecayedFunc = std::decay_t<Func>,
+                  typename = std::enable_if_t<
+                      !std::is_same<DecayedFunc, Function>::value &&
+                      (std::is_void<Return>::value ||
+                       std::is_convertible<typename std::result_of<DecayedFunc&(Args...)>::type, Return>::value)>>
         Function (Func&& callable)
         {
             static_assert (sizeof (DecayedFunc) <= Capacity, "Callable size exceeds Function capacity.");
@@ -152,7 +152,7 @@ namespace join
          * @return result of the invocation.
          * @throw std::bad_function_call if no callable is stored.
          */
-        Return operator() (Args... args)
+        Return operator() (Args&&... args)
         {
             if (!_invoker)
             {
