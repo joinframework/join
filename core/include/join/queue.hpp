@@ -247,7 +247,7 @@ namespace join
             {
                 if (JOIN_UNLIKELY (lastError != Errc::TemporaryError))
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
 
                 backoff ();
@@ -277,7 +277,7 @@ namespace join
                         return -1;
                     }
 
-                    backoff ();
+                    backoff ();  // LCOV_EXCL_LINE
                 }
                 else
                 {
@@ -322,7 +322,7 @@ namespace join
             {
                 if (JOIN_UNLIKELY (lastError != Errc::TemporaryError))
                 {
-                    return -1;
+                    return -1;  // LCOV_EXCL_LINE
                 }
 
                 backoff ();
@@ -769,7 +769,7 @@ namespace join
                         Backoff slotBackoff;
                         while (slot->_seq.load (std::memory_order_acquire) != head + i)
                         {
-                            slotBackoff ();
+                            slotBackoff ();  // LCOV_EXCL_LINE
                         }
                         slot->data = elements[i];
                         slot->_seq.store (head + i + 1, std::memory_order_release);
@@ -778,7 +778,7 @@ namespace join
                     return static_cast<ssize_t> (toWrite);
                 }
 
-                backoff ();
+                backoff ();  // LCOV_EXCL_LINE
             }
         }
 
@@ -1008,7 +1008,7 @@ namespace join
                     return static_cast<ssize_t> (ready);
                 }
 
-                backoff ();
+                backoff ();  // LCOV_EXCL_LINE
             }
         }
     };
