@@ -265,11 +265,13 @@ namespace join
          */
         void create ()
         {
-            _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+            _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
             if ((_ptr == MAP_FAILED) && ((errno == ENOMEM) || (errno == EINVAL)))
             {
                 // no hugepages available or no support.
-                _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                _ptr =
+                    ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
             }
 
             if (_ptr == MAP_FAILED)

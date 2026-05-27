@@ -66,15 +66,6 @@ protected:
 const std::string ShmMpmc::_name = "/test_mpmc_shm";
 
 /**
- * @brief test create.
- */
-TEST_F (ShmMpmc, create)
-{
-    ShmMem::Mpmc::Queue<uint64_t> prod1 (0, _name);
-    ASSERT_THROW (ShmMem::Mpmc::Queue<uint64_t> (2, _name), std::runtime_error);
-}
-
-/**
  * @brief test tryPush.
  */
 TEST_F (ShmMpmc, tryPush)
