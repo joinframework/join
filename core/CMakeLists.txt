@@ -16,6 +16,7 @@ set(PUBLIC_HEADERS
     include/join/traits.hpp
     include/join/variant.hpp
     include/join/reactor.hpp
+    include/join/io_operation.hpp
     include/join/proactor.hpp
     include/join/memory.hpp
     include/join/allocator.hpp
@@ -43,13 +44,15 @@ set(PUBLIC_HEADERS
 )
 
 if(JOIN_ENABLE_IO_URING)
-    list(APPEND PUBLIC_HEADERS include/join/proactor.hpp)
+    list(APPEND PUBLIC_HEADERS include/join/io_policy.hpp include/join/proactor_uring.inl)
+else()
+    list(APPEND PUBLIC_HEADERS include/join/proactor_epoll.inl)
 endif()
 
 set(SOURCES
     src/error.cpp
     src/reactor.cpp
-    src/proactor.cpp
+    src/io_operation.cpp
     src/mutex.cpp
     src/condition.cpp
     src/semaphore.cpp
@@ -61,10 +64,6 @@ set(SOURCES
     src/socket.cpp
     src/cpu.cpp
 )
-
-if(JOIN_ENABLE_IO_URING)
-    list(APPEND SOURCES src/proactor.cpp)
-endif()
 
 add_library(${JOIN_CORE} ${SOURCES})
 add_library(join::core ALIAS ${JOIN_CORE})

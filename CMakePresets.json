@@ -8,7 +8,6 @@
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_VERBOSE_MAKEFILE": "ON",
-        "JOIN_ENABLE_IO_URING": "ON",
         "JOIN_ENABLE_NUMA": "ON",
         "JOIN_ENABLE_SAMPLES": "ON",
         "JOIN_ENABLE_TESTS": "ON"
@@ -20,7 +19,8 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "gcc",
-        "CMAKE_CXX_COMPILER": "g++"
+        "CMAKE_CXX_COMPILER": "g++",
+        "JOIN_ENABLE_IO_URING": "ON"
       }
     },
     {

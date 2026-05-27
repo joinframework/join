@@ -83,7 +83,7 @@ Install required libraries and test dependencies:
 sudo apt install pkg-config libssl-dev zlib1g-dev libgtest-dev libgmock-dev
 ```
 
-> **Compilers:** Both GCC and Clang are supported. Clang requires `libclang-rt-dev` for coverage instrumentation.
+> **Compilers:** Both GCC and Clang are supported. Clang requires `libclang-rt-dev` for coverage instrumentation (`--coverage`).  
 > **OpenSSL** provides the core TLS runtime.
 
 ### Optional Dependencies
@@ -125,7 +125,7 @@ cmake --build build
 | `JOIN_ENABLE_DATA` | `ON` | Build the data module. |
 | `JOIN_ENABLE_FABRIC` | `ON` | Build the fabric module. |
 | `JOIN_ENABLE_SERVICES` | `ON` | Build the services module (requires crypto, data, fabric). |
-| `JOIN_ENABLE_IO_URING` | `OFF` | Enable io_uring backend (requires `liburing-dev`). |
+| `JOIN_ENABLE_IO_URING` | `OFF` | Enable io_uring based proactor backend (requires `liburing-dev`). |
 | `JOIN_ENABLE_NUMA` | `OFF` | Enable NUMA support (requires `libnuma-dev`). |
 | `JOIN_ENABLE_SAMPLES` | `OFF` | Build sample programs. |
 | `JOIN_ENABLE_TESTS` | `OFF` | Build the test suite. |

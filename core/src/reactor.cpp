@@ -211,10 +211,9 @@ void Reactor::run ()
 // =========================================================================
 void Reactor::stop (bool sync) noexcept
 {
-    _running.store (false, std::memory_order_release);
-
     if (isReactorThread ())
     {
+        _running.store (false, std::memory_order_release);
         return;
     }
 
@@ -248,6 +247,15 @@ int Reactor::mbind (int numa) const noexcept
 int Reactor::mlock () const noexcept
 {
     return _commands.mlock ();
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : isRunning
+// =========================================================================
+bool Reactor::isRunning () const noexcept
+{
+    return _running.load (std::memory_order_acquire);
 }
 
 // =========================================================================
@@ -380,6 +388,7 @@ void Reactor::processCommand (const Command& cmd) noexcept
             break;
 
         case CommandType::Stop:
+            _running.store (false, std::memory_order_release);
             break;
     }
 
