@@ -340,7 +340,7 @@ namespace join
                         return -1;
                     }
 
-                    backoff ();
+                    backoff ();  // LCOV_EXCL_LINE
                 }
                 else
                 {
