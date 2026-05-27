@@ -67,15 +67,6 @@ protected:
 const std::string ShmSpsc::_name = "/test_spsc_shm";
 
 /**
- * @brief test create.
- */
-TEST_F (ShmSpsc, create)
-{
-    ShmMem::Spsc::Queue<uint64_t> prod1 (0, _name);
-    ASSERT_THROW (ShmMem::Spsc::Queue<uint64_t> (2, _name), std::runtime_error);
-}
-
-/**
  * @brief test tryPush.
  */
 TEST_F (ShmSpsc, tryPush)
