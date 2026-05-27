@@ -51,7 +51,7 @@ namespace join
          * @brief create instance.
          * @param reactor event loop reactor.
          */
-        explicit BasicTimer (Reactor* reactor = nullptr)
+        explicit BasicTimer (Reactor& reactor = ReactorThread::reactor ())
         : _handle (timerfd_create (ClockPolicy::type (), TFD_NONBLOCK | TFD_CLOEXEC))
         , _reactor (reactor)
         {
@@ -60,12 +60,7 @@ namespace join
                 throw std::system_error (errno, std::system_category (), "timerfd_create failed");
             }
 
-            if (_reactor == nullptr)
-            {
-                _reactor = ReactorThread::reactor ();
-            }
-
-            _reactor->addHandler (_handle, this);
+            _reactor.addHandler (_handle, this);
         }
 
         /**
@@ -99,7 +94,7 @@ namespace join
          */
         ~BasicTimer () noexcept
         {
-            _reactor->delHandler (_handle);
+            _reactor.delHandler (_handle);
             if (_handle != -1)
             {
                 close (_handle);
@@ -233,7 +228,7 @@ namespace join
          * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.
          */
-        virtual void onReceive ([[maybe_unused]] int fd) override
+        virtual void onReadable ([[maybe_unused]] int fd) override
         {
             uint64_t expirations;
             ssize_t result = read (handle (), &expirations, sizeof (expirations));
@@ -290,7 +285,7 @@ namespace join
         int _handle = -1;
 
         /// event loop reactor.
-        Reactor* _reactor;
+        Reactor& _reactor;
     };
 }
 

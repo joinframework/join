@@ -35,12 +35,13 @@
 using join::Errc;
 using join::IpAddress;
 using join::ReactorThread;
+using join::EventHandler;
 using join::Tls;
 
 /**
  * @brief Class used to test the TLS socket API.
  */
-class TlsSocket : public Tls::Acceptor, public ::testing::Test
+class TlsSocket : public Tls::Acceptor, public EventHandler, public ::testing::Test
 {
 public:
     /**
@@ -190,7 +191,7 @@ protected:
         ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
         ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
         ASSERT_EQ (this->create ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -198,7 +199,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 
@@ -206,7 +207,7 @@ protected:
      * @brief method called when data are ready to be read on handle.
      * @param fd file descriptor.
      */
-    virtual void onReceive ([[maybe_unused]] int fd) override
+    virtual void onReadable ([[maybe_unused]] int fd) override
     {
         Tls::Socket sock = this->acceptEncrypted ();
         if (sock.connected ())
@@ -1032,6 +1033,23 @@ TEST_F (TlsSocket, setCipher_1_3)
     ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    tlsSocket.close ();
+}
+
+/**
+ * @brief Test setAlpnProtocols method.
+ */
+TEST_F (TlsSocket, setAlpnProtocols)
+{
+    Tls::Socket tlsSocket (Tls::Socket::Blocking);
+
+    ASSERT_EQ (tlsSocket.setAlpnProtocols ({""}), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (tlsSocket.setAlpnProtocols ({"http/1.1", "h2"}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.connectEncrypted ({_hostv4, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setAlpnProtocols ({"http/1.1", "h2"}), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+    ASSERT_EQ (tlsSocket.setAlpnProtocols ({"http/1.1", "h2"}), 0) << join::lastError.message ();
     tlsSocket.close ();
 }
 

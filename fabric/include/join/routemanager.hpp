@@ -146,7 +146,7 @@ namespace join
          * @brief create instance.
          * @param reactor event loop reactor (uses ReactorThread if nullptr).
          */
-        explicit RouteManager (Reactor* reactor = nullptr);
+        explicit RouteManager (Reactor& reactor = ReactorThread::reactor ());
 
         /**
          * @brief create instance by copy.

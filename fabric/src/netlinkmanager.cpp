@@ -35,7 +35,7 @@ using join::NetlinkManager;
 //   CLASS     : NetlinkManager
 //   METHOD    : NetlinkManager
 // =========================================================================
-NetlinkManager::NetlinkManager (uint32_t groups, Reactor* reactor)
+NetlinkManager::NetlinkManager (uint32_t groups, Reactor& reactor)
 : _buffer (std::make_unique<char[]> (_bufferSize))
 , _seq (0)
 , _jobs (_jobQueueSize)
@@ -44,10 +44,6 @@ NetlinkManager::NetlinkManager (uint32_t groups, Reactor* reactor)
 {
     open (Netlink::rt ());
     bind (groups);
-    if (_reactor == nullptr)
-    {
-        _reactor = ReactorThread::reactor ();
-    }
 }
 
 // =========================================================================
@@ -63,7 +59,7 @@ NetlinkManager::~NetlinkManager ()
 //   CLASS     : NetlinkManager
 //   METHOD    : reactor
 // =========================================================================
-Reactor* NetlinkManager::reactor () const noexcept
+Reactor& NetlinkManager::reactor () const noexcept
 {
     return _reactor;
 }
@@ -74,8 +70,8 @@ Reactor* NetlinkManager::reactor () const noexcept
 // =========================================================================
 void NetlinkManager::start ()
 {
-    _reactor->addHandler (_wakeup, this);
-    _reactor->addHandler (handle (), this);
+    _reactor.addHandler (_wakeup, this);
+    _reactor.addHandler (handle (), this);
 }
 
 // =========================================================================
@@ -84,8 +80,8 @@ void NetlinkManager::start ()
 // =========================================================================
 void NetlinkManager::stop ()
 {
-    _reactor->delHandler (handle ());
-    _reactor->delHandler (_wakeup);
+    _reactor.delHandler (handle ());
+    _reactor.delHandler (_wakeup);
 }
 
 // =========================================================================
@@ -98,7 +94,7 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
     {
         if (write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len) == -1)
         {
-            return -1;
+            return -1;  // LCOV_EXCL_LINE
         }
 
         return 0;
@@ -106,19 +102,48 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 
     ScopedLock<Mutex> lock (_syncMutex);
 
+    auto inserted = _pending.emplace (nlh->nlmsg_seq, std::make_unique<PendingRequest> ());
+    if (!inserted.second)
+    {
+        // LCOV_EXCL_START
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+        // LCOV_EXCL_STOP
+    }
+
     if (write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len) == -1)
     {
+        // LCOV_EXCL_START
+        _pending.erase (inserted.first);
+        return -1;
+        // LCOV_EXCL_STOP
+    }
+
+    if (!inserted.first->second->cond.timedWait (lock, timeout))
+    {
+        _pending.erase (inserted.first);
+        lastError = make_error_code (Errc::TimedOut);
         return -1;
     }
 
-    return waitResponse (lock, nlh->nlmsg_seq, timeout);
+    if (inserted.first->second->error != 0)
+    {
+        int err = inserted.first->second->error;
+        _pending.erase (inserted.first);
+        lastError = std::error_code (err, std::generic_category ());
+        return -1;
+    }
+
+    _pending.erase (inserted.first);
+
+    return 0;
 }
 
 // =========================================================================
 //   CLASS     : NetlinkManager
-//   METHOD    : onReceive
+//   METHOD    : onReadable
 // =========================================================================
-void NetlinkManager::onReceive (int fd)
+void NetlinkManager::onReadable (int fd)
 {
     if (fd == _wakeup)
     {

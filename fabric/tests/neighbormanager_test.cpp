@@ -78,6 +78,8 @@ public:
     {
         [[maybe_unused]] int result;
 
+        result = std::system ("ip neigh flush dev veth0");
+        result = std::system ("ip -6 neigh flush dev veth0");
         result = std::system ("ip neigh replace 192.168.100.2 lladdr 4e:ed:ed:ee:59:dc dev veth0 nud reachable");
         result = std::system ("ip -6 neigh replace 2001:db8::1236 lladdr 4e:ed:ed:ee:59:dc dev veth0 nud reachable");
     }

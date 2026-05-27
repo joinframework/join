@@ -45,7 +45,7 @@ namespace join
     /**
      * @brief ARP protocol class.
      */
-    class Arp : public Raw::Socket
+    class Arp : public Raw::Socket, public EventHandler
     {
     public:
         /**
@@ -58,7 +58,7 @@ namespace join
          * @param interface interface name.
          * @param neighbors neighbor manager to use (uses NeighborManager::instance if nullptr).
          */
-        Arp (const std::string& interface, NeighborManager* neighbors = nullptr);
+        Arp (const std::string& interface, NeighborManager& neighbors = NeighborManager::instance ());
 
         /**
          * @brief create instance by copy.
@@ -181,7 +181,7 @@ namespace join
             bpf.len = 6;
             bpf.filter = code;
 
-            // best effort, validation is done in onReceive anyway.
+            // best effort, validation is done in onReadable anyway.
             ::setsockopt (handle (), SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof (bpf));
 
             Packet out = {};
@@ -204,17 +204,45 @@ namespace join
 
             ScopedLock<Mutex> lock (_syncMutex);
 
+            _reactor.addHandler (handle (), this);
+
+            uint32_t tip;
+            ::memcpy (&tip, &out.arp.ar_tip, sizeof (tip));
+            auto inserted = _pending.emplace (tip, std::make_unique<PendingRequest> ());
+            if (!inserted.second)
+            {
+                // LCOV_EXCL_START
+                _reactor.delHandler (handle ());
+                close ();
+                lastError = make_error_code (Errc::OperationFailed);
+                return {};
+                // LCOV_EXCL_STOP
+            }
+
             if (write (reinterpret_cast<const char*> (&out), sizeof (Packet)) == -1)
             {
+                // LCOV_EXCL_START
+                _pending.erase (inserted.first);
+                _reactor.delHandler (handle ());
                 close ();
+                return {};
+                // LCOV_EXCL_STOP
+            }
+
+            if (!inserted.first->second->cond.timedWait (lock, timeout))
+            {
+                _pending.erase (inserted.first);
+                _reactor.delHandler (handle ());
+                close ();
+                lastError = std::make_error_code (std::errc::no_such_device_or_address);
                 return {};
             }
 
-            _reactor->addHandler (handle (), this);
-            MacAddress mac = waitResponse (lock, out.arp.ar_tip, timeout);
-            _reactor->delHandler (handle ());
-
+            MacAddress mac = inserted.first->second->mac;
+            _pending.erase (inserted.first);
+            _reactor.delHandler (handle ());
             close ();
+
             return mac;
         }
 
@@ -327,42 +355,10 @@ namespace join
         };
 
         /**
-         * @brief wait for ARP response.
-         * @param lock mutex previously locked by the calling thread.
-         * @param tip target IP.
-         * @param timeout wait timeout.
-         * @return the MAC address.
-         */
-        template <typename Rep, typename Period>
-        MacAddress waitResponse (ScopedLock<Mutex>& lock, uint32_t tip, std::chrono::duration<Rep, Period> timeout)
-        {
-            auto inserted = _pending.emplace (tip, std::make_unique<PendingRequest> ());
-            if (!inserted.second)
-            {
-                // LCOV_EXCL_START
-                lastError = make_error_code (Errc::OperationFailed);
-                return {};
-                // LCOV_EXCL_STOP
-            }
-
-            if (!inserted.first->second->cond.timedWait (lock, timeout))
-            {
-                _pending.erase (inserted.first);
-                lastError = std::make_error_code (std::errc::no_such_device_or_address);
-                return {};
-            }
-
-            MacAddress mac = inserted.first->second->mac;
-            _pending.erase (inserted.first);
-
-            return mac;
-        }
-
-        /**
          * @brief method called when data are ready to be read.
          * @param fd file descriptor.
          */
-        void onReceive (int fd) noexcept override;
+        void onReadable (int fd) noexcept override;
 
         /// buffer size.
         static constexpr size_t _bufferSize = 4096;
@@ -386,10 +382,10 @@ namespace join
         const std::string _interface;
 
         /// neighbor manager
-        NeighborManager* _neighbors = nullptr;
+        NeighborManager& _neighbors;
 
         /// event loop reactor.
-        Reactor* const _reactor = nullptr;
+        Reactor& _reactor;
     };
 }
 

@@ -32,6 +32,11 @@ target_link_libraries(reactor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME reactor.gtest COMMAND reactor.gtest)
 install(TARGETS reactor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(proactor.gtest proactor_test.cpp)
+target_link_libraries(proactor.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME proactor.gtest COMMAND proactor.gtest)
+install(TARGETS proactor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(realtimetimer.gtest realtimetimer_test.cpp)
 target_link_libraries(realtimetimer.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME realtimetimer.gtest COMMAND realtimetimer.gtest)
@@ -141,6 +146,21 @@ add_executable(sharedsemaphore.gtest sharedsemaphore_test.cpp)
 target_link_libraries(sharedsemaphore.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME sharedsemaphore.gtest COMMAND sharedsemaphore.gtest)
 install(TARGETS sharedsemaphore.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(futex.gtest futex_test.cpp)
+target_link_libraries(futex.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME futex.gtest COMMAND futex.gtest)
+install(TARGETS futex.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(sharedfutex.gtest sharedfutex_test.cpp)
+target_link_libraries(sharedfutex.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME sharedfutex.gtest COMMAND sharedfutex.gtest)
+install(TARGETS sharedfutex.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(function.gtest function_test.cpp)
+target_link_libraries(function.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME function.gtest COMMAND function.gtest)
+install(TARGETS function.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(thread.gtest thread_test.cpp)
 target_link_libraries(thread.gtest ${JOIN_CORE} GTest::gtest_main)

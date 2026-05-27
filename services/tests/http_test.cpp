@@ -37,7 +37,7 @@ using namespace std::chrono;
 using join::Errc;
 using join::TlsErrc;
 using join::IpAddress;
-using join::Resolver;
+using join::Dns;
 using join::HttpMethod;
 using join::HttpRequest;
 using join::HttpResponse;

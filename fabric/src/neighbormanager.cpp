@@ -38,7 +38,7 @@ using join::IpAddress;
 //   CLASS     : NeighborManager
 //   METHOD    : NeighborManager
 // =========================================================================
-NeighborManager::NeighborManager (Reactor* reactor)
+NeighborManager::NeighborManager (Reactor& reactor)
 : NetlinkManager (RTMGRP_NEIGH, reactor)
 {
     start ();

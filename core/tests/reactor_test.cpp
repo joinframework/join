@@ -67,12 +67,27 @@ protected:
      * @brief method called when data are ready to be read/accepted on handle.
      * @param fd file descriptor.
      */
-    virtual void onReceive (int fd) override
+    virtual void onReadable (int fd) override
     {
         {
             ScopedLock<Mutex> lock (_mut);
             _server.readExactly (_event, _server.canRead ());
-            EventHandler::onReceive (fd);
+            EventHandler::onReadable (fd);
+        }
+
+        _cond.signal ();
+    }
+
+    /**
+     * @brief method called when handle is ready to write.
+     * @param fd file descriptor.
+     */
+    virtual void onWriteable (int fd) override
+    {
+        {
+            ScopedLock<Mutex> lock (_mut);
+            _event = "onWriteable";
+            EventHandler::onWriteable (fd);
         }
 
         _cond.signal ();
@@ -84,9 +99,9 @@ protected:
      */
     virtual void onClose (int fd) override
     {
-        ReactorThread::reactor ()->delHandler (handle ());
-        ReactorThread::reactor ()->addHandler (handle (), this);
-        ReactorThread::reactor ()->delHandler (handle ());
+        ReactorThread::reactor ().delHandler (handle ());
+        ReactorThread::reactor ().addHandler (handle (), this, true, false);
+        ReactorThread::reactor ().delHandler (handle ());
         _server.close ();
 
         {
@@ -104,9 +119,9 @@ protected:
      */
     virtual void onError (int fd) override
     {
-        ReactorThread::reactor ()->delHandler (handle ());
-        ReactorThread::reactor ()->addHandler (handle (), this);
-        ReactorThread::reactor ()->delHandler (handle ());
+        ReactorThread::reactor ().delHandler (handle ());
+        ReactorThread::reactor ().addHandler (handle (), this, true, false);
+        ReactorThread::reactor ().delHandler (handle ());
         _server.close ();
 
         {
@@ -166,33 +181,75 @@ Mutex ReactorTest::_mut;
 std::string ReactorTest::_event;
 
 /**
- * @brief Test addHandler.
+ * @brief Test addHandler (write).
  */
-TEST_F (ReactorTest, addHandler)
+TEST_F (ReactorTest, addWriteHandler)
 {
     Reactor reactor;
     Thread th ([&reactor] () {
         reactor.run ();
     });
 
-    // test invalid parameter.
-    ASSERT_EQ (reactor.addHandler (handle (), nullptr), -1);
+    // test invalid handler.
+    ASSERT_EQ (reactor.addHandler (handle (), nullptr, false, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     // test invalid handle.
-    ASSERT_EQ (reactor.addHandler (handle (), this), -1);
+    ASSERT_EQ (reactor.addHandler (handle (), this, false, true), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    // connect sockets.
+    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    // test invalid event.
+    ASSERT_EQ (reactor.addHandler (handle (), this, false, false), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    // add write handler.
+    ASSERT_EQ (reactor.addHandler (handle (), this, false, true), 0) << join::lastError.message ();
+
+    // test already in use.
+    ASSERT_EQ (reactor.addHandler (handle (), this, true, false), 0) << join::lastError.message ();
+
+    // delete handler.
+    ASSERT_EQ (reactor.delHandler (handle ()), 0) << join::lastError.message ();
+
+    reactor.stop ();
+    th.join ();
+}
+
+/**
+ * @brief Test addHandler (read).
+ */
+TEST_F (ReactorTest, addReadHandler)
+{
+    Reactor reactor;
+    Thread th ([&reactor] () {
+        reactor.run ();
+    });
+
+    // test invalid handler.
+    ASSERT_EQ (reactor.addHandler (handle (), nullptr, true, false), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    // test invalid handle.
+    ASSERT_EQ (reactor.addHandler (handle (), this, true, false), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     // connect socket.
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    // add handler.
-    ASSERT_EQ (reactor.addHandler (handle (), this), 0) << join::lastError.message ();
+    // test invalid event.
+    ASSERT_EQ (reactor.addHandler (handle (), this, false, false), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    // add read handler.
+    ASSERT_EQ (reactor.addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // test already in use.
-    ASSERT_EQ (reactor.addHandler (handle (), this), -1);
-    ASSERT_EQ (join::lastError, std::errc::file_exists) << join::lastError.message ();
+    ASSERT_EQ (reactor.addHandler (handle (), this, false, true), 0) << join::lastError.message ();
 
     // delete handler
     ASSERT_EQ (reactor.delHandler (handle ()), 0) << join::lastError.message ();
@@ -220,7 +277,7 @@ TEST_F (ReactorTest, delHandler)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (reactor.addHandler (handle (), this), 0) << join::lastError.message ();
+    ASSERT_EQ (reactor.addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // delete handler
     ASSERT_EQ (reactor.delHandler (handle ()), 0) << join::lastError.message ();
@@ -246,7 +303,7 @@ TEST_F (ReactorTest, mbind)
 #endif
 
 /**
- * @brief Test delHandler.
+ * @brief Test mlock.
  */
 TEST_F (ReactorTest, mlock)
 {
@@ -256,9 +313,9 @@ TEST_F (ReactorTest, mlock)
 }
 
 /**
- * @brief Test onReceive.
+ * @brief Test onReadable.
  */
-TEST_F (ReactorTest, onReceive)
+TEST_F (ReactorTest, onReadable)
 {
     // connect socket.
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
@@ -275,23 +332,59 @@ TEST_F (ReactorTest, onReceive)
     ASSERT_EQ (ReactorThread::mlock (), 0) << join::lastError.message ();
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
-    // add handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+    // add read handler.
+    ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // write random data.
-    ASSERT_EQ (_client.writeExactly ("onReceive", strlen ("onReceive"), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("onReadable", strlen ("onReadable"), _timeout), 0) << join::lastError.message ();
 
-    // wait for the onReceive notification.
+    // wait for the onReadable notification.
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _event == "onReceive";
+            return _event == "onReadable";
         }));
         _event.clear ();
     }
 
     // delete handler.
-    ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test onWriteable.
+ */
+TEST_F (ReactorTest, onWriteable)
+{
+    // connect socket.
+    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    // tun thread
+    ASSERT_EQ (ReactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::affinity (), 0);
+    ASSERT_EQ (ReactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::priority (), 1);
+#ifdef JOIN_HAS_NUMA
+    ASSERT_EQ (ReactorThread::mbind (0), 0) << join::lastError.message ();
+#endif
+    ASSERT_EQ (ReactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
+
+    // add write handler.
+    ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this, false, true), 0) << join::lastError.message ();
+
+    // wait for the onWriteable notification.
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _event == "onWriteable";
+        }));
+        _event.clear ();
+    }
+
+    /// delete handler.
+    ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
 }
 
 /**
@@ -315,7 +408,7 @@ TEST_F (ReactorTest, onClose)
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // close immediately.
     _client.close ();
@@ -351,7 +444,7 @@ TEST_F (ReactorTest, onError)
     ASSERT_GT (ReactorThread::handle (), 0) << join::lastError.message ();
 
     // add handler.
-    ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+    ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // reset connection.
     struct linger sl

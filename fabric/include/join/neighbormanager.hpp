@@ -143,7 +143,7 @@ namespace join
          * @brief create instance.
          * @param reactor event loop reactor (uses ReactorThread if nullptr).
          */
-        explicit NeighborManager (Reactor* reactor = nullptr);
+        explicit NeighborManager (Reactor& reactor = ReactorThread::reactor ());
 
         /**
          * @brief create instance by copy.

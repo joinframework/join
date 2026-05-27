@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/condition.hpp>
+#include <join/reactor.hpp>
 #include <join/socket.hpp>
 #include <join/queue.hpp>
 
@@ -47,7 +48,7 @@ namespace join
     /**
      * @brief base class for netlink-based managers.
      */
-    class NetlinkManager : private Netlink::Socket
+    class NetlinkManager : private Netlink::Socket, public EventHandler
     {
     public:
         /**
@@ -55,7 +56,7 @@ namespace join
          * @param groups netlink multicast group bitmask to subscribe to.
          * @param reactor event loop reactor.
          */
-        NetlinkManager (uint32_t groups, Reactor* reactor = nullptr);
+        NetlinkManager (uint32_t groups, Reactor& reactor = ReactorThread::reactor ());
 
         /**
          * @brief create instance by copy.
@@ -84,9 +85,9 @@ namespace join
 
         /**
          * @brief get the event loop reactor.
-         * @return pointer to the reactor.
+         * @return reference to the reactor.
          */
-        Reactor* reactor () const noexcept;
+        Reactor& reactor () const noexcept;
 
     protected:
         /**
@@ -109,42 +110,6 @@ namespace join
         int sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::milliseconds timeout = std::chrono::seconds (5));
 
         /**
-         * @brief wait for specific netlink response.
-         * @param lock mutex previously locked by the calling thread.
-         * @param seq sequence number to wait for.
-         * @param timeout maximum wait duration.
-         * @return 0 on success, -1 on failure.
-         */
-        template <class Rep, class Period>
-        int waitResponse (ScopedLock<Mutex>& lock, uint32_t seq, std::chrono::duration<Rep, Period> timeout)
-        {
-            auto inserted = _pending.emplace (seq, std::make_unique<PendingRequest> ());
-            if (!inserted.second)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
-            if (!inserted.first->second->cond.timedWait (lock, timeout))
-            {
-                _pending.erase (inserted.first);
-                lastError = make_error_code (Errc::TimedOut);
-                return -1;
-            }
-
-            if (inserted.first->second->error != 0)
-            {
-                int err = inserted.first->second->error;
-                _pending.erase (inserted.first);
-                lastError = std::error_code (err, std::generic_category ());
-                return -1;
-            }
-
-            _pending.erase (inserted.first);
-            return 0;
-        }
-
-        /**
          * @brief push a job to be executed on the reactor thread.
          * @param func function to execute on the reactor thread.
          * @param args arguments to bind to the function.
@@ -155,7 +120,7 @@ namespace join
             Job job;
             job.func = std::bind (std::forward<Func> (func), std::forward<Args> (args)...);
 
-            if (_reactor->isReactorThread ())
+            if (_reactor.isReactorThread ())
             {
                 job.func ();
                 return;
@@ -177,7 +142,7 @@ namespace join
          * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.
          */
-        virtual void onReceive (int fd) override final;
+        virtual void onReadable (int fd) override final;
 
         /**
          * @brief dispatch a single RTM_* message to the derived class.
@@ -278,7 +243,7 @@ namespace join
         int _wakeup = -1;
 
         /// event loop reactor.
-        Reactor* _reactor;
+        Reactor& _reactor;
     };
 }
 

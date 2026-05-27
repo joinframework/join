@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2021 Mathieu Rabine
+ * Copyright (c) 2026 Mathieu Rabine
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 
 // libjoin.
 #include <join/thread.hpp>
-#include <join/mutex.hpp>
+#include <join/futex.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -37,45 +37,45 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-using join::SharedMutex;
+using join::SharedFutex;
 using join::ScopedLock;
 
 using namespace std::chrono_literals;
 
-const std::string _name = "/test_mutex";
+const std::string _name = "/test_futex";
 
 /**
  * @brief test lock.
  */
-TEST (SharedMutex, lock)
+TEST (SharedFutex, lock)
 {
-    SharedMutex* mutex = nullptr;
+    SharedFutex* futex = nullptr;
     void* shm = nullptr;
     pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
-    EXPECT_NE (::ftruncate (fd, sizeof (SharedMutex)), -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedFutex)), -1) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
-    shm = ::mmap (nullptr, sizeof (SharedMutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    shm = ::mmap (nullptr, sizeof (SharedFutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     EXPECT_NE (shm, nullptr) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
 
-    mutex = static_cast<SharedMutex*> (shm);
-    new (mutex) SharedMutex ();
+    futex = static_cast<SharedFutex*> (shm);
+    new (futex) SharedFutex ();
 
     child = fork ();
     if (child == 0)
     {
-        mutex->lock ();
+        futex->lock ();
         std::this_thread::sleep_for (15ms);
-        mutex->unlock ();
+        futex->unlock ();
         _exit (EXIT_SUCCESS);
     }
     else
@@ -87,10 +87,10 @@ TEST (SharedMutex, lock)
         }
         std::this_thread::sleep_for (5ms);
         auto beg = std::chrono::high_resolution_clock::now ();
-        mutex->lock ();
+        futex->lock ();
         auto end = std::chrono::high_resolution_clock::now ();
         EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
-        mutex->unlock ();
+        futex->unlock ();
         int status = -1;
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));
@@ -100,8 +100,8 @@ TEST (SharedMutex, lock)
 cleanup:
     if ((shm != nullptr) && (shm != MAP_FAILED))
     {
-        mutex->~SharedMutex ();
-        EXPECT_NE (::munmap (shm, sizeof (SharedMutex)), -1) << strerror (errno);
+        futex->~SharedFutex ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedFutex)), -1) << strerror (errno);
     }
 
     if (fd != -1)
@@ -115,35 +115,35 @@ cleanup:
 /**
  * @brief test tryLock.
  */
-TEST (SharedMutex, tryLock)
+TEST (SharedFutex, tryLock)
 {
-    SharedMutex* mutex = nullptr;
+    SharedFutex* futex = nullptr;
     void* shm = nullptr;
     pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
-    EXPECT_NE (::ftruncate (fd, sizeof (SharedMutex)), -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedFutex)), -1) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
-    shm = ::mmap (nullptr, sizeof (SharedMutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    shm = ::mmap (nullptr, sizeof (SharedFutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     EXPECT_NE (shm, nullptr) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
 
-    mutex = static_cast<SharedMutex*> (shm);
-    new (mutex) SharedMutex ();
+    futex = static_cast<SharedFutex*> (shm);
+    new (futex) SharedFutex ();
 
     child = fork ();
     if (child == 0)
     {
-        mutex->lock ();
+        futex->lock ();
         std::this_thread::sleep_for (15ms);
-        mutex->unlock ();
+        futex->unlock ();
         _exit (EXIT_SUCCESS);
     }
     else
@@ -154,10 +154,10 @@ TEST (SharedMutex, tryLock)
             goto cleanup;
         }
         std::this_thread::sleep_for (5ms);
-        EXPECT_FALSE (mutex->tryLock ());
+        EXPECT_FALSE (futex->tryLock ());
         std::this_thread::sleep_for (15ms);
-        EXPECT_TRUE (mutex->tryLock ());
-        mutex->unlock ();
+        EXPECT_TRUE (futex->tryLock ());
+        futex->unlock ();
         int status = -1;
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));
@@ -167,8 +167,8 @@ TEST (SharedMutex, tryLock)
 cleanup:
     if ((shm != nullptr) && (shm != MAP_FAILED))
     {
-        mutex->~SharedMutex ();
-        EXPECT_NE (::munmap (shm, sizeof (SharedMutex)), -1) << strerror (errno);
+        futex->~SharedFutex ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedFutex)), -1) << strerror (errno);
     }
 
     if (fd != -1)
@@ -182,34 +182,34 @@ cleanup:
 /**
  * @brief test scoped lock.
  */
-TEST (SharedMutex, scopedLock)
+TEST (SharedFutex, scopedLock)
 {
-    SharedMutex* mutex = nullptr;
+    SharedFutex* futex = nullptr;
     void* shm = nullptr;
     pid_t child = -1;
 
     int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
     ASSERT_NE (fd, -1) << strerror (errno);
-    EXPECT_NE (::ftruncate (fd, sizeof (SharedMutex)), -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedFutex)), -1) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
-    shm = ::mmap (nullptr, sizeof (SharedMutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    shm = ::mmap (nullptr, sizeof (SharedFutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     EXPECT_NE (shm, nullptr) << strerror (errno);
     if (HasFailure ())
     {
         goto cleanup;
     }
 
-    mutex = static_cast<SharedMutex*> (shm);
-    new (mutex) SharedMutex ();
+    futex = static_cast<SharedFutex*> (shm);
+    new (futex) SharedFutex ();
 
     child = fork ();
     if (child == 0)
     {
         {
-            ScopedLock<SharedMutex> lock (*mutex);
+            ScopedLock<SharedFutex> lock (*futex);
             std::this_thread::sleep_for (15ms);
         }
         _exit (EXIT_SUCCESS);
@@ -223,10 +223,10 @@ TEST (SharedMutex, scopedLock)
         }
         std::this_thread::sleep_for (5ms);
         auto beg = std::chrono::high_resolution_clock::now ();
-        mutex->lock ();
+        futex->lock ();
         auto end = std::chrono::high_resolution_clock::now ();
         EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
-        mutex->unlock ();
+        futex->unlock ();
         int status = -1;
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));
@@ -236,8 +236,8 @@ TEST (SharedMutex, scopedLock)
 cleanup:
     if ((shm != nullptr) && (shm != MAP_FAILED))
     {
-        mutex->~SharedMutex ();
-        EXPECT_NE (::munmap (shm, sizeof (SharedMutex)), -1) << strerror (errno);
+        futex->~SharedFutex ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedFutex)), -1) << strerror (errno);
     }
 
     if (fd != -1)
@@ -251,10 +251,10 @@ cleanup:
 /**
  * @brief test handle.
  */
-TEST (SharedMutex, handle)
+TEST (SharedFutex, handle)
 {
-    SharedMutex mutex;
-    EXPECT_NE (mutex.handle (), nullptr);
+    SharedFutex futex;
+    EXPECT_NE (futex.handle (), nullptr);
 }
 
 /**

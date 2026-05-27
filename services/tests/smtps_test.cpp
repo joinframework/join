@@ -34,8 +34,9 @@
 #include <fstream>
 
 using join::Errc;
-using join::Resolver;
+using join::Dns;
 using join::ReactorThread;
+using join::EventHandler;
 using join::MailMessage;
 using join::Smtps;
 using join::Tls;
@@ -43,7 +44,7 @@ using join::Tls;
 /**
  * @brief Class used to test the SMTPS client.
  */
-class SmtpsClient : public Tls::Acceptor, public ::testing::Test
+class SmtpsClient : public Tls::Acceptor, public EventHandler, public ::testing::Test
 {
 public:
     /**
@@ -194,8 +195,8 @@ protected:
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
         ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 #endif
-        ASSERT_EQ (this->create ({Resolver::resolveHost (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (this->create ({Dns::Resolver::lookupAddress (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -203,7 +204,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 
@@ -211,7 +212,7 @@ protected:
      * @brief method called when data are ready to be read on handle.
      * @param fd file descriptor.
      */
-    virtual void onReceive ([[maybe_unused]] int fd) override
+    virtual void onReadable ([[maybe_unused]] int fd) override
     {
         Tls::Stream stream = this->acceptStreamEncrypted ();
         if (stream.connected ())

@@ -31,12 +31,13 @@
 
 using join::Errc;
 using join::ReactorThread;
+using join::EventHandler;
 using join::UnixStream;
 
 /**
  * @brief Class used to test the unix stream socket API.
  */
-class UnixStreamSocket : public UnixStream::Acceptor, public ::testing::Test
+class UnixStreamSocket : public UnixStream::Acceptor, public EventHandler, public ::testing::Test
 {
 protected:
     /**
@@ -45,7 +46,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (this->create (_serverpath), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ()->addHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -53,7 +54,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ()->delHandler (handle ()), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
         this->close ();
     }
 
@@ -61,7 +62,7 @@ protected:
      * @brief method called when data are ready to be read on handle.
      * @param fd file descriptor.
      */
-    virtual void onReceive ([[maybe_unused]] int fd) override
+    virtual void onReadable ([[maybe_unused]] int fd) override
     {
         UnixStream::Socket sock = this->accept ();
         if (sock.connected ())

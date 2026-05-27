@@ -16,6 +16,7 @@ set(PUBLIC_HEADERS
     include/join/traits.hpp
     include/join/variant.hpp
     include/join/reactor.hpp
+    include/join/proactor.hpp
     include/join/memory.hpp
     include/join/allocator.hpp
     include/join/queue.hpp
@@ -23,6 +24,8 @@ set(PUBLIC_HEADERS
     include/join/mutex.hpp
     include/join/condition.hpp
     include/join/semaphore.hpp
+    include/join/futex.hpp
+    include/join/function.hpp
     include/join/thread.hpp
     include/join/threadpool.hpp
     include/join/macaddress.hpp
@@ -46,6 +49,7 @@ endif()
 set(SOURCES
     src/error.cpp
     src/reactor.cpp
+    src/proactor.cpp
     src/mutex.cpp
     src/condition.cpp
     src/semaphore.cpp

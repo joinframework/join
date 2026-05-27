@@ -160,7 +160,7 @@ namespace join
          * @brief create instance.
          * @param reactor event loop reactor.
          */
-        InterfaceManager (Reactor* reactor = nullptr);
+        InterfaceManager (Reactor& reactor = ReactorThread::reactor ());
 
         /**
          * @brief create instance by copy.

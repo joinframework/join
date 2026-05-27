@@ -54,6 +54,16 @@ namespace join
     class BasicTlsAcceptor;
 
     template <class Protocol>
+    class BasicDatagramResolver;
+    template <class Protocol>
+    class BasicTlsResolver;
+
+    template <class Protocol>
+    class BasicDatagramNameServer;
+    template <class Protocol>
+    class BasicDatagramPeer;
+
+    template <class Protocol>
     class BasicHttpClient;
     template <class Protocol>
     class BasicHttpSecureClient;
@@ -667,6 +677,314 @@ namespace join
      * @return true if not equals.
      */
     constexpr bool operator!= (const Tls& a, const Tls& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief DNS over UDP protocol class.
+     */
+    class Dns
+    {
+    public:
+        using Endpoint = BasicInternetEndpoint<Dns>;
+        using Socket = BasicDatagramSocket<Dns>;
+        using Resolver = BasicDatagramResolver<Dns>;
+        using NameServer = BasicDatagramNameServer<Dns>;
+
+        /**
+         * @brief construct the DNS protocol instance.
+         * @param family IP address family.
+         */
+        constexpr Dns (int family = AF_INET) noexcept
+        : _family (family)
+        {
+        }
+
+        /**
+         * @brief get protocol suitable for IPv4 address family.
+         * @return an IPv4 address family suitable protocol.
+         */
+        static inline Dns& v4 () noexcept
+        {
+            static Dns dnsv4 (AF_INET);
+            return dnsv4;
+        }
+
+        /**
+         * @brief get protocol suitable for IPv6 address family.
+         * @return an IPv6 address family suitable protocol.
+         */
+        static inline Dns& v6 () noexcept
+        {
+            static Dns dnsv6 (AF_INET6);
+            return dnsv6;
+        }
+
+        /**
+         * @brief get the protocol IP address family.
+         * @return the protocol IP address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return _family;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_DGRAM;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return IPPROTO_UDP;
+        }
+
+        /// default DNS port.
+        static constexpr uint16_t defaultPort = 53;
+
+        /// maximum DNS message size.
+        static constexpr size_t maxMsgSize = 8192;
+
+    private:
+        /// IP address family.
+        int _family;
+    };
+
+    /**
+     * @brief check if equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if equals.
+     */
+    constexpr bool operator== (const Dns& a, const Dns& b) noexcept
+    {
+        return a.family () == b.family ();
+    }
+
+    /**
+     * @brief check if not equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if not equals.
+     */
+    constexpr bool operator!= (const Dns& a, const Dns& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief Multicast DNS protocol class
+     */
+    class Mdns
+    {
+    public:
+        using Endpoint = BasicInternetEndpoint<Mdns>;
+        using Socket = BasicDatagramSocket<Mdns>;
+        using Peer = BasicDatagramPeer<Mdns>;
+
+        /**
+         * @brief construct the mDNS protocol instance.
+         * @param family IP address family.
+         */
+        constexpr Mdns (int family = AF_INET) noexcept
+        : _family (family)
+        {
+        }
+
+        /**
+         * @brief get protocol suitable for IPv4 address family.
+         * @return an IPv4 address family suitable protocol.
+         */
+        static inline Mdns& v4 () noexcept
+        {
+            static Mdns mdnsv4 (AF_INET);
+            return mdnsv4;
+        }
+
+        /**
+         * @brief get protocol suitable for IPv6 address family.
+         * @return an IPv6 address family suitable protocol.
+         */
+        static inline Mdns& v6 () noexcept
+        {
+            static Mdns mdnsv6 (AF_INET6);
+            return mdnsv6;
+        }
+
+        /**
+         * @brief get the protocol IP address family.
+         * @return the protocol IP address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return _family;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_DGRAM;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return IPPROTO_UDP;
+        }
+
+        /**
+         * @brief get multicast address for the given address family.
+         * @param family IP address family.
+         * @return multicast IP address.
+         */
+        static IpAddress multicastAddress (int family) noexcept
+        {
+            return (family == AF_INET6) ? "ff02::fb" : "224.0.0.251";
+        }
+
+        /// default DNS port.
+        static constexpr uint16_t defaultPort = 5353;
+
+        /// maximum DNS message size.
+        static constexpr size_t maxMsgSize = 8192;
+
+    private:
+        /// IP address family.
+        int _family;
+    };
+
+    /**
+     * @brief check if equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if equals.
+     */
+    constexpr bool operator== (const Mdns& a, const Mdns& b) noexcept
+    {
+        return a.family () == b.family ();
+    }
+
+    /**
+     * @brief check if not equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if not equals.
+     */
+    constexpr bool operator!= (const Mdns& a, const Mdns& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief DNS over TLS protocol class.
+     */
+    class Dot
+    {
+    public:
+        using Endpoint = BasicInternetEndpoint<Dot>;
+        using Socket = BasicTlsSocket<Dot>;
+        using Resolver = BasicTlsResolver<Dot>;
+
+        /**
+         * @brief construct the DoT protocol instance.
+         * @param family IP address family.
+         */
+        constexpr Dot (int family = AF_INET) noexcept
+        : _family (family)
+        {
+        }
+
+        /**
+         * @brief get protocol suitable for IPv4 address family.
+         * @return an IPv4 address family suitable protocol.
+         */
+        static inline Dot& v4 () noexcept
+        {
+            static Dot dotv4 (AF_INET);
+            return dotv4;
+        }
+
+        /**
+         * @brief get protocol suitable for IPv6 address family.
+         * @return an IPv6 address family suitable protocol.
+         */
+        static inline Dot& v6 () noexcept
+        {
+            static Dot dotv6 (AF_INET6);
+            return dotv6;
+        }
+
+        /**
+         * @brief get the protocol IP address family.
+         * @return the protocol IP address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return _family;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_STREAM;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return IPPROTO_TCP;
+        }
+
+        /// default DoT port.
+        static constexpr uint16_t defaultPort = 853;
+
+        /// maximum DoT message size.
+        static constexpr size_t maxMsgSize = 16384;
+
+    private:
+        /// IP address family.
+        int _family;
+    };
+
+    /**
+     * @brief check if equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if equals.
+     */
+    constexpr bool operator== (const Dot& a, const Dot& b) noexcept
+    {
+        return a.family () == b.family ();
+    }
+
+    /**
+     * @brief check if not equals.
+     * @param a protocol to check.
+     * @param b protocol to check.
+     * @return true if not equals.
+     */
+    constexpr bool operator!= (const Dot& a, const Dot& b) noexcept
     {
         return !(a == b);
     }

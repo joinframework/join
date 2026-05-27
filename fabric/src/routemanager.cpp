@@ -37,7 +37,7 @@ using join::IpAddress;
 //   CLASS     : RouteManager
 //   METHOD    : RouteManager
 // =========================================================================
-RouteManager::RouteManager (Reactor* reactor)
+RouteManager::RouteManager (Reactor& reactor)
 : NetlinkManager (RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE, reactor)
 {
     start ();
