@@ -222,7 +222,9 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
             break;
 
         default:
-            break;  // LCOV_EXCL_LINE
+            // LCOV_EXCL_START
+            break;
+            // LCOV_EXCL_STOP
     }
 
     if (JOIN_UNLIKELY (cmd.done))
@@ -532,7 +534,9 @@ inline int join::BasicProactor::executeOp (IoOperation* op) noexcept
                 }
 
             default:
-                return -EINVAL;  // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
+                return -EINVAL;
+                // LCOV_EXCL_STOP
         }
     }
 }

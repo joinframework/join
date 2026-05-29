@@ -79,8 +79,10 @@ int join::BasicProactor<Policy>::flush (bool sync) noexcept
     {
         if (JOIN_UNLIKELY (io_uring_submit (&_ring) < 0))
         {
+            // LCOV_EXCL_START
             lastError = std::error_code (errno, std::system_category ());
             return -1;
+            // LCOV_EXCL_STOP
         }
         return 0;
     }
@@ -453,7 +455,9 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
             break;
 
         default:
-            break;  // LCOV_EXCL_LINE
+            // LCOV_EXCL_START
+            break;
+            // LCOV_EXCL_STOP
     }
 
     if (JOIN_UNLIKELY (cmd.done))
@@ -671,8 +675,9 @@ void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation* op
             break;
 
         default:
-            io_uring_prep_nop (sqe);  // LCOV_EXCL_LINE
-            break;
+            // LCOV_EXCL_START
+            io_uring_prep_nop (sqe);
+            // LCOV_EXCL_STOP
     }
 
     io_uring_sqe_set_data (sqe, op);
@@ -736,7 +741,7 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::true_type
 
     if (JOIN_UNLIKELY (op->state == IoOperation::State::Idle))
     {
-        return;
+        return;  // LCOV_EXCL_LINE
     }
 
     int result = cqe->res;
@@ -759,7 +764,7 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
 
     if (JOIN_UNLIKELY (op->state == IoOperation::State::Idle))
     {
-        return;
+        return;  // LCOV_EXCL_LINE
     }
 
     int result = cqe->res;
@@ -797,7 +802,7 @@ void join::BasicProactor<Policy>::eventLoop (std::false_type, std::false_type) n
         {
             if (JOIN_UNLIKELY (io_uring_wait_cqe (&_ring, &cqe) < 0))
             {
-                continue;
+                continue;  // LCOV_EXCL_LINE
             }
         }
         else
