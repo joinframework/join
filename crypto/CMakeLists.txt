@@ -6,6 +6,9 @@ set(PUBLIC_HEADERS
     include/join/hmac.hpp
     include/join/tlskey.hpp
     include/join/signature.hpp
+    # include/join/tlserror.hpp
+    include/join/tlscontext.hpp
+    include/join/tlswrapper.hpp
 )
 
 set(SOURCES
@@ -14,6 +17,8 @@ set(SOURCES
     src/hmac.cpp
     src/tlskey.cpp
     src/signature.cpp
+    # src/tlserror.cpp
+    src/tlscontext.cpp
 )
 
 add_library(${JOIN_CRYPTO} ${SOURCES})

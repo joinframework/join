@@ -59,6 +59,7 @@ namespace join
     {
     public:
         using Ptr = std::unique_ptr<BasicSocket<Protocol>>;
+        using Proto = Protocol;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -622,6 +623,10 @@ namespace join
 
         /// protocol.
         Protocol _protocol;
+
+        /// friendship with TLS wrapper.
+        template <class Socket>
+        friend class TlsWrapper;
     };
 
     /**
@@ -644,6 +649,7 @@ namespace join
     {
     public:
         using Ptr = std::unique_ptr<BasicDatagramSocket<Protocol>>;
+        using Proto = Protocol;
         using Mode = typename BasicSocket<Protocol>::Mode;
         using Option = typename BasicSocket<Protocol>::Option;
         using State = typename BasicSocket<Protocol>::State;
@@ -1141,6 +1147,7 @@ namespace join
     {
     public:
         using Ptr = std::unique_ptr<BasicStreamSocket<Protocol>>;
+        using Proto = Protocol;
         using Mode = typename BasicDatagramSocket<Protocol>::Mode;
         using Option = typename BasicDatagramSocket<Protocol>::Option;
         using State = typename BasicDatagramSocket<Protocol>::State;
@@ -1264,7 +1271,7 @@ namespace join
                 this->_state = State::Disconnected;
             }
 
-            this->close ();
+            // this->close ();
 
             return 0;
         }
@@ -1551,6 +1558,7 @@ namespace join
     {
     public:
         using Ptr = std::unique_ptr<BasicTlsSocket<Protocol>>;
+        using Proto = Protocol;
         using Mode = typename BasicStreamSocket<Protocol>::Mode;
         using Option = typename BasicStreamSocket<Protocol>::Option;
         using State = typename BasicStreamSocket<Protocol>::State;
@@ -1570,7 +1578,7 @@ namespace join
          */
         BasicTlsSocket (Mode mode)
         : BasicStreamSocket<Protocol> (mode)
-        , _tlsContext (SSL_CTX_new (TLS_client_method ()))
+        , _tlsContext (SSL_CTX_new (TLS_client_method ()), SslCtxDelete ())
         {
             // enable the OpenSSL bug workaround options.
             SSL_CTX_set_options (this->_tlsContext.get (), SSL_OP_ALL);
