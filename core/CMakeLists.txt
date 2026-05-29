@@ -44,9 +44,9 @@ set(PUBLIC_HEADERS
 )
 
 if(JOIN_ENABLE_IO_URING)
-    list(APPEND PUBLIC_HEADERS include/join/io_policy.hpp include/join/proactor_uring.inl)
+    list(APPEND PUBLIC_HEADERS include/join/io_policy.hpp include/join/proactor_uring_impl.hpp)
 else()
-    list(APPEND PUBLIC_HEADERS include/join/proactor_epoll.inl)
+    list(APPEND PUBLIC_HEADERS include/join/proactor_epoll_impl.hpp)
 endif()
 
 set(SOURCES

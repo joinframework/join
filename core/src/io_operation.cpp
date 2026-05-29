@@ -66,11 +66,12 @@ IoOperation IoOperation::makeConnect (int fd, const sockaddr* addr, socklen_t ad
 //   CLASS     : IoOperation
 //   METHOD    : makeRead
 // =========================================================================
-IoOperation IoOperation::makeRead (int fd, void* buf, uint32_t len, CompletionHandler* handler) noexcept
+IoOperation IoOperation::makeRead (int fd, void* buf, uint32_t len, CompletionHandler* handler, bool linked) noexcept
 {
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Read);
     op.handler = handler;
+    op.linked = linked;
     op.data.rw.fd = fd;
     op.data.rw.buf = buf;
     op.data.rw.len = len;
@@ -83,11 +84,13 @@ IoOperation IoOperation::makeRead (int fd, void* buf, uint32_t len, CompletionHa
 //   CLASS     : IoOperation
 //   METHOD    : makeWrite
 // =========================================================================
-IoOperation IoOperation::makeWrite (int fd, const void* buf, uint32_t len, CompletionHandler* handler) noexcept
+IoOperation IoOperation::makeWrite (int fd, const void* buf, uint32_t len, CompletionHandler* handler,
+                                    bool linked) noexcept
 {
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Write);
     op.handler = handler;
+    op.linked = linked;
     op.data.rw.fd = fd;
     op.data.rw.buf = const_cast<void*> (buf);
     op.data.rw.len = len;
@@ -100,12 +103,13 @@ IoOperation IoOperation::makeWrite (int fd, const void* buf, uint32_t len, Compl
 //   CLASS     : IoOperation
 //   METHOD    : makeReadFixed
 // =========================================================================
-IoOperation IoOperation::makeReadFixed (int fd, void* buf, uint32_t len, uint16_t index,
-                                        CompletionHandler* handler) noexcept
+IoOperation IoOperation::makeReadFixed (int fd, void* buf, uint32_t len, uint16_t index, CompletionHandler* handler,
+                                        bool linked) noexcept
 {
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::ReadFixed);
     op.handler = handler;
+    op.linked = linked;
     op.data.rw.fd = fd;
     op.data.rw.buf = buf;
     op.data.rw.len = len;
@@ -119,11 +123,12 @@ IoOperation IoOperation::makeReadFixed (int fd, void* buf, uint32_t len, uint16_
 //   METHOD    : makeWriteFixed
 // =========================================================================
 IoOperation IoOperation::makeWriteFixed (int fd, const void* buf, uint32_t len, uint16_t index,
-                                         CompletionHandler* handler) noexcept
+                                         CompletionHandler* handler, bool linked) noexcept
 {
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::WriteFixed);
     op.handler = handler;
+    op.linked = linked;
     op.data.rw.fd = fd;
     op.data.rw.buf = const_cast<void*> (buf);
     op.data.rw.len = len;
@@ -136,11 +141,12 @@ IoOperation IoOperation::makeWriteFixed (int fd, const void* buf, uint32_t len, 
 //   CLASS     : IoOperation
 //   METHOD    : makeRecvmsg
 // =========================================================================
-IoOperation IoOperation::makeRecvmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler) noexcept
+IoOperation IoOperation::makeRecvmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler, bool linked) noexcept
 {
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::RecvMsg);
     op.handler = handler;
+    op.linked = linked;
     op.data.msg.fd = fd;
     op.data.msg.msg = msg;
     op.data.msg.flags = flags;
@@ -151,11 +157,13 @@ IoOperation IoOperation::makeRecvmsg (int fd, msghdr* msg, int flags, Completion
 //   CLASS     : IoOperation
 //   METHOD    : makeSendmsg
 // =========================================================================
-IoOperation IoOperation::makeSendmsg (int fd, const msghdr* msg, int flags, CompletionHandler* handler) noexcept
+IoOperation IoOperation::makeSendmsg (int fd, const msghdr* msg, int flags, CompletionHandler* handler,
+                                      bool linked) noexcept
 {
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::SendMsg);
     op.handler = handler;
+    op.linked = linked;
     op.data.msg.fd = fd;
     op.data.msg.msg = const_cast<msghdr*> (msg);
     op.data.msg.flags = flags;
@@ -166,11 +174,13 @@ IoOperation IoOperation::makeSendmsg (int fd, const msghdr* msg, int flags, Comp
 //   CLASS     : IoOperation
 //   METHOD    : makeRecv
 // =========================================================================
-IoOperation IoOperation::makeRecv (int fd, void* buf, uint32_t len, int flags, CompletionHandler* handler) noexcept
+IoOperation IoOperation::makeRecv (int fd, void* buf, uint32_t len, int flags, CompletionHandler* handler,
+                                   bool linked) noexcept
 {
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Recv);
     op.handler = handler;
+    op.linked = linked;
     op.data.stream.fd = fd;
     op.data.stream.buf = buf;
     op.data.stream.len = len;
@@ -182,12 +192,13 @@ IoOperation IoOperation::makeRecv (int fd, void* buf, uint32_t len, int flags, C
 //   CLASS     : IoOperation
 //   METHOD    : makeSend
 // =========================================================================
-IoOperation IoOperation::makeSend (int fd, const void* buf, uint32_t len, int flags,
-                                   CompletionHandler* handler) noexcept
+IoOperation IoOperation::makeSend (int fd, const void* buf, uint32_t len, int flags, CompletionHandler* handler,
+                                   bool linked) noexcept
 {
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Send);
     op.handler = handler;
+    op.linked = linked;
     op.data.stream.fd = fd;
     op.data.stream.buf = const_cast<void*> (buf);
     op.data.stream.len = len;

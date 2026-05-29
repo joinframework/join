@@ -73,6 +73,14 @@ namespace join
  */
 class join::CompletionHandler
 {
+    /// friendship with proactor.
+#ifdef JOIN_HAS_IO_URING
+    template <typename Policy>
+    friend class join::BasicProactor;
+#else
+    friend class join::BasicProactor;
+#endif
+
 public:
     /**
      * @brief create instance.
@@ -108,7 +116,7 @@ public:
     /**
      * @brief destroy instance.
      */
-    ~CompletionHandler () = default;
+    virtual ~CompletionHandler () = default;
 
 protected:
     /**
@@ -130,14 +138,6 @@ protected:
     {
         // do nothing.
     }
-
-    /// friendship with proactor.
-#ifdef JOIN_HAS_IO_URING
-    template <typename Policy>
-    friend class join::BasicProactor;
-#else
-    friend class join::BasicProactor;
-#endif
 };
 
 /**
@@ -152,7 +152,7 @@ class join::BasicProactor : public join::EventHandler
 {
 public:
     /**
-     * @brief construct with the given ring / queue size.
+     * @brief initialize the proactor and its I/O backend.
      */
     explicit BasicProactor ();
 
@@ -191,27 +191,27 @@ public:
      * @brief submit an asynchronous operation to the proactor.
      * @param op operation to submit.
      * @param flush call io_uring_submit after pushing the SQE if true (io_uring only).
-     * @param sync wait for submission acknowledgment if true.
+     * @param sync wait for submission acknowledgment if true (default: false).
      * @return 0 on success, -1 on failure.
      */
-    int submit (IoOperation* op, bool flush = false, bool sync = true) noexcept;
+    int submit (IoOperation* op, bool flush = false, bool sync = false) noexcept;
 
     /**
      * @brief cancel an in-flight operation.
      * @param op operation to cancel.
      * @param flush call io_uring_submit after pushing the cancel SQE if true (io_uring only).
-     * @param sync block until the cancellation has been acknowledged.
+     * @param sync wait for cancellation acknowledgment if true (default: false).
      * @return 0 on success, -1 on failure (lastError set).
      */
-    int cancel (IoOperation* op, bool flush = false, bool sync = true) noexcept;
+    int cancel (IoOperation* op, bool flush = false, bool sync = false) noexcept;
 
 #ifdef JOIN_HAS_IO_URING
     /**
      * @brief flush pending submissions to the kernel.
-     * @param sync block until the flush has been acknowledged if true.
+     * @param sync wait for flush acknowledgment if true (default: false).
      * @return 0 on success, -1 on failure (lastError set).
      */
-    int flush (bool sync = true) noexcept;
+    int flush (bool sync = false) noexcept;
 #endif
 
     /**
@@ -231,18 +231,18 @@ public:
      * @param iovecs list of buffers to register.
      * @return 0 on success, -1 on failure.
      */
-    int registerBuffers (const std::vector<iovec>& iovecs);
+    int registerBuffers (const std::vector<iovec>& iovecs) noexcept;
 
     /**
      * @brief unregister previously registered fixed buffers from the io_uring instance.
      * @return 0 on success, -1 on failure.
      */
-    int unregisterBuffers ();
+    int unregisterBuffers () noexcept;
 #endif
 
 #ifdef JOIN_HAS_NUMA
     /**
-     * @brief bind reactor command queue memory to a NUMA node.
+     * @brief bind proactor command queue memory to a NUMA node.
      * @param numa NUMA node ID.
      * @return 0 on success, -1 on failure.
      */
@@ -250,7 +250,7 @@ public:
 #endif
 
     /**
-     * @brief lock reactor command queue memory in RAM.
+     * @brief lock proactor command queue memory in RAM.
      * @return 0 on success, -1 on failure.
      */
     int mlock () const noexcept;
@@ -267,17 +267,17 @@ public:
      */
     bool isProactorThread () const noexcept;
 
-protected:
+private:
 #ifdef JOIN_HAS_IO_URING
     /**
-     * @brief init wakeup eventfd descriptor.
-     * @return eventfd descriptor.
+     * @brief create the wakeup eventfd descriptor.
+     * @return eventfd descriptor on success, -1 on failure.
      */
     int initWakeup (std::true_type) noexcept;
 
     /**
-     * @brief init wakeup eventfd descriptor.
-     * @return eventfd descriptor.
+     * @brief no-op stub; returns -1 for policies that do not use a wakeup eventfd.
+     * @return -1.
      */
     int initWakeup (std::false_type) noexcept;
 
@@ -287,7 +287,7 @@ protected:
     void initWakeupOp (std::true_type) noexcept;
 
     /**
-     * @brief init wakeup eventfd descriptor.
+     * @brief no-op stub for policies that do not use a wakeup operation.
      */
     void initWakeupOp (std::false_type) noexcept;
 
@@ -348,7 +348,7 @@ protected:
     {
         CommandType type;        /**< command type. */
         IoOperation* op;         /**< target operation, or nullptr for Stop/Flush. */
-        bool flush;              /**< call io_uring_submit after processing. */
+        bool flush;              /**< if true, call io_uring_submit after processing (io_uring only). */
         std::atomic<bool>* done; /**< set to true when the command is processed. */
         std::error_code* errc;   /**< filled with the error code on failure. */
     };
@@ -362,14 +362,14 @@ protected:
 
 #ifdef JOIN_HAS_IO_URING
     /**
-     * @brief write command to queue and wake dispatcher.
+     * @brief push command to queue and write to the wakeup eventfd to wake the dispatcher.
      * @param cmd command to write.
      * @return 0 on success, -1 on failure.
      */
     int writeCommand (const Command& cmd, std::true_type) noexcept;
 
     /**
-     * @brief write command to queue and wake dispatcher.
+     * @brief push command to queue; the polling event loop drains it without a wakeup signal.
      * @param cmd command to write.
      * @return 0 on success, -1 on failure.
      */
@@ -388,18 +388,25 @@ protected:
     void processCommand (const Command& cmd) noexcept;
 
     /**
-     * @brief submit op directly onto the ring.
+     * @brief submit an operation directly to the backend.
      * @param op operation to submit.
+     * @param flush if true, flush pending submissions to the kernel after submitting (io_uring only).
      * @return 0 on success, -1 on failure.
      */
-    int submitOperation (IoOperation* op, bool flush = true) noexcept;
+    int submitOperation (IoOperation* op, bool flush) noexcept;
 
     /**
-     * @brief cancel op directly on the ring.
+     * @brief cancel an in-flight operation directly in the backend.
      * @param op operation to cancel.
+     * @param flush if true, flush pending submissions to the kernel after cancelling (io_uring only).
      * @return 0 on success, -1 on failure.
      */
-    int cancelOperation (IoOperation* op, bool flush = true) noexcept;
+    int cancelOperation (IoOperation* op, bool flush) noexcept;
+
+    /**
+     * @brief cancel all in-flight operations.
+     */
+    void cancelAllOperations () noexcept;
 
     /**
      * @brief dispatch completion callback and reset operation state.
@@ -460,7 +467,7 @@ protected:
     void eventLoop () noexcept;
 
     /**
-     * @brief run the epoll backend event loop until stop() is called.
+     * @brief run the default io_uring event loop (blocking wait with eventfd wakeup) until stop() is called.
      */
     void eventLoop (std::false_type, std::false_type) noexcept;
 
@@ -477,7 +484,7 @@ protected:
     /**
      * @brief return true if opcode requires EPOLLOUT.
      * @param code raw opcode value.
-     * @return true for Write, WriteFixed, SendMsg.
+     * @return true for Connect, Write, WriteFixed, SendMsg, Send.
      */
     static bool isWriteOp (uint8_t code) noexcept;
 
@@ -492,25 +499,25 @@ protected:
      * @brief method called when data are ready to be read on handle.
      * @param fd file descriptor.
      */
-    void onReadable (int fd) override;
+    void onReadable (int fd) noexcept override;
 
     /**
      * @brief method called when data are ready to be written on handle.
      * @param fd file descriptor.
      */
-    void onWriteable (int fd) override;
+    void onWriteable (int fd) noexcept override;
 
     /**
      * @brief method called when handle was closed by the peer.
      * @param fd file descriptor.
      */
-    void onClose (int fd) override;
+    void onClose (int fd) noexcept override;
 
     /**
      * @brief method called when an error occurred on handle.
      * @param fd file descriptor.
      */
-    void onError (int fd) override;
+    void onError (int fd) noexcept override;
 #endif
 
     /// command queue size.
@@ -519,8 +526,8 @@ protected:
     /// command queue.
     LocalMem::Mpsc::Queue<Command> _commands;
 
-    /// stop waiter: non-null while a sync stop() is in progress.
-    std::atomic<std::atomic<bool>*> _stopDone{nullptr};
+    /// set to true while a sync stop() is in progress.
+    std::atomic<bool> _stopping{false};
 
     /// eventfd descriptor.
     int _wakeup = -1;
@@ -558,6 +565,10 @@ protected:
 #endif
 };
 
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : submit
+// =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
 int join::BasicProactor<Policy>::submit (IoOperation* op, bool flush, bool sync) noexcept
@@ -573,7 +584,7 @@ inline int join::BasicProactor::submit (IoOperation* op, bool flush, bool sync) 
     std::atomic<bool> done{false}, *pdone = nullptr;
     std::error_code errc, *perrc = nullptr;
 
-    if (JOIN_LIKELY (sync))
+    if (JOIN_UNLIKELY (sync))
     {
         pdone = &done;
         perrc = &errc;
@@ -584,7 +595,7 @@ inline int join::BasicProactor::submit (IoOperation* op, bool flush, bool sync) 
         return -1;  // LCOV_EXCL_LINE
     }
 
-    if (JOIN_LIKELY (sync))
+    if (JOIN_UNLIKELY (sync))
     {
         Backoff backoff;
         while (!done.load (std::memory_order_acquire))
@@ -602,6 +613,10 @@ inline int join::BasicProactor::submit (IoOperation* op, bool flush, bool sync) 
     return 0;
 }
 
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : cancel
+// =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
 int join::BasicProactor<Policy>::cancel (IoOperation* op, bool flush, bool sync) noexcept
@@ -617,7 +632,7 @@ inline int join::BasicProactor::cancel (IoOperation* op, bool flush, bool sync) 
     std::atomic<bool> done{false}, *pdone = nullptr;
     std::error_code errc, *perrc = nullptr;
 
-    if (JOIN_LIKELY (sync))
+    if (JOIN_UNLIKELY (sync))
     {
         pdone = &done;
         perrc = &errc;
@@ -628,7 +643,7 @@ inline int join::BasicProactor::cancel (IoOperation* op, bool flush, bool sync) 
         return -1;  // LCOV_EXCL_LINE
     }
 
-    if (JOIN_LIKELY (sync))
+    if (JOIN_UNLIKELY (sync))
     {
         Backoff backoff;
         while (!done.load (std::memory_order_acquire))
@@ -646,6 +661,10 @@ inline int join::BasicProactor::cancel (IoOperation* op, bool flush, bool sync) 
     return 0;
 }
 
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : dispatchOperation
+// =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
 void join::BasicProactor<Policy>::dispatchOperation (IoOperation* op, int result, bool cancelled) noexcept
@@ -655,10 +674,10 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
 {
     if (JOIN_UNLIKELY (op == nullptr))
     {
-        return;
+        return;  // LCOV_EXCL_LINE
     }
 
-    if (op->handler)
+    if (JOIN_LIKELY (op->handler))
     {
         if (cancelled)
         {
@@ -674,9 +693,9 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
 }
 
 #ifdef JOIN_HAS_IO_URING
-#include "proactor_uring.inl"
+#include "proactor_uring_impl.hpp"
 #else
-#include "proactor_epoll.inl"
+#include "proactor_epoll_impl.hpp"
 #endif
 
 /**
@@ -691,8 +710,8 @@ class join::BasicProactorThread
 {
 public:
     /**
-     * @brief get the global Proactor instance.
-     * @return reference to the singleton Proactor.
+     * @brief get the Proactor instance owned by the singleton ProactorThread.
+     * @return reference to the Proactor.
      */
 #ifdef JOIN_HAS_IO_URING
     static BasicProactor<Policy>& proactor ()
@@ -717,7 +736,7 @@ public:
      * @brief get proactor thread affinity.
      * @return core index, or -1 if not pinned.
      */
-    static int affinity ()
+    static int affinity () noexcept
     {
         return instance ()._dispatcher.affinity ();
     }
@@ -736,7 +755,7 @@ public:
      * @brief get proactor thread scheduling priority.
      * @return current priority.
      */
-    static int priority ()
+    static int priority () noexcept
     {
         return instance ()._dispatcher.priority ();
     }
@@ -745,28 +764,28 @@ public:
      * @brief get the native handle of the proactor thread.
      * @return pthread_t handle.
      */
-    static pthread_t handle ()
+    static pthread_t handle () noexcept
     {
         return instance ()._dispatcher.handle ();
     }
 
 #ifdef JOIN_HAS_NUMA
     /**
-     * @brief bind reactor command queue memory to a NUMA node.
+     * @brief bind proactor command queue memory to a NUMA node.
      * @param numa NUMA node ID.
      * @return 0 on success, -1 on failure.
      */
-    static int mbind (int numa)
+    static int mbind (int numa) noexcept
     {
         return instance ()._proactor.mbind (numa);
     }
 #endif
 
     /**
-     * @brief lock reactor command queue memory in RAM.
+     * @brief lock proactor command queue memory in RAM.
      * @return 0 on success, -1 on failure.
      */
-    static int mlock ()
+    static int mlock () noexcept
     {
         return instance ()._proactor.mlock ();
     }

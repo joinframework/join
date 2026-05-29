@@ -114,6 +114,8 @@ namespace join
         /**
          * @brief build a connect operation.
          * @param fd socket file descriptor.
+         * @param addr remote address.
+         * @param addrlen remote address length.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.
          */
@@ -131,7 +133,7 @@ namespace join
             /// buffer.
             void* buf;
 
-            /// number of bytes to proceed.
+            /// number of bytes to transfer.
             unsigned long len;
 
             /// registered buffer index (ignored with reactor backend).
@@ -147,9 +149,11 @@ namespace join
          * @param buf destination buffer.
          * @param len number of bytes to read.
          * @param handler handler to notify on completion.
+         * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeRead (int fd, void* buf, uint32_t len, CompletionHandler* handler) noexcept;
+        static IoOperation makeRead (int fd, void* buf, uint32_t len, CompletionHandler* handler,
+                                     bool linked = false) noexcept;
 
         /**
          * @brief build a regular write operation.
@@ -157,33 +161,37 @@ namespace join
          * @param buf source buffer.
          * @param len number of bytes to write.
          * @param handler handler to notify on completion.
+         * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeWrite (int fd, const void* buf, uint32_t len, CompletionHandler* handler) noexcept;
+        static IoOperation makeWrite (int fd, const void* buf, uint32_t len, CompletionHandler* handler,
+                                      bool linked = false) noexcept;
 
         /**
-         * @brief build a regular read operation.
+         * @brief build a fixed-buffer read operation.
          * @param fd file descriptor to read from.
          * @param buf destination buffer.
          * @param len number of bytes to read.
          * @param index registered buffer index.
          * @param handler handler to notify on completion.
+         * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeReadFixed (int fd, void* buf, uint32_t len, uint16_t index,
-                                          CompletionHandler* handler) noexcept;
+        static IoOperation makeReadFixed (int fd, void* buf, uint32_t len, uint16_t index, CompletionHandler* handler,
+                                          bool linked = false) noexcept;
 
         /**
-         * @brief build a regular write operation.
+         * @brief build a fixed-buffer write operation.
          * @param fd file descriptor to write to.
          * @param buf source buffer.
          * @param len number of bytes to write.
          * @param index registered buffer index.
          * @param handler handler to notify on completion.
+         * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
         static IoOperation makeWriteFixed (int fd, const void* buf, uint32_t len, uint16_t index,
-                                           CompletionHandler* handler) noexcept;
+                                           CompletionHandler* handler, bool linked = false) noexcept;
 
         /**
          * @brief payload for sendmsg / recvmsg.
@@ -206,9 +214,11 @@ namespace join
          * @param msg message header.
          * @param flags recv flags.
          * @param handler handler to notify on completion.
+         * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeRecvmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler) noexcept;
+        static IoOperation makeRecvmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler,
+                                        bool linked = false) noexcept;
 
         /**
          * @brief build a send-message operation.
@@ -216,9 +226,11 @@ namespace join
          * @param msg message header.
          * @param flags send flags.
          * @param handler handler to notify on completion.
+         * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeSendmsg (int fd, const msghdr* msg, int flags, CompletionHandler* handler) noexcept;
+        static IoOperation makeSendmsg (int fd, const msghdr* msg, int flags, CompletionHandler* handler,
+                                        bool linked = false) noexcept;
 
         /**
          * @brief payload for recv / send.
@@ -231,7 +243,7 @@ namespace join
             /// buffer.
             void* buf;
 
-            /// number of bytes to proceed.
+            /// number of bytes to transfer.
             unsigned long len;
 
             /// send / recv flags.
@@ -239,25 +251,30 @@ namespace join
         };
 
         /**
-         * @brief build a receive-message operation.
+         * @brief build a receive operation.
          * @param fd socket file descriptor.
-         * @param msg message header.
+         * @param buf destination buffer.
+         * @param len number of bytes to receive.
          * @param flags recv flags.
          * @param handler handler to notify on completion.
+         * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeRecv (int fd, void* buf, uint32_t len, int flags, CompletionHandler* handler) noexcept;
+        static IoOperation makeRecv (int fd, void* buf, uint32_t len, int flags, CompletionHandler* handler,
+                                     bool linked = false) noexcept;
 
         /**
-         * @brief build a send-message operation.
+         * @brief build a send operation.
          * @param fd socket file descriptor.
-         * @param msg message header.
+         * @param buf source buffer.
+         * @param len number of bytes to send.
          * @param flags send flags.
          * @param handler handler to notify on completion.
+         * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeSend (int fd, const void* buf, uint32_t len, int flags,
-                                     CompletionHandler* handler) noexcept;
+        static IoOperation makeSend (int fd, const void* buf, uint32_t len, int flags, CompletionHandler* handler,
+                                     bool linked = false) noexcept;
 
         union Data
         {
@@ -280,13 +297,11 @@ namespace join
         /// operation state.
         State state = State::Idle;
 
-#ifdef JOIN_HAS_IO_URING
-        /// index of this operation in the proactor pending ops vector.
-        uint32_t slot = 0;
+        /// index of this operation in the proactor pending ops (io_uring only).
+        uint32_t index = 0;
 
-        /// link this SQE to the next one (next executes only if this succeeds).
+        /// link this SQE to the next one (next executes only if this succeeds, io_uring only).
         bool linked = false;
-#endif
 
         /// handler to dispatch to on completion.
         CompletionHandler* handler = nullptr;
