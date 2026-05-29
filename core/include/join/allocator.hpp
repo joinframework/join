@@ -262,6 +262,26 @@ namespace join
             return ((ptr >= base) && (ptr < end));
         }
 
+        /**
+         * @brief get the index of a chunk in the pool.
+         * @param p pointer to the chunk (must be owned by this pool).
+         * @return index of the chunk.
+         */
+        uint32_t getIndex (void* p) const noexcept
+        {
+            return static_cast<uint32_t> (reinterpret_cast<Chunk*> (p) - _segment->_chunks);
+        }
+
+        /**
+         * @brief get the pointer to a chunk by index.
+         * @param idx index of the chunk (must be in range).
+         * @return pointer to the chunk.
+         */
+        void* getPtr (uint32_t idx) const noexcept
+        {
+            return &_segment->_chunks[idx];
+        }
+
         /// pointer into the mapped region.
         Segment* _segment = nullptr;
     };

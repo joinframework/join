@@ -35,16 +35,16 @@ using join::Mutex;
 using join::Condition;
 using join::ScopedLock;
 using join::Thread;
-using join::Proactor;
-using join::ProactorThread;
+using join::SqpollProactor;
+using join::SqpollProactorThread;
 using join::IoOperation;
 using join::CompletionHandler;
 using join::Tcp;
 
 /**
- * @brief Class used to test Proactor.
+ * @brief Class used to test SqpollProactor.
  */
-class ProactorTest : public CompletionHandler, public ::testing::Test
+class SqpollProactorTest : public CompletionHandler, public ::testing::Test
 {
 protected:
     /**
@@ -72,11 +72,9 @@ protected:
      */
     void onComplete (IoOperation* op, int result) override
     {
-        ProactorThread::proactor ().submit (op, true, true);
-        ProactorThread::proactor ().cancel (op, true, true);
-#ifdef JOIN_HAS_IO_URING
-        ProactorThread::proactor ().flush (true);
-#endif
+        SqpollProactorThread::proactor ().submit (op, true, true);
+        SqpollProactorThread::proactor ().cancel (op, true, true);
+        SqpollProactorThread::proactor ().flush (true);
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -95,11 +93,9 @@ protected:
      */
     void onCancel (IoOperation* op, int result) override
     {
-        ProactorThread::proactor ().submit (op, true, true);
-        ProactorThread::proactor ().cancel (op, true, true);
-#ifdef JOIN_HAS_IO_URING
-        ProactorThread::proactor ().flush (true);
-#endif
+        SqpollProactorThread::proactor ().submit (op, true, true);
+        SqpollProactorThread::proactor ().cancel (op, true, true);
+        SqpollProactorThread::proactor ().flush (true);
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -145,24 +141,24 @@ protected:
     static char _buf[256];
 };
 
-Tcp::Acceptor ProactorTest::_acceptor;
-Tcp::Socket ProactorTest::_client (Tcp::Socket::Blocking);
-Tcp::Socket ProactorTest::_server;
-std::string ProactorTest::_host = "127.0.0.1";
-uint16_t ProactorTest::_port = 5001;
-const int ProactorTest::_timeout = 1000;
-Condition ProactorTest::_cond;
-Mutex ProactorTest::_mut;
-IoOperation* ProactorTest::_op = nullptr;
-int ProactorTest::_result = 0;
-char ProactorTest::_buf[256] = {};
+Tcp::Acceptor SqpollProactorTest::_acceptor;
+Tcp::Socket SqpollProactorTest::_client (Tcp::Socket::Blocking);
+Tcp::Socket SqpollProactorTest::_server;
+std::string SqpollProactorTest::_host = "127.0.0.1";
+uint16_t SqpollProactorTest::_port = 5001;
+const int SqpollProactorTest::_timeout = 1000;
+Condition SqpollProactorTest::_cond;
+Mutex SqpollProactorTest::_mut;
+IoOperation* SqpollProactorTest::_op = nullptr;
+int SqpollProactorTest::_result = 0;
+char SqpollProactorTest::_buf[256] = {};
 
 /**
  * @brief Test stop.
  */
-TEST_F (ProactorTest, stop)
+TEST_F (SqpollProactorTest, stop)
 {
-    Proactor proactor;
+    SqpollProactor proactor;
     Thread th ([&proactor] () {
         proactor.run ();
     });
@@ -188,9 +184,9 @@ TEST_F (ProactorTest, stop)
 /**
  * @brief Test submit.
  */
-TEST_F (ProactorTest, submit)
+TEST_F (SqpollProactorTest, submit)
 {
-    Proactor proactor;
+    SqpollProactor proactor;
     Thread th ([&proactor] () {
         proactor.run ();
     });
@@ -236,9 +232,9 @@ TEST_F (ProactorTest, submit)
 /**
  * @brief Test cancel.
  */
-TEST_F (ProactorTest, cancel)
+TEST_F (SqpollProactorTest, cancel)
 {
-    Proactor proactor;
+    SqpollProactor proactor;
     Thread th ([&proactor] () {
         proactor.run ();
     });
@@ -278,13 +274,12 @@ TEST_F (ProactorTest, cancel)
     th.join ();
 }
 
-#ifdef JOIN_HAS_IO_URING
 /**
  * @brief Test flush.
  */
-TEST_F (ProactorTest, flush)
+TEST_F (SqpollProactorTest, flush)
 {
-    Proactor proactor;
+    SqpollProactor proactor;
     Thread th ([&proactor] () {
         proactor.run ();
     });
@@ -315,9 +310,9 @@ TEST_F (ProactorTest, flush)
 /**
  * @brief Test SQE chaining.
  */
-TEST_F (ProactorTest, chain)
+TEST_F (SqpollProactorTest, chain)
 {
-    Proactor proactor;
+    SqpollProactor proactor;
     Thread th ([&proactor] () {
         proactor.run ();
     });
@@ -357,15 +352,14 @@ TEST_F (ProactorTest, chain)
     proactor.stop ();
     th.join ();
 }
-#endif
 
 #ifdef JOIN_HAS_NUMA
 /**
  * @brief Test mbind.
  */
-TEST_F (ProactorTest, mbind)
+TEST_F (SqpollProactorTest, mbind)
 {
-    Proactor proactor;
+    SqpollProactor proactor;
 
     ASSERT_EQ (proactor.mbind (0), 0) << join::lastError.message ();
 }
@@ -374,9 +368,9 @@ TEST_F (ProactorTest, mbind)
 /**
  * @brief Test mlock.
  */
-TEST_F (ProactorTest, mlock)
+TEST_F (SqpollProactorTest, mlock)
 {
-    Proactor proactor;
+    SqpollProactor proactor;
 
     ASSERT_EQ (proactor.mlock (), 0) << join::lastError.message ();
 }
@@ -384,9 +378,9 @@ TEST_F (ProactorTest, mlock)
 /**
  * @brief Test isRunning.
  */
-TEST_F (ProactorTest, isRunning)
+TEST_F (SqpollProactorTest, isRunning)
 {
-    Proactor proactor;
+    SqpollProactor proactor;
 
     ASSERT_FALSE (proactor.isRunning ());
 
@@ -409,9 +403,9 @@ TEST_F (ProactorTest, isRunning)
 /**
  * @brief Test registerBuffers and unregisterBuffers.
  */
-TEST_F (ProactorTest, registerBuffers)
+TEST_F (SqpollProactorTest, registerBuffers)
 {
-    Proactor proactor;
+    SqpollProactor proactor;
 
     std::vector<char> buf (4096);
     iovec iov = {buf.data (), buf.size ()};
@@ -429,7 +423,7 @@ TEST_F (ProactorTest, registerBuffers)
 /**
  * @brief Test async connect.
  */
-TEST_F (ProactorTest, asyncConnect)
+TEST_F (SqpollProactorTest, asyncConnect)
 {
     Tcp::Endpoint endpoint{_host, _port};
 
@@ -437,7 +431,7 @@ TEST_F (ProactorTest, asyncConnect)
     _client.setMode (Tcp::Socket::NonBlocking);
 
     auto op = IoOperation::makeConnect (_client.handle (), endpoint.addr (), endpoint.length (), this);
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
 
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
@@ -456,24 +450,24 @@ TEST_F (ProactorTest, asyncConnect)
 /**
  * @brief Test async accept.
  */
-TEST_F (ProactorTest, asyncAccept)
+TEST_F (SqpollProactorTest, asyncAccept)
 {
-    ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::affinity (), 0);
-    ASSERT_EQ (ProactorThread::priority (1), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::priority (), 1);
+    ASSERT_EQ (SqpollProactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::affinity (), 0);
+    ASSERT_EQ (SqpollProactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::priority (), 1);
 #ifdef JOIN_HAS_NUMA
-    ASSERT_EQ (ProactorThread::mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::mbind (0), 0) << join::lastError.message ();
 #endif
-    ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
-    ASSERT_GT (ProactorThread::handle (), 0);
+    ASSERT_EQ (SqpollProactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (SqpollProactorThread::handle (), 0);
 
     sockaddr_storage addr = {};
     socklen_t addrlen = sizeof (addr);
     auto op = IoOperation::makeAccept (_acceptor.handle (), reinterpret_cast<sockaddr*> (&addr), &addrlen,
                                        SOCK_NONBLOCK | SOCK_CLOEXEC, this);
 
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
 
     {
@@ -490,25 +484,25 @@ TEST_F (ProactorTest, asyncAccept)
 /**
  * @brief Test async write.
  */
-TEST_F (ProactorTest, asyncWrite)
+TEST_F (SqpollProactorTest, asyncWrite)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::affinity (), 0);
-    ASSERT_EQ (ProactorThread::priority (1), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::priority (), 1);
+    ASSERT_EQ (SqpollProactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::affinity (), 0);
+    ASSERT_EQ (SqpollProactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::priority (), 1);
 #ifdef JOIN_HAS_NUMA
-    ASSERT_EQ (ProactorThread::mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::mbind (0), 0) << join::lastError.message ();
 #endif
-    ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
-    ASSERT_GT (ProactorThread::handle (), 0);
+    ASSERT_EQ (SqpollProactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (SqpollProactorThread::handle (), 0);
 
     const char* msg = "asyncWrite";
     auto op = IoOperation::makeWrite (_server.handle (), msg, strlen (msg), this);
 
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -528,24 +522,24 @@ TEST_F (ProactorTest, asyncWrite)
 /**
  * @brief Test async read.
  */
-TEST_F (ProactorTest, asyncRead)
+TEST_F (SqpollProactorTest, asyncRead)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::affinity (), 0);
-    ASSERT_EQ (ProactorThread::priority (1), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::priority (), 1);
+    ASSERT_EQ (SqpollProactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::affinity (), 0);
+    ASSERT_EQ (SqpollProactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::priority (), 1);
 #ifdef JOIN_HAS_NUMA
-    ASSERT_EQ (ProactorThread::mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::mbind (0), 0) << join::lastError.message ();
 #endif
-    ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
-    ASSERT_GT (ProactorThread::handle (), 0);
+    ASSERT_EQ (SqpollProactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (SqpollProactorThread::handle (), 0);
 
     auto op = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
 
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRead", strlen ("asyncRead"), _timeout), 0) << join::lastError.message ();
 
     {
@@ -559,11 +553,10 @@ TEST_F (ProactorTest, asyncRead)
     }
 }
 
-#ifdef JOIN_HAS_IO_URING
 /**
  * @brief Test async write fixed.
  */
-TEST_F (ProactorTest, asyncWriteFixed)
+TEST_F (SqpollProactorTest, asyncWriteFixed)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
@@ -573,10 +566,10 @@ TEST_F (ProactorTest, asyncWriteFixed)
     iovec iov = {regbuf.data (), regbuf.size ()};
     std::vector<iovec> iovecs = {iov};
 
-    ASSERT_EQ (ProactorThread::proactor ().registerBuffers (iovecs), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().registerBuffers (iovecs), 0) << join::lastError.message ();
 
     auto op = IoOperation::makeWriteFixed (_server.handle (), regbuf.data (), regbuf.size (), 0, this);
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -592,13 +585,13 @@ TEST_F (ProactorTest, asyncWriteFixed)
     ASSERT_EQ (_client.readExactly (rbuf, strlen (msg), _timeout), 0) << join::lastError.message ();
     ASSERT_EQ (std::string (rbuf, strlen (msg)), msg);
 
-    ASSERT_EQ (ProactorThread::proactor ().unregisterBuffers (), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().unregisterBuffers (), 0) << join::lastError.message ();
 }
 
 /**
  * @brief Test async read fixed.
  */
-TEST_F (ProactorTest, asyncReadFixed)
+TEST_F (SqpollProactorTest, asyncReadFixed)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
@@ -607,10 +600,10 @@ TEST_F (ProactorTest, asyncReadFixed)
     iovec iov = {regbuf.data (), regbuf.size ()};
     std::vector<iovec> iovecs = {iov};
 
-    ASSERT_EQ (ProactorThread::proactor ().registerBuffers (iovecs), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().registerBuffers (iovecs), 0) << join::lastError.message ();
 
     auto op = IoOperation::makeReadFixed (_server.handle (), regbuf.data (), regbuf.size (), 0, this);
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncReadFixed", strlen ("asyncReadFixed"), _timeout), 0)
         << join::lastError.message ();
 
@@ -624,27 +617,26 @@ TEST_F (ProactorTest, asyncReadFixed)
         _result = 0;
     }
 
-    ASSERT_EQ (ProactorThread::proactor ().unregisterBuffers (), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().unregisterBuffers (), 0) << join::lastError.message ();
 }
-#endif
 
 /**
  * @brief Test async sendmsg.
  */
-TEST_F (ProactorTest, asyncSendmsg)
+TEST_F (SqpollProactorTest, asyncSendmsg)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::affinity (), 0);
-    ASSERT_EQ (ProactorThread::priority (1), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::priority (), 1);
+    ASSERT_EQ (SqpollProactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::affinity (), 0);
+    ASSERT_EQ (SqpollProactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::priority (), 1);
 #ifdef JOIN_HAS_NUMA
-    ASSERT_EQ (ProactorThread::mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::mbind (0), 0) << join::lastError.message ();
 #endif
-    ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
-    ASSERT_GT (ProactorThread::handle (), 0);
+    ASSERT_EQ (SqpollProactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (SqpollProactorThread::handle (), 0);
 
     const char* payload = "asyncSendmsg";
     iovec iov = {.iov_base = const_cast<char*> (payload), .iov_len = strlen (payload)};
@@ -653,7 +645,7 @@ TEST_F (ProactorTest, asyncSendmsg)
     msg.msg_iovlen = 1;
     auto op = IoOperation::makeSendmsg (_server.handle (), &msg, 0, this);
 
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -673,20 +665,20 @@ TEST_F (ProactorTest, asyncSendmsg)
 /**
  * @brief Test async recvmsg.
  */
-TEST_F (ProactorTest, asyncRecvmsg)
+TEST_F (SqpollProactorTest, asyncRecvmsg)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::affinity (), 0);
-    ASSERT_EQ (ProactorThread::priority (1), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::priority (), 1);
+    ASSERT_EQ (SqpollProactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::affinity (), 0);
+    ASSERT_EQ (SqpollProactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::priority (), 1);
 #ifdef JOIN_HAS_NUMA
-    ASSERT_EQ (ProactorThread::mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::mbind (0), 0) << join::lastError.message ();
 #endif
-    ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
-    ASSERT_GT (ProactorThread::handle (), 0);
+    ASSERT_EQ (SqpollProactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (SqpollProactorThread::handle (), 0);
 
     iovec iov = {.iov_base = _buf, .iov_len = sizeof (_buf)};
     msghdr msg = {};
@@ -694,7 +686,7 @@ TEST_F (ProactorTest, asyncRecvmsg)
     msg.msg_iovlen = 1;
     auto op = IoOperation::makeRecvmsg (_server.handle (), &msg, 0, this);
 
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRecvmsg", strlen ("asyncRecvmsg"), _timeout), 0)
         << join::lastError.message ();
 
@@ -712,7 +704,7 @@ TEST_F (ProactorTest, asyncRecvmsg)
 /**
  * @brief Test async send.
  */
-TEST_F (ProactorTest, asyncSend)
+TEST_F (SqpollProactorTest, asyncSend)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
@@ -720,7 +712,7 @@ TEST_F (ProactorTest, asyncSend)
     const char* msg = "asyncSend";
     auto op = IoOperation::makeSend (_server.handle (), msg, strlen (msg), 0, this);
 
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -740,14 +732,14 @@ TEST_F (ProactorTest, asyncSend)
 /**
  * @brief Test async recv.
  */
-TEST_F (ProactorTest, asyncRecv)
+TEST_F (SqpollProactorTest, asyncRecv)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     auto op = IoOperation::makeRecv (_server.handle (), _buf, sizeof (_buf), 0, this);
 
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRecv", strlen ("asyncRecv"), _timeout), 0) << join::lastError.message ();
 
     {
@@ -764,24 +756,24 @@ TEST_F (ProactorTest, asyncRecv)
 /**
  * @brief Test onClose.
  */
-TEST_F (ProactorTest, onClose)
+TEST_F (SqpollProactorTest, onClose)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::affinity (), 0);
-    ASSERT_EQ (ProactorThread::priority (1), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::priority (), 1);
+    ASSERT_EQ (SqpollProactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::affinity (), 0);
+    ASSERT_EQ (SqpollProactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::priority (), 1);
 #ifdef JOIN_HAS_NUMA
-    ASSERT_EQ (ProactorThread::mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::mbind (0), 0) << join::lastError.message ();
 #endif
-    ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
-    ASSERT_GT (ProactorThread::handle (), 0);
+    ASSERT_EQ (SqpollProactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (SqpollProactorThread::handle (), 0);
 
     auto op = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
 
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
     _client.close ();
 
     {
@@ -797,24 +789,24 @@ TEST_F (ProactorTest, onClose)
 /**
  * @brief Test onError.
  */
-TEST_F (ProactorTest, onError)
+TEST_F (SqpollProactorTest, onError)
 {
     ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::affinity (), 0);
-    ASSERT_EQ (ProactorThread::priority (1), 0) << join::lastError.message ();
-    ASSERT_EQ (ProactorThread::priority (), 1);
+    ASSERT_EQ (SqpollProactorThread::affinity (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::affinity (), 0);
+    ASSERT_EQ (SqpollProactorThread::priority (1), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::priority (), 1);
 #ifdef JOIN_HAS_NUMA
-    ASSERT_EQ (ProactorThread::mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::mbind (0), 0) << join::lastError.message ();
 #endif
-    ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
-    ASSERT_GT (ProactorThread::handle (), 0);
+    ASSERT_EQ (SqpollProactorThread::mlock (), 0) << join::lastError.message ();
+    ASSERT_GT (SqpollProactorThread::handle (), 0);
 
     auto op = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
 
-    ASSERT_EQ (ProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
     linger sl{.l_onoff = 1, .l_linger = 0};
     ASSERT_EQ (setsockopt (_client.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
     _client.close ();

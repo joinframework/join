@@ -211,6 +211,12 @@ namespace join
         int mlock () const noexcept;
 
         /**
+         * @brief check if the event loop is running.
+         * @return true if the event loop is running.
+         */
+        bool isRunning () const noexcept;
+
+        /**
          * @brief check if the calling thread is the reactor thread.
          * @return true if called from the reactor thread.
          */

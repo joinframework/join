@@ -38,7 +38,8 @@
       "binaryDir": "${sourceDir}/build/gcc/debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "JOIN_ENABLE_COVERAGE": "ON"
+        "JOIN_ENABLE_COVERAGE": "ON",
+        "JOIN_ENABLE_IO_URING": "ON"
       }
     },
     {
@@ -58,7 +59,8 @@
       "binaryDir": "${sourceDir}/build/clang/debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "JOIN_ENABLE_COVERAGE": "ON"
+        "JOIN_ENABLE_COVERAGE": "ON",
+        "JOIN_ENABLE_IO_URING": "ON"
       }
     },
     {

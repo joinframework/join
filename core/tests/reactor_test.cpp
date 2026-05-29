@@ -313,6 +313,30 @@ TEST_F (ReactorTest, mlock)
 }
 
 /**
+ * @brief Test isRunning.
+ */
+TEST_F (ReactorTest, isRunning)
+{
+    Reactor reactor;
+
+    ASSERT_FALSE (reactor.isRunning ());
+
+    Thread th ([&reactor] () {
+        reactor.run ();
+    });
+    while (!reactor.isRunning ())
+    {
+    }
+
+    ASSERT_TRUE (reactor.isRunning ());
+
+    reactor.stop ();
+    th.join ();
+
+    ASSERT_FALSE (reactor.isRunning ());
+}
+
+/**
  * @brief Test onReadable.
  */
 TEST_F (ReactorTest, onReadable)
