@@ -455,9 +455,7 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
             break;
 
         default:
-            // LCOV_EXCL_START
             break;
-            // LCOV_EXCL_STOP
     }
 
     if (JOIN_UNLIKELY (cmd.done))
@@ -675,9 +673,7 @@ void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation* op
             break;
 
         default:
-            // LCOV_EXCL_START
             io_uring_prep_nop (sqe);
-            // LCOV_EXCL_STOP
     }
 
     io_uring_sqe_set_data (sqe, op);
@@ -807,11 +803,13 @@ void join::BasicProactor<Policy>::eventLoop (std::false_type, std::false_type) n
         }
         else
         {
+            // LCOV_EXCL_START
             io_uring_submit (&_ring);
             if (JOIN_UNLIKELY (io_uring_peek_cqe (&_ring, &cqe) != 0))
             {
                 continue;
             }
+            // LCOV_EXCL_STOP
         }
 
         do
@@ -841,7 +839,7 @@ void join::BasicProactor<Policy>::eventLoop (std::true_type, std::false_type) no
         }
         else
         {
-            io_uring_submit (&_ring);
+            io_uring_submit (&_ring);  // LCOV_EXCL_LINE
         }
 
         io_uring_cqe* cqe = nullptr;
@@ -885,7 +883,7 @@ void join::BasicProactor<Policy>::eventLoop (std::true_type, std::true_type) noe
         }
         else
         {
-            io_uring_submit (&_ring);
+            io_uring_submit (&_ring);  // LCOV_EXCL_LINE
         }
 
         io_uring_cqe* cqe = nullptr;

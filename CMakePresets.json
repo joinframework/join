@@ -19,8 +19,7 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "gcc",
-        "CMAKE_CXX_COMPILER": "g++",
-        "JOIN_ENABLE_IO_URING": "ON"
+        "CMAKE_CXX_COMPILER": "g++"
       }
     },
     {
@@ -39,7 +38,8 @@
       "binaryDir": "${sourceDir}/build/gcc/debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "JOIN_ENABLE_COVERAGE": "ON"
+        "JOIN_ENABLE_COVERAGE": "ON",
+        "JOIN_ENABLE_IO_URING": "ON"
       }
     },
     {
@@ -59,7 +59,8 @@
       "binaryDir": "${sourceDir}/build/clang/debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "JOIN_ENABLE_COVERAGE": "ON"
+        "JOIN_ENABLE_COVERAGE": "ON",
+        "JOIN_ENABLE_IO_URING": "ON"
       }
     },
     {
