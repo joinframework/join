@@ -237,7 +237,7 @@ namespace join
         }
     };
 
-    using SslCtxPtr = std::unique_ptr<SSL_CTX, SslCtxDelete>;
+    using SslCtxPtr = std::shared_ptr<SSL_CTX>;
 
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
     /**

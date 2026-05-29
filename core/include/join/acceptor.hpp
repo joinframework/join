@@ -301,7 +301,7 @@ namespace join
          */
         BasicTlsAcceptor ()
         : BasicStreamAcceptor<Protocol> ()
-        , _tlsContext (SSL_CTX_new (TLS_server_method ()))
+        , _tlsContext (SSL_CTX_new (TLS_server_method ()), SslCtxDelete ())
         , _sessionId (randomize<int> ())
         {
             // enable the OpenSSL bug workaround options.
@@ -409,10 +409,10 @@ namespace join
         {
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
-            Socket sock (join::SslCtxPtr (this->_tlsContext.get ()));
-            SSL_CTX_up_ref (this->_tlsContext.get ());
+            Socket sock (this->_tlsContext);
 
-            sock._handle = ::accept (this->_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len);
+            sock._handle = ::accept4 (this->_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len,
+                                      SOCK_NONBLOCK | SOCK_CLOEXEC);
             if (sock._handle == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
@@ -423,7 +423,6 @@ namespace join
             sock._state = Socket::Connected;
 
             sock.setOption (Socket::NoDelay, 1);
-            sock.setMode (Socket::NonBlocking);
 
             return sock;
         }

@@ -258,7 +258,7 @@ TEST_F (Openssl, StackOfGeneralNamePtr)
  */
 TEST_F (Openssl, SslPtr)
 {
-    join::SslCtxPtr ctx (SSL_CTX_new (TLS_method ()));
+    join::SslCtxPtr ctx (SSL_CTX_new (TLS_method ()), join::SslCtxDelete ());
     ASSERT_NE (ctx, nullptr);
     join::SslPtr ssl (SSL_new (ctx.get ()));
     ASSERT_NE (ssl, nullptr);
