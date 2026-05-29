@@ -202,15 +202,20 @@ target_link_libraries(unixstreamsocket.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME unixstreamsocket.gtest COMMAND unixstreamsocket.gtest)
 install(TARGETS unixstreamsocket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(unixacceptor.gtest unixacceptor_test.cpp)
+target_link_libraries(unixacceptor.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME unixacceptor.gtest COMMAND unixacceptor.gtest)
+install(TARGETS unixacceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(unixasyncacceptor.gtest unixasyncacceptor_test.cpp)
+target_link_libraries(unixasyncacceptor.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME unixasyncacceptor.gtest COMMAND unixasyncacceptor.gtest)
+install(TARGETS unixasyncacceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(netlinksocket.gtest netlinksocket_test.cpp)
 target_link_libraries(netlinksocket.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME netlinksocket.gtest COMMAND netlinksocket.gtest)
 install(TARGETS netlinksocket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(unixstreamacceptor.gtest unixstreamacceptor_test.cpp)
-target_link_libraries(unixstreamacceptor.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME unixstreamacceptor.gtest COMMAND unixstreamacceptor.gtest)
-install(TARGETS unixstreamacceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(rawsocket.gtest rawsocket_test.cpp)
 target_link_libraries(rawsocket.gtest ${JOIN_CORE} GTest::gtest_main)
@@ -241,6 +246,11 @@ add_executable(tcpacceptor.gtest tcpacceptor_test.cpp)
 target_link_libraries(tcpacceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME tcpacceptor.gtest COMMAND tcpacceptor.gtest)
 install(TARGETS tcpacceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(tcpasyncacceptor.gtest tcpasyncacceptor_test.cpp)
+target_link_libraries(tcpasyncacceptor.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME tcpasyncacceptor.gtest COMMAND tcpasyncacceptor.gtest)
+install(TARGETS tcpasyncacceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(tlserror.gtest tlserror_test.cpp)
 target_link_libraries(tlserror.gtest ${JOIN_CORE} GTest::gtest_main)

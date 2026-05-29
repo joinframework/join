@@ -51,6 +51,8 @@ namespace join
     template <class Protocol>
     class BasicStreamAcceptor;
     template <class Protocol>
+    class BasicAsyncStreamAcceptor;
+    template <class Protocol>
     class BasicTlsAcceptor;
 
     template <class Protocol>
@@ -132,6 +134,8 @@ namespace join
         using Socket = BasicStreamSocket<UnixStream>;
         using Stream = BasicSocketStream<UnixStream>;
         using Acceptor = BasicStreamAcceptor<UnixStream>;
+        using AsyncSocket = BasicStreamSocket<UnixStream>;
+        using AsyncAcceptor = BasicAsyncStreamAcceptor<UnixStream>;
 
         /**
          * @brief construct the unix stream protocol instance by default.
@@ -503,6 +507,8 @@ namespace join
         using Socket = BasicStreamSocket<Tcp>;
         using Stream = BasicSocketStream<Tcp>;
         using Acceptor = BasicStreamAcceptor<Tcp>;
+        using AsyncSocket = BasicStreamSocket<Tcp>;
+        using AsyncAcceptor = BasicAsyncStreamAcceptor<Tcp>;
 
         /**
          * @brief create the tcp protocol  instance.

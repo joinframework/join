@@ -31,6 +31,7 @@ set(PUBLIC_HEADERS
     include/join/socket.hpp
     include/join/socketstream.hpp
     include/join/acceptor.hpp
+    include/join/asyncacceptor.hpp
     include/join/openssl.hpp
     include/join/cpu.hpp
     include/join/clock.hpp
