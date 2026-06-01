@@ -207,10 +207,10 @@ const std::string TlsContextTest::_invalidKey = "/tmp/tlscontext_test_invalid.ke
  */
 TEST_F (TlsContextTest, construct)
 {
-    ASSERT_NO_THROW (TlsContext (TlsContext::Role::TlsClient));
-    ASSERT_NO_THROW (TlsContext (TlsContext::Role::TlsServer));
-    ASSERT_NO_THROW (TlsContext (TlsContext::Role::DtlsClient));
-    ASSERT_NO_THROW (TlsContext (TlsContext::Role::DtlsServer));
+    ASSERT_NO_THROW (TlsContext{TlsContext::Role::TlsClient});
+    ASSERT_NO_THROW (TlsContext{TlsContext::Role::TlsServer});
+    ASSERT_NO_THROW (TlsContext{TlsContext::Role::DtlsClient});
+    ASSERT_NO_THROW (TlsContext{TlsContext::Role::DtlsServer});
 }
 
 /**

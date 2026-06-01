@@ -217,25 +217,26 @@ protected:
         if (tcp.connected ())
         {
             TlsWrapper<Tcp::Socket> tls (std::move (tcp), _tlsContext);
-            tls.waitHandshake (_timeout);
-
-            char buf[1024];
-            for (;;)
+            if (tls.waitHandshake (_timeout))
             {
-                int nread = tls.read (buf, sizeof (buf));
-                if (nread == -1)
+                char buf[1024];
+                for (;;)
                 {
-                    if (join::lastError == Errc::TemporaryError)
+                    int nread = tls.read (buf, sizeof (buf));
+                    if (nread == -1)
                     {
-                        if (tls.waitReadyRead (_timeout))
-                            continue;
+                        if (join::lastError == Errc::TemporaryError)
+                        {
+                            if (tls.waitReadyRead (_timeout))
+                                continue;
+                        }
+                        break;
                     }
-                    break;
+                    tls.writeExactly (buf, nread);
                 }
-                tls.writeExactly (buf, nread);
-            }
 
-            tls.waitShutdown (_timeout);
+                tls.waitShutdown (_timeout);
+            }
             tls.waitDisconnected (_timeout);
             tls.close ();
         }

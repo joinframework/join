@@ -1064,6 +1064,15 @@ namespace join
         }
 
         /**
+         * @brief check if the socket is connecting.
+         * @return true if connecting, false otherwise.
+         */
+        virtual bool connecting () const noexcept
+        {
+            return (this->_state == State::Connecting);
+        }
+
+        /**
          * @brief check if the socket is connected.
          * @return true if connected, false otherwise.
          */
@@ -1445,15 +1454,6 @@ namespace join
             }
 
             return 0;
-        }
-
-        /**
-         * @brief check if the socket is connecting.
-         * @return true if connecting, false otherwise.
-         */
-        virtual bool connecting () const noexcept
-        {
-            return (this->_state == State::Connecting);
         }
 
         /**

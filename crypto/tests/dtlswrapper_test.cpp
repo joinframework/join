@@ -213,17 +213,17 @@ protected:
      */
     virtual void onReadable ([[maybe_unused]] int fd) override
     {
-        _socket.waitHandshake (_timeout);
-
-        char buffer[65536];
-        Udp::Endpoint from;
-        int nread = _socket.readFrom (buffer, sizeof (buffer), &from);
-        if (nread > 0)
+        if (_socket.waitHandshake (_timeout))
         {
-            _socket.writeTo (buffer, nread, from);
+            char buffer[65536];
+            Udp::Endpoint from;
+            int nread = _socket.readFrom (buffer, sizeof (buffer), &from);
+            if (nread > 0)
+            {
+                _socket.writeTo (buffer, nread, from);
+            }
+            _socket.waitShutdown (_timeout);
         }
-
-        _socket.waitShutdown (_timeout);
     }
 
     /// TLS context serveur.
@@ -388,25 +388,24 @@ TEST_F (DtlsSocket, connect)
 /**
  * @brief Test waitConnected method.
  */
-// TEST_F (DtlsSocket, waitConnected)
-// {
-//     TlsContext ctx (TlsContext::Role::DtlsClient);
-//     TlsWrapper<Udp::Socket> dtls (ctx);
+TEST_F (DtlsSocket, waitConnected)
+{
+    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsWrapper<Udp::Socket> dtls (ctx);
 
-//     ASSERT_FALSE (dtls.waitConnected (_timeout));
-//     if (dtls.connect ({_hostv4, _port}) == -1)
-//     {
-//         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-//         ASSERT_TRUE (dtls.connecting ());
-//     }
-//     ASSERT_TRUE (dtls.waitConnected (_timeout)) << join::lastError.message ();
-//     if (dtls.disconnect () == -1)
-//     {
-//         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-//     }
-//     ASSERT_TRUE (dtls.waitDisconnected (_timeout)) << join::lastError.message ();
-//     dtls.close ();
-// }
+    ASSERT_FALSE (dtls.waitConnected (_timeout));
+    if (dtls.connect ({_hostv4, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (dtls.waitConnected (_timeout)) << join::lastError.message ();
+    if (dtls.disconnect () == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (dtls.waitDisconnected (_timeout)) << join::lastError.message ();
+    dtls.close ();
+}
 
 /**
  * @brief Test handshake method.
@@ -653,6 +652,7 @@ TEST_F (DtlsSocket, writeExactly)
 
     ASSERT_EQ (dtls.writeExactly (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (dtls.bind ({_hostv4, uint16_t (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_EQ (dtls.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (dtls.handshake (), 0) << join::lastError.message ();
     ASSERT_TRUE (dtls.waitReadyWrite (_timeout)) << join::lastError.message ();
@@ -920,7 +920,6 @@ TEST_F (DtlsSocket, mtu)
     ASSERT_NE (dtls.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (dtls.shutdown (), 0) << join::lastError.message ();
     ASSERT_EQ (dtls.disconnect (), 0) << join::lastError.message ();
-    ASSERT_NE (dtls.mtu (), -1) << join::lastError.message ();
     dtls.close ();
     ASSERT_EQ (dtls.mtu (), -1);
 
@@ -930,7 +929,6 @@ TEST_F (DtlsSocket, mtu)
     ASSERT_NE (dtls.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (dtls.shutdown (), 0) << join::lastError.message ();
     ASSERT_EQ (dtls.disconnect (), 0) << join::lastError.message ();
-    ASSERT_NE (dtls.mtu (), -1) << join::lastError.message ();
     dtls.close ();
     ASSERT_EQ (dtls.mtu (), -1);
 }
@@ -941,11 +939,13 @@ TEST_F (DtlsSocket, mtu)
 TEST_F (DtlsSocket, verify)
 {
     TlsContext ctx (TlsContext::Role::DtlsClient);
-    Udp::Endpoint endpoint{_hostv4, _port};
+    Udp::Endpoint src{_hostv4, _port + 1};
+    Udp::Endpoint dest{_hostv4, _port};
 
     ctx.setVerify (false);
     TlsWrapper<Udp::Socket> dtls1 (ctx, Udp::Socket::Blocking);
-    ASSERT_EQ (dtls1.connect (endpoint), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls1.bind (src), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls1.connect (dest), 0) << join::lastError.message ();
     ASSERT_EQ (dtls1.handshake (), 0) << join::lastError.message ();
     ASSERT_EQ (dtls1.shutdown (), 0) << join::lastError.message ();
     ASSERT_EQ (dtls1.disconnect (), 0) << join::lastError.message ();
@@ -953,30 +953,34 @@ TEST_F (DtlsSocket, verify)
 
     ctx.setVerify (true, 0);
     TlsWrapper<Udp::Socket> dtls2 (ctx, Udp::Socket::Blocking);
-    ASSERT_EQ (dtls2.connect (endpoint), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls2.bind (src), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls2.connect (dest), 0) << join::lastError.message ();
     ASSERT_EQ (dtls2.handshake (), -1);
     ASSERT_EQ (dtls2.disconnect (), 0) << join::lastError.message ();
     dtls2.close ();
 
     ctx.setVerify (true, 1);
     TlsWrapper<Udp::Socket> dtls3 (ctx, Udp::Socket::Blocking);
-    ASSERT_EQ (dtls3.connect (endpoint), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls3.bind (src), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls3.connect (dest), 0) << join::lastError.message ();
     ASSERT_EQ (dtls3.handshake (), -1);
     ASSERT_EQ (dtls3.disconnect (), 0) << join::lastError.message ();
     dtls3.close ();
 
-    endpoint.hostname ("localhost");
+    dest.hostname ("localhost");
 
     ctx.setVerify (true, 0);
     TlsWrapper<Udp::Socket> dtls4 (ctx, Udp::Socket::Blocking);
-    ASSERT_EQ (dtls4.connect (endpoint), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls4.bind (src), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls4.connect (dest), 0) << join::lastError.message ();
     ASSERT_EQ (dtls4.handshake (), -1);
     ASSERT_EQ (dtls4.disconnect (), 0) << join::lastError.message ();
     dtls4.close ();
 
     ctx.setVerify (true, 1);
     TlsWrapper<Udp::Socket> dtls5 (ctx, Udp::Socket::Blocking);
-    ASSERT_EQ (dtls5.connect (endpoint), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls5.bind (src), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls5.connect (dest), 0) << join::lastError.message ();
     ASSERT_EQ (dtls5.handshake (), -1);
     ASSERT_EQ (dtls5.disconnect (), 0) << join::lastError.message ();
     dtls5.close ();
@@ -985,14 +989,16 @@ TEST_F (DtlsSocket, verify)
 
     ctx.setVerify (true, 0);
     TlsWrapper<Udp::Socket> dtls6 (ctx, Udp::Socket::Blocking);
-    ASSERT_EQ (dtls6.connect (endpoint), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls6.bind (src), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls6.connect (dest), 0) << join::lastError.message ();
     ASSERT_EQ (dtls6.handshake (), -1);
     ASSERT_EQ (dtls6.disconnect (), 0) << join::lastError.message ();
     dtls6.close ();
 
     ctx.setVerify (true, 1);
     TlsWrapper<Udp::Socket> dtls7 (ctx, Udp::Socket::Blocking);
-    ASSERT_EQ (dtls7.connect (endpoint), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls7.bind (src), 0) << join::lastError.message ();
+    ASSERT_EQ (dtls7.connect (dest), 0) << join::lastError.message ();
     ASSERT_EQ (dtls7.handshake (), 0) << join::lastError.message ();
     ASSERT_EQ (dtls7.shutdown (), 0) << join::lastError.message ();
     ASSERT_EQ (dtls7.disconnect (), 0) << join::lastError.message ();

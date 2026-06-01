@@ -326,7 +326,13 @@ namespace join
             int result = SSL_do_handshake (_ssl.get ());
             if (result < 1)
             {
-                return handleTlsError (result);
+                // return handleTlsError (result);
+                int ret = handleTlsError (result);
+                if (lastError != make_error_code (Errc::TemporaryError))
+                {
+                    _ssl.reset ();
+                }
+                return ret;
             }
 
             return 0;
@@ -387,6 +393,10 @@ namespace join
                             lastError = make_error_code (TlsErrc::TlsProtocolError);
                             return false;
                         }
+                        else if (ret == 0)
+                        {
+                            continue;
+                        }
 
                         lastError = make_error_code (Errc::TemporaryError);
                         if (handshake () == 0)
@@ -438,18 +448,19 @@ namespace join
                 }
             }
 
-            if (_socket.type () == SOCK_STREAM)
+            if (_socket.type () == SOCK_DGRAM)
             {
-                _ssl.reset ();
-                return 0;
-            }
-
-            if ((SSL_get_shutdown (_ssl.get ()) & SSL_RECEIVED_SHUTDOWN) == 0)
-            {
-                int result = SSL_shutdown (_ssl.get ());
-                if (result < 0)
+                if ((SSL_get_shutdown (_ssl.get ()) & SSL_RECEIVED_SHUTDOWN) == 0)
                 {
-                    return handleTlsError (result);
+                    int result = SSL_shutdown (_ssl.get ());
+                    if (result < 0)
+                    {
+                        handleTlsError (result);
+                        if (lastError != Errc::ConnectionClosed && lastError != TlsErrc::TlsCloseNotifyAlert)
+                        {
+                            return -1;
+                        }
+                    }
                 }
             }
 
