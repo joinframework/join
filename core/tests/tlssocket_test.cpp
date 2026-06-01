@@ -321,7 +321,7 @@ TEST_F (TlsSocket, close)
     ASSERT_EQ (tlsSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.opened ());
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_FALSE (tlsSocket.opened ());
+    ASSERT_TRUE (tlsSocket.opened ());
     tlsSocket.close ();
     ASSERT_FALSE (tlsSocket.opened ());
 }
@@ -336,11 +336,11 @@ TEST_F (TlsSocket, bind)
     ASSERT_EQ (tlsSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.bind (_hostv4), -1);
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+    tlsSocket.close ();
 
     ASSERT_EQ (tlsSocket.bind (_hostv4), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-
     tlsSocket.close ();
 }
 
@@ -352,18 +352,16 @@ TEST_F (TlsSocket, bindToDevice)
     Tls::Socket tlsSocket (Tls::Socket::Blocking);
 
     ASSERT_EQ (tlsSocket.bindToDevice ("lo"), -1);
-
     ASSERT_EQ (tlsSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.bindToDevice ("lo"), -1);
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
+    tlsSocket.close ();
 
     ASSERT_EQ (tlsSocket.open (Tls::v6 ()), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.bindToDevice ("lo"), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.connect ({_hostv6, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-
     ASSERT_EQ (tlsSocket.bindToDevice ("foo"), -1);
-
     tlsSocket.close ();
 }
 
@@ -776,7 +774,7 @@ TEST_F (TlsSocket, opened)
     ASSERT_EQ (tlsSocket.connectEncrypted ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_TRUE (tlsSocket.opened ());
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_FALSE (tlsSocket.opened ());
+    ASSERT_TRUE (tlsSocket.opened ());
     tlsSocket.close ();
     ASSERT_FALSE (tlsSocket.opened ());
 }
@@ -870,7 +868,7 @@ TEST_F (TlsSocket, handle)
     ASSERT_EQ (tlsSocket.connectEncrypted ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_GT (tlsSocket.handle (), -1);
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.handle (), -1);
+    ASSERT_GT (tlsSocket.handle (), -1);
     tlsSocket.close ();
     ASSERT_EQ (tlsSocket.handle (), -1);
 }
@@ -886,15 +884,17 @@ TEST_F (TlsSocket, mtu)
     ASSERT_EQ (tlsSocket.connectEncrypted ({"127.0.0.1", _port}), 0) << join::lastError.message ();
     ASSERT_NE (tlsSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.mtu (), -1);
+    ASSERT_NE (tlsSocket.mtu (), -1) << join::lastError.message ();
     tlsSocket.close ();
+    ASSERT_EQ (tlsSocket.mtu (), -1);
 
     ASSERT_EQ (tlsSocket.mtu (), -1);
     ASSERT_EQ (tlsSocket.connectEncrypted ({"::1", _port}), 0) << join::lastError.message ();
     ASSERT_NE (tlsSocket.mtu (), -1) << join::lastError.message ();
     ASSERT_EQ (tlsSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (tlsSocket.mtu (), -1);
+    ASSERT_NE (tlsSocket.mtu (), -1) << join::lastError.message ();
     tlsSocket.close ();
+    ASSERT_EQ (tlsSocket.mtu (), -1);
 }
 
 /**

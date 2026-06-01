@@ -1280,8 +1280,6 @@ namespace join
                 this->_state = State::Disconnected;
             }
 
-            // this->close ();
-
             return 0;
         }
 

@@ -123,7 +123,7 @@ TEST_F (UnixStreamSocket, close)
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.opened ());
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_FALSE (unixSocket.opened ());
+    ASSERT_TRUE (unixSocket.opened ());
     unixSocket.close ();
     ASSERT_FALSE (unixSocket.opened ());
 }
@@ -479,7 +479,7 @@ TEST_F (UnixStreamSocket, opened)
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.opened ());
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_FALSE (unixSocket.opened ());
+    ASSERT_TRUE (unixSocket.opened ());
     unixSocket.close ();
     ASSERT_FALSE (unixSocket.opened ());
 }
@@ -563,7 +563,7 @@ TEST_F (UnixStreamSocket, handle)
     ASSERT_EQ (unixSocket.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_GT (unixSocket.handle (), -1);
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (unixSocket.handle (), -1);
+    ASSERT_GT (unixSocket.handle (), -1);
     unixSocket.close ();
     ASSERT_EQ (unixSocket.handle (), -1);
 }

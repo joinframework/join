@@ -149,6 +149,8 @@ TEST_F (TcpSocketStream, bind)
     tcpStream.clear ();
     tcpStream.disconnect ();
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
+    tcpStream.close ();
+    ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.bind (_host);
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
     tcpStream.connect ({_host, _port});
@@ -245,7 +247,7 @@ TEST_F (TcpSocketStream, opened)
     ASSERT_TRUE (tcpStream.opened ());
     tcpStream.disconnect ();
     ASSERT_TRUE (tcpStream.good ()) << join::lastError.message ();
-    ASSERT_FALSE (tcpStream.opened ());
+    ASSERT_TRUE (tcpStream.opened ());
     tcpStream.close ();
     ASSERT_FALSE (tcpStream.opened ());
 }
