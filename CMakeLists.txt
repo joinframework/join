@@ -75,7 +75,6 @@ endif()
 
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
-find_package(OpenSSL REQUIRED)
 
 add_subdirectory(core)
 

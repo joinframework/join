@@ -1,23 +1,27 @@
 cmake_minimum_required(VERSION 3.22.1)
 
+find_package(OpenSSL REQUIRED)
+
 set(PUBLIC_HEADERS
     include/join/base64.hpp
-    include/join/digest.hpp
+    include/join/openssl.hpp
+    include/join/openssl.hpp
     include/join/hmac.hpp
     include/join/tlskey.hpp
     include/join/signature.hpp
-    # include/join/tlserror.hpp
+    include/join/tlserror.hpp
     include/join/tlscontext.hpp
     include/join/tlswrapper.hpp
 )
 
 set(SOURCES
     src/base64.cpp
+    src/openssl.cpp
     src/digest.cpp
     src/hmac.cpp
     src/tlskey.cpp
     src/signature.cpp
-    # src/tlserror.cpp
+    src/tlserror.cpp
     src/tlscontext.cpp
 )
 
@@ -41,6 +45,8 @@ target_include_directories(${JOIN_CRYPTO}
 target_link_libraries(${JOIN_CRYPTO}
     PUBLIC
         ${JOIN_CORE}
+        OpenSSL::SSL
+        OpenSSL::Crypto
 )
 
 install(TARGETS ${JOIN_CRYPTO}

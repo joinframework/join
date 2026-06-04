@@ -36,7 +36,6 @@ set(PUBLIC_HEADERS
     include/join/socket.hpp
     include/join/socketstream.hpp
     include/join/acceptor.hpp
-    include/join/openssl.hpp
     include/join/cpu.hpp
     include/join/clock.hpp
     include/join/timer.hpp
@@ -58,10 +57,8 @@ set(SOURCES
     src/semaphore.cpp
     src/thread.cpp
     src/threadpool.cpp
-    src/openssl.cpp
     src/macaddress.cpp
     src/ipaddress.cpp
-    src/socket.cpp
     src/cpu.cpp
 )
 
@@ -86,8 +83,6 @@ target_include_directories(${JOIN_CORE}
 
 target_link_libraries(${JOIN_CORE}
     PUBLIC
-        OpenSSL::SSL
-        OpenSSL::Crypto
         Threads::Threads
         $<$<BOOL:${JOIN_ENABLE_IO_URING}>:${LIBURING_LIBRARIES}>
         $<$<BOOL:${JOIN_ENABLE_NUMA}>:${NUMA_LIBRARIES}>

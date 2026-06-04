@@ -226,11 +226,6 @@ target_link_libraries(unixstreamsocket.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME unixstreamsocket.gtest COMMAND unixstreamsocket.gtest)
 install(TARGETS unixstreamsocket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
-add_executable(netlinksocket.gtest netlinksocket_test.cpp)
-target_link_libraries(netlinksocket.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME netlinksocket.gtest COMMAND netlinksocket.gtest)
-install(TARGETS netlinksocket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
 add_executable(unixstreamacceptor.gtest unixstreamacceptor_test.cpp)
 target_link_libraries(unixstreamacceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME unixstreamacceptor.gtest COMMAND unixstreamacceptor.gtest)
@@ -265,31 +260,6 @@ add_executable(tcpacceptor.gtest tcpacceptor_test.cpp)
 target_link_libraries(tcpacceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME tcpacceptor.gtest COMMAND tcpacceptor.gtest)
 install(TARGETS tcpacceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(tlserror.gtest tlserror_test.cpp)
-target_link_libraries(tlserror.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME tlserror.gtest COMMAND tlserror.gtest)
-install(TARGETS tlserror.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(tlssocket.gtest tlssocket_test.cpp)
-target_link_libraries(tlssocket.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME tlssocket.gtest COMMAND tlssocket.gtest)
-install(TARGETS tlssocket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(tlssocketstream.gtest tlssocketstream_test.cpp)
-target_link_libraries(tlssocketstream.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME tlssocketstream.gtest COMMAND tlssocketstream.gtest)
-install(TARGETS tlssocketstream.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(tlsacceptor.gtest tlsacceptor_test.cpp)
-target_link_libraries(tlsacceptor.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME tlsacceptor.gtest COMMAND tlsacceptor.gtest)
-install(TARGETS tlsacceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(openssl.gtest openssl_test.cpp)
-target_link_libraries(openssl.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME openssl.gtest COMMAND openssl.gtest)
-install(TARGETS openssl.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(cpu.gtest cpu_test.cpp)
 target_link_libraries(cpu.gtest ${JOIN_CORE} GTest::gtest_main)

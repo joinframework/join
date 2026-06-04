@@ -27,8 +27,8 @@
 
 // libjoin.
 #include <join/condition.hpp>
+#include <join/netlink.hpp>
 #include <join/reactor.hpp>
-#include <join/socket.hpp>
 #include <join/queue.hpp>
 
 // C++.
@@ -38,8 +38,6 @@
 #include <atomic>
 
 // C.
-#include <linux/rtnetlink.h>
-#include <linux/netlink.h>
 #include <cstdint>
 #include <cstddef>
 

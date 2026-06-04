@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/socket.hpp>
+#include <join/netlink.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>

@@ -34,15 +34,6 @@ using join::Raw;
 using join::Udp;
 using join::Icmp;
 using join::Tcp;
-using join::Tls;
-using join::Dns;
-using join::Mdns;
-using join::Dot;
-using join::Http;
-using join::Https;
-using join::Smtp;
-using join::Smtps;
-using join::Netlink;
 
 /**
  * @brief test the family method.
@@ -61,31 +52,6 @@ TEST (Protocol, family)
     ASSERT_EQ (Tcp ().family (), AF_INET);
     ASSERT_EQ (Tcp::v6 ().family (), AF_INET6);
     ASSERT_EQ (Tcp::v4 ().family (), AF_INET);
-    ASSERT_EQ (Tls ().family (), AF_INET);
-    ASSERT_EQ (Tls::v6 ().family (), AF_INET6);
-    ASSERT_EQ (Tls::v4 ().family (), AF_INET);
-    ASSERT_EQ (Dns ().family (), AF_INET);
-    ASSERT_EQ (Dns::v6 ().family (), AF_INET6);
-    ASSERT_EQ (Dns::v4 ().family (), AF_INET);
-    ASSERT_EQ (Mdns ().family (), AF_INET);
-    ASSERT_EQ (Mdns::v6 ().family (), AF_INET6);
-    ASSERT_EQ (Mdns::v4 ().family (), AF_INET);
-    ASSERT_EQ (Dot ().family (), AF_INET);
-    ASSERT_EQ (Dot::v6 ().family (), AF_INET6);
-    ASSERT_EQ (Dot::v4 ().family (), AF_INET);
-    ASSERT_EQ (Http ().family (), AF_INET);
-    ASSERT_EQ (Http::v6 ().family (), AF_INET6);
-    ASSERT_EQ (Http::v4 ().family (), AF_INET);
-    ASSERT_EQ (Https ().family (), AF_INET);
-    ASSERT_EQ (Https::v6 ().family (), AF_INET6);
-    ASSERT_EQ (Https::v4 ().family (), AF_INET);
-    ASSERT_EQ (Smtp ().family (), AF_INET);
-    ASSERT_EQ (Smtp::v6 ().family (), AF_INET6);
-    ASSERT_EQ (Smtp::v4 ().family (), AF_INET);
-    ASSERT_EQ (Smtps ().family (), AF_INET);
-    ASSERT_EQ (Smtps::v6 ().family (), AF_INET6);
-    ASSERT_EQ (Smtps::v4 ().family (), AF_INET);
-    ASSERT_EQ (Netlink::rt ().family (), AF_NETLINK);
 }
 
 /**
@@ -99,15 +65,6 @@ TEST (Protocol, type)
     ASSERT_EQ (Udp ().type (), SOCK_DGRAM);
     ASSERT_EQ (Icmp ().type (), SOCK_RAW);
     ASSERT_EQ (Tcp ().type (), SOCK_STREAM);
-    ASSERT_EQ (Tls ().type (), SOCK_STREAM);
-    ASSERT_EQ (Dns ().type (), SOCK_DGRAM);
-    ASSERT_EQ (Mdns ().type (), SOCK_DGRAM);
-    ASSERT_EQ (Dot ().type (), SOCK_STREAM);
-    ASSERT_EQ (Http ().type (), SOCK_STREAM);
-    ASSERT_EQ (Https ().type (), SOCK_STREAM);
-    ASSERT_EQ (Smtp ().type (), SOCK_STREAM);
-    ASSERT_EQ (Smtps ().type (), SOCK_STREAM);
-    ASSERT_EQ (Netlink ().type (), SOCK_RAW);
 }
 
 /**
@@ -122,17 +79,6 @@ TEST (Protocol, protocol)
     ASSERT_EQ (Icmp::v6 ().protocol (), IPPROTO_ICMPV6);
     ASSERT_EQ (Icmp::v4 ().protocol (), IPPROTO_ICMP);
     ASSERT_EQ (Tcp ().protocol (), IPPROTO_TCP);
-    ASSERT_EQ (Tls ().protocol (), IPPROTO_TCP);
-    ASSERT_EQ (Dns ().protocol (), IPPROTO_UDP);
-    ASSERT_EQ (Mdns ().protocol (), IPPROTO_UDP);
-    ASSERT_EQ (Dot ().protocol (), IPPROTO_TCP);
-    ASSERT_EQ (Http ().protocol (), IPPROTO_TCP);
-    ASSERT_EQ (Https ().protocol (), IPPROTO_TCP);
-    ASSERT_EQ (Smtp ().protocol (), IPPROTO_TCP);
-    ASSERT_EQ (Smtps ().protocol (), IPPROTO_TCP);
-    ASSERT_EQ (Netlink ().protocol (), NETLINK_ROUTE);
-    ASSERT_EQ (Netlink::rt ().protocol (), NETLINK_ROUTE);
-    ASSERT_EQ (Netlink::nf ().protocol (), NETLINK_NETFILTER);
 }
 
 /**
@@ -154,51 +100,6 @@ TEST (Protocol, equal)
     ASSERT_NE (Tcp::v4 (), Tcp::v6 ());
     ASSERT_EQ (Tcp::v6 (), Tcp::v6 ());
     ASSERT_NE (Tcp::v6 (), Tcp::v4 ());
-
-    ASSERT_EQ (Tls::v4 (), Tls::v4 ());
-    ASSERT_NE (Tls::v4 (), Tls::v6 ());
-    ASSERT_EQ (Tls::v6 (), Tls::v6 ());
-    ASSERT_NE (Tls::v6 (), Tls::v4 ());
-
-    ASSERT_EQ (Dns::v4 (), Dns::v4 ());
-    ASSERT_NE (Dns::v4 (), Dns::v6 ());
-    ASSERT_EQ (Dns::v6 (), Dns::v6 ());
-    ASSERT_NE (Dns::v6 (), Dns::v4 ());
-
-    ASSERT_EQ (Mdns::v4 (), Mdns::v4 ());
-    ASSERT_NE (Mdns::v4 (), Mdns::v6 ());
-    ASSERT_EQ (Mdns::v6 (), Mdns::v6 ());
-    ASSERT_NE (Mdns::v6 (), Mdns::v4 ());
-
-    ASSERT_EQ (Dot::v4 (), Dot::v4 ());
-    ASSERT_NE (Dot::v4 (), Dot::v6 ());
-    ASSERT_EQ (Dot::v6 (), Dot::v6 ());
-    ASSERT_NE (Dot::v6 (), Dot::v4 ());
-
-    ASSERT_EQ (Http::v4 (), Http::v4 ());
-    ASSERT_NE (Http::v4 (), Http::v6 ());
-    ASSERT_EQ (Http::v6 (), Http::v6 ());
-    ASSERT_NE (Http::v6 (), Http::v4 ());
-
-    ASSERT_EQ (Https::v4 (), Https::v4 ());
-    ASSERT_NE (Https::v4 (), Https::v6 ());
-    ASSERT_EQ (Https::v6 (), Https::v6 ());
-    ASSERT_NE (Https::v6 (), Https::v4 ());
-
-    ASSERT_EQ (Smtp::v4 (), Smtp::v4 ());
-    ASSERT_NE (Smtp::v4 (), Smtp::v6 ());
-    ASSERT_EQ (Smtp::v6 (), Smtp::v6 ());
-    ASSERT_NE (Smtp::v6 (), Smtp::v4 ());
-
-    ASSERT_EQ (Smtps::v4 (), Smtps::v4 ());
-    ASSERT_NE (Smtps::v4 (), Smtps::v6 ());
-    ASSERT_EQ (Smtps::v6 (), Smtps::v6 ());
-    ASSERT_NE (Smtps::v6 (), Smtps::v4 ());
-
-    ASSERT_EQ (Netlink::rt (), Netlink::rt ());
-    ASSERT_NE (Netlink::rt (), Netlink::nf ());
-    ASSERT_EQ (Netlink::nf (), Netlink::nf ());
-    ASSERT_NE (Netlink::nf (), Netlink::rt ());
 }
 
 /**

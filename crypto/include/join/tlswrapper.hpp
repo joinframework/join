@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/tlscontext.hpp>
+#include <join/tlserror.hpp>
 #include <join/socket.hpp>
 #include <join/error.hpp>
 
@@ -42,6 +43,7 @@ namespace join
     class TlsWrapper
     {
     public:
+        using UnderlyingSocket = Socket;
         using Protocol = typename Socket::Proto;
         using Mode = typename Socket::Mode;
         using Option = typename Socket::Option;
@@ -52,9 +54,8 @@ namespace join
          * @brief create a TLS wrapper with an internally created socket.
          * @param ctx TLS context.
          */
-        explicit TlsWrapper (TlsContext ctx, Mode mode = Socket::Mode::NonBlocking) noexcept
-        : _socket (mode)
-        , _ctx (ctx)
+        explicit TlsWrapper (TlsContext ctx, Mode mode = Mode::NonBlocking) noexcept
+        : TlsWrapper (Socket{mode}, ctx)
         {
         }
 
@@ -803,7 +804,7 @@ namespace join
          * @param val option value.
          * @return 0 on success, -1 on failure.
          */
-        int setOption (typename Socket::Option opt, int val) noexcept
+        int setOption (Option opt, int val) noexcept
         {
             return _socket.setOption (opt, val);
         }

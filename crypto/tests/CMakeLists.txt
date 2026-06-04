@@ -7,6 +7,11 @@ target_link_libraries(base64.gtest ${JOIN_CRYPTO} GTest::gtest_main)
 add_test(NAME base64.gtest COMMAND base64.gtest)
 install(TARGETS base64.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(openssl.gtest openssl_test.cpp)
+target_link_libraries(openssl.gtest ${JOIN_CRYPTO} GTest::gtest_main)
+add_test(NAME openssl.gtest COMMAND openssl.gtest)
+install(TARGETS openssl.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(digesterror.gtest digesterror_test.cpp)
 target_link_libraries(digesterror.gtest ${JOIN_CRYPTO} GTest::gtest_main)
 add_test(NAME digesterror.gtest COMMAND digesterror.gtest)

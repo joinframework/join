@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_CORE_OPENSSL_HPP
-#define JOIN_CORE_OPENSSL_HPP
+#ifndef JOIN_CRYPTO_OPENSSL_HPP
+#define JOIN_CRYPTO_OPENSSL_HPP
 
 // Libraries.
 #include <openssl/bn.h>
