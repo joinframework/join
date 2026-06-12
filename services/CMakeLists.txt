@@ -4,19 +4,19 @@ find_package(ZLIB REQUIRED)
 
 set(PUBLIC_HEADERS
     include/join/cache.hpp
-    include/join/chunkstream.hpp
-    include/join/httpmessage.hpp
+    include/join/chunk_stream.hpp
+    include/join/http_message.hpp
     include/join/httpclient.hpp
     include/join/httpserver.hpp
-    include/join/mailmessage.hpp
+    include/join/mail_message.hpp
     include/join/smtpclient.hpp
 )
 
 set(SOURCES
     src/cache.cpp
-    src/chunkstream.cpp
-    src/httpmessage.cpp
-    src/mailmessage.cpp
+    src/chunk_stream.cpp
+    src/http_message.cpp
+    src/mail_message.cpp
 )
 
 add_library(${JOIN_SERVICES} ${SOURCES})
@@ -58,6 +58,6 @@ if(JOIN_ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
 
-if(JOIN_ENABLE_SAMPLES)
-    add_subdirectory(samples)
-endif()
+# if(JOIN_ENABLE_SAMPLES)
+#     add_subdirectory(samples)
+# endif()

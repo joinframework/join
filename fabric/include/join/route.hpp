@@ -26,7 +26,7 @@
 #define JOIN_FABRIC_ROUTE_HPP
 
 // libjoin.
-#include <join/ipaddress.hpp>
+#include <join/ip_address.hpp>
 #include <join/mutex.hpp>
 
 // C++.

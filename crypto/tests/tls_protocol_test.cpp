@@ -1,0 +1,88 @@
+/**
+ * MIT License
+ *
+ * Copyright (c) 2021 Mathieu Rabine
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+// libjoin.
+#include <join/tls_protocol.hpp>
+
+// Libraries.
+#include <gtest/gtest.h>
+
+using join::Dtls;
+using join::Tls;
+
+/**
+ * @brief test the family method.
+ */
+TEST (TlsProtocol, family)
+{
+    ASSERT_EQ (Dtls ().family (), AF_INET);
+    ASSERT_EQ (Dtls::v6 ().family (), AF_INET6);
+    ASSERT_EQ (Dtls::v4 ().family (), AF_INET);
+    ASSERT_EQ (Tls ().family (), AF_INET);
+    ASSERT_EQ (Tls::v6 ().family (), AF_INET6);
+    ASSERT_EQ (Tls::v4 ().family (), AF_INET);
+}
+
+/**
+ * @brief test the type method.
+ */
+TEST (TlsProtocol, type)
+{
+    ASSERT_EQ (Dtls ().type (), SOCK_DGRAM);
+    ASSERT_EQ (Tls ().type (), SOCK_STREAM);
+}
+
+/**
+ * @brief test the protocol method.
+ */
+TEST (TlsProtocol, protocol)
+{
+    ASSERT_EQ (Dtls ().protocol (), IPPROTO_UDP);
+    ASSERT_EQ (Tls ().protocol (), IPPROTO_TCP);
+}
+
+/**
+ * @brief equal method.
+ */
+TEST (TlsProtocol, equal)
+{
+    ASSERT_EQ (Dtls::v4 (), Dtls::v4 ());
+    ASSERT_NE (Dtls::v4 (), Dtls::v6 ());
+    ASSERT_EQ (Dtls::v6 (), Dtls::v6 ());
+    ASSERT_NE (Dtls::v6 (), Dtls::v4 ());
+
+    ASSERT_EQ (Tls::v4 (), Tls::v4 ());
+    ASSERT_NE (Tls::v4 (), Tls::v6 ());
+    ASSERT_EQ (Tls::v6 (), Tls::v6 ());
+    ASSERT_NE (Tls::v6 (), Tls::v4 ());
+}
+
+/**
+ * @brief main function.
+ */
+int main (int argc, char** argv)
+{
+    testing::InitGoogleTest (&argc, argv);
+    return RUN_ALL_TESTS ();
+}

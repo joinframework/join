@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/interfacemanager.hpp>
+#include <join/interface_manager.hpp>
 #include <join/interface.hpp>
 #include <join/error.hpp>
 

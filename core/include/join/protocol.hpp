@@ -29,7 +29,6 @@
 #include <join/endpoint.hpp>
 
 // C.
-#include <linux/netlink.h>
 #include <net/ethernet.h>
 
 namespace join
@@ -194,7 +193,7 @@ namespace join
          * @brief construct the udp protocol instance.
          * @param family IP address family.
          */
-        constexpr Udp (int family = AF_INET) noexcept
+        constexpr explicit Udp (int family = AF_INET) noexcept
         : _family (family)
         {
         }
@@ -286,7 +285,7 @@ namespace join
          * @brief create the icmp protocol instance.
          * @param family IP address family.
          */
-        constexpr Icmp (int family = AF_INET) noexcept
+        constexpr explicit Icmp (int family = AF_INET) noexcept
         : _family (family)
         {
         }
@@ -385,7 +384,7 @@ namespace join
          * @brief create the tcp protocol  instance.
          * @param family IP address family.
          */
-        constexpr Tcp (int family = AF_INET) noexcept
+        constexpr explicit Tcp (int family = AF_INET) noexcept
         : _family (family)
         {
         }

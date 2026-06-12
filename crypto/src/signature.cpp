@@ -24,7 +24,7 @@
 
 // libjoin.
 #include <join/signature.hpp>
-#include <join/tlskey.hpp>
+#include <join/tls_key.hpp>
 #include <join/error.hpp>
 #include <join/utils.hpp>
 

@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/neighbormanager.hpp>
+#include <join/neighbor_manager.hpp>
 
 using join::NeighborKey;
 using join::Neighbor;

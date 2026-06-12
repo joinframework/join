@@ -26,8 +26,8 @@
 #define JOIN_FABRIC_NEIGHBOR_HPP
 
 // libjoin.
-#include <join/macaddress.hpp>
-#include <join/ipaddress.hpp>
+#include <join/mac_address.hpp>
+#include <join/ip_address.hpp>
 #include <join/mutex.hpp>
 
 // C++.

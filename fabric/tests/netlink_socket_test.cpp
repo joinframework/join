@@ -23,7 +23,9 @@
  */
 
 // libjoin.
-#include <join/netlink.hpp>
+#include <join/netlink_protocol.hpp>
+#include <join/datagram_socket.hpp>
+#include <join/error.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -450,22 +452,6 @@ TEST_F (NetlinkSocket, connected)
     ASSERT_TRUE (netlinkSocket.connected ());
     netlinkSocket.close ();
     ASSERT_FALSE (netlinkSocket.connected ());
-}
-
-/**
- * @brief Test encrypted method.
- */
-TEST_F (NetlinkSocket, encrypted)
-{
-    Netlink::Socket netlinkSocket (Netlink::Socket::Blocking);
-
-    ASSERT_FALSE (netlinkSocket.opened ());
-    ASSERT_EQ (netlinkSocket.open (Netlink::rt ()), 0) << join::lastError.message ();
-    ASSERT_FALSE (netlinkSocket.encrypted ());
-    ASSERT_EQ (netlinkSocket.connect (_groups), 0) << join::lastError.message ();
-    ASSERT_FALSE (netlinkSocket.encrypted ());
-    netlinkSocket.close ();
-    ASSERT_FALSE (netlinkSocket.encrypted ());
 }
 
 /**

@@ -31,20 +31,15 @@
 #include <join/utils.hpp>
 #include <join/error.hpp>
 
-// Libraries.
-#include <openssl/err.h>
-
 // C++.
 #include <type_traits>
-#include <iostream>
+#include <memory>
+#include <string>
 
 // C.
 #include <netinet/tcp.h>
 #include <linux/icmp.h>
 #include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <fnmatch.h>
-#include <cassert>
 #include <fcntl.h>
 #include <poll.h>
 
@@ -58,7 +53,6 @@ namespace join
     {
     public:
         using Ptr = std::unique_ptr<BasicSocket<Protocol>>;
-        using Proto = Protocol;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -118,7 +112,7 @@ namespace join
          * @brief create socket instance specifying the mode.
          * @param mode blocking mode.
          */
-        BasicSocket (Mode mode)
+        explicit BasicSocket (Mode mode)
         : _mode (mode)
         {
         }
@@ -140,7 +134,7 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicSocket (BasicSocket&& other)
+        BasicSocket (BasicSocket&& other) noexcept
         : _state (other._state)
         , _mode (other._mode)
         , _handle (other._handle)
@@ -157,14 +151,14 @@ namespace join
          * @param other other object to assign.
          * @return current object.
          */
-        BasicSocket& operator= (BasicSocket&& other)
+        BasicSocket& operator= (BasicSocket&& other) noexcept
         {
-            this->close ();
+            close ();
 
-            this->_state = other._state;
-            this->_mode = other._mode;
-            this->_handle = other._handle;
-            this->_protocol = other._protocol;
+            _state = other._state;
+            _mode = other._mode;
+            _handle = other._handle;
+            _protocol = other._protocol;
 
             other._state = State::Closed;
             other._mode = Mode::NonBlocking;
@@ -179,9 +173,9 @@ namespace join
          */
         virtual ~BasicSocket ()
         {
-            if (this->_handle != -1)
+            if (_handle != -1)
             {
-                ::close (this->_handle);
+                ::close (_handle);
             }
         }
 
@@ -192,26 +186,30 @@ namespace join
          */
         virtual int open (const Protocol& protocol = Protocol ()) noexcept
         {
-            if (this->_state != State::Closed)
+            if (_state != State::Closed)
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            if (this->_mode == Mode::NonBlocking)
-                this->_handle = ::socket (protocol.family (), protocol.type () | SOCK_NONBLOCK, protocol.protocol ());
+            if (_mode == Mode::NonBlocking)
+            {
+                _handle = ::socket (protocol.family (), protocol.type () | SOCK_NONBLOCK, protocol.protocol ());
+            }
             else
-                this->_handle = ::socket (protocol.family (), protocol.type (), protocol.protocol ());
+            {
+                _handle = ::socket (protocol.family (), protocol.type (), protocol.protocol ());
+            }
 
-            if (this->_handle == -1)
+            if (_handle == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
-                this->close ();
+                close ();
                 return -1;
             }
 
-            this->_state = State::Disconnected;
-            this->_protocol = protocol;
+            _state = State::Disconnected;
+            _protocol = protocol;
 
             return 0;
         }
@@ -221,11 +219,11 @@ namespace join
          */
         virtual void close () noexcept
         {
-            if (this->_state != State::Closed)
+            if (_state != State::Closed)
             {
-                ::close (this->_handle);
-                this->_state = State::Closed;
-                this->_handle = -1;
+                ::close (_handle);
+                _state = State::Closed;
+                _handle = -1;
             }
         }
 
@@ -234,9 +232,9 @@ namespace join
          * @param endpoint endpoint to assign to the socket.
          * @return 0 on success, -1 on failure.
          */
-        virtual int bind (const Endpoint& endpoint) noexcept
+        int bind (const Endpoint& endpoint) noexcept
         {
-            if ((this->_state == State::Closed) && (this->open (endpoint.protocol ()) == -1))
+            if ((_state == State::Closed) && (open (endpoint.protocol ()) == -1))
             {
                 return -1;
             }
@@ -251,14 +249,48 @@ namespace join
             }
             else if ((endpoint.protocol ().family () == AF_INET6) || (endpoint.protocol ().family () == AF_INET))
             {
-                this->setOption (Option::ReuseAddr, 1);
+                setOption (Option::ReuseAddr, 1);
             }
             else if (endpoint.protocol ().family () == AF_UNIX)
             {
                 ::unlink (endpoint.device ().c_str ());
             }
 
-            if (::bind (this->_handle, endpoint.addr (), endpoint.length ()) == -1)
+            if (::bind (_handle, endpoint.addr (), endpoint.length ()) == -1)
+            {
+                lastError = std::error_code (errno, std::generic_category ());
+                return -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief assigns the specified device to the socket.
+         * @param device device name.
+         * @return 0 on success, -1 on failure.
+         */
+        int bindToDevice (const std::string& device) noexcept
+        {
+            if (_state == State::Closed)
+            {
+                lastError = make_error_code (Errc::ConnectionClosed);
+                return -1;
+            }
+
+            if (_state == State::Connected)
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            if ((_protocol.family () == AF_INET6) || (_protocol.family () == AF_INET))
+            {
+                setOption (Option::ReuseAddr, 1);
+            }
+
+            int result = ::setsockopt (_handle, SOL_SOCKET, SO_BINDTODEVICE, device.c_str (), device.size ());
+            if (result == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
                 return -1;
@@ -271,12 +303,12 @@ namespace join
          * @brief get the number of readable bytes.
          * @return the number of readable bytes, -1 on failure.
          */
-        virtual int canRead () const noexcept
+        int canRead () const noexcept
         {
             int available = 0;
 
             // check if data can be read in the socket internal buffer.
-            if (::ioctl (this->_handle, FIONREAD, &available) == -1)
+            if (::ioctl (_handle, FIONREAD, &available) == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
                 return -1;
@@ -290,9 +322,9 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return true if there is new data available for reading, false otherwise.
          */
-        virtual bool waitReadyRead (int timeout = 0) const noexcept
+        bool waitReadyRead (int timeout = 0) const noexcept
         {
-            return (this->wait (true, false, timeout) == 0);
+            return (wait (true, false, timeout) == 0);
         }
 
         /**
@@ -301,7 +333,7 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return the number of bytes received, -1 on failure.
          */
-        virtual int read (char* data, unsigned long maxSize) noexcept
+        int read (char* data, unsigned long maxSize) noexcept
         {
             struct iovec iov;
             iov.iov_base = data;
@@ -315,7 +347,7 @@ namespace join
             message.msg_control = nullptr;
             message.msg_controllen = 0;
 
-            int size = ::recvmsg (this->_handle, &message, 0);
+            int size = ::recvmsg (_handle, &message, 0);
             if (size < 1)
             {
                 if (size == -1)
@@ -337,9 +369,9 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return true if data can be written, false otherwise.
          */
-        virtual bool waitReadyWrite (int timeout = 0) const noexcept
+        bool waitReadyWrite (int timeout = 0) const noexcept
         {
-            return (this->wait (false, true, timeout) == 0);
+            return (wait (false, true, timeout) == 0);
         }
 
         /**
@@ -348,7 +380,7 @@ namespace join
          * @param maxSize maximum number of bytes to write.
          * @return the number of bytes written, -1 on failure.
          */
-        virtual int write (const char* data, unsigned long maxSize) noexcept
+        int write (const char* data, unsigned long maxSize) noexcept
         {
             struct iovec iov;
             iov.iov_base = const_cast<char*> (data);
@@ -362,7 +394,7 @@ namespace join
             message.msg_control = nullptr;
             message.msg_controllen = 0;
 
-            int result = ::sendmsg (this->_handle, &message, 0);
+            int result = ::sendmsg (_handle, &message, 0);
             if (result == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
@@ -378,13 +410,13 @@ namespace join
          */
         void setMode (Mode mode) noexcept
         {
-            this->_mode = mode;
+            _mode = mode;
 
-            if (this->_state != State::Closed)
+            if (_state != State::Closed)
             {
-                int flags = ::fcntl (this->_handle, F_GETFL, 0);
+                int flags = ::fcntl (_handle, F_GETFL, 0);
 
-                if (this->_mode == Mode::NonBlocking)
+                if (_mode == Mode::NonBlocking)
                 {
                     flags = flags | O_NONBLOCK;
                 }
@@ -393,7 +425,7 @@ namespace join
                     flags = flags & ~O_NONBLOCK;
                 }
 
-                ::fcntl (this->_handle, F_SETFL, flags);
+                ::fcntl (_handle, F_SETFL, flags);
             }
         }
 
@@ -449,12 +481,77 @@ namespace join
                     optname = PACKET_AUXDATA;
                     break;
 
+                case Option::Ttl:
+                    if (family () == AF_INET6)
+                    {
+                        optlevel = IPPROTO_IPV6;
+                        optname = IPV6_UNICAST_HOPS;
+                    }
+                    else
+                    {
+                        optlevel = IPPROTO_IP;
+                        optname = IP_TTL;
+                    }
+                    break;
+
+                case Option::MulticastLoop:
+                    if (family () == AF_INET6)
+                    {
+                        optlevel = IPPROTO_IPV6;
+                        optname = IPV6_MULTICAST_LOOP;
+                    }
+                    else
+                    {
+                        optlevel = IPPROTO_IP;
+                        optname = IP_MULTICAST_LOOP;
+                    }
+                    break;
+
+                case Option::MulticastTtl:
+                    if (family () == AF_INET6)
+                    {
+                        optlevel = IPPROTO_IPV6;
+                        optname = IPV6_MULTICAST_HOPS;
+                    }
+                    else
+                    {
+                        optlevel = IPPROTO_IP;
+                        optname = IP_MULTICAST_TTL;
+                    }
+                    break;
+
+                case Option::PathMtuDiscover:
+                    if (family () == AF_INET6)
+                    {
+                        optlevel = IPPROTO_IPV6;
+                        optname = IPV6_MTU_DISCOVER;
+                    }
+                    else
+                    {
+                        optlevel = IPPROTO_IP;
+                        optname = IP_MTU_DISCOVER;
+                    }
+                    break;
+
+                case Option::RcvError:
+                    if (family () == AF_INET6)
+                    {
+                        optlevel = IPPROTO_IPV6;
+                        optname = IPV6_RECVERR;
+                    }
+                    else
+                    {
+                        optlevel = IPPROTO_IP;
+                        optname = IP_RECVERR;
+                    }
+                    break;
+
                 default:
                     lastError = make_error_code (Errc::InvalidParam);
                     return -1;
             }
 
-            int result = ::setsockopt (this->_handle, optlevel, optname, &value, sizeof (value));
+            int result = ::setsockopt (_handle, optlevel, optname, &value, sizeof (value));
             if (result == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
@@ -473,7 +570,7 @@ namespace join
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            if (::getsockname (this->_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len) == -1)
+            if (::getsockname (_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len) == -1)
             {
                 return {};
             }
@@ -487,16 +584,7 @@ namespace join
          */
         bool opened () const noexcept
         {
-            return (this->_state != State::Closed);
-        }
-
-        /**
-         * @brief check if the socket is secure.
-         * @return true if encrypted, false otherwise.
-         */
-        virtual bool encrypted () const noexcept
-        {
-            return false;
+            return (_state != State::Closed);
         }
 
         /**
@@ -505,7 +593,7 @@ namespace join
          */
         int family () const noexcept
         {
-            return this->_protocol.family ();
+            return _protocol.family ();
         }
 
         /**
@@ -514,7 +602,7 @@ namespace join
          */
         int type () const noexcept
         {
-            return this->_protocol.type ();
+            return _protocol.type ();
         }
 
         /**
@@ -523,7 +611,7 @@ namespace join
          */
         int protocol () const noexcept
         {
-            return this->_protocol.protocol ();
+            return _protocol.protocol ();
         }
 
         /**
@@ -532,7 +620,7 @@ namespace join
          */
         int handle () const noexcept
         {
-            return this->_handle;
+            return _handle;
         }
 
         /**
@@ -567,7 +655,6 @@ namespace join
             return static_cast<uint16_t> (~sum);
         }
 
-    protected:
         /**
          * @brief wait for the socket handle to become ready.
          * @param wantRead set to true if want read
@@ -577,7 +664,10 @@ namespace join
          */
         int wait (bool wantRead, bool wantWrite, int timeout) const noexcept
         {
-            struct pollfd handle = {.fd = this->_handle, .events = 0, .revents = 0};
+            struct pollfd handle;
+            handle.fd = _handle;
+            handle.events = 0;
+            handle.revents = 0;
 
             if (wantRead)
             {
@@ -611,6 +701,7 @@ namespace join
             return 0;
         }
 
+    protected:
         /// socket state.
         State _state = State::Closed;
 
@@ -622,10 +713,6 @@ namespace join
 
         /// protocol.
         Protocol _protocol;
-
-        /// friendship with TLS wrapper.
-        template <class Socket>
-        friend class TlsWrapper;
     };
 
     /**
@@ -635,865 +722,7 @@ namespace join
      * @return true if inferior.
      */
     template <class Protocol>
-    constexpr bool operator< (const BasicSocket<Protocol>& a, const BasicSocket<Protocol>& b) noexcept
-    {
-        return a.handle () < b.handle ();
-    }
-
-    /**
-     * @brief basic datagram socket class.
-     */
-    template <class Protocol>
-    class BasicDatagramSocket : public BasicSocket<Protocol>
-    {
-    public:
-        using Ptr = std::unique_ptr<BasicDatagramSocket<Protocol>>;
-        using Proto = Protocol;
-        using Mode = typename BasicSocket<Protocol>::Mode;
-        using Option = typename BasicSocket<Protocol>::Option;
-        using State = typename BasicSocket<Protocol>::State;
-        using Endpoint = typename Protocol::Endpoint;
-
-        /**
-         * @brief Default constructor.
-         */
-        BasicDatagramSocket (int ttl = 60)
-        : BasicDatagramSocket (Mode::NonBlocking, ttl)
-        {
-        }
-
-        /**
-         * @brief Create instance specifying the mode.
-         * @param mode Set the socket blocking mode.
-         */
-        BasicDatagramSocket (Mode mode, int ttl = 60)
-        : BasicSocket<Protocol> (mode)
-        , _ttl (ttl)
-        {
-        }
-
-        /**
-         * @brief Copy constructor.
-         * @param other Other object to copy.
-         */
-        BasicDatagramSocket (const BasicDatagramSocket& other) = delete;
-
-        /**
-         * @brief Copy assignment operator.
-         * @param other other object to assign.
-         * @return assigned object.
-         */
-        BasicDatagramSocket& operator= (const BasicDatagramSocket& other) = delete;
-
-        /**
-         * @brief Move constructor.
-         * @param other Other object to move.
-         */
-        BasicDatagramSocket (BasicDatagramSocket&& other)
-        : BasicSocket<Protocol> (std::move (other))
-        , _remote (std::move (other._remote))
-        , _ttl (other._ttl)
-        {
-            other._ttl = 60;
-        }
-
-        /**
-         * @brief Move assignment operator.
-         * @param other other object to assign.
-         * @return assigned object.
-         */
-        BasicDatagramSocket& operator= (BasicDatagramSocket&& other)
-        {
-            BasicSocket<Protocol>::operator= (std::move (other));
-
-            _remote = std::move (other._remote);
-            _ttl = other._ttl;
-
-            other._ttl = 60;
-
-            return *this;
-        }
-
-        /**
-         * @brief Destroy the instance.
-         */
-        virtual ~BasicDatagramSocket () = default;
-
-        /**
-         * @brief open socket using the given protocol.
-         * @param protocol protocol to use.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int open (const Protocol& protocol = Protocol ()) noexcept override
-        {
-            int result = BasicSocket<Protocol>::open (protocol);
-            if (result == -1)
-            {
-                return -1;
-            }
-
-            int off = 0;
-
-            if ((protocol.protocol () == IPPROTO_UDP) || (protocol.protocol () == IPPROTO_TCP))
-            {
-                if ((protocol.family () == AF_INET6) &&
-                    (::setsockopt (this->_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1))
-                {
-                    lastError = std::error_code (errno, std::generic_category ());
-                    this->close ();
-                    return -1;
-                }
-            }
-
-            if ((protocol.protocol () == IPPROTO_ICMPV6) || (protocol.protocol () == IPPROTO_ICMP))
-            {
-                if ((protocol.family () == AF_INET) &&
-                    (::setsockopt (this->_handle, IPPROTO_IP, IP_HDRINCL, &off, sizeof (off)) == -1))
-                {
-                    lastError = std::error_code (errno, std::generic_category ());
-                    this->close ();
-                    return -1;
-                }
-
-                this->setOption (Option::MulticastTtl, this->_ttl);
-                this->setOption (Option::Ttl, this->_ttl);
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief assigns the specified device to the socket.
-         * @param device device name.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int bindToDevice (const std::string& device) noexcept
-        {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::ConnectionClosed);
-                return -1;
-            }
-
-            if (this->_state == State::Connected)
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            if ((this->_protocol.family () == AF_INET6) || (this->_protocol.family () == AF_INET))
-            {
-                this->setOption (Option::ReuseAddr, 1);
-            }
-
-            int result = setsockopt (this->_handle, SOL_SOCKET, SO_BINDTODEVICE, device.c_str (), device.size ());
-            if (result == -1)
-            {
-                lastError = std::error_code (errno, std::generic_category ());
-                return -1;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief make a connection to the given endpoint.
-         * @param endpoint endpoint to connect to.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int connect (const Endpoint& endpoint)
-        {
-            if ((this->_state != State::Closed) && (this->_state != State::Disconnected))
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            if ((this->_state == State::Closed) && (this->open (endpoint.protocol ()) == -1))
-            {
-                return -1;
-            }
-
-            int result = ::connect (this->_handle, endpoint.addr (), endpoint.length ());
-
-            this->_state = State::Connecting;
-            this->_remote = endpoint;
-
-            if (result == -1)
-            {
-                lastError = std::error_code (errno, std::generic_category ());
-                if (lastError != std::errc::operation_in_progress)
-                {
-                    this->close ();
-                }
-                return -1;
-            }
-
-            this->_state = State::Connected;
-
-            return 0;
-        }
-
-        /**
-         * @brief shutdown the connection.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int disconnect ()
-        {
-            if (this->_state == State::Connected)
-            {
-                struct sockaddr_storage nullAddr;
-                ::memset (&nullAddr, 0, sizeof (nullAddr));
-
-                nullAddr.ss_family = AF_UNSPEC;
-
-                int result = ::connect (this->_handle, reinterpret_cast<struct sockaddr*> (&nullAddr),
-                                        sizeof (struct sockaddr_storage));
-                if (result == -1)
-                {
-                    if (errno != EAFNOSUPPORT)
-                    {
-                        lastError = std::error_code (errno, std::generic_category ());
-                        return -1;
-                    }
-                }
-
-                this->_state = State::Disconnected;
-                this->_remote = {};
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief close the socket handle.
-         */
-        virtual void close () noexcept override
-        {
-            BasicSocket<Protocol>::close ();
-            this->_remote = {};
-        }
-
-        /**
-         * @brief read data.
-         * @param data buffer used to store the data received.
-         * @param maxSize maximum number of bytes to read.
-         * @return the number of bytes received, -1 on failure.
-         */
-        virtual int read (char* data, unsigned long maxSize) noexcept override
-        {
-            return BasicSocket<Protocol>::read (data, maxSize);
-        }
-
-        /**
-         * @brief read data on the socket.
-         * @param data buffer used to store the data received.
-         * @param maxSize maximum number of bytes to read.
-         * @param endpoint endpoint from where data are coming (optional).
-         * @return The number of bytes received, -1 on failure.
-         */
-        virtual int readFrom (char* data, unsigned long maxSize, Endpoint* endpoint = nullptr) noexcept
-        {
-            struct sockaddr_storage sa;
-            socklen_t sa_len = sizeof (struct sockaddr_storage);
-
-            int size = ::recvfrom (this->_handle, data, maxSize, 0, reinterpret_cast<struct sockaddr*> (&sa), &sa_len);
-            if (size < 1)
-            {
-                if (size == -1)
-                {
-                    lastError = std::error_code (errno, std::generic_category ());
-                }
-                else
-                {
-                    lastError = make_error_code (Errc::ConnectionClosed);
-                    this->_state = State::Disconnected;
-                }
-
-                return -1;
-            }
-
-            if (endpoint != nullptr)
-            {
-                *endpoint = Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len);
-            }
-
-            return size;
-        }
-
-        /**
-         * @brief write data.
-         * @param data data buffer to send.
-         * @param maxSize maximum number of bytes to write.
-         * @return the number of bytes written, -1 on failure.
-         */
-        virtual int write (const char* data, unsigned long maxSize) noexcept override
-        {
-            return BasicSocket<Protocol>::write (data, maxSize);
-        }
-
-        /**
-         * @brief write data on the socket.
-         * @param data data buffer to send.
-         * @param maxSize maximum number of bytes to write.
-         * @param endpoint endpoint where to write the data.
-         * @return the number of bytes written, -1 on failure.
-         */
-        virtual int writeTo (const char* data, unsigned long maxSize, const Endpoint& endpoint) noexcept
-        {
-            if ((this->_state == State::Closed) && (this->open (endpoint.protocol ()) == -1))
-            {
-                return -1;
-            }
-
-            int result = ::sendto (this->_handle, data, maxSize, 0, endpoint.addr (), endpoint.length ());
-            if (result < 0)
-            {
-                lastError = std::error_code (errno, std::generic_category ());
-                return -1;
-            }
-
-            return result;
-        }
-
-        /**
-         * @brief set the given option to the given value.
-         * @param option socket option.
-         * @param value option value.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int setOption (Option option, int value) noexcept override
-        {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
-            int optlevel, optname;
-
-            switch (option)
-            {
-                case Option::Ttl:
-                    if (this->family () == AF_INET6)
-                    {
-                        optlevel = IPPROTO_IPV6;
-                        optname = IPV6_UNICAST_HOPS;
-                    }
-                    else
-                    {
-                        optlevel = IPPROTO_IP;
-                        optname = IP_TTL;
-                    }
-                    break;
-
-                case Option::MulticastLoop:
-                    if (this->family () == AF_INET6)
-                    {
-                        optlevel = IPPROTO_IPV6;
-                        optname = IPV6_MULTICAST_LOOP;
-                    }
-                    else
-                    {
-                        optlevel = IPPROTO_IP;
-                        optname = IP_MULTICAST_LOOP;
-                    }
-                    break;
-
-                case Option::MulticastTtl:
-                    if (this->family () == AF_INET6)
-                    {
-                        optlevel = IPPROTO_IPV6;
-                        optname = IPV6_MULTICAST_HOPS;
-                    }
-                    else
-                    {
-                        optlevel = IPPROTO_IP;
-                        optname = IP_MULTICAST_TTL;
-                    }
-                    break;
-
-                case Option::PathMtuDiscover:
-                    if (this->family () == AF_INET6)
-                    {
-                        optlevel = IPPROTO_IPV6;
-                        optname = IPV6_MTU_DISCOVER;
-                    }
-                    else
-                    {
-                        optlevel = IPPROTO_IP;
-                        optname = IP_MTU_DISCOVER;
-                    }
-                    break;
-
-                case Option::RcvError:
-                    if (this->family () == AF_INET6)
-                    {
-                        optlevel = IPPROTO_IPV6;
-                        optname = IPV6_RECVERR;
-                    }
-                    else
-                    {
-                        optlevel = IPPROTO_IP;
-                        optname = IP_RECVERR;
-                    }
-                    break;
-
-                default:
-                    return BasicSocket<Protocol>::setOption (option, value);
-            }
-
-            int result = ::setsockopt (this->_handle, optlevel, optname, &value, sizeof (value));
-            if (result == -1)
-            {
-                lastError = std::error_code (errno, std::generic_category ());
-                return -1;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief determine the remote endpoint associated with this socket.
-         * @return remote endpoint.
-         */
-        const Endpoint& remoteEndpoint () const noexcept
-        {
-            return this->_remote;
-        }
-
-        /**
-         * @brief check if the socket is connecting.
-         * @return true if connecting, false otherwise.
-         */
-        virtual bool connecting () const noexcept
-        {
-            return (this->_state == State::Connecting);
-        }
-
-        /**
-         * @brief check if the socket is connected.
-         * @return true if connected, false otherwise.
-         */
-        virtual bool connected () noexcept
-        {
-            return (this->_state == State::Connected);
-        }
-
-        /**
-         * @brief get socket mtu.
-         * @return mtu on success, -1 on failure.
-         */
-        int mtu () const
-        {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
-            int result = -1, value = -1;
-            socklen_t valueLen = sizeof (value);
-
-            if (this->_protocol.family () == AF_INET6)
-            {
-                result = ::getsockopt (this->_handle, IPPROTO_IPV6, IPV6_MTU, &value, &valueLen);
-            }
-            else if (this->_protocol.family () == AF_INET)
-            {
-                result = ::getsockopt (this->_handle, IPPROTO_IP, IP_MTU, &value, &valueLen);
-            }
-            else
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
-            if (result == -1)
-            {
-                lastError = std::error_code (errno, std::generic_category ());
-                return -1;
-            }
-
-            return value;
-        }
-
-        /**
-         * @brief returns the Time-To-Live value.
-         * @return The Time-To-Live value.
-         */
-        int ttl () const noexcept
-        {
-            return this->_ttl;
-        }
-
-    protected:
-        /// remote endpoint.
-        Endpoint _remote;
-
-        /// packet time to live.
-        int _ttl = 60;
-    };
-
-    /**
-     * @brief compare if socket handle is inferior.
-     * @param a socket handle to compare.
-     * @param b socket handle to compare to.
-     * @return true if inferior.
-     */
-    template <class Protocol>
-    constexpr bool operator< (const BasicDatagramSocket<Protocol>& a, const BasicDatagramSocket<Protocol>& b) noexcept
-    {
-        return a.handle () < b.handle ();
-    }
-
-    /**
-     * @brief basic stream socket class.
-     */
-    template <class Protocol>
-    class BasicStreamSocket : public BasicDatagramSocket<Protocol>
-    {
-    public:
-        using Ptr = std::unique_ptr<BasicStreamSocket<Protocol>>;
-        using Proto = Protocol;
-        using Mode = typename BasicDatagramSocket<Protocol>::Mode;
-        using Option = typename BasicDatagramSocket<Protocol>::Option;
-        using State = typename BasicDatagramSocket<Protocol>::State;
-        using Endpoint = typename Protocol::Endpoint;
-
-        /**
-         * @brief default constructor.
-         */
-        BasicStreamSocket ()
-        : BasicStreamSocket (Mode::NonBlocking)
-        {
-        }
-
-        /**
-         * @brief create instance specifying the mode.
-         * @param mode Set the socket blocking mode.
-         */
-        BasicStreamSocket (Mode mode)
-        : BasicDatagramSocket<Protocol> (mode)
-        {
-        }
-
-        /**
-         * @brief copy constructor.
-         * @param other other object to copy.
-         */
-        BasicStreamSocket (const BasicStreamSocket& other) = delete;
-
-        /**
-         * @brief copy assignment operator.
-         * @param other other object to assign.
-         * @return assigned object.
-         */
-        BasicStreamSocket& operator= (const BasicStreamSocket& other) = delete;
-
-        /**
-         * @brief move constructor.
-         * @param other other object to move.
-         */
-        BasicStreamSocket (BasicStreamSocket&& other)
-        : BasicDatagramSocket<Protocol> (std::move (other))
-        {
-        }
-
-        /**
-         * @brief move assignment operator.
-         * @param other other object to assign.
-         * @return assigned object.
-         */
-        BasicStreamSocket& operator= (BasicStreamSocket&& other)
-        {
-            BasicDatagramSocket<Protocol>::operator= (std::move (other));
-
-            return *this;
-        }
-
-        /**
-         * @brief destroy the instance.
-         */
-        virtual ~BasicStreamSocket () = default;
-
-        /**
-         * @brief block until connected.
-         * @param timeout timeout in milliseconds.
-         * @return true if connected, false otherwise.
-         */
-        virtual bool waitConnected (int timeout = 0)
-        {
-            if (this->_state != State::Connected)
-            {
-                if (this->_state != State::Connecting)
-                {
-                    lastError = make_error_code (Errc::OperationFailed);
-                    return false;
-                }
-
-                if (!this->waitReadyWrite (timeout))
-                {
-                    return false;
-                }
-
-                return connected ();
-            }
-
-            return true;
-        }
-
-        /**
-         * @brief shutdown the connection.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int disconnect () override
-        {
-            if (this->_state == State::Connected)
-            {
-                ::shutdown (this->_handle, SHUT_WR);
-                this->_state = State::Disconnecting;
-            }
-
-            if (this->_state == State::Disconnecting)
-            {
-                char buffer[4096];
-                // closing before reading can make the client
-                // not see all of our output.
-                // we have to do a "lingering close"
-                for (;;)
-                {
-                    int result = this->read (buffer, sizeof (buffer));
-                    if (result <= 0)
-                    {
-                        if ((result == -1) && (lastError == Errc::TemporaryError))
-                        {
-                            return -1;
-                        }
-
-                        break;
-                    }
-                }
-
-                ::shutdown (this->_handle, SHUT_RD);
-                this->_state = State::Disconnected;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief wait until the connection as been shut down.
-         * @param timeout timeout in milliseconds.
-         * return true if the connection as been shut down, false otherwise.
-         */
-        virtual bool waitDisconnected (int timeout = 0)
-        {
-            if ((this->_state != State::Disconnected) && (this->_state != State::Closed))
-            {
-                if (this->_state != State::Disconnecting)
-                {
-                    lastError = make_error_code (Errc::OperationFailed);
-                    return false;
-                }
-
-                auto start = std::chrono::steady_clock::now ();
-                int elapsed = 0;
-
-                while ((lastError == Errc::TemporaryError) && (elapsed <= timeout))
-                {
-                    if (!this->waitReadyRead (timeout - elapsed))
-                    {
-                        return false;
-                    }
-
-                    if (this->disconnect () == 0)
-                    {
-                        return true;
-                    }
-
-                    if (timeout)
-                    {
-                        elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (
-                                      std::chrono::steady_clock::now () - start)
-                                      .count ();
-                    }
-                }
-
-                return false;
-            }
-
-            return true;
-        }
-
-        /**
-         * @brief read data until size is reached or an error occurred.
-         * @param data buffer used to store the data received.
-         * @param size number of bytes to read.
-         * @param timeout timeout in milliseconds.
-         * @return 0 on success, -1 on failure.
-         */
-        int readExactly (char* data, unsigned long size, int timeout = 0)
-        {
-            unsigned long numRead = 0;
-
-            while (numRead < size)
-            {
-                int result = this->read (data + numRead, size - numRead);
-                if (result == -1)
-                {
-                    if (lastError == Errc::TemporaryError)
-                    {
-                        if (this->waitReadyRead (timeout))
-                            continue;
-                    }
-
-                    return -1;
-                }
-
-                numRead += result;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief read data until size is reached or an error occurred.
-         * @param data buffer used to store the data received.
-         * @param size number of bytes to read.
-         * @param timeout timeout in milliseconds.
-         * @return 0 on success, -1 on failure.
-         */
-        int readExactly (std::string& data, unsigned long size, int timeout = 0)
-        {
-            data.resize (size);
-            return readExactly (&data[0], size, timeout);
-        }
-
-        /**
-         * @brief write data until size is reached or an error occurred.
-         * @param data data buffer to send.
-         * @param size number of bytes to write.
-         * @param timeout timeout in milliseconds.
-         * @return 0 on success, -1 on failure.
-         */
-        int writeExactly (const char* data, unsigned long size, int timeout = 0)
-        {
-            unsigned long numWrite = 0;
-
-            while (numWrite < size)
-            {
-                int result = this->write (data + numWrite, size - numWrite);
-                if (result == -1)
-                {
-                    if (lastError == Errc::TemporaryError)
-                    {
-                        if (this->waitReadyWrite (timeout))
-                            continue;
-                    }
-
-                    return -1;
-                }
-
-                numWrite += result;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief set the given option to the given value.
-         * @param option socket option.
-         * @param value option value.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int setOption (Option option, int value) noexcept override
-        {
-            if (this->_state == State::Closed)
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
-            int optlevel, optname;
-
-            switch (option)
-            {
-                case Option::NoDelay:
-                    optlevel = IPPROTO_TCP;
-                    optname = TCP_NODELAY;
-                    break;
-
-                case Option::KeepIdle:
-                    optlevel = IPPROTO_TCP;
-                    optname = TCP_KEEPIDLE;
-                    break;
-
-                case Option::KeepIntvl:
-                    optlevel = IPPROTO_TCP;
-                    optname = TCP_KEEPINTVL;
-                    break;
-
-                case Option::KeepCount:
-                    optlevel = IPPROTO_TCP;
-                    optname = TCP_KEEPCNT;
-                    break;
-
-                default:
-                    return BasicDatagramSocket<Protocol>::setOption (option, value);
-            }
-
-            int result = ::setsockopt (this->_handle, optlevel, optname, &value, sizeof (value));
-            if (result == -1)
-            {
-                lastError = std::error_code (errno, std::generic_category ());
-                return -1;
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief check if the socket is connected.
-         * @return true if connected, false otherwise.
-         */
-        virtual bool connected () noexcept override
-        {
-            if (this->_state == State::Connected)
-            {
-                return true;
-            }
-            else if (this->_state != State::Connecting)
-            {
-                return false;
-            }
-
-            int optval;
-            socklen_t optlen = sizeof (optval);
-
-            int result = ::getsockopt (this->_handle, SOL_SOCKET, SO_ERROR, &optval, &optlen);
-            if ((result == -1) || (optval != 0))
-            {
-                return false;
-            }
-
-            this->_state = State::Connected;
-
-            return true;
-        }
-
-        /// friendship with basic stream acceptor
-        friend class BasicStreamAcceptor<Protocol>;
-    };
-
-    /**
-     * @brief compare if socket handle is inferior.
-     * @param a socket handle to compare.
-     * @param b socket handle to compare to.
-     * @return true if inferior.
-     */
-    template <class Protocol>
-    constexpr bool operator< (const BasicStreamSocket<Protocol>& a, const BasicStreamSocket<Protocol>& b) noexcept
+    inline bool operator< (const BasicSocket<Protocol>& a, const BasicSocket<Protocol>& b) noexcept
     {
         return a.handle () < b.handle ();
     }

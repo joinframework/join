@@ -7,11 +7,15 @@ set(PUBLIC_HEADERS
     include/join/openssl.hpp
     include/join/openssl.hpp
     include/join/hmac.hpp
-    include/join/tlskey.hpp
+    include/join/tls_key.hpp
     include/join/signature.hpp
-    include/join/tlserror.hpp
-    include/join/tlscontext.hpp
-    include/join/tlswrapper.hpp
+    include/join/tl_serror.hpp
+    include/join/tls_context.hpp
+    include/join/tls.hpp
+    include/join/tls_wrapper.hpp
+    include/join/tls_stream.hpp
+    include/join/dtls_wrapper.hpp
+    include/join/tls_protocol.hpp
 )
 
 set(SOURCES
@@ -19,10 +23,10 @@ set(SOURCES
     src/openssl.cpp
     src/digest.cpp
     src/hmac.cpp
-    src/tlskey.cpp
+    src/tls_key.cpp
     src/signature.cpp
-    src/tlserror.cpp
-    src/tlscontext.cpp
+    src/tls_error.cpp
+    src/tls_context.cpp
 )
 
 add_library(${JOIN_CRYPTO} ${SOURCES})

@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/mdns.hpp>
+#include <join/mdns_protocol.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>

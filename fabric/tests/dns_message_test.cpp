@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/dnsmessage.hpp>
+#include <join/dns_message.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>

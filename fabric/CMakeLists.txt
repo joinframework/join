@@ -1,33 +1,33 @@
 cmake_minimum_required(VERSION 3.22.1)
 
 set(PUBLIC_HEADERS
-    include/join/dns.hpp
-    include/join/dot.hpp
-    include/join/mdns.hpp
+    include/join/dns_protocol.hpp
+    include/join/mdns_protocol.hpp
+    include/join/dot_protocol.hpp
     include/join/dnsmessage.hpp
     include/join/resolver.hpp
     include/join/nameserver.hpp
-    include/join/netlink.hpp
+    include/join/netlink_protocol.hpp
     include/join/netlink_endpoint.hpp
-    include/join/netlinkmanager.hpp
+    include/join/netlink_manager.hpp
     include/join/neighbor.hpp
-    include/join/neighbormanager.hpp
+    include/join/neighbor_manager.hpp
     include/join/arp.hpp
     include/join/interface.hpp
     include/join/interfacemanager.hpp
     include/join/route.hpp
-    include/join/routemanager.hpp
+    include/join/route_manager.hpp
 )
 
 set(SOURCES
-    src/netlinkmanager.cpp
+    src/netlink_manager.cpp
     src/neighbor.cpp
-    src/neighbormanager.cpp
+    src/neighbor_manager.cpp
     src/arp.cpp
     src/interface.cpp
-    src/interfacemanager.cpp
+    src/interface_manager.cpp
     src/route.cpp
-    src/routemanager.cpp
+    src/route_manager.cpp
 )
 
 add_library(${JOIN_FABRIC} ${SOURCES})

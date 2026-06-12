@@ -26,7 +26,7 @@
 #define JOIN_CORE_ACCEPTOR_HPP
 
 // libjoin.
-#include <join/socketstream.hpp>
+#include <join/socket_stream.hpp>
 
 namespace join
 {

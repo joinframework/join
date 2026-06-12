@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/netlink.hpp>
+#include <join/netlink_protocol.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>

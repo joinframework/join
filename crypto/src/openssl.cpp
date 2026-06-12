@@ -28,7 +28,6 @@
 // Libraries.
 #include <openssl/provider.h>
 #include <openssl/rand.h>
-#include <openssl/err.h>
 
 // C++.
 #include <mutex>

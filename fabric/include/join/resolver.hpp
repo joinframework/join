@@ -26,11 +26,13 @@
 #define JOIN_FABRIC_RESOLVER_HPP
 
 // libjoin.
-#include <join/dnsmessage.hpp>
+#include <join/datagram_socket.hpp>
+#include <join/dns_protocol.hpp>
+#include <join/dot_protocol.hpp>
+#include <join/tls_wrapper.hpp>
+#include <join/dns_message.hpp>
 #include <join/condition.hpp>
 #include <join/reactor.hpp>
-#include <join/dns.hpp>
-#include <join/dot.hpp>
 
 // C++.
 #include <unordered_map>
@@ -712,6 +714,11 @@ namespace join
          */
         virtual int disconnect ([[maybe_unused]] std::chrono::milliseconds timeout = std::chrono::seconds (5)) noexcept
         {
+            if (this->_socket.handle () == -1)
+            {
+                return 0;
+            }
+
             _reactor.delHandler (_socket.handle ());
 
             if (_socket.disconnect () == -1)
@@ -883,10 +890,11 @@ namespace join
                 data.rdbuf ()->pubsetbuf (_buffer.get (), size);
 
                 DnsPacket packet;
-                _message.deserialize (packet, data);
-                packet.src = _socket.localEndpoint ().ip ();
-                packet.dest = _socket.remoteEndpoint ().ip ();
-                packet.port = _socket.remoteEndpoint ().port ();
+                auto local = _socket.localEndpoint ();
+                auto remote = _socket.remoteEndpoint ();
+                packet.src = local.ip ();
+                packet.dest = remote.ip ();
+                packet.port = remote.port ();
 
                 if (packet.flags & 0x8000)
                 {
@@ -1108,7 +1116,10 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicTlsResolver () noexcept = default;
+        virtual ~BasicTlsResolver () noexcept
+        {
+            disconnect ();
+        }
 
         /**
          * @brief resolve host name using system name servers and return all IP addresses found.
@@ -1232,12 +1243,6 @@ namespace join
                 }
             }
 
-            // if (!this->_socket.waitHandshake (timeout.count ()))
-            // {
-            //     close ();
-            //     return -1;
-            // }
-
             this->_reactor.addHandler (this->_socket.handle (), this);
 
             return 0;
@@ -1249,6 +1254,11 @@ namespace join
          */
         int disconnect (std::chrono::milliseconds timeout = std::chrono::seconds (5)) noexcept override final
         {
+            if (this->_socket.handle () == -1)
+            {
+                return 0;
+            }
+
             this->_reactor.delHandler (this->_socket.handle ());
 
             if (this->_socket.shutdown () == -1)

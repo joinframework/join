@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/routemanager.hpp>
+#include <join/route_manager.hpp>
 
 using join::RouteKey;
 using join::Route;

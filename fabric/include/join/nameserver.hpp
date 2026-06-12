@@ -26,11 +26,12 @@
 #define JOIN_FABRIC_NAMESERVER_HPP
 
 // libjoin.
-#include <join/dnsmessage.hpp>
+#include <join/datagram_socket.hpp>
+#include <join/mdns_protocol.hpp>
+#include <join/dns_protocol.hpp>
+#include <join/dns_message.hpp>
 #include <join/condition.hpp>
 #include <join/reactor.hpp>
-#include <join/mdns.hpp>
-#include <join/dns.hpp>
 
 namespace join
 {

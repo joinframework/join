@@ -26,7 +26,7 @@
 #define JOIN_CORE_ENDPOINT_HPP
 
 // libjoin.
-#include <join/macaddress.hpp>
+#include <join/mac_address.hpp>
 
 // C++.
 #include <ostream>

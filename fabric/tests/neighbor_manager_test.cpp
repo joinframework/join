@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/neighbormanager.hpp>
+#include <join/neighbor_manager.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>

@@ -26,7 +26,7 @@
 #define JOIN_SERVICES_HTTPCLIENT_HPP
 
 // libjoin.
-#include <join/socketstream.hpp>
+#include <join/socket_stream.hpp>
 #include <join/httpmessage.hpp>
 #include <join/chunkstream.hpp>
 #include <join/resolver.hpp>

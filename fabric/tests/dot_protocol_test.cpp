@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/dot.hpp>
+#include <join/dot_protocol.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>

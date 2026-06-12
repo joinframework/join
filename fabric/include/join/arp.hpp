@@ -26,8 +26,8 @@
 #define JOIN_FABRIC_ARP_HPP
 
 // libjoin.
-#include <join/neighbormanager.hpp>
-#include <join/macaddress.hpp>
+#include <join/neighbor_manager.hpp>
+#include <join/mac_address.hpp>
 #include <join/condition.hpp>
 #include <join/socket.hpp>
 

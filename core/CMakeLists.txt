@@ -28,13 +28,15 @@ set(PUBLIC_HEADERS
     include/join/futex.hpp
     include/join/function.hpp
     include/join/thread.hpp
-    include/join/threadpool.hpp
-    include/join/macaddress.hpp
-    include/join/ipaddress.hpp
+    include/join/thread_pool.hpp
+    include/join/mac_address.hpp
+    include/join/ip_address.hpp
     include/join/endpoint.hpp
     include/join/protocol.hpp
     include/join/socket.hpp
-    include/join/socketstream.hpp
+    include/join/datagram_socket.hpp
+    include/join/stream_socket.hpp
+    include/join/socket_stream.hpp
     include/join/acceptor.hpp
     include/join/cpu.hpp
     include/join/clock.hpp
@@ -56,9 +58,9 @@ set(SOURCES
     src/condition.cpp
     src/semaphore.cpp
     src/thread.cpp
-    src/threadpool.cpp
-    src/macaddress.cpp
-    src/ipaddress.cpp
+    src/thread_pool.cpp
+    src/mac_address.cpp
+    src/ip_address.cpp
     src/cpu.cpp
 )
 

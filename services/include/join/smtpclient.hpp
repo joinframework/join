@@ -26,7 +26,7 @@
 #define JOIN_SERVICES_SMTPCLIENT_HPP
 
 // libjoin.
-#include <join/socketstream.hpp>
+#include <join/socket_stream.hpp>
 #include <join/mailmessage.hpp>
 #include <join/resolver.hpp>
 #include <join/base64.hpp>
