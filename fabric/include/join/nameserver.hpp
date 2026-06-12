@@ -378,7 +378,7 @@ namespace join
             }
 
 #ifndef DEBUG
-            if (this->setOption (Socket::MulticastLoop, 0) == -1)
+            if (this->_socket.setOption (Socket::MulticastLoop, 0) == -1)
             {
                 // LCOV_EXCL_START
                 this->close ();
