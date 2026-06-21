@@ -82,24 +82,6 @@ namespace join
             return _family;
         }
 
-        /**
-         * @brief get the protocol communication semantic.
-         * @return the protocol communication semantic.
-         */
-        constexpr int type () const noexcept
-        {
-            return SOCK_STREAM;
-        }
-
-        /**
-         * @brief get the protocol type.
-         * @return the protocol type.
-         */
-        constexpr int protocol () const noexcept
-        {
-            return IPPROTO_TCP;
-        }
-
         /// default DoT port.
         static constexpr uint16_t defaultPort = 853;
 

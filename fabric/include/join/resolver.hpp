@@ -890,6 +890,7 @@ namespace join
                 data.rdbuf ()->pubsetbuf (_buffer.get (), size);
 
                 DnsPacket packet;
+                _message.deserialize (packet, data);
                 auto local = _socket.localEndpoint ();
                 auto remote = _socket.remoteEndpoint ();
                 packet.src = local.ip ();

@@ -88,24 +88,6 @@ namespace join
             return _family;
         }
 
-        /**
-         * @brief get the protocol communication semantic.
-         * @return the protocol communication semantic.
-         */
-        constexpr int type () const noexcept
-        {
-            return SOCK_STREAM;
-        }
-
-        /**
-         * @brief get the protocol type.
-         * @return the protocol type.
-         */
-        constexpr int protocol () const noexcept
-        {
-            return IPPROTO_TCP;
-        }
-
     private:
         /// IP address family.
         int _family;
@@ -179,24 +161,6 @@ namespace join
         constexpr int family () const noexcept
         {
             return _family;
-        }
-
-        /**
-         * @brief get the protocol communication semantic.
-         * @return the protocol communication semantic.
-         */
-        constexpr int type () const noexcept
-        {
-            return SOCK_DGRAM;
-        }
-
-        /**
-         * @brief get the protocol type.
-         * @return the protocol type.
-         */
-        constexpr int protocol () const noexcept
-        {
-            return IPPROTO_UDP;
         }
 
     private:

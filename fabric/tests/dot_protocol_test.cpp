@@ -41,26 +41,6 @@ TEST (Dot, family)
 }
 
 /**
- * @brief test the type method.
- */
-TEST (Dot, type)
-{
-    ASSERT_EQ (Dot ().type (), SOCK_STREAM);
-    ASSERT_EQ (Dot::v4 ().type (), SOCK_STREAM);
-    ASSERT_EQ (Dot::v6 ().type (), SOCK_STREAM);
-}
-
-/**
- * @brief test the protocol method.
- */
-TEST (Dot, protocol)
-{
-    ASSERT_EQ (Dot ().protocol (), IPPROTO_TCP);
-    ASSERT_EQ (Dot::v4 ().protocol (), IPPROTO_TCP);
-    ASSERT_EQ (Dot::v6 ().protocol (), IPPROTO_TCP);
-}
-
-/**
  * @brief test the equal method.
  */
 TEST (Dot, equal)

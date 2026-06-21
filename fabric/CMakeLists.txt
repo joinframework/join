@@ -4,7 +4,7 @@ set(PUBLIC_HEADERS
     include/join/dns_protocol.hpp
     include/join/mdns_protocol.hpp
     include/join/dot_protocol.hpp
-    include/join/dnsmessage.hpp
+    include/join/dns_message.hpp
     include/join/resolver.hpp
     include/join/nameserver.hpp
     include/join/netlink_protocol.hpp
@@ -14,7 +14,7 @@ set(PUBLIC_HEADERS
     include/join/neighbor_manager.hpp
     include/join/arp.hpp
     include/join/interface.hpp
-    include/join/interfacemanager.hpp
+    include/join/interface_manager.hpp
     include/join/route.hpp
     include/join/route_manager.hpp
 )

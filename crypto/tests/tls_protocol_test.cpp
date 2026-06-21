@@ -45,24 +45,6 @@ TEST (TlsProtocol, family)
 }
 
 /**
- * @brief test the type method.
- */
-TEST (TlsProtocol, type)
-{
-    ASSERT_EQ (Dtls ().type (), SOCK_DGRAM);
-    ASSERT_EQ (Tls ().type (), SOCK_STREAM);
-}
-
-/**
- * @brief test the protocol method.
- */
-TEST (TlsProtocol, protocol)
-{
-    ASSERT_EQ (Dtls ().protocol (), IPPROTO_UDP);
-    ASSERT_EQ (Tls ().protocol (), IPPROTO_TCP);
-}
-
-/**
  * @brief equal method.
  */
 TEST (TlsProtocol, equal)

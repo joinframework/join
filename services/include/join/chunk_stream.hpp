@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_SERVICES_CHUNK_TREAM_HPP
-#define JOIN_SERVICES_CHUNK_TREAM_HPP
+#ifndef JOIN_SERVICES_CHUNK_STREAM_HPP
+#define JOIN_SERVICES_CHUNK_STREAM_HPP
 
 // libjoin.
 #include <join/streambuf.hpp>
