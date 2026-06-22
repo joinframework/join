@@ -5,11 +5,10 @@ find_package(OpenSSL REQUIRED)
 set(PUBLIC_HEADERS
     include/join/base64.hpp
     include/join/openssl.hpp
-    include/join/openssl.hpp
     include/join/hmac.hpp
     include/join/tls_key.hpp
     include/join/signature.hpp
-    include/join/tl_serror.hpp
+    include/join/tls_error.hpp
     include/join/tls_context.hpp
     include/join/tls.hpp
     include/join/tls_wrapper.hpp
