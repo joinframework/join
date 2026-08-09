@@ -26,9 +26,6 @@
 #include <join/error.hpp>
 #include <join/arp.hpp>
 
-// C.
-#include <cstring>
-
 #ifndef NUD_VALID
 #define NUD_VALID (NUD_PERMANENT | NUD_NOARP | NUD_REACHABLE | NUD_PROBE | NUD_STALE | NUD_DELAY)
 #endif

@@ -38,7 +38,6 @@
 
 // C++.
 #include <memory>
-#include <vector>
 #include <string>
 
 namespace join

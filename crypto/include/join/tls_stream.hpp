@@ -31,7 +31,6 @@
 
 // C++.
 #include <utility>
-#include <string>
 
 namespace join
 {

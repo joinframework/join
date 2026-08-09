@@ -33,11 +33,9 @@
 
 // C++.
 #include <iostream>
-#include <limits>
 
 // C.
 #include <cstdint>
-#include <cstdio>
 
 using join::Digest;
 using join::TlsKey;

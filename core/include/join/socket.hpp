@@ -32,7 +32,6 @@
 #include <join/error.hpp>
 
 // C++.
-#include <type_traits>
 #include <memory>
 #include <string>
 

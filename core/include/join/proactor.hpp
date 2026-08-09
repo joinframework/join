@@ -37,7 +37,6 @@
 #include <join/queue.hpp>
 
 // C++.
-#include <utility>
 #include <vector>
 
 // C.

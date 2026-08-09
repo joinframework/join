@@ -31,7 +31,6 @@
 
 // C++.
 #include <functional>
-#include <stdexcept>
 #include <chrono>
 
 // C.

@@ -30,7 +30,6 @@
 
 // C++.
 #include <ostream>
-#include <sstream>
 
 // C.
 #include <linux/if_packet.h>

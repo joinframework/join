@@ -32,7 +32,6 @@
 #include <streambuf>
 #include <utility>
 #include <memory>
-#include <chrono>
 
 namespace join
 {

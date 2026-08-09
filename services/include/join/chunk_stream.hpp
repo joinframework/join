@@ -28,6 +28,10 @@
 // libjoin.
 #include <join/streambuf.hpp>
 
+// C++.
+#include <iostream>
+#include <memory>
+
 namespace join
 {
     /**

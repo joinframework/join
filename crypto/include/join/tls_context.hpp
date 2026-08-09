@@ -29,6 +29,10 @@
 #include <join/tls_error.hpp>
 #include <join/openssl.hpp>
 
+// C++.
+#include <string>
+#include <vector>
+
 namespace join
 {
     /**

@@ -32,7 +32,6 @@
 
 // C++.
 #include <type_traits>
-#include <stdexcept>
 #include <algorithm>
 #include <atomic>
 

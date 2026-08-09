@@ -27,9 +27,6 @@
 #include <join/interface.hpp>
 #include <join/error.hpp>
 
-// C++.
-#include <algorithm>
-
 // C.
 #include <linux/if_arp.h>
 #include <linux/if.h>

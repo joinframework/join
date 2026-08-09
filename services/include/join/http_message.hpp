@@ -32,7 +32,6 @@
 // C++.
 #include <system_error>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <map>
 
