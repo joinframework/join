@@ -57,7 +57,8 @@ TEST (Smtp, equal)
  */
 TEST (Smtp, defaultPort)
 {
-    ASSERT_EQ (Smtp::defaultPort, 25);
+    constexpr uint16_t port = Smtp::defaultPort;
+    ASSERT_EQ (port, 25);
 }
 
 /**
@@ -86,7 +87,8 @@ TEST (Smtps, equal)
  */
 TEST (Smtps, defaultPort)
 {
-    ASSERT_EQ (Smtps::defaultPort, 465);
+    constexpr uint16_t port = Smtps::defaultPort;
+    ASSERT_EQ (port, 465);
 }
 
 /**
