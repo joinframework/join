@@ -301,9 +301,12 @@ TEST_F (TlsSocket, move)
     tls2 = std::move (tls1);
     ASSERT_TRUE (tls2.connected ());
     ASSERT_TRUE (tls2.encrypted ());
-    ASSERT_EQ (tls2.shutdown (), 0) << join::lastError.message ();
-    ASSERT_EQ (tls2.disconnect (), 0) << join::lastError.message ();
-    tls2.close ();
+    Tls::Socket tls3 (std::move (tls2));
+    ASSERT_TRUE (tls3.connected ());
+    ASSERT_TRUE (tls3.encrypted ());
+    ASSERT_EQ (tls3.shutdown (), 0) << join::lastError.message ();
+    ASSERT_EQ (tls3.disconnect (), 0) << join::lastError.message ();
+    tls3.close ();
 }
 
 /**
