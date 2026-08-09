@@ -86,6 +86,21 @@ namespace join
 
             return BasicTls<Protocol>::waitHandshake (timeout);
         }
+
+        /**
+         * @brief get the number of readable bytes.
+         * @return the number of readable bytes, -1 on failure.
+         * @note once TLS is armed, reports the decrypted bytes buffered by OpenSSL.
+         */
+        int canRead () const noexcept
+        {
+            if (this->_ssl)
+            {
+                return SSL_pending (this->_ssl.get ());
+            }
+
+            return this->_socket.canRead ();
+        }
     };
 
     /**

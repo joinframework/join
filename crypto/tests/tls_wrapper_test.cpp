@@ -570,6 +570,28 @@ TEST_F (TlsSocket, waitReadyRead)
 }
 
 /**
+ * @brief Test canRead method.
+ */
+TEST_F (TlsSocket, canRead)
+{
+    TlsContext ctx (TlsContext::TlsClient);
+    Tls::Socket tls (ctx, Tcp::Socket::Blocking);
+    char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
+
+    ASSERT_EQ (tls.canRead (), -1);
+    ASSERT_EQ (tls.connect ({_hostv4, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tls.handshake (), 0) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (tls.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (tls.read (data, 1), 1) << join::lastError.message ();
+    ASSERT_GT (tls.canRead (), 0) << join::lastError.message ();
+    ASSERT_EQ (tls.shutdown (), 0) << join::lastError.message ();
+    ASSERT_EQ (tls.disconnect (), 0) << join::lastError.message ();
+    tls.close ();
+}
+
+/**
  * @brief Test read method.
  */
 TEST_F (TlsSocket, read)
