@@ -22,39 +22,37 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_CRYPTO_TLS_PROTOCOL_HPP
-#define JOIN_CRYPTO_TLS_PROTOCOL_HPP
+#ifndef JOIN_SERVICES_SMTP_PROTOCOL_HPP
+#define JOIN_SERVICES_SMTP_PROTOCOL_HPP
 
 // libjoin.
-#include <join/protocol.hpp>
+#include <join/tls_protocol.hpp>
 
 namespace join
 {
     template <class Protocol>
-    class BasicTlsWrapper;
+    class BasicSmtpClient;
 
     template <class Protocol>
-    class BasicDtlsWrapper;
-
-    template <class Protocol>
-    class BasicTlsStream;
+    class BasicSmtpSecureClient;
 
     /**
-     * @brief TLS protocol class (TLS over TCP).
+     * @brief SMTP protocol class (SMTP over TCP, upgradable to TLS using STARTTLS).
      */
-    class Tls
+    class Smtp
     {
     public:
         using Transport = Tcp;
         using Endpoint = typename Transport::Endpoint;
-        using Socket = BasicTlsWrapper<Tls>;
-        using Stream = BasicTlsStream<Tls>;
+        using Socket = BasicTlsWrapper<Smtp>;
+        using Stream = BasicTlsStream<Smtp>;
+        using Client = BasicSmtpClient<Smtp>;
 
         /**
-         * @brief create the tls protocol instance.
+         * @brief construct the SMTP protocol instance.
          * @param family IP address family.
          */
-        constexpr explicit Tls (int family = AF_INET) noexcept
+        constexpr explicit Smtp (int family = AF_INET) noexcept
         : _transport (family)
         {
         }
@@ -63,20 +61,20 @@ namespace join
          * @brief get protocol suitable for IPv4 address family.
          * @return an IPv4 address family suitable protocol.
          */
-        static inline Tls& v4 () noexcept
+        static inline Smtp& v4 () noexcept
         {
-            static Tls tlsv4 (AF_INET);
-            return tlsv4;
+            static Smtp smtpv4 (AF_INET);
+            return smtpv4;
         }
 
         /**
          * @brief get protocol suitable for IPv6 address family.
          * @return an IPv6 address family suitable protocol.
          */
-        static inline Tls& v6 () noexcept
+        static inline Smtp& v6 () noexcept
         {
-            static Tls tlsv6 (AF_INET6);
-            return tlsv6;
+            static Smtp smtpv6 (AF_INET6);
+            return smtpv6;
         }
 
         /**
@@ -87,6 +85,9 @@ namespace join
         {
             return _transport.family ();
         }
+
+        /// default SMTP port.
+        static constexpr uint16_t defaultPort = 25;
 
     private:
         /// underlying transport protocol.
@@ -99,7 +100,7 @@ namespace join
      * @param b protocol to check.
      * @return true if equals.
      */
-    constexpr bool operator== (const Tls& a, const Tls& b) noexcept
+    constexpr bool operator== (const Smtp& a, const Smtp& b) noexcept
     {
         return a.family () == b.family ();
     }
@@ -110,26 +111,28 @@ namespace join
      * @param b protocol to check.
      * @return true if not equals.
      */
-    constexpr bool operator!= (const Tls& a, const Tls& b) noexcept
+    constexpr bool operator!= (const Smtp& a, const Smtp& b) noexcept
     {
         return !(a == b);
     }
 
     /**
-     * @brief DTLS protocol class (DTLS over UDP).
+     * @brief SMTPS protocol class (SMTP over TLS).
      */
-    class Dtls
+    class Smtps
     {
     public:
-        using Transport = Udp;
+        using Transport = Tcp;
         using Endpoint = typename Transport::Endpoint;
-        using Socket = BasicDtlsWrapper<Dtls>;
+        using Socket = BasicTlsWrapper<Smtps>;
+        using Stream = BasicTlsStream<Smtps>;
+        using Client = BasicSmtpSecureClient<Smtps>;
 
         /**
-         * @brief create the dtls protocol instance.
+         * @brief construct the SMTPS protocol instance.
          * @param family IP address family.
          */
-        constexpr explicit Dtls (int family = AF_INET) noexcept
+        constexpr explicit Smtps (int family = AF_INET) noexcept
         : _transport (family)
         {
         }
@@ -138,20 +141,20 @@ namespace join
          * @brief get protocol suitable for IPv4 address family.
          * @return an IPv4 address family suitable protocol.
          */
-        static inline Dtls& v4 () noexcept
+        static inline Smtps& v4 () noexcept
         {
-            static Dtls dtlsv4 (AF_INET);
-            return dtlsv4;
+            static Smtps smtpsv4 (AF_INET);
+            return smtpsv4;
         }
 
         /**
          * @brief get protocol suitable for IPv6 address family.
          * @return an IPv6 address family suitable protocol.
          */
-        static inline Dtls& v6 () noexcept
+        static inline Smtps& v6 () noexcept
         {
-            static Dtls dtlsv6 (AF_INET6);
-            return dtlsv6;
+            static Smtps smtpsv6 (AF_INET6);
+            return smtpsv6;
         }
 
         /**
@@ -162,6 +165,9 @@ namespace join
         {
             return _transport.family ();
         }
+
+        /// default SMTPS port.
+        static constexpr uint16_t defaultPort = 465;
 
     private:
         /// underlying transport protocol.
@@ -174,7 +180,7 @@ namespace join
      * @param b protocol to check.
      * @return true if equals.
      */
-    constexpr bool operator== (const Dtls& a, const Dtls& b) noexcept
+    constexpr bool operator== (const Smtps& a, const Smtps& b) noexcept
     {
         return a.family () == b.family ();
     }
@@ -185,7 +191,7 @@ namespace join
      * @param b protocol to check.
      * @return true if not equals.
      */
-    constexpr bool operator!= (const Dtls& a, const Dtls& b) noexcept
+    constexpr bool operator!= (const Smtps& a, const Smtps& b) noexcept
     {
         return !(a == b);
     }

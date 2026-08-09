@@ -40,7 +40,7 @@ namespace join
     {
     public:
         using Transport = Tcp;
-        using Endpoint = BasicInternetEndpoint<Tcp>;
+        using Endpoint = typename Transport::Endpoint;
         using Socket = BasicTlsWrapper<Dot>;
         using Resolver = BasicTlsResolver<Dot>;
 
@@ -49,7 +49,7 @@ namespace join
          * @param family IP address family.
          */
         constexpr explicit Dot (int family = AF_INET) noexcept
-        : _family (family)
+        : _transport (family)
         {
         }
 
@@ -79,7 +79,7 @@ namespace join
          */
         constexpr int family () const noexcept
         {
-            return _family;
+            return _transport.family ();
         }
 
         /// default DoT port.
@@ -89,8 +89,8 @@ namespace join
         static constexpr size_t maxMsgSize = 16384;
 
     private:
-        /// IP address family.
-        int _family;
+        /// underlying transport protocol.
+        Transport _transport;
     };
 
     /**

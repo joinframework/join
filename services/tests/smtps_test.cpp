@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/smtpclient.hpp>
+#include <join/smtp_client.hpp>
 #include <join/acceptor.hpp>
 #include <join/reactor.hpp>
 
@@ -37,14 +37,15 @@ using join::Errc;
 using join::Dns;
 using join::ReactorThread;
 using join::EventHandler;
-using join::MailMessage;
+using join::SmtpMessage;
 using join::Smtps;
-using join::Tls;
+using join::Tcp;
+using join::TlsContext;
 
 /**
  * @brief Class used to test the SMTPS client.
  */
-class SmtpsClient : public Tls::Acceptor, public EventHandler, public ::testing::Test
+class SmtpsClient : public EventHandler, public ::testing::Test
 {
 public:
     /**
@@ -186,17 +187,29 @@ public:
 
 protected:
     /**
+     * @brief build a client context trusting the test root certificate.
+     * @return the client context.
+     */
+    static TlsContext clientContext ()
+    {
+        TlsContext ctx (TlsContext::TlsClient);
+        ctx.setVerify (true, 1);
+        ctx.setCaFile (_rootcert);
+        return ctx;
+    }
+
+    /**
      * @brief Sets up the test fixture.
      */
     void SetUp () override
     {
-        ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
+        ASSERT_EQ (_ctx.setCertificate (_certFile, _key), 0) << join::lastError.message ();
+        ASSERT_EQ (_ctx.setCipher (join::defaultCipher), 0) << join::lastError.message ();
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+        ASSERT_EQ (_ctx.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 #endif
-        ASSERT_EQ (this->create ({Dns::Resolver::lookupAddress (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.create ({Dns::Resolver::lookupAddress (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().addHandler (_acceptor.handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -204,8 +217,8 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
-        this->close ();
+        ASSERT_EQ (ReactorThread::reactor ().delHandler (_acceptor.handle ()), 0) << join::lastError.message ();
+        _acceptor.close ();
     }
 
     /**
@@ -214,7 +227,8 @@ protected:
      */
     virtual void onReadable ([[maybe_unused]] int fd) override
     {
-        Tls::Stream stream = this->acceptStreamEncrypted ();
+        Smtps::Stream stream{_acceptor.accept (), _ctx};
+        stream.handshake ();
         if (stream.connected ())
         {
             std::string tmp;
@@ -292,6 +306,12 @@ protected:
 
     /// password.
     static const std::string _password;
+
+    /// transport acceptor.
+    Tcp::Acceptor _acceptor;
+
+    /// TLS context used to wrap the accepted connections.
+    TlsContext _ctx{TlsContext::TlsServer};
 };
 
 const std::string SmtpsClient::_host = "localhost";
@@ -310,11 +330,11 @@ const std::string SmtpsClient::_password = "12345";
  */
 TEST_F (SmtpsClient, move)
 {
-    Smtps::Client tmp (_host, _port);
+    Smtps::Client tmp (clientContext (), _host, _port);
     Smtps::Client client1 (std::move (tmp));
     ASSERT_EQ (client1.host (), _host);
 
-    Smtps::Client client2 ("localhost");
+    Smtps::Client client2 (clientContext (), "localhost");
     ASSERT_EQ (client2.host (), "localhost");
 
     client2 = std::move (client1);
@@ -326,10 +346,10 @@ TEST_F (SmtpsClient, move)
  */
 TEST_F (SmtpsClient, scheme)
 {
-    Smtps::Client client1 ("localhost", 25);
+    Smtps::Client client1 (clientContext (), "localhost", 25);
     ASSERT_EQ (client1.scheme (), "smtps");
 
-    Smtps::Client client2 ("localhost", 465);
+    Smtps::Client client2 (clientContext (), "localhost", 465);
     ASSERT_EQ (client2.scheme (), "smtps");
 }
 
@@ -338,10 +358,10 @@ TEST_F (SmtpsClient, scheme)
  */
 TEST_F (SmtpsClient, host)
 {
-    Smtps::Client client1 ("91.66.32.78", 25);
+    Smtps::Client client1 (clientContext (), "91.66.32.78", 25);
     ASSERT_EQ (client1.host (), "91.66.32.78");
 
-    Smtps::Client client2 ("localhost", 465);
+    Smtps::Client client2 (clientContext (), "localhost", 465);
     ASSERT_EQ (client2.host (), "localhost");
 }
 
@@ -350,10 +370,10 @@ TEST_F (SmtpsClient, host)
  */
 TEST_F (SmtpsClient, port)
 {
-    Smtps::Client client1 ("91.66.32.78", 25);
+    Smtps::Client client1 (clientContext (), "91.66.32.78", 25);
     ASSERT_EQ (client1.port (), 25);
 
-    Smtps::Client client2 ("91.66.32.78", 465);
+    Smtps::Client client2 (clientContext (), "91.66.32.78", 465);
     ASSERT_EQ (client2.port (), 465);
 }
 
@@ -362,17 +382,19 @@ TEST_F (SmtpsClient, port)
  */
 TEST_F (SmtpsClient, authority)
 {
-    ASSERT_EQ (Smtps::Client ("localhost", 25).authority (), "localhost:25");
-    ASSERT_EQ (Smtps::Client ("localhost", 465).authority (), "localhost");
-    ASSERT_EQ (Smtps::Client ("localhost", 5000).authority (), "localhost:5000");
+    ASSERT_EQ (Smtps::Client (clientContext (), "localhost", 25).authority (), "localhost:25");
+    ASSERT_EQ (Smtps::Client (clientContext (), "localhost", 465).authority (), "localhost");
+    ASSERT_EQ (Smtps::Client (clientContext (), "localhost", 5000).authority (), "localhost:5000");
 
-    ASSERT_EQ (Smtps::Client ("91.66.32.78", 25).authority (), "91.66.32.78:25");
-    ASSERT_EQ (Smtps::Client ("91.66.32.78", 465).authority (), "91.66.32.78");
-    ASSERT_EQ (Smtps::Client ("91.66.32.78", 5000).authority (), "91.66.32.78:5000");
+    ASSERT_EQ (Smtps::Client (clientContext (), "91.66.32.78", 25).authority (), "91.66.32.78:25");
+    ASSERT_EQ (Smtps::Client (clientContext (), "91.66.32.78", 465).authority (), "91.66.32.78");
+    ASSERT_EQ (Smtps::Client (clientContext (), "91.66.32.78", 5000).authority (), "91.66.32.78:5000");
 
-    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 25).authority (), "[2001:db8:1234:5678::1]:25");
-    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 465).authority (), "[2001:db8:1234:5678::1]");
-    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 5000).authority (), "[2001:db8:1234:5678::1]:5000");
+    ASSERT_EQ (Smtps::Client (clientContext (), "2001:db8:1234:5678::1", 25).authority (),
+               "[2001:db8:1234:5678::1]:25");
+    ASSERT_EQ (Smtps::Client (clientContext (), "2001:db8:1234:5678::1", 465).authority (), "[2001:db8:1234:5678::1]");
+    ASSERT_EQ (Smtps::Client (clientContext (), "2001:db8:1234:5678::1", 5000).authority (),
+               "[2001:db8:1234:5678::1]:5000");
 }
 
 /**
@@ -380,82 +402,20 @@ TEST_F (SmtpsClient, authority)
  */
 TEST_F (SmtpsClient, url)
 {
-    ASSERT_EQ (Smtps::Client ("localhost", 25).url (), "smtps://localhost:25");
-    ASSERT_EQ (Smtps::Client ("localhost", 465).url (), "smtps://localhost");
-    ASSERT_EQ (Smtps::Client ("localhost", 5000).url (), "smtps://localhost:5000");
+    ASSERT_EQ (Smtps::Client (clientContext (), "localhost", 25).url (), "smtps://localhost:25");
+    ASSERT_EQ (Smtps::Client (clientContext (), "localhost", 465).url (), "smtps://localhost");
+    ASSERT_EQ (Smtps::Client (clientContext (), "localhost", 5000).url (), "smtps://localhost:5000");
 
-    ASSERT_EQ (Smtps::Client ("91.66.32.78", 25).url (), "smtps://91.66.32.78:25");
-    ASSERT_EQ (Smtps::Client ("91.66.32.78", 465).url (), "smtps://91.66.32.78");
-    ASSERT_EQ (Smtps::Client ("91.66.32.78", 5000).url (), "smtps://91.66.32.78:5000");
+    ASSERT_EQ (Smtps::Client (clientContext (), "91.66.32.78", 25).url (), "smtps://91.66.32.78:25");
+    ASSERT_EQ (Smtps::Client (clientContext (), "91.66.32.78", 465).url (), "smtps://91.66.32.78");
+    ASSERT_EQ (Smtps::Client (clientContext (), "91.66.32.78", 5000).url (), "smtps://91.66.32.78:5000");
 
-    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 25).url (), "smtps://[2001:db8:1234:5678::1]:25");
-    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 465).url (), "smtps://[2001:db8:1234:5678::1]");
-    ASSERT_EQ (Smtps::Client ("2001:db8:1234:5678::1", 5000).url (), "smtps://[2001:db8:1234:5678::1]:5000");
-}
-
-/**
- * @brief Test setCertificate.
- */
-TEST_F (SmtpsClient, setCertificate)
-{
-    Smtps::Client client (_host, _port);
-    ASSERT_EQ (client.setCertificate ("/invalid/cert/path"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCertificate (_certFile), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCertificate (_certFile, "/invalid/key/path"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCertificate (_certFile, _invalidKey), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCertificate (_certFile, _key), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test setCaPath.
- */
-TEST_F (SmtpsClient, setCaPath)
-{
-    Smtps::Client client (_host, _port);
-    ASSERT_EQ (client.setCaPath ("/invalid/ca/path"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCaPath (_certFile), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCaPath (_certPath), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test setCaFile.
- */
-TEST_F (SmtpsClient, setCaFile)
-{
-    Smtps::Client client (_host, _port);
-    ASSERT_EQ (client.setCaFile ("/invalid/ca/file"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCaFile (_certPath), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCaFile (_certFile), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test setCipher.
- */
-TEST_F (SmtpsClient, setCipher)
-{
-    Smtps::Client client (_host, _port);
-    ASSERT_EQ (client.setCipher ("foo"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test setCipher_1_3.
- */
-TEST_F (SmtpsClient, setCipher_1_3)
-{
-    Smtps::Client client (_host, _port);
-    ASSERT_EQ (client.setCipher_1_3 ("foo"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    ASSERT_EQ (Smtps::Client (clientContext (), "2001:db8:1234:5678::1", 25).url (),
+               "smtps://[2001:db8:1234:5678::1]:25");
+    ASSERT_EQ (Smtps::Client (clientContext (), "2001:db8:1234:5678::1", 465).url (),
+               "smtps://[2001:db8:1234:5678::1]");
+    ASSERT_EQ (Smtps::Client (clientContext (), "2001:db8:1234:5678::1", 5000).url (),
+               "smtps://[2001:db8:1234:5678::1]:5000");
 }
 
 /**
@@ -463,22 +423,37 @@ TEST_F (SmtpsClient, setCipher_1_3)
  */
 TEST_F (SmtpsClient, send)
 {
-    MailMessage message;
+    SmtpMessage message;
     message.sender ({"test@foo.com", "tester"});
     message.addRecipient ({"admin@foo.com", "admin"});
     message.subject ("this is a test");
     message.content ("this is a test");
 
-    Smtps::Client client (_host, _port);
+    TlsContext relaxed (TlsContext::TlsClient);
+    relaxed.setVerify (false);
+    Smtps::Client client (std::move (relaxed), _host, _port);
     client.credentials (_user, _password);
-    client.setVerify (false);
     ASSERT_EQ (client.send (message), 0) << join::lastError.message ();
-    client.setVerify (true, 0);
-    ASSERT_EQ (client.send (message), -1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.send (message), -1);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.send (message), 0) << join::lastError.message ();
+
+    TlsContext untrusted (TlsContext::TlsClient);
+    untrusted.setVerify (true, 0);
+    Smtps::Client rejecting (std::move (untrusted), _host, _port);
+    rejecting.credentials (_user, _password);
+    ASSERT_EQ (rejecting.send (message), -1);
+
+    TlsContext shallow (TlsContext::TlsClient);
+    shallow.setVerify (true, 0);
+    ASSERT_EQ (shallow.setCaFile (_rootcert), 0) << join::lastError.message ();
+    Smtps::Client tooShort (std::move (shallow), _host, _port);
+    tooShort.credentials (_user, _password);
+    ASSERT_EQ (tooShort.send (message), -1);
+
+    TlsContext trusted (TlsContext::TlsClient);
+    trusted.setVerify (true, 1);
+    ASSERT_EQ (trusted.setCaFile (_rootcert), 0) << join::lastError.message ();
+    Smtps::Client accepting (std::move (trusted), _host, _port);
+    accepting.credentials (_user, _password);
+    ASSERT_EQ (accepting.send (message), 0) << join::lastError.message ();
 }
 
 /**

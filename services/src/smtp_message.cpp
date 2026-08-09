@@ -23,52 +23,52 @@
  */
 
 // libjoin.
-#include <join/mail_message.hpp>
+#include <join/smtp_message.hpp>
 
 // C++.
 #include <algorithm>
 #include <iterator>
 #include <iomanip>
 
-using join::MailSender;
-using join::MailRecipient;
-using join::MailRecipients;
-using join::MailMessage;
+using join::SmtpSender;
+using join::SmtpRecipient;
+using join::SmtpRecipients;
+using join::SmtpMessage;
 
 // =========================================================================
-//   CLASS     : MailSender
-//   METHOD    : MailSender
+//   CLASS     : SmtpSender
+//   METHOD    : SmtpSender
 // =========================================================================
-MailSender::MailSender (const std::string& address)
-: MailSender (address, "")
+SmtpSender::SmtpSender (const std::string& address)
+: SmtpSender (address, "")
 {
 }
 
 // =========================================================================
-//   CLASS     : MailSender
-//   METHOD    : MailSender
+//   CLASS     : SmtpSender
+//   METHOD    : SmtpSender
 // =========================================================================
-MailSender::MailSender (const std::string& address, const std::string& name)
+SmtpSender::SmtpSender (const std::string& address, const std::string& name)
 : _address (address)
 , _name (name)
 {
 }
 
 // =========================================================================
-//   CLASS     : MailSender
-//   METHOD    : MailSender
+//   CLASS     : SmtpSender
+//   METHOD    : SmtpSender
 // =========================================================================
-MailSender::MailSender (const MailSender& other)
+SmtpSender::SmtpSender (const SmtpSender& other)
 : _address (other._address)
 , _name (other._name)
 {
 }
 
 // =========================================================================
-//   CLASS     : MailSender
+//   CLASS     : SmtpSender
 //   METHOD    : operator=
 // =========================================================================
-MailSender& MailSender::operator= (const MailSender& other)
+SmtpSender& SmtpSender::operator= (const SmtpSender& other)
 {
     _address = other._address;
     _name = other._name;
@@ -76,20 +76,20 @@ MailSender& MailSender::operator= (const MailSender& other)
 }
 
 // =========================================================================
-//   CLASS     : MailSender
-//   METHOD    : MailSender
+//   CLASS     : SmtpSender
+//   METHOD    : SmtpSender
 // =========================================================================
-MailSender::MailSender (MailSender&& other)
+SmtpSender::SmtpSender (SmtpSender&& other)
 : _address (std::move (other._address))
 , _name (std::move (other._name))
 {
 }
 
 // =========================================================================
-//   CLASS     : MailSender
+//   CLASS     : SmtpSender
 //   METHOD    : operator=
 // =========================================================================
-MailSender& MailSender::operator= (MailSender&& other)
+SmtpSender& SmtpSender::operator= (SmtpSender&& other)
 {
     _address = std::move (other._address);
     _name = std::move (other._name);
@@ -97,46 +97,46 @@ MailSender& MailSender::operator= (MailSender&& other)
 }
 
 // =========================================================================
-//   CLASS     : MailSender
+//   CLASS     : SmtpSender
 //   METHOD    : address
 // =========================================================================
-void MailSender::address (const std::string& addr)
+void SmtpSender::address (const std::string& addr)
 {
     _address = addr;
 }
 
 // =========================================================================
-//   CLASS     : MailSender
+//   CLASS     : SmtpSender
 //   METHOD    : address
 // =========================================================================
-const std::string& MailSender::address () const
+const std::string& SmtpSender::address () const
 {
     return _address;
 }
 
 // =========================================================================
-//   CLASS     : MailSender
+//   CLASS     : SmtpSender
 //   METHOD    : realName
 // =========================================================================
-void MailSender::realName (const std::string& name)
+void SmtpSender::realName (const std::string& name)
 {
     _name = name;
 }
 
 // =========================================================================
-//   CLASS     : MailSender
+//   CLASS     : SmtpSender
 //   METHOD    : realName
 // =========================================================================
-const std::string& MailSender::realName () const
+const std::string& SmtpSender::realName () const
 {
     return _name;
 }
 
 // =========================================================================
-//   CLASS     : MailSender
+//   CLASS     : SmtpSender
 //   METHOD    : empty
 // =========================================================================
-bool MailSender::empty () const
+bool SmtpSender::empty () const
 {
     return _address.empty ();
 }
@@ -145,96 +145,96 @@ bool MailSender::empty () const
 //   CLASS     :
 //   METHOD    : operator<<
 // =========================================================================
-std::ostream& join::operator<< (std::ostream& out, const MailSender& sender)
+std::ostream& join::operator<< (std::ostream& out, const SmtpSender& sender)
 {
     out << sender.realName () << "<" << sender.address () << ">";
     return out;
 }
 
 // =========================================================================
-//   CLASS     : MailRecipient
-//   METHOD    : MailRecipient
+//   CLASS     : SmtpRecipient
+//   METHOD    : SmtpRecipient
 // =========================================================================
-MailRecipient::MailRecipient (const std::string& address, Type t)
-: MailRecipient (address, "", t)
+SmtpRecipient::SmtpRecipient (const std::string& address, Type t)
+: SmtpRecipient (address, "", t)
 {
 }
 
 // =========================================================================
-//   CLASS     : MailRecipient
-//   METHOD    : MailRecipient
+//   CLASS     : SmtpRecipient
+//   METHOD    : SmtpRecipient
 // =========================================================================
-MailRecipient::MailRecipient (const std::string& address, const std::string& name, Type t)
-: MailSender (address, name)
+SmtpRecipient::SmtpRecipient (const std::string& address, const std::string& name, Type t)
+: SmtpSender (address, name)
 , _type (t)
 {
 }
 
 // =========================================================================
-//   CLASS     : MailRecipient
-//   METHOD    : MailRecipient
+//   CLASS     : SmtpRecipient
+//   METHOD    : SmtpRecipient
 // =========================================================================
-MailRecipient::MailRecipient (const MailRecipient& other)
-: MailSender (other)
+SmtpRecipient::SmtpRecipient (const SmtpRecipient& other)
+: SmtpSender (other)
 , _type (other._type)
 {
 }
 
 // =========================================================================
-//   CLASS     : MailRecipient
+//   CLASS     : SmtpRecipient
 //   METHOD    : operator=
 // =========================================================================
-MailRecipient& MailRecipient::operator= (const MailRecipient& other)
+SmtpRecipient& SmtpRecipient::operator= (const SmtpRecipient& other)
 {
-    MailSender::operator= (other);
+    SmtpSender::operator= (other);
     _type = other._type;
     return *this;
 }
 
 // =========================================================================
-//   CLASS     : MailRecipient
-//   METHOD    : MailRecipient
+//   CLASS     : SmtpRecipient
+//   METHOD    : SmtpRecipient
 // =========================================================================
-MailRecipient::MailRecipient (MailRecipient&& other)
-: MailSender (std::move (other))
+SmtpRecipient::SmtpRecipient (SmtpRecipient&& other)
+: SmtpSender (std::move (other))
 , _type (other._type)
 {
 }
 
 // =========================================================================
-//   CLASS     : MailRecipient
+//   CLASS     : SmtpRecipient
 //   METHOD    : operator=
 // =========================================================================
-MailRecipient& MailRecipient::operator= (MailRecipient&& other)
+SmtpRecipient& SmtpRecipient::operator= (SmtpRecipient&& other)
 {
-    MailSender::operator= (std::move (other));
+    SmtpSender::operator= (std::move (other));
     _type = other._type;
     return *this;
 }
 
 // =========================================================================
-//   CLASS     : MailRecipient
+//   CLASS     : SmtpRecipient
 //   METHOD    : type
 // =========================================================================
-void MailRecipient::type (Type t)
+void SmtpRecipient::type (Type t)
 {
     _type = t;
 }
 
 // =========================================================================
-//   CLASS     : MailRecipient
+//   CLASS     : SmtpRecipient
 //   METHOD    : type
 // =========================================================================
-MailRecipient::Type MailRecipient::type () const
+SmtpRecipient::Type SmtpRecipient::type () const
 {
     return _type;
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
-//   METHOD    : MailMessage
+//   CLASS     : SmtpMessage
+//   METHOD    : SmtpMessage
 // =========================================================================
-MailMessage::MailMessage (const MailMessage& other)
+SmtpMessage::SmtpMessage (const SmtpMessage& other)
 : _sender (other._sender)
 , _recipients (other._recipients)
 , _subject (other._subject)
@@ -243,10 +243,10 @@ MailMessage::MailMessage (const MailMessage& other)
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : operator=
 // =========================================================================
-MailMessage& MailMessage::operator= (const MailMessage& other)
+SmtpMessage& SmtpMessage::operator= (const SmtpMessage& other)
 {
     _sender = other._sender;
     _recipients = other._recipients;
@@ -256,10 +256,10 @@ MailMessage& MailMessage::operator= (const MailMessage& other)
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
-//   METHOD    : MailMessage
+//   CLASS     : SmtpMessage
+//   METHOD    : SmtpMessage
 // =========================================================================
-MailMessage::MailMessage (MailMessage&& other)
+SmtpMessage::SmtpMessage (SmtpMessage&& other)
 : _sender (std::move (other._sender))
 , _recipients (std::move (other._recipients))
 , _subject (std::move (other._subject))
@@ -268,10 +268,10 @@ MailMessage::MailMessage (MailMessage&& other)
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : operator=
 // =========================================================================
-MailMessage& MailMessage::operator= (MailMessage&& other)
+SmtpMessage& SmtpMessage::operator= (SmtpMessage&& other)
 {
     _sender = std::move (other._sender);
     _recipients = std::move (other._recipients);
@@ -281,101 +281,101 @@ MailMessage& MailMessage::operator= (MailMessage&& other)
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : sender
 // =========================================================================
-void MailMessage::sender (const MailSender& from)
+void SmtpMessage::sender (const SmtpSender& from)
 {
     _sender = from;
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : sender
 // =========================================================================
-const MailSender& MailMessage::sender () const
+const SmtpSender& SmtpMessage::sender () const
 {
     return _sender;
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : addRecipient
 // =========================================================================
-void MailMessage::addRecipient (const MailRecipient& to)
+void SmtpMessage::addRecipient (const SmtpRecipient& to)
 {
     _recipients.push_back (to);
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : addRecipient
 // =========================================================================
-void MailMessage::addRecipient (MailRecipient&& to)
+void SmtpMessage::addRecipient (SmtpRecipient&& to)
 {
     _recipients.push_back (std::move (to));
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : recipients
 // =========================================================================
-const MailRecipients& MailMessage::recipients () const
+const SmtpRecipients& SmtpMessage::recipients () const
 {
     return _recipients;
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : subject
 // =========================================================================
-void MailMessage::subject (const std::string& subj)
+void SmtpMessage::subject (const std::string& subj)
 {
     _subject = subj;
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : subject
 // =========================================================================
-const std::string& MailMessage::subject () const
+const std::string& SmtpMessage::subject () const
 {
     return _subject;
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : content
 // =========================================================================
-void MailMessage::content (const std::string& message)
+void SmtpMessage::content (const std::string& message)
 {
     _content = message;
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : content
 // =========================================================================
-const std::string& MailMessage::content () const
+const std::string& SmtpMessage::content () const
 {
     return _content;
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : writeHeaders
 // =========================================================================
-int MailMessage::writeHeaders (std::ostream& out) const
+int SmtpMessage::writeHeaders (std::ostream& out) const
 {
-    MailRecipients to, cc, bcc;
+    SmtpRecipients to, cc, bcc;
     std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (to), [] (auto const& t) {
-        return t.type () == MailRecipient::Recipient;
+        return t.type () == SmtpRecipient::Recipient;
     });
     std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (cc), [] (auto const& t) {
-        return t.type () == MailRecipient::CCRecipient;
+        return t.type () == SmtpRecipient::CCRecipient;
     });
     std::copy_if (_recipients.begin (), _recipients.end (), std::back_inserter (bcc), [] (auto const& t) {
-        return t.type () == MailRecipient::BCCRecipient;
+        return t.type () == SmtpRecipient::BCCRecipient;
     });
 
     // write date.
@@ -393,7 +393,7 @@ int MailMessage::writeHeaders (std::ostream& out) const
     if (!to.empty ())
     {
         out << "To: ";
-        std::copy (to.begin (), std::prev (to.end ()), std::ostream_iterator<MailRecipient> (out, ","));
+        std::copy (to.begin (), std::prev (to.end ()), std::ostream_iterator<SmtpRecipient> (out, ","));
         out << to.back ();
         out << "\r\n";
     }
@@ -402,7 +402,7 @@ int MailMessage::writeHeaders (std::ostream& out) const
     if (!cc.empty ())
     {
         out << "Cc: ";
-        std::copy (cc.begin (), std::prev (cc.end ()), std::ostream_iterator<MailRecipient> (out, ","));
+        std::copy (cc.begin (), std::prev (cc.end ()), std::ostream_iterator<SmtpRecipient> (out, ","));
         out << cc.back ();
         out << "\r\n";
     }
@@ -411,7 +411,7 @@ int MailMessage::writeHeaders (std::ostream& out) const
     if (!bcc.empty ())
     {
         out << "Bcc: ";
-        std::copy (bcc.begin (), std::prev (bcc.end ()), std::ostream_iterator<MailRecipient> (out, ","));
+        std::copy (bcc.begin (), std::prev (bcc.end ()), std::ostream_iterator<SmtpRecipient> (out, ","));
         out << bcc.back ();
         out << "\r\n";
     }
@@ -443,10 +443,10 @@ int MailMessage::writeHeaders (std::ostream& out) const
 }
 
 // =========================================================================
-//   CLASS     : MailMessage
+//   CLASS     : SmtpMessage
 //   METHOD    : writeContent
 // =========================================================================
-int MailMessage::writeContent (std::ostream& out) const
+int SmtpMessage::writeContent (std::ostream& out) const
 {
     // write content.
     out << _content;

@@ -243,7 +243,7 @@ protected:
     }
 
     /// TLS context serveur.
-    TlsContext _tlsContext{TlsContext::Role::TlsServer};
+    TlsContext _tlsContext{TlsContext::TlsServer};
 
     /// acceptor.
     Tcp::Acceptor _acceptor;
@@ -291,7 +291,7 @@ const std::string TlsSocket::_invalidKey = "/tmp/tlssocket_test_invalid.key";
  */
 TEST_F (TlsSocket, move)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls1 (ctx, Tcp::Socket::Blocking), tls2 (ctx);
 
     ASSERT_EQ (tls1.connect ({_hostv4, _port}), 0) << join::lastError.message ();
@@ -311,7 +311,7 @@ TEST_F (TlsSocket, move)
  */
 TEST_F (TlsSocket, open)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx);
 
     ASSERT_EQ (tls.open (Tls::v4 ()), 0) << join::lastError.message ();
@@ -330,7 +330,7 @@ TEST_F (TlsSocket, open)
  */
 TEST_F (TlsSocket, close)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_FALSE (tls.opened ());
@@ -347,7 +347,7 @@ TEST_F (TlsSocket, close)
  */
 TEST_F (TlsSocket, bind)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_EQ (tls.connect ({_hostv4, _port}), 0) << join::lastError.message ();
@@ -366,7 +366,7 @@ TEST_F (TlsSocket, bind)
  */
 TEST_F (TlsSocket, bindToDevice)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_EQ (tls.bindToDevice ("lo"), -1);
@@ -390,7 +390,7 @@ TEST_F (TlsSocket, bindToDevice)
  */
 TEST_F (TlsSocket, connect)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_EQ (tls.connect ({"255.255.255.255", _port}), -1);
@@ -409,7 +409,7 @@ TEST_F (TlsSocket, connect)
  */
 TEST_F (TlsSocket, waitConnected)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx);
 
     ASSERT_FALSE (tls.waitConnected (_timeout));
@@ -432,7 +432,13 @@ TEST_F (TlsSocket, waitConnected)
  */
 TEST_F (TlsSocket, handshake)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    // a socket wrapped without context cannot negotiate.
+    Tls::Socket bare (Tcp::Socket{Tcp::Socket::Blocking});
+
+    ASSERT_EQ (bare.handshake (), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_EQ (tls.handshake (), -1);
@@ -454,7 +460,7 @@ TEST_F (TlsSocket, handshake)
  */
 TEST_F (TlsSocket, waitHandshake)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
 
     ASSERT_EQ (tls.open (Tls::v6 ()), 0) << join::lastError.message ();
@@ -488,7 +494,7 @@ TEST_F (TlsSocket, waitHandshake)
  */
 TEST_F (TlsSocket, disconnect)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_FALSE (tls.connected ());
@@ -505,7 +511,7 @@ TEST_F (TlsSocket, disconnect)
  */
 TEST_F (TlsSocket, waitDisconnected)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
 
     ASSERT_TRUE (tls.waitDisconnected (_timeout)) << join::lastError.message ();
@@ -528,7 +534,7 @@ TEST_F (TlsSocket, waitDisconnected)
  */
 TEST_F (TlsSocket, waitReadyRead)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
@@ -565,7 +571,7 @@ TEST_F (TlsSocket, waitReadyRead)
  */
 TEST_F (TlsSocket, read)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
@@ -584,7 +590,7 @@ TEST_F (TlsSocket, read)
 
 TEST_F (TlsSocket, readExactly)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
@@ -606,7 +612,7 @@ TEST_F (TlsSocket, readExactly)
  */
 TEST_F (TlsSocket, waitReadyWrite)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
 
     ASSERT_FALSE (tls.waitReadyWrite (_timeout));
@@ -640,7 +646,7 @@ TEST_F (TlsSocket, waitReadyWrite)
  */
 TEST_F (TlsSocket, write)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
@@ -658,7 +664,7 @@ TEST_F (TlsSocket, write)
 
 TEST_F (TlsSocket, writeExactly)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
@@ -679,7 +685,7 @@ TEST_F (TlsSocket, writeExactly)
  */
 TEST_F (TlsSocket, setMode)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
 
     ASSERT_EQ (tls.open (), 0) << join::lastError.message ();
@@ -703,7 +709,7 @@ TEST_F (TlsSocket, setMode)
  */
 TEST_F (TlsSocket, setOption)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
 
     ASSERT_EQ (tls.setOption (Tcp::Socket::RcvBuffer, 1500), -1);
@@ -759,7 +765,7 @@ TEST_F (TlsSocket, setOption)
  */
 TEST_F (TlsSocket, localEndpoint)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_EQ (tls.localEndpoint (), Tcp::Endpoint{});
@@ -774,7 +780,7 @@ TEST_F (TlsSocket, localEndpoint)
  */
 TEST_F (TlsSocket, remoteEndpoint)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_EQ (tls.remoteEndpoint (), Tcp::Endpoint{});
@@ -789,7 +795,7 @@ TEST_F (TlsSocket, remoteEndpoint)
  */
 TEST_F (TlsSocket, opened)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_FALSE (tls.opened ());
@@ -810,7 +816,7 @@ TEST_F (TlsSocket, opened)
  */
 TEST_F (TlsSocket, connected)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_FALSE (tls.connected ());
@@ -831,7 +837,7 @@ TEST_F (TlsSocket, connected)
  */
 TEST_F (TlsSocket, encrypted)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_FALSE (tls.encrypted ());
@@ -854,7 +860,7 @@ TEST_F (TlsSocket, encrypted)
  */
 TEST_F (TlsSocket, family)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_EQ (tls.family (), AF_INET);
@@ -873,7 +879,7 @@ TEST_F (TlsSocket, family)
  */
 TEST_F (TlsSocket, type)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
 
     ASSERT_EQ (tls.type (), SOCK_STREAM);
@@ -884,7 +890,7 @@ TEST_F (TlsSocket, type)
  */
 TEST_F (TlsSocket, protocol)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
 
     ASSERT_EQ (tls.protocol (), IPPROTO_TCP);
@@ -895,7 +901,7 @@ TEST_F (TlsSocket, protocol)
  */
 TEST_F (TlsSocket, handle)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_EQ (tls.handle (), -1);
@@ -916,7 +922,7 @@ TEST_F (TlsSocket, handle)
  */
 TEST_F (TlsSocket, mtu)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::Blocking);
 
     ASSERT_EQ (tls.mtu (), -1);
@@ -945,7 +951,7 @@ TEST_F (TlsSocket, mtu)
  */
 TEST_F (TlsSocket, verify)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tcp::Endpoint endpoint{_hostv4, _port};
 
     ctx.setVerify (false);
@@ -1009,7 +1015,7 @@ TEST_F (TlsSocket, verify)
  */
 TEST_F (TlsSocket, isLower)
 {
-    TlsContext ctx (TlsContext::Role::TlsClient);
+    TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls1 (ctx), tls2 (ctx);
 
     ASSERT_EQ (tls1.open (Tls (IpAddress (_hostv4).family ())), 0) << join::lastError.message ();

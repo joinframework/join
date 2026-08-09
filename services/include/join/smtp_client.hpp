@@ -22,12 +22,14 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_SERVICES_SMTPCLIENT_HPP
-#define JOIN_SERVICES_SMTPCLIENT_HPP
+#ifndef JOIN_SERVICES_SMTP_CLIENT_HPP
+#define JOIN_SERVICES_SMTP_CLIENT_HPP
 
 // libjoin.
 #include <join/socket_stream.hpp>
-#include <join/mailmessage.hpp>
+#include <join/smtp_protocol.hpp>
+#include <join/smtp_message.hpp>
+#include <join/tls_stream.hpp>
 #include <join/resolver.hpp>
 #include <join/base64.hpp>
 
@@ -48,7 +50,7 @@ namespace join
          * @param host host.
          * @param port port (default: 25).
          */
-        BasicSmtpClient (const char* host, uint16_t port = 25)
+        BasicSmtpClient (const char* host, uint16_t port = Protocol::defaultPort)
         : _host (host)
         , _port (port)
         {
@@ -59,8 +61,32 @@ namespace join
          * @param host host.
          * @param port port (default: 25).
          */
-        BasicSmtpClient (const std::string& host, uint16_t port = 25)
+        BasicSmtpClient (const std::string& host, uint16_t port = Protocol::defaultPort)
         : BasicSmtpClient (host.c_str (), port)
+        {
+        }
+
+        /**
+         * @brief create the basic SMTP client instance using the given context.
+         * @param ctx TLS context used by the STARTTLS upgrade.
+         * @param host host.
+         * @param port port (default: 25).
+         */
+        BasicSmtpClient (TlsContext ctx, const char* host, uint16_t port = Protocol::defaultPort)
+        : _stream (std::move (ctx))
+        , _host (host)
+        , _port (port)
+        {
+        }
+
+        /**
+         * @brief create the basic SMTP client instance using the given context.
+         * @param ctx TLS context used by the STARTTLS upgrade.
+         * @param host host.
+         * @param port port (default: 25).
+         */
+        BasicSmtpClient (TlsContext ctx, const std::string& host, uint16_t port = Protocol::defaultPort)
+        : BasicSmtpClient (std::move (ctx), host.c_str (), port)
         {
         }
 
@@ -183,72 +209,11 @@ namespace join
         }
 
         /**
-         * @brief set the certificate and the private key.
-         * @param cert certificate path.
-         * @param key private key path.
-         * @return 0 on success, -1 on failure.
-         */
-        int setCertificate (const std::string& cert, const std::string& key = "")
-        {
-            return this->_stream.setCertificate (cert, key);
-        }
-
-        /**
-         * @brief set the location of the trusted CA certificates.
-         * @param caPath path of the trusted CA certificates.
-         * @return 0 on success, -1 on failure.
-         */
-        int setCaPath (const std::string& caPath)
-        {
-            return this->_stream.setCaPath (caPath);
-        }
-
-        /**
-         * @brief set the location of the trusted CA certificate file.
-         * @param caFile path of the trusted CA certificate file.
-         * @return 0 on success, -1 on failure.
-         */
-        int setCaFile (const std::string& caFile)
-        {
-            return this->_stream.setCaFile (caFile);
-        }
-
-        /**
-         * @brief Enable/Disable the verification of the peer certificate.
-         * @param verify Enable peer verification if set to true, false otherwise.
-         * @param depth The maximum certificate verification depth (default: no limit).
-         */
-        void setVerify (bool verify, int depth = -1)
-        {
-            this->_stream.setVerify (verify, depth);
-        }
-
-        /**
-         * @brief set the cipher list (TLSv1.2 and below).
-         * @param cipher the cipher list.
-         * @return 0 on success, -1 on failure.
-         */
-        int setCipher (const std::string& cipher)
-        {
-            return this->_stream.setCipher (cipher);
-        }
-
-        /**
-         * @brief set the cipher list (TLSv1.3).
-         * @param cipher the cipher list.
-         * @return 0 on success, -1 on failure.
-         */
-        int setCipher_1_3 (const std::string& cipher)
-        {
-            return this->_stream.setCipher_1_3 (cipher);
-        }
-
-        /**
          * @brief send mail message.
-         * @param mail mail message to send.
+         * @param message mail message to send.
          * @return 0 on success, -1 on failure.
          */
-        int send (const MailMessage& mail)
+        int send (const SmtpMessage& message)
         {
             Endpoint endpoint{Dns::Resolver::lookupAddress (this->host ()), this->port ()};
             endpoint.hostname (this->host ());
@@ -313,19 +278,19 @@ namespace join
                 }
             }
 
-            if (this->sendFrom (mail) == -1)
+            if (this->sendFrom (message) == -1)
             {
                 this->close ();
                 return -1;
             }
 
-            if (this->sendTo (mail) == -1)
+            if (this->sendTo (message) == -1)
             {
                 this->close ();
                 return -1;
             }
 
-            if (this->sendData (mail) == -1)
+            if (this->sendData (message) == -1)
             {
                 this->close ();
                 return -1;
@@ -463,7 +428,7 @@ namespace join
             {
                 return -1;
             }
-            this->_stream.startEncryption ();
+            this->_stream.handshake ();
             if (this->_stream.fail ())
             {
                 return -1;
@@ -534,7 +499,7 @@ namespace join
          * @param message mail message.
          * @return 0 on success, -1 on failure.
          */
-        int sendFrom (const MailMessage& message)
+        int sendFrom (const SmtpMessage& message)
         {
             if (this->sendMessage ("MAIL FROM: <" + message.sender ().address () + ">") == -1)
             {
@@ -552,7 +517,7 @@ namespace join
          * @param message mail message.
          * @return 0 on success, -1 on failure.
          */
-        int sendTo (const MailMessage& message)
+        int sendTo (const SmtpMessage& message)
         {
             for (auto const& recipient : message.recipients ())
             {
@@ -573,7 +538,7 @@ namespace join
          * @param message message to send.
          * @return 0 on success, -1 on failure.
          */
-        int sendData (const MailMessage& message)
+        int sendData (const SmtpMessage& message)
         {
             if (this->sendMessage ("DATA") == -1)
             {
@@ -652,22 +617,24 @@ namespace join
         using Endpoint = typename Protocol::Endpoint;
 
         /**
-         * @brief create the basic SMTPS client instance.
+         * @brief create the basic SMTPS client instance using the given context.
+         * @param ctx TLS context to use for the encryption layer.
          * @param host host.
          * @param port port (default: 465).
          */
-        BasicSmtpSecureClient (const char* host, uint16_t port = 465)
-        : BasicSmtpClient<Protocol> (host, port)
+        BasicSmtpSecureClient (TlsContext ctx, const char* host, uint16_t port = Protocol::defaultPort)
+        : BasicSmtpClient<Protocol> (std::move (ctx), host, port)
         {
         }
 
         /**
-         * @brief create the basic SMTPS client instance.
+         * @brief create the basic SMTPS client instance using the given context.
+         * @param ctx TLS context to use for the encryption layer.
          * @param host host.
          * @param port port (default: 465).
          */
-        BasicSmtpSecureClient (const std::string& host, uint16_t port = 465)
-        : BasicSmtpSecureClient (host.c_str (), port)
+        BasicSmtpSecureClient (TlsContext ctx, const std::string& host, uint16_t port = Protocol::defaultPort)
+        : BasicSmtpSecureClient (std::move (ctx), host.c_str (), port)
         {
         }
 
@@ -726,7 +693,12 @@ namespace join
          */
         int connect (const Endpoint& endpoint) override
         {
-            this->_stream.connectEncrypted (endpoint);
+            this->_stream.connect (endpoint);
+            if (this->_stream.fail ())
+            {
+                return -1;
+            }
+            this->_stream.handshake ();
             return this->_stream.fail () ? -1 : 0;
         }
     };

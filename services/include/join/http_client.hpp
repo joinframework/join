@@ -22,13 +22,15 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_SERVICES_HTTPCLIENT_HPP
-#define JOIN_SERVICES_HTTPCLIENT_HPP
+#ifndef JOIN_SERVICES_HTTP_CLIENT_HPP
+#define JOIN_SERVICES_HTTP_CLIENT_HPP
 
 // libjoin.
 #include <join/socket_stream.hpp>
-#include <join/httpmessage.hpp>
-#include <join/chunkstream.hpp>
+#include <join/http_protocol.hpp>
+#include <join/http_message.hpp>
+#include <join/chunk_stream.hpp>
+#include <join/tls_stream.hpp>
 #include <join/resolver.hpp>
 #include <join/zstream.hpp>
 #include <join/version.hpp>
@@ -53,7 +55,7 @@ namespace join
          * @param port port (default: 80).
          * @param keepAlive use a persistent connection.
          */
-        BasicHttpClient (const char* host, uint16_t port = 80, bool keepAlive = true)
+        BasicHttpClient (const char* host, uint16_t port = Protocol::defaultPort, bool keepAlive = true)
         : _host (host)
         , _port (port)
         , _keep (keepAlive)
@@ -67,7 +69,7 @@ namespace join
          * @param port port (default: 80).
          * @param keepAlive use a persistent connection.
          */
-        BasicHttpClient (const std::string& host, uint16_t port = 80, bool keepAlive = true)
+        BasicHttpClient (const std::string& host, uint16_t port = Protocol::defaultPort, bool keepAlive = true)
         : BasicHttpClient (host.c_str (), port, keepAlive)
         {
         }
@@ -488,26 +490,32 @@ namespace join
     {
     public:
         using Endpoint = typename Protocol::Endpoint;
+        using Stream = typename Protocol::Stream;
 
         /**
-         * @brief create the basic HTTPS client instance.
+         * @brief create the basic HTTPS client instance using the given context.
+         * @param ctx TLS context to use for the encryption layer.
          * @param host host.
          * @param port port (default: 443).
          * @param keepAlive use a persistent connection.
          */
-        BasicHttpSecureClient (const char* host, uint16_t port = 443, bool keepAlive = true)
+        BasicHttpSecureClient (TlsContext ctx, const char* host, uint16_t port = Protocol::defaultPort,
+                               bool keepAlive = true)
         : BasicHttpClient<Protocol> (host, port, keepAlive)
         {
+            static_cast<Stream&> (*this) = Stream (std::move (ctx));
         }
 
         /**
-         * @brief create the basic HTTPS client instance.
+         * @brief create the basic HTTPS client instance using the given context.
+         * @param ctx TLS context to use for the encryption layer.
          * @param host host.
          * @param port port (default: 443).
          * @param keepAlive use a persistent connection.
          */
-        BasicHttpSecureClient (const std::string& host, uint16_t port = 443, bool keepAlive = true)
-        : BasicHttpSecureClient (host.c_str (), port, keepAlive)
+        BasicHttpSecureClient (TlsContext ctx, const std::string& host, uint16_t port = Protocol::defaultPort,
+                               bool keepAlive = true)
+        : BasicHttpSecureClient (std::move (ctx), host.c_str (), port, keepAlive)
         {
         }
 
@@ -567,7 +575,11 @@ namespace join
         {
             this->disconnect ();
             this->close ();
-            this->connectEncrypted (endpoint);
+            this->connect (endpoint);
+            if (!this->fail ())
+            {
+                this->handshake ();
+            }
         }
     };
 

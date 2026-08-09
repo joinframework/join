@@ -226,7 +226,7 @@ protected:
     }
 
     /// TLS context serveur.
-    TlsContext _tlsContext{TlsContext::Role::DtlsServer};
+    TlsContext _tlsContext{TlsContext::DtlsServer};
 
     /// socket.
     Dtls::Socket _socket{_tlsContext, Udp::Socket::Blocking};
@@ -272,7 +272,7 @@ const std::string DtlsSocket::_invalidKey = "/tmp/tlssocket_test_invalid.key";
  */
 TEST_F (DtlsSocket, move)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls1 (ctx, Udp::Socket::Blocking), dtls2 (ctx);
 
     ASSERT_EQ (dtls1.bind ({_hostv4, uint16_t (_port + 1)}), 0) << join::lastError.message ();
@@ -293,7 +293,7 @@ TEST_F (DtlsSocket, move)
  */
 TEST_F (DtlsSocket, open)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx);
 
     ASSERT_EQ (dtls.open (Dtls::v4 ()), 0) << join::lastError.message ();
@@ -312,7 +312,7 @@ TEST_F (DtlsSocket, open)
  */
 TEST_F (DtlsSocket, close)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_FALSE (dtls.opened ());
@@ -329,7 +329,7 @@ TEST_F (DtlsSocket, close)
  */
 TEST_F (DtlsSocket, bind)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_EQ (dtls.connect ({_hostv4, _port}), 0) << join::lastError.message ();
@@ -348,7 +348,7 @@ TEST_F (DtlsSocket, bind)
  */
 TEST_F (DtlsSocket, bindToDevice)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_EQ (dtls.bindToDevice ("lo"), -1);
@@ -372,7 +372,7 @@ TEST_F (DtlsSocket, bindToDevice)
  */
 TEST_F (DtlsSocket, connect)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_EQ (dtls.connect ({"255.255.255.255", _port}), -1);
@@ -389,7 +389,7 @@ TEST_F (DtlsSocket, connect)
  */
 TEST_F (DtlsSocket, handshake)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_EQ (dtls.handshake (), -1);
@@ -414,7 +414,7 @@ TEST_F (DtlsSocket, handshake)
  */
 TEST_F (DtlsSocket, waitHandshake)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::NonBlocking);
 
     ASSERT_EQ (dtls.open (Dtls::v6 ()), 0) << join::lastError.message ();
@@ -443,7 +443,7 @@ TEST_F (DtlsSocket, waitHandshake)
  */
 TEST_F (DtlsSocket, disconnect)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_FALSE (dtls.connected ());
@@ -460,7 +460,7 @@ TEST_F (DtlsSocket, disconnect)
  */
 TEST_F (DtlsSocket, waitReadyRead)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::NonBlocking);
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
@@ -493,7 +493,7 @@ TEST_F (DtlsSocket, waitReadyRead)
  */
 TEST_F (DtlsSocket, read)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
@@ -513,7 +513,7 @@ TEST_F (DtlsSocket, read)
 
 TEST_F (DtlsSocket, readExactly)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
@@ -536,7 +536,7 @@ TEST_F (DtlsSocket, readExactly)
  */
 TEST_F (DtlsSocket, waitReadyWrite)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::NonBlocking);
 
     ASSERT_FALSE (dtls.waitReadyWrite (_timeout));
@@ -566,7 +566,7 @@ TEST_F (DtlsSocket, waitReadyWrite)
  */
 TEST_F (DtlsSocket, write)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
@@ -585,7 +585,7 @@ TEST_F (DtlsSocket, write)
 
 TEST_F (DtlsSocket, writeExactly)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
@@ -607,7 +607,7 @@ TEST_F (DtlsSocket, writeExactly)
  */
 TEST_F (DtlsSocket, setMode)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::NonBlocking);
 
     ASSERT_EQ (dtls.open (), 0) << join::lastError.message ();
@@ -631,7 +631,7 @@ TEST_F (DtlsSocket, setMode)
  */
 TEST_F (DtlsSocket, setOption)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::NonBlocking);
 
     ASSERT_EQ (dtls.setOption (Udp::Socket::RcvBuffer, 1500), -1);
@@ -693,7 +693,7 @@ TEST_F (DtlsSocket, setOption)
  */
 TEST_F (DtlsSocket, localEndpoint)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_EQ (dtls.localEndpoint (), Udp::Endpoint{});
@@ -708,7 +708,7 @@ TEST_F (DtlsSocket, localEndpoint)
  */
 TEST_F (DtlsSocket, remoteEndpoint)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_EQ (dtls.remoteEndpoint (), Udp::Endpoint{});
@@ -723,7 +723,7 @@ TEST_F (DtlsSocket, remoteEndpoint)
  */
 TEST_F (DtlsSocket, opened)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_FALSE (dtls.opened ());
@@ -744,7 +744,7 @@ TEST_F (DtlsSocket, opened)
  */
 TEST_F (DtlsSocket, connected)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_FALSE (dtls.connected ());
@@ -765,7 +765,7 @@ TEST_F (DtlsSocket, connected)
  */
 TEST_F (DtlsSocket, encrypted)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_FALSE (dtls.encrypted ());
@@ -788,7 +788,7 @@ TEST_F (DtlsSocket, encrypted)
  */
 TEST_F (DtlsSocket, family)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_EQ (dtls.family (), AF_INET);
@@ -807,7 +807,7 @@ TEST_F (DtlsSocket, family)
  */
 TEST_F (DtlsSocket, type)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::NonBlocking);
 
     ASSERT_EQ (dtls.type (), SOCK_DGRAM);
@@ -818,7 +818,7 @@ TEST_F (DtlsSocket, type)
  */
 TEST_F (DtlsSocket, protocol)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::NonBlocking);
 
     ASSERT_EQ (dtls.protocol (), IPPROTO_UDP);
@@ -829,7 +829,7 @@ TEST_F (DtlsSocket, protocol)
  */
 TEST_F (DtlsSocket, handle)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_EQ (dtls.handle (), -1);
@@ -850,7 +850,7 @@ TEST_F (DtlsSocket, handle)
  */
 TEST_F (DtlsSocket, mtu)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls (ctx, Udp::Socket::Blocking);
 
     ASSERT_EQ (dtls.mtu (), -1);
@@ -877,7 +877,7 @@ TEST_F (DtlsSocket, mtu)
  */
 TEST_F (DtlsSocket, verify)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Udp::Endpoint src{_hostv4, _port + 1};
     Udp::Endpoint dest{_hostv4, _port};
 
@@ -949,7 +949,7 @@ TEST_F (DtlsSocket, verify)
  */
 TEST_F (DtlsSocket, isLower)
 {
-    TlsContext ctx (TlsContext::Role::DtlsClient);
+    TlsContext ctx (TlsContext::DtlsClient);
     Dtls::Socket dtls1 (ctx), dtls2 (ctx);
 
     ASSERT_EQ (dtls1.open (Dtls (IpAddress (_hostv4).family ())), 0) << join::lastError.message ();

@@ -55,7 +55,7 @@ namespace join
         using Mode = typename UnderlyingSocket::Mode;
         using Option = typename UnderlyingSocket::Option;
         using State = typename UnderlyingSocket::State;
-        using Endpoint = typename UnderlyingSocket::Endpoint;
+        using Endpoint = typename Protocol::Endpoint;
 
         /**
          * @brief create a TLS decorator with an internally created socket.
@@ -64,6 +64,15 @@ namespace join
          */
         explicit BasicTls (TlsContext ctx, Mode mode = Mode::NonBlocking) noexcept
         : BasicTls (UnderlyingSocket{mode}, ctx)
+        {
+        }
+
+        /**
+         * @brief create a TLS decorator taking ownership of the given socket, without context.
+         * @param socket underlying socket.
+         */
+        explicit BasicTls (UnderlyingSocket&& socket) noexcept
+        : _socket (std::move (socket))
         {
         }
 
@@ -190,14 +199,15 @@ namespace join
         }
 
         /**
-         * @brief Perform the TLS handshake.
+         * @brief set the TLS layer up without negotiating immediately.
          * @return 0 on success, -1 on failure.
          */
-        int handshake ()
+        int deferHandshake ()
         {
-            if (encrypted ())
+            if (!_ctx.handle ())
             {
-                return 0;
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
             }
 
             if (!_ssl)
@@ -295,6 +305,25 @@ namespace join
                 {
                     SSL_set_verify (_ssl.get (), SSL_VERIFY_NONE, nullptr);
                 }
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief perform the TLS handshake.
+         * @return 0 on success, -1 on failure.
+         */
+        int handshake ()
+        {
+            if (encrypted ())
+            {
+                return 0;
+            }
+
+            if (deferHandshake () == -1)
+            {
+                return -1;
             }
 
             int result = SSL_do_handshake (_ssl.get ());
@@ -502,7 +531,7 @@ namespace join
          */
         bool waitReadyRead (int timeout = 0) const noexcept
         {
-            if (encrypted ())
+            if (_ssl)
             {
                 bool wantRead = SSL_want_read (_ssl.get ());
                 bool wantWrite = SSL_want_write (_ssl.get ());
@@ -524,7 +553,7 @@ namespace join
          */
         int read (char* buf, unsigned long len) noexcept
         {
-            if (encrypted ())
+            if (_ssl)
             {
                 int nread = SSL_read (_ssl.get (), buf, static_cast<int> (len));
                 if (nread < 1)
@@ -578,7 +607,7 @@ namespace join
          */
         bool waitReadyWrite (int timeout = 0) const noexcept
         {
-            if (encrypted ())
+            if (_ssl)
             {
                 bool wantRead = SSL_want_read (_ssl.get ());
                 bool wantWrite = SSL_want_write (_ssl.get ());
@@ -600,7 +629,7 @@ namespace join
          */
         int write (const char* buf, unsigned long len) noexcept
         {
-            if (encrypted ())
+            if (_ssl)
             {
                 int nwritten = SSL_write (_ssl.get (), buf, static_cast<int> (len));
                 if (nwritten < 1)

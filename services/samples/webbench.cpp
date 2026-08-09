@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/httpclient.hpp>
+#include <join/http_client.hpp>
 #include <join/filesystem.hpp>
 #include <join/thread.hpp>
 #include <join/mutex.hpp>
@@ -82,10 +82,9 @@ void usage ()
 //   METHOD    : benchmark
 // =========================================================================
 template <class Client>
-void benchmark (const std::string& host, uint16_t port, join::HttpRequest request, const std::string& file, int timeout,
-                int max, bool verbose, BenchmarkContext& ctx)
+void benchmark (Client client, join::HttpRequest request, const std::string& file, int timeout, int max, bool verbose,
+                BenchmarkContext& ctx)
 {
-    Client client (host, port, false);
     std::string payload;
     void* addr = nullptr;
     struct stat sbuf;
@@ -265,9 +264,10 @@ int main (int argc, char* argv[])
 
     auto run = [&] () {
         if (scheme == "https")
-            ::benchmark<join::Https::Client> (host, port, request, file, timeout, max, verbose, ctx);
+            ::benchmark (join::Https::Client (join::TlsContext (join::TlsContext::TlsClient), host, port, false),
+                         request, file, timeout, max, verbose, ctx);
         else
-            ::benchmark<join::Http::Client> (host, port, request, file, timeout, max, verbose, ctx);
+            ::benchmark (join::Http::Client (host, port, false), request, file, timeout, max, verbose, ctx);
     };
 
     std::vector<join::Thread> threads;

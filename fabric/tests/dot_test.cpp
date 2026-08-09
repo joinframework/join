@@ -50,7 +50,7 @@ protected:
     }
 
     /// TLS context client.
-    TlsContext _tlsContext{TlsContext::Role::TlsClient};
+    TlsContext _tlsContext{TlsContext::TlsClient};
 
     /// DoT resolver.
     std::unique_ptr<Dot::Resolver> _resolver;

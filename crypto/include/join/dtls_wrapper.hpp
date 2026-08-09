@@ -51,7 +51,7 @@ namespace join
          */
         int readFrom (char* buf, unsigned long len, Endpoint* endpoint = nullptr) noexcept
         {
-            if (this->encrypted ())
+            if (this->_ssl)
             {
                 int nread = SSL_read (this->_ssl.get (), buf, static_cast<int> (len));
                 if (nread < 1)
@@ -94,7 +94,7 @@ namespace join
          */
         int writeTo (const char* buf, unsigned long len, const Endpoint& endpoint) noexcept
         {
-            if (this->encrypted ())
+            if (this->_ssl)
             {
                 BIO* wbio = SSL_get_wbio (this->_ssl.get ());
                 if (!wbio)

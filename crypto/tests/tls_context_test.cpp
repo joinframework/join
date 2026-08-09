@@ -207,10 +207,10 @@ const std::string TlsContextTest::_invalidKey = "/tmp/tlscontext_test_invalid.ke
  */
 TEST_F (TlsContextTest, construct)
 {
-    ASSERT_NO_THROW (TlsContext{TlsContext::Role::TlsClient});
-    ASSERT_NO_THROW (TlsContext{TlsContext::Role::TlsServer});
-    ASSERT_NO_THROW (TlsContext{TlsContext::Role::DtlsClient});
-    ASSERT_NO_THROW (TlsContext{TlsContext::Role::DtlsServer});
+    ASSERT_NO_THROW (TlsContext{TlsContext::TlsClient});
+    ASSERT_NO_THROW (TlsContext{TlsContext::TlsServer});
+    ASSERT_NO_THROW (TlsContext{TlsContext::DtlsClient});
+    ASSERT_NO_THROW (TlsContext{TlsContext::DtlsServer});
 }
 
 /**
@@ -262,7 +262,12 @@ TEST_F (TlsContextTest, move)
  */
 TEST_F (TlsContextTest, setCertificate)
 {
-    TlsContext ctx;
+    TlsContext empty;
+
+    ASSERT_EQ (empty.setCertificate (_certFile, _key), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    TlsContext ctx (TlsContext::TlsClient);
 
     ASSERT_EQ (ctx.setCertificate ("/invalid/cert/path"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -284,7 +289,12 @@ TEST_F (TlsContextTest, setCertificate)
  */
 TEST_F (TlsContextTest, setCaPath)
 {
-    TlsContext ctx;
+    TlsContext empty;
+
+    ASSERT_EQ (empty.setCaPath (_certPath), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    TlsContext ctx (TlsContext::TlsClient);
 
     ASSERT_EQ (ctx.setCaPath ("/invalid/ca/path"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -300,7 +310,12 @@ TEST_F (TlsContextTest, setCaPath)
  */
 TEST_F (TlsContextTest, setCaFile)
 {
-    TlsContext ctx;
+    TlsContext empty;
+
+    ASSERT_EQ (empty.setCaFile (_certFile), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    TlsContext ctx (TlsContext::TlsClient);
 
     ASSERT_EQ (ctx.setCaFile ("/invalid/ca/file"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -316,7 +331,12 @@ TEST_F (TlsContextTest, setCaFile)
  */
 TEST_F (TlsContextTest, setCipher)
 {
-    TlsContext ctx;
+    TlsContext empty;
+
+    ASSERT_EQ (empty.setCipher (join::defaultCipher), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    TlsContext ctx (TlsContext::TlsClient);
 
     ASSERT_EQ (ctx.setCipher ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -329,7 +349,12 @@ TEST_F (TlsContextTest, setCipher)
  */
 TEST_F (TlsContextTest, setCipher_1_3)
 {
-    TlsContext ctx;
+    TlsContext empty;
+
+    ASSERT_EQ (empty.setCipher_1_3 (join::defaultCipher_1_3), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    TlsContext ctx (TlsContext::TlsClient);
 
     ASSERT_EQ (ctx.setCipher_1_3 ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -343,7 +368,12 @@ TEST_F (TlsContextTest, setCipher_1_3)
  */
 TEST_F (TlsContextTest, setCurve)
 {
-    TlsContext ctx;
+    TlsContext empty;
+
+    ASSERT_EQ (empty.setCurve (join::defaultCurve), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    TlsContext ctx (TlsContext::TlsClient);
 
     ASSERT_EQ (ctx.setCurve ("foo"), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -357,7 +387,12 @@ TEST_F (TlsContextTest, setCurve)
  */
 TEST_F (TlsContextTest, setAlpnProtocols)
 {
-    TlsContext ctx;
+    TlsContext empty;
+
+    ASSERT_EQ (empty.setAlpnProtocols ({"http/1.1", "h2"}), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    TlsContext ctx (TlsContext::TlsClient);
 
     ASSERT_EQ (ctx.setAlpnProtocols ({""}), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -370,7 +405,7 @@ TEST_F (TlsContextTest, setAlpnProtocols)
  */
 TEST_F (TlsContextTest, handle)
 {
-    TlsContext ctx;
+    TlsContext ctx (TlsContext::TlsClient);
 
     ASSERT_NE (ctx.handle (), nullptr);
 }
@@ -380,7 +415,7 @@ TEST_F (TlsContextTest, handle)
  */
 TEST_F (TlsContextTest, verify)
 {
-    TlsContext ctx;
+    TlsContext ctx (TlsContext::TlsClient);
 
     ASSERT_EQ (ctx.verify (), false);
 
@@ -396,7 +431,7 @@ TEST_F (TlsContextTest, verify)
  */
 TEST_F (TlsContextTest, depth)
 {
-    TlsContext ctx;
+    TlsContext ctx (TlsContext::TlsClient);
 
     ASSERT_EQ (ctx.depth (), -1);
 

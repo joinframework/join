@@ -40,7 +40,7 @@ namespace join
         /**
          * @brief TLS/DTLS role.
          */
-        enum class Role
+        enum Role
         {
             TlsClient,  /**< TLS client. */
             TlsServer,  /**< TLS server. */
@@ -49,11 +49,16 @@ namespace join
         };
 
         /**
+         * @brief create an empty context, unable to negotiate.
+         */
+        TlsContext () noexcept = default;
+
+        /**
          * @brief create TLS/DTLS context for the given role.
          * @param role client or server, TLS or DTLS.
          * @throw std::runtime_error if SSL_CTX_new fails.
          */
-        explicit TlsContext (Role role = Role::TlsClient);
+        explicit TlsContext (Role role);
 
         /**
          * @brief copy constructor.
@@ -187,7 +192,7 @@ namespace join
 #endif
 
         /// TLS role.
-        Role _role;
+        Role _role = Role::TlsClient;
 
         /// peer verification enabled.
         bool _verify = false;

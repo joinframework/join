@@ -119,6 +119,12 @@ TlsContext::TlsContext (Role role)
 // =========================================================================
 int TlsContext::setCertificate (const std::string& cert, const std::string& key) noexcept
 {
+    if (!_ctx)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
     if (SSL_CTX_use_certificate_file (_ctx.get (), cert.c_str (), SSL_FILETYPE_PEM) == 0)
     {
         lastError = make_error_code (Errc::InvalidParam);
@@ -149,6 +155,12 @@ int TlsContext::setCertificate (const std::string& cert, const std::string& key)
 // =========================================================================
 int TlsContext::setCaPath (const std::string& caPath)
 {
+    if (!_ctx)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
     struct stat st;
     if (stat (caPath.c_str (), &st) != 0 || !S_ISDIR (st.st_mode) ||
         SSL_CTX_load_verify_locations (_ctx.get (), nullptr, caPath.c_str ()) == 0)
@@ -166,6 +178,12 @@ int TlsContext::setCaPath (const std::string& caPath)
 // =========================================================================
 int TlsContext::setCaFile (const std::string& caFile)
 {
+    if (!_ctx)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
     struct stat st;
     if (stat (caFile.c_str (), &st) != 0 || !S_ISREG (st.st_mode) ||
         SSL_CTX_load_verify_locations (_ctx.get (), caFile.c_str (), nullptr) == 0)
@@ -193,6 +211,12 @@ void TlsContext::setVerify (bool verify, int depth) noexcept
 // =========================================================================
 int TlsContext::setCipher (const std::string& cipher) noexcept
 {
+    if (!_ctx)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
     if (SSL_CTX_set_cipher_list (_ctx.get (), cipher.c_str ()) == 0)
     {
         lastError = make_error_code (Errc::InvalidParam);
@@ -208,6 +232,12 @@ int TlsContext::setCipher (const std::string& cipher) noexcept
 // =========================================================================
 int TlsContext::setCipher_1_3 (const std::string& cipher) noexcept
 {
+    if (!_ctx)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
     if (SSL_CTX_set_ciphersuites (_ctx.get (), cipher.c_str ()) == 0)
     {
         lastError = make_error_code (Errc::InvalidParam);
@@ -224,6 +254,12 @@ int TlsContext::setCipher_1_3 (const std::string& cipher) noexcept
 // =========================================================================
 int TlsContext::setCurve (const std::string& curves)
 {
+    if (!_ctx)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
     if (SSL_CTX_set1_groups_list (_ctx.get (), curves.c_str ()) == 0)
     {
         lastError = make_error_code (Errc::InvalidParam);
@@ -240,6 +276,12 @@ int TlsContext::setCurve (const std::string& curves)
 // =========================================================================
 int TlsContext::setAlpnProtocols (const std::vector<std::string>& protocols)
 {
+    if (!_ctx)
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
     std::vector<uint8_t> wire;
     wire.reserve (256);
 

@@ -23,51 +23,51 @@
  */
 
 // libjoin.
-#include <join/mail_message.hpp>
+#include <join/smtp_message.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::MailSender;
+using join::SmtpSender;
 
 /**
  * @brief Test copy.
  */
-TEST (MailSender, copy)
+TEST (SmtpSender, copy)
 {
-    MailSender sender1, sender2 ("foo@bar.com");
+    SmtpSender sender1, sender2 ("foo@bar.com");
     ASSERT_EQ (sender1.address (), "");
     ASSERT_EQ (sender2.address (), "foo@bar.com");
 
     sender1 = sender2;
     ASSERT_EQ (sender1.address (), "foo@bar.com");
 
-    MailSender sender3 (sender1);
+    SmtpSender sender3 (sender1);
     ASSERT_EQ (sender3.address (), "foo@bar.com");
 }
 
 /**
  * @brief Test move.
  */
-TEST (MailSender, move)
+TEST (SmtpSender, move)
 {
-    MailSender sender1, sender2 ("foo@bar.com");
+    SmtpSender sender1, sender2 ("foo@bar.com");
     ASSERT_EQ (sender1.address (), "");
     ASSERT_EQ (sender2.address (), "foo@bar.com");
 
     sender1 = std::move (sender2);
     ASSERT_EQ (sender1.address (), "foo@bar.com");
 
-    MailSender sender3 (std::move (sender1));
+    SmtpSender sender3 (std::move (sender1));
     ASSERT_EQ (sender3.address (), "foo@bar.com");
 }
 
 /**
  * @brief Test address.
  */
-TEST (MailSender, address)
+TEST (SmtpSender, address)
 {
-    MailSender sender;
+    SmtpSender sender;
     ASSERT_EQ (sender.address (), "");
 
     sender.address ("foo@bar.com");
@@ -77,9 +77,9 @@ TEST (MailSender, address)
 /**
  * @brief Test realName.
  */
-TEST (MailSender, realName)
+TEST (SmtpSender, realName)
 {
-    MailSender sender;
+    SmtpSender sender;
     ASSERT_EQ (sender.realName (), "");
 
     sender.realName ("foo");
@@ -89,9 +89,9 @@ TEST (MailSender, realName)
 /**
  * @brief Test empty.
  */
-TEST (MailSender, empty)
+TEST (SmtpSender, empty)
 {
-    MailSender sender;
+    SmtpSender sender;
     ASSERT_TRUE (sender.empty ());
 
     sender.address ("foo@bar.com");
@@ -101,10 +101,10 @@ TEST (MailSender, empty)
 /**
  * @brief Test serialize.
  */
-TEST (MailSender, serialize)
+TEST (SmtpSender, serialize)
 {
     std::stringstream stream;
-    MailSender sender ("foo@bar.com", "foo");
+    SmtpSender sender ("foo@bar.com", "foo");
 
     ASSERT_NO_THROW (stream << sender);
     ASSERT_EQ (stream.str (), "foo<foo@bar.com>");

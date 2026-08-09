@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_SERVICES_MAIL_MESSAGE_HPP
-#define JOIN_SERVICES_MAIL_MESSAGE_HPP
+#ifndef JOIN_SERVICES_SMTP_MESSAGE_HPP
+#define JOIN_SERVICES_SMTP_MESSAGE_HPP
 
 // libjoin.
 #include <join/version.hpp>
@@ -38,57 +38,57 @@ namespace join
     /**
      * @brief mail sender.
      */
-    class MailSender
+    class SmtpSender
     {
     public:
         /**
-         * @brief create the MailSender instance.
+         * @brief create the SmtpSender instance.
          */
-        MailSender () = default;
+        SmtpSender () = default;
 
         /**
-         * @brief create the MailSender instance.
+         * @brief create the SmtpSender instance.
          * @param address recipient address.
          */
-        MailSender (const std::string& address);
+        SmtpSender (const std::string& address);
 
         /**
-         * @brief create the MailSender instance.
+         * @brief create the SmtpSender instance.
          * @param address recipient address.
          * @param name recipient name.
          */
-        MailSender (const std::string& address, const std::string& name);
+        SmtpSender (const std::string& address, const std::string& name);
 
         /**
-         * @brief create the MailSender instance by copy.
+         * @brief create the SmtpSender instance by copy.
          * @param other request to copy.
          */
-        MailSender (const MailSender& other);
+        SmtpSender (const SmtpSender& other);
 
         /**
-         * @brief assign the MailSender instance by copy.
+         * @brief assign the SmtpSender instance by copy.
          * @param other request to copy.
          * @return a reference of the current object.
          */
-        MailSender& operator= (const MailSender& other);
+        SmtpSender& operator= (const SmtpSender& other);
 
         /**
-         * @brief create the MailSender instance by move.
+         * @brief create the SmtpSender instance by move.
          * @param other request to move.
          */
-        MailSender (MailSender&& other);
+        SmtpSender (SmtpSender&& other);
 
         /**
-         * @brief assign the MailSender instance by move.
+         * @brief assign the SmtpSender instance by move.
          * @param other request to move.
          * @return a reference of the current object.
          */
-        MailSender& operator= (MailSender&& other);
+        SmtpSender& operator= (SmtpSender&& other);
 
         /**
-         * @brief destroy the MailSender instance.
+         * @brief destroy the SmtpSender instance.
          */
-        virtual ~MailSender () = default;
+        virtual ~SmtpSender () = default;
 
         /**
          * @brief set address.
@@ -134,12 +134,12 @@ namespace join
      * @param sender mail sender.
      * @return a reference to the output stream.
      */
-    std::ostream& operator<< (std::ostream& out, const MailSender& sender);
+    std::ostream& operator<< (std::ostream& out, const SmtpSender& sender);
 
     /**
      * @brief mail recipient.
      */
-    class MailRecipient : public MailSender
+    class SmtpRecipient : public SmtpSender
     {
     public:
         /**
@@ -153,55 +153,55 @@ namespace join
         };
 
         /**
-         * @brief create the MailRecipient instance.
+         * @brief create the SmtpRecipient instance.
          */
-        MailRecipient () = default;
+        SmtpRecipient () = default;
 
         /**
-         * @brief create the MailRecipient instance.
+         * @brief create the SmtpRecipient instance.
          * @param address recipient address.
          * @param t recipient type.
          */
-        MailRecipient (const std::string& address, Type t = Recipient);
+        SmtpRecipient (const std::string& address, Type t = Recipient);
 
         /**
-         * @brief create the MailRecipient instance.
+         * @brief create the SmtpRecipient instance.
          * @param address recipient address.
          * @param name recipient name.
          * @param t recipient type.
          */
-        MailRecipient (const std::string& address, const std::string& name, Type t = Recipient);
+        SmtpRecipient (const std::string& address, const std::string& name, Type t = Recipient);
 
         /**
-         * @brief create the MailRecipient instance by copy.
+         * @brief create the SmtpRecipient instance by copy.
          * @param other request to copy.
          */
-        MailRecipient (const MailRecipient& other);
+        SmtpRecipient (const SmtpRecipient& other);
 
         /**
-         * @brief assign the MailRecipient instance by copy.
+         * @brief assign the SmtpRecipient instance by copy.
          * @param other request to copy.
          * @return a reference of the current object.
          */
-        MailRecipient& operator= (const MailRecipient& other);
+        SmtpRecipient& operator= (const SmtpRecipient& other);
 
         /**
-         * @brief create the MailRecipient instance by move.
+         * @brief create the SmtpRecipient instance by move.
          * @param other request to move.
          */
-        MailRecipient (MailRecipient&& other);
+        SmtpRecipient (SmtpRecipient&& other);
 
         /**
-         * @brief assign the MailRecipient instance by move.
+         * @brief assign the SmtpRecipient instance by move.
          * @param other request to move.
          * @return a reference of the current object.
          */
-        MailRecipient& operator= (MailRecipient&& other);
+        SmtpRecipient& operator= (SmtpRecipient&& other);
 
         /**
-         * @brief destroy the MailRecipient instance.
+         * @brief destroy the SmtpRecipient instance.
          */
-        virtual ~MailRecipient () = default;
+        virtual ~SmtpRecipient () = default;
 
         /**
          * @brief set recipient type.
@@ -221,79 +221,79 @@ namespace join
     };
 
     /// mail recipient list.
-    using MailRecipients = std::vector<MailRecipient>;
+    using SmtpRecipients = std::vector<SmtpRecipient>;
 
     /**
      * @brief mail message.
      */
-    class MailMessage
+    class SmtpMessage
     {
     public:
         /**
-         * @brief create the MailMessage instance.
+         * @brief create the SmtpMessage instance.
          */
-        MailMessage () = default;
+        SmtpMessage () = default;
 
         /**
-         * @brief create the MailMessage instance by copy.
+         * @brief create the SmtpMessage instance by copy.
          * @param other request to copy.
          */
-        MailMessage (const MailMessage& other);
+        SmtpMessage (const SmtpMessage& other);
 
         /**
-         * @brief assign the MailMessage instance by copy.
+         * @brief assign the SmtpMessage instance by copy.
          * @param other request to copy.
          * @return a reference of the current object.
          */
-        MailMessage& operator= (const MailMessage& other);
+        SmtpMessage& operator= (const SmtpMessage& other);
 
         /**
-         * @brief create the MailMessage instance by move.
+         * @brief create the SmtpMessage instance by move.
          * @param other request to move.
          */
-        MailMessage (MailMessage&& other);
+        SmtpMessage (SmtpMessage&& other);
 
         /**
-         * @brief assign the MailMessage instance by move.
+         * @brief assign the SmtpMessage instance by move.
          * @param other request to move.
          * @return a reference of the current object.
          */
-        MailMessage& operator= (MailMessage&& other);
+        SmtpMessage& operator= (SmtpMessage&& other);
 
         /**
-         * @brief destroy the MailMessage instance.
+         * @brief destroy the SmtpMessage instance.
          */
-        virtual ~MailMessage () = default;
+        virtual ~SmtpMessage () = default;
 
         /**
          * @brief set mail sender.
          * @param from mail sender.
          */
-        void sender (const MailSender& from);
+        void sender (const SmtpSender& from);
 
         /**
          * @brief get mail sender
          * @return mail sender.
          */
-        const MailSender& sender () const;
+        const SmtpSender& sender () const;
 
         /**
          * @brief add mail recipient.
          * @param to mail recipient.
          */
-        void addRecipient (const MailRecipient& to);
+        void addRecipient (const SmtpRecipient& to);
 
         /**
          * @brief add mail recipient.
          * @param to mail recipient.
          */
-        void addRecipient (MailRecipient&& to);
+        void addRecipient (SmtpRecipient&& to);
 
         /**
          * @brief get mail recipients.
          * @return mail recipients.
          */
-        const MailRecipients& recipients () const;
+        const SmtpRecipients& recipients () const;
 
         /**
          * @brief set mail subject.
@@ -335,10 +335,10 @@ namespace join
 
     protected:
         /// mail sender.
-        MailSender _sender;
+        SmtpSender _sender;
 
         /// mail recipients.
-        MailRecipients _recipients;
+        SmtpRecipients _recipients;
 
         /// mail sender.
         std::string _subject;

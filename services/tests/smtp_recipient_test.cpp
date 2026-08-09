@@ -23,51 +23,51 @@
  */
 
 // libjoin.
-#include <join/mail_message.hpp>
+#include <join/smtp_message.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::MailRecipient;
+using join::SmtpRecipient;
 
 /**
  * @brief Test copy.
  */
-TEST (MailRecipient, copy)
+TEST (SmtpRecipient, copy)
 {
-    MailRecipient recipient1, recipient2 ("foo@bar.com");
+    SmtpRecipient recipient1, recipient2 ("foo@bar.com");
     ASSERT_EQ (recipient1.address (), "");
     ASSERT_EQ (recipient2.address (), "foo@bar.com");
 
     recipient1 = recipient2;
     ASSERT_EQ (recipient1.address (), "foo@bar.com");
 
-    MailRecipient recipient3 (recipient1);
+    SmtpRecipient recipient3 (recipient1);
     ASSERT_EQ (recipient3.address (), "foo@bar.com");
 }
 
 /**
  * @brief Test move.
  */
-TEST (MailRecipient, move)
+TEST (SmtpRecipient, move)
 {
-    MailRecipient recipient1, recipient2 ("foo@bar.com");
+    SmtpRecipient recipient1, recipient2 ("foo@bar.com");
     ASSERT_EQ (recipient1.address (), "");
     ASSERT_EQ (recipient2.address (), "foo@bar.com");
 
     recipient1 = std::move (recipient2);
     ASSERT_EQ (recipient1.address (), "foo@bar.com");
 
-    MailRecipient recipient3 (std::move (recipient1));
+    SmtpRecipient recipient3 (std::move (recipient1));
     ASSERT_EQ (recipient3.address (), "foo@bar.com");
 }
 
 /**
  * @brief Test address.
  */
-TEST (MailRecipient, address)
+TEST (SmtpRecipient, address)
 {
-    MailRecipient recipient;
+    SmtpRecipient recipient;
     ASSERT_EQ (recipient.address (), "");
 
     recipient.address ("foo@bar.com");
@@ -77,9 +77,9 @@ TEST (MailRecipient, address)
 /**
  * @brief Test realName.
  */
-TEST (MailRecipient, realName)
+TEST (SmtpRecipient, realName)
 {
-    MailRecipient recipient;
+    SmtpRecipient recipient;
     ASSERT_EQ (recipient.realName (), "");
 
     recipient.realName ("foo");
@@ -89,21 +89,21 @@ TEST (MailRecipient, realName)
 /**
  * @brief Test type.
  */
-TEST (MailRecipient, type)
+TEST (SmtpRecipient, type)
 {
-    MailRecipient recipient;
-    ASSERT_EQ (recipient.type (), MailRecipient::Recipient);
+    SmtpRecipient recipient;
+    ASSERT_EQ (recipient.type (), SmtpRecipient::Recipient);
 
-    recipient.type (MailRecipient::CCRecipient);
-    ASSERT_EQ (recipient.type (), MailRecipient::CCRecipient);
+    recipient.type (SmtpRecipient::CCRecipient);
+    ASSERT_EQ (recipient.type (), SmtpRecipient::CCRecipient);
 }
 
 /**
  * @brief Test empty.
  */
-TEST (MailRecipient, empty)
+TEST (SmtpRecipient, empty)
 {
-    MailRecipient recipient;
+    SmtpRecipient recipient;
     ASSERT_TRUE (recipient.empty ());
 
     recipient.address ("foo@bar.com");
@@ -113,10 +113,10 @@ TEST (MailRecipient, empty)
 /**
  * @brief Test serialize.
  */
-TEST (MailRecipient, serialize)
+TEST (SmtpRecipient, serialize)
 {
     std::stringstream stream;
-    MailRecipient recipient ("foo@bar.com", "foo");
+    SmtpRecipient recipient ("foo@bar.com", "foo");
 
     ASSERT_NO_THROW (stream << recipient);
     ASSERT_EQ (stream.str (), "foo<foo@bar.com>");

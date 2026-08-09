@@ -22,40 +22,49 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_CRYPTO_TLS_PROTOCOL_HPP
-#define JOIN_CRYPTO_TLS_PROTOCOL_HPP
+#ifndef JOIN_SERVICES_HTTP_PROTOCOL_HPP
+#define JOIN_SERVICES_HTTP_PROTOCOL_HPP
 
 // libjoin.
-#include <join/protocol.hpp>
+#include <join/tls_protocol.hpp>
 
 namespace join
 {
     template <class Protocol>
-    class BasicTlsWrapper;
+    class BasicHttpClient;
 
     template <class Protocol>
-    class BasicDtlsWrapper;
+    class BasicHttpSecureClient;
 
     template <class Protocol>
-    class BasicTlsStream;
+    class BasicHttpWorker;
+
+    template <class Protocol>
+    class BasicHttpServer;
+
+    template <class Protocol>
+    class BasicHttpSecureServer;
 
     /**
-     * @brief TLS protocol class (TLS over TCP).
+     * @brief HTTP protocol class (HTTP over TCP).
      */
-    class Tls
+    class Http
     {
     public:
-        using Transport = Tcp;
-        using Endpoint = typename Transport::Endpoint;
-        using Socket = BasicTlsWrapper<Tls>;
-        using Stream = BasicTlsStream<Tls>;
+        using Endpoint = BasicInternetEndpoint<Http>;
+        using Socket = BasicStreamSocket<Http>;
+        using Stream = BasicSocketStream<Http>;
+        using Acceptor = BasicStreamAcceptor<Http>;
+        using Client = BasicHttpClient<Http>;
+        using Worker = BasicHttpWorker<Http>;
+        using Server = BasicHttpServer<Http>;
 
         /**
-         * @brief create the tls protocol instance.
+         * @brief construct the HTTP protocol instance.
          * @param family IP address family.
          */
-        constexpr explicit Tls (int family = AF_INET) noexcept
-        : _transport (family)
+        constexpr explicit Http (int family = AF_INET) noexcept
+        : _family (family)
         {
         }
 
@@ -63,20 +72,20 @@ namespace join
          * @brief get protocol suitable for IPv4 address family.
          * @return an IPv4 address family suitable protocol.
          */
-        static inline Tls& v4 () noexcept
+        static inline Http& v4 () noexcept
         {
-            static Tls tlsv4 (AF_INET);
-            return tlsv4;
+            static Http httpv4 (AF_INET);
+            return httpv4;
         }
 
         /**
          * @brief get protocol suitable for IPv6 address family.
          * @return an IPv6 address family suitable protocol.
          */
-        static inline Tls& v6 () noexcept
+        static inline Http& v6 () noexcept
         {
-            static Tls tlsv6 (AF_INET6);
-            return tlsv6;
+            static Http httpv6 (AF_INET6);
+            return httpv6;
         }
 
         /**
@@ -85,12 +94,33 @@ namespace join
          */
         constexpr int family () const noexcept
         {
-            return _transport.family ();
+            return _family;
+        }
+
+        /// default HTTP port.
+        static constexpr uint16_t defaultPort = 80;
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_STREAM;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return IPPROTO_TCP;
         }
 
     private:
-        /// underlying transport protocol.
-        Transport _transport;
+        /// IP address family.
+        int _family;
     };
 
     /**
@@ -99,7 +129,7 @@ namespace join
      * @param b protocol to check.
      * @return true if equals.
      */
-    constexpr bool operator== (const Tls& a, const Tls& b) noexcept
+    constexpr bool operator== (const Http& a, const Http& b) noexcept
     {
         return a.family () == b.family ();
     }
@@ -110,26 +140,31 @@ namespace join
      * @param b protocol to check.
      * @return true if not equals.
      */
-    constexpr bool operator!= (const Tls& a, const Tls& b) noexcept
+    constexpr bool operator!= (const Http& a, const Http& b) noexcept
     {
         return !(a == b);
     }
 
     /**
-     * @brief DTLS protocol class (DTLS over UDP).
+     * @brief HTTPS protocol class (HTTP over TLS).
      */
-    class Dtls
+    class Https
     {
     public:
-        using Transport = Udp;
+        using Transport = Tcp;
         using Endpoint = typename Transport::Endpoint;
-        using Socket = BasicDtlsWrapper<Dtls>;
+        using Socket = BasicTlsWrapper<Https>;
+        using Stream = BasicTlsStream<Https>;
+        using Acceptor = typename Transport::Acceptor;
+        using Client = BasicHttpSecureClient<Https>;
+        using Worker = BasicHttpWorker<Https>;
+        using Server = BasicHttpSecureServer<Https>;
 
         /**
-         * @brief create the dtls protocol instance.
+         * @brief construct the HTTPS protocol instance.
          * @param family IP address family.
          */
-        constexpr explicit Dtls (int family = AF_INET) noexcept
+        constexpr explicit Https (int family = AF_INET) noexcept
         : _transport (family)
         {
         }
@@ -138,20 +173,20 @@ namespace join
          * @brief get protocol suitable for IPv4 address family.
          * @return an IPv4 address family suitable protocol.
          */
-        static inline Dtls& v4 () noexcept
+        static inline Https& v4 () noexcept
         {
-            static Dtls dtlsv4 (AF_INET);
-            return dtlsv4;
+            static Https httpsv4 (AF_INET);
+            return httpsv4;
         }
 
         /**
          * @brief get protocol suitable for IPv6 address family.
          * @return an IPv6 address family suitable protocol.
          */
-        static inline Dtls& v6 () noexcept
+        static inline Https& v6 () noexcept
         {
-            static Dtls dtlsv6 (AF_INET6);
-            return dtlsv6;
+            static Https httpsv6 (AF_INET6);
+            return httpsv6;
         }
 
         /**
@@ -162,6 +197,9 @@ namespace join
         {
             return _transport.family ();
         }
+
+        /// default HTTPS port.
+        static constexpr uint16_t defaultPort = 443;
 
     private:
         /// underlying transport protocol.
@@ -174,7 +212,7 @@ namespace join
      * @param b protocol to check.
      * @return true if equals.
      */
-    constexpr bool operator== (const Dtls& a, const Dtls& b) noexcept
+    constexpr bool operator== (const Https& a, const Https& b) noexcept
     {
         return a.family () == b.family ();
     }
@@ -185,7 +223,7 @@ namespace join
      * @param b protocol to check.
      * @return true if not equals.
      */
-    constexpr bool operator!= (const Dtls& a, const Dtls& b) noexcept
+    constexpr bool operator!= (const Https& a, const Https& b) noexcept
     {
         return !(a == b);
     }

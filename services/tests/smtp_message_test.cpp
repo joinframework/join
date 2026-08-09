@@ -23,23 +23,23 @@
  */
 
 // libjoin.
-#include <join/mail_message.hpp>
+#include <join/smtp_message.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-using join::MailSender;
-using join::MailRecipient;
-using join::MailRecipients;
-using join::MailMessage;
+using join::SmtpSender;
+using join::SmtpRecipient;
+using join::SmtpRecipients;
+using join::SmtpMessage;
 
 /**
  * @brief Test copy.
  */
-TEST (MailMessage, copy)
+TEST (SmtpMessage, copy)
 {
-    MailMessage message1, message2;
+    SmtpMessage message1, message2;
 
     message2.sender ({"foo@bar.com"});
     ASSERT_EQ (message1.sender ().address (), "");
@@ -48,16 +48,16 @@ TEST (MailMessage, copy)
     message1 = message2;
     ASSERT_EQ (message1.sender ().address (), "foo@bar.com");
 
-    MailMessage message3 (message1);
+    SmtpMessage message3 (message1);
     ASSERT_EQ (message3.sender ().address (), "foo@bar.com");
 }
 
 /**
  * @brief Test move.
  */
-TEST (MailMessage, move)
+TEST (SmtpMessage, move)
 {
-    MailMessage message1, message2;
+    SmtpMessage message1, message2;
 
     message2.sender ({"foo@bar.com"});
     ASSERT_EQ (message1.sender ().address (), "");
@@ -66,16 +66,16 @@ TEST (MailMessage, move)
     message1 = std::move (message2);
     ASSERT_EQ (message1.sender ().address (), "foo@bar.com");
 
-    MailMessage message3 (std::move (message1));
+    SmtpMessage message3 (std::move (message1));
     ASSERT_EQ (message3.sender ().address (), "foo@bar.com");
 }
 
 /**
  * @brief Test sender.
  */
-TEST (MailMessage, sender)
+TEST (SmtpMessage, sender)
 {
-    MailMessage message;
+    SmtpMessage message;
     ASSERT_TRUE (message.sender ().empty ());
 
     message.sender ({"foo@bar.com"});
@@ -85,9 +85,9 @@ TEST (MailMessage, sender)
 /**
  * @brief Test addRecipient.
  */
-TEST (MailMessage, addRecipient)
+TEST (SmtpMessage, addRecipient)
 {
-    MailMessage message;
+    SmtpMessage message;
     ASSERT_TRUE (message.recipients ().empty ());
 
     message.addRecipient ({"foo@bar.com"});
@@ -97,9 +97,9 @@ TEST (MailMessage, addRecipient)
 /**
  * @brief Test subject.
  */
-TEST (MailMessage, subject)
+TEST (SmtpMessage, subject)
 {
-    MailMessage message;
+    SmtpMessage message;
     ASSERT_EQ (message.subject (), "");
 
     message.subject ("test");
@@ -109,9 +109,9 @@ TEST (MailMessage, subject)
 /**
  * @brief Test content.
  */
-TEST (MailMessage, content)
+TEST (SmtpMessage, content)
 {
-    MailMessage message;
+    SmtpMessage message;
     ASSERT_EQ (message.content (), "");
 
     message.content ("test");
@@ -121,19 +121,19 @@ TEST (MailMessage, content)
 /**
  * @brief Test writeHeaders.
  */
-TEST (MailMessage, writeHeaders)
+TEST (SmtpMessage, writeHeaders)
 {
-    MailMessage message;
+    SmtpMessage message;
     message.sender ({"foo@bar.com", "foo"});
-    MailRecipient recipient1 = {"baz@fun.com", "baz", MailRecipient::Recipient};
+    SmtpRecipient recipient1 = {"baz@fun.com", "baz", SmtpRecipient::Recipient};
     message.addRecipient (recipient1);
-    message.addRecipient ({"nlo@fre.com", "nlo", MailRecipient::Recipient});
-    MailRecipient recipient2 = {"bla@zom.com", "bla", MailRecipient::CCRecipient};
+    message.addRecipient ({"nlo@fre.com", "nlo", SmtpRecipient::Recipient});
+    SmtpRecipient recipient2 = {"bla@zom.com", "bla", SmtpRecipient::CCRecipient};
     message.addRecipient (recipient2);
-    message.addRecipient ({"hbd@qsd.com", "hbd", MailRecipient::CCRecipient});
-    MailRecipient recipient3 = {"flu@mlo.com", "flu", MailRecipient::BCCRecipient};
+    message.addRecipient ({"hbd@qsd.com", "hbd", SmtpRecipient::CCRecipient});
+    SmtpRecipient recipient3 = {"flu@mlo.com", "flu", SmtpRecipient::BCCRecipient};
     message.addRecipient (recipient3);
-    message.addRecipient ({"kjl@try.com", "kjl", MailRecipient::BCCRecipient});
+    message.addRecipient ({"kjl@try.com", "kjl", SmtpRecipient::BCCRecipient});
     message.subject ("test");
 
     std::stringstream ss;

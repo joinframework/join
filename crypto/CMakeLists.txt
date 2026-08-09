@@ -5,6 +5,7 @@ find_package(OpenSSL REQUIRED)
 set(PUBLIC_HEADERS
     include/join/base64.hpp
     include/join/openssl.hpp
+    include/join/digest.hpp
     include/join/hmac.hpp
     include/join/tls_key.hpp
     include/join/signature.hpp

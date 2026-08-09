@@ -416,9 +416,9 @@ namespace join
     template <class Func, class... Args>
     std::chrono::milliseconds benchmark (Func&& func, Args&&... args)
     {
-        auto beg = std::chrono::high_resolution_clock::now ();
+        auto beg = std::chrono::steady_clock::now ();
         func (std::forward<Args> (args)...);
-        auto end = std::chrono::high_resolution_clock::now ();
+        auto end = std::chrono::steady_clock::now ();
         return std::chrono::duration_cast<std::chrono::milliseconds> (end - beg);
     }
 

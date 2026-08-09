@@ -22,14 +22,18 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_SERVICES_HTTPSERVER_HPP
-#define JOIN_SERVICES_HTTPSERVER_HPP
+#ifndef JOIN_SERVICES_HTTP_SERVER_HPP
+#define JOIN_SERVICES_HTTP_SERVER_HPP
 
 // libjoin.
-#include <join/httpmessage.hpp>
+#include <join/http_protocol.hpp>
+#include <join/http_message.hpp>
+#include <join/chunk_stream.hpp>
 #include <join/filesystem.hpp>
+#include <join/tls_stream.hpp>
 #include <join/acceptor.hpp>
 #include <join/version.hpp>
+#include <join/zstream.hpp>
 #include <join/thread.hpp>
 #include <join/cache.hpp>
 
@@ -165,7 +169,7 @@ namespace join
                     this->_max = 0;
                 }
             }
-            if (this->encrypted () && !this->_response.hasHeader ("Strict-Transport-Security"))
+            if ((this->_server->scheme () == "https") && !this->_response.hasHeader ("Strict-Transport-Security"))
             {
                 this->_response.header ("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
             }
@@ -737,7 +741,7 @@ namespace join
          */
         virtual Socket accept () const
         {
-            return this->_acceptor.accept ();
+            return Socket (this->_acceptor.accept ());
         }
 
         /**
@@ -979,19 +983,16 @@ namespace join
     {
     public:
         using Worker = BasicHttpWorker<Protocol>;
-        using Content = BasicHttpContent<Protocol>;
-        using Handler = typename Content::Handler;
-        using Access = typename Content::Access;
-        using Endpoint = typename Protocol::Endpoint;
         using Socket = typename Protocol::Socket;
-        using Acceptor = typename Protocol::Acceptor;
 
         /**
-         * @brief create the HTTPS server instance.
+         * @brief create the HTTPS server instance using the given context.
+         * @param ctx TLS context used to wrap the accepted connections.
          * @param workers number of worker threads.
          */
-        BasicHttpSecureServer (size_t workers = std::thread::hardware_concurrency ())
+        BasicHttpSecureServer (TlsContext ctx, size_t workers = std::thread::hardware_concurrency ())
         : BasicHttpServer<Protocol> (workers)
+        , _ctx (std::move (ctx))
         {
         }
 
@@ -1024,7 +1025,11 @@ namespace join
         /**
          * @brief destroy the HTTPS server.
          */
-        virtual ~BasicHttpSecureServer () = default;
+        virtual ~BasicHttpSecureServer ()
+        {
+            // join the workers while the context they use is still alive.
+            this->close ();
+        }
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
@@ -1032,71 +1037,13 @@ namespace join
          */
         Socket accept () const override
         {
-            return this->_acceptor.acceptEncrypted ();
+            Socket sock (this->_acceptor.accept (), this->_ctx);
+            if (sock.deferHandshake () == -1)
+            {
+                sock.close ();
+            }
+            return sock;
         }
-
-        /**
-         * @brief set the certificate and the private key.
-         * @param cert certificate path.
-         * @param key private key path.
-         * @return 0 on success, -1 on failure.
-         */
-        int setCertificate (const std::string& cert, const std::string& key = "")
-        {
-            return this->_acceptor.setCertificate (cert, key);
-        }
-
-        /**
-         * @brief Set the location of the trusted CA certificate.
-         * @param caFile path of the trusted CA certificate file.
-         * @return 0 on success, -1 on failure.
-         */
-        int setCaCertificate (const std::string& caFile)
-        {
-            return this->_acceptor.setCaCertificate (caFile);
-        }
-
-        /**
-         * @brief Enable/Disable the verification of the peer certificate.
-         * @param verify Enable peer verification if set to true, false otherwise.
-         * @param depth The maximum certificate verification depth (default: no limit).
-         */
-        void setVerify (bool verify, int depth = -1)
-        {
-            return this->_acceptor.setVerify (verify, depth);
-        }
-
-        /**
-         * @brief set the cipher list (TLSv1.2 and below).
-         * @param cipher the cipher list.
-         * @return 0 on success, -1 on failure.
-         */
-        int setCipher (const std::string& cipher)
-        {
-            return this->_acceptor.setCipher (cipher);
-        }
-
-        /**
-         * @brief set the cipher list (TLSv1.3).
-         * @param cipher the cipher list.
-         * @return 0 on success, -1 on failure.
-         */
-        int setCipher_1_3 (const std::string& cipher)
-        {
-            return this->_acceptor.setCipher_1_3 (cipher);
-        }
-
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        /**
-         * @brief set curve list.
-         * @param curves curve list.
-         * @return 0 on success, -1 on failure.
-         */
-        int setCurve (const std::string& curves)
-        {
-            return this->_acceptor.setCurve (curves);
-        }
-#endif
 
         /**
          * @brief get scheme.
@@ -1106,6 +1053,9 @@ namespace join
         {
             return "https";
         }
+
+        /// TLS context used to wrap the accepted connections.
+        TlsContext _ctx;
 
         /// friendship with worker.
         friend Worker;
