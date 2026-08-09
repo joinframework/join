@@ -285,7 +285,7 @@ const std::string TlsSocketStream::_invalidKey = "/tmp/tlssocket_test_invalid.ke
  */
 TEST_F (TlsSocketStream, defaultConstruct)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
 }
 
@@ -294,7 +294,7 @@ TEST_F (TlsSocketStream, defaultConstruct)
  */
 TEST_F (TlsSocketStream, moveConstruct)
 {
-    Tls::Stream tmp {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tmp{TlsContext (TlsContext::TlsClient)};
     ASSERT_TRUE (tmp.good ()) << join::lastError.message ();
     Tls::Stream tlsStream (std::move (tmp));
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
@@ -305,9 +305,9 @@ TEST_F (TlsSocketStream, moveConstruct)
  */
 TEST_F (TlsSocketStream, moveAssign)
 {
-    Tls::Stream tmp {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tmp{TlsContext (TlsContext::TlsClient)};
     ASSERT_TRUE (tmp.good ()) << join::lastError.message ();
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream = std::move (tmp);
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
 }
@@ -317,7 +317,7 @@ TEST_F (TlsSocketStream, moveAssign)
  */
 TEST_F (TlsSocketStream, bind)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.bind (_host);
@@ -341,7 +341,7 @@ TEST_F (TlsSocketStream, bind)
  */
 TEST_F (TlsSocketStream, connect)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.connect ({"255.255.255.255", _port});
     ASSERT_TRUE (tlsStream.fail ());
     tlsStream.clear ();
@@ -364,7 +364,7 @@ TEST_F (TlsSocketStream, connect)
  */
 TEST_F (TlsSocketStream, handshake)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.handshake ();
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -386,7 +386,7 @@ TEST_F (TlsSocketStream, handshake)
  */
 TEST_F (TlsSocketStream, shutdown)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.handshake ();
@@ -405,7 +405,7 @@ TEST_F (TlsSocketStream, shutdown)
  */
 TEST_F (TlsSocketStream, disconnect)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     ASSERT_FALSE (tlsStream.connected ());
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
@@ -424,7 +424,7 @@ TEST_F (TlsSocketStream, disconnect)
  */
 TEST_F (TlsSocketStream, close)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     ASSERT_FALSE (tlsStream.opened ());
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
@@ -441,7 +441,7 @@ TEST_F (TlsSocketStream, close)
  */
 TEST_F (TlsSocketStream, localEndpoint)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     ASSERT_EQ (tlsStream.localEndpoint (), Tls::Endpoint{});
     tlsStream.bind ({_host, uint16_t (_port + 1)});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
@@ -460,7 +460,7 @@ TEST_F (TlsSocketStream, localEndpoint)
  */
 TEST_F (TlsSocketStream, remoteEndpoint)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     ASSERT_EQ (tlsStream.remoteEndpoint (), Tls::Endpoint{});
     tlsStream.bind ({_host, uint16_t (_port + 1)});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
@@ -479,7 +479,7 @@ TEST_F (TlsSocketStream, remoteEndpoint)
  */
 TEST_F (TlsSocketStream, opened)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     ASSERT_FALSE (tlsStream.opened ());
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
@@ -496,7 +496,7 @@ TEST_F (TlsSocketStream, opened)
  */
 TEST_F (TlsSocketStream, connected)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     ASSERT_FALSE (tlsStream.connected ());
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
@@ -513,7 +513,7 @@ TEST_F (TlsSocketStream, connected)
  */
 TEST_F (TlsSocketStream, encrypted)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     ASSERT_FALSE (tlsStream.encrypted ());
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
@@ -534,7 +534,7 @@ TEST_F (TlsSocketStream, encrypted)
  */
 TEST_F (TlsSocketStream, timeout)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     ASSERT_NE (tlsStream.timeout (), _timeout);
     tlsStream.timeout (_timeout);
     ASSERT_EQ (tlsStream.timeout (), _timeout);
@@ -545,7 +545,7 @@ TEST_F (TlsSocketStream, timeout)
  */
 TEST_F (TlsSocketStream, socket)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     ASSERT_EQ (tlsStream.socket ().handle (), -1);
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
@@ -560,7 +560,7 @@ TEST_F (TlsSocketStream, socket)
  */
 TEST_F (TlsSocketStream, insert)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream << "test" << std::endl;
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
@@ -583,7 +583,7 @@ TEST_F (TlsSocketStream, insert)
  */
 TEST_F (TlsSocketStream, put)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.put ('t');
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
@@ -609,7 +609,7 @@ TEST_F (TlsSocketStream, put)
  */
 TEST_F (TlsSocketStream, write)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.write ("test", 4);
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
@@ -632,7 +632,7 @@ TEST_F (TlsSocketStream, write)
  */
 TEST_F (TlsSocketStream, flush)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.handshake ();
@@ -658,7 +658,7 @@ TEST_F (TlsSocketStream, flush)
 TEST_F (TlsSocketStream, extract)
 {
     int test;
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream >> test;
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
@@ -681,7 +681,7 @@ TEST_F (TlsSocketStream, extract)
  */
 TEST_F (TlsSocketStream, get)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.get ();
     ASSERT_TRUE (tlsStream.fail ());
     ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
@@ -706,7 +706,7 @@ TEST_F (TlsSocketStream, get)
  */
 TEST_F (TlsSocketStream, peek)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.handshake ();
@@ -731,7 +731,7 @@ TEST_F (TlsSocketStream, peek)
  */
 TEST_F (TlsSocketStream, getline)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.handshake ();
@@ -751,7 +751,7 @@ TEST_F (TlsSocketStream, getline)
  */
 TEST_F (TlsSocketStream, ignore)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.handshake ();
@@ -771,7 +771,7 @@ TEST_F (TlsSocketStream, ignore)
  */
 TEST_F (TlsSocketStream, read)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.handshake ();
@@ -791,7 +791,7 @@ TEST_F (TlsSocketStream, read)
  */
 TEST_F (TlsSocketStream, DISABLED_readsome)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.handshake ();
@@ -811,7 +811,7 @@ TEST_F (TlsSocketStream, DISABLED_readsome)
  */
 TEST_F (TlsSocketStream, gcount)
 {
-    Tls::Stream tlsStream {TlsContext (TlsContext::TlsClient)};
+    Tls::Stream tlsStream{TlsContext (TlsContext::TlsClient)};
     tlsStream.connect ({_host, _port});
     ASSERT_TRUE (tlsStream.good ()) << join::lastError.message ();
     tlsStream.handshake ();
