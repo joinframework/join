@@ -26,8 +26,8 @@
 #define JOIN_DATA_STREAMBUF_HPP
 
 // C++.
-#include <iostream>
-#include <memory>
+#include <streambuf>
+#include <utility>
 
 namespace join
 {

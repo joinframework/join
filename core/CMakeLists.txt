@@ -28,15 +28,16 @@ set(PUBLIC_HEADERS
     include/join/futex.hpp
     include/join/function.hpp
     include/join/thread.hpp
-    include/join/threadpool.hpp
-    include/join/macaddress.hpp
-    include/join/ipaddress.hpp
+    include/join/thread_pool.hpp
+    include/join/mac_address.hpp
+    include/join/ip_address.hpp
     include/join/endpoint.hpp
     include/join/protocol.hpp
     include/join/socket.hpp
-    include/join/socketstream.hpp
+    include/join/datagram_socket.hpp
+    include/join/stream_socket.hpp
+    include/join/socket_stream.hpp
     include/join/acceptor.hpp
-    include/join/openssl.hpp
     include/join/cpu.hpp
     include/join/clock.hpp
     include/join/timer.hpp
@@ -57,11 +58,9 @@ set(SOURCES
     src/condition.cpp
     src/semaphore.cpp
     src/thread.cpp
-    src/threadpool.cpp
-    src/openssl.cpp
-    src/macaddress.cpp
-    src/ipaddress.cpp
-    src/socket.cpp
+    src/thread_pool.cpp
+    src/mac_address.cpp
+    src/ip_address.cpp
     src/cpu.cpp
 )
 
@@ -86,8 +85,6 @@ target_include_directories(${JOIN_CORE}
 
 target_link_libraries(${JOIN_CORE}
     PUBLIC
-        OpenSSL::SSL
-        OpenSSL::Crypto
         Threads::Threads
         $<$<BOOL:${JOIN_ENABLE_IO_URING}>:${LIBURING_LIBRARIES}>
         $<$<BOOL:${JOIN_ENABLE_NUMA}>:${NUMA_LIBRARIES}>

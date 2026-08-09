@@ -875,11 +875,9 @@ void join::BasicProactor<Policy>::eventLoop (std::true_type, std::true_type) noe
         if (JOIN_LIKELY (running))
         {
             readCommands ();
-
-            if (JOIN_UNLIKELY (IO_URING_READ_ONCE (*_ring.sq.kflags) & IORING_SQ_NEED_WAKEUP))
-            {
-                io_uring_enter (_ring.ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP, nullptr);
-            }
+            // publishes the SQ tail and, in SQPOLL mode, only enters the kernel
+            // if the poll thread went to sleep (IORING_SQ_NEED_WAKEUP).
+            io_uring_submit (&_ring);
         }
         else
         {

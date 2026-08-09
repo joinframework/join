@@ -64,7 +64,6 @@ protected:
      */
     void TearDown () override
     {
-        EXPECT_EQ (_resolver->disconnect (), 0) << lastError.message ();
         this->close ();
     }
 

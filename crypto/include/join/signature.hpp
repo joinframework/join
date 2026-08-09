@@ -29,7 +29,6 @@
 #include <join/digest.hpp>
 
 // C++.
-#include <system_error>
 #include <future>
 
 namespace join

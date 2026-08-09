@@ -71,7 +71,8 @@ protected:
     {
         {
             ScopedLock<Mutex> lock (_mut);
-            _server.readExactly (_event, _server.canRead ());
+            _event.resize (_server.canRead ());
+            _server.readExactly (&_event[0], _event.size ());
             EventHandler::onReadable (fd);
         }
 

@@ -52,8 +52,8 @@ namespace join
                 {
                     data[i] = 1;
                 }
-                data['"'] = 1;
-                data['\\'] = 1;
+                data[static_cast<unsigned char> ('"')] = 1;
+                data[static_cast<unsigned char> ('\\')] = 1;
             }
         };
 
@@ -66,10 +66,10 @@ namespace join
             constexpr WhitespaceTable ()
             : data{}
             {
-                data['\t'] = 1;
-                data['\n'] = 1;
-                data['\r'] = 1;
-                data[' '] = 1;
+                data[static_cast<unsigned char> ('\t')] = 1;
+                data[static_cast<unsigned char> ('\n')] = 1;
+                data[static_cast<unsigned char> ('\r')] = 1;
+                data[static_cast<unsigned char> (' ')] = 1;
             }
         };
 

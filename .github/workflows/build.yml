@@ -223,7 +223,7 @@ jobs:
           fail-on-error: true
 
       - name: Deploy coverage report to codecov
-        uses: codecov/codecov-action@v5.5.3
+        uses: codecov/codecov-action@v7.0.0
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           flags: unittests

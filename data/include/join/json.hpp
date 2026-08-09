@@ -62,13 +62,13 @@ namespace join
                 {
                     data[i] = 'u';
                 }
-                data['\b'] = 'b';
-                data['\t'] = 't';
-                data['\n'] = 'n';
-                data['\f'] = 'f';
-                data['\r'] = 'r';
-                data['"'] = '"';
-                data['\\'] = '\\';
+                data[static_cast<unsigned char> ('\b')] = 'b';
+                data[static_cast<unsigned char> ('\t')] = 't';
+                data[static_cast<unsigned char> ('\n')] = 'n';
+                data[static_cast<unsigned char> ('\f')] = 'f';
+                data[static_cast<unsigned char> ('\r')] = 'r';
+                data[static_cast<unsigned char> ('"')] = '"';
+                data[static_cast<unsigned char> ('\\')] = '\\';
             }
         };
 

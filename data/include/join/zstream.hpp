@@ -31,6 +31,10 @@
 // Libraries.
 #include <zlib.h>
 
+// C++.
+#include <iostream>
+#include <memory>
+
 namespace join
 {
     /**

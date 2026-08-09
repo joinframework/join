@@ -26,13 +26,12 @@
 #include <join/cache.hpp>
 
 // C.
-#include <cstring>
-#include <cerrno>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <cerrno>
 
 using join::Cache;
 

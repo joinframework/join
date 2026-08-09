@@ -26,10 +26,12 @@
 #define JOIN_FABRIC_NAMESERVER_HPP
 
 // libjoin.
-#include <join/dnsmessage.hpp>
+#include <join/datagram_socket.hpp>
+#include <join/mdns_protocol.hpp>
+#include <join/dns_protocol.hpp>
+#include <join/dns_message.hpp>
 #include <join/condition.hpp>
 #include <join/reactor.hpp>
-#include <join/socket.hpp>
 
 namespace join
 {
@@ -37,7 +39,7 @@ namespace join
      * @brief basic DNS name server over datagram socket.
      */
     template <typename Protocol>
-    class BasicDatagramNameServer : public Protocol::Socket, public EventHandler
+    class BasicDatagramNameServer : public EventHandler
     {
     public:
         using Socket = typename Protocol::Socket;
@@ -48,8 +50,7 @@ namespace join
          * @param reactor event loop reactor.
          */
         explicit BasicDatagramNameServer (Reactor& reactor = ReactorThread::reactor ())
-        : Socket ()
-        , _reactor (reactor)
+        : _reactor (reactor)
         , _buffer (std::make_unique<char[]> (Protocol::maxMsgSize))
         {
         }
@@ -90,14 +91,14 @@ namespace join
          * @param endpoint endpoint to bind to.
          * @return 0 on success, -1 on failure.
          */
-        virtual int bind (const Endpoint& endpoint) noexcept override
+        virtual int bind (const Endpoint& endpoint) noexcept
         {
-            if (Socket::bind (endpoint) == -1)
+            if (_socket.bind (endpoint) == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            _reactor.addHandler (this->handle (), this);
+            _reactor.addHandler (_socket.handle (), this);
 
             return 0;
         }
@@ -105,10 +106,10 @@ namespace join
         /**
          * @brief close the socket and unregister from the reactor.
          */
-        virtual void close () noexcept override
+        virtual void close () noexcept
         {
-            _reactor.delHandler (this->handle ());
-            Socket::close ();
+            _reactor.delHandler (_socket.handle ());
+            _socket.close ();
         }
 
         /**
@@ -152,7 +153,7 @@ namespace join
         virtual void onReadable ([[maybe_unused]] int fd) override
         {
             Endpoint from;
-            int size = this->readFrom (_buffer.get (), Protocol::maxMsgSize, &from);
+            int size = _socket.readFrom (_buffer.get (), Protocol::maxMsgSize, &from);
             if (size >= int (_headerSize))
             {
                 std::stringstream data;
@@ -161,7 +162,7 @@ namespace join
                 DnsPacket packet;
                 _message.deserialize (packet, data);
                 packet.src = from.ip ();
-                packet.dest = this->localEndpoint ().ip ();
+                packet.dest = _socket.localEndpoint ().ip ();
                 packet.port = from.port ();
 
                 if ((packet.flags & 0x8000) == 0)
@@ -196,7 +197,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (this->writeTo (buffer.data (), buffer.size (), {packet.dest, packet.port}) == -1)
+            if (_socket.writeTo (buffer.data (), buffer.size (), {packet.dest, packet.port}) == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
@@ -209,6 +210,9 @@ namespace join
 
         /// DNS message codec.
         DnsMessage _message;
+
+        /// underlying socket.
+        Socket _socket;
 
         /// event loop reactor.
         Reactor& _reactor;
@@ -307,12 +311,12 @@ namespace join
             IpAddress maddress = Protocol::multicastAddress (family);
             Endpoint endpoint{IpAddress (family), Protocol::defaultPort};
 
-            if ((this->_state == Socket::State::Closed) && (this->open (endpoint.protocol ()) == -1))
+            if ((this->_socket.opened () == false) && (this->_socket.open (endpoint.protocol ()) == -1))
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            if (this->setOption (Socket::ReusePort, 1) == -1)
+            if (this->_socket.setOption (Socket::ReusePort, 1) == -1)
             {
                 // LCOV_EXCL_START
                 this->close ();
@@ -320,7 +324,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (Socket::bind (endpoint) == -1)
+            if (this->_socket.bind (endpoint) == -1)
             {
                 // LCOV_EXCL_START
                 this->close ();
@@ -333,7 +337,8 @@ namespace join
                 ipv6_mreq mreq{};
                 ::memcpy (&mreq.ipv6mr_multiaddr, maddress.addr (), maddress.length ());
                 mreq.ipv6mr_interface = _ifindex;
-                if (::setsockopt (this->handle (), IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq, sizeof (mreq)) == -1)
+                if (::setsockopt (this->_socket.handle (), IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq, sizeof (mreq)) ==
+                    -1)
                 {
                     // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
@@ -341,7 +346,8 @@ namespace join
                     return -1;
                     // LCOV_EXCL_STOP
                 }
-                if (::setsockopt (this->handle (), IPPROTO_IPV6, IPV6_MULTICAST_IF, &_ifindex, sizeof (_ifindex)) == -1)
+                if (::setsockopt (this->_socket.handle (), IPPROTO_IPV6, IPV6_MULTICAST_IF, &_ifindex,
+                                  sizeof (_ifindex)) == -1)
                 {
                     // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
@@ -356,13 +362,13 @@ namespace join
                 ip_mreqn mreq{};
                 ::memcpy (&mreq.imr_multiaddr, maddress.addr (), maddress.length ());
                 mreq.imr_ifindex = static_cast<int> (_ifindex);
-                if (::setsockopt (this->handle (), IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof (mreq)) == -1)
+                if (::setsockopt (this->_socket.handle (), IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof (mreq)) == -1)
                 {
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
                     return -1;
                 }
-                if (::setsockopt (this->handle (), IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof (mreq)) == -1)
+                if (::setsockopt (this->_socket.handle (), IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof (mreq)) == -1)
                 {
                     lastError = std::error_code (errno, std::generic_category ());
                     this->close ();
@@ -372,7 +378,7 @@ namespace join
             }
 
 #ifndef DEBUG
-            if (this->setOption (Socket::MulticastLoop, 0) == -1)
+            if (this->_socket.setOption (Socket::MulticastLoop, 0) == -1)
             {
                 // LCOV_EXCL_START
                 this->close ();
@@ -381,7 +387,7 @@ namespace join
             }
 #endif
 
-            this->_reactor.addHandler (this->handle (), this);
+            this->_reactor.addHandler (this->_socket.handle (), this);
 
             return 0;
         }
@@ -402,7 +408,7 @@ namespace join
             DnsPacket packet{};
             packet.id = 0;
             packet.flags = 0;
-            IpAddress mcast = Protocol::multicastAddress (this->family ());
+            IpAddress mcast = Protocol::multicastAddress (this->_socket.family ());
             packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
             packet.port = Protocol::defaultPort;
 
@@ -436,7 +442,7 @@ namespace join
             DnsPacket packet{};
             packet.id = 0;
             packet.flags = (uint16_t (1) << 15) | (uint16_t (1) << 10);
-            IpAddress mcast = Protocol::multicastAddress (this->family ());
+            IpAddress mcast = Protocol::multicastAddress (this->_socket.family ());
             packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
             packet.port = Protocol::defaultPort;
 
@@ -464,7 +470,7 @@ namespace join
             DnsPacket packet{};
             packet.id = 0;
             packet.flags = (uint16_t (1) << 15) | (uint16_t (1) << 10);
-            IpAddress mcast = Protocol::multicastAddress (this->family ());
+            IpAddress mcast = Protocol::multicastAddress (this->_socket.family ());
             packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
             packet.port = Protocol::defaultPort;
 
@@ -494,7 +500,7 @@ namespace join
             DnsPacket packet{};
             packet.id = 0;
             packet.flags = 0;
-            IpAddress mcast = Protocol::multicastAddress (this->family ());
+            IpAddress mcast = Protocol::multicastAddress (this->_socket.family ());
             packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
             packet.port = Protocol::defaultPort;
 
@@ -676,7 +682,7 @@ namespace join
         void onReadable ([[maybe_unused]] int fd) override final
         {
             Endpoint from;
-            int size = this->readFrom (this->_buffer.get (), Protocol::maxMsgSize, &from);
+            int size = this->_socket.readFrom (this->_buffer.get (), Protocol::maxMsgSize, &from);
             if (size >= int (this->_headerSize))
             {
                 std::stringstream data;
@@ -684,7 +690,7 @@ namespace join
 
                 DnsPacket packet;
                 this->_message.deserialize (packet, data);
-                IpAddress mcast = Protocol::multicastAddress (this->family ());
+                IpAddress mcast = Protocol::multicastAddress (this->_socket.family ());
                 packet.src = from.ip ();
                 packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
                 packet.port = from.port ();
@@ -816,7 +822,7 @@ namespace join
          */
         int query (DnsPacket& packet, std::chrono::milliseconds timeout)
         {
-            IpAddress mcast = Protocol::multicastAddress (this->family ());
+            IpAddress mcast = Protocol::multicastAddress (this->_socket.family ());
             packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
             packet.port = Protocol::defaultPort;
 
@@ -850,7 +856,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (this->writeTo (buffer.data (), buffer.size (), {packet.dest, packet.port}) == -1)
+            if (this->_socket.writeTo (buffer.data (), buffer.size (), {packet.dest, packet.port}) == -1)
             {
                 // LCOV_EXCL_START
                 _pending.erase (inserted.first);

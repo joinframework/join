@@ -26,10 +26,13 @@
 #define JOIN_FABRIC_RESOLVER_HPP
 
 // libjoin.
-#include <join/dnsmessage.hpp>
+#include <join/datagram_socket.hpp>
+#include <join/dns_protocol.hpp>
+#include <join/dot_protocol.hpp>
+#include <join/tls_wrapper.hpp>
+#include <join/dns_message.hpp>
 #include <join/condition.hpp>
 #include <join/reactor.hpp>
-#include <join/socket.hpp>
 
 // C++.
 #include <unordered_map>
@@ -48,12 +51,11 @@ namespace join
      * @brief basic DNS resolver over datagram socket.
      */
     template <class Protocol>
-    class BasicDatagramResolver : public Protocol::Socket, public EventHandler
+    class BasicDatagramResolver : public EventHandler
     {
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
-        using State = typename Socket::State;
 
         /// notification callback definition.
         using DnsNotify = std::function<void (const DnsPacket&)>;
@@ -64,22 +66,29 @@ namespace join
         /// callback called when a lookup sequence failed.
         DnsNotify onFailure;
 
+        explicit BasicDatagramResolver (const std::string& server = {}, uint16_t port = Protocol::defaultPort,
+                                        Reactor& reactor = ReactorThread::reactor ())
+        : BasicDatagramResolver (Socket{}, server, port, reactor)
+        {
+        }
+
         /**
          * @brief construct the resolver instance.
          * @param server remote DNS server hostname or IP address.
          * @param port remote DNS server port.
          * @param reactor reactor instance.
          */
-        explicit BasicDatagramResolver (const std::string& server = {}, uint16_t port = Protocol::defaultPort,
+        explicit BasicDatagramResolver (Socket&& socket, const std::string& server = {},
+                                        uint16_t port = Protocol::defaultPort,
                                         Reactor& reactor = ReactorThread::reactor ())
-        : Socket ()
 #ifdef DEBUG
-        , onSuccess (defaultOnSuccess)
+        : onSuccess (defaultOnSuccess)
         , onFailure (defaultOnFailure)
 #else
-        , onSuccess (nullptr)
+        : onSuccess (nullptr)
         , onFailure (nullptr)
 #endif
+        , _socket (std::move (socket))
         , _server (server)
         , _port (port)
         , _reactor (reactor)
@@ -116,46 +125,9 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicDatagramResolver () noexcept = default;
-
-        /**
-         * @brief make a connection to the given endpoint.
-         * @param endpoint endpoint to connect to.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int connect (const Endpoint& endpoint) override
+        virtual ~BasicDatagramResolver () noexcept
         {
-            if (Socket::connect (endpoint) == -1)
-            {
-                return -1;
-            }
-
-            _server = endpoint.hostname ();
-            if (_server.empty ())
-            {
-                _server = endpoint.ip ().toString ();
-            }
-            _port = endpoint.port ();
-
-            this->_reactor.addHandler (this->handle (), this);
-
-            return 0;
-        }
-
-        /**
-         * @brief shutdown the connection.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int disconnect () override
-        {
-            this->_reactor.delHandler (this->_handle);
-
-            if (Socket::disconnect () == -1)
-            {
-                return -1;
-            }
-
-            return 0;
+            disconnect ();
         }
 
         /**
@@ -714,12 +686,57 @@ namespace join
 
     protected:
         /**
+         * @brief make a connection to the given endpoint.
+         * @param endpoint endpoint to connect to.
+         * @param timeout timeout in milliseconds.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int connect (const Endpoint& endpoint,
+                             [[maybe_unused]] std::chrono::milliseconds timeout = std::chrono::seconds (5)) noexcept
+        {
+            if (_socket.connect (endpoint) == -1)
+            {
+                _socket.close ();
+                return -1;
+            }
+
+            _server = endpoint.hostname ().empty () ? endpoint.ip ().toString () : endpoint.hostname ();
+            _port = endpoint.port ();
+
+            _reactor.addHandler (_socket.handle (), this);
+
+            return 0;
+        }
+
+        /**
+         * @brief shutdown the connection.
+         * @return 0 on success, -1 on failure.
+         */
+        virtual int disconnect ([[maybe_unused]] std::chrono::milliseconds timeout = std::chrono::seconds (5)) noexcept
+        {
+            if (this->_socket.handle () == -1)
+            {
+                return 0;
+            }
+
+            _reactor.delHandler (_socket.handle ());
+
+            if (_socket.disconnect () == -1)
+            {
+                _socket.close ();
+                return -1;
+            }
+
+            return 0;
+        }
+
+        /**
          * @brief check if client must reconnect.
          * @return true if reconnection is required.
          */
-        bool needReconnection () noexcept
+        virtual bool needReconnection () noexcept
         {
-            return !this->connected ();
+            return !_socket.connected () || _socket.remoteEndpoint ().ip ().isWildcard ();
         }
 
         /**
@@ -728,23 +745,32 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        virtual int reconnect (const Endpoint& endpoint, [[maybe_unused]] std::chrono::milliseconds timeout)
+        int reconnect (const Endpoint& endpoint, std::chrono::milliseconds timeout = std::chrono::seconds (5))
         {
-            if (this->disconnect () == -1)
-            {
-                // LCOV_EXCL_START
-                this->close ();
-                return -1;
-                // LCOV_EXCL_STOP
-            }
+            disconnect (timeout);
+            return connect (endpoint, timeout);
+        }
 
-            if (this->connect (endpoint) == -1)
-            {
-                this->close ();
-                return -1;
-            }
+        /**
+         * @brief read a DNS message.
+         * @param data destination buffer.
+         * @param maxSize maximum number of bytes to read.
+         * @return number of bytes read, or -1 on error.
+         */
+        virtual int read (char* data, unsigned long maxSize) noexcept
+        {
+            return _socket.read (data, maxSize);
+        }
 
-            return 0;
+        /**
+         * @brief write a DNS message.
+         * @param data source buffer.
+         * @param size number of bytes to write.
+         * @return number of bytes written, or -1 on error.
+         */
+        virtual int write (const char* data, unsigned long size) noexcept
+        {
+            return _socket.write (data, size);
         }
 
         /**
@@ -755,7 +781,9 @@ namespace join
          */
         int query (DnsPacket& packet, std::chrono::milliseconds timeout)
         {
-            if (this->_remote.ip ().isWildcard ())
+            auto remote = _socket.remoteEndpoint ();
+
+            if (remote.ip ().isWildcard ())
             {
                 IpAddress ip = IpAddress::isIpAddress (_server) ? IpAddress (_server)
                                                                 : Dns::Resolver::lookupAddress (_server, AF_INET);
@@ -767,26 +795,26 @@ namespace join
                     return -1;
                 }
 
-                this->_remote.ip (ip);
-                this->_remote.port (_port);
+                remote.ip (ip);
+                remote.port (_port);
             }
 
-            packet.dest = this->_remote.ip ();
-            packet.port = this->_remote.port ();
+            packet.dest = remote.ip ();
+            packet.port = remote.port ();
 
-            if (this->needReconnection ())
+            if (needReconnection ())
             {
                 Endpoint endpoint{packet.dest, packet.port};
                 endpoint.hostname (_server);
 
-                if (this->reconnect (endpoint, timeout) == -1)
+                if (reconnect (endpoint, timeout) == -1)
                 {
                     notify (onFailure, packet);
                     return -1;
                 }
             }
 
-            packet.src = this->localEndpoint ().ip ();
+            packet.src = _socket.localEndpoint ().ip ();
 
             std::stringstream data;
             if (_message.serialize (packet, data) == -1)
@@ -816,7 +844,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (this->write (buffer.data (), buffer.size ()) == -1)
+            if (write (buffer.data (), buffer.size ()) == -1)
             {
                 // LCOV_EXCL_START
                 _pending.erase (inserted.first);
@@ -855,7 +883,7 @@ namespace join
          */
         void onReadable ([[maybe_unused]] int fd) override final
         {
-            int size = this->read (_buffer.get (), Protocol::maxMsgSize);
+            int size = read (_buffer.get (), Protocol::maxMsgSize);
             if (size >= int (_headerSize))
             {
                 std::stringstream data;
@@ -863,9 +891,11 @@ namespace join
 
                 DnsPacket packet;
                 _message.deserialize (packet, data);
-                packet.src = this->localEndpoint ().ip ();
-                packet.dest = this->remoteEndpoint ().ip ();
-                packet.port = this->remoteEndpoint ().port ();
+                auto local = _socket.localEndpoint ();
+                auto remote = _socket.remoteEndpoint ();
+                packet.src = local.ip ();
+                packet.dest = remote.ip ();
+                packet.port = remote.port ();
 
                 if (packet.flags & 0x8000)
                 {
@@ -892,7 +922,7 @@ namespace join
          */
         void onClose ([[maybe_unused]] int fd) override final
         {
-            this->disconnect ();
+            disconnect ();
         }
 
 #ifdef DEBUG
@@ -1005,6 +1035,9 @@ namespace join
         /// DNS message codec.
         DnsMessage _message;
 
+        /// underlying socket.
+        Socket _socket;
+
         /// remote DNS server.
         std::string _server;
 
@@ -1040,8 +1073,8 @@ namespace join
     {
     public:
         using Socket = typename Protocol::Socket;
+        using UnderlyingSocket = typename Socket::UnderlyingSocket;
         using Endpoint = typename Protocol::Endpoint;
-        using State = typename Socket::State;
 
         /**
          * @brief construct the DoT resolver instance.
@@ -1049,9 +1082,9 @@ namespace join
          * @param port remote DNS server port.
          * @param reactor reactor instance.
          */
-        explicit BasicTlsResolver (const std::string& server = {}, uint16_t port = Protocol::defaultPort,
-                                   Reactor& reactor = ReactorThread::reactor ())
-        : BasicDatagramResolver<Protocol> (server, port, reactor)
+        explicit BasicTlsResolver (TlsContext ctx, const std::string& server = {},
+                                   uint16_t port = Protocol::defaultPort, Reactor& reactor = ReactorThread::reactor ())
+        : BasicDatagramResolver<Protocol> (Socket (UnderlyingSocket{}, ctx), server, port, reactor)
         {
         }
 
@@ -1084,210 +1117,9 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicTlsResolver () noexcept = default;
-
-        /**
-         * @brief make a connection to the given endpoint.
-         * @param endpoint endpoint to connect to.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int connect (const Endpoint& endpoint) override
+        virtual ~BasicTlsResolver () noexcept
         {
-            if (Socket::connect (endpoint) == -1)
-            {
-                return -1;
-            }
-
-            this->_server = this->_remote.hostname ();
-            if (this->_server.empty ())
-            {
-                this->_server = this->_remote.ip ().toString ();
-            }
-            this->_port = this->_remote.port ();
-
-            return 0;
-        }
-
-        /**
-         * @brief make an encrypted connection to the given endpoint.
-         * @param endpoint endpoint to connect to.
-         * @return 0 on success, -1 on failure.
-         */
-        virtual int connectEncrypted (const Endpoint& endpoint) override
-        {
-            if (Socket::connectEncrypted (endpoint) == -1)
-            {
-                return -1;
-            }
-
-            this->_reactor.addHandler (this->handle (), this);
-
-            return 0;
-        }
-
-        /**
-         * @brief wait until TLS handshake is performed or timeout occur (non blocking socket).
-         * @param timeout timeout in milliseconds (0: infinite).
-         * return true on success, false otherwise.
-         */
-        virtual bool waitEncrypted (int timeout = 0) override
-        {
-            if (!Socket::waitEncrypted (timeout))
-            {
-                return false;
-            }
-
-            this->_reactor.addHandler (this->handle (), this);
-
-            return true;
-        }
-
-        /**
-         * @brief block until connected.
-         * @param timeout timeout in milliseconds.
-         * @return true if connected, false otherwise.
-         */
-        virtual bool waitConnected (int timeout = 0) override
-        {
-            if (!Socket::waitConnected (timeout))
-            {
-                return false;
-            }
-
-            this->_server = this->_remote.hostname ();
-            if (this->_server.empty ())
-            {
-                this->_server = this->_remote.ip ().toString ();
-            }
-            this->_port = this->_remote.port ();
-
-            return true;
-        }
-
-        /**
-         * @brief close the TLS connection and reset framing state.
-         */
-        virtual void close () noexcept override
-        {
-            Socket::close ();
-            _size = 0;
-            _offset = 0;
-        }
-
-        /**
-         * @brief read a framed DoT message (2-byte length prefix).
-         * @param data destination buffer.
-         * @param maxSize maximum number of bytes to read.
-         * @return number of bytes read, or -1 on error.
-         */
-        virtual int read (char* data, unsigned long maxSize) noexcept override
-        {
-            if (_offset < _frameHeaderSize)
-            {
-                int nread = Socket::read (data + _offset, _frameHeaderSize - _offset);
-                if (nread == -1)
-                {
-                    if (lastError != Errc::TemporaryError)
-                    {
-                        _offset = 0;
-                        _size = 0;
-                    }
-                    return -1;
-                }
-
-                _offset += static_cast<size_t> (nread);
-
-                if (_offset < _frameHeaderSize)
-                {
-                    lastError = make_error_code (Errc::TemporaryError);
-                    return -1;
-                }
-
-                _size = ntohs (*reinterpret_cast<uint16_t*> (data));
-
-                if (_size > maxSize)
-                {
-                    lastError = make_error_code (Errc::MessageTooLong);
-                    _offset = 0;
-                    _size = 0;
-                    return -1;
-                }
-            }
-
-            int nread = Socket::read (data + (_offset - _frameHeaderSize), _size - (_offset - _frameHeaderSize));
-            if (nread == -1)
-            {
-                if (lastError != Errc::TemporaryError)
-                {
-                    _offset = 0;
-                    _size = 0;
-                }
-                return -1;
-            }
-
-            _offset += static_cast<size_t> (nread);
-
-            if (_offset < (_size + _frameHeaderSize))
-            {
-                lastError = make_error_code (Errc::TemporaryError);
-                return -1;
-            }
-
-            int msgLen = static_cast<int> (_size);
-            _offset = 0;
-            _size = 0;
-
-            return msgLen;
-        }
-
-        /**
-         * @brief write a framed DoT message (2-byte length prefix).
-         * @param data source buffer.
-         * @param size number of bytes to write.
-         * @return number of bytes written, or -1 on error.
-         */
-        virtual int write (const char* data, unsigned long size) noexcept override
-        {
-            uint16_t msgLength = htons (static_cast<uint16_t> (size));
-            const char* p = reinterpret_cast<const char*> (&msgLength);
-            unsigned long remaining = sizeof (msgLength);
-
-            while (remaining > 0)
-            {
-                int result = Socket::write (p, remaining);
-                if (result == -1)
-                {
-                    if (lastError == Errc::TemporaryError)
-                    {
-                        if (this->waitReadyWrite ())
-                            continue;
-                    }
-                    return -1;
-                }
-                p += result;
-                remaining -= result;
-            }
-
-            p = data;
-            remaining = size;
-
-            while (remaining > 0)
-            {
-                int result = Socket::write (p, remaining);
-                if (result == -1)
-                {
-                    if (lastError == Errc::TemporaryError)
-                    {
-                        if (this->waitReadyWrite ())
-                            continue;
-                    }
-                    return -1;
-                }
-                p += result;
-                remaining -= result;
-            }
-
-            return static_cast<int> (size);
+            disconnect ();
         }
 
         /**
@@ -1371,51 +1203,225 @@ namespace join
 
     private:
         /**
-         * @brief reconnect to the remote DNS server.
+         * @brief make an encrypted connection to the given endpoint.
          * @param endpoint endpoint to connect to.
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        virtual int reconnect (const Endpoint& endpoint, std::chrono::milliseconds timeout) override
+        int connect (const Endpoint& endpoint,
+                     std::chrono::milliseconds timeout = std::chrono::seconds (5)) noexcept override final
         {
-            if (this->disconnect () == -1)
+            if (this->_socket.connect (endpoint) == -1)
             {
                 if (lastError != Errc::TemporaryError)
                 {
-                    // LCOV_EXCL_START
-                    this->close ();
+                    close ();
                     return -1;
-                    // LCOV_EXCL_STOP
                 }
 
-                if (!this->waitDisconnected (timeout.count ()))
+                if (!this->_socket.waitConnected (timeout.count ()))
                 {
-                    this->close ();
+                    close ();
                     return -1;
                 }
             }
 
-            this->setAlpnProtocols ({"dot"});
+            this->_server = endpoint.hostname ().empty () ? endpoint.ip ().toString () : endpoint.hostname ();
+            this->_port = endpoint.port ();
 
-            if (this->connectEncrypted (endpoint) == -1)
+            if (this->_socket.handshake () == -1)
             {
                 if (lastError != Errc::TemporaryError)
                 {
-                    this->close ();
+                    close ();
                     return -1;
                 }
 
-                if (!this->waitEncrypted (timeout.count ()))
+                if (!this->_socket.waitHandshake (timeout.count ()))
                 {
-                    this->close ();
+                    close ();
                     return -1;
                 }
+            }
+
+            this->_reactor.addHandler (this->_socket.handle (), this);
+
+            return 0;
+        }
+
+        /**
+         * @brief shutdown the encrypted connection.
+         * @return 0 on success, -1 on failure.
+         */
+        int disconnect (std::chrono::milliseconds timeout = std::chrono::seconds (5)) noexcept override final
+        {
+            if (this->_socket.handle () == -1)
+            {
+                return 0;
+            }
+
+            this->_reactor.delHandler (this->_socket.handle ());
+
+            if (this->_socket.shutdown () == -1)
+            {
+                if ((lastError != Errc::TemporaryError))
+                {
+                    close ();
+                    return -1;
+                }
+
+                if (!this->_socket.waitShutdown (timeout.count ()))
+                {
+                    close ();
+                    return -1;
+                }
+            }
+
+            if (!this->_socket.waitDisconnected (timeout.count ()))
+            {
+                close ();
+                return -1;
             }
 
             return 0;
         }
 
-        /// DOT framing header size.
+        /**
+         * @brief close the TLS connection and reset framing state.
+         */
+        void close () noexcept
+        {
+            this->_socket.close ();
+            _offset = 0;
+            _size = 0;
+        }
+
+        /**
+         * @brief check if client must reconnect.
+         * @return true if reconnection is required.
+         */
+        bool needReconnection () noexcept override final
+        {
+            return !this->_socket.encrypted () || this->_socket.remoteEndpoint ().ip ().isWildcard ();
+        }
+
+        /**
+         * @brief read a framed DoT message (2-byte length prefix).
+         * @param data destination buffer.
+         * @param maxSize maximum number of bytes to read.
+         * @return number of bytes read, or -1 on error.
+         */
+        int read (char* data, unsigned long maxSize) noexcept override final
+        {
+            if (_offset < _frameHeaderSize)
+            {
+                int nread = this->_socket.read (data + _offset, _frameHeaderSize - _offset);
+                if (nread == -1)
+                {
+                    if (lastError != Errc::TemporaryError)
+                    {
+                        _offset = 0;
+                        _size = 0;
+                    }
+                    return -1;
+                }
+
+                _offset += static_cast<size_t> (nread);
+
+                if (_offset < _frameHeaderSize)
+                {
+                    lastError = make_error_code (Errc::TemporaryError);
+                    return -1;
+                }
+
+                _size = ntohs (*reinterpret_cast<uint16_t*> (data));
+
+                if (_size > maxSize)
+                {
+                    lastError = make_error_code (Errc::MessageTooLong);
+                    _offset = 0;
+                    _size = 0;
+                    return -1;
+                }
+            }
+
+            int nread = this->_socket.read (data + (_offset - _frameHeaderSize), _size - (_offset - _frameHeaderSize));
+            if (nread == -1)
+            {
+                if (lastError != Errc::TemporaryError)
+                {
+                    _offset = 0;
+                    _size = 0;
+                }
+                return -1;
+            }
+
+            _offset += static_cast<size_t> (nread);
+
+            if (_offset < (_size + _frameHeaderSize))
+            {
+                lastError = make_error_code (Errc::TemporaryError);
+                return -1;
+            }
+
+            int msgLen = static_cast<int> (_size);
+            _offset = 0;
+            _size = 0;
+
+            return msgLen;
+        }
+
+        /**
+         * @brief write a framed DoT message (2-byte length prefix).
+         * @param data source buffer.
+         * @param size number of bytes to write.
+         * @return number of bytes written, or -1 on error.
+         */
+        int write (const char* data, unsigned long size) noexcept override final
+        {
+            uint16_t msgLength = htons (static_cast<uint16_t> (size));
+            const char* p = reinterpret_cast<const char*> (&msgLength);
+            unsigned long remaining = sizeof (msgLength);
+
+            while (remaining > 0)
+            {
+                int result = this->_socket.write (p, remaining);
+                if (result == -1)
+                {
+                    if (lastError == Errc::TemporaryError)
+                    {
+                        if (this->_socket.waitReadyWrite ())
+                            continue;
+                    }
+                    return -1;
+                }
+                p += result;
+                remaining -= result;
+            }
+
+            p = data;
+            remaining = size;
+
+            while (remaining > 0)
+            {
+                int result = this->_socket.write (p, remaining);
+                if (result == -1)
+                {
+                    if (lastError == Errc::TemporaryError)
+                    {
+                        if (this->_socket.waitReadyWrite ())
+                            continue;
+                    }
+                    return -1;
+                }
+                p += result;
+                remaining -= result;
+            }
+
+            return static_cast<int> (size);
+        }
+
+        /// DoT framing header size.
         static constexpr size_t _frameHeaderSize = 2;
 
         /// total expected payload size.

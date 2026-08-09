@@ -26,7 +26,6 @@
 #define JOIN_DATA_DIYFP_HPP
 
 // C++.
-#include <utility>
 #include <limits>
 
 // C.

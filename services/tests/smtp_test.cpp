@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/smtpclient.hpp>
+#include <join/smtp_client.hpp>
 #include <join/acceptor.hpp>
 #include <join/reactor.hpp>
 
@@ -37,14 +37,15 @@ using join::Errc;
 using join::Dns;
 using join::ReactorThread;
 using join::EventHandler;
-using join::MailMessage;
+using join::SmtpMessage;
 using join::Smtp;
-using join::Tls;
+using join::Tcp;
+using join::TlsContext;
 
 /**
  * @brief Class used to test the SMTP client.
  */
-class SmtpClient : public Tls::Acceptor, public EventHandler, public ::testing::Test
+class SmtpClient : public EventHandler, public ::testing::Test
 {
 public:
     /**
@@ -190,13 +191,13 @@ protected:
      */
     void SetUp () override
     {
-        ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
+        ASSERT_EQ (_ctx.setCertificate (_certFile, _key), 0) << join::lastError.message ();
+        ASSERT_EQ (_ctx.setCipher (join::defaultCipher), 0) << join::lastError.message ();
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
-        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+        ASSERT_EQ (_ctx.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
 #endif
-        ASSERT_EQ (this->create ({Dns::Resolver::lookupAddress (_host), _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this), 0) << join::lastError.message ();
+        ASSERT_EQ (_acceptor.create ({Dns::Resolver::lookupAddress (_host), _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().addHandler (_acceptor.handle (), this), 0) << join::lastError.message ();
     }
 
     /**
@@ -204,8 +205,8 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ().delHandler (handle ()), 0) << join::lastError.message ();
-        this->close ();
+        ASSERT_EQ (ReactorThread::reactor ().delHandler (_acceptor.handle ()), 0) << join::lastError.message ();
+        _acceptor.close ();
     }
 
     /**
@@ -214,7 +215,7 @@ protected:
      */
     virtual void onReadable ([[maybe_unused]] int fd) override
     {
-        Tls::Stream stream = this->acceptStream ();
+        Smtp::Stream stream{_acceptor.accept (), _ctx};
         if (stream.connected ())
         {
             std::string tmp;
@@ -236,7 +237,7 @@ protected:
             join::getline (stream, tmp);
             stream << "220 2.0.0 Ready to start TLS\r\n";
             stream.flush ();
-            stream.startEncryption ();
+            stream.handshake ();
             join::getline (stream, tmp);
             stream << "250-mail.foo.bar\r\n";
             stream << "250-PIPELINING\r\n";
@@ -306,6 +307,12 @@ protected:
 
     /// password.
     static const std::string _password;
+
+    /// transport acceptor.
+    Tcp::Acceptor _acceptor;
+
+    /// TLS context used to wrap the accepted connections.
+    TlsContext _ctx{TlsContext::TlsServer};
 };
 
 const std::string SmtpClient::_host = "localhost";
@@ -408,91 +415,41 @@ TEST_F (SmtpClient, url)
 }
 
 /**
- * @brief Test setCertificate.
- */
-TEST_F (SmtpClient, setCertificate)
-{
-    Smtp::Client client (_host, _port);
-    ASSERT_EQ (client.setCertificate ("/invalid/cert/path"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCertificate (_certFile), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCertificate (_certFile, "/invalid/key/path"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCertificate (_certFile, _invalidKey), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCertificate (_certFile, _key), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test setCaPath.
- */
-TEST_F (SmtpClient, setCaPath)
-{
-    Smtp::Client client (_host, _port);
-    ASSERT_EQ (client.setCaPath ("/invalid/ca/path"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCaPath (_certFile), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCaPath (_certPath), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test setCaFile.
- */
-TEST_F (SmtpClient, setCaFile)
-{
-    Smtp::Client client (_host, _port);
-    ASSERT_EQ (client.setCaFile ("/invalid/ca/file"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCaFile (_certPath), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCaFile (_certFile), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test setCipher.
- */
-TEST_F (SmtpClient, setCipher)
-{
-    Smtp::Client client (_host, _port);
-    ASSERT_EQ (client.setCipher ("foo"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-}
-
-/**
- * @brief Test setCipher_1_3.
- */
-TEST_F (SmtpClient, setCipher_1_3)
-{
-    Smtp::Client client (_host, _port);
-    ASSERT_EQ (client.setCipher_1_3 ("foo"), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
-}
-
-/**
  * @brief Test send.
  */
 TEST_F (SmtpClient, send)
 {
-    MailMessage message;
+    SmtpMessage message;
     message.sender ({"test@foo.com", "tester"});
     message.addRecipient ({"admin@foo.com", "admin"});
     message.subject ("this is a test");
     message.content ("this is a test");
 
-    Smtp::Client client (_host, _port);
+    TlsContext relaxed (TlsContext::TlsClient);
+    relaxed.setVerify (false);
+    Smtp::Client client (std::move (relaxed), _host, _port);
     client.credentials (_user, _password);
-    client.setVerify (false);
     ASSERT_EQ (client.send (message), 0) << join::lastError.message ();
-    client.setVerify (true, 0);
-    ASSERT_EQ (client.send (message), -1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.send (message), -1);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.send (message), 0) << join::lastError.message ();
+
+    TlsContext untrusted (TlsContext::TlsClient);
+    untrusted.setVerify (true, 0);
+    Smtp::Client rejecting (std::move (untrusted), _host, _port);
+    rejecting.credentials (_user, _password);
+    ASSERT_EQ (rejecting.send (message), -1);
+
+    TlsContext shallow (TlsContext::TlsClient);
+    shallow.setVerify (true, 0);
+    ASSERT_EQ (shallow.setCaFile (_rootcert), 0) << join::lastError.message ();
+    Smtp::Client tooShort (std::move (shallow), _host, _port);
+    tooShort.credentials (_user, _password);
+    ASSERT_EQ (tooShort.send (message), -1);
+
+    TlsContext trusted (TlsContext::TlsClient);
+    trusted.setVerify (true, 1);
+    ASSERT_EQ (trusted.setCaFile (_rootcert), 0) << join::lastError.message ();
+    Smtp::Client accepting (std::move (trusted), _host, _port);
+    accepting.credentials (_user, _password);
+    ASSERT_EQ (accepting.send (message), 0) << join::lastError.message ();
 }
 
 /**

@@ -23,8 +23,8 @@
  */
 
 // libjoin.
-#include <join/httpclient.hpp>
-#include <join/httpserver.hpp>
+#include <join/http_client.hpp>
+#include <join/http_server.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -43,6 +43,7 @@ using join::HttpRequest;
 using join::HttpResponse;
 using join::HttpErrc;
 using join::Https;
+using join::TlsContext;
 
 /**
  * @brief Class used to test the HTTPS API.
@@ -50,6 +51,14 @@ using join::Https;
 class HttpsTest : public Https::Server, public ::testing::Test
 {
 public:
+    /**
+     * @brief create the test fixture using a configured server context.
+     */
+    HttpsTest ()
+    : Https::Server (serverContext ())
+    {
+    }
+
     /**
      * @brief Set up test case.
      */
@@ -165,6 +174,33 @@ public:
 
 protected:
     /**
+     * @brief build the context used by the server to wrap accepted connections.
+     * @return the server context.
+     */
+    static TlsContext serverContext ()
+    {
+        TlsContext ctx (TlsContext::TlsServer);
+        ctx.setCertificate (_certFile, _key);
+        ctx.setCipher (join::defaultCipher);
+        ctx.setCipher_1_3 (join::defaultCipher_1_3);
+        return ctx;
+    }
+
+    /**
+     * @brief build a client context trusting the test root certificate.
+     * @return the client context.
+     */
+    static TlsContext clientContext ()
+    {
+        TlsContext ctx (TlsContext::TlsClient);
+        ctx.setVerify (true, 1);
+        ctx.setCaFile (_rootcert);
+        ctx.setCipher (join::defaultCipher);
+        ctx.setCipher_1_3 (join::defaultCipher_1_3);
+        return ctx;
+    }
+
+    /**
      * @brief Sets up the test fixture.
      */
     void SetUp ()
@@ -174,9 +210,6 @@ protected:
         this->keepAlive (seconds (_timeout), _max);
         ASSERT_EQ (this->keepAliveTimeout (), seconds (_timeout));
         ASSERT_EQ (this->keepAliveMax (), _max);
-        ASSERT_EQ (this->setCertificate (_certFile, _key), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher (join::defaultCipher), 0) << join::lastError.message ();
-        ASSERT_EQ (this->setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
         this->addAlias ("/", "", _sampleFile);
         this->addAlias ("/authorized/", "file", _sampleFile, accessHandler);
         this->addDocumentRoot ("/", "*");
@@ -323,7 +356,7 @@ const std::string HttpsTest::_key = "/tmp/https_test.key";
  */
 TEST_F (HttpsTest, move)
 {
-    Https::Client client1 ("127.0.0.1", 5000), client2 ("127.0.0.2", 5001);
+    Https::Client client1 (clientContext (), "127.0.0.1", 5000), client2 (clientContext (), "127.0.0.2", 5001);
     ASSERT_EQ (client1.host (), "127.0.0.1");
     ASSERT_EQ (client1.port (), 5000);
     ASSERT_EQ (client2.host (), "127.0.0.2");
@@ -343,10 +376,10 @@ TEST_F (HttpsTest, move)
  */
 TEST_F (HttpsTest, scheme)
 {
-    Https::Client client1 ("localhost", 80);
+    Https::Client client1 (clientContext (), "localhost", 80);
     ASSERT_EQ (client1.scheme (), "https");
 
-    Https::Client client2 ("localhost", 443);
+    Https::Client client2 (clientContext (), "localhost", 443);
     ASSERT_EQ (client2.scheme (), "https");
 }
 
@@ -355,10 +388,10 @@ TEST_F (HttpsTest, scheme)
  */
 TEST_F (HttpsTest, host)
 {
-    Https::Client client1 ("91.66.32.78", 80);
+    Https::Client client1 (clientContext (), "91.66.32.78", 80);
     ASSERT_EQ (client1.host (), "91.66.32.78");
 
-    Https::Client client2 ("localhost", 80);
+    Https::Client client2 (clientContext (), "localhost", 80);
     ASSERT_EQ (client2.host (), "localhost");
 }
 
@@ -367,10 +400,10 @@ TEST_F (HttpsTest, host)
  */
 TEST_F (HttpsTest, port)
 {
-    Https::Client client1 ("91.66.32.78", 80);
+    Https::Client client1 (clientContext (), "91.66.32.78", 80);
     ASSERT_EQ (client1.port (), 80);
 
-    Https::Client client2 ("91.66.32.78", 5000);
+    Https::Client client2 (clientContext (), "91.66.32.78", 5000);
     ASSERT_EQ (client2.port (), 5000);
 }
 
@@ -379,17 +412,19 @@ TEST_F (HttpsTest, port)
  */
 TEST_F (HttpsTest, authority)
 {
-    ASSERT_EQ (Https::Client ("localhost", 80).authority (), "localhost:80");
-    ASSERT_EQ (Https::Client ("localhost", 443).authority (), "localhost");
-    ASSERT_EQ (Https::Client ("localhost", 5000).authority (), "localhost:5000");
+    ASSERT_EQ (Https::Client (clientContext (), "localhost", 80).authority (), "localhost:80");
+    ASSERT_EQ (Https::Client (clientContext (), "localhost", 443).authority (), "localhost");
+    ASSERT_EQ (Https::Client (clientContext (), "localhost", 5000).authority (), "localhost:5000");
 
-    ASSERT_EQ (Https::Client ("91.66.32.78", 80).authority (), "91.66.32.78:80");
-    ASSERT_EQ (Https::Client ("91.66.32.78", 443).authority (), "91.66.32.78");
-    ASSERT_EQ (Https::Client ("91.66.32.78", 5000).authority (), "91.66.32.78:5000");
+    ASSERT_EQ (Https::Client (clientContext (), "91.66.32.78", 80).authority (), "91.66.32.78:80");
+    ASSERT_EQ (Https::Client (clientContext (), "91.66.32.78", 443).authority (), "91.66.32.78");
+    ASSERT_EQ (Https::Client (clientContext (), "91.66.32.78", 5000).authority (), "91.66.32.78:5000");
 
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 80).authority (), "[2001:db8:1234:5678::1]:80");
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 443).authority (), "[2001:db8:1234:5678::1]");
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 5000).authority (), "[2001:db8:1234:5678::1]:5000");
+    ASSERT_EQ (Https::Client (clientContext (), "2001:db8:1234:5678::1", 80).authority (),
+               "[2001:db8:1234:5678::1]:80");
+    ASSERT_EQ (Https::Client (clientContext (), "2001:db8:1234:5678::1", 443).authority (), "[2001:db8:1234:5678::1]");
+    ASSERT_EQ (Https::Client (clientContext (), "2001:db8:1234:5678::1", 5000).authority (),
+               "[2001:db8:1234:5678::1]:5000");
 }
 
 /**
@@ -397,17 +432,20 @@ TEST_F (HttpsTest, authority)
  */
 TEST_F (HttpsTest, url)
 {
-    ASSERT_EQ (Https::Client ("localhost", 80).url (), "https://localhost:80/");
-    ASSERT_EQ (Https::Client ("localhost", 443).url (), "https://localhost/");
-    ASSERT_EQ (Https::Client ("localhost", 5000).url (), "https://localhost:5000/");
+    ASSERT_EQ (Https::Client (clientContext (), "localhost", 80).url (), "https://localhost:80/");
+    ASSERT_EQ (Https::Client (clientContext (), "localhost", 443).url (), "https://localhost/");
+    ASSERT_EQ (Https::Client (clientContext (), "localhost", 5000).url (), "https://localhost:5000/");
 
-    ASSERT_EQ (Https::Client ("91.66.32.78", 80).url (), "https://91.66.32.78:80/");
-    ASSERT_EQ (Https::Client ("91.66.32.78", 443).url (), "https://91.66.32.78/");
-    ASSERT_EQ (Https::Client ("91.66.32.78", 5000).url (), "https://91.66.32.78:5000/");
+    ASSERT_EQ (Https::Client (clientContext (), "91.66.32.78", 80).url (), "https://91.66.32.78:80/");
+    ASSERT_EQ (Https::Client (clientContext (), "91.66.32.78", 443).url (), "https://91.66.32.78/");
+    ASSERT_EQ (Https::Client (clientContext (), "91.66.32.78", 5000).url (), "https://91.66.32.78:5000/");
 
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 80).url (), "https://[2001:db8:1234:5678::1]:80/");
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 443).url (), "https://[2001:db8:1234:5678::1]/");
-    ASSERT_EQ (Https::Client ("2001:db8:1234:5678::1", 5000).url (), "https://[2001:db8:1234:5678::1]:5000/");
+    ASSERT_EQ (Https::Client (clientContext (), "2001:db8:1234:5678::1", 80).url (),
+               "https://[2001:db8:1234:5678::1]:80/");
+    ASSERT_EQ (Https::Client (clientContext (), "2001:db8:1234:5678::1", 443).url (),
+               "https://[2001:db8:1234:5678::1]/");
+    ASSERT_EQ (Https::Client (clientContext (), "2001:db8:1234:5678::1", 5000).url (),
+               "https://[2001:db8:1234:5678::1]:5000/");
 }
 
 /**
@@ -415,13 +453,13 @@ TEST_F (HttpsTest, url)
  */
 TEST_F (HttpsTest, keepAlive)
 {
-    Https::Client client1 ("localhost", 80);
+    Https::Client client1 (clientContext (), "localhost", 80);
     ASSERT_TRUE (client1.keepAlive ());
 
     client1.keepAlive (false);
     ASSERT_FALSE (client1.keepAlive ());
 
-    Https::Client client2 ("localhost", 80, false);
+    Https::Client client2 (clientContext (), "localhost", 80, false);
     ASSERT_FALSE (client2.keepAlive ());
 
     client2.keepAlive (true);
@@ -433,11 +471,7 @@ TEST_F (HttpsTest, keepAlive)
  */
 TEST_F (HttpsTest, keepAliveTimeout)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
     ASSERT_EQ (client.keepAliveTimeout (), seconds::zero ());
 
     HttpRequest request;
@@ -471,11 +505,7 @@ TEST_F (HttpsTest, keepAliveTimeout)
  */
 TEST_F (HttpsTest, keepAliveMax)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
     ASSERT_EQ (client.keepAliveMax (), -1);
 
     HttpRequest request;
@@ -509,11 +539,7 @@ TEST_F (HttpsTest, keepAliveMax)
  */
 TEST_F (HttpsTest, badRequest)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.path ("\r\n");
@@ -539,11 +565,7 @@ TEST_F (HttpsTest, badRequest)
  */
 TEST_F (HttpsTest, invalidMethod)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.method (HttpMethod (100));
@@ -560,11 +582,7 @@ TEST_F (HttpsTest, invalidMethod)
  */
 TEST_F (HttpsTest, headerTooLarge)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.header ("User-Agent", std::string (8192, 'a'));
@@ -581,11 +599,7 @@ TEST_F (HttpsTest, headerTooLarge)
  */
 TEST_F (HttpsTest, notFound)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.path ("/invalid/path");
@@ -616,11 +630,7 @@ TEST_F (HttpsTest, notModified)
     ASSERT_EQ (stat (_sampleFile.c_str (), &sbuf), 0);
     modifTime << std::put_time (std::gmtime (&sbuf.st_ctime), "%a, %d %b %Y %H:%M:%S GMT");
 
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.header ("If-Modified-Since", modifTime.str ());
@@ -637,11 +647,7 @@ TEST_F (HttpsTest, notModified)
  */
 TEST_F (HttpsTest, redirect)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.path ("/redirect/file");
@@ -677,11 +683,7 @@ TEST_F (HttpsTest, redirect)
  */
 TEST_F (HttpsTest, serverError)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.path ("/exec/null");
@@ -701,11 +703,7 @@ TEST_F (HttpsTest, serverError)
  */
 TEST_F (HttpsTest, unauthorized)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.path ("/authorized/file");
@@ -735,7 +733,7 @@ TEST_F (HttpsTest, unauthorized)
  */
 TEST_F (HttpsTest, forbidden)
 {
-    Https::Client client (_host, _port);
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.path ("/authorized/file");
@@ -756,11 +754,7 @@ TEST_F (HttpsTest, forbidden)
  */
 TEST_F (HttpsTest, head)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.method (HttpMethod::Head);
@@ -791,11 +785,7 @@ TEST_F (HttpsTest, head)
  */
 TEST_F (HttpsTest, get)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.method (HttpMethod::Get);
@@ -853,11 +843,7 @@ TEST_F (HttpsTest, get)
  */
 TEST_F (HttpsTest, post)
 {
-    Https::Client client (_host, _port);
-    client.setVerify (true, 1);
-    ASSERT_EQ (client.setCaFile (_rootcert), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher (join::defaultCipher), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setCipher_1_3 (join::defaultCipher_1_3), 0) << join::lastError.message ();
+    Https::Client client (clientContext (), _host, _port);
 
     HttpRequest request;
     request.method (HttpMethod::Post);

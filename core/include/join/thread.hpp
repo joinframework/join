@@ -26,7 +26,6 @@
 #define JOIN_CORE_THREAD_HPP
 
 // C++.
-#include <system_error>
 #include <functional>
 #include <memory>
 #include <atomic>

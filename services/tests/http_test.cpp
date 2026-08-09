@@ -23,8 +23,8 @@
  */
 
 // libjoin.
-#include <join/httpclient.hpp>
-#include <join/httpserver.hpp>
+#include <join/http_client.hpp>
+#include <join/http_server.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>

@@ -62,11 +62,11 @@ The framework is a collection of specialized modules that build upon one another
 
 | Module | Purpose | Highlights |
 | :--- | :--- | :--- |
-| **`core`** | **Foundation** | Epoll Reactor, TCP/UDP/TLS, Unix Sockets, Thread Pools, Lock-Free Queues & Allocator. |
-| **`fabric`**| **Network Control** | Netlink Interface Manager, ARP client, DNS Resolver. |
-| **`crypto`**| **Security** | OpenSSL Wrappers, HMAC, Digital Signatures, Base64. |
+| **`core`** | **Foundation** | Epoll Reactor, io_uring Proactor, TCP/UDP/ICMP/Raw & Unix Sockets, Thread Pools, Lock-Free Queues & Allocator. |
+| **`fabric`**| **Network Control** | Netlink Interface Manager, ARP client, DNS/mDNS/DoT Resolver. |
+| **`crypto`**| **Security** | TLS/DTLS Sockets & Streams, OpenSSL Wrappers, HMAC, Digital Signatures, Base64. |
 | **`data`** | **Serialization** | High-perf JSON (DOM/SAX), MessagePack, Zlib Streams. |
-| **`services`**| **Protocols** | HTTP/1.1 (Client/Server), SMTP, Mail Parsing. |
+| **`services`**| **Protocols** | HTTP/1.1 & HTTPS (Client/Server), SMTP/SMTPS, message composition. |
 
 ---
 

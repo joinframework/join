@@ -26,9 +26,9 @@
 #define JOIN_CORE_TRAITS_HPP
 
 // C++.
-#include <utility>
-#include <type_traits>
 #include <bits/enable_special_members.h>
+#include <type_traits>
+#include <utility>
 
 namespace join
 {

@@ -30,7 +30,6 @@
 #include <join/error.hpp>
 
 // C++.
-#include <functional>
 #include <iostream>
 #include <sstream>
 #include <fstream>
