@@ -357,6 +357,13 @@ namespace join
                 {
                     lastError = make_error_code (Errc::ConnectionClosed);
                 }
+
+                return -1;
+            }
+
+            if (message.msg_flags & MSG_TRUNC)
+            {
+                lastError = make_error_code (Errc::MessageTooLong);
                 return -1;
             }
 

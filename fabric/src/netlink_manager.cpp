@@ -25,6 +25,9 @@
 // libjoin.
 #include <join/netlink_manager.hpp>
 
+// C++.
+#include <system_error>
+
 // C.
 #include <sys/eventfd.h>
 
@@ -44,6 +47,7 @@ NetlinkManager::NetlinkManager (uint32_t groups, Reactor& reactor)
 {
     _socket.open (Netlink::rt ());
     _socket.bind (groups);
+    _socket.setOption (Netlink::Socket::RcvBuffer, _rcvBufferSize);
 }
 
 // =========================================================================
@@ -121,16 +125,17 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 
     if (!inserted.first->second->cond.timedWait (lock, timeout))
     {
+        // LCOV_EXCL_START
         _pending.erase (inserted.first);
         lastError = make_error_code (Errc::TimedOut);
         return -1;
+        // LCOV_EXCL_STOP
     }
 
-    if (inserted.first->second->error != 0)
+    if (inserted.first->second->error)
     {
-        int err = inserted.first->second->error;
+        lastError = inserted.first->second->error;
         _pending.erase (inserted.first);
-        lastError = std::error_code (err, std::generic_category ());
         return -1;
     }
 
@@ -160,29 +165,34 @@ void NetlinkManager::onReadable (int fd)
     }
 
     ssize_t len = _socket.read (_buffer.get (), _bufferSize);
-    if (len != -1)
+    if (len == -1)
     {
-        struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (_buffer.get ());
-        while (NLMSG_OK (nlh, len))
+        // LCOV_EXCL_START
+        notifyAllRequests (lastError);
+        return;
+        // LCOV_EXCL_STOP
+    }
+
+    struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (_buffer.get ());
+    while (NLMSG_OK (nlh, len))
+    {
+        if (nlh->nlmsg_type == NLMSG_DONE)
         {
-            if (nlh->nlmsg_type == NLMSG_DONE)
-            {
-                notifyRequest (nlh->nlmsg_seq, 0);
-                break;
-            }
-
-            if (nlh->nlmsg_type == NLMSG_ERROR)
-            {
-                struct nlmsgerr* err = static_cast<struct nlmsgerr*> (NLMSG_DATA (nlh));
-                notifyRequest (err->msg.nlmsg_seq, -err->error);
-                nlh = NLMSG_NEXT (nlh, len);
-                continue;
-            }
-
-            onMessage (nlh);
-
-            nlh = NLMSG_NEXT (nlh, len);
+            notifyRequest (nlh->nlmsg_seq);
+            break;
         }
+
+        if (nlh->nlmsg_type == NLMSG_ERROR)
+        {
+            struct nlmsgerr* err = static_cast<struct nlmsgerr*> (NLMSG_DATA (nlh));
+            notifyRequest (err->msg.nlmsg_seq, std::error_code (-err->error, std::generic_category ()));
+            nlh = NLMSG_NEXT (nlh, len);
+            continue;
+        }
+
+        onMessage (nlh);
+
+        nlh = NLMSG_NEXT (nlh, len);
     }
 }
 
@@ -190,7 +200,7 @@ void NetlinkManager::onReadable (int fd)
 //   CLASS     : NetlinkManager
 //   METHOD    : notifyRequest
 // =========================================================================
-void NetlinkManager::notifyRequest (uint32_t seq, int error)
+void NetlinkManager::notifyRequest (uint32_t seq, const std::error_code& error)
 {
     ScopedLock<Mutex> lock (_syncMutex);
 
@@ -200,6 +210,23 @@ void NetlinkManager::notifyRequest (uint32_t seq, int error)
         it->second->error = error;
         it->second->cond.signal ();
     }
+}
+
+// =========================================================================
+//   CLASS     : NetlinkManager
+//   METHOD    : notifyAllRequests
+// =========================================================================
+void NetlinkManager::notifyAllRequests (const std::error_code& error)
+{
+    // LCOV_EXCL_START
+    ScopedLock<Mutex> lock (_syncMutex);
+
+    for (auto& entry : _pending)
+    {
+        entry.second->error = error;
+        entry.second->cond.signal ();
+    }
+    // LCOV_EXCL_STOP
 }
 
 // =========================================================================
