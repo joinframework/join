@@ -125,9 +125,11 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 
     if (!inserted.first->second->cond.timedWait (lock, timeout))
     {
+        // LCOV_EXCL_START
         _pending.erase (inserted.first);
         lastError = make_error_code (Errc::TimedOut);
         return -1;
+        // LCOV_EXCL_STOP
     }
 
     if (inserted.first->second->error)
@@ -214,9 +216,9 @@ void NetlinkManager::notifyRequest (uint32_t seq, const std::error_code& error)
 //   CLASS     : NetlinkManager
 //   METHOD    : notifyAllRequests
 // =========================================================================
+// LCOV_EXCL_START
 void NetlinkManager::notifyAllRequests (const std::error_code& error)
 {
-    // LCOV_EXCL_START
     ScopedLock<Mutex> lock (_syncMutex);
 
     for (auto& entry : _pending)
@@ -224,8 +226,8 @@ void NetlinkManager::notifyAllRequests (const std::error_code& error)
         entry.second->error = error;
         entry.second->cond.signal ();
     }
-    // LCOV_EXCL_STOP
 }
+// LCOV_EXCL_STOP
 
 // =========================================================================
 //   CLASS     : NetlinkManager
