@@ -34,6 +34,7 @@
 
 // C++.
 #include <unordered_map>
+#include <system_error>
 #include <functional>
 #include <memory>
 #include <atomic>
@@ -152,9 +153,15 @@ namespace join
         /**
          * @brief notify a pending synchronous request.
          * @param seq sequence number of the completed request.
-         * @param error kernel error code (0 on success, positive errno).
+         * @param error error reported to the request (default: success).
          */
-        void notifyRequest (uint32_t seq, int error = 0);
+        void notifyRequest (uint32_t seq, const std::error_code& error = std::error_code ());
+
+        /**
+         * @brief notify every pending synchronous requests with an error.
+         * @param error error reported to each pending request.
+         */
+        void notifyAllRequests (const std::error_code& error);
 
         /**
          * @brief add an attribute to a netlink message.
@@ -201,6 +208,9 @@ namespace join
         /// underlying socket.
         Netlink::Socket _socket;
 
+        /// socket receive buffer size.
+        static constexpr int _rcvBufferSize = 1 << 20;
+
         /// internal buffer size.
         static constexpr size_t _bufferSize = 16384;
 
@@ -214,7 +224,7 @@ namespace join
         struct PendingRequest
         {
             Condition cond;
-            int error = 0;
+            std::error_code error;
         };
 
         /// synchronous requests indexed by sequence number.

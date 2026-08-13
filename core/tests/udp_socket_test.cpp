@@ -248,6 +248,10 @@ TEST_F (UdpSocket, read)
     ASSERT_EQ (udpSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.read (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
+    ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.read (data, sizeof (data) / 2), -1);
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
     udpSocket.close ();
 }
 
