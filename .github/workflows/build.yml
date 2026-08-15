@@ -209,6 +209,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6.0.2
 
+      - name: Mark workspace as safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Download coverage data from GitHub
         uses: actions/download-artifact@v7.0.0
         with:
