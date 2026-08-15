@@ -45,6 +45,14 @@ class ShmSpsc : public ::testing::Test
 {
 protected:
     /**
+     * @brief set up the test suite.
+     */
+    static void SetUpTestSuite ()
+    {
+        ::sem_unlink (_name.c_str ());
+    }
+
+    /**
      * @brief set up the test fixture.
      */
     void SetUp () override

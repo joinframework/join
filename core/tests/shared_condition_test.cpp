@@ -44,8 +44,6 @@ using join::ScopedLock;
 
 using namespace std::chrono_literals;
 
-const std::string _name = "/test_condition";
-
 struct ConditionSync
 {
     alignas (64) SharedMutex mutex;
@@ -54,9 +52,29 @@ struct ConditionSync
 };
 
 /**
+ * @brief class used to test the shared condition.
+ */
+class SharedConditionTest : public ::testing::Test
+{
+protected:
+    /**
+     * @brief set up the test suite.
+     */
+    static void SetUpTestSuite ()
+    {
+        ::shm_unlink (_name.c_str ());
+    }
+
+    /// shared memory segment name.
+    static const std::string _name;
+};
+
+const std::string SharedConditionTest::_name = "/test_condition";
+
+/**
  * @brief test wait.
  */
-TEST (SharedCondition, wait)
+TEST_F (SharedConditionTest, wait)
 {
     ConditionSync* sync = nullptr;
     void* shm = nullptr;
@@ -129,7 +147,7 @@ cleanup:
 /**
  * @brief test timedWait.
  */
-TEST (SharedCondition, timedWait)
+TEST_F (SharedConditionTest, timedWait)
 {
     ConditionSync* sync = nullptr;
     void* shm = nullptr;
