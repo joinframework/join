@@ -148,7 +148,9 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
         // LCOV_EXCL_STOP
     }
 
-    if (!request->cond.timedWait (lock, timeout, [request] () { return request->done; }))
+    if (!request->cond.timedWait (lock, timeout, [request] () {
+            return request->done;
+        }))
     {
         // LCOV_EXCL_START
         _pending.erase (nlh->nlmsg_seq);
