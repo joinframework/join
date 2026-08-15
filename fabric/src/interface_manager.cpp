@@ -131,7 +131,7 @@ uint64_t InterfaceManager::addLinkListener (const LinkNotify& cb)
 {
     uint64_t id = ++_listenerCounter;
 
-    pushJob ([this, id, cb] () {
+    pushJob ([this, id, &cb] () {
         _linkListeners.emplace (id, cb);
     });
 
@@ -157,7 +157,7 @@ uint64_t InterfaceManager::addAddressListener (const AddressNotify& cb)
 {
     uint64_t id = ++_listenerCounter;
 
-    pushJob ([this, id, cb] () {
+    pushJob ([this, id, &cb] () {
         _addressListeners.emplace (id, cb);
     });
 

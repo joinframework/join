@@ -160,7 +160,7 @@ uint64_t RouteManager::addRouteListener (const RouteNotify& cb)
 {
     uint64_t id = ++_listenerCounter;
 
-    pushJob ([this, id, cb] () {
+    pushJob ([this, id, &cb] () {
         _routeListeners.emplace (id, cb);
     });
 

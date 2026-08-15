@@ -161,7 +161,7 @@ uint64_t NeighborManager::addNeighborListener (const NeighborNotify& cb)
 {
     uint64_t id = ++_listenerCounter;
 
-    pushJob ([this, id, cb] () {
+    pushJob ([this, id, &cb] () {
         _neighborListeners.emplace (id, cb);
     });
 
