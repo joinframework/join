@@ -41,12 +41,30 @@ using join::SharedSemaphore;
 
 using namespace std::chrono_literals;
 
-const std::string _name = "/test_semaphore";
+/**
+ * @brief class used to test the shared semaphore.
+ */
+class SharedSemaphoreTest : public ::testing::Test
+{
+protected:
+    /**
+     * @brief set up the test suite.
+     */
+    static void SetUpTestSuite ()
+    {
+        ::shm_unlink (_name.c_str ());
+    }
+
+    /// shared memory segment name.
+    static const std::string _name;
+};
+
+const std::string SharedSemaphoreTest::_name = "/test_semaphore";
 
 /**
  * @brief test create.
  */
-TEST (SharedSemaphore, create)
+TEST_F (SharedSemaphoreTest, create)
 {
     ASSERT_THROW (SharedSemaphore (size_t (SEM_VALUE_MAX) + 1), std::system_error);
 }
@@ -54,7 +72,7 @@ TEST (SharedSemaphore, create)
 /**
  * @brief test wait.
  */
-TEST (SharedSemaphore, wait)
+TEST_F (SharedSemaphoreTest, wait)
 {
     SharedSemaphore* sem = nullptr;
     void* shm = nullptr;
@@ -117,7 +135,7 @@ cleanup:
 /**
  * @brief test tryWait.
  */
-TEST (SharedSemaphore, tryWait)
+TEST_F (SharedSemaphoreTest, tryWait)
 {
     SharedSemaphore* sem = nullptr;
     void* shm = nullptr;
@@ -180,7 +198,7 @@ cleanup:
 /**
  * @brief test timedWait.
  */
-TEST (SharedSemaphore, timedWait)
+TEST_F (SharedSemaphoreTest, timedWait)
 {
     SharedSemaphore* sem = nullptr;
     void* shm = nullptr;
@@ -241,7 +259,7 @@ cleanup:
 /**
  * @brief test value.
  */
-TEST (SharedSemaphore, value)
+TEST_F (SharedSemaphoreTest, value)
 {
     SharedSemaphore* sem = nullptr;
     void* shm = nullptr;

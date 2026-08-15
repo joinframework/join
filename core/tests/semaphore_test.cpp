@@ -36,12 +36,30 @@ using join::Semaphore;
 
 using namespace std::chrono_literals;
 
-const std::string _name = "/test_sem";
+/**
+ * @brief class used to test the semaphore.
+ */
+class SemaphoreTest : public ::testing::Test
+{
+protected:
+    /**
+     * @brief set up the test suite.
+     */
+    static void SetUpTestSuite ()
+    {
+        ::sem_unlink (_name.c_str ());
+    }
+
+    /// semaphore name.
+    static const std::string _name;
+};
+
+const std::string SemaphoreTest::_name = "/test_sem";
 
 /**
  * @brief test create.
  */
-TEST (Semaphore, create)
+TEST_F (SemaphoreTest, create)
 {
     ASSERT_THROW (Semaphore (size_t (SEM_VALUE_MAX) + 1), std::system_error);
     ASSERT_THROW (Semaphore ("/"), std::system_error);
@@ -50,7 +68,7 @@ TEST (Semaphore, create)
 /**
  * @brief test wait.
  */
-TEST (Semaphore, wait)
+TEST_F (SemaphoreTest, wait)
 {
     Semaphore unnamed;
     auto task = std::async (std::launch::async, [&] () {
@@ -78,7 +96,7 @@ TEST (Semaphore, wait)
 /**
  * @brief test tryWait.
  */
-TEST (Semaphore, tryWait)
+TEST_F (SemaphoreTest, tryWait)
 {
     Semaphore unnamed;
     ASSERT_FALSE (unnamed.tryWait ());
@@ -102,7 +120,7 @@ TEST (Semaphore, tryWait)
 /**
  * @brief test timedWait.
  */
-TEST (Semaphore, timedWait)
+TEST_F (SemaphoreTest, timedWait)
 {
     Semaphore unnamed;
     ASSERT_FALSE (unnamed.timedWait (10ms));
@@ -124,7 +142,7 @@ TEST (Semaphore, timedWait)
 /**
  * @brief test value.
  */
-TEST (Semaphore, value)
+TEST_F (SemaphoreTest, value)
 {
     Semaphore unnamed;
     ASSERT_EQ (unnamed.value (), 0);

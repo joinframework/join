@@ -59,7 +59,7 @@ protected:
     static const std::string _name;
 };
 
-const std::string PosixMem::_name = "/test_shm";
+const std::string PosixMem::_name = "/test_mem_shm";
 
 TEST_F (PosixMem, create)
 {

@@ -59,7 +59,7 @@ protected:
     static const std::string _name;
 };
 
-const std::string PosixAlloc::_name = "/test_shm";
+const std::string PosixAlloc::_name = "/test_alloc_shm";
 
 /**
  * @brief test move.
