@@ -29,13 +29,13 @@
 #include <join/netlink_protocol.hpp>
 #include <join/datagram_socket.hpp>
 #include <join/condition.hpp>
+#include <join/function.hpp>
 #include <join/reactor.hpp>
 #include <join/queue.hpp>
 
 // C++.
 #include <unordered_map>
 #include <system_error>
-#include <functional>
 #include <memory>
 #include <atomic>
 
@@ -112,13 +112,12 @@ namespace join
         /**
          * @brief push a job to be executed on the reactor thread.
          * @param func function to execute on the reactor thread.
-         * @param args arguments to bind to the function.
          */
-        template <typename Func, typename... Args>
-        void pushJob (Func&& func, Args&&... args) noexcept
+        template <typename Func>
+        void pushJob (Func&& func) noexcept
         {
             Job job;
-            job.func = std::bind (std::forward<Func> (func), std::forward<Args> (args)...);
+            job.func = std::forward<Func> (func);
 
             if (_reactor.isReactorThread ())
             {
@@ -225,6 +224,7 @@ namespace join
         {
             Condition cond;
             std::error_code error;
+            bool done = false;
         };
 
         /// synchronous requests indexed by sequence number.
@@ -238,8 +238,11 @@ namespace join
          */
         struct Job
         {
+            /// job storage capacity, sized for the largest callable pushed.
+            static constexpr size_t _funcCapacity = 64;
+
             /// function to execute.
-            std::function<void ()> func;
+            Function<void (), _funcCapacity> func;
 
             /// set to true when the job has been executed.
             std::atomic<bool> done{false};

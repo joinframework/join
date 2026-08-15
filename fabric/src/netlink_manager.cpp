@@ -94,52 +94,79 @@ void NetlinkManager::stop ()
 // =========================================================================
 int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::milliseconds timeout)
 {
-    if (!sync)
+    PendingRequest* request = nullptr;
+
+    if (sync)
     {
-        if (_socket.write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len) == -1)
+        ScopedLock<Mutex> lock (_syncMutex);
+
+        auto inserted = _pending.emplace (nlh->nlmsg_seq, std::make_unique<PendingRequest> ());
+        if (!inserted.second)
         {
-            return -1;  // LCOV_EXCL_LINE
+            // LCOV_EXCL_START
+            lastError = make_error_code (Errc::OperationFailed);
+            return -1;
+            // LCOV_EXCL_STOP
         }
 
-        return 0;
+        request = inserted.first->second.get ();
+    }
+
+    int result = 0;
+
+    if ((nlh->nlmsg_flags & NLM_F_DUMP) == NLM_F_DUMP)
+    {
+        std::error_code error;
+
+        pushJob ([this, nlh, &result, &error] () {
+            result = _socket.write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len);
+            error = lastError;
+        });
+
+        if (result == -1)
+        {
+            lastError = error;  // LCOV_EXCL_LINE
+        }
+    }
+    else
+    {
+        result = _socket.write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len);
+    }
+
+    if (!sync)
+    {
+        return (result == -1) ? -1 : 0;
     }
 
     ScopedLock<Mutex> lock (_syncMutex);
 
-    auto inserted = _pending.emplace (nlh->nlmsg_seq, std::make_unique<PendingRequest> ());
-    if (!inserted.second)
+    if (result == -1)
     {
         // LCOV_EXCL_START
-        lastError = make_error_code (Errc::OperationFailed);
+        _pending.erase (nlh->nlmsg_seq);
         return -1;
         // LCOV_EXCL_STOP
     }
 
-    if (_socket.write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len) == -1)
+    if (!request->cond.timedWait (lock, timeout, [request] () {
+            return request->done;
+        }))
     {
         // LCOV_EXCL_START
-        _pending.erase (inserted.first);
-        return -1;
-        // LCOV_EXCL_STOP
-    }
-
-    if (!inserted.first->second->cond.timedWait (lock, timeout))
-    {
-        // LCOV_EXCL_START
-        _pending.erase (inserted.first);
+        _pending.erase (nlh->nlmsg_seq);
         lastError = make_error_code (Errc::TimedOut);
         return -1;
         // LCOV_EXCL_STOP
     }
 
-    if (inserted.first->second->error)
+    if (request->error)
     {
-        lastError = inserted.first->second->error;
-        _pending.erase (inserted.first);
+        lastError = request->error;
+        _pending.erase (nlh->nlmsg_seq);
         return -1;
     }
 
-    _pending.erase (inserted.first);
+    _pending.erase (nlh->nlmsg_seq);
 
     return 0;
 }
@@ -179,18 +206,16 @@ void NetlinkManager::onReadable (int fd)
         if (nlh->nlmsg_type == NLMSG_DONE)
         {
             notifyRequest (nlh->nlmsg_seq);
-            break;
         }
-
-        if (nlh->nlmsg_type == NLMSG_ERROR)
+        else if (nlh->nlmsg_type == NLMSG_ERROR)
         {
             struct nlmsgerr* err = static_cast<struct nlmsgerr*> (NLMSG_DATA (nlh));
             notifyRequest (err->msg.nlmsg_seq, std::error_code (-err->error, std::generic_category ()));
-            nlh = NLMSG_NEXT (nlh, len);
-            continue;
         }
-
-        onMessage (nlh);
+        else
+        {
+            onMessage (nlh);
+        }
 
         nlh = NLMSG_NEXT (nlh, len);
     }
@@ -208,6 +233,7 @@ void NetlinkManager::notifyRequest (uint32_t seq, const std::error_code& error)
     if (it != _pending.end ())
     {
         it->second->error = error;
+        it->second->done = true;
         it->second->cond.signal ();
     }
 }
@@ -224,6 +250,7 @@ void NetlinkManager::notifyAllRequests (const std::error_code& error)
     for (auto& entry : _pending)
     {
         entry.second->error = error;
+        entry.second->done = true;
         entry.second->cond.signal ();
     }
     // LCOV_EXCL_STOP
