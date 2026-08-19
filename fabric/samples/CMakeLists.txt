@@ -15,3 +15,7 @@ install(TARGETS ping RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 add_executable(traceroute traceroute.cpp)
 target_link_libraries(traceroute ${JOIN_FABRIC})
 install(TARGETS traceroute RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+add_executable(nslookup nslookup.cpp)
+target_link_libraries(nslookup ${JOIN_FABRIC})
+install(TARGETS nslookup RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
