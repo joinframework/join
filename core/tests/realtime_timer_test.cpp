@@ -64,6 +64,15 @@ TEST (RealTimer, setOneShot)
     EXPECT_FALSE (timer.active ());
     EXPECT_TRUE (timer.oneShot ());
     EXPECT_EQ (timer.interval (), 0ms);
+
+    timer.setOneShot (0ms, [&] {
+        ++count;
+    });
+    std::this_thread::sleep_for (35ms);
+    EXPECT_EQ (count, 3);
+    EXPECT_FALSE (timer.active ());
+    EXPECT_TRUE (timer.oneShot ());
+    EXPECT_EQ (timer.interval (), 0ms);
 }
 
 /**
@@ -82,6 +91,17 @@ TEST (RealTimer, setInterval)
     EXPECT_TRUE (timer.active ());
     EXPECT_FALSE (timer.oneShot ());
     EXPECT_EQ (timer.interval (), 10ms);
+
+    timer.cancel ();
+
+    int fired = 0;
+
+    timer.setInterval (0ms, [&] {
+        ++fired;
+    });
+    std::this_thread::sleep_for (35ms);
+    EXPECT_EQ (fired, 1);
+    EXPECT_FALSE (timer.active ());
 }
 
 /**
