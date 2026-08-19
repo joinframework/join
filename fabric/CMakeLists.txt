@@ -13,6 +13,7 @@ set(PUBLIC_HEADERS
     include/join/neighbor.hpp
     include/join/neighbor_manager.hpp
     include/join/arp.hpp
+    include/join/ping.hpp
     include/join/interface.hpp
     include/join/interface_manager.hpp
     include/join/route.hpp
@@ -24,6 +25,7 @@ set(SOURCES
     src/neighbor.cpp
     src/neighbor_manager.cpp
     src/arp.cpp
+    src/ping.cpp
     src/interface.cpp
     src/interface_manager.cpp
     src/route.cpp
@@ -62,6 +64,10 @@ install(TARGETS ${JOIN_FABRIC}
 
 configure_file(${JOIN_FABRIC}.pc.in ${JOIN_FABRIC}.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${JOIN_FABRIC}.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+if(JOIN_ENABLE_SAMPLES)
+    add_subdirectory(samples)
+endif()
 
 if(JOIN_ENABLE_TESTS)
     add_subdirectory(tests)

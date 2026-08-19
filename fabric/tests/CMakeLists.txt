@@ -67,6 +67,11 @@ target_link_libraries(arp.gtest ${JOIN_FABRIC} GTest::gtest_main)
 add_test(NAME arp.gtest COMMAND arp.gtest)
 install(TARGETS arp.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(ping.gtest ping_test.cpp)
+target_link_libraries(ping.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME ping.gtest COMMAND ping.gtest)
+install(TARGETS ping.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(interface.gtest interface_test.cpp)
 target_link_libraries(interface.gtest ${JOIN_FABRIC} GTest::gtest_main)
 add_test(NAME interface.gtest COMMAND interface.gtest)
