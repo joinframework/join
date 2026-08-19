@@ -26,6 +26,9 @@
 #include <join/error.hpp>
 #include <join/arp.hpp>
 
+// C++.
+#include <system_error>
+
 #ifndef NUD_VALID
 #define NUD_VALID (NUD_PERMANENT | NUD_NOARP | NUD_REACHABLE | NUD_PROBE | NUD_STALE | NUD_DELAY)
 #endif
@@ -44,6 +47,40 @@ Arp::Arp (const std::string& interface, NeighborManager& neighbors)
 , _neighbors (neighbors)
 , _reactor (_neighbors.reactor ())
 {
+    _index = ::if_nametoindex (_interface.c_str ());
+    if (_index == 0)
+    {
+        throw std::system_error (errno, std::system_category (), "arp interface lookup failed");
+    }
+
+    if (bind (_interface) == -1 || setOption (Raw::Socket::Broadcast, 1) == -1)
+    {
+        throw std::system_error (lastError, "arp socket setup failed");  // LCOV_EXCL_LINE
+    }
+
+    // accept only ARP replies.
+    struct sock_filter code[] = {
+        {0x28, 0, 0, 0x0000000c}, {0x15, 0, 3, 0x00000806}, {0x28, 0, 0, 0x00000014},
+        {0x15, 0, 1, 0x00000002}, {0x6, 0, 0, 0x00040000},  {0x6, 0, 0, 0x00000000},
+    };
+
+    struct sock_fprog bpf;
+    bpf.len = 6;
+    bpf.filter = code;
+
+    // best effort, validation is done in onReadable anyway.
+    ::setsockopt (handle (), SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof (bpf));
+
+    _reactor.addHandler (handle (), this);
+}
+
+// =========================================================================
+//   CLASS     : Arp
+//   METHOD    : ~Arp
+// =========================================================================
+Arp::~Arp ()
+{
+    _reactor.delHandler (handle ());
 }
 
 // =========================================================================
@@ -58,14 +95,7 @@ int Arp::add (const MacAddress& mac, const IpAddress& ip)
         return -1;
     }
 
-    int index = ::if_nametoindex (_interface.c_str ());
-    if (index == 0)
-    {
-        lastError = std::error_code (errno, std::generic_category ());
-        return -1;
-    }
-
-    return _neighbors.addNeighbor (index, ip, mac, NUD_PERMANENT, true);
+    return _neighbors.addNeighbor (_index, ip, mac, NUD_PERMANENT, true);
 }
 
 // =========================================================================
@@ -89,14 +119,7 @@ int Arp::remove (const IpAddress& ip)
         return -1;
     }
 
-    int index = ::if_nametoindex (_interface.c_str ());
-    if (index == 0)
-    {
-        lastError = std::error_code (errno, std::generic_category ());
-        return -1;
-    }
-
-    return _neighbors.removeNeighbor (index, ip, true);
+    return _neighbors.removeNeighbor (_index, ip, true);
 }
 
 // =========================================================================
@@ -120,14 +143,7 @@ MacAddress Arp::cache (const IpAddress& ip)
         return {};
     }
 
-    int index = ::if_nametoindex (_interface.c_str ());
-    if (index == 0)
-    {
-        lastError = std::error_code (errno, std::generic_category ());
-        return {};
-    }
-
-    auto neighbor = _neighbors.findByIndex (index, ip);
+    auto neighbor = _neighbors.findByIndex (_index, ip);
     if (!neighbor)
     {
         lastError = std::make_error_code (std::errc::no_such_device_or_address);
@@ -136,8 +152,8 @@ MacAddress Arp::cache (const IpAddress& ip)
 
     if (!(neighbor->state () & NUD_VALID))
     {
-        lastError = std::make_error_code (std::errc::no_such_device_or_address);
-        return {};
+        lastError = std::make_error_code (std::errc::no_such_device_or_address);  // LCOV_EXCL_LINE
+        return {};                                                                // LCOV_EXCL_LINE
     }
 
     return neighbor->mac ();
@@ -158,10 +174,16 @@ MacAddress Arp::cache (const std::string& interface, const IpAddress& ip)
 // =========================================================================
 void Arp::onReadable ([[maybe_unused]] int fd) noexcept
 {
-    Packet in{};
+    char data[_bufferSize];
 
-    if (read (reinterpret_cast<char*> (&in), sizeof (in)) == static_cast<int> (sizeof (in)) &&
-        in.eth.h_proto == htons (ETH_P_ARP) && in.arp.ar_hrd == htons (ARPHRD_ETHER) &&
+    if (read (data, sizeof (data)) < static_cast<int> (sizeof (Packet)))
+    {
+        return;  // LCOV_EXCL_LINE
+    }
+
+    const Packet& in = *reinterpret_cast<const Packet*> (data);
+
+    if (in.eth.h_proto == htons (ETH_P_ARP) && in.arp.ar_hrd == htons (ARPHRD_ETHER) &&
         in.arp.ar_pro == htons (ETH_P_IP) && in.arp.ar_hln == ETH_ALEN && in.arp.ar_pln == 4 &&
         in.arp.ar_op == htons (ARPOP_REPLY))
     {
