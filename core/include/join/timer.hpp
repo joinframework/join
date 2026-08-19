@@ -249,13 +249,17 @@ namespace join
         static constexpr itimerspec toTimerSpec (std::chrono::nanoseconds ns, bool periodic = false) noexcept
         {
             itimerspec ts{};
-            ts.it_value.tv_sec = ns.count () / _nsPerSec;
-            ts.it_value.tv_nsec = ns.count () % _nsPerSec;
             if (periodic)
             {
-                ts.it_interval.tv_sec = ts.it_value.tv_sec;
-                ts.it_interval.tv_nsec = ts.it_value.tv_nsec;
+                ts.it_interval.tv_sec = ns.count () / _nsPerSec;
+                ts.it_interval.tv_nsec = ns.count () % _nsPerSec;
             }
+            if (ns.count () < 1)
+            {
+                ns = std::chrono::nanoseconds (1);
+            }
+            ts.it_value.tv_sec = ns.count () / _nsPerSec;
+            ts.it_value.tv_nsec = ns.count () % _nsPerSec;
             return ts;
         }
 

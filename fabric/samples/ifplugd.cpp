@@ -30,7 +30,6 @@
 #include <join/timer.hpp>
 
 // C++.
-#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -80,7 +79,7 @@ void usage ()
     std::cout << "  -h          display this help and exit\n";
     std::cout << "  -I device   interface to monitor\n";
     std::cout << "  -r command  command to run on link change, called as: command device up|down\n";
-    std::cout << "  -u delay    delay in ms before acting on link up (default: 100)\n";
+    std::cout << "  -u delay    delay in ms before acting on link up (default: 0)\n";
     std::cout << "  -v          display version information and exit\n";
 }
 
@@ -99,7 +98,7 @@ bool changed (InterfaceChangeType flags, InterfaceChangeType type)
 // =========================================================================
 int main (int argc, char* argv[])
 {
-    int downDelay = 5000, upDelay = 100, opt = 0;
+    int downDelay = 5000, upDelay = 0, opt = 0;
     std::string device, command;
 
     while ((opt = getopt (argc, argv, "d:hI:r:u:v")) != -1)
@@ -167,7 +166,7 @@ int main (int argc, char* argv[])
 
         if (changed (info.flags, InterfaceChangeType::OperStateChanged))
         {
-            int delay = std::max (1, interface->isRunning () ? upDelay : downDelay);
+            int delay = interface->isRunning () ? upDelay : downDelay;
 
             timer.setOneShot (std::chrono::milliseconds (delay), [] {
                 ScopedLock<Mutex> lock (mutex);
