@@ -57,6 +57,7 @@ namespace join
          * @brief create the Arp instance.
          * @param interface interface name.
          * @param neighbors neighbor manager to use (uses NeighborManager::instance if nullptr).
+         * @throw std::system_error if the interface is unknown or the socket could not be bound to it.
          */
         Arp (const std::string& interface, NeighborManager& neighbors = NeighborManager::instance ());
 
@@ -89,7 +90,7 @@ namespace join
         /**
          * @brief destroy the Arp instance.
          */
-        ~Arp () = default;
+        ~Arp ();
 
         /**
          * @brief get the MAC address for the given IP address using netlink neighbor cache or ARP request.
@@ -166,24 +167,6 @@ namespace join
                 return {};
             }
 
-            if (bind (_interface) == -1 || setOption (Raw::Socket::Broadcast, 1) == -1)
-            {
-                return {};
-            }
-
-            // accept only ARP replies.
-            struct sock_filter code[] = {
-                {0x28, 0, 0, 0x0000000c}, {0x15, 0, 3, 0x00000806}, {0x28, 0, 0, 0x00000014},
-                {0x15, 0, 1, 0x00000002}, {0x6, 0, 0, 0x00040000},  {0x6, 0, 0, 0x00000000},
-            };
-
-            struct sock_fprog bpf;
-            bpf.len = 6;
-            bpf.filter = code;
-
-            // best effort, validation is done in onReadable anyway.
-            ::setsockopt (handle (), SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof (bpf));
-
             Packet out = {};
             const MacAddress srcMac = MacAddress::address (_interface);
             const IpAddress srcIp = IpAddress::ipv4Address (_interface);
@@ -204,16 +187,12 @@ namespace join
 
             ScopedLock<Mutex> lock (_syncMutex);
 
-            _reactor.addHandler (handle (), this);
-
             uint32_t tip;
             ::memcpy (&tip, &out.arp.ar_tip, sizeof (tip));
             auto inserted = _pending.emplace (tip, std::make_unique<PendingRequest> ());
             if (!inserted.second)
             {
                 // LCOV_EXCL_START
-                _reactor.delHandler (handle ());
-                close ();
                 lastError = make_error_code (Errc::OperationFailed);
                 return {};
                 // LCOV_EXCL_STOP
@@ -223,8 +202,6 @@ namespace join
             {
                 // LCOV_EXCL_START
                 _pending.erase (inserted.first);
-                _reactor.delHandler (handle ());
-                close ();
                 return {};
                 // LCOV_EXCL_STOP
             }
@@ -232,16 +209,12 @@ namespace join
             if (!inserted.first->second->cond.timedWait (lock, timeout))
             {
                 _pending.erase (inserted.first);
-                _reactor.delHandler (handle ());
-                close ();
                 lastError = std::make_error_code (std::errc::no_such_device_or_address);
                 return {};
             }
 
             MacAddress mac = inserted.first->second->mac;
             _pending.erase (inserted.first);
-            _reactor.delHandler (handle ());
-            close ();
 
             return mac;
         }
@@ -380,6 +353,9 @@ namespace join
 
         /// interface name.
         const std::string _interface;
+
+        /// interface index.
+        uint32_t _index = 0;
 
         /// neighbor manager
         NeighborManager& _neighbors;
