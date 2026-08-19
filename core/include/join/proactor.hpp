@@ -523,6 +523,9 @@ private:
     /// command queue size.
     static constexpr size_t _queueSize = 1024;
 
+    /// coalesce eventfd writes.
+    alignas (64) std::atomic<bool> _notified{false};
+
     /// command queue.
     LocalMem::Mpsc::Queue<Command> _commands;
 
