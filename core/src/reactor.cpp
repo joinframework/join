@@ -360,10 +360,18 @@ int Reactor::writeCommand (const Command& cmd) noexcept
         return -1;  // LCOV_EXCL_LINE
     }
 
+    if (_notified.exchange (true))
+    {
+        return 0;
+    }
+
     uint64_t value = 1;
     if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
     {
-        return -1;  // LCOV_EXCL_LINE
+        // LCOV_EXCL_START
+        _notified.store (false);
+        return -1;
+        // LCOV_EXCL_STOP
     }
 
     return 0;
@@ -409,7 +417,10 @@ void Reactor::processCommand (const Command& cmd) noexcept
 void Reactor::readCommands () noexcept
 {
     uint64_t count;
-    if (JOIN_UNLIKELY (::read (_wakeup, &count, sizeof (count)) == -1))
+    ssize_t nread = ::read (_wakeup, &count, sizeof (count));
+    _notified.store (false);
+
+    if (JOIN_UNLIKELY (nread == -1))
     {
         return;  // LCOV_EXCL_LINE
     }

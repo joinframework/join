@@ -313,6 +313,9 @@ namespace join
         /// epoll descriptor.
         int _epoll = -1;
 
+        /// coalesce eventfd writes.
+        alignas (64) std::atomic<bool> _notified{false};
+
         /// command queue
         LocalMem::Mpsc::Queue<Command> _commands;
 

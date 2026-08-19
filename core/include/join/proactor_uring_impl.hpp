@@ -380,10 +380,16 @@ int join::BasicProactor<Policy>::writeCommand (const Command& cmd, std::true_typ
         return -1;  // LCOV_EXCL_LINE
     }
 
+    if (_notified.exchange (true))
+    {
+        return 0;
+    }
+
     uint64_t value = 1;
     if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
     {
         // LCOV_EXCL_START
+        _notified.store (false);
         lastError = std::error_code (errno, std::system_category ());
         return -1;
         // LCOV_EXCL_STOP
@@ -727,6 +733,8 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::true_type
     if (JOIN_UNLIKELY (op == &_wakeupOp))
     {
         _wakeupOp.state = IoOperation::State::Idle;
+        _notified.store (false);
+
         readCommands ();
         if (JOIN_LIKELY (_running.load (std::memory_order_acquire)))
         {
