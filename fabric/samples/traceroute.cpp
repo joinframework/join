@@ -58,7 +58,7 @@ void usage ()
     std::cout << "  -6          use IPv6\n";
     std::cout << "  -h          display this help and exit\n";
     std::cout << "  -I device   bind to the given device\n";
-    std::cout << "  -M          set the don't fragment flag and report the MTU of each hop\n";
+    std::cout << "  -M          set the don't fragment flag and report the MTU a hop rejects the probe on\n";
     std::cout << "  -m hops     maximum number of hops to probe (default: 30)\n";
     std::cout << "  -q probes   number of probes sent per hop (default: 3)\n";
     std::cout << "  -s size     number of data bytes to send (default: 56)\n";
@@ -95,13 +95,19 @@ void onHop (const PingStats& stats)
 
     std::cout << stats.from () << "  ";
     std::cout << std::fixed << std::setprecision (3) << (stats.avg ().count () / 1000.0) << " ms";
+    std::cout << std::endl;
+}
 
+// =========================================================================
+//   CLASS     :
+//   METHOD    : onFailure
+// =========================================================================
+void onFailure (const PingStats& stats)
+{
     if (stats.mtu ())
     {
-        std::cout << "  mtu=" << stats.mtu ();
+        std::cout << stats.error () << std::endl;
     }
-
-    std::cout << std::endl;
 }
 
 // =========================================================================
@@ -163,6 +169,7 @@ int main (int argc, char* argv[])
     Ping client (device);
 
     client.onStart = onStart;
+    client.onFailure = onFailure;
     client.onHop = onHop;
 
     if (client.trace (IpAddress (family), argv[optind], maxHops, probes, size, df,

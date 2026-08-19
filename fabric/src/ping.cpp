@@ -52,6 +52,49 @@ using join::Ping;
 
 // =========================================================================
 //   CLASS     : PingStats
+//   METHOD    : PingStats
+// =========================================================================
+PingStats::PingStats (const std::string& device, const IpAddress& source, const std::string& host, int size,
+                      std::chrono::milliseconds interval, int hop, int df)
+: _device (device)
+, _source (source)
+, _host (host)
+, _size (size)
+, _interval (interval)
+, _hop (hop)
+, _df (df)
+, _start (std::chrono::steady_clock::now ())
+, _stop (_start)
+{
+}
+
+// =========================================================================
+//   CLASS     : PingStats
+//   METHOD    : sample
+// =========================================================================
+void PingStats::sample (std::chrono::microseconds rtt) noexcept
+{
+    const uint64_t value = static_cast<uint64_t> (rtt.count ());
+
+    ++_samples;
+
+    if ((_samples == 1) || (value < _min))
+    {
+        _min = value;
+    }
+
+    if (value > _max)
+    {
+        _max = value;
+    }
+
+    const double delta = static_cast<double> (value) - _mean;
+    _mean += delta / _samples;
+    _m2 += delta * (static_cast<double> (value) - _mean);
+}
+
+// =========================================================================
+//   CLASS     : PingStats
 //   METHOD    : mdev
 // =========================================================================
 std::chrono::microseconds PingStats::mdev () const noexcept
@@ -80,6 +123,8 @@ void PingStats::reset () noexcept
     _max = 0;
     _mean = 0.0;
     _m2 = 0.0;
+    _start = std::chrono::steady_clock::now ();
+    _stop = _start;
 }
 
 // =========================================================================
@@ -124,17 +169,11 @@ Ping::Ping (const std::string& device, int ttl, Reactor& reactor)
 int Ping::ping (const IpAddress& source, const std::string& destination, int size, int count,
                 std::chrono::milliseconds interval, int df, std::chrono::milliseconds timeout)
 {
-    PingStats stats;
+    PingStats stats (_device, source, destination, size, interval, _ttl, df);
 
-    stats._device = _device;
-    stats._source = source;
-    stats._host = destination;
-    stats._size = size;
-    stats._interval = interval;
-    stats._hop = _ttl;
-    stats._df = df;
+    Icmp::Socket socket;
 
-    if (!isValidDestination (stats))
+    if (open (socket, stats) == -1)
     {
         notify (onFailure, stats);
         return 0;
@@ -146,7 +185,7 @@ int Ping::ping (const IpAddress& source, const std::string& destination, int siz
     {
         const uint32_t transmitted = stats.sent ();
 
-        if (echo (stats, timeout) == 0)
+        if (echo (socket, stats, timeout) == 0)
         {
             notify (onSuccess, stats);
         }
@@ -165,6 +204,10 @@ int Ping::ping (const IpAddress& source, const std::string& destination, int siz
             std::this_thread::sleep_for (interval);
         }
     }
+
+    close (socket);
+
+    stats._stop = std::chrono::steady_clock::now ();
 
     notify (onStop, stats);
 
@@ -197,49 +240,44 @@ int Ping::ping6 (const std::string& destination, int size, int count, std::chron
 // =========================================================================
 int Ping::pathMtu (const IpAddress& source, const std::string& destination, std::chrono::milliseconds timeout)
 {
-    PingStats stats;
+    const std::chrono::milliseconds interval (static_cast<int> (_retryDelay));
 
-    stats._device = _device;
-    stats._source = source;
-    stats._host = destination;
-    stats._size = 0;
-    stats._interval = std::chrono::milliseconds (static_cast<int> (_retryDelay));
-    stats._hop = _ttl;
-    stats._df = IP_PMTUDISC_DO;
+    PingStats stats (_device, source, destination, 0, interval, _ttl, IP_PMTUDISC_DO);
 
-    if (!isValidDestination (stats))
+    Icmp::Socket socket;
+
+    if (open (socket, stats) == -1)
     {
         notify (onFailure, stats);
         return -1;
     }
 
-    const int overhead = ((stats.address ().family () == AF_INET6) ? static_cast<int> (sizeof (struct ip6_hdr))
-                                                                   : static_cast<int> (sizeof (struct iphdr))) +
-                         _icmpHeaderSize;
+    const int overhead = headerSize (stats);
 
     int mtu = static_cast<int> (_bufferSize);
+    bool narrowed = false;
     int result = -1;
-    bool searching = true, narrowed = false;
 
-    stats._size = std::max (0, std::min (mtu, static_cast<int> (_bufferSize)) - overhead);
+    stats._size = std::max (0, mtu - overhead);
 
     notify (onStart, stats);
 
-    for (int probe = 0; searching && (probe < _maxMtuProbes); ++probe)
+    for (int probe = 0; probe < _maxMtuProbes; ++probe)
     {
-        stats._size = std::max (0, std::min (mtu, static_cast<int> (_bufferSize)) - overhead);
+        const int previous = mtu;
 
         for (int retry = 0; retry < _defaultProbes; ++retry)
         {
             const uint32_t transmitted = stats.sent ();
 
-            if (echo (stats, timeout) == 0)
+            if (echo (socket, stats, timeout) == 0)
             {
                 notify (onSuccess, stats);
                 result = (!narrowed && (stats.route () > 0)) ? stats.route () : mtu;
-                searching = false;
                 break;
             }
+
+            notify (onFailure, stats);
 
             if (stats.mtu () && (static_cast<int> (stats.mtu ()) < mtu))
             {
@@ -248,23 +286,28 @@ int Ping::pathMtu (const IpAddress& source, const std::string& destination, std:
                 break;
             }
 
-            notify (onFailure, stats);
-
             if (isFatal (stats, transmitted))
             {
-                searching = false;
                 break;
             }
 
-            if (retry == (_defaultProbes - 1))
+            if (retry < (_defaultProbes - 1))
             {
-                searching = false;
-                break;
+                std::this_thread::sleep_for (stats.interval ());
             }
-
-            std::this_thread::sleep_for (stats.interval ());
         }
+
+        if (mtu == previous)
+        {
+            break;
+        }
+
+        stats._size = std::max (0, mtu - overhead);
     }
+
+    close (socket);
+
+    stats._stop = std::chrono::steady_clock::now ();
 
     notify (onStop, stats);
 
@@ -278,16 +321,11 @@ int Ping::pathMtu (const IpAddress& source, const std::string& destination, std:
 int Ping::trace (const IpAddress& source, const std::string& destination, int maxHops, int probes, int size, int df,
                  std::chrono::milliseconds timeout)
 {
-    PingStats stats;
+    PingStats stats (_device, source, destination, size, std::chrono::milliseconds (0), _ttl, df);
 
-    stats._device = _device;
-    stats._source = source;
-    stats._host = destination;
-    stats._size = size;
-    stats._interval = std::chrono::milliseconds (static_cast<int> (_retryDelay));
-    stats._df = df;
+    Icmp::Socket socket;
 
-    if (!isValidDestination (stats))
+    if (open (socket, stats) == -1)
     {
         notify (onFailure, stats);
         return -1;
@@ -295,19 +333,22 @@ int Ping::trace (const IpAddress& source, const std::string& destination, int ma
 
     notify (onStart, stats);
 
-    int reached = -1;
+    const int overhead = headerSize (stats);
+    int reached = -1, hop = 1;
     bool aborted = false;
 
-    for (int hop = 1; (hop <= maxHops) && (reached == -1) && !aborted; ++hop)
+    while ((hop <= maxHops) && (reached == -1) && !aborted)
     {
         stats.reset ();
         stats._hop = hop;
 
-        for (int probe = 0; probe < probes; ++probe)
+        bool narrowed = false;
+
+        for (int probe = 0; (probe < probes) && !narrowed && !aborted; ++probe)
         {
             const uint32_t transmitted = stats.sent ();
 
-            if (echo (stats, timeout) == 0)
+            if (echo (socket, stats, timeout) == 0)
             {
                 reached = hop;
                 notify (onSuccess, stats);
@@ -320,21 +361,32 @@ int Ping::trace (const IpAddress& source, const std::string& destination, int ma
             {
                 notify (onFailure, stats);
 
-                if (isFatal (stats, transmitted))
+                const int shrunk = std::max (0, static_cast<int> (stats.mtu ()) - overhead);
+
+                narrowed = (stats.mtu () && (shrunk < stats.size ()));
+
+                if (narrowed)
                 {
-                    aborted = true;
-                    break;
+                    stats._size = shrunk;
+                }
+                else
+                {
+                    aborted = isFatal (stats, transmitted);
                 }
             }
         }
 
-        if (aborted)
+        if (!narrowed)
         {
-            break;
-        }
+            notify (onHop, stats);
 
-        notify (onHop, stats);
+            ++hop;
+        }
     }
+
+    close (socket);
+
+    stats._stop = std::chrono::steady_clock::now ();
 
     notify (onStop, stats);
 
@@ -353,9 +405,20 @@ bool Ping::isFatal (const PingStats& stats, uint32_t transmitted)
 
 // =========================================================================
 //   CLASS     : Ping
-//   METHOD    : isValidDestination
+//   METHOD    : headerSize
 // =========================================================================
-bool Ping::isValidDestination (PingStats& stats)
+int Ping::headerSize (const PingStats& stats)
+{
+    return ((stats.address ().family () == AF_INET6) ? static_cast<int> (sizeof (struct ip6_hdr))
+                                                     : static_cast<int> (sizeof (struct iphdr))) +
+           _icmpHeaderSize;
+}
+
+// =========================================================================
+//   CLASS     : Ping
+//   METHOD    : open
+// =========================================================================
+int Ping::open (Icmp::Socket& socket, PingStats& stats)
 {
     if (IpAddress::isIpAddress (stats.host ()))
     {
@@ -368,24 +431,12 @@ bool Ping::isValidDestination (PingStats& stats)
 
     if (stats._address.isWildcard () || (stats._address.family () != stats.source ().family ()))
     {
-        fail (stats, make_error_code (Errc::NotFound), "ping: unknown host");
-        return false;
+        return fail (stats, make_error_code (Errc::NotFound), "ping: unknown host");
     }
-
-    return true;
-}
-
-// =========================================================================
-//   CLASS     : Ping
-//   METHOD    : echo
-// =========================================================================
-int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
-{
-    Icmp::Socket socket;
 
     if (socket.open ((stats.address ().family () == AF_INET6) ? Icmp::v6 () : Icmp::v4 ()) == -1)
     {
-        return fail (stats, lastError, "ping: open: " + lastError.message ());
+        return fail (stats, lastError, "ping: open: " + lastError.message ());  // LCOV_EXCL_LINE
     }
 
     if (!_device.empty () && (socket.bindToDevice (_device) == -1))
@@ -403,75 +454,105 @@ int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
         return fail (stats, lastError, "ping: connect: " + lastError.message ());
     }
 
-    stats._route = socket.mtu ();
+    if (socket.setOption (Icmp::Socket::RcvError, 1) == -1)
+    {
+        return fail (stats, lastError, "ping: enable error queue: " + lastError.message ());  // LCOV_EXCL_LINE
+    }
 
+    if (socket.setOption (Icmp::Socket::TimeStamp, 1) == -1)
+    {
+        return fail (stats, lastError, "ping: enable timestamp: " + lastError.message ());  // LCOV_EXCL_LINE
+    }
+
+    if (socket.setOption (Icmp::Socket::PathMtuDiscover, stats.df ()) == -1)
+    {
+        return fail (stats, lastError, "ping: set path mtu discovery: " + lastError.message ());  // LCOV_EXCL_LINE
+    }
+
+    const bool inet6 = (socket.family () == AF_INET6);
+
+    int on = 1;
+
+    if (inet6 && (::setsockopt (socket.handle (), IPPROTO_IPV6, IPV6_RECVHOPLIMIT, &on, sizeof (on)) == -1))
+    {
+        // LCOV_EXCL_START
+        std::error_code code (errno, std::generic_category ());
+        return fail (stats, code, "ping: enable hop limit: " + code.message ());
+        // LCOV_EXCL_STOP
+    }
+
+    if (setFilter (socket, stats) == -1)
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
+
+    if (_reactor.addHandler (socket.handle (), this) == -1)
+    {
+        return fail (stats, lastError, "ping: add handler: " + lastError.message ());  // LCOV_EXCL_LINE
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Ping
+//   METHOD    : setFilter
+// =========================================================================
+int Ping::setFilter (Icmp::Socket& socket, PingStats& stats)
+{
+    if (socket.family () == AF_INET6)
+    {
+        struct icmp6_filter filter;
+        ICMP6_FILTER_SETBLOCKALL (&filter);
+        ICMP6_FILTER_SETPASS (ICMP6_ECHO_REPLY, &filter);
+
+        if (::setsockopt (socket.handle (), IPPROTO_ICMPV6, ICMP6_FILTER, &filter, sizeof (filter)) == -1)
+        {
+            // LCOV_EXCL_START
+            std::error_code code (errno, std::generic_category ());
+            return fail (stats, code, "ping: set icmp message filter: " + code.message ());
+            // LCOV_EXCL_STOP
+        }
+
+        return 0;
+    }
+
+    struct icmp_filter filter;
+    filter.data = ~(1 << ICMP_ECHOREPLY);
+
+    if (::setsockopt (socket.handle (), SOL_RAW, ICMP_FILTER, &filter, sizeof (filter)) == -1)
+    {
+        // LCOV_EXCL_START
+        std::error_code code (errno, std::generic_category ());
+        return fail (stats, code, "ping: set icmp message filter: " + code.message ());
+        // LCOV_EXCL_STOP
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Ping
+//   METHOD    : close
+// =========================================================================
+void Ping::close (Icmp::Socket& socket)
+{
+    _reactor.delHandler (socket.handle ());
+    socket.close ();
+}
+
+// =========================================================================
+//   CLASS     : Ping
+//   METHOD    : echo
+// =========================================================================
+int Ping::echo (Icmp::Socket& socket, PingStats& stats, std::chrono::milliseconds timeout)
+{
     if (socket.setOption (Icmp::Socket::Ttl, stats.hop ()) == -1)
     {
         return fail (stats, lastError, "ping: set time to live: " + lastError.message ());
     }
 
-    if (socket.setOption (Icmp::Socket::RcvError, 1) == -1)
-    {
-        return fail (stats, lastError, "ping: enable error queue: " + lastError.message ());
-    }
-
-    if (socket.setOption (Icmp::Socket::TimeStamp, 1) == -1)
-    {
-        return fail (stats, lastError, "ping: enable timestamp: " + lastError.message ());
-    }
-
-    if (socket.setOption (Icmp::Socket::PathMtuDiscover, stats.df ()) == -1)
-    {
-        return fail (stats, lastError, "ping: set path mtu discovery: " + lastError.message ());
-    }
-
-    int on = 1;
-
-    if (socket.family () == AF_INET6)
-    {
-        if (::setsockopt (socket.handle (), IPPROTO_IPV6, IPV6_RECVHOPLIMIT, &on, sizeof (on)) == -1)
-        {
-            std::error_code code (errno, std::generic_category ());
-            return fail (stats, code, "ping: enable hop limit: " + code.message ());
-        }
-
-        struct icmp6_filter filter;
-        ICMP6_FILTER_SETBLOCKALL (&filter);
-        ICMP6_FILTER_SETPASS (ICMP6_ECHO_REPLY, &filter);
-        ICMP6_FILTER_SETPASS (ICMP6_DST_UNREACH, &filter);
-        ICMP6_FILTER_SETPASS (ICMP6_PACKET_TOO_BIG, &filter);
-        ICMP6_FILTER_SETPASS (ICMP6_TIME_EXCEEDED, &filter);
-        ICMP6_FILTER_SETPASS (ICMP6_PARAM_PROB, &filter);
-
-        if (::setsockopt (socket.handle (), IPPROTO_ICMPV6, ICMP6_FILTER, &filter, sizeof (filter)) == -1)
-        {
-            std::error_code code (errno, std::generic_category ());
-            return fail (stats, code, "ping: set icmp message filter: " + code.message ());
-        }
-    }
-    else
-    {
-        if (::setsockopt (socket.handle (), IPPROTO_IP, IP_RECVTTL, &on, sizeof (on)) == -1)
-        {
-            std::error_code code (errno, std::generic_category ());
-            return fail (stats, code, "ping: enable time to live: " + code.message ());
-        }
-
-        struct icmp_filter filter;
-        filter.data = ~((1 << ICMP_ECHOREPLY) | (1 << ICMP_DEST_UNREACH) | (1 << ICMP_TIME_EXCEEDED) |
-                        (1 << ICMP_PARAMETERPROB) | (1 << ICMP_REDIRECT));
-
-        if (::setsockopt (socket.handle (), SOL_RAW, ICMP_FILTER, &filter, sizeof (filter)) == -1)
-        {
-            std::error_code code (errno, std::generic_category ());
-            return fail (stats, code, "ping: set icmp message filter: " + code.message ());
-        }
-    }
-
-    if (_reactor.addHandler (socket.handle (), this) == -1)
-    {
-        return fail (stats, lastError, "ping: add handler: " + lastError.message ());
-    }
+    stats._route = socket.mtu ();
 
     const int size = stats.size () + _icmpHeaderSize;
 
@@ -481,22 +562,18 @@ int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
     {
         ScopedLock<Mutex> lock (_syncMutex);
 
-        for (int attempt = 0; (request == nullptr) && (attempt < _maxSequenceAttempts); ++attempt)
-        {
-            sequence = randomize<uint16_t> ();
+        sequence = ++_sequence;
 
-            auto inserted = _pending.emplace (sequence, std::make_unique<PendingRequest> ());
-            if (inserted.second)
-            {
-                request = inserted.first->second.get ();
-            }
+        auto inserted = _pending.emplace (sequence, std::make_unique<PendingRequest> ());
+        if (inserted.second)
+        {
+            request = inserted.first->second.get ();
         }
     }
 
     if (request == nullptr)
     {
-        _reactor.delHandler (socket.handle ());
-        return fail (stats, make_error_code (Errc::InUse), "ping: no sequence number available");
+        return fail (stats, make_error_code (Errc::InUse), "ping: no sequence number available");  // LCOV_EXCL_LINE
     }
 
     const bool stamped = stats.size () >= static_cast<int> (sizeof (struct timeval));
@@ -508,6 +585,11 @@ int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
         data[i + _icmpHeaderSize] = static_cast<char> (i);
     }
 
+    if (stamped)
+    {
+        ::gettimeofday (reinterpret_cast<struct timeval*> (data.get () + _icmpHeaderSize), nullptr);
+    }
+
     if (socket.family () == AF_INET6)
     {
         struct icmp6_hdr* icmp = reinterpret_cast<struct icmp6_hdr*> (data.get ());
@@ -516,11 +598,6 @@ int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
         icmp->icmp6_cksum = 0;
         icmp->icmp6_seq = htons (sequence);
         icmp->icmp6_id = htons (_identity);
-
-        if (stamped)
-        {
-            ::gettimeofday (reinterpret_cast<struct timeval*> (icmp + 1), nullptr);
-        }
     }
     else
     {
@@ -530,12 +607,6 @@ int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
         icmp->checksum = 0;
         icmp->un.echo.sequence = htons (sequence);
         icmp->un.echo.id = htons (_identity);
-
-        if (stamped)
-        {
-            ::gettimeofday (reinterpret_cast<struct timeval*> (icmp + 1), nullptr);
-        }
-
         icmp->checksum = Icmp::Socket::checksum (reinterpret_cast<uint16_t*> (icmp), size, 0);
     }
 
@@ -545,7 +616,7 @@ int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
     {
         if (attempt)
         {
-            std::this_thread::sleep_for (std::chrono::milliseconds (static_cast<int> (_retryDelay)));
+            std::this_thread::sleep_for (std::chrono::milliseconds (static_cast<int> (_retryDelay)));  // LCOV_EXCL_LINE
         }
 
         ScopedLock<Mutex> lock (_syncMutex);
@@ -556,7 +627,7 @@ int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
 
         if ((written == -1) && (lastError == std::errc::no_buffer_space) && (attempt == 0))
         {
-            continue;
+            continue;  // LCOV_EXCL_LINE
         }
 
         if (written == -1)
@@ -606,23 +677,7 @@ int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
 
         if (replied || stats._answer.expired)
         {
-            const uint64_t rtt = static_cast<uint64_t> (stats._answer.rtt.count ());
-
-            ++stats._samples;
-
-            if ((stats._samples == 1) || (rtt < stats._min))
-            {
-                stats._min = rtt;
-            }
-
-            if (rtt > stats._max)
-            {
-                stats._max = rtt;
-            }
-
-            const double delta = static_cast<double> (rtt) - stats._mean;
-            stats._mean += delta / stats._samples;
-            stats._m2 += delta * (static_cast<double> (rtt) - stats._mean);
+            stats.sample (stats._answer.rtt);
         }
 
         if (replied)
@@ -638,8 +693,6 @@ int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
         break;
     }
 
-    _reactor.delHandler (socket.handle ());
-
     return result;
 }
 
@@ -649,7 +702,7 @@ int Ping::echo (PingStats& stats, std::chrono::milliseconds timeout)
 // =========================================================================
 void Ping::onReadable (int fd)
 {
-    struct sockaddr_storage addr;
+    struct sockaddr_storage addr = {};
     char control[CMSG_SPACE (sizeof (int)) + CMSG_SPACE (sizeof (struct timeval))];
 
     struct iovec iov;
@@ -668,15 +721,13 @@ void Ping::onReadable (int fd)
     int packetSize = ::recvmsg (fd, &msg, 0);
     if ((packetSize < 0) || (msg.msg_flags & MSG_TRUNC))
     {
-        return;
+        return;  // LCOV_EXCL_LINE
     }
 
-    int family = AF_INET;
-    socklen_t length = sizeof (family);
-
-    if (::getsockopt (fd, SOL_SOCKET, SO_DOMAIN, &family, &length) == -1)
+    const int family = addr.ss_family;
+    if ((family != AF_INET) && (family != AF_INET6))
     {
-        return;
+        return;  // LCOV_EXCL_LINE
     }
 
 #ifdef DEBUG
@@ -694,8 +745,7 @@ void Ping::onReadable (int fd)
             {
                 received = reinterpret_cast<struct timeval*> (CMSG_DATA (cmsg));
             }
-            else if (((cmsg->cmsg_level == IPPROTO_IPV6) && (cmsg->cmsg_type == IPV6_HOPLIMIT)) ||
-                     ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_TTL)))
+            else if ((cmsg->cmsg_level == IPPROTO_IPV6) && (cmsg->cmsg_type == IPV6_HOPLIMIT))
             {
                 ::memcpy (&ttl, CMSG_DATA (cmsg), sizeof (ttl));
             }
@@ -709,13 +759,13 @@ void Ping::onReadable (int fd)
     {
         if (packetSize < _icmpHeaderSize)
         {
-            return;
+            return;  // LCOV_EXCL_LINE
         }
 
         struct icmp6_hdr* icmp = reinterpret_cast<struct icmp6_hdr*> (_buffer.get ());
         if ((icmp->icmp6_type != ICMP6_ECHO_REPLY) || (ntohs (icmp->icmp6_id) != _identity))
         {
-            return;
+            return;  // LCOV_EXCL_LINE
         }
 
         sequence = ntohs (icmp->icmp6_seq);
@@ -724,21 +774,17 @@ void Ping::onReadable (int fd)
     {
         if (packetSize < static_cast<int> (sizeof (struct iphdr)))
         {
-            return;
+            return;  // LCOV_EXCL_LINE
         }
 
         struct iphdr* ip = reinterpret_cast<struct iphdr*> (_buffer.get ());
         offset = ip->ihl * 4;
         packetSize -= offset;
-
-        if (ttl == 0)
-        {
-            ttl = ip->ttl;
-        }
+        ttl = ip->ttl;
 
         if (packetSize < _icmpHeaderSize)
         {
-            return;
+            return;  // LCOV_EXCL_LINE
         }
 
         struct icmphdr* icmp = reinterpret_cast<struct icmphdr*> (_buffer.get () + offset);
@@ -746,7 +792,7 @@ void Ping::onReadable (int fd)
         if ((icmp->type != ICMP_ECHOREPLY) || (ntohs (icmp->un.echo.id) != _identity) ||
             Icmp::Socket::checksum (reinterpret_cast<uint16_t*> (icmp), packetSize, 0))
         {
-            return;
+            return;  // LCOV_EXCL_LINE
         }
 
         sequence = ntohs (icmp->un.echo.sequence);
@@ -760,7 +806,7 @@ void Ping::onReadable (int fd)
     {
         if (payload[i] != static_cast<char> (i))
         {
-            return;
+            return;  // LCOV_EXCL_LINE
         }
     }
 
@@ -783,17 +829,17 @@ void Ping::onReadable (int fd)
     ScopedLock<Mutex> lock (_syncMutex);
 
     auto it = _pending.find (sequence);
-    if (it == _pending.end ())
+    if (it != _pending.end ())
     {
-        return;
-    }
+        PendingRequest& request = *it->second;
 
-    it->second->answer.from = IpAddress (*reinterpret_cast<struct sockaddr*> (&addr));
-    it->second->answer.ttl = ttl;
-    it->second->answer.size = packetSize;
-    it->second->answer.rtt = rtt;
-    it->second->answered = true;
-    it->second->cond.signal ();
+        request.answer.from = IpAddress (*reinterpret_cast<struct sockaddr*> (&addr));
+        request.answer.ttl = ttl;
+        request.answer.size = packetSize;
+        request.answer.rtt = rtt;
+        request.answered = true;
+        request.cond.signal ();
+    }
 }
 
 // =========================================================================
@@ -821,12 +867,12 @@ void Ping::onError (int fd)
 
     if (::recvmsg (fd, &msg, MSG_ERRQUEUE) < _icmpHeaderSize)
     {
-        return;
+        return;  // LCOV_EXCL_LINE
     }
 
     if (msg.msg_flags & MSG_CTRUNC)
     {
-        return;
+        return;  // LCOV_EXCL_LINE
     }
 
     struct sock_extended_err* error = nullptr;
@@ -842,7 +888,7 @@ void Ping::onError (int fd)
 
     if (error == nullptr)
     {
-        return;
+        return;  // LCOV_EXCL_LINE
     }
 
     int family = AF_INET;
@@ -853,7 +899,7 @@ void Ping::onError (int fd)
         struct icmp6_hdr* icmp = reinterpret_cast<struct icmp6_hdr*> (data);
         if ((icmp->icmp6_type != ICMP6_ECHO_REQUEST) || (ntohs (icmp->icmp6_id) != _identity))
         {
-            return;
+            return;  // LCOV_EXCL_LINE
         }
 
         family = AF_INET6;
@@ -864,7 +910,7 @@ void Ping::onError (int fd)
         struct icmphdr* icmp = reinterpret_cast<struct icmphdr*> (data);
         if ((icmp->type != ICMP_ECHO) || (ntohs (icmp->un.echo.id) != _identity))
         {
-            return;
+            return;  // LCOV_EXCL_LINE
         }
 
         family = AF_INET;
@@ -872,7 +918,7 @@ void Ping::onError (int fd)
     }
     else
     {
-        return;
+        return;  // LCOV_EXCL_LINE
     }
 
     const bool expired =
@@ -909,20 +955,20 @@ void Ping::onError (int fd)
     ScopedLock<Mutex> lock (_syncMutex);
 
     auto it = _pending.find (sequence);
-    if (it == _pending.end ())
+    if (it != _pending.end ())
     {
-        return;
-    }
+        PendingRequest& request = *it->second;
 
-    it->second->answer.from = from;
-    it->second->answer.rtt =
-        std::chrono::duration_cast<std::chrono::microseconds> (std::chrono::steady_clock::now () - it->second->sent);
-    it->second->answer.mtu = mtu;
-    it->second->answer.expired = expired;
-    it->second->answer.error = os.str ();
-    it->second->answer.code = code;
-    it->second->answered = true;
-    it->second->cond.signal ();
+        request.answer.from = from;
+        request.answer.rtt =
+            std::chrono::duration_cast<std::chrono::microseconds> (std::chrono::steady_clock::now () - request.sent);
+        request.answer.mtu = mtu;
+        request.answer.expired = expired;
+        request.answer.error = os.str ();
+        request.answer.code = code;
+        request.answered = true;
+        request.cond.signal ();
+    }
 }
 
 // =========================================================================

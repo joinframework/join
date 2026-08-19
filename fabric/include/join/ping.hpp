@@ -85,6 +85,19 @@ namespace join
         PingStats () = default;
 
         /**
+         * @brief create the PingStats instance for the given sequence settings.
+         * @param device device name to bind to.
+         * @param source source address to bind to.
+         * @param host destination host name or address.
+         * @param size number of data bytes sent in each echo request.
+         * @param interval interval between two echo requests.
+         * @param hop time to live the echo requests are sent with.
+         * @param df path MTU discovery setting the echo requests are sent with.
+         */
+        PingStats (const std::string& device, const IpAddress& source, const std::string& host, int size,
+                   std::chrono::milliseconds interval, int hop, int df);
+
+        /**
          * @brief create instance by copy.
          * @param other other object to copy.
          */
@@ -310,7 +323,7 @@ namespace join
          */
         std::chrono::microseconds min () const noexcept
         {
-            return std::chrono::microseconds (_samples ? _min : 0);
+            return std::chrono::microseconds (_min);
         }
 
         /**
@@ -343,8 +356,7 @@ namespace join
          */
         std::chrono::microseconds total () const noexcept
         {
-            return std::chrono::microseconds (static_cast<uint64_t> (_mean * _samples)) +
-                   (_interval * (_sent ? _sent - 1 : 0));
+            return std::chrono::duration_cast<std::chrono::microseconds> (_stop - _start);
         }
 
         /**
@@ -353,6 +365,12 @@ namespace join
         void reset () noexcept;
 
     private:
+        /**
+         * @brief add a round trip time to the aggregates.
+         * @param rtt round trip time to add.
+         */
+        void sample (std::chrono::microseconds rtt) noexcept;
+
         /// device name.
         std::string _device;
 
@@ -406,6 +424,12 @@ namespace join
 
         /// round trip time sum of squared deltas.
         double _m2 = 0.0;
+
+        /// time the sequence started at.
+        std::chrono::steady_clock::time_point _start;
+
+        /// time the sequence stopped at.
+        std::chrono::steady_clock::time_point _stop;
 
         /// friendship with ping.
         friend class Ping;
@@ -570,19 +594,42 @@ namespace join
         static bool isFatal (const PingStats& stats, uint32_t transmitted);
 
         /**
-         * @brief resolve the destination held by the statistics and check it is usable.
-         * @param stats sequence statistics, receives the resolved address.
-         * @return true if the destination resolves to an address of the source address family.
+         * @brief get the number of header bytes added to the data of an echo request.
+         * @param stats sequence statistics, holds the resolved destination.
+         * @return IP and ICMP header size.
          */
-        bool isValidDestination (PingStats& stats);
+        static int headerSize (const PingStats& stats);
 
         /**
-         * @brief open a socket, send an echo request and wait for its answer.
+         * @brief resolve the destination then open and register the socket used by a sequence.
+         * @param socket socket to open.
+         * @param stats sequence statistics.
+         * @return 0 on success, -1 on failure.
+         */
+        int open (Icmp::Socket& socket, PingStats& stats);
+
+        /**
+         * @brief restrict the ICMP messages delivered to the given socket.
+         * @param socket socket to set the filter on.
+         * @param stats sequence statistics, receives the outcome.
+         * @return 0 on success, -1 on failure.
+         */
+        static int setFilter (Icmp::Socket& socket, PingStats& stats);
+
+        /**
+         * @brief unregister and close the socket used by a sequence.
+         * @param socket socket to close.
+         */
+        void close (Icmp::Socket& socket);
+
+        /**
+         * @brief send an echo request through the given socket and wait for its answer.
+         * @param socket socket the echo request is sent through.
          * @param stats sequence statistics, holds the request settings and receives the outcome.
          * @param timeout answer timeout.
          * @return 0 if the destination answered, -1 otherwise.
          */
-        int echo (PingStats& stats, std::chrono::milliseconds timeout);
+        int echo (Icmp::Socket& socket, PingStats& stats, std::chrono::milliseconds timeout);
 
         /**
          * @brief method called when data are ready to be read.
@@ -656,9 +703,6 @@ namespace join
         /// receive buffer size.
         static constexpr size_t _bufferSize = 65535;
 
-        /// maximum number of attempts made to reserve a sequence number.
-        static constexpr int _maxSequenceAttempts = 8;
-
         /// maximum number of probes sent by pathMtu.
         static constexpr int _maxMtuProbes = 30;
 
@@ -700,6 +744,9 @@ namespace join
 
         /// echo request identifier.
         const uint16_t _identity;
+
+        /// sequence number of the last echo request sent.
+        uint16_t _sequence = 0;
 
         /// default time to live.
         const int _ttl;
