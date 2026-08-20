@@ -19,3 +19,11 @@ install(TARGETS traceroute RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 add_executable(nslookup nslookup.cpp)
 target_link_libraries(nslookup ${JOIN_FABRIC})
 install(TARGETS nslookup RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+add_executable(dhclient dhclient.cpp)
+target_link_libraries(dhclient ${JOIN_FABRIC})
+install(TARGETS dhclient RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+add_executable(dhcpd dhcpd.cpp)
+target_link_libraries(dhcpd ${JOIN_FABRIC})
+install(TARGETS dhcpd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
