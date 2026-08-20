@@ -45,7 +45,7 @@ namespace join
     /**
      * @brief ARP protocol class.
      */
-    class Arp : public Raw::Socket, public EventHandler
+    class Arp : public EventHandler
     {
     public:
         /**
@@ -198,7 +198,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (write (reinterpret_cast<const char*> (&out), sizeof (Packet)) == -1)
+            if (_socket.write (reinterpret_cast<const char*> (&out), sizeof (Packet)) == -1)
             {
                 // LCOV_EXCL_START
                 _pending.erase (inserted.first);
@@ -350,6 +350,9 @@ namespace join
 
         /// mutex for synchronous operations.
         Mutex _syncMutex;
+
+        /// underlying socket.
+        Raw::Socket _socket;
 
         /// interface name.
         const std::string _interface;

@@ -53,7 +53,7 @@ Arp::Arp (const std::string& interface, NeighborManager& neighbors)
         throw std::system_error (errno, std::system_category (), "arp interface lookup failed");
     }
 
-    if (bind (_interface) == -1 || setOption (Raw::Socket::Broadcast, 1) == -1)
+    if (_socket.bind (_interface) == -1 || _socket.setOption (Raw::Socket::Broadcast, 1) == -1)
     {
         throw std::system_error (lastError, "arp socket setup failed");  // LCOV_EXCL_LINE
     }
@@ -69,9 +69,9 @@ Arp::Arp (const std::string& interface, NeighborManager& neighbors)
     bpf.filter = code;
 
     // best effort, validation is done in onReadable anyway.
-    ::setsockopt (handle (), SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof (bpf));
+    ::setsockopt (_socket.handle (), SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof (bpf));
 
-    _reactor.addHandler (handle (), this);
+    _reactor.addHandler (_socket.handle (), this);
 }
 
 // =========================================================================
@@ -80,7 +80,7 @@ Arp::Arp (const std::string& interface, NeighborManager& neighbors)
 // =========================================================================
 Arp::~Arp ()
 {
-    _reactor.delHandler (handle ());
+    _reactor.delHandler (_socket.handle ());
 }
 
 // =========================================================================
@@ -176,7 +176,7 @@ void Arp::onReadable ([[maybe_unused]] int fd) noexcept
 {
     char data[_bufferSize];
 
-    if (read (data, sizeof (data)) < static_cast<int> (sizeof (Packet)))
+    if (_socket.read (data, sizeof (data)) < static_cast<int> (sizeof (Packet)))
     {
         return;  // LCOV_EXCL_LINE
     }
