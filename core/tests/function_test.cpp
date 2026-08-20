@@ -265,6 +265,28 @@ TEST (Function, forward)
 }
 
 /**
+ * @brief Test invoke.
+ */
+TEST (Function, invoke)
+{
+    int counter = 0;
+
+    Function<void (int)> f1 ([&counter] (int val) {
+        counter += val;
+    });
+
+    int arg = 42;
+    f1 (arg);
+    EXPECT_EQ (counter, 42);
+
+    const Function<int (int)> f2 (Multiplier{2});
+    EXPECT_EQ (f2 (21), 42);
+
+    const Function<void ()> f3 (nullptr);
+    EXPECT_THROW (f3 (), std::bad_function_call);
+}
+
+/**
  * @brief Test destroy.
  */
 TEST (Function, destroy)

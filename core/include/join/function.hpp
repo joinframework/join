@@ -152,7 +152,7 @@ namespace join
          * @return result of the invocation.
          * @throw std::bad_function_call if no callable is stored.
          */
-        Return operator() (Args&&... args)
+        Return operator() (Args... args) const
         {
             if (!_invoker)
             {
@@ -231,7 +231,7 @@ namespace join
         }
 
         /// fixed-capacity aligned storage for the callable target.
-        alignas (Alignment) unsigned char _storage[Capacity];
+        alignas (Alignment) mutable unsigned char _storage[Capacity];
 
         /// pointer to the static invocation wrapper.
         InvokerFunc _invoker = nullptr;
