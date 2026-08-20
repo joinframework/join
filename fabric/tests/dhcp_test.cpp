@@ -488,9 +488,10 @@ TEST_F (DhcpTest, exchange)
     ASSERT_EQ (answer->id, id);
     ASSERT_EQ (_secs, 4);
 
-    DhcpPacket lonely = client.compose (DhcpMessage::Discover);
-    ASSERT_EQ (client.exchange (lonely, IpAddress::ipv4Broadcast, DhcpMessage::Offer, std::chrono::milliseconds (0)),
-               nullptr);
+    DhcpPacket unanswered = client.compose (DhcpMessage::Offer);
+    ASSERT_EQ (
+        client.exchange (unanswered, IpAddress::ipv4Broadcast, DhcpMessage::Offer, std::chrono::milliseconds (100)),
+        nullptr);
     ASSERT_EQ (lastError, Errc::TimedOut) << lastError.message ();
 }
 
