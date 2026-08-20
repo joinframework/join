@@ -91,3 +91,23 @@ add_executable(route_manager.gtest route_manager_test.cpp)
 target_link_libraries(route_manager.gtest ${JOIN_FABRIC} GTest::gtest_main)
 add_test(NAME route_manager.gtest COMMAND route_manager.gtest)
 install(TARGETS route_manager.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(dhcp_option.gtest dhcp_option_test.cpp)
+target_link_libraries(dhcp_option.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME dhcp_option.gtest COMMAND dhcp_option.gtest)
+install(TARGETS dhcp_option.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(dhcp_protocol.gtest dhcp_protocol_test.cpp)
+target_link_libraries(dhcp_protocol.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME dhcp_protocol.gtest COMMAND dhcp_protocol.gtest)
+install(TARGETS dhcp_protocol.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(dhcp_message.gtest dhcp_message_test.cpp)
+target_link_libraries(dhcp_message.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME dhcp_message.gtest COMMAND dhcp_message.gtest)
+install(TARGETS dhcp_message.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(dhcp.gtest dhcp_test.cpp)
+target_link_libraries(dhcp.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME dhcp.gtest COMMAND dhcp.gtest)
+install(TARGETS dhcp.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)

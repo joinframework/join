@@ -18,6 +18,10 @@ set(PUBLIC_HEADERS
     include/join/interface_manager.hpp
     include/join/route.hpp
     include/join/route_manager.hpp
+    include/join/dhcp_option.hpp
+    include/join/dhcp_protocol.hpp
+    include/join/dhcp_message.hpp
+    include/join/dhcp.hpp
 )
 
 set(SOURCES
@@ -30,6 +34,8 @@ set(SOURCES
     src/interface_manager.cpp
     src/route.cpp
     src/route_manager.cpp
+    src/dhcp_option.cpp
+    src/dhcp_message.cpp
 )
 
 add_library(${JOIN_FABRIC} ${SOURCES})
