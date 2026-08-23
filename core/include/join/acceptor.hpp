@@ -193,10 +193,8 @@ namespace join
             int fd = ::accept4 (_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len, flags);
             if (fd == -1)
             {
-                // LCOV_EXCL_START
                 lastError = std::error_code (errno, std::generic_category ());
                 return {};
-                // LCOV_EXCL_STOP
             }
 
             return Socket (fd, Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len),
