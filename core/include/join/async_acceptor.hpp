@@ -32,6 +32,9 @@
 #include <join/proactor.hpp>
 #include <join/backoff.hpp>
 
+// C.
+#include <cerrno>
+
 // C++.
 #include <system_error>
 #include <utility>
@@ -261,8 +264,6 @@ namespace join
         void onComplete ([[maybe_unused]] IoOperation* op, int result) override
         {
             dispatch (result);
-
-            _accepting.store (_acceptOp.state != IoOperation::State::Idle, std::memory_order_release);
         }
 
         /**
@@ -279,10 +280,8 @@ namespace join
                 {
                     ::close (result);
                 }
-                return;
             }
-
-            if (result < 0)
+            else if (result < 0)
             {
                 handler (std::error_code (-result, std::generic_category ()), AsyncSocket (_engine));
             }
@@ -292,6 +291,8 @@ namespace join
                          AsyncSocket (Socket (result, Endpoint (reinterpret_cast<struct sockaddr*> (&_sa), _salen)),
                                       _engine));
             }
+
+            _accepting.store (_acceptOp.state != IoOperation::State::Idle, std::memory_order_release);
         }
 
         /**
@@ -301,14 +302,7 @@ namespace join
          */
         void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
         {
-            AcceptHandler handler = std::move (_onAccept);
-
-            if (handler)
-            {
-                handler (make_error_code (std::errc::operation_canceled), AsyncSocket (_engine));
-            }
-
-            _accepting.store (_acceptOp.state != IoOperation::State::Idle, std::memory_order_release);
+            dispatch (-ECANCELED);
         }
 
         /**
