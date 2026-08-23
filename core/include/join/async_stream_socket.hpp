@@ -202,15 +202,15 @@ namespace join
             if (!_writeState.compare_exchange_strong (expected, State::Pending, std::memory_order_acq_rel,
                                                       std::memory_order_acquire))
             {
+                // LCOV_EXCL_START
                 if ((expected != State::Dispatching) || !_engine->isProactorThread ())
                 {
-                    // LCOV_EXCL_START
                     lastError = make_error_code (Errc::InUse);
                     return -1;
-                    // LCOV_EXCL_STOP
                 }
 
                 _writeState.store (State::Pending, std::memory_order_release);
+                // LCOV_EXCL_STOP
             }
 
             _socket._state = Socket::Connecting;

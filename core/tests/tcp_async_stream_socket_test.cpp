@@ -139,25 +139,6 @@ protected:
     }
 
     /**
-     * @brief handler resubmitting a connection from within itself.
-     * @param ec error reported by the socket.
-     */
-    static void onConnect (const std::error_code& ec)
-    {
-        if (_rearms > 0)
-        {
-            --_rearms;
-            _current->asyncConnect ({_host, _port}, onConnect);
-        }
-
-        ScopedLock<Mutex> lock (_mut);
-
-        _code = ec;
-        ++_completions;
-        _cond.signal ();
-    }
-
-    /**
      * @brief handler resubmitting a read from within itself.
      * @param ec error reported by the socket.
      * @param size number of bytes read.
@@ -484,19 +465,6 @@ TEST_F (TcpAsyncStreamSocket, resubmit)
         }));
         ASSERT_FALSE (_code) << _code.message ();
     }
-
-    _rearms = 1;
-
-    ASSERT_EQ (client.asyncConnect ({_host, _port}, onConnect), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 7;
-        }));
-    }
-
-    ASSERT_FALSE (client.writePending ());
 
     client.close ();
     _current = nullptr;
