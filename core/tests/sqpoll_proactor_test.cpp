@@ -72,9 +72,13 @@ protected:
      */
     void onComplete (IoOperation* op, int result) override
     {
-        SqpollProactorThread::proactor ().submit (op, true, true);
-        SqpollProactorThread::proactor ().cancel (op, true, true);
-        SqpollProactorThread::proactor ().flush (true);
+        if (_resubmits > 0)
+        {
+            --_resubmits;
+            _resubmitted = SqpollProactorThread::proactor ().submit (op, true, true);
+            _rejected = SqpollProactorThread::proactor ().submit (op, true, true);
+            SqpollProactorThread::proactor ().flush (true);
+        }
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -93,9 +97,13 @@ protected:
      */
     void onCancel (IoOperation* op, int result) override
     {
-        SqpollProactorThread::proactor ().submit (op, true, true);
-        SqpollProactorThread::proactor ().cancel (op, true, true);
-        SqpollProactorThread::proactor ().flush (true);
+        if (_resubmits > 0)
+        {
+            --_resubmits;
+            _resubmitted = SqpollProactorThread::proactor ().submit (op, true, true);
+            _rejected = SqpollProactorThread::proactor ().submit (op, true, true);
+            SqpollProactorThread::proactor ().flush (true);
+        }
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -134,6 +142,18 @@ protected:
     /// last completed operation.
     static IoOperation* _op;
 
+    /// operation resubmitted from a handler.
+    static IoOperation _resubmitOp;
+
+    /// number of resubmissions left to perform from a handler.
+    static int _resubmits;
+
+    /// result of the resubmission performed from a handler.
+    static int _resubmitted;
+
+    /// result of the rejected resubmission performed from a handler.
+    static int _rejected;
+
     /// last operation result.
     static int _result;
 
@@ -150,6 +170,10 @@ const int SqpollProactorTest::_timeout = 1000;
 Condition SqpollProactorTest::_cond;
 Mutex SqpollProactorTest::_mut;
 IoOperation* SqpollProactorTest::_op = nullptr;
+IoOperation SqpollProactorTest::_resubmitOp = {};
+int SqpollProactorTest::_resubmits = 0;
+int SqpollProactorTest::_resubmitted = 0;
+int SqpollProactorTest::_rejected = 0;
 int SqpollProactorTest::_result = 0;
 char SqpollProactorTest::_buf[256] = {};
 
@@ -815,6 +839,48 @@ TEST_F (SqpollProactorTest, onError)
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
             return _op == &op && _result == -ECONNRESET;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+}
+
+/**
+ * @brief Test resubmission from handler.
+ */
+TEST_F (SqpollProactorTest, resubmit)
+{
+    const char* msg = "resubmit";
+
+    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _resubmits = 1;
+    _resubmitted = 0;
+    _rejected = 0;
+
+    _resubmitOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_resubmitOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_resubmitOp && _result > 0;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (_resubmitted, 0);
+    ASSERT_EQ (_rejected, -1);
+
+    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (&_resubmitOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_resubmitOp && _result == -ECANCELED;
         }));
         _op = nullptr;
         _result = 0;

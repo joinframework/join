@@ -680,6 +680,8 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
         return;  // LCOV_EXCL_LINE
     }
 
+    op->state = IoOperation::State::Idle;
+
     if (JOIN_LIKELY (op->handler))
     {
         if (cancelled)
@@ -691,8 +693,6 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
             op->handler->onComplete (op, result);
         }
     }
-
-    op->state = IoOperation::State::Idle;
 }
 
 #ifdef JOIN_HAS_IO_URING

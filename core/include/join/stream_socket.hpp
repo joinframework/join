@@ -42,8 +42,9 @@ namespace join
     template <class Protocol>
     class BasicStreamSocket final : public BasicSocket<Protocol>
     {
-        /// friendship with basic stream acceptor
-        friend class BasicStreamAcceptor<Protocol>;
+        /// friendship with basic asynchronous stream socket
+        template <class P, class E>
+        friend class BasicAsyncStreamSocket;
 
     public:
         using Ptr = std::unique_ptr<BasicStreamSocket<Protocol>>;
@@ -67,6 +68,26 @@ namespace join
         explicit BasicStreamSocket (Mode mode)
         : BasicSocket<Protocol> (mode)
         {
+        }
+
+        /**
+         * @brief create the socket instance adopting an accepted file descriptor.
+         * @param fd accepted file descriptor.
+         * @param remote endpoint of the connected peer, as reported by the accept.
+         * @param mode blocking mode the file descriptor was accepted with.
+         */
+        explicit BasicStreamSocket (int fd, const Endpoint& remote, Mode mode = Mode::NonBlocking)
+        : BasicSocket<Protocol> (mode)
+        {
+            this->_handle = fd;
+            this->_state = State::Connected;
+            this->_protocol = remote.protocol ();
+            _remote = remote;
+
+            if (this->protocol () == IPPROTO_TCP)
+            {
+                setOption (Option::NoDelay, 1);
+            }
         }
 
         /**

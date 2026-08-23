@@ -72,11 +72,15 @@ protected:
      */
     void onComplete (IoOperation* op, int result) override
     {
-        ProactorThread::proactor ().submit (op, true, true);
-        ProactorThread::proactor ().cancel (op, true, true);
+        if (_resubmits > 0)
+        {
+            --_resubmits;
+            _resubmitted = ProactorThread::proactor ().submit (op, true, true);
+            _rejected = ProactorThread::proactor ().submit (op, true, true);
 #ifdef JOIN_HAS_IO_URING
-        ProactorThread::proactor ().flush (true);
+            ProactorThread::proactor ().flush (true);
 #endif
+        }
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -95,11 +99,15 @@ protected:
      */
     void onCancel (IoOperation* op, int result) override
     {
-        ProactorThread::proactor ().submit (op, true, true);
-        ProactorThread::proactor ().cancel (op, true, true);
+        if (_resubmits > 0)
+        {
+            --_resubmits;
+            _resubmitted = ProactorThread::proactor ().submit (op, true, true);
+            _rejected = ProactorThread::proactor ().submit (op, true, true);
 #ifdef JOIN_HAS_IO_URING
-        ProactorThread::proactor ().flush (true);
+            ProactorThread::proactor ().flush (true);
 #endif
+        }
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -138,6 +146,18 @@ protected:
     /// last completed operation.
     static IoOperation* _op;
 
+    /// operation resubmitted from a handler.
+    static IoOperation _resubmitOp;
+
+    /// number of resubmissions left to perform from a handler.
+    static int _resubmits;
+
+    /// result of the resubmission performed from a handler.
+    static int _resubmitted;
+
+    /// result of the rejected resubmission performed from a handler.
+    static int _rejected;
+
     /// last operation result.
     static int _result;
 
@@ -154,6 +174,10 @@ const int ProactorTest::_timeout = 1000;
 Condition ProactorTest::_cond;
 Mutex ProactorTest::_mut;
 IoOperation* ProactorTest::_op = nullptr;
+IoOperation ProactorTest::_resubmitOp = {};
+int ProactorTest::_resubmits = 0;
+int ProactorTest::_resubmitted = 0;
+int ProactorTest::_rejected = 0;
 int ProactorTest::_result = 0;
 char ProactorTest::_buf[256] = {};
 
@@ -823,6 +847,48 @@ TEST_F (ProactorTest, onError)
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
             return _op == &op && _result == -ECONNRESET;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+}
+
+/**
+ * @brief Test resubmission from handler.
+ */
+TEST_F (ProactorTest, resubmit)
+{
+    const char* msg = "resubmit";
+
+    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _resubmits = 1;
+    _resubmitted = 0;
+    _rejected = 0;
+
+    _resubmitOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_resubmitOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_resubmitOp && _result > 0;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (_resubmitted, 0);
+    ASSERT_EQ (_rejected, -1);
+
+    ASSERT_EQ (ProactorThread::proactor ().cancel (&_resubmitOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_resubmitOp && _result == -ECANCELED;
         }));
         _op = nullptr;
         _result = 0;
