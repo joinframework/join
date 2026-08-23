@@ -38,6 +38,7 @@
 
 // C.
 #include <cstddef>
+#include <cstdint>
 
 namespace join
 {
@@ -148,7 +149,18 @@ namespace join
         {
             cancelRead ();
             cancelWrite ();
-            waitIdle ();
+
+            if (!_engine->isProactorThread ())
+            {
+                Backoff backoff;
+
+                while ((_readState.load (std::memory_order_acquire) != State::Idle) ||
+                       (_writeState.load (std::memory_order_acquire) != State::Idle))
+                {
+                    backoff ();
+                }
+            }
+
             _socket.close ();
         }
 
@@ -180,17 +192,25 @@ namespace join
          */
         int asyncConnect (const Endpoint& endpoint, ConnectHandler handler) noexcept
         {
-            if (_writeOp.state != IoOperation::State::Idle)
-            {
-                // LCOV_EXCL_START
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-
             if (!_socket.opened () && (_socket.open (endpoint.protocol ()) == -1))
             {
                 return -1;  // LCOV_EXCL_LINE
+            }
+
+            State expected = State::Idle;
+
+            if (!_writeState.compare_exchange_strong (expected, State::Pending, std::memory_order_acq_rel,
+                                                      std::memory_order_acquire))
+            {
+                if ((expected != State::Dispatching) || !_engine->isProactorThread ())
+                {
+                    // LCOV_EXCL_START
+                    lastError = make_error_code (Errc::InUse);
+                    return -1;
+                    // LCOV_EXCL_STOP
+                }
+
+                _writeState.store (State::Pending, std::memory_order_release);
             }
 
             _socket._state = Socket::Connecting;
@@ -199,12 +219,10 @@ namespace join
             _writeOp =
                 IoOperation::makeConnect (_socket.handle (), _socket._remote.addr (), _socket._remote.length (), this);
 
-            _writing.store (true, std::memory_order_release);
-
             if (_engine->submit (&_writeOp, true, true) == -1)
             {
                 // LCOV_EXCL_START
-                _writing.store (false, std::memory_order_release);
+                _writeState.store (State::Idle, std::memory_order_release);
                 _onConnect.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
@@ -222,27 +240,33 @@ namespace join
          */
         int asyncRead (char* data, size_t maxSize, ReadHandler handler) noexcept
         {
-            if (_readOp.state != IoOperation::State::Idle)
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
             if (!_socket.opened ())
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
+            State expected = State::Idle;
+
+            if (!_readState.compare_exchange_strong (expected, State::Pending, std::memory_order_acq_rel,
+                                                     std::memory_order_acquire))
+            {
+                if ((expected != State::Dispatching) || !_engine->isProactorThread ())
+                {
+                    lastError = make_error_code (Errc::InUse);
+                    return -1;
+                }
+
+                _readState.store (State::Pending, std::memory_order_release);
+            }
+
             _onRead = std::move (handler);
             _readOp = IoOperation::makeRecv (_socket.handle (), data, static_cast<uint32_t> (maxSize), 0, this);
-
-            _reading.store (true, std::memory_order_release);
 
             if (_engine->submit (&_readOp, true, true) == -1)
             {
                 // LCOV_EXCL_START
-                _reading.store (false, std::memory_order_release);
+                _readState.store (State::Idle, std::memory_order_release);
                 _onRead.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
@@ -260,30 +284,36 @@ namespace join
          */
         int asyncWrite (const char* data, size_t size, WriteHandler handler) noexcept
         {
-            if (_writeOp.state != IoOperation::State::Idle)
-            {
-                // LCOV_EXCL_START
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-
             if (!_socket.opened ())
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
+            State expected = State::Idle;
+
+            if (!_writeState.compare_exchange_strong (expected, State::Pending, std::memory_order_acq_rel,
+                                                      std::memory_order_acquire))
+            {
+                if ((expected != State::Dispatching) || !_engine->isProactorThread ())
+                {
+                    // LCOV_EXCL_START
+                    lastError = make_error_code (Errc::InUse);
+                    return -1;
+                    // LCOV_EXCL_STOP
+                }
+
+                _writeState.store (State::Pending, std::memory_order_release);
+            }
+
             _onWrite = std::move (handler);
             _writeOp =
                 IoOperation::makeSend (_socket.handle (), data, static_cast<uint32_t> (size), MSG_NOSIGNAL, this);
 
-            _writing.store (true, std::memory_order_release);
-
             if (_engine->submit (&_writeOp, true, true) == -1)
             {
                 // LCOV_EXCL_START
-                _writing.store (false, std::memory_order_release);
+                _writeState.store (State::Idle, std::memory_order_release);
                 _onWrite.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
@@ -298,12 +328,17 @@ namespace join
          */
         int cancelRead () noexcept
         {
-            if (_readOp.state != IoOperation::State::Submitted)
+            if (_readState.load (std::memory_order_acquire) == State::Idle)
             {
                 return 0;
             }
 
-            return _engine->cancel (&_readOp, true, true);
+            if (_engine->cancel (&_readOp, true, true) == -1)
+            {
+                return (lastError == Errc::OperationFailed) ? 0 : -1;
+            }
+
+            return 0;
         }
 
         /**
@@ -312,12 +347,17 @@ namespace join
          */
         int cancelWrite () noexcept
         {
-            if (_writeOp.state != IoOperation::State::Submitted)
+            if (_writeState.load (std::memory_order_acquire) == State::Idle)
             {
                 return 0;
             }
 
-            return _engine->cancel (&_writeOp, true, true);  // LCOV_EXCL_LINE
+            if (_engine->cancel (&_writeOp, true, true) == -1)
+            {
+                return (lastError == Errc::OperationFailed) ? 0 : -1;
+            }
+
+            return 0;  // LCOV_EXCL_LINE
         }
 
         /**
@@ -326,7 +366,7 @@ namespace join
          */
         bool readPending () const noexcept
         {
-            return _reading.load (std::memory_order_acquire);
+            return _readState.load (std::memory_order_acquire) != State::Idle;
         }
 
         /**
@@ -335,7 +375,7 @@ namespace join
          */
         bool writePending () const noexcept
         {
-            return _writing.load (std::memory_order_acquire);
+            return _writeState.load (std::memory_order_acquire) != State::Idle;
         }
 
         /**
@@ -468,6 +508,16 @@ namespace join
 
     private:
         /**
+         * @brief operation slot state.
+         */
+        enum class State : uint8_t
+        {
+            Idle,        /**< no operation in flight and no completion handler running. */
+            Pending,     /**< an operation is in flight. */
+            Dispatching, /**< the completion handler is running. */
+        };
+
+        /**
          * @brief method called when an operation completes.
          * @param op completed operation.
          * @param result number of bytes transferred, or operation specific value.
@@ -497,6 +547,9 @@ namespace join
         void dispatch (IoOperation* op, const std::error_code& code, size_t size) noexcept
         {
             bool isRead = (op == &_readOp);
+            std::atomic<State>& state = isRead ? _readState : _writeState;
+
+            state.store (State::Dispatching, std::memory_order_release);
 
             if (isRead)
             {
@@ -531,32 +584,8 @@ namespace join
                 }
             }
 
-            if (isRead)
-            {
-                _reading.store (_readOp.state != IoOperation::State::Idle, std::memory_order_release);
-            }
-            else
-            {
-                _writing.store (_writeOp.state != IoOperation::State::Idle, std::memory_order_release);
-            }
-        }
-
-        /**
-         * @brief block until both operation slots are idle.
-         */
-        void waitIdle () noexcept
-        {
-            if (_engine->isProactorThread ())
-            {
-                return;
-            }
-
-            Backoff backoff;
-
-            while (_reading.load (std::memory_order_acquire) || _writing.load (std::memory_order_acquire))
-            {
-                backoff ();
-            }
+            State expected = State::Dispatching;
+            state.compare_exchange_strong (expected, State::Idle, std::memory_order_acq_rel, std::memory_order_acquire);
         }
 
         /// underlying synchronous socket.
@@ -565,11 +594,11 @@ namespace join
         /// engine driving the operations.
         Engine* _engine;
 
-        /// true while a read operation or its completion handler is in flight.
-        alignas (64) std::atomic<bool> _reading{false};
+        /// read slot state.
+        alignas (64) std::atomic<State> _readState{State::Idle};
 
-        /// true while a connect or write operation or its completion handler is in flight.
-        std::atomic<bool> _writing{false};
+        /// connect or write slot state.
+        alignas (64) std::atomic<State> _writeState{State::Idle};
 
         /// read operation slot.
         IoOperation _readOp = {};

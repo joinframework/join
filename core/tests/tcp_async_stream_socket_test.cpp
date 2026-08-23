@@ -118,6 +118,46 @@ protected:
     }
 
     /**
+     * @brief handler resubmitting a write from within itself.
+     * @param ec error reported by the socket.
+     * @param size number of bytes written.
+     */
+    static void onWrite (const std::error_code& ec, size_t size)
+    {
+        if (!ec && (_rearms > 0))
+        {
+            --_rearms;
+            _current->asyncWrite ("two", 3, onWrite);
+        }
+
+        ScopedLock<Mutex> lock (_mut);
+
+        _code = ec;
+        _transferred = size;
+        ++_completions;
+        _cond.signal ();
+    }
+
+    /**
+     * @brief handler resubmitting a connection from within itself.
+     * @param ec error reported by the socket.
+     */
+    static void onConnect (const std::error_code& ec)
+    {
+        if (_rearms > 0)
+        {
+            --_rearms;
+            _current->asyncConnect ({_host, _port}, onConnect);
+        }
+
+        ScopedLock<Mutex> lock (_mut);
+
+        _code = ec;
+        ++_completions;
+        _cond.signal ();
+    }
+
+    /**
      * @brief handler resubmitting a read from within itself.
      * @param ec error reported by the socket.
      * @param size number of bytes read.
@@ -433,7 +473,83 @@ TEST_F (TcpAsyncStreamSocket, resubmit)
         ASSERT_EQ (std::string (_buf, 3), "two");
     }
 
+    _rearms = 1;
+
+    ASSERT_EQ (client.asyncWrite ("three", 5, onWrite), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 5;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    _rearms = 1;
+
+    ASSERT_EQ (client.asyncConnect ({_host, _port}, onConnect), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 7;
+        }));
+    }
+
+    ASSERT_FALSE (client.writePending ());
+
     client.close ();
+    _current = nullptr;
+}
+
+/**
+ * @brief Test close from within the write completion handler.
+ */
+TEST_F (TcpAsyncStreamSocket, closeFromWriteHandler)
+{
+    Tcp::AsyncSocket client;
+
+    _current = &client;
+
+    ASSERT_EQ (client.asyncConnect ({_host, _port},
+                                    [] (const std::error_code& ec) {
+                                        ScopedLock<Mutex> lock (_mut);
+                                        _code = ec;
+                                        ++_completions;
+                                        _cond.signal ();
+                                    }),
+               0)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_EQ (client.asyncWrite ("hello", 5,
+                                  [] (const std::error_code& ec, [[maybe_unused]] size_t size) {
+                                      _current->close ();
+
+                                      ScopedLock<Mutex> lock (_mut);
+                                      _code = ec;
+                                      ++_completions;
+                                      _cond.signal ();
+                                  }),
+               0)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_FALSE (client.opened ());
     _current = nullptr;
 }
 

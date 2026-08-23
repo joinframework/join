@@ -32,13 +32,14 @@
 #include <join/proactor.hpp>
 #include <join/backoff.hpp>
 
-// C.
-#include <cerrno>
-
 // C++.
 #include <system_error>
 #include <utility>
 #include <atomic>
+
+// C.
+#include <cstdint>
+#include <cerrno>
 
 namespace join
 {
@@ -117,7 +118,17 @@ namespace join
         void close () noexcept
         {
             cancelAccept ();
-            waitIdle ();
+
+            if (!_engine.isProactorThread ())
+            {
+                Backoff backoff;
+
+                while (_acceptState.load (std::memory_order_acquire) != State::Idle)
+                {
+                    backoff ();
+                }
+            }
+
             _acceptor.close ();
         }
 
@@ -129,16 +140,24 @@ namespace join
          */
         int asyncAccept (AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) noexcept
         {
-            if (_acceptOp.state != IoOperation::State::Idle)
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
             if (!_acceptor.opened ())
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
+            }
+
+            State expected = State::Idle;
+
+            if (!_acceptState.compare_exchange_strong (expected, State::Pending, std::memory_order_acq_rel,
+                                                       std::memory_order_acquire))
+            {
+                if ((expected != State::Dispatching) || !_engine.isProactorThread ())
+                {
+                    lastError = make_error_code (Errc::InUse);
+                    return -1;
+                }
+
+                _acceptState.store (State::Pending, std::memory_order_release);
             }
 
             _salen = sizeof (struct sockaddr_storage);
@@ -146,12 +165,10 @@ namespace join
             _acceptOp = IoOperation::makeAccept (_acceptor.handle (), reinterpret_cast<struct sockaddr*> (&_sa),
                                                  &_salen, flags | SOCK_NONBLOCK, this);
 
-            _accepting.store (true, std::memory_order_release);
-
             if (_engine.submit (&_acceptOp, true, true) == -1)
             {
                 // LCOV_EXCL_START
-                _accepting.store (false, std::memory_order_release);
+                _acceptState.store (State::Idle, std::memory_order_release);
                 _onAccept.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
@@ -166,12 +183,17 @@ namespace join
          */
         int cancelAccept () noexcept
         {
-            if (_acceptOp.state != IoOperation::State::Submitted)
+            if (_acceptState.load (std::memory_order_acquire) == State::Idle)
             {
                 return 0;
             }
 
-            return _engine.cancel (&_acceptOp, true, true);
+            if (_engine.cancel (&_acceptOp, true, true) == -1)
+            {
+                return (lastError == Errc::OperationFailed) ? 0 : -1;
+            }
+
+            return 0;
         }
 
         /**
@@ -180,7 +202,7 @@ namespace join
          */
         bool acceptPending () const noexcept
         {
-            return _accepting.load (std::memory_order_acquire);
+            return _acceptState.load (std::memory_order_acquire) != State::Idle;
         }
 
         /**
@@ -257,6 +279,16 @@ namespace join
 
     private:
         /**
+         * @brief acceptation slot state.
+         */
+        enum class State : uint8_t
+        {
+            Idle,        /**< no acceptation in flight and no completion handler running. */
+            Pending,     /**< an acceptation is in flight. */
+            Dispatching, /**< the completion handler is running. */
+        };
+
+        /**
          * @brief method called when the acceptation completes.
          * @param op completed operation.
          * @param result accepted file descriptor, or negative errno.
@@ -272,6 +304,8 @@ namespace join
          */
         void dispatch (int result) noexcept
         {
+            _acceptState.store (State::Dispatching, std::memory_order_release);
+
             AcceptHandler handler = std::move (_onAccept);
 
             if (!handler)
@@ -292,7 +326,9 @@ namespace join
                                       _engine));
             }
 
-            _accepting.store (_acceptOp.state != IoOperation::State::Idle, std::memory_order_release);
+            State expected = State::Dispatching;
+            _acceptState.compare_exchange_strong (expected, State::Idle, std::memory_order_acq_rel,
+                                                  std::memory_order_acquire);
         }
 
         /**
@@ -305,32 +341,14 @@ namespace join
             dispatch (-ECANCELED);
         }
 
-        /**
-         * @brief block until the acceptation slot is idle.
-         */
-        void waitIdle () noexcept
-        {
-            if (_engine.isProactorThread ())
-            {
-                return;
-            }
-
-            Backoff backoff;
-
-            while (_accepting.load (std::memory_order_acquire))
-            {
-                backoff ();
-            }
-        }
-
         /// underlying synchronous acceptor.
         Acceptor _acceptor;
 
         /// engine driving the operations.
         Engine& _engine;
 
-        /// true while an acceptation or its completion handler is in flight.
-        alignas (64) std::atomic<bool> _accepting{false};
+        /// acceptation slot state.
+        alignas (64) std::atomic<State> _acceptState{State::Idle};
 
         /// acceptation operation slot.
         IoOperation _acceptOp = {};
