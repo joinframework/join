@@ -201,7 +201,7 @@ namespace join
 
             _writing.store (true, std::memory_order_release);
 
-            if (_engine->submit (&_writeOp, true, !_engine->isProactorThread ()) == -1)
+            if (_engine->submit (&_writeOp, true, true) == -1)
             {
                 // LCOV_EXCL_START
                 _writing.store (false, std::memory_order_release);
@@ -239,7 +239,7 @@ namespace join
 
             _reading.store (true, std::memory_order_release);
 
-            if (_engine->submit (&_readOp, true, !_engine->isProactorThread ()) == -1)
+            if (_engine->submit (&_readOp, true, true) == -1)
             {
                 // LCOV_EXCL_START
                 _reading.store (false, std::memory_order_release);
@@ -280,7 +280,7 @@ namespace join
 
             _writing.store (true, std::memory_order_release);
 
-            if (_engine->submit (&_writeOp, true, !_engine->isProactorThread ()) == -1)
+            if (_engine->submit (&_writeOp, true, true) == -1)
             {
                 // LCOV_EXCL_START
                 _writing.store (false, std::memory_order_release);
@@ -303,7 +303,7 @@ namespace join
                 return 0;
             }
 
-            return _engine->cancel (&_readOp, true, !_engine->isProactorThread ());
+            return _engine->cancel (&_readOp, true, true);
         }
 
         /**
@@ -317,7 +317,7 @@ namespace join
                 return 0;
             }
 
-            return _engine->cancel (&_writeOp, true, !_engine->isProactorThread ());  // LCOV_EXCL_LINE
+            return _engine->cancel (&_writeOp, true, true);  // LCOV_EXCL_LINE
         }
 
         /**

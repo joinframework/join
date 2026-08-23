@@ -148,7 +148,7 @@ namespace join
 
             _accepting.store (true, std::memory_order_release);
 
-            if (_engine.submit (&_acceptOp, true, !_engine.isProactorThread ()) == -1)
+            if (_engine.submit (&_acceptOp, true, true) == -1)
             {
                 // LCOV_EXCL_START
                 _accepting.store (false, std::memory_order_release);
@@ -171,7 +171,7 @@ namespace join
                 return 0;
             }
 
-            return _engine.cancel (&_acceptOp, true, !_engine.isProactorThread ());
+            return _engine.cancel (&_acceptOp, true, true);
         }
 
         /**
