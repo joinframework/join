@@ -288,9 +288,9 @@ namespace join
             }
             else
             {
-                handler (
-                    std::error_code (),
-                    AsyncSocket (Socket (result, Endpoint (reinterpret_cast<struct sockaddr*> (&_sa), _salen)), _engine));
+                handler (std::error_code (),
+                         AsyncSocket (Socket (result, Endpoint (reinterpret_cast<struct sockaddr*> (&_sa), _salen)),
+                                      _engine));
             }
         }
 
