@@ -337,7 +337,7 @@ namespace join
         Engine& _engine;
 
         /// true while an acceptation or its completion handler is in flight.
-        alignas (64) std::atomic<bool> _accepting {false};
+        alignas (64) std::atomic<bool> _accepting{false};
 
         /// acceptation operation slot.
         IoOperation _acceptOp = {};
