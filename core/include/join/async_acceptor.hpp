@@ -284,15 +284,14 @@ namespace join
 
             if (result < 0)
             {
-                // LCOV_EXCL_START
                 handler (std::error_code (-result, std::generic_category ()), AsyncSocket (_engine));
-                return;
-                // LCOV_EXCL_STOP
             }
-
-            handler (
-                std::error_code (),
-                AsyncSocket (Socket (result, Endpoint (reinterpret_cast<struct sockaddr*> (&_sa), _salen)), _engine));
+            else
+            {
+                handler (
+                    std::error_code (),
+                    AsyncSocket (Socket (result, Endpoint (reinterpret_cast<struct sockaddr*> (&_sa), _salen)), _engine));
+            }
         }
 
         /**
