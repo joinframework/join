@@ -64,6 +64,7 @@ protected:
     {
         ::unlink (_serverpath.c_str ());
         ::unlink (_clientpath.c_str ());
+        ::unlink (_stallpath.c_str ());
     }
 
     /**
@@ -147,6 +148,25 @@ protected:
     }
 
     /**
+     * @brief handler retrying the connection from within itself.
+     * @param ec error reported by the socket.
+     */
+    static void onConnect (const std::error_code& ec)
+    {
+        if (ec && (_rearms > 0))
+        {
+            --_rearms;
+            _current->asyncConnect (_serverpath, onConnect);
+        }
+
+        ScopedLock<Mutex> lock (_mut);
+
+        _code = ec;
+        ++_completions;
+        _cond.signal ();
+    }
+
+    /**
      * @brief handler resubmitting a read from within itself.
      * @param ec error reported by the socket.
      * @param size number of bytes read.
@@ -200,6 +220,7 @@ protected:
     /// path.
     static const std::string _serverpath;
     static const std::string _clientpath;
+    static const std::string _stallpath;
 
     /// timeout.
     static const int _timeout;
@@ -216,6 +237,7 @@ UnixStream::AsyncSocket* UnixAsyncStreamSocket::_current = nullptr;
 int UnixAsyncStreamSocket::_rearms = 0;
 const std::string UnixAsyncStreamSocket::_serverpath = "/tmp/unixasyncserver_test.sock";
 const std::string UnixAsyncStreamSocket::_clientpath = "/tmp/unixasyncclient_test.sock";
+const std::string UnixAsyncStreamSocket::_stallpath = "/tmp/unixasyncstall_test.sock";
 const int UnixAsyncStreamSocket::_timeout = 1000;
 
 /**
@@ -318,6 +340,26 @@ TEST_F (UnixAsyncStreamSocket, asyncConnect)
     ASSERT_TRUE (client.connected ());
     ASSERT_EQ (client.remoteEndpoint (), UnixStream::Endpoint (_serverpath));
     client.close ();
+
+    UnixStream::AsyncSocket retry;
+
+    _current = &retry;
+    _rearms = 1;
+
+    ASSERT_EQ (retry.asyncConnect ("/tmp/unixasyncmissing_test.sock", onConnect), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 4;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_TRUE (retry.connected ());
+
+    retry.close ();
+    _current = nullptr;
 }
 
 /**
@@ -611,6 +653,58 @@ TEST_F (UnixAsyncStreamSocket, cancelWrite)
     ASSERT_EQ (client.open (), 0) << join::lastError.message ();
     ASSERT_EQ (client.cancelWrite (), 0) << join::lastError.message ();
     client.close ();
+
+    UnixStream::Acceptor stall;
+    UnixStream::AsyncSocket sender;
+
+    ASSERT_EQ (stall.create (_stallpath), 0) << join::lastError.message ();
+
+    ASSERT_EQ (sender.asyncConnect (_stallpath,
+                                    [] (const std::error_code& ec) {
+                                        ScopedLock<Mutex> lock (_mut);
+                                        _code = ec;
+                                        ++_completions;
+                                        _cond.signal ();
+                                    }),
+               0)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    UnixStream::Socket peer = stall.accept ();
+    ASSERT_TRUE (peer.connected ());
+
+    ASSERT_EQ (sender.setOption (UnixStream::Socket::SndBuffer, 4096), 0) << join::lastError.message ();
+    ASSERT_EQ (peer.setOption (UnixStream::Socket::RcvBuffer, 4096), 0) << join::lastError.message ();
+
+    int filled = 0;
+    while ((filled < 4096) && (sender.socket ().write (_buf, sizeof (_buf)) != -1))
+    {
+        ++filled;
+    }
+
+    ASSERT_LT (filled, 4096);
+
+    ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), 0) << join::lastError.message ();
+    ASSERT_TRUE (sender.writePending ());
+
+    ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (sender.asyncConnect (_stallpath, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (sender.cancelWrite (), 0) << join::lastError.message ();
+
+    sender.close ();
+    peer.close ();
+    stall.close ();
 }
 
 /**

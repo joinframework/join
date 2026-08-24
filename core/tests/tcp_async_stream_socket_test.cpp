@@ -139,6 +139,25 @@ protected:
     }
 
     /**
+     * @brief handler retrying the connection from within itself.
+     * @param ec error reported by the socket.
+     */
+    static void onConnect (const std::error_code& ec)
+    {
+        if (ec && (_rearms > 0))
+        {
+            --_rearms;
+            _current->asyncConnect ({_host, _port}, onConnect);
+        }
+
+        ScopedLock<Mutex> lock (_mut);
+
+        _code = ec;
+        ++_completions;
+        _cond.signal ();
+    }
+
+    /**
      * @brief handler resubmitting a read from within itself.
      * @param ec error reported by the socket.
      * @param size number of bytes read.
@@ -194,6 +213,7 @@ protected:
 
     /// port.
     static const uint16_t _port;
+    static const uint16_t _stallport;
 
     /// timeout.
     static const int _timeout;
@@ -210,6 +230,7 @@ Tcp::AsyncSocket* TcpAsyncStreamSocket::_current = nullptr;
 int TcpAsyncStreamSocket::_rearms = 0;
 const IpAddress TcpAsyncStreamSocket::_host = "::1";
 const uint16_t TcpAsyncStreamSocket::_port = 5034;
+const uint16_t TcpAsyncStreamSocket::_stallport = 5035;
 const int TcpAsyncStreamSocket::_timeout = 1000;
 
 /**
@@ -314,6 +335,26 @@ TEST_F (TcpAsyncStreamSocket, asyncConnect)
     ASSERT_TRUE (client.connected ());
     ASSERT_EQ (client.remoteEndpoint (), Tcp::Endpoint (_host, _port));
     client.close ();
+
+    Tcp::AsyncSocket retry;
+
+    _current = &retry;
+    _rearms = 1;
+
+    ASSERT_EQ (retry.asyncConnect (Tcp::Endpoint (_host, 1), onConnect), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 4;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_TRUE (retry.connected ());
+
+    retry.close ();
+    _current = nullptr;
 }
 
 /**
@@ -607,6 +648,58 @@ TEST_F (TcpAsyncStreamSocket, cancelWrite)
     ASSERT_EQ (client.open (), 0) << join::lastError.message ();
     ASSERT_EQ (client.cancelWrite (), 0) << join::lastError.message ();
     client.close ();
+
+    Tcp::Acceptor stall;
+    Tcp::AsyncSocket sender;
+
+    ASSERT_EQ (stall.create ({IpAddress::ipv6Wildcard, _stallport}), 0) << join::lastError.message ();
+
+    ASSERT_EQ (sender.asyncConnect ({_host, _stallport},
+                                    [] (const std::error_code& ec) {
+                                        ScopedLock<Mutex> lock (_mut);
+                                        _code = ec;
+                                        ++_completions;
+                                        _cond.signal ();
+                                    }),
+               0)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    Tcp::Socket peer = stall.accept ();
+    ASSERT_TRUE (peer.connected ());
+
+    ASSERT_EQ (sender.setOption (Tcp::Socket::SndBuffer, 4096), 0) << join::lastError.message ();
+    ASSERT_EQ (peer.setOption (Tcp::Socket::RcvBuffer, 4096), 0) << join::lastError.message ();
+
+    int filled = 0;
+    while ((filled < 4096) && (sender.socket ().write (_buf, sizeof (_buf)) != -1))
+    {
+        ++filled;
+    }
+
+    ASSERT_LT (filled, 4096);
+
+    ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), 0) << join::lastError.message ();
+    ASSERT_TRUE (sender.writePending ());
+
+    ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (sender.asyncConnect ({_host, _stallport}, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (sender.cancelWrite (), 0) << join::lastError.message ();
+
+    sender.close ();
+    peer.close ();
+    stall.close ();
 }
 
 /**
