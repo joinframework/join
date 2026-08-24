@@ -36,8 +36,10 @@
 #include <system_error>
 #include <utility>
 #include <atomic>
+#include <memory>
 
 // C.
+#include <cstdlib>
 #include <cstdint>
 #include <cerrno>
 
@@ -63,7 +65,7 @@ namespace join
          * @param engine engine driving the operations.
          */
         explicit BasicAsyncStreamAcceptor (Engine& engine = ProactorThread::proactor ())
-        : _engine (engine)
+        : _engine (&engine)
         {
         }
 
@@ -84,21 +86,46 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicAsyncStreamAcceptor (BasicAsyncStreamAcceptor&& other) = delete;
+        BasicAsyncStreamAcceptor (BasicAsyncStreamAcceptor&& other) noexcept
+        : _acceptor (std::move (other._acceptor))
+        , _engine (other._engine)
+        , _ops (std::move (other._ops))
+        , _onAccept (std::move (other._onAccept))
+        {
+            _ops->acceptOp.handler = this;
+        }
 
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicAsyncStreamAcceptor& operator= (BasicAsyncStreamAcceptor&& other) = delete;
+        BasicAsyncStreamAcceptor& operator= (BasicAsyncStreamAcceptor&& other) noexcept
+        {
+            if (_ops)
+            {
+                close ();
+            }
+
+            _acceptor = std::move (other._acceptor);
+            _engine = other._engine;
+            _ops = std::move (other._ops);
+            _onAccept = std::move (other._onAccept);
+
+            _ops->acceptOp.handler = this;
+
+            return *this;
+        }
 
         /**
          * @brief destroy the acceptor instance.
          */
         ~BasicAsyncStreamAcceptor ()
         {
-            close ();
+            if (_ops)
+            {
+                close ();
+            }
         }
 
         /**
@@ -119,11 +146,11 @@ namespace join
         {
             cancelAccept ();
 
-            if (!_engine.isProactorThread ())
+            if (!_engine->isProactorThread ())
             {
                 Backoff backoff;
 
-                while (_acceptState.load (std::memory_order_acquire) != State::Idle)
+                while (_ops->acceptState.load (std::memory_order_acquire) != State::Idle)
                 {
                     backoff ();
                 }
@@ -148,27 +175,27 @@ namespace join
 
             State expected = State::Idle;
 
-            if (!_acceptState.compare_exchange_strong (expected, State::Pending, std::memory_order_acq_rel,
-                                                       std::memory_order_acquire))
+            if (!_ops->acceptState.compare_exchange_strong (expected, State::Pending, std::memory_order_acq_rel,
+                                                            std::memory_order_acquire))
             {
-                if ((expected != State::Dispatching) || !_engine.isProactorThread ())
+                if ((expected != State::Dispatching) || !_engine->isProactorThread ())
                 {
                     lastError = make_error_code (Errc::InUse);
                     return -1;
                 }
 
-                _acceptState.store (State::Pending, std::memory_order_release);
+                _ops->acceptState.store (State::Pending, std::memory_order_release);
             }
 
-            _salen = sizeof (struct sockaddr_storage);
+            _ops->peerLen = sizeof (struct sockaddr_storage);
             _onAccept = std::move (handler);
-            _acceptOp = IoOperation::makeAccept (_acceptor.handle (), reinterpret_cast<struct sockaddr*> (&_sa),
-                                                 &_salen, flags | SOCK_NONBLOCK, this);
+            _ops->acceptOp = IoOperation::makeAccept (_acceptor.handle (), _ops->peer.addr (), &_ops->peerLen,
+                                                      flags | SOCK_NONBLOCK, this);
 
-            if (_engine.submit (&_acceptOp, true, false) == -1)
+            if (_engine->submit (&_ops->acceptOp, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _acceptState.store (State::Idle, std::memory_order_release);
+                _ops->acceptState.store (State::Idle, std::memory_order_release);
                 _onAccept.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
@@ -183,26 +210,17 @@ namespace join
          */
         int cancelAccept () noexcept
         {
-            if (_acceptState.load (std::memory_order_acquire) == State::Idle)
+            if (_ops->acceptState.load (std::memory_order_acquire) == State::Idle)
             {
                 return 0;
             }
 
-            if (_engine.cancel (&_acceptOp, true, true) == -1)
+            if (_engine->cancel (&_ops->acceptOp, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;
             }
 
             return 0;
-        }
-
-        /**
-         * @brief check if an acceptation is in flight.
-         * @return true if an acceptation is in flight, false otherwise.
-         */
-        bool acceptPending () const noexcept
-        {
-            return _acceptState.load (std::memory_order_acquire) != State::Idle;
         }
 
         /**
@@ -289,6 +307,50 @@ namespace join
         };
 
         /**
+         * @brief operation block, kept at a stable address across moves.
+         */
+        struct Ops
+        {
+            /**
+             * @brief allocate a block honouring its extended alignment.
+             * @param size allocation size in bytes.
+             * @return pointer to the allocated storage.
+             */
+            static void* operator new (size_t size)
+            {
+                void* mem = ::aligned_alloc (alignof (Ops), size);
+
+                if (mem == nullptr)
+                {
+                    throw std::bad_alloc ();  // LCOV_EXCL_LINE
+                }
+
+                return mem;
+            }
+
+            /**
+             * @brief release storage allocated by operator new.
+             * @param mem storage to release.
+             */
+            static void operator delete (void* mem) noexcept
+            {
+                ::free (mem);
+            }
+
+            /// acceptation operation slot.
+            alignas (64) IoOperation acceptOp = {};
+
+            /// acceptation slot state.
+            alignas (64) std::atomic<State> acceptState{State::Idle};
+
+            /// peer endpoint, written by the kernel until the acceptation completes.
+            Endpoint peer;
+
+            /// peer address length, written by the kernel until the acceptation completes.
+            socklen_t peerLen = sizeof (struct sockaddr_storage);
+        };
+
+        /**
          * @brief method called when the acceptation completes.
          * @param op completed operation.
          * @param result accepted file descriptor, or negative errno.
@@ -304,7 +366,9 @@ namespace join
          */
         void dispatch (int result) noexcept
         {
-            _acceptState.store (State::Dispatching, std::memory_order_release);
+            Ops* ops = _ops.get ();
+
+            ops->acceptState.store (State::Dispatching, std::memory_order_release);
 
             AcceptHandler handler = std::move (_onAccept);
 
@@ -317,18 +381,16 @@ namespace join
             }
             else if (result < 0)
             {
-                handler (std::error_code (-result, std::generic_category ()), AsyncSocket (_engine));
+                handler (std::error_code (-result, std::generic_category ()), AsyncSocket (*_engine));
             }
             else
             {
-                handler (std::error_code (),
-                         AsyncSocket (Socket (result, Endpoint (reinterpret_cast<struct sockaddr*> (&_sa), _salen)),
-                                      _engine));
+                handler (std::error_code (), AsyncSocket (Socket (result, ops->peer), *_engine));
             }
 
             State expected = State::Dispatching;
-            _acceptState.compare_exchange_strong (expected, State::Idle, std::memory_order_acq_rel,
-                                                  std::memory_order_acquire);
+            ops->acceptState.compare_exchange_strong (expected, State::Idle, std::memory_order_acq_rel,
+                                                      std::memory_order_acquire);
         }
 
         /**
@@ -345,22 +407,13 @@ namespace join
         Acceptor _acceptor;
 
         /// engine driving the operations.
-        Engine& _engine;
+        Engine* _engine;
 
-        /// acceptation slot state.
-        alignas (64) std::atomic<State> _acceptState{State::Idle};
-
-        /// acceptation operation slot.
-        IoOperation _acceptOp = {};
+        /// operation block.
+        std::unique_ptr<Ops> _ops{new Ops ()};
 
         /// handler invoked on acceptation completion.
         AcceptHandler _onAccept;
-
-        /// peer address filled in by the kernel.
-        struct sockaddr_storage _sa = {};
-
-        /// peer address length.
-        socklen_t _salen = sizeof (struct sockaddr_storage);
     };
 }
 

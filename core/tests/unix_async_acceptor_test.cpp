@@ -147,6 +147,50 @@ int UnixAsyncAcceptor::_peerFamily = -1;
 UnixStream::AsyncAcceptor* UnixAsyncAcceptor::_current = nullptr;
 
 /**
+ * @brief Test move with an acceptation in flight.
+ */
+TEST_F (UnixAsyncAcceptor, move)
+{
+    UnixStream::AsyncAcceptor server;
+    UnixStream::Socket client (UnixStream::Socket::Blocking);
+
+    ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
+
+    ASSERT_EQ (server.asyncAccept ([] (const std::error_code& ec, UnixStream::AsyncSocket&& peer) {
+        onReport (ec, std::move (peer));
+    }),
+               0)
+        << join::lastError.message ();
+
+    ASSERT_EQ (server.asyncAccept (nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    UnixStream::AsyncAcceptor moved (std::move (server));
+
+    ASSERT_EQ (moved.asyncAccept (nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (client.connect (_path), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_TRUE (_peerConnected);
+    }
+
+    UnixStream::AsyncAcceptor assigned;
+    assigned = std::move (moved);
+
+    ASSERT_TRUE (assigned.opened ());
+
+    client.close ();
+    assigned.close ();
+}
+
+/**
  * @brief Test create method.
  */
 TEST_F (UnixAsyncAcceptor, create)
@@ -258,15 +302,19 @@ TEST_F (UnixAsyncAcceptor, discard)
 
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
     ASSERT_EQ (server.asyncAccept (nullptr), 0) << join::lastError.message ();
-    ASSERT_TRUE (server.acceptPending ());
+    ASSERT_EQ (server.asyncAccept (nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (client.connect (_path), 0) << join::lastError.message ();
 
-    for (int i = 0; (i < 100) && server.acceptPending (); ++i)
+    int rearmed = -1;
+
+    for (int i = 0; (i < 100) && (rearmed == -1); ++i)
     {
         std::this_thread::sleep_for (std::chrono::milliseconds (10));
+        rearmed = server.asyncAccept (nullptr);
     }
 
-    ASSERT_FALSE (server.acceptPending ());
+    ASSERT_EQ (rearmed, 0) << join::lastError.message ();
 
     client.close ();
     server.close ();
@@ -327,29 +375,7 @@ TEST_F (UnixAsyncAcceptor, cancelAccept)
         ASSERT_FALSE (_peerConnected);
     }
 
-    ASSERT_FALSE (server.acceptPending ());
     server.close ();
-}
-
-/**
- * @brief Test acceptPending method.
- */
-TEST_F (UnixAsyncAcceptor, acceptPending)
-{
-    UnixStream::AsyncAcceptor server;
-
-    ASSERT_FALSE (server.acceptPending ());
-    ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
-
-    ASSERT_EQ (server.asyncAccept ([] (const std::error_code& ec, UnixStream::AsyncSocket&& peer) {
-        onReport (ec, std::move (peer));
-    }),
-               0)
-        << join::lastError.message ();
-
-    ASSERT_TRUE (server.acceptPending ());
-    server.close ();
-    ASSERT_FALSE (server.acceptPending ());
 }
 
 /**
