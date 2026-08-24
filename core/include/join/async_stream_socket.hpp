@@ -219,11 +219,12 @@ namespace join
             _writeOp =
                 IoOperation::makeConnect (_socket.handle (), _socket._remote.addr (), _socket._remote.length (), this);
 
-            if (_engine->submit (&_writeOp, true, true) == -1)
+            if (_engine->submit (&_writeOp, true, false) == -1)
             {
                 // LCOV_EXCL_START
                 _writeState.store (State::Idle, std::memory_order_release);
                 _onConnect.reset ();
+                _socket.close ();
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -263,7 +264,7 @@ namespace join
             _onRead = std::move (handler);
             _readOp = IoOperation::makeRecv (_socket.handle (), data, static_cast<uint32_t> (maxSize), 0, this);
 
-            if (_engine->submit (&_readOp, true, true) == -1)
+            if (_engine->submit (&_readOp, true, false) == -1)
             {
                 // LCOV_EXCL_START
                 _readState.store (State::Idle, std::memory_order_release);
@@ -310,7 +311,7 @@ namespace join
             _writeOp =
                 IoOperation::makeSend (_socket.handle (), data, static_cast<uint32_t> (size), MSG_NOSIGNAL, this);
 
-            if (_engine->submit (&_writeOp, true, true) == -1)
+            if (_engine->submit (&_writeOp, true, false) == -1)
             {
                 // LCOV_EXCL_START
                 _writeState.store (State::Idle, std::memory_order_release);
@@ -564,7 +565,11 @@ namespace join
             {
                 ConnectHandler handler = std::move (_onConnect);
 
-                if (!code)
+                if (code)
+                {
+                    _socket.close ();
+                }
+                else
                 {
                     _socket._state = Socket::Connected;
                 }

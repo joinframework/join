@@ -165,7 +165,7 @@ namespace join
             _acceptOp = IoOperation::makeAccept (_acceptor.handle (), reinterpret_cast<struct sockaddr*> (&_sa),
                                                  &_salen, flags | SOCK_NONBLOCK, this);
 
-            if (_engine.submit (&_acceptOp, true, true) == -1)
+            if (_engine.submit (&_acceptOp, true, false) == -1)
             {
                 // LCOV_EXCL_START
                 _acceptState.store (State::Idle, std::memory_order_release);

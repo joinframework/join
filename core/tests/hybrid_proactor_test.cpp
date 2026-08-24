@@ -228,15 +228,38 @@ TEST_F (HybridProactorTest, submit)
     op1 = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
     op1.state = IoOperation::State::Submitted;
     ASSERT_EQ (proactor.submit (&op1, true, true), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
 
     op1.state = IoOperation::State::Idle;
     ASSERT_EQ (proactor.submit (&op1, true, true), 0) << join::lastError.message ();
+
+    auto op3 = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (&op3, true, false), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &op3 && _result == -EBADF;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
 
 #ifndef JOIN_HAS_IO_URING
     auto op2 = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (&op2, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    ASSERT_EQ (proactor.submit (&op2, true, false), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &op2 && _result == -EINVAL;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
 #endif
 
     ASSERT_EQ (proactor.cancel (&op1, true, true), 0) << join::lastError.message ();

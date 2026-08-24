@@ -271,7 +271,7 @@ TEST_F (TcpAsyncStreamSocket, asyncConnect)
 {
     Tcp::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncConnect ({_host, _port},
+    ASSERT_EQ (client.asyncConnect (Tcp::Endpoint (_host, 1),
                                     [] (const std::error_code& ec) {
                                         ScopedLock<Mutex> lock (_mut);
                                         _code = ec;
@@ -285,6 +285,28 @@ TEST_F (TcpAsyncStreamSocket, asyncConnect)
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
             return _completions >= 1;
+        }));
+        ASSERT_TRUE (_code);
+    }
+
+    ASSERT_FALSE (client.connecting ());
+    ASSERT_FALSE (client.connected ());
+    ASSERT_FALSE (client.opened ());
+
+    ASSERT_EQ (client.asyncConnect ({_host, _port},
+                                    [] (const std::error_code& ec) {
+                                        ScopedLock<Mutex> lock (_mut);
+                                        _code = ec;
+                                        ++_completions;
+                                        _cond.signal ();
+                                    }),
+               0)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
         }));
         ASSERT_FALSE (_code) << _code.message ();
     }
