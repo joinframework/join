@@ -48,6 +48,27 @@ namespace join
     template <class Protocol>
     class BasicStreamAcceptor;
 
+#ifdef JOIN_HAS_IO_URING
+    struct IoDefaultPolicy;
+
+    template <typename Policy>
+    class BasicProactor;
+
+    template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
+    class BasicAsyncStreamSocket;
+
+    template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
+    class BasicAsyncStreamAcceptor;
+#else
+    class BasicProactor;
+
+    template <class Protocol, class Engine = BasicProactor>
+    class BasicAsyncStreamSocket;
+
+    template <class Protocol, class Engine = BasicProactor>
+    class BasicAsyncStreamAcceptor;
+#endif
+
     /**
      * @brief unix datagram protocol class.
      */
@@ -100,6 +121,8 @@ namespace join
         using Socket = BasicStreamSocket<UnixStream>;
         using Stream = BasicSocketStream<UnixStream>;
         using Acceptor = BasicStreamAcceptor<UnixStream>;
+        using AsyncSocket = BasicAsyncStreamSocket<UnixStream>;
+        using AsyncAcceptor = BasicAsyncStreamAcceptor<UnixStream>;
 
         /**
          * @brief construct the unix stream protocol instance by default.
@@ -379,6 +402,8 @@ namespace join
         using Socket = BasicStreamSocket<Tcp>;
         using Stream = BasicSocketStream<Tcp>;
         using Acceptor = BasicStreamAcceptor<Tcp>;
+        using AsyncSocket = BasicAsyncStreamSocket<Tcp>;
+        using AsyncAcceptor = BasicAsyncStreamAcceptor<Tcp>;
 
         /**
          * @brief create the tcp protocol  instance.

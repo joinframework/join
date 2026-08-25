@@ -78,10 +78,10 @@ namespace join
          */
         BasicStreamAcceptor& operator= (BasicStreamAcceptor&& other)
         {
-            this->close ();
+            close ();
 
-            this->_handle = other._handle;
-            this->_protocol = other._protocol;
+            _handle = other._handle;
+            _protocol = other._protocol;
 
             other._handle = -1;
             other._protocol = Protocol ();
@@ -92,42 +92,47 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~BasicStreamAcceptor ()
+        ~BasicStreamAcceptor ()
         {
-            this->close ();
+            close ();
         }
 
         /**
          * @brief create acceptor
          * @param endpoint endpoint to assign to the acceptor.
+         * @param flags acceptor socket creation flags.
          * @return 0 on success, -1 on failure.
          */
-        virtual int create (const Endpoint& endpoint) noexcept
+        int create (const Endpoint& endpoint, int flags = SOCK_CLOEXEC) noexcept
         {
-            if (this->opened ())
+            if (opened ())
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            this->_handle = ::socket (endpoint.protocol ().family (), endpoint.protocol ().type () | SOCK_CLOEXEC,
-                                      endpoint.protocol ().protocol ());
-            if (this->_handle == -1)
+            _handle = ::socket (endpoint.protocol ().family (), endpoint.protocol ().type () | flags,
+                                endpoint.protocol ().protocol ());
+            if (_handle == -1)
             {
+                // LCOV_EXCL_START
                 lastError = std::error_code (errno, std::generic_category ());
-                this->close ();
+                close ();
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             if (endpoint.protocol ().family () == AF_INET6)
             {
                 int off = 0;
 
-                if (::setsockopt (this->_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1)
+                if (::setsockopt (_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1)
                 {
+                    // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
-                    this->close ();
+                    close ();
                     return -1;
+                    // LCOV_EXCL_STOP
                 }
             }
 
@@ -139,23 +144,24 @@ namespace join
             {
                 int on = 1;
 
-                if (::setsockopt (this->_handle, SOL_SOCKET, SO_REUSEADDR, &on, sizeof (on)) == -1)
+                if (::setsockopt (_handle, SOL_SOCKET, SO_REUSEADDR, &on, sizeof (on)) == -1)
                 {
+                    // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
-                    this->close ();
+                    close ();
                     return -1;
+                    // LCOV_EXCL_STOP
                 }
             }
 
-            if ((::bind (this->_handle, endpoint.addr (), endpoint.length ()) == -1) ||
-                (::listen (this->_handle, SOMAXCONN) == -1))
+            if ((::bind (_handle, endpoint.addr (), endpoint.length ()) == -1) || (::listen (_handle, SOMAXCONN) == -1))
             {
                 lastError = std::error_code (errno, std::generic_category ());
-                this->close ();
+                close ();
                 return -1;
             }
 
-            this->_protocol = endpoint.protocol ();
+            _protocol = endpoint.protocol ();
 
             return 0;
         }
@@ -163,54 +169,46 @@ namespace join
         /**
          * @brief close acceptor.
          */
-        virtual void close () noexcept
+        void close () noexcept
         {
-            if (this->_handle != -1)
+            if (_handle != -1)
             {
-                ::close (this->_handle);
-                this->_handle = -1;
+                ::close (_handle);
+                _handle = -1;
             }
 
-            this->_protocol = Protocol ();
+            _protocol = Protocol ();
         }
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
+         * @param flags accepted socket creation flags.
          * @return the accepted client socket object.
          */
-        virtual Socket accept () const
+        Socket accept (int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) const
         {
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
-            Socket sock;
 
-            sock._handle = ::accept (this->_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len);
-            if (sock._handle == -1)
+            int fd = ::accept4 (_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len, flags);
+            if (fd == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
-                return sock;
+                return {};
             }
 
-            sock._remote = Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len);
-            sock._state = Socket::Connected;
-
-            if (sock.protocol () == IPPROTO_TCP)
-            {
-                sock.setOption (Socket::NoDelay, 1);
-            }
-            sock.setMode (Socket::NonBlocking);
-
-            return sock;
+            return Socket (fd, Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len),
+                           (flags & SOCK_NONBLOCK) ? Socket::NonBlocking : Socket::Blocking);
         }
 
         /**
          * @brief accept new connection and fill in the client object with connection parameters.
          * @return The client stream object on success, nullptr on failure.
          */
-        virtual Stream acceptStream () const
+        Stream acceptStream () const
         {
             Stream stream;
-            stream.socket () = this->accept ();
+            stream.socket () = accept ();
             return stream;
         }
 
@@ -223,7 +221,7 @@ namespace join
             struct sockaddr_storage sa;
             socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            if (::getsockname (this->_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len) == -1)
+            if (::getsockname (_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len) == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
                 return {};
@@ -238,7 +236,7 @@ namespace join
          */
         bool opened () const noexcept
         {
-            return (this->_handle != -1);
+            return (_handle != -1);
         }
 
         /**
@@ -247,7 +245,7 @@ namespace join
          */
         int family () const noexcept
         {
-            return this->_protocol.family ();
+            return _protocol.family ();
         }
 
         /**
@@ -256,7 +254,7 @@ namespace join
          */
         int type () const noexcept
         {
-            return this->_protocol.type ();
+            return _protocol.type ();
         }
 
         /**
@@ -265,7 +263,7 @@ namespace join
          */
         int protocol () const noexcept
         {
-            return this->_protocol.protocol ();
+            return _protocol.protocol ();
         }
 
         /**
@@ -274,10 +272,10 @@ namespace join
          */
         int handle () const noexcept
         {
-            return this->_handle;
+            return _handle;
         }
 
-    protected:
+    private:
         /// socket handle.
         int _handle = -1;
 

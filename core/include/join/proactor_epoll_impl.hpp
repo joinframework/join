@@ -176,11 +176,7 @@ inline int join::BasicProactor::writeCommand (const Command& cmd) noexcept
     uint64_t value = 1;
     if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
     {
-        // LCOV_EXCL_START
-        _notified.store (false);
-        lastError = std::error_code (errno, std::system_category ());
-        return -1;
-        // LCOV_EXCL_STOP
+        _notified.store (false);  // LCOV_EXCL_LINE
     }
 
     return 0;
@@ -220,6 +216,11 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
     {
         case CommandType::Submit:
             err = submitOperation (cmd.op, cmd.flush);
+            if (JOIN_UNLIKELY ((err != 0) && (cmd.done == nullptr) && (cmd.op != nullptr) &&
+                               (cmd.op->state == IoOperation::State::Idle)))
+            {
+                dispatchOperation (cmd.op, -lastError.value (), false);
+            }
             break;
 
         case CommandType::Cancel:
@@ -252,7 +253,7 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
 {
     if (JOIN_UNLIKELY (op == nullptr))
     {
-        lastError = make_error_code (Errc::InvalidParam);
+        lastError = make_error_code (std::errc::invalid_argument);
         return -1;
     }
 
@@ -264,7 +265,7 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
 
     if (JOIN_UNLIKELY (op->state != IoOperation::State::Idle))
     {
-        lastError = make_error_code (Errc::OperationFailed);
+        lastError = make_error_code (std::errc::device_or_resource_busy);
         return -1;
     }
 
@@ -290,7 +291,7 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
     if (JOIN_UNLIKELY ((isWrite && (_writeOps[op->fd ()] != nullptr)) ||
                        (!isWrite && (_readOps[op->fd ()] != nullptr))))
     {
-        lastError = make_error_code (Errc::InvalidParam);
+        lastError = make_error_code (std::errc::invalid_argument);
         return -1;
     }
 

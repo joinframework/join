@@ -1,0 +1,420 @@
+/**
+ * MIT License
+ *
+ * Copyright (c) 2026 Mathieu Rabine
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+#ifndef JOIN_CORE_ASYNC_ACCEPTOR_HPP
+#define JOIN_CORE_ASYNC_ACCEPTOR_HPP
+
+// libjoin.
+#include <join/async_stream_socket.hpp>
+#include <join/acceptor.hpp>
+#include <join/function.hpp>
+#include <join/proactor.hpp>
+#include <join/backoff.hpp>
+
+// C++.
+#include <system_error>
+#include <utility>
+#include <atomic>
+#include <memory>
+
+// C.
+#include <cstdlib>
+#include <cstdint>
+#include <cerrno>
+
+namespace join
+{
+    /**
+     * @brief asynchronous stream acceptor class.
+     */
+    template <class Protocol, class Engine>
+    class BasicAsyncStreamAcceptor : private CompletionHandler
+    {
+    public:
+        using Acceptor = BasicStreamAcceptor<Protocol>;
+        using Endpoint = typename Protocol::Endpoint;
+        using Socket = typename Protocol::Socket;
+        using AsyncSocket = BasicAsyncStreamSocket<Protocol, Engine>;
+
+        /// handler invoked on acceptation completion.
+        using AcceptHandler = Function<void (const std::error_code&, AsyncSocket&&)>;
+
+        /**
+         * @brief create the acceptor instance.
+         * @param engine engine driving the operations.
+         */
+        explicit BasicAsyncStreamAcceptor (Engine& engine = ProactorThread::proactor ())
+        : _engine (&engine)
+        {
+        }
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        BasicAsyncStreamAcceptor (const BasicAsyncStreamAcceptor& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to assign.
+         * @return assigned object.
+         */
+        BasicAsyncStreamAcceptor& operator= (const BasicAsyncStreamAcceptor& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        BasicAsyncStreamAcceptor (BasicAsyncStreamAcceptor&& other) noexcept
+        : _acceptor (std::move (other._acceptor))
+        , _engine (other._engine)
+        , _ops (std::move (other._ops))
+        , _onAccept (std::move (other._onAccept))
+        {
+            _ops->acceptOp.handler = this;
+        }
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to assign.
+         * @return assigned object.
+         */
+        BasicAsyncStreamAcceptor& operator= (BasicAsyncStreamAcceptor&& other) noexcept
+        {
+            if (_ops)
+            {
+                close ();
+            }
+
+            _acceptor = std::move (other._acceptor);
+            _engine = other._engine;
+            _ops = std::move (other._ops);
+            _onAccept = std::move (other._onAccept);
+
+            _ops->acceptOp.handler = this;
+
+            return *this;
+        }
+
+        /**
+         * @brief destroy the acceptor instance.
+         */
+        ~BasicAsyncStreamAcceptor ()
+        {
+            if (_ops)
+            {
+                close ();
+            }
+        }
+
+        /**
+         * @brief create acceptor.
+         * @param endpoint endpoint to assign to the acceptor.
+         * @param flags acceptor socket creation flags.
+         * @return 0 on success, -1 on failure.
+         */
+        int create (const Endpoint& endpoint, int flags = SOCK_CLOEXEC | SOCK_NONBLOCK) noexcept
+        {
+            return _acceptor.create (endpoint, flags | SOCK_NONBLOCK);
+        }
+
+        /**
+         * @brief close acceptor, cancelling the acceptation in flight.
+         */
+        void close () noexcept
+        {
+            cancelAccept ();
+
+            if (!_engine->isProactorThread ())
+            {
+                Backoff backoff;
+
+                while (_ops->acceptState.load (std::memory_order_acquire) != State::Idle)
+                {
+                    backoff ();
+                }
+            }
+
+            _acceptor.close ();
+        }
+
+        /**
+         * @brief start an asynchronous acceptation.
+         * @param handler handler invoked on completion.
+         * @param flags accepted socket creation flags.
+         * @return 0 on success, -1 on failure.
+         */
+        int asyncAccept (AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) noexcept
+        {
+            if (!_acceptor.opened ())
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            State expected = State::Idle;
+
+            if (!_ops->acceptState.compare_exchange_strong (expected, State::Pending, std::memory_order_acq_rel,
+                                                            std::memory_order_acquire))
+            {
+                if ((expected != State::Dispatching) || !_engine->isProactorThread ())
+                {
+                    lastError = make_error_code (Errc::InUse);
+                    return -1;
+                }
+
+                _ops->acceptState.store (State::Pending, std::memory_order_release);
+            }
+
+            _ops->peerLen = sizeof (struct sockaddr_storage);
+            _onAccept = std::move (handler);
+            _ops->acceptOp = IoOperation::makeAccept (_acceptor.handle (), _ops->peer.addr (), &_ops->peerLen,
+                                                      flags | SOCK_NONBLOCK, this);
+
+            if (_engine->submit (&_ops->acceptOp, true, false) == -1)
+            {
+                // LCOV_EXCL_START
+                _ops->acceptState.store (State::Idle, std::memory_order_release);
+                _onAccept.reset ();
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief cancel the acceptation in flight, if any.
+         * @return 0 on success, -1 on failure.
+         */
+        int cancelAccept () noexcept
+        {
+            if (_ops->acceptState.load (std::memory_order_acquire) == State::Idle)
+            {
+                return 0;
+            }
+
+            if (_engine->cancel (&_ops->acceptOp, true, true) == -1)
+            {
+                return (lastError == Errc::OperationFailed) ? 0 : -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief determine the local endpoint associated with this acceptor.
+         * @return local endpoint.
+         */
+        Endpoint localEndpoint () const
+        {
+            return _acceptor.localEndpoint ();
+        }
+
+        /**
+         * @brief check if the acceptor is opened.
+         * @return true if opened, false otherwise.
+         */
+        bool opened () const noexcept
+        {
+            return _acceptor.opened ();
+        }
+
+        /**
+         * @brief get address family.
+         * @return address family.
+         */
+        int family () const noexcept
+        {
+            return _acceptor.family ();
+        }
+
+        /**
+         * @brief get the acceptor communication semantic.
+         * @return the acceptor communication semantic.
+         */
+        int type () const noexcept
+        {
+            return _acceptor.type ();
+        }
+
+        /**
+         * @brief get acceptor protocol.
+         * @return acceptor protocol.
+         */
+        int protocol () const noexcept
+        {
+            return _acceptor.protocol ();
+        }
+
+        /**
+         * @brief get acceptor native handle.
+         * @return acceptor native handle.
+         */
+        int handle () const noexcept
+        {
+            return _acceptor.handle ();
+        }
+
+        /**
+         * @brief get the underlying synchronous acceptor.
+         * @return the underlying synchronous acceptor.
+         */
+        Acceptor& acceptor () noexcept
+        {
+            return _acceptor;
+        }
+
+        /**
+         * @brief get the underlying synchronous acceptor.
+         * @return the underlying synchronous acceptor.
+         */
+        const Acceptor& acceptor () const noexcept
+        {
+            return _acceptor;
+        }
+
+    private:
+        /**
+         * @brief acceptation slot state.
+         */
+        enum class State : uint8_t
+        {
+            Idle,        /**< no acceptation in flight and no completion handler running. */
+            Pending,     /**< an acceptation is in flight. */
+            Dispatching, /**< the completion handler is running. */
+        };
+
+        /**
+         * @brief operation block, kept at a stable address across moves.
+         */
+        struct Ops
+        {
+            /**
+             * @brief allocate a block honouring its extended alignment.
+             * @param size allocation size in bytes.
+             * @return pointer to the allocated storage.
+             */
+            static void* operator new (size_t size)
+            {
+                void* mem = ::aligned_alloc (alignof (Ops), size);
+
+                if (mem == nullptr)
+                {
+                    throw std::bad_alloc ();  // LCOV_EXCL_LINE
+                }
+
+                return mem;
+            }
+
+            /**
+             * @brief release storage allocated by operator new.
+             * @param mem storage to release.
+             */
+            static void operator delete (void* mem) noexcept
+            {
+                ::free (mem);
+            }
+
+            /// acceptation operation slot.
+            alignas (64) IoOperation acceptOp = {};
+
+            /// acceptation slot state.
+            alignas (64) std::atomic<State> acceptState{State::Idle};
+
+            /// peer endpoint, written by the kernel until the acceptation completes.
+            Endpoint peer;
+
+            /// peer address length, written by the kernel until the acceptation completes.
+            socklen_t peerLen = sizeof (struct sockaddr_storage);
+        };
+
+        /**
+         * @brief method called when the acceptation completes.
+         * @param op completed operation.
+         * @param result accepted file descriptor, or negative errno.
+         */
+        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
+        {
+            dispatch (result);
+        }
+
+        /**
+         * @brief invoke the handler owning the acceptation slot.
+         * @param result accepted file descriptor, or negative errno.
+         */
+        void dispatch (int result) noexcept
+        {
+            Ops* ops = _ops.get ();
+
+            ops->acceptState.store (State::Dispatching, std::memory_order_release);
+
+            AcceptHandler handler = std::move (_onAccept);
+
+            if (!handler)
+            {
+                if (result > -1)
+                {
+                    ::close (result);
+                }
+            }
+            else if (result < 0)
+            {
+                handler (std::error_code (-result, std::generic_category ()), AsyncSocket (*_engine));
+            }
+            else
+            {
+                handler (std::error_code (), AsyncSocket (Socket (result, ops->peer), *_engine));
+            }
+
+            State expected = State::Dispatching;
+            ops->acceptState.compare_exchange_strong (expected, State::Idle, std::memory_order_acq_rel,
+                                                      std::memory_order_acquire);
+        }
+
+        /**
+         * @brief method called when the acceptation is cancelled.
+         * @param op cancelled operation.
+         * @param result negative errno.
+         */
+        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
+        {
+            dispatch (-ECANCELED);
+        }
+
+        /// underlying synchronous acceptor.
+        Acceptor _acceptor;
+
+        /// engine driving the operations.
+        Engine* _engine;
+
+        /// operation block.
+        std::unique_ptr<Ops> _ops{new Ops ()};
+
+        /// handler invoked on acceptation completion.
+        AcceptHandler _onAccept;
+    };
+}
+
+#endif

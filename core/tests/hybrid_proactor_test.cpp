@@ -72,9 +72,13 @@ protected:
      */
     void onComplete (IoOperation* op, int result) override
     {
-        HybridProactorThread::proactor ().submit (op, true, true);
-        HybridProactorThread::proactor ().cancel (op, true, true);
-        HybridProactorThread::proactor ().flush (true);
+        if (_resubmits > 0)
+        {
+            --_resubmits;
+            _resubmitted = HybridProactorThread::proactor ().submit (op, true, true);
+            _rejected = HybridProactorThread::proactor ().submit (op, true, true);
+            HybridProactorThread::proactor ().flush (true);
+        }
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -93,9 +97,13 @@ protected:
      */
     void onCancel (IoOperation* op, int result) override
     {
-        HybridProactorThread::proactor ().submit (op, true, true);
-        HybridProactorThread::proactor ().cancel (op, true, true);
-        HybridProactorThread::proactor ().flush (true);
+        if (_resubmits > 0)
+        {
+            --_resubmits;
+            _resubmitted = HybridProactorThread::proactor ().submit (op, true, true);
+            _rejected = HybridProactorThread::proactor ().submit (op, true, true);
+            HybridProactorThread::proactor ().flush (true);
+        }
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -134,6 +142,18 @@ protected:
     /// last completed operation.
     static IoOperation* _op;
 
+    /// operation resubmitted from a handler.
+    static IoOperation _resubmitOp;
+
+    /// number of resubmissions left to perform from a handler.
+    static int _resubmits;
+
+    /// result of the resubmission performed from a handler.
+    static int _resubmitted;
+
+    /// result of the rejected resubmission performed from a handler.
+    static int _rejected;
+
     /// last operation result.
     static int _result;
 
@@ -150,6 +170,10 @@ const int HybridProactorTest::_timeout = 1000;
 Condition HybridProactorTest::_cond;
 Mutex HybridProactorTest::_mut;
 IoOperation* HybridProactorTest::_op = nullptr;
+IoOperation HybridProactorTest::_resubmitOp = {};
+int HybridProactorTest::_resubmits = 0;
+int HybridProactorTest::_resubmitted = 0;
+int HybridProactorTest::_rejected = 0;
 int HybridProactorTest::_result = 0;
 char HybridProactorTest::_buf[256] = {};
 
@@ -204,15 +228,38 @@ TEST_F (HybridProactorTest, submit)
     op1 = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
     op1.state = IoOperation::State::Submitted;
     ASSERT_EQ (proactor.submit (&op1, true, true), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
 
     op1.state = IoOperation::State::Idle;
     ASSERT_EQ (proactor.submit (&op1, true, true), 0) << join::lastError.message ();
+
+    auto op3 = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (&op3, true, false), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &op3 && _result == -EBADF;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
 
 #ifndef JOIN_HAS_IO_URING
     auto op2 = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (&op2, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    ASSERT_EQ (proactor.submit (&op2, true, false), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &op2 && _result == -EINVAL;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
 #endif
 
     ASSERT_EQ (proactor.cancel (&op1, true, true), 0) << join::lastError.message ();
@@ -815,6 +862,48 @@ TEST_F (HybridProactorTest, onError)
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
             return _op == &op && _result == -ECONNRESET;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+}
+
+/**
+ * @brief Test resubmission from handler.
+ */
+TEST_F (HybridProactorTest, resubmit)
+{
+    const char* msg = "resubmit";
+
+    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _resubmits = 1;
+    _resubmitted = 0;
+    _rejected = 0;
+
+    _resubmitOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_resubmitOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_resubmitOp && _result > 0;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (_resubmitted, 0);
+    ASSERT_EQ (_rejected, -1);
+
+    ASSERT_EQ (HybridProactorThread::proactor ().cancel (&_resubmitOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_resubmitOp && _result == -ECANCELED;
         }));
         _op = nullptr;
         _result = 0;

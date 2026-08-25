@@ -231,6 +231,16 @@ target_link_libraries(unix_stream_acceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME unix_stream_acceptor.gtest COMMAND unix_stream_acceptor.gtest)
 install(TARGETS unix_stream_acceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(unix_async_stream_socket.gtest unix_async_stream_socket_test.cpp)
+target_link_libraries(unix_async_stream_socket.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME unix_async_stream_socket.gtest COMMAND unix_async_stream_socket.gtest)
+install(TARGETS unix_async_stream_socket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(unix_async_acceptor.gtest unix_async_acceptor_test.cpp)
+target_link_libraries(unix_async_acceptor.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME unix_async_acceptor.gtest COMMAND unix_async_acceptor.gtest)
+install(TARGETS unix_async_acceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(raw_socket.gtest raw_socket_test.cpp)
 target_link_libraries(raw_socket.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME raw_socket.gtest COMMAND raw_socket.gtest)
@@ -260,6 +270,16 @@ add_executable(tcp_acceptor.gtest tcp_acceptor_test.cpp)
 target_link_libraries(tcp_acceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME tcp_acceptor.gtest COMMAND tcp_acceptor.gtest)
 install(TARGETS tcp_acceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(tcp_async_stream_socket.gtest tcp_async_stream_socket_test.cpp)
+target_link_libraries(tcp_async_stream_socket.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME tcp_async_stream_socket.gtest COMMAND tcp_async_stream_socket.gtest)
+install(TARGETS tcp_async_stream_socket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(tcp_async_acceptor.gtest tcp_async_acceptor_test.cpp)
+target_link_libraries(tcp_async_acceptor.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME tcp_async_acceptor.gtest COMMAND tcp_async_acceptor.gtest)
+install(TARGETS tcp_async_acceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(cpu.gtest cpu_test.cpp)
 target_link_libraries(cpu.gtest ${JOIN_CORE} GTest::gtest_main)
