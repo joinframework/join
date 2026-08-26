@@ -55,12 +55,18 @@ namespace join
     class BasicProactor;
 
     template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
+    class BasicAsyncSocket;
+
+    template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
     class BasicAsyncStreamSocket;
 
     template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
     class BasicAsyncStreamAcceptor;
 #else
     class BasicProactor;
+
+    template <class Protocol, class Engine = BasicProactor>
+    class BasicAsyncSocket;
 
     template <class Protocol, class Engine = BasicProactor>
     class BasicAsyncStreamSocket;
@@ -165,6 +171,7 @@ namespace join
     public:
         using Endpoint = BasicLinkLayerEndpoint<Raw>;
         using Socket = BasicSocket<Raw>;
+        using AsyncSocket = BasicAsyncSocket<Raw>;
 
         /**
          * @brief default constructor.

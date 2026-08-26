@@ -29,6 +29,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C.
+#include <unistd.h>
+
 using join::Errc;
 using join::Mutex;
 using join::Condition;
@@ -299,6 +302,20 @@ TEST_F (UnixAsyncStreamSocket, move)
     assigned = std::move (moved);
 
     ASSERT_TRUE (assigned.connected ());
+
+    ASSERT_EQ (moved.cancelRead (), 0) << join::lastError.message ();
+    ASSERT_EQ (moved.cancelWrite (), 0) << join::lastError.message ();
+    ASSERT_EQ (moved.asyncConnect ({_serverpath}, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_FALSE (moved.opened ());
+    moved.close ();
+
+    UnixStream::AsyncSocket chained (std::move (moved));
+    ASSERT_FALSE (chained.opened ());
+
+    UnixStream::AsyncSocket reassigned;
+    reassigned = std::move (chained);
+    ASSERT_FALSE (reassigned.opened ());
 
     assigned.close ();
 }
@@ -747,7 +764,7 @@ TEST_F (UnixAsyncStreamSocket, cancelWrite)
     ASSERT_EQ (peer.setOption (UnixStream::Socket::RcvBuffer, 4096), 0) << join::lastError.message ();
 
     int filled = 0;
-    while ((filled < 4096) && (sender.socket ().write (_buf, sizeof (_buf)) != -1))
+    while ((filled < 4096) && (::write (sender.handle (), _buf, sizeof (_buf)) != -1))
     {
         ++filled;
     }
@@ -976,18 +993,6 @@ TEST_F (UnixAsyncStreamSocket, handle)
     ASSERT_GT (client.handle (), -1);
     client.close ();
     ASSERT_EQ (client.handle (), -1);
-}
-
-/**
- * @brief Test socket method.
- */
-TEST_F (UnixAsyncStreamSocket, socket)
-{
-    UnixStream::AsyncSocket client;
-
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_TRUE (client.socket ().opened ());
-    client.close ();
 }
 
 /**

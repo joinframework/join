@@ -168,7 +168,7 @@ inline int join::BasicProactor::writeCommand (const Command& cmd) noexcept
         return -1;  // LCOV_EXCL_LINE
     }
 
-    if (_notified.exchange (true))
+    if (_notified.exchange (true, std::memory_order_acq_rel))
     {
         return 0;
     }

@@ -380,7 +380,7 @@ int join::BasicProactor<Policy>::writeCommand (const Command& cmd, std::true_typ
         return -1;  // LCOV_EXCL_LINE
     }
 
-    if (_notified.exchange (true))
+    if (_notified.exchange (true, std::memory_order_acq_rel))
     {
         return 0;
     }

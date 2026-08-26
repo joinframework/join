@@ -186,6 +186,17 @@ TEST_F (UnixAsyncAcceptor, move)
 
     ASSERT_TRUE (assigned.opened ());
 
+    ASSERT_EQ (moved.cancelAccept (), 0) << join::lastError.message ();
+    ASSERT_FALSE (moved.opened ());
+    moved.close ();
+
+    UnixStream::AsyncAcceptor chained (std::move (moved));
+    ASSERT_FALSE (chained.opened ());
+
+    UnixStream::AsyncAcceptor reassigned;
+    reassigned = std::move (chained);
+    ASSERT_FALSE (reassigned.opened ());
+
     client.close ();
     assigned.close ();
 }
@@ -453,18 +464,6 @@ TEST_F (UnixAsyncAcceptor, handle)
     ASSERT_GT (server.handle (), -1);
     server.close ();
     ASSERT_EQ (server.handle (), -1);
-}
-
-/**
- * @brief Test acceptor method.
- */
-TEST_F (UnixAsyncAcceptor, acceptor)
-{
-    UnixStream::AsyncAcceptor server;
-
-    ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
-    ASSERT_TRUE (server.acceptor ().opened ());
-    server.close ();
 }
 
 /**
