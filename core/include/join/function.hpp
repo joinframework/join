@@ -33,6 +33,7 @@
 
 // C.
 #include <cstddef>
+#include <cstring>
 
 namespace join
 {
@@ -127,15 +128,24 @@ namespace join
                 return static_cast<Return> ((*static_cast<DecayedFunc*> (storage)) (std::forward<Args> (args)...));
             };
 
-            _manager = [] (void* dst, void* src) noexcept {
-                DecayedFunc* source = static_cast<DecayedFunc*> (src);
-                new (dst) DecayedFunc (std::move (*source));
-                source->~DecayedFunc ();
-            };
+            _manager = nullptr;
+            _destructor = nullptr;
 
-            _destructor = [] (void* storage) noexcept {
-                static_cast<DecayedFunc*> (storage)->~DecayedFunc ();
-            };
+            if (!std::is_trivially_copyable<DecayedFunc>::value)
+            {
+                _manager = [] (void* dst, void* src) noexcept {
+                    DecayedFunc* source = static_cast<DecayedFunc*> (src);
+                    new (dst) DecayedFunc (std::move (*source));
+                    source->~DecayedFunc ();
+                };
+            }
+
+            if (!std::is_trivially_destructible<DecayedFunc>::value)
+            {
+                _destructor = [] (void* storage) noexcept {
+                    static_cast<DecayedFunc*> (storage)->~DecayedFunc ();
+                };
+            }
         }
 
         /**
@@ -203,13 +213,19 @@ namespace join
          */
         void clear () noexcept
         {
+            if (_invoker == nullptr)
+            {
+                return;
+            }
+
             if (_destructor)
             {
                 _destructor (&_storage);
-                _invoker = nullptr;
-                _manager = nullptr;
-                _destructor = nullptr;
             }
+
+            _invoker = nullptr;
+            _manager = nullptr;
+            _destructor = nullptr;
         }
 
         /**
@@ -221,13 +237,23 @@ namespace join
             _manager = other._manager;
             _destructor = other._destructor;
 
+            if (_invoker == nullptr)
+            {
+                return;
+            }
+
             if (_manager)
             {
                 _manager (&_storage, &other._storage);
-                other._invoker = nullptr;
-                other._manager = nullptr;
-                other._destructor = nullptr;
             }
+            else
+            {
+                std::memcpy (&_storage, &other._storage, Capacity);
+            }
+
+            other._invoker = nullptr;
+            other._manager = nullptr;
+            other._destructor = nullptr;
         }
 
         /// fixed-capacity aligned storage for the callable target.

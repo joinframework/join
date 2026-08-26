@@ -92,7 +92,10 @@ namespace join
         , _ops (std::move (other._ops))
         , _onAccept (std::move (other._onAccept))
         {
-            _ops->acceptOp.handler = this;
+            if (_ops)
+            {
+                _ops->accept.op.handler = this;
+            }
         }
 
         /**
@@ -102,17 +105,17 @@ namespace join
          */
         BasicAsyncStreamAcceptor& operator= (BasicAsyncStreamAcceptor&& other) noexcept
         {
-            if (_ops)
-            {
-                close ();
-            }
+            close ();
 
             _acceptor = std::move (other._acceptor);
             _engine = other._engine;
             _ops = std::move (other._ops);
             _onAccept = std::move (other._onAccept);
 
-            _ops->acceptOp.handler = this;
+            if (_ops)
+            {
+                _ops->accept.op.handler = this;
+            }
 
             return *this;
         }
@@ -122,10 +125,7 @@ namespace join
          */
         ~BasicAsyncStreamAcceptor ()
         {
-            if (_ops)
-            {
-                close ();
-            }
+            close ();
         }
 
         /**
@@ -146,11 +146,11 @@ namespace join
         {
             cancelAccept ();
 
-            if (!_engine->isProactorThread ())
+            if (_ops && !_engine->isProactorThread ())
             {
                 Backoff backoff;
 
-                while (_ops->acceptState.load (std::memory_order_acquire) != State::Idle)
+                while (_ops->accept.state.load (std::memory_order_acquire) != AsyncOperation::Idle)
                 {
                     backoff ();
                 }
@@ -167,35 +167,35 @@ namespace join
          */
         int asyncAccept (AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) noexcept
         {
-            if (!_acceptor.opened ())
+            if (JOIN_UNLIKELY (!_acceptor.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
-            State expected = State::Idle;
+            AsyncOperation::State expected = AsyncOperation::Idle;
 
-            if (!_ops->acceptState.compare_exchange_strong (expected, State::Pending, std::memory_order_acq_rel,
-                                                            std::memory_order_acquire))
+            if (!_ops->accept.state.compare_exchange_strong (expected, AsyncOperation::Pending,
+                                                             std::memory_order_acquire, std::memory_order_acquire))
             {
-                if ((expected != State::Dispatching) || !_engine->isProactorThread ())
+                if ((expected != AsyncOperation::Dispatching) || !_engine->isProactorThread ())
                 {
                     lastError = make_error_code (Errc::InUse);
                     return -1;
                 }
 
-                _ops->acceptState.store (State::Pending, std::memory_order_release);
+                _ops->accept.state.store (AsyncOperation::Pending, std::memory_order_release);
             }
 
             _ops->peerLen = sizeof (struct sockaddr_storage);
             _onAccept = std::move (handler);
-            _ops->acceptOp = IoOperation::makeAccept (_acceptor.handle (), _ops->peer.addr (), &_ops->peerLen,
-                                                      flags | SOCK_NONBLOCK, this);
+            _ops->accept.op = IoOperation::makeAccept (_acceptor.handle (), _ops->peer.addr (), &_ops->peerLen,
+                                                       flags | SOCK_NONBLOCK, this);
 
-            if (_engine->submit (&_ops->acceptOp, true, false) == -1)
+            if (_engine->submit (&_ops->accept.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _ops->acceptState.store (State::Idle, std::memory_order_release);
+                _ops->accept.state.store (AsyncOperation::Idle, std::memory_order_release);
                 _onAccept.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
@@ -210,12 +210,12 @@ namespace join
          */
         int cancelAccept () noexcept
         {
-            if (_ops->acceptState.load (std::memory_order_acquire) == State::Idle)
+            if (!_ops || (_ops->accept.state.load (std::memory_order_acquire) == AsyncOperation::Idle))
             {
                 return 0;
             }
 
-            if (_engine->cancel (&_ops->acceptOp, true, true) == -1)
+            if (_engine->cancel (&_ops->accept.op, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;
             }
@@ -277,35 +277,7 @@ namespace join
             return _acceptor.handle ();
         }
 
-        /**
-         * @brief get the underlying synchronous acceptor.
-         * @return the underlying synchronous acceptor.
-         */
-        Acceptor& acceptor () noexcept
-        {
-            return _acceptor;
-        }
-
-        /**
-         * @brief get the underlying synchronous acceptor.
-         * @return the underlying synchronous acceptor.
-         */
-        const Acceptor& acceptor () const noexcept
-        {
-            return _acceptor;
-        }
-
     private:
-        /**
-         * @brief acceptation slot state.
-         */
-        enum class State : uint8_t
-        {
-            Idle,        /**< no acceptation in flight and no completion handler running. */
-            Pending,     /**< an acceptation is in flight. */
-            Dispatching, /**< the completion handler is running. */
-        };
-
         /**
          * @brief operation block, kept at a stable address across moves.
          */
@@ -338,10 +310,7 @@ namespace join
             }
 
             /// acceptation operation slot.
-            alignas (64) IoOperation acceptOp = {};
-
-            /// acceptation slot state.
-            alignas (64) std::atomic<State> acceptState{State::Idle};
+            AsyncOperation accept;
 
             /// peer endpoint, written by the kernel until the acceptation completes.
             Endpoint peer;
@@ -368,11 +337,11 @@ namespace join
         {
             Ops* ops = _ops.get ();
 
-            ops->acceptState.store (State::Dispatching, std::memory_order_release);
+            ops->accept.state.store (AsyncOperation::Dispatching, std::memory_order_release);
 
             AcceptHandler handler = std::move (_onAccept);
 
-            if (!handler)
+            if (JOIN_UNLIKELY (!handler))
             {
                 if (result > -1)
                 {
@@ -388,9 +357,9 @@ namespace join
                 handler (std::error_code (), AsyncSocket (Socket (result, ops->peer), *_engine));
             }
 
-            State expected = State::Dispatching;
-            ops->acceptState.compare_exchange_strong (expected, State::Idle, std::memory_order_acq_rel,
-                                                      std::memory_order_acquire);
+            AsyncOperation::State expected = AsyncOperation::Dispatching;
+            ops->accept.state.compare_exchange_strong (expected, AsyncOperation::Idle, std::memory_order_release,
+                                                       std::memory_order_relaxed);
         }
 
         /**

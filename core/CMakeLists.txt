@@ -38,6 +38,7 @@ set(PUBLIC_HEADERS
     include/join/stream_socket.hpp
     include/join/socket_stream.hpp
     include/join/acceptor.hpp
+    include/join/async_socket.hpp
     include/join/async_stream_socket.hpp
     include/join/async_acceptor.hpp
     include/join/cpu.hpp

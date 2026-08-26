@@ -271,6 +271,11 @@ target_link_libraries(tcp_acceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME tcp_acceptor.gtest COMMAND tcp_acceptor.gtest)
 install(TARGETS tcp_acceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(raw_async_socket.gtest raw_async_socket_test.cpp)
+target_link_libraries(raw_async_socket.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME raw_async_socket.gtest COMMAND raw_async_socket.gtest)
+install(TARGETS raw_async_socket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(tcp_async_stream_socket.gtest tcp_async_stream_socket_test.cpp)
 target_link_libraries(tcp_async_stream_socket.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME tcp_async_stream_socket.gtest COMMAND tcp_async_stream_socket.gtest)

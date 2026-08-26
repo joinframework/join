@@ -183,6 +183,17 @@ TEST_F (TcpAsyncAcceptor, move)
 
     ASSERT_TRUE (assigned.opened ());
 
+    ASSERT_EQ (moved.cancelAccept (), 0) << join::lastError.message ();
+    ASSERT_FALSE (moved.opened ());
+    moved.close ();
+
+    Tcp::AsyncAcceptor chained (std::move (moved));
+    ASSERT_FALSE (chained.opened ());
+
+    Tcp::AsyncAcceptor reassigned;
+    reassigned = std::move (chained);
+    ASSERT_FALSE (reassigned.opened ());
+
     client.close ();
     assigned.close ();
 }
@@ -452,18 +463,6 @@ TEST_F (TcpAsyncAcceptor, handle)
     ASSERT_GT (server.handle (), -1);
     server.close ();
     ASSERT_EQ (server.handle (), -1);
-}
-
-/**
- * @brief Test acceptor method.
- */
-TEST_F (TcpAsyncAcceptor, acceptor)
-{
-    Tcp::AsyncAcceptor server;
-
-    ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE (server.acceptor ().opened ());
-    server.close ();
 }
 
 /**
