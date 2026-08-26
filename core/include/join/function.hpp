@@ -146,6 +146,10 @@ namespace join
                     static_cast<DecayedFunc*> (storage)->~DecayedFunc ();
                 };
             }
+
+            // an empty target holds no state, so relocating it copies nothing at all and never
+            // reads the storage, which is left uninitialized by the placement new above.
+            _size = std::is_empty<DecayedFunc>::value ? 0 : sizeof (DecayedFunc);
         }
 
         /**
@@ -226,6 +230,7 @@ namespace join
             _invoker = nullptr;
             _manager = nullptr;
             _destructor = nullptr;
+            _size = 0;
         }
 
         /**
@@ -236,6 +241,7 @@ namespace join
             _invoker = other._invoker;
             _manager = other._manager;
             _destructor = other._destructor;
+            _size = other._size;
 
             if (_invoker == nullptr)
             {
@@ -248,12 +254,13 @@ namespace join
             }
             else
             {
-                std::memcpy (&_storage, &other._storage, Capacity);
+                std::memcpy (&_storage, &other._storage, _size);
             }
 
             other._invoker = nullptr;
             other._manager = nullptr;
             other._destructor = nullptr;
+            other._size = 0;
         }
 
         /// fixed-capacity aligned storage for the callable target.
@@ -267,6 +274,9 @@ namespace join
 
         /// pointer to the static destructor wrapper.
         DestructorFunc _destructor = nullptr;
+
+        /// number of bytes to relocate when the target is trivially copyable.
+        std::size_t _size = 0;
     };
 }
 
