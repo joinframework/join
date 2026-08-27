@@ -302,7 +302,7 @@ namespace join
          * @brief get the number of readable bytes.
          * @return the number of readable bytes, -1 on failure.
          */
-        int canRead () const noexcept
+        ssize_t canRead () const noexcept
         {
             int available = 0;
 
@@ -332,7 +332,7 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return the number of bytes received, -1 on failure.
          */
-        int read (char* data, size_t maxSize) noexcept
+        ssize_t read (char* data, size_t maxSize) noexcept
         {
             struct iovec iov;
             iov.iov_base = data;
@@ -346,7 +346,7 @@ namespace join
             message.msg_control = nullptr;
             message.msg_controllen = 0;
 
-            int size = ::recvmsg (_handle, &message, 0);
+            ssize_t size = ::recvmsg (_handle, &message, 0);
             if (size == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
@@ -378,7 +378,7 @@ namespace join
          * @param maxSize maximum number of bytes to write.
          * @return the number of bytes written, -1 on failure.
          */
-        int write (const char* data, size_t maxSize) noexcept
+        ssize_t write (const char* data, size_t maxSize) noexcept
         {
             struct iovec iov;
             iov.iov_base = const_cast<char*> (data);
@@ -392,7 +392,7 @@ namespace join
             message.msg_control = nullptr;
             message.msg_controllen = 0;
 
-            int result = ::sendmsg (_handle, &message, 0);
+            ssize_t result = ::sendmsg (_handle, &message, 0);
             if (result == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());

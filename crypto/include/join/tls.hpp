@@ -551,7 +551,7 @@ namespace join
          * @param len maximum number of bytes to read.
          * @return number of bytes read on success, -1 on failure.
          */
-        int read (char* buf, size_t len) noexcept
+        ssize_t read (char* buf, size_t len) noexcept
         {
             if (_ssl)
             {
@@ -580,7 +580,7 @@ namespace join
 
             while (numRead < size)
             {
-                int result = read (data + numRead, size - numRead);
+                ssize_t result = read (data + numRead, size - numRead);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)
@@ -627,7 +627,7 @@ namespace join
          * @param len number of bytes to write.
          * @return number of bytes written on success, -1 on failure.
          */
-        int write (const char* buf, size_t len) noexcept
+        ssize_t write (const char* buf, size_t len) noexcept
         {
             if (_ssl)
             {
@@ -656,7 +656,7 @@ namespace join
 
             while (numWrite < size)
             {
-                int result = write (data + numWrite, size - numWrite);
+                ssize_t result = write (data + numWrite, size - numWrite);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)

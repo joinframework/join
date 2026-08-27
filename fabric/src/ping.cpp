@@ -623,7 +623,7 @@ int Ping::echo (Icmp::Socket& socket, PingStats& stats, std::chrono::millisecond
 
         request->sent = std::chrono::steady_clock::now ();
 
-        int written = socket.write (data.get (), size);
+        ssize_t written = socket.write (data.get (), size);
 
         if ((written == -1) && (lastError == std::errc::no_buffer_space) && (attempt == 0))
         {

@@ -222,7 +222,7 @@ protected:
                 char buf[1024];
                 for (;;)
                 {
-                    int nread = tls.read (buf, sizeof (buf));
+                    ssize_t nread = tls.read (buf, sizeof (buf));
                     if (nread == -1)
                     {
                         if (join::lastError == Errc::TemporaryError)

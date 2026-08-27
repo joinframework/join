@@ -174,7 +174,7 @@ namespace join
          */
         void onReadable ([[maybe_unused]] int fd) override final
         {
-            int size = _socket.read (_buffer.get (), sizeof (Frame) + Protocol::maxMsgSize);
+            ssize_t size = _socket.read (_buffer.get (), sizeof (Frame) + Protocol::maxMsgSize);
             if (size <= 0)
             {
                 return;  // LCOV_EXCL_LINE

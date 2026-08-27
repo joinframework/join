@@ -110,7 +110,7 @@ protected:
         auto buffer = std::make_unique<char[]> (this->canRead ());
         if (buffer)
         {
-            int nread = this->read (buffer.get (), this->canRead ());
+            ssize_t nread = this->read (buffer.get (), this->canRead ());
             if (size_t (nread) < sizeof (Packet))
             {
                 return;

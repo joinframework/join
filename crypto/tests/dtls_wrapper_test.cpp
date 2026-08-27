@@ -216,7 +216,7 @@ protected:
         {
             char buffer[65536];
             Udp::Endpoint from;
-            int nread = _socket.readFrom (buffer, sizeof (buffer), &from);
+            ssize_t nread = _socket.readFrom (buffer, sizeof (buffer), &from);
             if (nread > 0)
             {
                 _socket.writeTo (buffer, nread, from);

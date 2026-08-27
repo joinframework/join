@@ -49,7 +49,7 @@ namespace join
          * @param endpoint endpoint from where data are coming (optional).
          * @return The number of bytes received, -1 on failure.
          */
-        int readFrom (char* buf, size_t len, Endpoint* endpoint = nullptr) noexcept
+        ssize_t readFrom (char* buf, size_t len, Endpoint* endpoint = nullptr) noexcept
         {
             if (this->_ssl)
             {
@@ -92,7 +92,7 @@ namespace join
          * @param endpoint endpoint where to write the data.
          * @return the number of bytes written, -1 on failure.
          */
-        int writeTo (const char* buf, size_t len, const Endpoint& endpoint) noexcept
+        ssize_t writeTo (const char* buf, size_t len, const Endpoint& endpoint) noexcept
         {
             if (this->_ssl)
             {

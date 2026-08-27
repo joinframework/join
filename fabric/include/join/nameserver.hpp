@@ -153,7 +153,7 @@ namespace join
         virtual void onReadable ([[maybe_unused]] int fd) override
         {
             Endpoint from;
-            int size = _socket.readFrom (_buffer.get (), Protocol::maxMsgSize, &from);
+            ssize_t size = _socket.readFrom (_buffer.get (), Protocol::maxMsgSize, &from);
             if (size >= int (_headerSize))
             {
                 std::stringstream data;
@@ -682,7 +682,7 @@ namespace join
         void onReadable ([[maybe_unused]] int fd) override final
         {
             Endpoint from;
-            int size = this->_socket.readFrom (this->_buffer.get (), Protocol::maxMsgSize, &from);
+            ssize_t size = this->_socket.readFrom (this->_buffer.get (), Protocol::maxMsgSize, &from);
             if (size >= int (this->_headerSize))
             {
                 std::stringstream data;

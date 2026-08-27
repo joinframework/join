@@ -73,7 +73,7 @@ protected:
             for (;;)
             {
                 // echo received data.
-                int nread = sock.read (buf, sizeof (buf));
+                ssize_t nread = sock.read (buf, sizeof (buf));
                 if (nread == -1)
                 {
                     if (join::lastError == Errc::TemporaryError)

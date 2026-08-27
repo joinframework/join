@@ -80,7 +80,7 @@ protected:
         if (buffer)
         {
             UnixDgram::Endpoint from;
-            int nread = _server.readFrom (buffer.get (), _server.canRead (), &from);
+            ssize_t nread = _server.readFrom (buffer.get (), _server.canRead (), &from);
             if (nread >= 0)
             {
                 _server.writeTo (buffer.get (), nread, from);

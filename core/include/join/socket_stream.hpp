@@ -241,7 +241,7 @@ namespace join
             {
                 for (;;)
                 {
-                    int nread = _socket.read (eback (), _bufsize);
+                    ssize_t nread = _socket.read (eback (), _bufsize);
                     if (nread == -1)
                     {
                         if (lastError == Errc::TemporaryError)

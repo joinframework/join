@@ -250,7 +250,7 @@ namespace join
          * @param endpoint endpoint from where data are coming (optional).
          * @return The number of bytes received, -1 on failure.
          */
-        int readFrom (char* data, size_t maxSize, Endpoint* endpoint = nullptr) noexcept
+        ssize_t readFrom (char* data, size_t maxSize, Endpoint* endpoint = nullptr) noexcept
         {
             struct sockaddr_storage sa;
 
@@ -266,7 +266,7 @@ namespace join
             message.msg_control = nullptr;
             message.msg_controllen = 0;
 
-            int size = ::recvmsg (this->_handle, &message, 0);
+            ssize_t size = ::recvmsg (this->_handle, &message, 0);
             if (size == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
@@ -294,14 +294,14 @@ namespace join
          * @param endpoint endpoint where to write the data.
          * @return the number of bytes written, -1 on failure.
          */
-        int writeTo (const char* data, size_t maxSize, const Endpoint& endpoint) noexcept
+        ssize_t writeTo (const char* data, size_t maxSize, const Endpoint& endpoint) noexcept
         {
             if ((this->_state == State::Closed) && (open (endpoint.protocol ()) == -1))
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            int result = ::sendto (this->_handle, data, maxSize, 0, endpoint.addr (), endpoint.length ());
+            ssize_t result = ::sendto (this->_handle, data, maxSize, 0, endpoint.addr (), endpoint.length ());
             if (result < 0)
             {
                 lastError = std::error_code (errno, std::generic_category ());

@@ -294,9 +294,9 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return the number of bytes received, -1 on failure.
          */
-        int read (char* data, size_t maxSize) noexcept
+        ssize_t read (char* data, size_t maxSize) noexcept
         {
-            int size = BasicSocket<Protocol>::read (data, maxSize);
+            ssize_t size = BasicSocket<Protocol>::read (data, maxSize);
             if (size == 0)
             {
                 lastError = make_error_code (Errc::ConnectionClosed);
@@ -319,7 +319,7 @@ namespace join
 
             while (numRead < size)
             {
-                int result = this->read (data + numRead, size - numRead);
+                ssize_t result = this->read (data + numRead, size - numRead);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)
@@ -352,7 +352,7 @@ namespace join
 
             while (numWrite < size)
             {
-                int result = this->write (data + numWrite, size - numWrite);
+                ssize_t result = this->write (data + numWrite, size - numWrite);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)

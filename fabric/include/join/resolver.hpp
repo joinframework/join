@@ -757,7 +757,7 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return number of bytes read, or -1 on error.
          */
-        virtual int read (char* data, size_t maxSize) noexcept
+        virtual ssize_t read (char* data, size_t maxSize) noexcept
         {
             return _socket.read (data, maxSize);
         }
@@ -768,7 +768,7 @@ namespace join
          * @param size number of bytes to write.
          * @return number of bytes written, or -1 on error.
          */
-        virtual int write (const char* data, size_t size) noexcept
+        virtual ssize_t write (const char* data, size_t size) noexcept
         {
             return _socket.write (data, size);
         }
@@ -883,7 +883,7 @@ namespace join
          */
         void onReadable ([[maybe_unused]] int fd) override final
         {
-            int size = read (_buffer.get (), Protocol::maxMsgSize);
+            ssize_t size = read (_buffer.get (), Protocol::maxMsgSize);
             if (size >= int (_headerSize))
             {
                 std::stringstream data;
@@ -1311,11 +1311,11 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return number of bytes read, or -1 on error.
          */
-        int read (char* data, size_t maxSize) noexcept override final
+        ssize_t read (char* data, size_t maxSize) noexcept override final
         {
             if (_offset < _frameHeaderSize)
             {
-                int nread = this->_socket.read (data + _offset, _frameHeaderSize - _offset);
+                ssize_t nread = this->_socket.read (data + _offset, _frameHeaderSize - _offset);
                 if (nread == -1)
                 {
                     if (lastError != Errc::TemporaryError)
@@ -1345,7 +1345,7 @@ namespace join
                 }
             }
 
-            int nread = this->_socket.read (data + (_offset - _frameHeaderSize), _size - (_offset - _frameHeaderSize));
+            ssize_t nread = this->_socket.read (data + (_offset - _frameHeaderSize), _size - (_offset - _frameHeaderSize));
             if (nread == -1)
             {
                 if (lastError != Errc::TemporaryError)
@@ -1377,7 +1377,7 @@ namespace join
          * @param size number of bytes to write.
          * @return number of bytes written, or -1 on error.
          */
-        int write (const char* data, size_t size) noexcept override final
+        ssize_t write (const char* data, size_t size) noexcept override final
         {
             uint16_t msgLength = htons (static_cast<uint16_t> (size));
             const char* p = reinterpret_cast<const char*> (&msgLength);
@@ -1385,7 +1385,7 @@ namespace join
 
             while (remaining > 0)
             {
-                int result = this->_socket.write (p, remaining);
+                ssize_t result = this->_socket.write (p, remaining);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)
@@ -1404,7 +1404,7 @@ namespace join
 
             while (remaining > 0)
             {
-                int result = this->_socket.write (p, remaining);
+                ssize_t result = this->_socket.write (p, remaining);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)
