@@ -1345,7 +1345,8 @@ namespace join
                 }
             }
 
-            ssize_t nread = this->_socket.read (data + (_offset - _frameHeaderSize), _size - (_offset - _frameHeaderSize));
+            ssize_t nread =
+                this->_socket.read (data + (_offset - _frameHeaderSize), _size - (_offset - _frameHeaderSize));
             if (nread == -1)
             {
                 if (lastError != Errc::TemporaryError)
