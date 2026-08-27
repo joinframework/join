@@ -221,7 +221,7 @@ protected:
             for (;;)
             {
                 // echo received data.
-                int nread = stream.socket ().read (buf, sizeof (buf));
+                ssize_t nread = stream.socket ().read (buf, sizeof (buf));
                 if (nread == -1)
                 {
                     if (join::lastError == Errc::TemporaryError)

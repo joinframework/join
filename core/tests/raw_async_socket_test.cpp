@@ -65,7 +65,7 @@ public:
         _packet.udp.len = htons (sizeof (Packet) - sizeof (_packet.eth) - sizeof (_packet.ip));
         _packet.ip.tot_len = _packet.udp.len;
         _packet.udp.check =
-            Raw::Socket::checksum (reinterpret_cast<uint16_t*> (&_packet.ip), sizeof (Packet) - sizeof (_packet.eth));
+            join::checksum (reinterpret_cast<uint16_t*> (&_packet.ip), sizeof (Packet) - sizeof (_packet.eth));
 
         // fill in IP header.
         _packet.ip.ihl = sizeof (_packet.ip) >> 2;
@@ -75,7 +75,7 @@ public:
         _packet.ip.id = htons (join::randomize<uint16_t> ());
         _packet.ip.frag_off = htons (IP_DF);
         _packet.ip.ttl = IPDEFTTL;
-        _packet.ip.check = Raw::Socket::checksum (reinterpret_cast<uint16_t*> (&_packet.ip), sizeof (_packet.ip));
+        _packet.ip.check = join::checksum (reinterpret_cast<uint16_t*> (&_packet.ip), sizeof (_packet.ip));
 
         // fill in ETH header.
         memcpy (_packet.eth.h_dest, MacAddress::wildcard.addr (), 6);

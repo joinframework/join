@@ -289,19 +289,37 @@ namespace join
         }
 
         /**
+         * @brief read data.
+         * @param data buffer used to store the data received.
+         * @param maxSize maximum number of bytes to read.
+         * @return the number of bytes received, -1 on failure.
+         */
+        ssize_t read (char* data, size_t maxSize) noexcept
+        {
+            ssize_t size = BasicSocket<Protocol>::read (data, maxSize);
+            if (size == 0)
+            {
+                lastError = make_error_code (Errc::ConnectionClosed);
+                return -1;
+            }
+
+            return size;
+        }
+
+        /**
          * @brief read data until size is reached or an error occurred.
          * @param data buffer used to store the data received.
          * @param size number of bytes to read.
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int readExactly (char* data, unsigned long size, int timeout = 0) noexcept
+        int readExactly (char* data, size_t size, int timeout = 0) noexcept
         {
-            unsigned long numRead = 0;
+            size_t numRead = 0;
 
             while (numRead < size)
             {
-                int result = this->read (data + numRead, size - numRead);
+                ssize_t result = this->read (data + numRead, size - numRead);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)
@@ -328,13 +346,13 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int writeExactly (const char* data, unsigned long size, int timeout = 0) noexcept
+        int writeExactly (const char* data, size_t size, int timeout = 0) noexcept
         {
-            unsigned long numWrite = 0;
+            size_t numWrite = 0;
 
             while (numWrite < size)
             {
-                int result = this->write (data + numWrite, size - numWrite);
+                ssize_t result = this->write (data + numWrite, size - numWrite);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)

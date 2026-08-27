@@ -72,7 +72,7 @@ protected:
             for (;;)
             {
                 // echo received data.
-                int nread = sock.read (buf, sizeof (buf));
+                ssize_t nread = sock.read (buf, sizeof (buf));
                 if (nread == -1)
                 {
                     if (join::lastError == Errc::TemporaryError)
@@ -631,16 +631,6 @@ TEST_F (TcpSocket, mtu)
     ASSERT_NE (tcpSocket.mtu (), -1) << join::lastError.message ();
     tcpSocket.close ();
     ASSERT_EQ (tcpSocket.mtu (), -1);
-}
-
-/**
- * @brief Test checksum method.
- */
-TEST_F (TcpSocket, checksum)
-{
-    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
-
-    ASSERT_EQ (Tcp::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**

@@ -302,7 +302,7 @@ namespace join
          * @brief get the number of readable bytes.
          * @return the number of readable bytes, -1 on failure.
          */
-        int canRead () const noexcept
+        ssize_t canRead () const noexcept
         {
             int available = 0;
 
@@ -332,7 +332,7 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return the number of bytes received, -1 on failure.
          */
-        int read (char* data, unsigned long maxSize) noexcept
+        ssize_t read (char* data, size_t maxSize) noexcept
         {
             struct iovec iov;
             iov.iov_base = data;
@@ -346,18 +346,10 @@ namespace join
             message.msg_control = nullptr;
             message.msg_controllen = 0;
 
-            int size = ::recvmsg (_handle, &message, 0);
-            if (size < 1)
+            ssize_t size = ::recvmsg (_handle, &message, 0);
+            if (size == -1)
             {
-                if (size == -1)
-                {
-                    lastError = std::error_code (errno, std::generic_category ());
-                }
-                else
-                {
-                    lastError = make_error_code (Errc::ConnectionClosed);
-                }
-
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -386,7 +378,7 @@ namespace join
          * @param maxSize maximum number of bytes to write.
          * @return the number of bytes written, -1 on failure.
          */
-        int write (const char* data, unsigned long maxSize) noexcept
+        ssize_t write (const char* data, size_t maxSize) noexcept
         {
             struct iovec iov;
             iov.iov_base = const_cast<char*> (data);
@@ -400,7 +392,7 @@ namespace join
             message.msg_control = nullptr;
             message.msg_controllen = 0;
 
-            int result = ::sendmsg (_handle, &message, 0);
+            ssize_t result = ::sendmsg (_handle, &message, 0);
             if (result == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());
@@ -627,38 +619,6 @@ namespace join
         int handle () const noexcept
         {
             return _handle;
-        }
-
-        /**
-         * @brief get standard 1s complement checksum.
-         * @param data data pointer.
-         * @param len data len.
-         * @param current Current sum.
-         * @return checksum.
-         */
-        static uint16_t checksum (const uint16_t* data, size_t len, uint16_t current = 0)
-        {
-            uint32_t sum = current;
-
-            while (len > 1)
-            {
-                sum += *data++;
-                len -= 2;
-            }
-
-            if (len == 1)
-            {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-                sum += *reinterpret_cast<const uint8_t*> (data);
-#else
-                sum += *reinterpret_cast<const uint8_t*> (data) << 8;
-#endif
-            }
-
-            sum = (sum >> 16) + (sum & 0xffff);
-            sum += (sum >> 16);
-
-            return static_cast<uint16_t> (~sum);
         }
 
         /**

@@ -283,7 +283,7 @@ protected:
         ::memcpy (&frame->ip.saddr, IpAddress (_server).addr (), sizeof (frame->ip.saddr));
         ::memcpy (&frame->ip.daddr, IpAddress::ipv4Broadcast.addr (), sizeof (frame->ip.daddr));
         frame->ip.check = 0;
-        frame->ip.check = Dhcp::Socket::checksum (reinterpret_cast<const uint16_t*> (&frame->ip), sizeof (frame->ip));
+        frame->ip.check = join::checksum (reinterpret_cast<const uint16_t*> (&frame->ip), sizeof (frame->ip));
 
         const bool boot = (packet.op == DhcpMessage::BootRequest);
 

@@ -29,6 +29,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C.
+#include <unistd.h>
+
 using join::Errc;
 using join::ReactorThread;
 using join::EventHandler;
@@ -40,6 +43,15 @@ using join::UnixDgram;
 class UnixDgramSocket : public EventHandler, public ::testing::Test
 {
 protected:
+    /**
+     * @brief Tears down the test suite.
+     */
+    static void TearDownTestSuite ()
+    {
+        ::unlink (_serverpath.c_str ());
+        ::unlink (_clientpath.c_str ());
+    }
+
     /**
      * @brief Sets up the test fixture.
      */
@@ -68,8 +80,8 @@ protected:
         if (buffer)
         {
             UnixDgram::Endpoint from;
-            int nread = _server.readFrom (buffer.get (), _server.canRead (), &from);
-            if (nread > 0)
+            ssize_t nread = _server.readFrom (buffer.get (), _server.canRead (), &from);
+            if (nread >= 0)
             {
                 _server.writeTo (buffer.get (), nread, from);
             }
@@ -250,6 +262,10 @@ TEST_F (UnixDgramSocket, readFrom)
     ASSERT_EQ (unixSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (unixSocket.readFrom (data, unixSocket.canRead (), &from), sizeof (data)) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.write ("", 0), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (unixSocket.readFrom (data, sizeof (data), &from), 0) << join::lastError.message ();
     ASSERT_EQ (from, UnixDgram::Endpoint (_serverpath));
     unixSocket.close ();
 }
@@ -483,16 +499,6 @@ TEST_F (UnixDgramSocket, mtu)
     ASSERT_EQ (unixSocket.mtu (), -1);
     unixSocket.close ();
     ASSERT_EQ (unixSocket.mtu (), -1);
-}
-
-/**
- * @brief Test checksum method.
- */
-TEST_F (UnixDgramSocket, checksum)
-{
-    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
-
-    ASSERT_EQ (UnixDgram::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**

@@ -174,7 +174,7 @@ namespace join
          */
         void onReadable ([[maybe_unused]] int fd) override final
         {
-            int size = _socket.read (_buffer.get (), sizeof (Frame) + Protocol::maxMsgSize);
+            ssize_t size = _socket.read (_buffer.get (), sizeof (Frame) + Protocol::maxMsgSize);
             if (size <= 0)
             {
                 return;  // LCOV_EXCL_LINE
@@ -207,7 +207,7 @@ namespace join
             ::memcpy (scratch.data () + sizeof (pseudo), &frame.udp, sizeof (frame.udp));
             ::memcpy (scratch.data () + sizeof (pseudo) + sizeof (frame.udp), payload, size);
 
-            uint16_t sum = Socket::checksum (reinterpret_cast<const uint16_t*> (scratch.data ()), scratch.size ());
+            uint16_t sum = join::checksum (reinterpret_cast<const uint16_t*> (scratch.data ()), scratch.size ());
 
             return sum ? sum : 0xffff;
         }
@@ -261,7 +261,7 @@ namespace join
             ::memcpy (&frame->ip.saddr, source.addr (), sizeof (frame->ip.saddr));
             ::memcpy (&frame->ip.daddr, destination.addr (), sizeof (frame->ip.daddr));
             frame->ip.check = 0;
-            frame->ip.check = Socket::checksum (reinterpret_cast<const uint16_t*> (&frame->ip), sizeof (frame->ip));
+            frame->ip.check = join::checksum (reinterpret_cast<const uint16_t*> (&frame->ip), sizeof (frame->ip));
 
             frame->udp.check = udpChecksum (*frame, payload.data (), payload.size ());
 
@@ -298,7 +298,7 @@ namespace join
             const uint16_t check = header.check;
             header.check = 0;
 
-            if (check != Socket::checksum (reinterpret_cast<const uint16_t*> (&header), sizeof (header)))
+            if (check != join::checksum (reinterpret_cast<const uint16_t*> (&header), sizeof (header)))
             {
                 return nullptr;
             }

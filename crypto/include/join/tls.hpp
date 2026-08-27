@@ -551,7 +551,7 @@ namespace join
          * @param len maximum number of bytes to read.
          * @return number of bytes read on success, -1 on failure.
          */
-        int read (char* buf, unsigned long len) noexcept
+        ssize_t read (char* buf, size_t len) noexcept
         {
             if (_ssl)
             {
@@ -574,13 +574,13 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int readExactly (char* data, unsigned long size, int timeout = 0)
+        int readExactly (char* data, size_t size, int timeout = 0)
         {
-            unsigned long numRead = 0;
+            size_t numRead = 0;
 
             while (numRead < size)
             {
-                int result = read (data + numRead, size - numRead);
+                ssize_t result = read (data + numRead, size - numRead);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)
@@ -627,7 +627,7 @@ namespace join
          * @param len number of bytes to write.
          * @return number of bytes written on success, -1 on failure.
          */
-        int write (const char* buf, unsigned long len) noexcept
+        ssize_t write (const char* buf, size_t len) noexcept
         {
             if (_ssl)
             {
@@ -650,13 +650,13 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int writeExactly (const char* data, unsigned long size, int timeout = 0)
+        int writeExactly (const char* data, size_t size, int timeout = 0)
         {
-            unsigned long numWrite = 0;
+            size_t numWrite = 0;
 
             while (numWrite < size)
             {
-                int result = write (data + numWrite, size - numWrite);
+                ssize_t result = write (data + numWrite, size - numWrite);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)

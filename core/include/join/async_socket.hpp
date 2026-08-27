@@ -547,16 +547,9 @@ namespace join
                 ReadHandler handler = std::move (_onRead);
                 std::error_code result = code;
 
-                if (JOIN_LIKELY (!result))
+                if (JOIN_UNLIKELY (!result && (_ops->readMsg.msg_flags & MSG_TRUNC)))
                 {
-                    if (JOIN_UNLIKELY (size == 0))
-                    {
-                        result = make_error_code (Errc::ConnectionClosed);  // LCOV_EXCL_LINE
-                    }
-                    else if (JOIN_UNLIKELY (_ops->readMsg.msg_flags & MSG_TRUNC))
-                    {
-                        result = make_error_code (Errc::MessageTooLong);
-                    }
+                    result = make_error_code (Errc::MessageTooLong);
                 }
 
                 if (JOIN_LIKELY (handler))

@@ -39,10 +39,6 @@ namespace join
     template <class Protocol>
     class BasicDatagramSocket final : public BasicSocket<Protocol>
     {
-        /// friendship with basic asynchronous datagram socket
-        template <class P, class E>
-        friend class BasicAsyncDatagramSocket;
-
     public:
         using Ptr = std::unique_ptr<BasicDatagramSocket<Protocol>>;
         using Mode = typename BasicSocket<Protocol>::Mode;
@@ -145,9 +141,11 @@ namespace join
                 if ((protocol.family () == AF_INET6) &&
                     (::setsockopt (this->_handle, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof (off)) == -1))
                 {
+                    // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
                     close ();
                     return -1;
+                    // LCOV_EXCL_STOP
                 }
             }
 
@@ -156,9 +154,11 @@ namespace join
                 if ((protocol.family () == AF_INET) &&
                     (::setsockopt (this->_handle, IPPROTO_IP, IP_HDRINCL, &off, sizeof (off)) == -1))
                 {
+                    // LCOV_EXCL_START
                     lastError = std::error_code (errno, std::generic_category ());
                     close ();
                     return -1;
+                    // LCOV_EXCL_STOP
                 }
 
                 this->setOption (Option::MulticastTtl, _ttl);
@@ -185,7 +185,7 @@ namespace join
 
             if ((this->_state == State::Closed) && (open (endpoint.protocol ()) == -1))
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             if (::connect (this->_handle, endpoint.addr (), endpoint.length ()) == -1)
@@ -218,11 +218,13 @@ namespace join
                                         sizeof (struct sockaddr_storage));
                 if (result == -1)
                 {
+                    // LCOV_EXCL_START
                     if (errno != EAFNOSUPPORT)
                     {
                         lastError = std::error_code (errno, std::generic_category ());
                         return -1;
                     }
+                    // LCOV_EXCL_STOP
                 }
 
                 this->_state = State::Disconnected;
@@ -248,7 +250,7 @@ namespace join
          * @param endpoint endpoint from where data are coming (optional).
          * @return The number of bytes received, -1 on failure.
          */
-        int readFrom (char* data, unsigned long maxSize, Endpoint* endpoint = nullptr) noexcept
+        ssize_t readFrom (char* data, size_t maxSize, Endpoint* endpoint = nullptr) noexcept
         {
             struct sockaddr_storage sa;
 
@@ -264,19 +266,10 @@ namespace join
             message.msg_control = nullptr;
             message.msg_controllen = 0;
 
-            int size = ::recvmsg (this->_handle, &message, 0);
-            if (size < 1)
+            ssize_t size = ::recvmsg (this->_handle, &message, 0);
+            if (size == -1)
             {
-                if (size == -1)
-                {
-                    lastError = std::error_code (errno, std::generic_category ());
-                }
-                else
-                {
-                    lastError = make_error_code (Errc::ConnectionClosed);
-                    this->_state = State::Disconnected;
-                }
-
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
@@ -301,14 +294,14 @@ namespace join
          * @param endpoint endpoint where to write the data.
          * @return the number of bytes written, -1 on failure.
          */
-        int writeTo (const char* data, unsigned long maxSize, const Endpoint& endpoint) noexcept
+        ssize_t writeTo (const char* data, size_t maxSize, const Endpoint& endpoint) noexcept
         {
             if ((this->_state == State::Closed) && (open (endpoint.protocol ()) == -1))
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
-            int result = ::sendto (this->_handle, data, maxSize, 0, endpoint.addr (), endpoint.length ());
+            ssize_t result = ::sendto (this->_handle, data, maxSize, 0, endpoint.addr (), endpoint.length ());
             if (result < 0)
             {
                 lastError = std::error_code (errno, std::generic_category ());

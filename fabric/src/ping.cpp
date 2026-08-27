@@ -607,7 +607,7 @@ int Ping::echo (Icmp::Socket& socket, PingStats& stats, std::chrono::millisecond
         icmp->checksum = 0;
         icmp->un.echo.sequence = htons (sequence);
         icmp->un.echo.id = htons (_identity);
-        icmp->checksum = Icmp::Socket::checksum (reinterpret_cast<uint16_t*> (icmp), size, 0);
+        icmp->checksum = join::checksum (reinterpret_cast<uint16_t*> (icmp), size, 0);
     }
 
     int result = -1;
@@ -623,7 +623,7 @@ int Ping::echo (Icmp::Socket& socket, PingStats& stats, std::chrono::millisecond
 
         request->sent = std::chrono::steady_clock::now ();
 
-        int written = socket.write (data.get (), size);
+        ssize_t written = socket.write (data.get (), size);
 
         if ((written == -1) && (lastError == std::errc::no_buffer_space) && (attempt == 0))
         {
@@ -790,7 +790,7 @@ void Ping::onReadable (int fd)
         struct icmphdr* icmp = reinterpret_cast<struct icmphdr*> (_buffer.get () + offset);
 
         if ((icmp->type != ICMP_ECHOREPLY) || (ntohs (icmp->un.echo.id) != _identity) ||
-            Icmp::Socket::checksum (reinterpret_cast<uint16_t*> (icmp), packetSize, 0))
+            join::checksum (reinterpret_cast<uint16_t*> (icmp), packetSize, 0))
         {
             return;  // LCOV_EXCL_LINE
         }
