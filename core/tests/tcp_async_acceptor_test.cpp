@@ -140,7 +140,6 @@ protected:
 
     /// acceptor used by the resubmitting handler.
     static Tcp::AsyncAcceptor* _current;
-
 };
 
 const IpAddress TcpAsyncAcceptor::_address = "::1";

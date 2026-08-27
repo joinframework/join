@@ -144,7 +144,6 @@ protected:
 
     /// acceptor used by the resubmitting handler.
     static UnixStream::AsyncAcceptor* _current;
-
 };
 
 const std::string UnixAsyncAcceptor::_path = "/tmp/unixasyncacceptor_test.sock";
