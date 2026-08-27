@@ -58,7 +58,7 @@ namespace join
         using AsyncSocket = BasicAsyncStreamSocket<Protocol, Engine>;
 
         /// handler invoked on acceptation completion.
-        using AcceptHandler = Function<void (const std::error_code&, AsyncSocket&&)>;
+        using AcceptHandler = Function<void (const std::error_code&)>;
 
         /**
          * @brief create the acceptor instance.
@@ -86,39 +86,14 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicAsyncStreamAcceptor (BasicAsyncStreamAcceptor&& other) noexcept
-        : _acceptor (std::move (other._acceptor))
-        , _engine (other._engine)
-        , _ops (std::move (other._ops))
-        , _onAccept (std::move (other._onAccept))
-        {
-            if (_ops)
-            {
-                _ops->accept.op.handler = this;
-            }
-        }
+        BasicAsyncStreamAcceptor (BasicAsyncStreamAcceptor&& other) = delete;
 
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicAsyncStreamAcceptor& operator= (BasicAsyncStreamAcceptor&& other) noexcept
-        {
-            close ();
-
-            _acceptor = std::move (other._acceptor);
-            _engine = other._engine;
-            _ops = std::move (other._ops);
-            _onAccept = std::move (other._onAccept);
-
-            if (_ops)
-            {
-                _ops->accept.op.handler = this;
-            }
-
-            return *this;
-        }
+        BasicAsyncStreamAcceptor& operator= (BasicAsyncStreamAcceptor&& other) = delete;
 
         /**
          * @brief destroy the acceptor instance.
@@ -146,30 +121,50 @@ namespace join
         {
             cancelAccept ();
 
-            if (_ops && !_engine->isProactorThread ())
+            if (_engine->isProactorThread ())
             {
-                Backoff backoff;
+                _acceptor.close ();
+                return;
+            }
 
-                while (_ops->accept.state.load (std::memory_order_acquire) != AsyncOperation::Idle)
+            Backoff backoff;
+            AsyncOperation::State expected = AsyncOperation::Idle;
+
+            while (!_ops->accept.state.compare_exchange_strong (expected, AsyncOperation::Closing,
+                                                                std::memory_order_acq_rel, std::memory_order_acquire))
+            {
+                if (expected == AsyncOperation::Pending)
                 {
-                    backoff ();
+                    cancelAccept ();
                 }
+
+                backoff ();
+                expected = AsyncOperation::Idle;
             }
 
             _acceptor.close ();
+
+            _ops->accept.state.store (AsyncOperation::Idle, std::memory_order_release);
         }
 
         /**
          * @brief start an asynchronous acceptation.
+         * @param peer closed socket receiving the accepted connection, valid until the handler is invoked.
          * @param handler handler invoked on completion.
          * @param flags accepted socket creation flags.
          * @return 0 on success, -1 on failure.
          */
-        int asyncAccept (AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) noexcept
+        int asyncAccept (AsyncSocket& peer, AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) noexcept
         {
             if (JOIN_UNLIKELY (!_acceptor.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            if (JOIN_UNLIKELY (peer.opened ()))
+            {
+                lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
@@ -189,6 +184,7 @@ namespace join
 
             _ops->peerLen = sizeof (struct sockaddr_storage);
             _onAccept = std::move (handler);
+            _peer = &peer;
             _ops->accept.op = IoOperation::makeAccept (_acceptor.handle (), _ops->peer.addr (), &_ops->peerLen,
                                                        flags | SOCK_NONBLOCK, this);
 
@@ -197,6 +193,7 @@ namespace join
                 // LCOV_EXCL_START
                 _ops->accept.state.store (AsyncOperation::Idle, std::memory_order_release);
                 _onAccept.reset ();
+                _peer = nullptr;
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -210,7 +207,7 @@ namespace join
          */
         int cancelAccept () noexcept
         {
-            if (!_ops || (_ops->accept.state.load (std::memory_order_acquire) == AsyncOperation::Idle))
+            if (_ops->accept.state.load (std::memory_order_acquire) != AsyncOperation::Pending)
             {
                 return 0;
             }
@@ -341,20 +338,24 @@ namespace join
 
             AcceptHandler handler = std::move (_onAccept);
 
-            if (JOIN_UNLIKELY (!handler))
+            AsyncSocket* peer = _peer;
+            _peer = nullptr;
+
+            if (JOIN_UNLIKELY (result < 0))
             {
-                if (result > -1)
+                if (JOIN_LIKELY (handler))
                 {
-                    ::close (result);
+                    handler (std::error_code (-result, std::generic_category ()));
                 }
-            }
-            else if (result < 0)
-            {
-                handler (std::error_code (-result, std::generic_category ()), AsyncSocket (*_engine));
             }
             else
             {
-                handler (std::error_code (), AsyncSocket (Socket (result, ops->peer), *_engine));
+                peer->_socket = Socket (result, ops->peer);
+
+                if (JOIN_LIKELY (handler))
+                {
+                    handler (std::error_code ());
+                }
             }
 
             AsyncOperation::State expected = AsyncOperation::Dispatching;
@@ -379,10 +380,13 @@ namespace join
         Engine* _engine;
 
         /// operation block.
-        std::unique_ptr<Ops> _ops{new Ops ()};
+        const std::unique_ptr<Ops> _ops{new Ops ()};
 
         /// handler invoked on acceptation completion.
         AcceptHandler _onAccept;
+
+        /// socket receiving the accepted connection.
+        AsyncSocket* _peer = nullptr;
     };
 }
 

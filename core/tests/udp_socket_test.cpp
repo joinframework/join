@@ -271,6 +271,16 @@ TEST_F (UdpSocket, readFrom)
     ASSERT_EQ (udpSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.readFrom (data, udpSocket.canRead (), &from), sizeof (data)) << join::lastError.message ();
+
+    // a datagram larger than the supplied buffer is reported, not silently truncated.
+    char small[4];
+
+    ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
+    ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.readFrom (small, sizeof (small), &from), -1);
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
+
     udpSocket.close ();
     ASSERT_EQ (from, Udp::Endpoint (_host, _port));
 }

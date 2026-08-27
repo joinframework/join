@@ -39,6 +39,10 @@ namespace join
     template <class Protocol>
     class BasicDatagramSocket final : public BasicSocket<Protocol>
     {
+        /// friendship with basic asynchronous datagram socket
+        template <class P, class E>
+        friend class BasicAsyncDatagramSocket;
+
     public:
         using Ptr = std::unique_ptr<BasicDatagramSocket<Protocol>>;
         using Mode = typename BasicSocket<Protocol>::Mode;
@@ -247,9 +251,20 @@ namespace join
         int readFrom (char* data, unsigned long maxSize, Endpoint* endpoint = nullptr) noexcept
         {
             struct sockaddr_storage sa;
-            socklen_t sa_len = sizeof (struct sockaddr_storage);
 
-            int size = ::recvfrom (this->_handle, data, maxSize, 0, reinterpret_cast<struct sockaddr*> (&sa), &sa_len);
+            struct iovec iov;
+            iov.iov_base = data;
+            iov.iov_len = maxSize;
+
+            struct msghdr message;
+            message.msg_name = &sa;
+            message.msg_namelen = sizeof (struct sockaddr_storage);
+            message.msg_iov = &iov;
+            message.msg_iovlen = 1;
+            message.msg_control = nullptr;
+            message.msg_controllen = 0;
+
+            int size = ::recvmsg (this->_handle, &message, 0);
             if (size < 1)
             {
                 if (size == -1)
@@ -265,9 +280,15 @@ namespace join
                 return -1;
             }
 
+            if (message.msg_flags & MSG_TRUNC)
+            {
+                lastError = make_error_code (Errc::MessageTooLong);
+                return -1;
+            }
+
             if (endpoint != nullptr)
             {
-                *endpoint = Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len);
+                *endpoint = Endpoint (reinterpret_cast<struct sockaddr*> (&sa), message.msg_namelen);
             }
 
             return size;

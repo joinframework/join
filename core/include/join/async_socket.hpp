@@ -61,6 +61,7 @@ namespace join
             Idle,        /**< no operation in flight and no completion handler running. */
             Pending,     /**< an operation is in flight. */
             Dispatching, /**< the completion handler is running. */
+            Closing,     /**< the socket is closing, no operation may be armed. */
         };
 
         /// operation.
@@ -124,43 +125,14 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicAsyncSocket (BasicAsyncSocket&& other) noexcept
-        : _socket (std::move (other._socket))
-        , _engine (other._engine)
-        , _ops (std::move (other._ops))
-        , _onRead (std::move (other._onRead))
-        , _onWrite (std::move (other._onWrite))
-        {
-            if (_ops)
-            {
-                _ops->read.op.handler = this;
-                _ops->write.op.handler = this;
-            }
-        }
+        BasicAsyncSocket (BasicAsyncSocket&& other) = delete;
 
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicAsyncSocket& operator= (BasicAsyncSocket&& other) noexcept
-        {
-            close ();
-
-            _socket = std::move (other._socket);
-            _engine = other._engine;
-            _ops = std::move (other._ops);
-            _onRead = std::move (other._onRead);
-            _onWrite = std::move (other._onWrite);
-
-            if (_ops)
-            {
-                _ops->read.op.handler = this;
-                _ops->write.op.handler = this;
-            }
-
-            return *this;
-        }
+        BasicAsyncSocket& operator= (BasicAsyncSocket&& other) = delete;
 
         /**
          * @brief destroy the socket instance.
@@ -188,18 +160,45 @@ namespace join
             cancelRead ();
             cancelWrite ();
 
-            if (_ops && !_engine->isProactorThread ())
+            if (_engine->isProactorThread ())
             {
-                Backoff backoff;
+                _socket.close ();
+                return;
+            }
 
-                while ((_ops->read.state.load (std::memory_order_acquire) != AsyncOperation::Idle) ||
-                       (_ops->write.state.load (std::memory_order_acquire) != AsyncOperation::Idle))
+            Backoff backoff;
+            AsyncOperation::State expected = AsyncOperation::Idle;
+
+            while (!_ops->read.state.compare_exchange_strong (expected, AsyncOperation::Closing,
+                                                              std::memory_order_acq_rel, std::memory_order_acquire))
+            {
+                if (expected == AsyncOperation::Pending)
                 {
-                    backoff ();
+                    cancelRead ();
                 }
+
+                backoff ();
+                expected = AsyncOperation::Idle;
+            }
+
+            expected = AsyncOperation::Idle;
+
+            while (!_ops->write.state.compare_exchange_strong (expected, AsyncOperation::Closing,
+                                                               std::memory_order_acq_rel, std::memory_order_acquire))
+            {
+                if (expected == AsyncOperation::Pending)
+                {
+                    cancelWrite ();
+                }
+
+                backoff ();
+                expected = AsyncOperation::Idle;
             }
 
             _socket.close ();
+
+            _ops->read.state.store (AsyncOperation::Idle, std::memory_order_release);
+            _ops->write.state.store (AsyncOperation::Idle, std::memory_order_release);
         }
 
         /**
@@ -211,7 +210,7 @@ namespace join
          */
         int asyncRead (char* data, size_t maxSize, ReadHandler handler) noexcept
         {
-            if (JOIN_UNLIKELY (!_ops || !_socket.opened ()))
+            if (JOIN_UNLIKELY (!_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
@@ -267,7 +266,7 @@ namespace join
          */
         int asyncWrite (const char* data, size_t size, WriteHandler handler) noexcept
         {
-            if (JOIN_UNLIKELY (!_ops || !_socket.opened ()))
+            if (JOIN_UNLIKELY (!_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
@@ -320,7 +319,7 @@ namespace join
          */
         int cancelRead () noexcept
         {
-            if (!_ops || (_ops->read.state.load (std::memory_order_acquire) == AsyncOperation::Idle))
+            if (_ops->read.state.load (std::memory_order_acquire) != AsyncOperation::Pending)
             {
                 return 0;
             }
@@ -339,7 +338,7 @@ namespace join
          */
         int cancelWrite () noexcept
         {
-            if (!_ops || (_ops->write.state.load (std::memory_order_acquire) == AsyncOperation::Idle))
+            if (_ops->write.state.load (std::memory_order_acquire) != AsyncOperation::Pending)
             {
                 return 0;
             }
@@ -504,7 +503,7 @@ namespace join
         Engine* _engine;
 
         /// operation block.
-        std::unique_ptr<Ops> _ops{new Ops ()};
+        const std::unique_ptr<Ops> _ops{new Ops ()};
 
         /// handler invoked on read completion.
         ReadHandler _onRead;
@@ -552,7 +551,7 @@ namespace join
                 {
                     if (JOIN_UNLIKELY (size == 0))
                     {
-                        result = make_error_code (Errc::ConnectionClosed);
+                        result = make_error_code (Errc::ConnectionClosed);  // LCOV_EXCL_LINE
                     }
                     else if (JOIN_UNLIKELY (_ops->readMsg.msg_flags & MSG_TRUNC))
                     {
