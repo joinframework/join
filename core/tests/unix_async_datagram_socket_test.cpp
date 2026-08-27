@@ -326,7 +326,6 @@ TEST_F (UnixAsyncDatagramSocket, asyncWriteTo)
     UnixDgram::AsyncSocket client;
     UnixDgram::Endpoint dest (_serverpath);
 
-    // an unopened socket is opened by the write itself.
     ASSERT_FALSE (client.opened ());
     ASSERT_EQ (client.asyncWriteTo ("hello", 5, dest, onReport), 0) << join::lastError.message ();
     ASSERT_TRUE (client.opened ());
@@ -356,7 +355,6 @@ TEST_F (UnixAsyncDatagramSocket, asyncReadFrom)
     ASSERT_EQ (client.asyncReadFrom (_buf, sizeof (_buf), _from, nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    // a datagram socket must be bound for the echo to have somewhere to reply to.
     ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
     ASSERT_EQ (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), 0) << join::lastError.message ();
@@ -378,7 +376,6 @@ TEST_F (UnixAsyncDatagramSocket, asyncReadFrom)
 
     client.close ();
 
-    // the sender endpoint is reported through the caller supplied endpoint.
     ASSERT_EQ (_from, UnixDgram::Endpoint (_serverpath));
 }
 
@@ -469,7 +466,6 @@ TEST_F (UnixAsyncDatagramSocket, resubmit)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    // a write resubmitted from within its own completion handler.
     _dest = UnixDgram::Endpoint (_serverpath);
     _rearms = 1;
 

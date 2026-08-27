@@ -692,7 +692,7 @@ TEST_F (UnixAsyncStreamSocket, cancelWrite)
 
     ASSERT_LT (filled, 4096);
 
-    ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), 0) << join::lastError.message ();
+    ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), onWrite), 0) << join::lastError.message ();
 
     ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
@@ -701,6 +701,16 @@ TEST_F (UnixAsyncStreamSocket, cancelWrite)
     ASSERT_EQ (join::lastError, Errc::InUse);
 
     ASSERT_EQ (sender.cancelWrite (), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
+
+    ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), 0) << join::lastError.message ();
 
     sender.close ();
     peer.close ();

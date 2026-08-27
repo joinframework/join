@@ -226,7 +226,6 @@ TEST_F (IcmpAsyncDatagramSocket, asyncWriteTo)
     Icmp::AsyncSocket client;
     Icmp::Endpoint dest (_host);
 
-    // an unopened socket is opened by the write itself.
     ASSERT_FALSE (client.opened ());
     ASSERT_EQ (client.asyncWriteTo (_data, sizeof (_data), dest, onReport), 0) << join::lastError.message ();
     ASSERT_TRUE (client.opened ());
@@ -277,7 +276,6 @@ TEST_F (IcmpAsyncDatagramSocket, asyncReadFrom)
     client.close ();
     server.close ();
 
-    // the sender endpoint is reported through the caller supplied endpoint.
     ASSERT_EQ (_from, Icmp::Endpoint (_host));
 }
 

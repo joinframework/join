@@ -54,8 +54,8 @@ protected:
         _code = {};
         _completions = 0;
 
-        _peer.reset (new UnixStream::AsyncSocket ());
-        _spare.reset (new UnixStream::AsyncSocket ());
+        peer ().close ();
+        spare ().close ();
     }
 
     /**
@@ -64,6 +64,26 @@ protected:
     static void TearDownTestSuite ()
     {
         ::unlink (_path.c_str ());
+    }
+
+    /**
+     * @brief get the socket receiving the accepted connections.
+     * @return the socket receiving the accepted connections.
+     */
+    static UnixStream::AsyncSocket& peer ()
+    {
+        static UnixStream::AsyncSocket sock;
+        return sock;
+    }
+
+    /**
+     * @brief get the socket receiving the connection accepted by a resubmitted acceptation.
+     * @return the socket receiving the connection accepted by a resubmitted acceptation.
+     */
+    static UnixStream::AsyncSocket& spare ()
+    {
+        static UnixStream::AsyncSocket sock;
+        return sock;
     }
 
     /**
@@ -87,7 +107,7 @@ protected:
     {
         if (!ec)
         {
-            _current->asyncAccept (*_spare, onAccept);
+            _current->asyncAccept (spare (), onAccept);
         }
 
         onReport (ec);
@@ -125,11 +145,6 @@ protected:
     /// acceptor used by the resubmitting handler.
     static UnixStream::AsyncAcceptor* _current;
 
-    /// socket receiving the accepted connections.
-    static std::unique_ptr<UnixStream::AsyncSocket> _peer;
-
-    /// socket receiving the connection accepted by a resubmitted acceptation.
-    static std::unique_ptr<UnixStream::AsyncSocket> _spare;
 };
 
 const std::string UnixAsyncAcceptor::_path = "/tmp/unixasyncacceptor_test.sock";
@@ -139,8 +154,6 @@ Condition UnixAsyncAcceptor::_cond;
 std::error_code UnixAsyncAcceptor::_code;
 int UnixAsyncAcceptor::_completions = 0;
 UnixStream::AsyncAcceptor* UnixAsyncAcceptor::_current = nullptr;
-std::unique_ptr<UnixStream::AsyncSocket> UnixAsyncAcceptor::_peer;
-std::unique_ptr<UnixStream::AsyncSocket> UnixAsyncAcceptor::_spare;
 
 /**
  * @brief Test create method.
@@ -175,14 +188,14 @@ TEST_F (UnixAsyncAcceptor, asyncAccept)
     UnixStream::AsyncAcceptor server;
     UnixStream::Socket client (UnixStream::Socket::Blocking);
 
-    ASSERT_EQ (server.asyncAccept (*_peer, nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
 
-    ASSERT_EQ (server.asyncAccept (*_peer, onReport), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (peer (), onReport), 0) << join::lastError.message ();
 
-    ASSERT_EQ (server.asyncAccept (*_peer, nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
     ASSERT_EQ (client.connect (_path), 0) << join::lastError.message ();
@@ -195,10 +208,10 @@ TEST_F (UnixAsyncAcceptor, asyncAccept)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_TRUE (_peer->connected ());
-    ASSERT_EQ (_peer->family (), AF_UNIX);
+    ASSERT_TRUE (peer ().connected ());
+    ASSERT_EQ (peer ().family (), AF_UNIX);
 
-    ASSERT_EQ (server.asyncAccept (*_peer, nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
     client.close ();
@@ -217,7 +230,7 @@ TEST_F (UnixAsyncAcceptor, resubmit)
     _current = &server;
 
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (*_peer, onAccept), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (peer (), onAccept), 0) << join::lastError.message ();
     ASSERT_EQ (client1.connect (_path), 0) << join::lastError.message ();
 
     {
@@ -253,8 +266,8 @@ TEST_F (UnixAsyncAcceptor, discard)
     UnixStream::Socket client (UnixStream::Socket::Blocking);
 
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (*_peer, nullptr), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (*_peer, nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (peer (), nullptr), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (client.connect (_path), 0) << join::lastError.message ();
 
@@ -263,7 +276,7 @@ TEST_F (UnixAsyncAcceptor, discard)
     for (int i = 0; (i < 100) && (rearmed == -1); ++i)
     {
         std::this_thread::sleep_for (std::chrono::milliseconds (10));
-        rearmed = server.asyncAccept (*_spare, nullptr);
+        rearmed = server.asyncAccept (spare (), nullptr);
     }
 
     ASSERT_EQ (rearmed, 0) << join::lastError.message ();
@@ -283,7 +296,7 @@ TEST_F (UnixAsyncAcceptor, closeFromHandler)
     _current = &server;
 
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (*_peer, onAcceptAndClose), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (peer (), onAcceptAndClose), 0) << join::lastError.message ();
     ASSERT_EQ (client.connect (_path), 0) << join::lastError.message ();
 
     {
@@ -310,7 +323,7 @@ TEST_F (UnixAsyncAcceptor, cancelAccept)
     ASSERT_EQ (server.cancelAccept (), 0) << join::lastError.message ();
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
 
-    ASSERT_EQ (server.asyncAccept (*_peer, onReport), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (peer (), onReport), 0) << join::lastError.message ();
 
     ASSERT_EQ (server.cancelAccept (), 0) << join::lastError.message ();
 
@@ -320,7 +333,7 @@ TEST_F (UnixAsyncAcceptor, cancelAccept)
             return _completions >= 1;
         }));
         ASSERT_EQ (_code, std::errc::operation_canceled);
-        ASSERT_FALSE (_peer->connected ());
+        ASSERT_FALSE (peer ().connected ());
     }
 
     server.close ();

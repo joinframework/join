@@ -315,7 +315,6 @@ TEST_F (UdpAsyncDatagramSocket, asyncWriteTo)
     Udp::AsyncSocket client;
     Udp::Endpoint dest (_host, _port);
 
-    // an unopened socket is opened by the write itself.
     ASSERT_FALSE (client.opened ());
     ASSERT_EQ (client.asyncWriteTo ("hello", 5, dest, onReport), 0) << join::lastError.message ();
     ASSERT_TRUE (client.opened ());
@@ -365,7 +364,6 @@ TEST_F (UdpAsyncDatagramSocket, asyncReadFrom)
 
     client.close ();
 
-    // the sender endpoint is reported through the caller supplied endpoint.
     ASSERT_EQ (_from, Udp::Endpoint (_host, _port));
 }
 
@@ -454,7 +452,6 @@ TEST_F (UdpAsyncDatagramSocket, resubmit)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    // a write resubmitted from within its own completion handler.
     _dest = Udp::Endpoint (_host, _port);
     _rearms = 1;
 
