@@ -289,6 +289,24 @@ namespace join
         }
 
         /**
+         * @brief read data.
+         * @param data buffer used to store the data received.
+         * @param maxSize maximum number of bytes to read.
+         * @return the number of bytes received, -1 on failure.
+         */
+        int read (char* data, size_t maxSize) noexcept
+        {
+            int size = BasicSocket<Protocol>::read (data, maxSize);
+            if (size == 0)
+            {
+                lastError = make_error_code (Errc::ConnectionClosed);
+                return -1;
+            }
+
+            return size;
+        }
+
+        /**
          * @brief read data until size is reached or an error occurred.
          * @param data buffer used to store the data received.
          * @param size number of bytes to read.

@@ -347,17 +347,9 @@ namespace join
             message.msg_controllen = 0;
 
             int size = ::recvmsg (_handle, &message, 0);
-            if (size < 1)
+            if (size == -1)
             {
-                if (size == -1)
-                {
-                    lastError = std::error_code (errno, std::generic_category ());
-                }
-                else
-                {
-                    lastError = make_error_code (Errc::ConnectionClosed);
-                }
-
+                lastError = std::error_code (errno, std::generic_category ());
                 return -1;
             }
 
