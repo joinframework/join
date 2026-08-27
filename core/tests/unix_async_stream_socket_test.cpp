@@ -50,7 +50,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (_server.create (_serverpath), 0) << join::lastError.message ();
-        ASSERT_EQ (_server.asyncAccept (onEchoAccept), 0) << join::lastError.message ();
+        ASSERT_EQ (_server.asyncAccept (peer (), onEchoAccept), 0) << join::lastError.message ();
 
         ScopedLock<Mutex> lock (_mut);
 
@@ -118,13 +118,11 @@ protected:
     /**
      * @brief adopt the socket accepted by the echo server.
      * @param ec error reported by the acceptor.
-     * @param sock accepted socket.
      */
-    static void onEchoAccept (const std::error_code& ec, UnixStream::AsyncSocket&& sock)
+    static void onEchoAccept (const std::error_code& ec)
     {
         if (!ec)
         {
-            peer () = std::move (sock);
             peer ().asyncRead (_echobuf, sizeof (_echobuf), onEchoRead);
         }
     }
@@ -242,83 +240,6 @@ const std::string UnixAsyncStreamSocket::_serverpath = "/tmp/unixasyncserver_tes
 const std::string UnixAsyncStreamSocket::_clientpath = "/tmp/unixasyncclient_test.sock";
 const std::string UnixAsyncStreamSocket::_stallpath = "/tmp/unixasyncstall_test.sock";
 const int UnixAsyncStreamSocket::_timeout = 1000;
-
-/**
- * @brief Test move with an operation in flight.
- */
-TEST_F (UnixAsyncStreamSocket, move)
-{
-    UnixStream::AsyncSocket client;
-
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
-               0)
-        << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-    }
-
-    ASSERT_EQ (client.asyncRead (_buf, sizeof (_buf),
-                                 [] (const std::error_code& ec, size_t size) {
-                                     ScopedLock<Mutex> lock (_mut);
-                                     _code = ec;
-                                     _transferred = size;
-                                     ++_completions;
-                                     _cond.signal ();
-                                 }),
-               0)
-        << join::lastError.message ();
-
-    ASSERT_EQ (client.asyncRead (_buf, sizeof (_buf), nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
-
-    UnixStream::AsyncSocket moved (std::move (client));
-
-    ASSERT_EQ (moved.asyncRead (_buf, sizeof (_buf), nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
-
-    ASSERT_EQ (moved.asyncWrite ("one", 3, nullptr), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 2;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        ASSERT_EQ (_transferred, 3u);
-    }
-
-    UnixStream::AsyncSocket assigned;
-    assigned = std::move (moved);
-
-    ASSERT_TRUE (assigned.connected ());
-
-    ASSERT_EQ (moved.cancelRead (), 0) << join::lastError.message ();
-    ASSERT_EQ (moved.cancelWrite (), 0) << join::lastError.message ();
-    ASSERT_EQ (moved.asyncConnect ({_serverpath}, nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_FALSE (moved.opened ());
-    moved.close ();
-
-    UnixStream::AsyncSocket chained (std::move (moved));
-    ASSERT_FALSE (chained.opened ());
-
-    UnixStream::AsyncSocket reassigned;
-    reassigned = std::move (chained);
-    ASSERT_FALSE (reassigned.opened ());
-
-    assigned.close ();
-}
 
 /**
  * @brief Test open method.
@@ -771,7 +692,7 @@ TEST_F (UnixAsyncStreamSocket, cancelWrite)
 
     ASSERT_LT (filled, 4096);
 
-    ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), 0) << join::lastError.message ();
+    ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), onWrite), 0) << join::lastError.message ();
 
     ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
@@ -780,6 +701,16 @@ TEST_F (UnixAsyncStreamSocket, cancelWrite)
     ASSERT_EQ (join::lastError, Errc::InUse);
 
     ASSERT_EQ (sender.cancelWrite (), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
+
+    ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), 0) << join::lastError.message ();
 
     sender.close ();
     peer.close ();

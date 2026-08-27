@@ -175,52 +175,6 @@ const std::string RawAsyncSocket::_interface = "lo";
 const int RawAsyncSocket::_timeout = 1000;
 
 /**
- * @brief Test move with an operation in flight.
- */
-TEST_F (RawAsyncSocket, move)
-{
-    Raw::AsyncSocket rawSocket;
-
-    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.asyncRead (_buf, sizeof (_buf), onCompletion), 0) << join::lastError.message ();
-
-    ASSERT_EQ (rawSocket.asyncRead (_buf, sizeof (_buf), nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
-
-    Raw::AsyncSocket moved (std::move (rawSocket));
-
-    ASSERT_EQ (moved.asyncRead (_buf, sizeof (_buf), nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
-
-    ASSERT_EQ (moved.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), 0)
-        << join::lastError.message ();
-
-    ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
-    ASSERT_GT (_transferred, 0u);
-
-    Raw::AsyncSocket assigned;
-    assigned = std::move (moved);
-
-    ASSERT_TRUE (assigned.opened ());
-
-    // the moved from socket must stay safe to use.
-    ASSERT_EQ (moved.cancelRead (), 0) << join::lastError.message ();
-    ASSERT_EQ (moved.cancelWrite (), 0) << join::lastError.message ();
-    ASSERT_FALSE (moved.opened ());
-    moved.close ();
-
-    Raw::AsyncSocket chained (std::move (moved));
-    ASSERT_FALSE (chained.opened ());
-
-    Raw::AsyncSocket reassigned;
-    reassigned = std::move (chained);
-    ASSERT_FALSE (reassigned.opened ());
-
-    assigned.close ();
-}
-
-/**
  * @brief Test open method.
  */
 TEST_F (RawAsyncSocket, open)

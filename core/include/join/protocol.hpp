@@ -58,6 +58,9 @@ namespace join
     class BasicAsyncSocket;
 
     template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
+    class BasicAsyncDatagramSocket;
+
+    template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
     class BasicAsyncStreamSocket;
 
     template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
@@ -67,6 +70,9 @@ namespace join
 
     template <class Protocol, class Engine = BasicProactor>
     class BasicAsyncSocket;
+
+    template <class Protocol, class Engine = BasicProactor>
+    class BasicAsyncDatagramSocket;
 
     template <class Protocol, class Engine = BasicProactor>
     class BasicAsyncStreamSocket;
@@ -83,6 +89,7 @@ namespace join
     public:
         using Endpoint = BasicUnixEndpoint<UnixDgram>;
         using Socket = BasicDatagramSocket<UnixDgram>;
+        using AsyncSocket = BasicAsyncDatagramSocket<UnixDgram>;
 
         /**
          * @brief construct the unix datagram protocol instance by default.
@@ -218,6 +225,7 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint<Udp>;
         using Socket = BasicDatagramSocket<Udp>;
+        using AsyncSocket = BasicAsyncDatagramSocket<Udp>;
 
         /**
          * @brief construct the udp protocol instance.
@@ -310,6 +318,7 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint<Icmp>;
         using Socket = BasicDatagramSocket<Icmp>;
+        using AsyncSocket = BasicAsyncDatagramSocket<Icmp>;
 
         /**
          * @brief create the icmp protocol instance.

@@ -231,16 +231,6 @@ target_link_libraries(unix_stream_acceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME unix_stream_acceptor.gtest COMMAND unix_stream_acceptor.gtest)
 install(TARGETS unix_stream_acceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
-add_executable(unix_async_stream_socket.gtest unix_async_stream_socket_test.cpp)
-target_link_libraries(unix_async_stream_socket.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME unix_async_stream_socket.gtest COMMAND unix_async_stream_socket.gtest)
-install(TARGETS unix_async_stream_socket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(unix_async_acceptor.gtest unix_async_acceptor_test.cpp)
-target_link_libraries(unix_async_acceptor.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME unix_async_acceptor.gtest COMMAND unix_async_acceptor.gtest)
-install(TARGETS unix_async_acceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
 add_executable(raw_socket.gtest raw_socket_test.cpp)
 target_link_libraries(raw_socket.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME raw_socket.gtest COMMAND raw_socket.gtest)
@@ -271,10 +261,35 @@ target_link_libraries(tcp_acceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME tcp_acceptor.gtest COMMAND tcp_acceptor.gtest)
 install(TARGETS tcp_acceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(unix_async_datagram_socket.gtest unix_async_datagram_socket_test.cpp)
+target_link_libraries(unix_async_datagram_socket.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME unix_async_datagram_socket.gtest COMMAND unix_async_datagram_socket.gtest)
+install(TARGETS unix_async_datagram_socket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(unix_async_stream_socket.gtest unix_async_stream_socket_test.cpp)
+target_link_libraries(unix_async_stream_socket.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME unix_async_stream_socket.gtest COMMAND unix_async_stream_socket.gtest)
+install(TARGETS unix_async_stream_socket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(unix_async_acceptor.gtest unix_async_acceptor_test.cpp)
+target_link_libraries(unix_async_acceptor.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME unix_async_acceptor.gtest COMMAND unix_async_acceptor.gtest)
+install(TARGETS unix_async_acceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(raw_async_socket.gtest raw_async_socket_test.cpp)
 target_link_libraries(raw_async_socket.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME raw_async_socket.gtest COMMAND raw_async_socket.gtest)
 install(TARGETS raw_async_socket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(udp_async_datagram_socket.gtest udp_async_datagram_socket_test.cpp)
+target_link_libraries(udp_async_datagram_socket.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME udp_async_datagram_socket.gtest COMMAND udp_async_datagram_socket.gtest)
+install(TARGETS udp_async_datagram_socket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(icmp_async_datagram_socket.gtest icmp_async_datagram_socket_test.cpp)
+target_link_libraries(icmp_async_datagram_socket.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME icmp_async_datagram_socket.gtest COMMAND icmp_async_datagram_socket.gtest)
+install(TARGETS icmp_async_datagram_socket.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(tcp_async_stream_socket.gtest tcp_async_stream_socket_test.cpp)
 target_link_libraries(tcp_async_stream_socket.gtest ${JOIN_CORE} GTest::gtest_main)
