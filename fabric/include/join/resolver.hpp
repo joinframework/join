@@ -757,7 +757,7 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return number of bytes read, or -1 on error.
          */
-        virtual int read (char* data, unsigned long maxSize) noexcept
+        virtual int read (char* data, size_t maxSize) noexcept
         {
             return _socket.read (data, maxSize);
         }
@@ -768,7 +768,7 @@ namespace join
          * @param size number of bytes to write.
          * @return number of bytes written, or -1 on error.
          */
-        virtual int write (const char* data, unsigned long size) noexcept
+        virtual int write (const char* data, size_t size) noexcept
         {
             return _socket.write (data, size);
         }
@@ -1311,7 +1311,7 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return number of bytes read, or -1 on error.
          */
-        int read (char* data, unsigned long maxSize) noexcept override final
+        int read (char* data, size_t maxSize) noexcept override final
         {
             if (_offset < _frameHeaderSize)
             {
@@ -1377,11 +1377,11 @@ namespace join
          * @param size number of bytes to write.
          * @return number of bytes written, or -1 on error.
          */
-        int write (const char* data, unsigned long size) noexcept override final
+        int write (const char* data, size_t size) noexcept override final
         {
             uint16_t msgLength = htons (static_cast<uint16_t> (size));
             const char* p = reinterpret_cast<const char*> (&msgLength);
-            unsigned long remaining = sizeof (msgLength);
+            size_t remaining = sizeof (msgLength);
 
             while (remaining > 0)
             {

@@ -28,6 +28,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C.
+#include <unistd.h>
+
 using join::Errc;
 using join::UnixStream;
 
@@ -197,5 +200,7 @@ TEST (UnixAcceptor, handle)
 int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
-    return RUN_ALL_TESTS ();
+    int result = RUN_ALL_TESTS ();
+    ::unlink (path.c_str ());
+    return result;
 }

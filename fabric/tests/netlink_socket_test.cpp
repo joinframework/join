@@ -520,16 +520,6 @@ TEST_F (NetlinkSocket, mtu)
 }
 
 /**
- * @brief Test checksum method.
- */
-TEST_F (NetlinkSocket, checksum)
-{
-    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
-
-    ASSERT_EQ (Netlink::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
-}
-
-/**
  * @brief Test is lower method.
  */
 TEST_F (NetlinkSocket, lower)

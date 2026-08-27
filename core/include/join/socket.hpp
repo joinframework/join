@@ -332,7 +332,7 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @return the number of bytes received, -1 on failure.
          */
-        int read (char* data, unsigned long maxSize) noexcept
+        int read (char* data, size_t maxSize) noexcept
         {
             struct iovec iov;
             iov.iov_base = data;
@@ -386,7 +386,7 @@ namespace join
          * @param maxSize maximum number of bytes to write.
          * @return the number of bytes written, -1 on failure.
          */
-        int write (const char* data, unsigned long maxSize) noexcept
+        int write (const char* data, size_t maxSize) noexcept
         {
             struct iovec iov;
             iov.iov_base = const_cast<char*> (data);
@@ -627,38 +627,6 @@ namespace join
         int handle () const noexcept
         {
             return _handle;
-        }
-
-        /**
-         * @brief get standard 1s complement checksum.
-         * @param data data pointer.
-         * @param len data len.
-         * @param current Current sum.
-         * @return checksum.
-         */
-        static uint16_t checksum (const uint16_t* data, size_t len, uint16_t current = 0)
-        {
-            uint32_t sum = current;
-
-            while (len > 1)
-            {
-                sum += *data++;
-                len -= 2;
-            }
-
-            if (len == 1)
-            {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-                sum += *reinterpret_cast<const uint8_t*> (data);
-#else
-                sum += *reinterpret_cast<const uint8_t*> (data) << 8;
-#endif
-            }
-
-            sum = (sum >> 16) + (sum & 0xffff);
-            sum += (sum >> 16);
-
-            return static_cast<uint16_t> (~sum);
         }
 
         /**

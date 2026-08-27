@@ -71,7 +71,7 @@ protected:
         {
             Udp::Endpoint from;
             int nread = _server.readFrom (buffer.get (), _server.canRead (), &from);
-            if (nread > 0)
+            if (nread >= 0)
             {
                 _server.writeTo (buffer.get (), nread, from);
             }
@@ -271,6 +271,11 @@ TEST_F (UdpSocket, readFrom)
     ASSERT_EQ (udpSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (udpSocket.readFrom (data, udpSocket.canRead (), &from), sizeof (data)) << join::lastError.message ();
+
+    ASSERT_TRUE (udpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.write ("", 0), 0) << join::lastError.message ();
+    ASSERT_TRUE (udpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.readFrom (data, sizeof (data), &from), 0) << join::lastError.message ();
 
     char small[4];
 
@@ -535,6 +540,10 @@ TEST_F (UdpSocket, mtu)
     Udp::Socket udpSocket (Udp::Socket::Blocking);
 
     ASSERT_EQ (udpSocket.mtu (), -1);
+    ASSERT_EQ (udpSocket.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (udpSocket.mtu (), -1);
+    udpSocket.close ();
+
     ASSERT_EQ (udpSocket.connect ({"127.0.0.1", _port}), 0) << join::lastError.message ();
     ASSERT_NE (udpSocket.mtu (), -1) << join::lastError.message ();
     udpSocket.close ();
@@ -543,16 +552,6 @@ TEST_F (UdpSocket, mtu)
     ASSERT_EQ (udpSocket.connect ({"::1", _port}), 0) << join::lastError.message ();
     ASSERT_NE (udpSocket.mtu (), -1) << join::lastError.message ();
     udpSocket.close ();
-}
-
-/**
- * @brief Test checksum method.
- */
-TEST_F (UdpSocket, checksum)
-{
-    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
-
-    ASSERT_EQ (Udp::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**

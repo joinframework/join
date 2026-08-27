@@ -54,7 +54,7 @@ public:
         icmp->checksum = 0;
         icmp->un.echo.sequence = htons (1);
         icmp->un.echo.id = htons (getpid () & 0xFFFF);
-        icmp->checksum = Icmp::Socket::checksum (reinterpret_cast<uint16_t*> (icmp), sizeof (struct icmphdr), 0);
+        icmp->checksum = join::checksum (reinterpret_cast<uint16_t*> (icmp), sizeof (struct icmphdr), 0);
     }
 
 protected:

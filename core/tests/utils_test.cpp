@@ -175,6 +175,18 @@ TEST (Utils, getline)
 }
 
 /**
+ * @brief Test checksum.
+ */
+TEST (Utils, checksum)
+{
+    std::string odd ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
+    ASSERT_EQ (join::checksum (reinterpret_cast<uint16_t*> (&odd[0]), odd.size (), 0), 19349);
+
+    std::string even ({'\xD2', '\xB6', '\x69', '\xFD'});
+    ASSERT_EQ (join::checksum (reinterpret_cast<uint16_t*> (&even[0]), even.size ()), 19395);
+}
+
+/**
  * @brief Test dump.
  */
 TEST (Utils, dump)

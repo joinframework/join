@@ -32,7 +32,38 @@
 // C++.
 #include <sstream>
 
+// C.
+#include <net/if.h>
+
 using join::IpAddress;
+
+/**
+ * @brief find an interface whose scope identifier is greater than the loopback one.
+ * @return interface name, empty if none was found.
+ */
+static std::string scopedInterface ()
+{
+    struct if_nameindex* list = ::if_nameindex ();
+    std::string interface;
+
+    if (list == nullptr)
+    {
+        return interface;
+    }
+
+    for (struct if_nameindex* it = list; it->if_index != 0; ++it)
+    {
+        if (it->if_index > 1)
+        {
+            interface = it->if_name;
+            break;
+        }
+    }
+
+    ::if_freenameindex (list);
+
+    return interface;
+}
 
 /**
  * @brief Test default construction.
@@ -1822,7 +1853,7 @@ TEST (IpAddress, equal)
     ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
     ASSERT_TRUE (ip1 == "fe80::57f3:baa4:fc3a:890a%lo");
 
-    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ip2 = "fe80::57f3:baa4:fc3a:890a%" + scopedInterface ();
     ASSERT_FALSE (ip1 == ip2);
 }
 
@@ -1886,7 +1917,7 @@ TEST (IpAddress, different)
     ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
     ASSERT_FALSE (ip1 != "fe80::57f3:baa4:fc3a:890a%lo");
 
-    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ip2 = "fe80::57f3:baa4:fc3a:890a%" + scopedInterface ();
     ASSERT_TRUE (ip1 != ip2);
 }
 
@@ -1970,7 +2001,7 @@ TEST (IpAddress, lower)
     ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
     ASSERT_FALSE (ip1 < "fe80::57f3:baa4:fc3a:890a%lo");
 
-    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ip2 = "fe80::57f3:baa4:fc3a:890a%" + scopedInterface ();
     ASSERT_TRUE (ip1 < ip2);
 }
 
@@ -2054,7 +2085,7 @@ TEST (IpAddress, lowerOrEqual)
     ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
     ASSERT_TRUE (ip1 <= "fe80::57f3:baa4:fc3a:890a%lo");
 
-    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ip2 = "fe80::57f3:baa4:fc3a:890a%" + scopedInterface ();
     ASSERT_TRUE (ip1 <= ip2);
 }
 
@@ -2138,7 +2169,7 @@ TEST (IpAddress, greater)
     ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
     ASSERT_FALSE (ip1 > "fe80::57f3:baa4:fc3a:890a%lo");
 
-    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ip2 = "fe80::57f3:baa4:fc3a:890a%" + scopedInterface ();
     ASSERT_FALSE (ip1 > ip2);
 }
 
@@ -2222,7 +2253,7 @@ TEST (IpAddress, greaterOrEqual)
     ip1 = "fe80::57f3:baa4:fc3a:890a%lo";
     ASSERT_TRUE (ip1 >= "fe80::57f3:baa4:fc3a:890a%lo");
 
-    ip2 = "fe80::57f3:baa4:fc3a:890a%eth0";
+    ip2 = "fe80::57f3:baa4:fc3a:890a%" + scopedInterface ();
     ASSERT_FALSE (ip1 >= ip2);
 }
 

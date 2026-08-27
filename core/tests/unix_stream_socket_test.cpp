@@ -29,6 +29,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C.
+#include <unistd.h>
+
 using join::Errc;
 using join::ReactorThread;
 using join::EventHandler;
@@ -40,6 +43,15 @@ using join::UnixStream;
 class UnixStreamSocket : public EventHandler, public ::testing::Test
 {
 protected:
+    /**
+     * @brief Tears down the test suite.
+     */
+    static void TearDownTestSuite ()
+    {
+        ::unlink (_serverpath.c_str ());
+        ::unlink (_clientpath.c_str ());
+    }
+
     /**
      * @brief Sets up the test fixture.
      */
@@ -565,16 +577,6 @@ TEST_F (UnixStreamSocket, mtu)
     ASSERT_EQ (unixSocket.mtu (), -1);
     unixSocket.close ();
     ASSERT_EQ (unixSocket.mtu (), -1);
-}
-
-/**
- * @brief Test checksum method.
- */
-TEST_F (UnixStreamSocket, checksum)
-{
-    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
-
-    ASSERT_EQ (UnixStream::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**

@@ -52,7 +52,7 @@ public:
         icmp->checksum = 0;
         icmp->un.echo.sequence = htons (1);
         icmp->un.echo.id = htons (getpid () & 0xFFFF);
-        icmp->checksum = Icmp::Socket::checksum (reinterpret_cast<uint16_t*> (icmp), sizeof (struct icmphdr), 0);
+        icmp->checksum = join::checksum (reinterpret_cast<uint16_t*> (icmp), sizeof (struct icmphdr), 0);
     }
 
 protected:
@@ -549,16 +549,6 @@ TEST_F (IcmpSocket, ttl)
     Icmp::Socket icmpSocket (Icmp::Socket::Blocking);
 
     ASSERT_EQ (icmpSocket.ttl (), 60);
-}
-
-/**
- * @brief Test checksum method.
- */
-TEST_F (IcmpSocket, checksum)
-{
-    std::string buffer ({'\xD2', '\xB6', '\x69', '\xFD', '\x2E'});
-
-    ASSERT_EQ (Icmp::Socket::checksum (reinterpret_cast<uint16_t*> (&buffer[0]), buffer.size (), 0), 19349);
 }
 
 /**

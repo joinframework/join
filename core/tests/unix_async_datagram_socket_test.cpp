@@ -551,10 +551,9 @@ TEST_F (UnixAsyncDatagramSocket, empty)
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
             return _completions >= 1;
         }));
-        ASSERT_EQ (_code, Errc::ConnectionClosed);
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 0u);
     }
-
-    ASSERT_FALSE (client.connected ());
 
     sender.close ();
     client.close ();

@@ -348,6 +348,38 @@ namespace join
     }
 
     /**
+     * @brief get standard 1s complement checksum.
+     * @param data data pointer.
+     * @param len data len.
+     * @param current current sum.
+     * @return checksum.
+     */
+    inline uint16_t checksum (const uint16_t* data, size_t len, uint16_t current = 0) noexcept
+    {
+        uint32_t sum = current;
+
+        while (len > 1)
+        {
+            sum += *data++;
+            len -= 2;
+        }
+
+        if (len == 1)
+        {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+            sum += *reinterpret_cast<const uint8_t*> (data);
+#else
+            sum += *reinterpret_cast<const uint8_t*> (data) << 8;
+#endif
+        }
+
+        sum = (sum >> 16) + (sum & 0xffff);
+        sum += (sum >> 16);
+
+        return static_cast<uint16_t> (~sum);
+    }
+
+    /**
      * @brief dump data to standard output stream.
      * @param data data to dump.
      * @param size number of data bytes.

@@ -30,10 +30,54 @@
 #include <gtest/gtest.h>
 
 // C.
+#include <linux/if_packet.h>
 #include <linux/if_arp.h>
+#include <ifaddrs.h>
 #include <climits>
 
 using join::MacAddress;
+
+/**
+ * @brief find the first ethernet interface having a hardware address.
+ * @param mac hardware address of the interface found.
+ * @return interface name, empty if none was found.
+ */
+static std::string ethernetInterface (MacAddress& mac)
+{
+    struct ifaddrs* ifap = nullptr;
+    std::string interface;
+
+    if (::getifaddrs (&ifap) == -1)
+    {
+        return interface;
+    }
+
+    for (struct ifaddrs* ifa = ifap; ifa != nullptr; ifa = ifa->ifa_next)
+    {
+        if ((ifa->ifa_addr == nullptr) || (ifa->ifa_addr->sa_family != AF_PACKET) || (ifa->ifa_flags & IFF_LOOPBACK))
+        {
+            continue;
+        }
+
+        const struct sockaddr_ll* hwaddr = reinterpret_cast<const struct sockaddr_ll*> (ifa->ifa_addr);
+        if ((hwaddr->sll_hatype != ARPHRD_ETHER) || (hwaddr->sll_halen != IFHWADDRLEN))
+        {
+            continue;
+        }
+
+        MacAddress found (hwaddr->sll_addr, hwaddr->sll_halen);
+        if (!found.isWildcard ())
+        {
+            interface = ifa->ifa_name;
+            mac = found;
+            break;
+        }
+    }
+
+    ::freeifaddrs (ifap);
+
+    return interface;
+}
 
 /**
  * @brief Test default construction.
@@ -332,8 +376,17 @@ TEST (MacAddress, cend)
  */
 TEST (MacAddress, address)
 {
+    MacAddress expected;
+    std::string interface = ethernetInterface (expected);
+
     ASSERT_TRUE (MacAddress::address ("bar0").isWildcard ());
-    ASSERT_FALSE (MacAddress::address ("eth0").isWildcard ()) << join::lastError.message ();
+
+    if (interface.empty ())
+    {
+        GTEST_SKIP () << "no ethernet interface available";
+    }
+
+    ASSERT_EQ (MacAddress::address (interface), expected) << join::lastError.message ();
 }
 
 /**

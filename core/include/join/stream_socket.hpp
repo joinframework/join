@@ -295,9 +295,9 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int readExactly (char* data, unsigned long size, int timeout = 0) noexcept
+        int readExactly (char* data, size_t size, int timeout = 0) noexcept
         {
-            unsigned long numRead = 0;
+            size_t numRead = 0;
 
             while (numRead < size)
             {
@@ -328,9 +328,9 @@ namespace join
          * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int writeExactly (const char* data, unsigned long size, int timeout = 0) noexcept
+        int writeExactly (const char* data, size_t size, int timeout = 0) noexcept
         {
-            unsigned long numWrite = 0;
+            size_t numWrite = 0;
 
             while (numWrite < size)
             {
