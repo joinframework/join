@@ -373,7 +373,8 @@ namespace join
                     if (DTLSv1_get_timeout (_ssl.get (), &dtlsTimeout))
                     {
                         auto dtlsDuration = std::chrono::duration_cast<std::chrono::nanoseconds> (
-                            std::chrono::seconds (dtlsTimeout.tv_sec) + std::chrono::microseconds (dtlsTimeout.tv_usec));
+                            std::chrono::seconds (dtlsTimeout.tv_sec) +
+                            std::chrono::microseconds (dtlsTimeout.tv_usec));
                         if ((timeout <= std::chrono::nanoseconds::zero ()) || (dtlsDuration < timeout))
                         {
                             activeTimeout = dtlsDuration;
