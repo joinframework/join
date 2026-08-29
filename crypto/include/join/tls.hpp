@@ -34,6 +34,7 @@
 #include <join/error.hpp>
 
 // C++.
+#include <algorithm>
 #include <iostream>
 #include <utility>
 #include <chrono>
@@ -57,6 +58,7 @@ namespace join
         using Option = typename UnderlyingSocket::Option;
         using State = typename UnderlyingSocket::State;
         using Endpoint = typename Protocol::Endpoint;
+        using TimePoint = typename UnderlyingSocket::TimePoint;
 
         /**
          * @brief create a TLS decorator with an internally created socket.
@@ -343,10 +345,29 @@ namespace join
 
         /**
          * @brief block until TLS handshake is finished.
-         * @param timeout timeout duration (zero: infinite).
          * @return true if TLS handshake is finished.
          */
-        virtual bool waitHandshake (std::chrono::nanoseconds timeout)
+        bool waitHandshake ()
+        {
+            return waitHandshake (TimePoint::max ());
+        }
+
+        /**
+         * @brief block until TLS handshake is finished, giving up after the given duration.
+         * @param timeout maximum time granted to the whole handshake.
+         * @return true if TLS handshake is finished.
+         */
+        bool waitHandshake (std::chrono::nanoseconds timeout)
+        {
+            return waitHandshake (std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief block until TLS handshake is finished, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return true if TLS handshake is finished.
+         */
+        virtual bool waitHandshake (TimePoint deadline)
         {
             if (handshake () == 0)
             {
@@ -365,27 +386,23 @@ namespace join
                     break;  // LCOV_EXCL_LINE
                 }
 
-                std::chrono::nanoseconds activeTimeout = timeout;
+                TimePoint activeDeadline = deadline;
 
                 if (isDtls)
                 {
                     struct timeval dtlsTimeout;
                     if (DTLSv1_get_timeout (_ssl.get (), &dtlsTimeout))
                     {
-                        auto dtlsDuration = std::chrono::duration_cast<std::chrono::nanoseconds> (
-                            std::chrono::seconds (dtlsTimeout.tv_sec) +
-                            std::chrono::microseconds (dtlsTimeout.tv_usec));
-                        if ((timeout <= std::chrono::nanoseconds::zero ()) || (dtlsDuration < timeout))
-                        {
-                            activeTimeout = dtlsDuration;
-                        }
+                        activeDeadline = std::min (activeDeadline, std::chrono::steady_clock::now () +
+                                                                       std::chrono::seconds (dtlsTimeout.tv_sec) +
+                                                                       std::chrono::microseconds (dtlsTimeout.tv_usec));
                     }
                 }
 
-                int waitResult = _socket.wait (wantRead, wantWrite, activeTimeout);
-                if (waitResult == -1)
+                if (_socket.waitUntil (wantRead, wantWrite, activeDeadline) == -1)
                 {
-                    if (isDtls && (lastError == make_error_code (Errc::TimedOut)))
+                    if (isDtls && (lastError == make_error_code (Errc::TimedOut)) &&
+                        (std::chrono::steady_clock::now () < deadline))
                     {
                         int ret = DTLSv1_handle_timeout (_ssl.get ());
                         if (ret < 0)
@@ -470,10 +487,29 @@ namespace join
 
         /**
          * @brief block until TLS shutdown is finished.
-         * @param timeout timeout duration (zero: infinite).
+         * @return true if TLS shutdown is finished.
+         */
+        bool waitShutdown () noexcept
+        {
+            return waitShutdown (TimePoint::max ());
+        }
+
+        /**
+         * @brief block until TLS shutdown is finished, giving up after the given duration.
+         * @param timeout maximum time granted to the whole shutdown.
          * @return true if TLS shutdown is finished.
          */
         bool waitShutdown (std::chrono::nanoseconds timeout) noexcept
+        {
+            return waitShutdown (std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief block until TLS shutdown is finished, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return true if TLS shutdown is finished.
+         */
+        bool waitShutdown (TimePoint deadline) noexcept
         {
             if (!_ssl)
             {
@@ -495,7 +531,7 @@ namespace join
                     break;  // LCOV_EXCL_LINE
                 }
 
-                if (_socket.wait (wantRead, wantWrite, timeout) == -1)
+                if (_socket.waitUntil (wantRead, wantWrite, deadline) == -1)
                 {
                     return false;
                 }
@@ -529,23 +565,40 @@ namespace join
 
         /**
          * @brief block until new data is available for reading.
-         * @param timeout timeout duration (zero: infinite).
          * @return true if there is new data available for reading, false otherwise.
          */
-        bool waitReadyRead (std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ()) const noexcept
+        bool waitReadyRead () const noexcept
         {
-            if (_ssl)
-            {
-                bool wantRead = SSL_want_read (_ssl.get ());
-                bool wantWrite = SSL_want_write (_ssl.get ());
+            return waitReadyRead (TimePoint::max ());
+        }
 
-                if (wantRead || wantWrite)
-                {
-                    return (_socket.wait (wantRead, wantWrite, timeout) == 0);
-                }
+        /**
+         * @brief block until new data is available for reading, giving up after the given duration.
+         * @param timeout maximum time to wait.
+         * @return true if there is new data available for reading, false otherwise.
+         */
+        bool waitReadyRead (std::chrono::nanoseconds timeout) const noexcept
+        {
+            return waitReadyRead (std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief block until new data is available for reading, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return true if there is new data available for reading, false otherwise.
+         */
+        bool waitReadyRead (TimePoint deadline) const noexcept
+        {
+            bool wantRead = true;
+            bool wantWrite = false;
+
+            if (_ssl && (SSL_want_read (_ssl.get ()) || SSL_want_write (_ssl.get ())))
+            {
+                wantRead = SSL_want_read (_ssl.get ());
+                wantWrite = SSL_want_write (_ssl.get ());
             }
 
-            return _socket.waitReadyRead (timeout);
+            return (_socket.waitUntil (wantRead, wantWrite, deadline) == 0);
         }
 
         /**
@@ -574,10 +627,33 @@ namespace join
          * @brief read data until size is reached or an error occurred.
          * @param data buffer used to store the data received.
          * @param size number of bytes to read.
-         * @param timeout timeout duration (zero: infinite).
          * @return 0 on success, -1 on failure.
          */
-        int readExactly (char* data, size_t size, std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ())
+        int readExactly (char* data, size_t size)
+        {
+            return readExactly (data, size, TimePoint::max ());
+        }
+
+        /**
+         * @brief read data until size is reached, an error occurred or the given duration elapsed.
+         * @param data buffer used to store the data received.
+         * @param size number of bytes to read.
+         * @param timeout maximum time granted to the whole read.
+         * @return 0 on success, -1 on failure.
+         */
+        int readExactly (char* data, size_t size, std::chrono::nanoseconds timeout)
+        {
+            return readExactly (data, size, std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief read data until size is reached, an error occurred or the deadline expired.
+         * @param data buffer used to store the data received.
+         * @param size number of bytes to read.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return 0 on success, -1 on failure.
+         */
+        int readExactly (char* data, size_t size, TimePoint deadline)
         {
             size_t numRead = 0;
 
@@ -588,7 +664,7 @@ namespace join
                 {
                     if (lastError == Errc::TemporaryError)
                     {
-                        if (waitReadyRead (timeout))
+                        if (waitReadyRead (deadline))
                         {
                             continue;
                         }
@@ -605,23 +681,40 @@ namespace join
 
         /**
          * @brief block until at least one byte can be written on the socket.
-         * @param timeout timeout duration (zero: infinite).
          * @return true if data can be written on the socket, false otherwise.
          */
-        bool waitReadyWrite (std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ()) const noexcept
+        bool waitReadyWrite () const noexcept
         {
-            if (_ssl)
-            {
-                bool wantRead = SSL_want_read (_ssl.get ());
-                bool wantWrite = SSL_want_write (_ssl.get ());
+            return waitReadyWrite (TimePoint::max ());
+        }
 
-                if (wantRead || wantWrite)
-                {
-                    return (_socket.wait (wantRead, wantWrite, timeout) == 0);
-                }
+        /**
+         * @brief block until at least one byte can be written on the socket, giving up after the given duration.
+         * @param timeout maximum time to wait.
+         * @return true if data can be written on the socket, false otherwise.
+         */
+        bool waitReadyWrite (std::chrono::nanoseconds timeout) const noexcept
+        {
+            return waitReadyWrite (std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief block until at least one byte can be written, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return true if data can be written on the socket, false otherwise.
+         */
+        bool waitReadyWrite (TimePoint deadline) const noexcept
+        {
+            bool wantRead = false;
+            bool wantWrite = true;
+
+            if (_ssl && (SSL_want_read (_ssl.get ()) || SSL_want_write (_ssl.get ())))
+            {
+                wantRead = SSL_want_read (_ssl.get ());
+                wantWrite = SSL_want_write (_ssl.get ());
             }
 
-            return _socket.waitReadyWrite (timeout);
+            return (_socket.waitUntil (wantRead, wantWrite, deadline) == 0);
         }
 
         /**
@@ -650,11 +743,33 @@ namespace join
          * @brief write data until size is reached or an error occurred.
          * @param data data buffer to send.
          * @param size number of bytes to write.
-         * @param timeout timeout duration (zero: infinite).
          * @return 0 on success, -1 on failure.
          */
-        int writeExactly (const char* data, size_t size,
-                          std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ())
+        int writeExactly (const char* data, size_t size)
+        {
+            return writeExactly (data, size, TimePoint::max ());
+        }
+
+        /**
+         * @brief write data until size is reached, an error occurred or the given duration elapsed.
+         * @param data data buffer to send.
+         * @param size number of bytes to write.
+         * @param timeout maximum time granted to the whole write.
+         * @return 0 on success, -1 on failure.
+         */
+        int writeExactly (const char* data, size_t size, std::chrono::nanoseconds timeout)
+        {
+            return writeExactly (data, size, std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief write data until size is reached, an error occurred or the deadline expired.
+         * @param data data buffer to send.
+         * @param size number of bytes to write.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return 0 on success, -1 on failure.
+         */
+        int writeExactly (const char* data, size_t size, TimePoint deadline)
         {
             size_t numWrite = 0;
 
@@ -665,7 +780,7 @@ namespace join
                 {
                     if (lastError == Errc::TemporaryError)
                     {
-                        if (waitReadyWrite (timeout))
+                        if (waitReadyWrite (deadline))
                         {
                             continue;
                         }
