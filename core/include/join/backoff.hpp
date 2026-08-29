@@ -80,6 +80,15 @@ namespace join
             _count = 0;
         }
 
+        /**
+         * @brief check if initial spin phase is over.
+         * @return true if initial spin phase is over.
+         */
+        bool spinExhausted () const noexcept
+        {
+            return _count >= _spin;
+        }
+
     private:
         /// number of spin iterations before yielding.
         size_t _spin;

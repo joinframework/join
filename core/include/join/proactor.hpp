@@ -220,10 +220,15 @@ public:
     void run ();
 
     /**
-     * @brief stop the event loop.
-     * @param sync wait for loop termination if true.
+     * @brief stop the event loop, ignored if no event loop is running.
+     * @param sync wait for the event loop thread to terminate.
      */
     void stop (bool sync = true) noexcept;
+
+    /**
+     * @brief wait for the event loop thread to terminate.
+     */
+    void waitStopped () const noexcept;
 
 #ifdef JOIN_HAS_IO_URING
     /**
@@ -327,6 +332,16 @@ private:
      */
     void initSqThreadCpu (io_uring_params& params, std::true_type) noexcept;
 #endif
+
+    /**
+     * @brief event loop wakeup state.
+     */
+    enum class WakeupState
+    {
+        Pending,  /**< the event loop is asleep or about to sleep, a wakeup write is required. */
+        Notified, /**< a wakeup has already been posted and not yet consumed. */
+        Polling,  /**< the event loop is busy-polling the command queue, no wakeup write is required. */
+    };
 
     /**
      * @brief command type for proactor dispatcher.
@@ -523,21 +538,22 @@ private:
     /// command queue size.
     static constexpr size_t _queueSize = 1024;
 
-    /// coalesce eventfd writes.
-    alignas (64) std::atomic<bool> _notified{false};
-
     /// command queue.
     LocalMem::Mpsc::Queue<Command> _commands;
 
-    /// set to true while a sync stop() is in progress.
-    std::atomic<bool> _stopping{false};
+    /// event loop wakeup state.
+#ifdef JOIN_HAS_IO_URING
+    alignas (64) std::atomic<WakeupState> _wakeupState{WakeupState::Polling};
+#else
+    alignas (64) std::atomic<WakeupState> _wakeupState{WakeupState::Pending};
+#endif
 
     /// eventfd descriptor.
     int _wakeup = -1;
 
 #ifdef JOIN_HAS_IO_URING
     /// buffer for the wakeup eventfd read.
-    uint64_t _wakeupBuf = 0;
+    alignas (64) uint64_t _wakeupBuf = 0;
 
     /// internal operation used to watch the wakeup eventfd.
     IoOperation _wakeupOp = {};
@@ -812,6 +828,12 @@ private:
         _dispatcher = Thread ([this] () {
             _proactor.run ();
         });
+
+        Backoff backoff;
+        while (!_proactor.isRunning ())
+        {
+            backoff ();
+        }
     }
 
     /**

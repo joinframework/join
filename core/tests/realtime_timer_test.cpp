@@ -31,6 +31,7 @@
 // C++.
 #include <thread>
 #include <chrono>
+#include <atomic>
 
 // C.
 #include <sys/resource.h>
@@ -47,19 +48,19 @@ TEST (RealTimer, setOneShot)
     RealTime::Timer timer;
     int count = 0;
 
-    timer.setOneShot (10ms, [&] {
+    timer.setOneShot (50ms, [&] {
         ++count;
     });
-    std::this_thread::sleep_for (35ms);
+    std::this_thread::sleep_for (250ms);
     EXPECT_EQ (count, 1);
     EXPECT_FALSE (timer.active ());
     EXPECT_TRUE (timer.oneShot ());
     EXPECT_EQ (timer.interval (), 0ms);
 
-    timer.setOneShot (std::chrono::system_clock::now () + 10ms, [&] {
+    timer.setOneShot (std::chrono::system_clock::now () + 50ms, [&] {
         ++count;
     });
-    std::this_thread::sleep_for (35ms);
+    std::this_thread::sleep_for (250ms);
     EXPECT_EQ (count, 2);
     EXPECT_FALSE (timer.active ());
     EXPECT_TRUE (timer.oneShot ());
@@ -68,7 +69,7 @@ TEST (RealTimer, setOneShot)
     timer.setOneShot (0ms, [&] {
         ++count;
     });
-    std::this_thread::sleep_for (35ms);
+    std::this_thread::sleep_for (250ms);
     EXPECT_EQ (count, 3);
     EXPECT_FALSE (timer.active ());
     EXPECT_TRUE (timer.oneShot ());
@@ -83,25 +84,26 @@ TEST (RealTimer, setInterval)
     RealTime::Timer timer;
     int count = 0;
 
-    timer.setInterval (10ms, [&] {
+    timer.setInterval (50ms, [&] {
         ++count;
     });
-    std::this_thread::sleep_for (35ms);
+    std::this_thread::sleep_for (250ms);
     EXPECT_GT (count, 1);
     EXPECT_TRUE (timer.active ());
     EXPECT_FALSE (timer.oneShot ());
-    EXPECT_EQ (timer.interval (), 10ms);
+    EXPECT_EQ (timer.interval (), 50ms);
 
     timer.cancel ();
 
+    RealTime::Timer once;
     int fired = 0;
 
-    timer.setInterval (0ms, [&] {
+    once.setInterval (0ms, [&] {
         ++fired;
     });
-    std::this_thread::sleep_for (35ms);
+    std::this_thread::sleep_for (250ms);
     EXPECT_EQ (fired, 1);
-    EXPECT_FALSE (timer.active ());
+    EXPECT_FALSE (once.active ());
 }
 
 /**
@@ -112,15 +114,39 @@ TEST (RealTimer, cancel)
     RealTime::Timer timer;
     int count1 = 0, count2 = 0;
 
-    timer.setInterval (10ms, [&] {
+    timer.setInterval (50ms, [&] {
         count1++;
     });
-    std::this_thread::sleep_for (35ms);
+    std::this_thread::sleep_for (250ms);
     timer.cancel ();
     count2 = count1;
     EXPECT_GT (count2, 1);
-    std::this_thread::sleep_for (35ms);
+    std::this_thread::sleep_for (250ms);
     EXPECT_EQ (count1, count2);
+
+    RealTime::Timer slow;
+    std::atomic<int> ran{0};
+
+    slow.setInterval (50ms, [&ran] {
+        ran++;
+        std::this_thread::sleep_for (300ms);
+    });
+    while (ran.load () == 0)
+    {
+    }
+    slow.cancel ();
+    EXPECT_GE (ran.load (), 1);
+
+    RealTime::Timer suicidal;
+    std::atomic<int> fired{0};
+
+    suicidal.setInterval (50ms, [&suicidal, &fired] {
+        fired++;
+        suicidal.cancel ();
+    });
+    std::this_thread::sleep_for (250ms);
+    EXPECT_GE (fired.load (), 1);
+    EXPECT_FALSE (suicidal.active ());
 }
 
 /**
@@ -132,7 +158,7 @@ TEST (RealTimer, active)
     int count = 0;
 
     ASSERT_FALSE (timer.active ());
-    timer.setInterval (10ms, [&] {
+    timer.setInterval (50ms, [&] {
         ++count;
     });
     ASSERT_TRUE (timer.active ());
@@ -147,25 +173,25 @@ TEST (RealTimer, remaining)
 {
     RealTime::Timer timer;
 
-    timer.setOneShot (20ms, [] {
+    timer.setOneShot (200ms, [] {
     });
     auto t1 = timer.remaining ();
-    std::this_thread::sleep_for (15ms);
+    std::this_thread::sleep_for (60ms);
     auto t2 = timer.remaining ();
     EXPECT_GT (t2.count (), 0);
     EXPECT_LT (t2.count (), t1.count ());
-    std::this_thread::sleep_for (15ms);
+    std::this_thread::sleep_for (200ms);
     auto t3 = timer.remaining ();
     EXPECT_EQ (t3.count (), 0);  // remaining time is zero
 
-    timer.setInterval (20ms, [] {
+    timer.setInterval (200ms, [] {
     });
     t1 = timer.remaining ();
-    std::this_thread::sleep_for (15ms);
+    std::this_thread::sleep_for (60ms);
     t2 = timer.remaining ();
     EXPECT_GT (t2.count (), 0);
     EXPECT_LT (t2.count (), t1.count ());
-    std::this_thread::sleep_for (15ms);
+    std::this_thread::sleep_for (200ms);
     t3 = timer.remaining ();
     EXPECT_GT (t3.count (), 0);  // next interval has started
 }
@@ -179,10 +205,10 @@ TEST (RealTimer, interval)
     int count = 0;
 
     ASSERT_EQ (timer.interval (), 0ms);
-    timer.setInterval (10ms, [&] {
+    timer.setInterval (50ms, [&] {
         ++count;
     });
-    ASSERT_EQ (timer.interval (), 10ms);
+    ASSERT_EQ (timer.interval (), 50ms);
     timer.cancel ();
     ASSERT_EQ (timer.interval (), 0ms);
 }
@@ -196,7 +222,7 @@ TEST (RealTimer, oneShot)
     int count = 0;
 
     ASSERT_TRUE (timer.oneShot ());
-    timer.setInterval (10ms, [&] {
+    timer.setInterval (50ms, [&] {
         ++count;
     });
     ASSERT_FALSE (timer.oneShot ());

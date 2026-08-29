@@ -26,16 +26,21 @@
 #define JOIN_CORE_TIMER_HPP
 
 // libjoin.
-#include <join/reactor.hpp>
+#include <join/proactor.hpp>
+#include <join/function.hpp>
+#include <join/backoff.hpp>
 #include <join/clock.hpp>
 
 // C++.
-#include <functional>
 #include <chrono>
+#include <atomic>
+#include <memory>
+#include <new>
 
 // C.
 #include <sys/timerfd.h>
 #include <unistd.h>
+#include <cstdlib>
 
 namespace join
 {
@@ -43,23 +48,43 @@ namespace join
      * @brief base timer class.
      */
     template <class ClockPolicy>
-    class BasicTimer : protected EventHandler
+    class BasicTimer : protected CompletionHandler
     {
     public:
         /**
-         * @brief create instance.
-         * @param reactor event loop reactor.
+         * @brief timer state.
          */
-        explicit BasicTimer (Reactor& reactor = ReactorThread::reactor ())
+        enum class State
+        {
+            Idle,     /**< no callback armed. */
+            Armed,    /**< a callback is armed. */
+            Invoking, /**< the callback is being invoked. */
+            Closed,   /**< the timerfd read operation is no longer in flight. */
+        };
+
+        /**
+         * @brief create instance.
+         * @param proactor completion dispatcher.
+         */
+        explicit BasicTimer (Proactor& proactor = ProactorThread::proactor ())
         : _handle (timerfd_create (ClockPolicy::type (), TFD_NONBLOCK | TFD_CLOEXEC))
-        , _reactor (reactor)
+        , _proactor (proactor)
         {
             if (_handle == -1)
             {
-                throw std::system_error (errno, std::system_category (), "timerfd_create failed");
+                throw std::system_error (errno, std::system_category (), "timerfd_create failed");  // LCOV_EXCL_LINE
             }
 
-            _reactor.addHandler (_handle, this);
+            _ops->op = IoOperation::makeRead (_handle, &_ops->expirations,
+                                              static_cast<uint32_t> (sizeof (_ops->expirations)), this);
+
+            if (_proactor.submit (&_ops->op, true, true) == -1)
+            {
+                // LCOV_EXCL_START
+                close (_handle);
+                throw std::system_error (lastError, "timerfd submit failed");
+                // LCOV_EXCL_STOP
+            }
         }
 
         /**
@@ -93,34 +118,42 @@ namespace join
          */
         ~BasicTimer () noexcept
         {
-            _reactor.delHandler (_handle);
-            if (_handle != -1)
+            cancel ();
+
+            Backoff backoff;
+            while (_state.load (std::memory_order_acquire) != State::Closed)
             {
-                close (_handle);
+                _proactor.cancel (&_ops->op, true, true);
+                backoff ();
             }
+
+            close (_handle);
         }
 
         /**
          * @brief arm the timer as a one-shot timer.
          * @param duration timeout duration before timer expires.
-         * @param callback function to call when timer expires.
+         * @param callback function to call when timer expires, captures limited to 32 bytes.
          */
         template <class Rep, class Period, typename Func>
         void setOneShot (std::chrono::duration<Rep, Period> duration, Func&& callback)
         {
+            cancel ();
+
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
             _callback = std::forward<Func> (callback);
             _oneShot = true;
             _ns = std::chrono::nanoseconds::zero ();
+            _state.store (State::Armed, std::memory_order_release);
 
             auto ts = toTimerSpec (ns);
-            timerfd_settime (handle (), 0, &ts, nullptr);
+            timerfd_settime (_handle, 0, &ts, nullptr);
         }
 
         /**
          * @brief arm the timer as a one-shot timer with absolute time.
          * @param timePoint absolute time when timer should expire.
-         * @param callback function to call when timer expires.
+         * @param callback function to call when timer expires, captures limited to 32 bytes.
          */
         template <class Clock, class Duration, typename Func>
         void setOneShot (std::chrono::time_point<Clock, Duration> timePoint, Func&& callback)
@@ -131,31 +164,37 @@ namespace join
                      std::is_same<Clock, std::chrono::steady_clock>::value),
                 "Clock type mismatch timer policy");
 
+            cancel ();
+
             auto elapsed = timePoint.time_since_epoch ();
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (elapsed);
             _callback = std::forward<Func> (callback);
             _oneShot = true;
             _ns = std::chrono::nanoseconds::zero ();
+            _state.store (State::Armed, std::memory_order_release);
 
             auto ts = toTimerSpec (ns);
-            timerfd_settime (handle (), TFD_TIMER_ABSTIME, &ts, nullptr);
+            timerfd_settime (_handle, TFD_TIMER_ABSTIME, &ts, nullptr);
         }
 
         /**
          * @brief arm the timer as a periodic timer.
          * @param duration interval duration between timer expirations.
-         * @param callback function to call on each timer expiration.
+         * @param callback function to call on each timer expiration, captures limited to 32 bytes.
          */
         template <class Rep, class Period, typename Func>
         void setInterval (std::chrono::duration<Rep, Period> duration, Func&& callback)
         {
+            cancel ();
+
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
             _callback = std::forward<Func> (callback);
             _oneShot = false;
             _ns = ns;
+            _state.store (State::Armed, std::memory_order_release);
 
             auto ts = toTimerSpec (ns, true);
-            timerfd_settime (handle (), 0, &ts, nullptr);
+            timerfd_settime (_handle, 0, &ts, nullptr);
         }
 
         /**
@@ -163,12 +202,34 @@ namespace join
          */
         void cancel () noexcept
         {
-            _callback = nullptr;
             _oneShot = true;
             _ns = std::chrono::nanoseconds::zero ();
 
             struct itimerspec ts = {};
-            timerfd_settime (handle (), 0, &ts, nullptr);
+            timerfd_settime (_handle, 0, &ts, nullptr);
+
+            if (JOIN_UNLIKELY (_proactor.isProactorThread ()))
+            {
+                _state.store (State::Idle, std::memory_order_release);
+                return;
+            }
+
+            Backoff backoff;
+            State expected = State::Armed;
+
+            while (!_state.compare_exchange_strong (expected, State::Idle, std::memory_order_acq_rel,
+                                                    std::memory_order_acquire))
+            {
+                if (expected != State::Invoking)
+                {
+                    return;
+                }
+
+                backoff ();
+                expected = State::Armed;
+            }
+
+            _callback = nullptr;
         }
 
         /**
@@ -178,7 +239,7 @@ namespace join
         bool active () const noexcept
         {
             struct itimerspec ts = {};
-            timerfd_gettime (handle (), &ts);
+            timerfd_gettime (_handle, &ts);
             const bool hasValue = (ts.it_value.tv_sec != 0 || ts.it_value.tv_nsec != 0);
             const bool hasInterval = (ts.it_interval.tv_sec != 0 || ts.it_interval.tv_nsec != 0);
             return hasValue || hasInterval;
@@ -191,7 +252,7 @@ namespace join
         std::chrono::nanoseconds remaining () const noexcept
         {
             struct itimerspec ts = {};
-            timerfd_gettime (handle (), &ts);
+            timerfd_gettime (_handle, &ts);
             return std::chrono::seconds (ts.it_value.tv_sec) + std::chrono::nanoseconds (ts.it_value.tv_nsec);
         }
 
@@ -224,20 +285,60 @@ namespace join
 
     private:
         /**
-         * @brief method called when data are ready to be read on handle.
-         * @param fd file descriptor.
+         * @brief method called when the timerfd read completes.
+         * @param op completed operation.
+         * @param result bytes read, or negative errno.
          */
-        virtual void onReadable ([[maybe_unused]] int fd) override
+        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
         {
-            uint64_t expirations;
-            ssize_t result = read (handle (), &expirations, sizeof (expirations));
-            if (result == sizeof (expirations) && _callback)
+            uint64_t expirations = _ops->expirations;
+
+            if (JOIN_UNLIKELY (result != static_cast<int> (sizeof (_ops->expirations)) && result != -EAGAIN &&
+                               result != -EINTR))
+            {
+                // LCOV_EXCL_START
+                _state.store (State::Closed, std::memory_order_release);
+                return;
+                // LCOV_EXCL_STOP
+            }
+
+            if (JOIN_UNLIKELY (_proactor.submit (&_ops->op) == -1))
+            {
+                // LCOV_EXCL_START
+                _state.store (State::Closed, std::memory_order_release);
+                return;
+                // LCOV_EXCL_STOP
+            }
+
+            if (JOIN_UNLIKELY (result != static_cast<int> (sizeof (_ops->expirations))))
+            {
+                return;  // LCOV_EXCL_LINE
+            }
+
+            State expected = State::Armed;
+
+            if (JOIN_LIKELY (_state.compare_exchange_strong (expected, State::Invoking, std::memory_order_acq_rel,
+                                                             std::memory_order_acquire)))
             {
                 for (uint64_t i = 0; i < expirations; ++i)
                 {
                     _callback ();
                 }
+
+                expected = State::Invoking;
+                _state.compare_exchange_strong (expected, State::Armed, std::memory_order_acq_rel,
+                                                std::memory_order_acquire);
             }
+        }
+
+        /**
+         * @brief method called when the timerfd read is cancelled.
+         * @param op cancelled operation.
+         * @param result negative errno.
+         */
+        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
+        {
+            _state.store (State::Closed, std::memory_order_release);
         }
 
         /**
@@ -264,19 +365,54 @@ namespace join
         }
 
         /**
-         * @brief get native handle.
-         * @return native handle.
+         * @brief operation block, kept at its extended alignment.
          */
-        int handle () const noexcept
+        struct Ops
         {
-            return _handle;
-        }
+            /**
+             * @brief allocate a block honouring its extended alignment.
+             * @param size allocation size in bytes.
+             * @return pointer to the allocated storage.
+             */
+            static void* operator new (size_t size)
+            {
+                void* mem = ::aligned_alloc (alignof (Ops), size);
+
+                if (mem == nullptr)
+                {
+                    throw std::bad_alloc ();  // LCOV_EXCL_LINE
+                }
+
+                return mem;
+            }
+
+            /**
+             * @brief release storage allocated by operator new.
+             * @param mem storage to release.
+             */
+            static void operator delete (void* mem) noexcept
+            {
+                ::free (mem);
+            }
+
+            /// timerfd read operation.
+            IoOperation op = {};
+
+            /// expiration count, written by the kernel until the read completes.
+            uint64_t expirations = 0;
+        };
 
         /// ns per sec.
         static constexpr uint64_t _nsPerSec = 1000000000ULL;
 
+        /// operation block.
+        const std::unique_ptr<Ops> _ops{new Ops ()};
+
+        /// timer state.
+        std::atomic<State> _state{State::Idle};
+
         /// callback function
-        std::function<void ()> _callback;
+        Function<void ()> _callback;
 
         /// interval.
         std::chrono::nanoseconds _ns{};
@@ -287,8 +423,8 @@ namespace join
         /// timer handle.
         int _handle = -1;
 
-        /// event loop reactor.
-        Reactor& _reactor;
+        /// completion dispatcher.
+        Proactor& _proactor;
     };
 }
 
