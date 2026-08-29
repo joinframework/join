@@ -172,7 +172,7 @@ protected:
 };
 
 Tcp::Acceptor ReactorTest::_acceptor;
-Tcp::Socket ReactorTest::_client (Tcp::Socket::Blocking);
+Tcp::Socket ReactorTest::_client (Tcp::Socket::NonBlocking);
 Tcp::Socket ReactorTest::_server;
 std::string ReactorTest::_host = "127.0.0.1";
 uint16_t ReactorTest::_port = 5000;
@@ -200,7 +200,11 @@ TEST_F (ReactorTest, addWriteHandler)
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     // connect sockets.
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // test invalid event.
@@ -239,7 +243,11 @@ TEST_F (ReactorTest, addReadHandler)
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     // connect socket.
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // test invalid event.
@@ -274,7 +282,11 @@ TEST_F (ReactorTest, delHandler)
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     // connect socket.
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // add handler.
@@ -379,7 +391,11 @@ TEST_F (ReactorTest, waitStopped)
 TEST_F (ReactorTest, onReadable)
 {
     // connect socket.
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // tun thread
@@ -418,7 +434,11 @@ TEST_F (ReactorTest, onReadable)
 TEST_F (ReactorTest, onWriteable)
 {
     // connect socket.
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // tun thread
@@ -454,7 +474,11 @@ TEST_F (ReactorTest, onWriteable)
 TEST_F (ReactorTest, onClose)
 {
     // connect socket.
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // tun thread
@@ -490,7 +514,11 @@ TEST_F (ReactorTest, onClose)
 TEST_F (ReactorTest, onError)
 {
     // connect socket.
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     // tun thread
