@@ -135,7 +135,7 @@ protected:
     static uint16_t _port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// condition variable.
     static Condition _cond;
@@ -170,7 +170,7 @@ Tcp::Socket ProactorTest::_client (Tcp::Socket::Blocking);
 Tcp::Socket ProactorTest::_server;
 std::string ProactorTest::_host = "127.0.0.1";
 uint16_t ProactorTest::_port = 5001;
-const int ProactorTest::_timeout = 1000;
+const std::chrono::milliseconds ProactorTest::_timeout{1000};
 Condition ProactorTest::_cond;
 Mutex ProactorTest::_mut;
 IoOperation* ProactorTest::_op = nullptr;

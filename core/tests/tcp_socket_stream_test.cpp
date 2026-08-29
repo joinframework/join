@@ -93,7 +93,7 @@ protected:
     Tcp::Acceptor _server;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// host.
     static const std::string _host;
@@ -103,7 +103,7 @@ protected:
     static const uint16_t _invalid_port;
 };
 
-const int TcpSocketStream::_timeout = 1000;
+const std::chrono::milliseconds TcpSocketStream::_timeout{1000};
 const std::string TcpSocketStream::_host = "127.0.0.1";
 const uint16_t TcpSocketStream::_port = 5000;
 const uint16_t TcpSocketStream::_invalid_port = 5032;

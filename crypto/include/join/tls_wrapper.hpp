@@ -53,31 +53,31 @@ namespace join
 
         /**
          * @brief block until the underlying socket is connected.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * @return true if connected, false otherwise.
          */
-        bool waitConnected (int timeout = 0)
+        bool waitConnected (std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ())
         {
             return this->_socket.waitConnected (timeout);
         }
 
         /**
          * @brief block until the underlying socket is disconnected.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * @return true if disconnected, false otherwise.
          */
-        bool waitDisconnected (int timeout = 0)
+        bool waitDisconnected (std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ())
         {
             return this->_socket.waitDisconnected (timeout);
         }
 
         /**
          * @brief block until TLS handshake is finished.
-         * @param timeout timeout in milliseconds (0: infinite).
+         * @param timeout timeout duration (zero: infinite).
          * @return true if TLS handshake is finished.
          * @note waits for the transport connection first, then runs the common handshake.
          */
-        bool waitHandshake (int timeout) override
+        bool waitHandshake (std::chrono::nanoseconds timeout) override
         {
             if (!this->_socket.waitConnected (timeout))
             {

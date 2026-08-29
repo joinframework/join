@@ -96,12 +96,12 @@ protected:
     static const std::string _clientpath;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 const std::string UnixDgramSocket::_serverpath = "/tmp/unixserver_test.sock";
 const std::string UnixDgramSocket::_clientpath = "/tmp/unixclient_test.sock";
-const int UnixDgramSocket::_timeout = 1000;
+const std::chrono::milliseconds UnixDgramSocket::_timeout{1000};
 
 /**
  * @brief Test open method.

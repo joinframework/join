@@ -172,10 +172,10 @@ namespace join
 
         /**
          * @brief block until connected.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * @return true if connected, false otherwise.
          */
-        bool waitConnected (int timeout = 0)
+        bool waitConnected (std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ())
         {
             if (this->_state != State::Connected)
             {
@@ -237,10 +237,10 @@ namespace join
 
         /**
          * @brief wait until the connection as been shut down.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * return true if the connection as been shut down, false otherwise.
          */
-        bool waitDisconnected (int timeout = 0)
+        bool waitDisconnected (std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ())
         {
             if ((this->_state != State::Disconnected) && (this->_state != State::Closed))
             {
@@ -251,7 +251,7 @@ namespace join
                 }
 
                 auto start = std::chrono::steady_clock::now ();
-                int elapsed = 0;
+                auto elapsed = std::chrono::nanoseconds::zero ();
 
                 while ((lastError == Errc::TemporaryError) && (elapsed <= timeout))
                 {
@@ -265,11 +265,10 @@ namespace join
                         return true;
                     }
 
-                    if (timeout)
+                    if (timeout != std::chrono::nanoseconds::zero ())
                     {
-                        elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (
-                                      std::chrono::steady_clock::now () - start)
-                                      .count ();
+                        elapsed = std::chrono::duration_cast<std::chrono::nanoseconds> (
+                            std::chrono::steady_clock::now () - start);
                     }
                 }
 
@@ -310,10 +309,11 @@ namespace join
          * @brief read data until size is reached or an error occurred.
          * @param data buffer used to store the data received.
          * @param size number of bytes to read.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * @return 0 on success, -1 on failure.
          */
-        int readExactly (char* data, size_t size, int timeout = 0) noexcept
+        int readExactly (char* data, size_t size,
+                         std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ()) noexcept
         {
             size_t numRead = 0;
 
@@ -343,10 +343,11 @@ namespace join
          * @brief write data until size is reached or an error occurred.
          * @param data data buffer to send.
          * @param size number of bytes to write.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * @return 0 on success, -1 on failure.
          */
-        int writeExactly (const char* data, size_t size, int timeout = 0) noexcept
+        int writeExactly (const char* data, size_t size,
+                          std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ()) noexcept
         {
             size_t numWrite = 0;
 

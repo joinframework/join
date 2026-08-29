@@ -36,6 +36,7 @@
 // C++.
 #include <iostream>
 #include <utility>
+#include <chrono>
 #include <string>
 
 // C.
@@ -342,10 +343,10 @@ namespace join
 
         /**
          * @brief block until TLS handshake is finished.
-         * @param timeout timeout in milliseconds (0: infinite).
+         * @param timeout timeout duration (zero: infinite).
          * @return true if TLS handshake is finished.
          */
-        virtual bool waitHandshake (int timeout)
+        virtual bool waitHandshake (std::chrono::nanoseconds timeout)
         {
             if (handshake () == 0)
             {
@@ -364,17 +365,18 @@ namespace join
                     break;  // LCOV_EXCL_LINE
                 }
 
-                int activeTimeout = timeout;
+                std::chrono::nanoseconds activeTimeout = timeout;
 
                 if (isDtls)
                 {
                     struct timeval dtlsTimeout;
                     if (DTLSv1_get_timeout (_ssl.get (), &dtlsTimeout))
                     {
-                        int dtlsTimeoutMs = (dtlsTimeout.tv_sec * 1000) + (dtlsTimeout.tv_usec / 1000);
-                        if (timeout <= 0 || dtlsTimeoutMs < timeout)
+                        auto dtlsDuration = std::chrono::duration_cast<std::chrono::nanoseconds> (
+                            std::chrono::seconds (dtlsTimeout.tv_sec) + std::chrono::microseconds (dtlsTimeout.tv_usec));
+                        if ((timeout <= std::chrono::nanoseconds::zero ()) || (dtlsDuration < timeout))
                         {
-                            activeTimeout = dtlsTimeoutMs;
+                            activeTimeout = dtlsDuration;
                         }
                     }
                 }
@@ -467,10 +469,10 @@ namespace join
 
         /**
          * @brief block until TLS shutdown is finished.
-         * @param timeout timeout in milliseconds (0: infinite).
+         * @param timeout timeout duration (zero: infinite).
          * @return true if TLS shutdown is finished.
          */
-        bool waitShutdown (int timeout) noexcept
+        bool waitShutdown (std::chrono::nanoseconds timeout) noexcept
         {
             if (!_ssl)
             {
@@ -526,10 +528,10 @@ namespace join
 
         /**
          * @brief block until new data is available for reading.
-         * @param timeout timeout in milliseconds (0: infinite).
+         * @param timeout timeout duration (zero: infinite).
          * @return true if there is new data available for reading, false otherwise.
          */
-        bool waitReadyRead (int timeout = 0) const noexcept
+        bool waitReadyRead (std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ()) const noexcept
         {
             if (_ssl)
             {
@@ -571,10 +573,10 @@ namespace join
          * @brief read data until size is reached or an error occurred.
          * @param data buffer used to store the data received.
          * @param size number of bytes to read.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * @return 0 on success, -1 on failure.
          */
-        int readExactly (char* data, size_t size, int timeout = 0)
+        int readExactly (char* data, size_t size, std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ())
         {
             size_t numRead = 0;
 
@@ -602,10 +604,10 @@ namespace join
 
         /**
          * @brief block until at least one byte can be written on the socket.
-         * @param timeout timeout in milliseconds (0: infinite).
+         * @param timeout timeout duration (zero: infinite).
          * @return true if data can be written on the socket, false otherwise.
          */
-        bool waitReadyWrite (int timeout = 0) const noexcept
+        bool waitReadyWrite (std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ()) const noexcept
         {
             if (_ssl)
             {
@@ -647,10 +649,11 @@ namespace join
          * @brief write data until size is reached or an error occurred.
          * @param data data buffer to send.
          * @param size number of bytes to write.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * @return 0 on success, -1 on failure.
          */
-        int writeExactly (const char* data, size_t size, int timeout = 0)
+        int writeExactly (const char* data, size_t size,
+                          std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ())
         {
             size_t numWrite = 0;
 

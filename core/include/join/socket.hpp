@@ -32,6 +32,7 @@
 #include <join/error.hpp>
 
 // C++.
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -318,10 +319,10 @@ namespace join
 
         /**
          * @brief block until new data is available for reading.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * @return true if there is new data available for reading, false otherwise.
          */
-        bool waitReadyRead (int timeout = 0) const noexcept
+        bool waitReadyRead (std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ()) const noexcept
         {
             return (wait (true, false, timeout) == 0);
         }
@@ -364,10 +365,10 @@ namespace join
 
         /**
          * @brief block until at least one byte can be written.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * @return true if data can be written, false otherwise.
          */
-        bool waitReadyWrite (int timeout = 0) const noexcept
+        bool waitReadyWrite (std::chrono::nanoseconds timeout = std::chrono::nanoseconds::zero ()) const noexcept
         {
             return (wait (false, true, timeout) == 0);
         }
@@ -625,10 +626,10 @@ namespace join
          * @brief wait for the socket handle to become ready.
          * @param wantRead set to true if want read
          * @param wantWrite set to true if want write.
-         * @param timeout timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          * @return 0 on success, -1 on failure.
          */
-        int wait (bool wantRead, bool wantWrite, int timeout) const noexcept
+        int wait (bool wantRead, bool wantWrite, std::chrono::nanoseconds timeout) const noexcept
         {
             struct pollfd handle;
             handle.fd = _handle;
@@ -645,7 +646,10 @@ namespace join
                 handle.events |= POLLOUT;
             }
 
-            int nset = (handle.fd > -1) ? ::poll (&handle, 1, timeout == 0 ? -1 : timeout) : -1;
+            struct timespec ts = toTimespec (timeout);
+            const struct timespec* deadline = (timeout > std::chrono::nanoseconds::zero ()) ? &ts : nullptr;
+
+            int nset = (handle.fd > -1) ? ::ppoll (&handle, 1, deadline, nullptr) : -1;
             if (nset != 1)
             {
                 if (nset == -1)

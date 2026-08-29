@@ -257,7 +257,7 @@ protected:
     static const uint16_t _invalid_port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// root certificate.
     static const std::string _rootcert;
@@ -279,7 +279,7 @@ const std::string TlsSocket::_hostv4 = "127.0.0.1";
 const std::string TlsSocket::_hostv6 = "::1";
 const uint16_t TlsSocket::_port = 5000;
 const uint16_t TlsSocket::_invalid_port = 5032;
-const int TlsSocket::_timeout = 1000;
+const std::chrono::milliseconds TlsSocket::_timeout{1000};
 const std::string TlsSocket::_rootcert = "/tmp/tlssocket_test_root.cert";
 const std::string TlsSocket::_certPath = "/tmp/certs";
 const std::string TlsSocket::_certFile = _certPath + "/tlssocket_test.cert";

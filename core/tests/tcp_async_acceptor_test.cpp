@@ -124,7 +124,7 @@ protected:
     static const uint16_t _port;
 
     /// completion timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// condition mutex.
     static Mutex _mut;
@@ -144,7 +144,7 @@ protected:
 
 const IpAddress TcpAsyncAcceptor::_address = "::1";
 const uint16_t TcpAsyncAcceptor::_port = 5033;
-const int TcpAsyncAcceptor::_timeout = 1000;
+const std::chrono::milliseconds TcpAsyncAcceptor::_timeout{1000};
 Mutex TcpAsyncAcceptor::_mut;
 Condition TcpAsyncAcceptor::_cond;
 std::error_code TcpAsyncAcceptor::_code;

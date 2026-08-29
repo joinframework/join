@@ -218,7 +218,7 @@ protected:
     static const std::string _senderpath;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 Mutex UnixAsyncDatagramSocket::_mut;
@@ -236,7 +236,7 @@ UnixDgram::Endpoint UnixAsyncDatagramSocket::_dest;
 const std::string UnixAsyncDatagramSocket::_serverpath = "/tmp/unixasyncdgramserver_test.sock";
 const std::string UnixAsyncDatagramSocket::_clientpath = "/tmp/unixasyncdgramclient_test.sock";
 const std::string UnixAsyncDatagramSocket::_senderpath = "/tmp/unixasyncdgramsender_test.sock";
-const int UnixAsyncDatagramSocket::_timeout = 1000;
+const std::chrono::milliseconds UnixAsyncDatagramSocket::_timeout{1000};
 
 /**
  * @brief Test open method.

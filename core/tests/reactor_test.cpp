@@ -159,7 +159,7 @@ protected:
     static uint16_t _port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// condition variable.
     static Condition _cond;
@@ -176,7 +176,7 @@ Tcp::Socket ReactorTest::_client (Tcp::Socket::Blocking);
 Tcp::Socket ReactorTest::_server;
 std::string ReactorTest::_host = "127.0.0.1";
 uint16_t ReactorTest::_port = 5000;
-const int ReactorTest::_timeout = 1000;
+const std::chrono::milliseconds ReactorTest::_timeout{1000};
 Condition ReactorTest::_cond;
 Mutex ReactorTest::_mut;
 std::string ReactorTest::_event;

@@ -256,6 +256,22 @@ TEST (Utils, toTimespec)
     ts = join::toTimespec (tp);
     EXPECT_EQ (ts.tv_sec, 0);
     EXPECT_EQ (ts.tv_nsec, 0);
+
+    ts = join::toTimespec (std::chrono::seconds (1234));
+    EXPECT_EQ (ts.tv_sec, 1234);
+    EXPECT_EQ (ts.tv_nsec, 0);
+
+    ts = join::toTimespec (std::chrono::seconds (5) + std::chrono::nanoseconds (123456789));
+    EXPECT_EQ (ts.tv_sec, 5);
+    EXPECT_EQ (ts.tv_nsec, 123456789);
+
+    ts = join::toTimespec (std::chrono::milliseconds (1500));
+    EXPECT_EQ (ts.tv_sec, 1);
+    EXPECT_EQ (ts.tv_nsec, 500000000);
+
+    ts = join::toTimespec (std::chrono::nanoseconds::zero ());
+    EXPECT_EQ (ts.tv_sec, 0);
+    EXPECT_EQ (ts.tv_nsec, 0);
 }
 
 /**

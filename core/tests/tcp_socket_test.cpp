@@ -99,13 +99,13 @@ protected:
     static const uint16_t _port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 const std::string TcpSocket::_hostv4 = "127.0.0.1";
 const std::string TcpSocket::_hostv6 = "::1";
 const uint16_t TcpSocket::_port = 5000;
-const int TcpSocket::_timeout = 1000;
+const std::chrono::milliseconds TcpSocket::_timeout{1000};
 
 /**
  * @brief Test move.

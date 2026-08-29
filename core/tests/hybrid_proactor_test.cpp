@@ -131,7 +131,7 @@ protected:
     static uint16_t _port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// condition variable.
     static Condition _cond;
@@ -166,7 +166,7 @@ Tcp::Socket HybridProactorTest::_client (Tcp::Socket::Blocking);
 Tcp::Socket HybridProactorTest::_server;
 std::string HybridProactorTest::_host = "127.0.0.1";
 uint16_t HybridProactorTest::_port = 5001;
-const int HybridProactorTest::_timeout = 1000;
+const std::chrono::milliseconds HybridProactorTest::_timeout{1000};
 Condition HybridProactorTest::_cond;
 Mutex HybridProactorTest::_mut;
 IoOperation* HybridProactorTest::_op = nullptr;

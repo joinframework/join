@@ -131,7 +131,7 @@ protected:
     static uint16_t _port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// condition variable.
     static Condition _cond;
@@ -166,7 +166,7 @@ Tcp::Socket SqpollProactorTest::_client (Tcp::Socket::Blocking);
 Tcp::Socket SqpollProactorTest::_server;
 std::string SqpollProactorTest::_host = "127.0.0.1";
 uint16_t SqpollProactorTest::_port = 5001;
-const int SqpollProactorTest::_timeout = 1000;
+const std::chrono::milliseconds SqpollProactorTest::_timeout{1000};
 Condition SqpollProactorTest::_cond;
 Mutex SqpollProactorTest::_mut;
 IoOperation* SqpollProactorTest::_op = nullptr;

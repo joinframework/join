@@ -1219,7 +1219,7 @@ namespace join
                     return -1;
                 }
 
-                if (!this->_socket.waitConnected (timeout.count ()))
+                if (!this->_socket.waitConnected (timeout))
                 {
                     close ();
                     return -1;
@@ -1237,7 +1237,7 @@ namespace join
                     return -1;
                 }
 
-                if (!this->_socket.waitHandshake (timeout.count ()))
+                if (!this->_socket.waitHandshake (timeout))
                 {
                     close ();
                     return -1;
@@ -1270,14 +1270,14 @@ namespace join
                     return -1;
                 }
 
-                if (!this->_socket.waitShutdown (timeout.count ()))
+                if (!this->_socket.waitShutdown (timeout))
                 {
                     close ();
                     return -1;
                 }
             }
 
-            if (!this->_socket.waitDisconnected (timeout.count ()))
+            if (!this->_socket.waitDisconnected (timeout))
             {
                 close ();
                 return -1;

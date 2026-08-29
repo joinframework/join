@@ -113,7 +113,7 @@ protected:
     static const std::string _host;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 Mutex IcmpAsyncDatagramSocket::_mut;
@@ -125,7 +125,7 @@ char IcmpAsyncDatagramSocket::_buf[1024] = {};
 Icmp::Endpoint IcmpAsyncDatagramSocket::_from;
 char IcmpAsyncDatagramSocket::_data[sizeof (struct icmphdr)] = {};
 const std::string IcmpAsyncDatagramSocket::_host = "127.0.0.1";
-const int IcmpAsyncDatagramSocket::_timeout = 1000;
+const std::chrono::milliseconds IcmpAsyncDatagramSocket::_timeout{1000};
 
 /**
  * @brief Test open method.

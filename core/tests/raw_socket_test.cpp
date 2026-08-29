@@ -144,12 +144,12 @@ protected:
     static const std::string _interface;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 RawSocket::Packet RawSocket::_packet;
 const std::string RawSocket::_interface = "lo";
-const int RawSocket::_timeout = 1000;
+const std::chrono::milliseconds RawSocket::_timeout{1000};
 
 /**
  * @brief Test open method.

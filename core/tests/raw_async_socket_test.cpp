@@ -161,7 +161,7 @@ protected:
     static const std::string _interface;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 Mutex RawAsyncSocket::_mut;
@@ -172,7 +172,7 @@ size_t RawAsyncSocket::_transferred = 0;
 RawAsyncSocket::Packet RawAsyncSocket::_packet;
 char RawAsyncSocket::_buf[2048] = {};
 const std::string RawAsyncSocket::_interface = "lo";
-const int RawAsyncSocket::_timeout = 1000;
+const std::chrono::milliseconds RawAsyncSocket::_timeout{1000};
 
 /**
  * @brief Test open method.

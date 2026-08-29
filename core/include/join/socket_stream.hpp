@@ -31,6 +31,7 @@
 // C++.
 #include <streambuf>
 #include <utility>
+#include <chrono>
 #include <memory>
 
 namespace join
@@ -194,18 +195,18 @@ namespace join
 
         /**
          * @brief set the socket timeout.
-         * @param ms timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          */
-        void timeout (int ms)
+        void timeout (std::chrono::nanoseconds timeout)
         {
-            _timeout = ms;
+            _timeout = timeout;
         }
 
         /**
-         * @brief get the current timeout in milliseconds.
-         * @return the current timeout.
+         * @brief get the current timeout duration.
+         * @return the current timeout duration.
          */
-        int timeout () const
+        std::chrono::nanoseconds timeout () const
         {
             return _timeout;
         }
@@ -324,7 +325,7 @@ namespace join
         std::unique_ptr<char[]> _buf;
 
         /// timeout.
-        int _timeout = 30000;
+        std::chrono::nanoseconds _timeout = std::chrono::seconds (30);
 
         /// internal socket.
         Socket _socket;
@@ -485,18 +486,18 @@ namespace join
 
         /**
          * @brief set the socket timeout.
-         * @param ms timeout in milliseconds.
+         * @param timeout timeout duration (zero: infinite).
          */
-        void timeout (int ms)
+        void timeout (std::chrono::nanoseconds timeout)
         {
-            _sockbuf.timeout (ms);
+            _sockbuf.timeout (timeout);
         }
 
         /**
-         * @brief get the current timeout in milliseconds.
-         * @return the current timeout.
+         * @brief get the current timeout duration.
+         * @return the current timeout duration.
          */
-        int timeout () const
+        std::chrono::nanoseconds timeout () const
         {
             return _sockbuf.timeout ();
         }

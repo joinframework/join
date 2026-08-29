@@ -239,7 +239,7 @@ protected:
     static const uint16_t _port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// root certificate.
     static const std::string _rootcert;
@@ -260,7 +260,7 @@ protected:
 const std::string DtlsSocket::_hostv4 = "127.0.0.1";
 const std::string DtlsSocket::_hostv6 = "::1";
 const uint16_t DtlsSocket::_port = 5000;
-const int DtlsSocket::_timeout = 1000;
+const std::chrono::milliseconds DtlsSocket::_timeout{1000};
 const std::string DtlsSocket::_rootcert = "/tmp/tlssocket_test_root.cert";
 const std::string DtlsSocket::_certPath = "/tmp/certs";
 const std::string DtlsSocket::_certFile = _certPath + "/tlssocket_test.cert";

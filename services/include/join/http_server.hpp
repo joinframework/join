@@ -396,7 +396,7 @@ namespace join
                         if (FD_ISSET (this->_server->_acceptor.handle (), &fdset))
                         {
                             this->_sockbuf.socket () = this->_server->accept ();
-                            this->_sockbuf.timeout (this->_server->keepAliveTimeout ().count () * 1000);
+                            this->_sockbuf.timeout (this->_server->keepAliveTimeout ());
                         }
                     }
                 }
