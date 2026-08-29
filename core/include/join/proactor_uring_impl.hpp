@@ -149,35 +149,31 @@ void join::BasicProactor<Policy>::stop (bool sync) noexcept
         return;
     }
 
-    if (!isRunning ())
+    if (JOIN_UNLIKELY (!isRunning ()))
     {
         return;
-    }
-
-    if (JOIN_LIKELY (sync))
-    {
-        bool expected = false;
-        if (!_stopping.compare_exchange_strong (expected, true, std::memory_order_acq_rel))
-        {
-            Backoff backoff;
-            while (_threadId.load (std::memory_order_acquire) != _invalidThreadId)
-            {
-                backoff ();
-            }
-            return;
-        }
     }
 
     writeCommand ({CommandType::Stop, nullptr, sync, nullptr, nullptr});
 
     if (JOIN_LIKELY (sync))
     {
-        Backoff backoff;
-        while (_threadId.load (std::memory_order_acquire) != _invalidThreadId)
-        {
-            backoff ();
-        }
-        _stopping.store (false, std::memory_order_release);
+        waitStopped ();
+    }
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : waitStopped
+// =========================================================================
+template <typename Policy>
+void join::BasicProactor<Policy>::waitStopped () const noexcept
+{
+    Backoff backoff;
+
+    while (_threadId.load (std::memory_order_acquire) != _invalidThreadId)
+    {
+        backoff ();
     }
 }
 
@@ -244,7 +240,7 @@ int join::BasicProactor<Policy>::mlock () const noexcept
 template <typename Policy>
 bool join::BasicProactor<Policy>::isRunning () const noexcept
 {
-    return _running.load (std::memory_order_acquire);
+    return _threadId.load (std::memory_order_acquire) != _invalidThreadId;
 }
 
 // =========================================================================
@@ -380,15 +376,23 @@ int join::BasicProactor<Policy>::writeCommand (const Command& cmd, std::true_typ
         return -1;  // LCOV_EXCL_LINE
     }
 
-    if (_notified.exchange (true, std::memory_order_acq_rel))
+    // pairs with the fence in the event loop: an acquire load would let the push above be
+    // reordered after it, the loop would sleep and the wakeup would be lost.
+    std::atomic_thread_fence (std::memory_order_seq_cst);
+
+    WakeupState state = _wakeupState.load (std::memory_order_relaxed);
+    if (state != WakeupState::Pending)
     {
         return 0;
     }
 
-    uint64_t value = 1;
-    if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
+    if (_wakeupState.compare_exchange_strong (state, WakeupState::Notified, std::memory_order_seq_cst))
     {
-        _notified.store (false);  // LCOV_EXCL_LINE
+        uint64_t value = 1;
+        if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
+        {
+            _wakeupState.store (WakeupState::Pending, std::memory_order_seq_cst);  // LCOV_EXCL_LINE
+        }
     }
 
     return 0;
@@ -734,9 +738,7 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::true_type
     if (JOIN_UNLIKELY (op == &_wakeupOp))
     {
         _wakeupOp.state = IoOperation::State::Idle;
-        _notified.store (false);
 
-        readCommands ();
         if (JOIN_LIKELY (_running.load (std::memory_order_acquire)))
         {
             rearmWakeup ();
@@ -799,34 +801,49 @@ void join::BasicProactor<Policy>::eventLoop (std::false_type, std::false_type) n
         rearmWakeup ();
     }
 
-    while (_running.load (std::memory_order_acquire) || !_pendingOps.empty ())
-    {
-        io_uring_cqe* cqe = nullptr;
+    Backoff backoff;
+    bool running;
 
+    while ((running = _running.load (std::memory_order_acquire)) || !_pendingOps.empty ())
+    {
+        readCommands ();
+        io_uring_submit (&_ring);
+
+        io_uring_cqe* cqe = nullptr;
+        if (io_uring_peek_cqe (&_ring, &cqe) == 0)
+        {
+            backoff.reset ();
+
+            do
+            {
+                dispatchCqe (cqe);
+                io_uring_cqe_seen (&_ring, cqe);
+            }
+            while (io_uring_peek_cqe (&_ring, &cqe) == 0);
+
+            continue;
+        }
+
+        if (!running || !backoff.spinExhausted ())
+        {
+            backoff ();
+            continue;
+        }
+
+        _wakeupState.store (WakeupState::Pending, std::memory_order_relaxed);
+        std::atomic_thread_fence (std::memory_order_seq_cst);
+        readCommands ();
+
+        io_uring_submit (&_ring);
         if (JOIN_LIKELY (_running.load (std::memory_order_acquire)))
         {
-            if (JOIN_UNLIKELY (io_uring_wait_cqe (&_ring, &cqe) < 0))
+            if (io_uring_peek_cqe (&_ring, &cqe) != 0)
             {
-                continue;  // LCOV_EXCL_LINE
+                io_uring_wait_cqe (&_ring, &cqe);
             }
-        }
-        else
-        {
-            // LCOV_EXCL_START
-            io_uring_submit (&_ring);
-            if (JOIN_UNLIKELY (io_uring_peek_cqe (&_ring, &cqe) != 0))
-            {
-                continue;
-            }
-            // LCOV_EXCL_STOP
         }
 
-        do
-        {
-            dispatchCqe (cqe);
-            io_uring_cqe_seen (&_ring, cqe);
-        }
-        while (io_uring_peek_cqe (&_ring, &cqe) == 0);
+        _wakeupState.store (WakeupState::Polling, std::memory_order_seq_cst);
     }
 }
 

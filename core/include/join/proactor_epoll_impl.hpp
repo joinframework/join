@@ -57,6 +57,7 @@ inline join::BasicProactor::~BasicProactor () noexcept
 // =========================================================================
 inline void join::BasicProactor::run ()
 {
+    _wakeupState.store (WakeupState::Pending, std::memory_order_seq_cst);
     _reactor.run ();
 }
 
@@ -73,40 +74,26 @@ inline void join::BasicProactor::stop (bool sync) noexcept
         return;
     }
 
-    if (!_reactor.isRunning ())
+    if (JOIN_UNLIKELY (!isRunning ()))
     {
         return;
     }
 
-    std::atomic<bool> done{false};
+    writeCommand ({CommandType::Stop, nullptr, sync, nullptr, nullptr});
 
     if (JOIN_LIKELY (sync))
     {
-        bool expected = false;
-        if (!_stopping.compare_exchange_strong (expected, true, std::memory_order_acq_rel))
-        {
-            Backoff backoff;
-            while (isRunning ())
-            {
-                backoff ();
-            }
-            return;
-        }
+        waitStopped ();
     }
+}
 
-    writeCommand ({CommandType::Stop, nullptr, sync, sync ? &done : nullptr, nullptr});
-
-    if (JOIN_LIKELY (sync))
-    {
-        Backoff backoff;
-        while (!done.load (std::memory_order_acquire))
-        {
-            backoff ();
-        }
-        _stopping.store (false, std::memory_order_release);
-    }
-
-    _reactor.stop (sync);
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : waitStopped
+// =========================================================================
+inline void join::BasicProactor::waitStopped () const noexcept
+{
+    _reactor.waitStopped ();
 }
 
 #ifdef JOIN_HAS_NUMA
@@ -168,15 +155,23 @@ inline int join::BasicProactor::writeCommand (const Command& cmd) noexcept
         return -1;  // LCOV_EXCL_LINE
     }
 
-    if (_notified.exchange (true, std::memory_order_acq_rel))
+    // pairs with the fence in the event loop: an acquire load would let the push above be
+    // reordered after it, the loop would sleep and the wakeup would be lost.
+    std::atomic_thread_fence (std::memory_order_seq_cst);
+
+    WakeupState state = _wakeupState.load (std::memory_order_relaxed);
+    if (state != WakeupState::Pending)
     {
         return 0;
     }
 
-    uint64_t value = 1;
-    if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
+    if (_wakeupState.compare_exchange_strong (state, WakeupState::Notified, std::memory_order_seq_cst))
     {
-        _notified.store (false);  // LCOV_EXCL_LINE
+        uint64_t value = 1;
+        if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
+        {
+            _wakeupState.store (WakeupState::Pending, std::memory_order_seq_cst);  // LCOV_EXCL_LINE
+        }
     }
 
     return 0;
@@ -189,13 +184,9 @@ inline int join::BasicProactor::writeCommand (const Command& cmd) noexcept
 inline void join::BasicProactor::readCommands () noexcept
 {
     uint64_t count;
-    ssize_t nread = ::read (_wakeup, &count, sizeof (count));
-    _notified.store (false);
-
-    if (JOIN_UNLIKELY (nread == -1))
-    {
-        return;  // LCOV_EXCL_LINE
-    }
+    [[maybe_unused]] ssize_t nread = ::read (_wakeup, &count, sizeof (count));
+    _wakeupState.store (WakeupState::Pending, std::memory_order_relaxed);
+    std::atomic_thread_fence (std::memory_order_seq_cst);
 
     Command cmd;
     while (_commands.tryPop (cmd) == 0)
@@ -229,6 +220,7 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
 
         case CommandType::Stop:
             cancelAllOperations ();
+            _reactor.stop (false);
             break;
 
         default:
@@ -558,8 +550,12 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
         readCommands ();
         return;
     }
-
-    endOperation (_readOps[fd], executeOp (_readOps[fd]), false);
+    IoOperation* op = _readOps[fd];
+    if (JOIN_UNLIKELY (op == nullptr))
+    {
+        return;
+    }
+    endOperation (op, executeOp (op), false);
 }
 
 // =========================================================================
@@ -568,7 +564,12 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
 // =========================================================================
 inline void join::BasicProactor::onWriteable (int fd) noexcept
 {
-    endOperation (_writeOps[fd], executeOp (_writeOps[fd]), false);
+    IoOperation* op = _writeOps[fd];
+    if (JOIN_UNLIKELY (op == nullptr))
+    {
+        return;
+    }
+    endOperation (op, executeOp (op), false);
 }
 
 // =========================================================================

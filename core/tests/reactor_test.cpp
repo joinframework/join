@@ -338,6 +338,42 @@ TEST_F (ReactorTest, isRunning)
 }
 
 /**
+ * @brief Test waitStopped.
+ */
+TEST_F (ReactorTest, waitStopped)
+{
+    Reactor reactor;
+
+    reactor.waitStopped ();
+
+    Thread th ([&reactor] () {
+        reactor.run ();
+    });
+    while (!reactor.isRunning ())
+    {
+    }
+
+    reactor.stop (false);
+    reactor.waitStopped ();
+
+    ASSERT_FALSE (reactor.isRunning ());
+
+    th.join ();
+
+    Thread orphan;
+    {
+        Reactor dying;
+        orphan = Thread ([&dying] () {
+            dying.run ();
+        });
+        while (!dying.isRunning ())
+        {
+        }
+    }
+    orphan.join ();
+}
+
+/**
  * @brief Test onReadable.
  */
 TEST_F (ReactorTest, onReadable)

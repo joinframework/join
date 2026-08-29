@@ -190,10 +190,15 @@ namespace join
         void run ();
 
         /**
-         * @brief stop the event loop.
-         * @param sync wait for loop termination if true.
+         * @brief stop the event loop, ignored if no event loop is running.
+         * @param sync wait for the event loop thread to terminate.
          */
         void stop (bool sync = true) noexcept;
+
+        /**
+         * @brief wait for the event loop thread to terminate.
+         */
+        void waitStopped () const noexcept;
 
 #ifdef JOIN_HAS_NUMA
         /**

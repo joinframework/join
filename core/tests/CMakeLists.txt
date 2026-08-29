@@ -27,6 +27,11 @@ target_link_libraries(variant.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME variant.gtest COMMAND variant.gtest)
 install(TARGETS variant.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(backoff.gtest backoff_test.cpp)
+target_link_libraries(backoff.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME backoff.gtest COMMAND backoff.gtest)
+install(TARGETS backoff.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(reactor.gtest reactor_test.cpp)
 target_link_libraries(reactor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME reactor.gtest COMMAND reactor.gtest)

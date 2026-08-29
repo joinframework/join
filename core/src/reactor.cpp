@@ -217,15 +217,30 @@ void Reactor::stop (bool sync) noexcept
         return;
     }
 
+    if (JOIN_UNLIKELY (!isRunning ()))
+    {
+        return;
+    }
+
     writeCommand ({CommandType::Stop, -1, 0, nullptr, nullptr, nullptr});
 
     if (JOIN_LIKELY (sync))
     {
-        Backoff backoff;
-        while (_threadId.load (std::memory_order_acquire) != _invalidThreadId)
-        {
-            backoff ();
-        }
+        waitStopped ();
+    }
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : waitStopped
+// =========================================================================
+void Reactor::waitStopped () const noexcept
+{
+    Backoff backoff;
+
+    while (_threadId.load (std::memory_order_acquire) != _invalidThreadId)
+    {
+        backoff ();
     }
 }
 
@@ -255,7 +270,7 @@ int Reactor::mlock () const noexcept
 // =========================================================================
 bool Reactor::isRunning () const noexcept
 {
-    return _running.load (std::memory_order_acquire);
+    return _threadId.load (std::memory_order_acquire) != _invalidThreadId;
 }
 
 // =========================================================================
@@ -417,13 +432,8 @@ void Reactor::processCommand (const Command& cmd) noexcept
 void Reactor::readCommands () noexcept
 {
     uint64_t count;
-    ssize_t nread = ::read (_wakeup, &count, sizeof (count));
+    [[maybe_unused]] ssize_t nread = ::read (_wakeup, &count, sizeof (count));
     _notified.store (false);
-
-    if (JOIN_UNLIKELY (nread == -1))
-    {
-        return;  // LCOV_EXCL_LINE
-    }
 
     Command cmd;
     while (_commands.tryPop (cmd) == 0)
@@ -611,6 +621,12 @@ ReactorThread::ReactorThread ()
     _dispatcher = Thread ([this] () {
         _reactor.run ();
     });
+
+    Backoff backoff;
+    while (!_reactor.isRunning ())
+    {
+        backoff ();
+    }
 }
 
 // =========================================================================

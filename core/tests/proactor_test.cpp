@@ -207,6 +207,53 @@ TEST_F (ProactorTest, stop)
         _op = nullptr;
         _result = 0;
     }
+
+    for (int i = 0; i < 32; ++i)
+    {
+        Proactor concurrent;
+        Thread loop ([&concurrent] () {
+            concurrent.run ();
+        });
+        while (!concurrent.isRunning ())
+        {
+        }
+
+        std::atomic<bool> go{false};
+        auto stopper = [&concurrent, &go] () {
+            while (!go.load (std::memory_order_acquire))
+            {
+            }
+            concurrent.stop ();
+        };
+
+        Thread first (stopper);
+        Thread second (stopper);
+        Thread third (stopper);
+        Thread fourth (stopper);
+
+        go.store (true, std::memory_order_release);
+
+        first.join ();
+        second.join ();
+        third.join ();
+        fourth.join ();
+
+        ASSERT_FALSE (concurrent.isRunning ());
+
+        loop.join ();
+    }
+
+    Thread orphan;
+    {
+        Proactor dying;
+        orphan = Thread ([&dying] () {
+            dying.run ();
+        });
+        while (!dying.isRunning ())
+        {
+        }
+    }
+    orphan.join ();
 }
 
 /**
@@ -450,6 +497,30 @@ TEST_F (ProactorTest, isRunning)
     th.join ();
 
     ASSERT_FALSE (proactor.isRunning ());
+}
+
+/**
+ * @brief Test waitStopped.
+ */
+TEST_F (ProactorTest, waitStopped)
+{
+    Proactor proactor;
+
+    proactor.waitStopped ();
+
+    Thread th ([&proactor] () {
+        proactor.run ();
+    });
+    while (!proactor.isRunning ())
+    {
+    }
+
+    proactor.stop (false);
+    proactor.waitStopped ();
+
+    ASSERT_FALSE (proactor.isRunning ());
+
+    th.join ();
 }
 
 #ifdef JOIN_HAS_IO_URING
