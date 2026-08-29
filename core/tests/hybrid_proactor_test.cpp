@@ -162,7 +162,7 @@ protected:
 };
 
 Tcp::Acceptor HybridProactorTest::_acceptor;
-Tcp::Socket HybridProactorTest::_client (Tcp::Socket::Blocking);
+Tcp::Socket HybridProactorTest::_client (Tcp::Socket::NonBlocking);
 Tcp::Socket HybridProactorTest::_server;
 std::string HybridProactorTest::_host = "127.0.0.1";
 uint16_t HybridProactorTest::_port = 5001;
@@ -187,7 +187,11 @@ TEST_F (HybridProactorTest, stop)
         proactor.run ();
     });
 
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     auto op = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
@@ -269,7 +273,11 @@ TEST_F (HybridProactorTest, submit)
     ASSERT_EQ (proactor.submit (&op1, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     op1 = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
@@ -340,7 +348,11 @@ TEST_F (HybridProactorTest, cancel)
     ASSERT_EQ (proactor.cancel (&op1, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     op1 = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
@@ -378,7 +390,11 @@ TEST_F (HybridProactorTest, flush)
         proactor.run ();
     });
 
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     auto op = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
@@ -411,7 +427,11 @@ TEST_F (HybridProactorTest, chain)
         proactor.run ();
     });
 
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     auto writeOp = IoOperation::makeWrite (_server.handle (), "ping", 4, this, true);
@@ -546,7 +566,6 @@ TEST_F (HybridProactorTest, asyncConnect)
     Tcp::Endpoint endpoint{_host, _port};
 
     ASSERT_EQ (_client.open (Tcp::v4 ()), 0) << join::lastError.message ();
-    _client.setMode (Tcp::Socket::NonBlocking);
 
     auto op = IoOperation::makeConnect (_client.handle (), endpoint.addr (), endpoint.length (), this);
     ASSERT_EQ (HybridProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
@@ -561,8 +580,6 @@ TEST_F (HybridProactorTest, asyncConnect)
         _op = nullptr;
         _result = 0;
     }
-
-    _client.setMode (Tcp::Socket::Blocking);
 }
 
 /**
@@ -586,7 +603,11 @@ TEST_F (HybridProactorTest, asyncAccept)
                                        SOCK_NONBLOCK | SOCK_CLOEXEC, this);
 
     ASSERT_EQ (HybridProactorThread::proactor ().submit (&op, true, true), 0) << join::lastError.message ();
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -604,7 +625,11 @@ TEST_F (HybridProactorTest, asyncAccept)
  */
 TEST_F (HybridProactorTest, asyncWrite)
 {
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     ASSERT_EQ (HybridProactorThread::affinity (0), 0) << join::lastError.message ();
@@ -642,7 +667,11 @@ TEST_F (HybridProactorTest, asyncWrite)
  */
 TEST_F (HybridProactorTest, asyncRead)
 {
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     ASSERT_EQ (HybridProactorThread::affinity (0), 0) << join::lastError.message ();
@@ -676,7 +705,11 @@ TEST_F (HybridProactorTest, asyncRead)
  */
 TEST_F (HybridProactorTest, asyncWriteFixed)
 {
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     const char* msg = "asyncWriteFixed";
@@ -711,7 +744,11 @@ TEST_F (HybridProactorTest, asyncWriteFixed)
  */
 TEST_F (HybridProactorTest, asyncReadFixed)
 {
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     std::vector<char> regbuf (sizeof (_buf));
@@ -743,7 +780,11 @@ TEST_F (HybridProactorTest, asyncReadFixed)
  */
 TEST_F (HybridProactorTest, asyncSendmsg)
 {
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     ASSERT_EQ (HybridProactorThread::affinity (0), 0) << join::lastError.message ();
@@ -785,7 +826,11 @@ TEST_F (HybridProactorTest, asyncSendmsg)
  */
 TEST_F (HybridProactorTest, asyncRecvmsg)
 {
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     ASSERT_EQ (HybridProactorThread::affinity (0), 0) << join::lastError.message ();
@@ -824,7 +869,11 @@ TEST_F (HybridProactorTest, asyncRecvmsg)
  */
 TEST_F (HybridProactorTest, asyncSend)
 {
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     const char* msg = "asyncSend";
@@ -852,7 +901,11 @@ TEST_F (HybridProactorTest, asyncSend)
  */
 TEST_F (HybridProactorTest, asyncRecv)
 {
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     auto op = IoOperation::makeRecv (_server.handle (), _buf, sizeof (_buf), 0, this);
@@ -876,7 +929,11 @@ TEST_F (HybridProactorTest, asyncRecv)
  */
 TEST_F (HybridProactorTest, onClose)
 {
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     ASSERT_EQ (HybridProactorThread::affinity (0), 0) << join::lastError.message ();
@@ -909,7 +966,11 @@ TEST_F (HybridProactorTest, onClose)
  */
 TEST_F (HybridProactorTest, onError)
 {
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     ASSERT_EQ (HybridProactorThread::affinity (0), 0) << join::lastError.message ();
@@ -946,7 +1007,11 @@ TEST_F (HybridProactorTest, resubmit)
 {
     const char* msg = "resubmit";
 
-    ASSERT_EQ (_client.connect ({_host, _port}), 0) << join::lastError.message ();
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     _resubmits = 1;
