@@ -654,6 +654,15 @@ namespace join
         }
 
         /**
+         * @brief get the blocking mode of the socket.
+         * @return the blocking mode of the socket.
+         */
+        Mode mode () const noexcept
+        {
+            return _mode;
+        }
+
+        /**
          * @brief get socket native handle.
          * @return socket native handle.
          */

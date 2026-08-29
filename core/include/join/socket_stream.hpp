@@ -45,6 +45,7 @@ namespace join
     public:
         using Endpoint = typename Protocol::Endpoint;
         using Socket = typename Protocol::Socket;
+        using TimePoint = typename Socket::TimePoint;
 
         /**
          * @brief default constructor.
@@ -147,7 +148,7 @@ namespace join
                     return nullptr;
                 }
 
-                if (!(hasTimeout () ? _socket.waitConnected (_timeout) : _socket.waitConnected ()))
+                if (!_socket.waitConnected (deadline ()))
                 {
                     _socket.close ();
                     return nullptr;
@@ -175,7 +176,7 @@ namespace join
                     return nullptr;
                 }
 
-                if (!(hasTimeout () ? _socket.waitDisconnected (_timeout) : _socket.waitDisconnected ()))
+                if (!_socket.waitDisconnected (deadline ()))
                 {
                     return nullptr;
                 }
@@ -209,6 +210,16 @@ namespace join
         std::chrono::nanoseconds timeout () const
         {
             return _timeout;
+        }
+
+        /**
+         * @brief get the deadline of an operation started now.
+         * @return the deadline, max when the stream operations are not time bounded.
+         */
+        TimePoint deadline () const noexcept
+        {
+            return (_timeout == std::chrono::nanoseconds::zero ()) ? TimePoint::max ()
+                                                                   : std::chrono::steady_clock::now () + _timeout;
         }
 
         /**
@@ -247,7 +258,7 @@ namespace join
                     {
                         if (lastError == Errc::TemporaryError)
                         {
-                            if (hasTimeout () ? _socket.waitReadyRead (_timeout) : _socket.waitReadyRead ())
+                            if (_socket.waitReadyRead (deadline ()))
                             {
                                 continue;
                             }
@@ -287,8 +298,7 @@ namespace join
                 std::streamsize pending = pptr () - pbase ();
                 if (pending)
                 {
-                    if ((hasTimeout () ? _socket.writeExactly (pbase (), pending, _timeout)
-                                       : _socket.writeExactly (pbase (), pending)) == -1)
+                    if (_socket.writeExactly (pbase (), pending, deadline ()) == -1)
                     {
                         _socket.close ();
                         return traits_type::eof ();
@@ -324,15 +334,6 @@ namespace join
 
         /// internal buffer.
         std::unique_ptr<char[]> _buf;
-
-        /**
-         * @brief check if a timeout is configured.
-         * @return true if a timeout is configured.
-         */
-        bool hasTimeout () const noexcept
-        {
-            return _timeout != std::chrono::nanoseconds::zero ();
-        }
 
         /// timeout, zero when the stream operations are not time bounded.
         std::chrono::nanoseconds _timeout = std::chrono::seconds (30);

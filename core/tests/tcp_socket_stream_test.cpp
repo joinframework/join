@@ -280,6 +280,14 @@ TEST_F (TcpSocketStream, timeout)
     ASSERT_NE (tcpStream.timeout (), _timeout);
     tcpStream.timeout (_timeout);
     ASSERT_EQ (tcpStream.timeout (), _timeout);
+
+    join::BasicSocketStreambuf<Tcp> sockbuf;
+
+    auto before = std::chrono::steady_clock::now ();
+
+    ASSERT_GE (sockbuf.deadline (), before + sockbuf.timeout ());
+    sockbuf.timeout (std::chrono::nanoseconds::zero ());
+    ASSERT_EQ (sockbuf.deadline (), Tcp::Socket::TimePoint::max ());
 }
 
 /**

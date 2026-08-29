@@ -398,6 +398,12 @@ TEST_F (TcpSocket, readExactly)
     std::error_code error = join::lastError;
     auto elapsed = std::chrono::steady_clock::now () - beg;
 
+    dribbler.setMode (Tcp::Socket::Blocking);
+    int blocking = dribbler.readExactly (slow, sizeof (slow), std::chrono::milliseconds (250));
+    std::error_code blockingError = join::lastError;
+    bool blockingWait = dribbler.waitDisconnected (std::chrono::milliseconds (250));
+    std::error_code blockingWaitError = join::lastError;
+
     sender.join ();
     dribbler.close ();
     peer.close ();
@@ -406,6 +412,10 @@ TEST_F (TcpSocket, readExactly)
     ASSERT_EQ (result, -1);
     ASSERT_EQ (error, Errc::TimedOut);
     ASSERT_LT (elapsed, std::chrono::milliseconds (700));
+    ASSERT_EQ (blocking, -1);
+    ASSERT_EQ (blockingError, Errc::OperationFailed);
+    ASSERT_FALSE (blockingWait);
+    ASSERT_EQ (blockingWaitError, Errc::OperationFailed);
 }
 
 /**
@@ -553,6 +563,12 @@ TEST_F (TcpSocket, writeExactly)
     ASSERT_EQ (join::lastError, Errc::TimedOut);
     ASSERT_LT (std::chrono::steady_clock::now () - beg, std::chrono::milliseconds (700));
 
+    sender.setMode (Tcp::Socket::Blocking);
+    ASSERT_EQ (sender.writeExactly (bulk.data (), bulk.size (), std::chrono::milliseconds (250)), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (sender.writeExactly (bulk.data (), bulk.size (), std::chrono::steady_clock::now ()), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
     sender.close ();
     peer.close ();
     stall.close ();
@@ -579,6 +595,18 @@ TEST_F (TcpSocket, setMode)
     ASSERT_TRUE (flags & O_NONBLOCK);
 
     tcpSocket.close ();
+}
+
+/**
+ * @brief Test mode method.
+ */
+TEST_F (TcpSocket, mode)
+{
+    Tcp::Socket tcpSocket;
+
+    ASSERT_EQ (tcpSocket.mode (), Tcp::Socket::NonBlocking);
+    tcpSocket.setMode (Tcp::Socket::Blocking);
+    ASSERT_EQ (tcpSocket.mode (), Tcp::Socket::Blocking);
 }
 
 /**

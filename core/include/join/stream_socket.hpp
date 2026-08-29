@@ -281,6 +281,12 @@ namespace join
          */
         bool waitDisconnected (TimePoint deadline)
         {
+            if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (this->_mode == Mode::Blocking)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return false;
+            }
+
             if ((this->_state != State::Disconnected) && (this->_state != State::Closed))
             {
                 if (this->_state != State::Disconnecting)
@@ -367,6 +373,12 @@ namespace join
          */
         int readExactly (char* data, size_t size, TimePoint deadline) noexcept
         {
+            if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (this->_mode == Mode::Blocking)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             size_t numRead = 0;
 
             while (numRead < size)
@@ -423,6 +435,12 @@ namespace join
          */
         int writeExactly (const char* data, size_t size, TimePoint deadline) noexcept
         {
+            if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (this->_mode == Mode::Blocking)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             size_t numWrite = 0;
 
             while (numWrite < size)

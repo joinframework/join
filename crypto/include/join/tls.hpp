@@ -369,6 +369,12 @@ namespace join
          */
         virtual bool waitHandshake (TimePoint deadline)
         {
+            if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (_socket.mode () == Mode::Blocking)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return false;
+            }
+
             if (handshake () == 0)
             {
                 return true;
@@ -511,6 +517,12 @@ namespace join
          */
         bool waitShutdown (TimePoint deadline) noexcept
         {
+            if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (_socket.mode () == Mode::Blocking)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return false;
+            }
+
             if (!_ssl)
             {
                 return true;
@@ -655,6 +667,12 @@ namespace join
          */
         int readExactly (char* data, size_t size, TimePoint deadline)
         {
+            if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (_socket.mode () == Mode::Blocking)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             size_t numRead = 0;
 
             while (numRead < size)
@@ -771,6 +789,12 @@ namespace join
          */
         int writeExactly (const char* data, size_t size, TimePoint deadline)
         {
+            if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (_socket.mode () == Mode::Blocking)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             size_t numWrite = 0;
 
             while (numWrite < size)

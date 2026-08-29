@@ -216,10 +216,13 @@ protected:
         {
             char buffer[65536];
             Udp::Endpoint from;
-            ssize_t nread = _socket.readFrom (buffer, sizeof (buffer), &from);
-            if (nread > 0)
+            if (_socket.waitReadyRead (_timeout))
             {
-                _socket.writeTo (buffer, nread, from);
+                ssize_t nread = _socket.readFrom (buffer, sizeof (buffer), &from);
+                if (nread > 0)
+                {
+                    _socket.writeTo (buffer, nread, from);
+                }
             }
             _socket.waitShutdown (_timeout);
         }
@@ -229,7 +232,7 @@ protected:
     TlsContext _tlsContext{TlsContext::DtlsServer};
 
     /// socket.
-    Dtls::Socket _socket{_tlsContext, Udp::Socket::Blocking};
+    Dtls::Socket _socket{_tlsContext, Udp::Socket::NonBlocking};
 
     /// host.
     static const std::string _hostv4;

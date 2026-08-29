@@ -30,6 +30,7 @@
 #include <join/tls_wrapper.hpp>
 
 // C++.
+#include <chrono>
 #include <utility>
 
 namespace join
@@ -131,7 +132,7 @@ namespace join
             {
                 if (lastError == Errc::TemporaryError)
                 {
-                    if (this->_sockbuf.socket ().waitHandshake (this->timeout ()))
+                    if (this->_sockbuf.socket ().waitHandshake (this->_sockbuf.deadline ()))
                     {
                         return;
                     }
@@ -150,7 +151,7 @@ namespace join
             {
                 if (lastError == Errc::TemporaryError)
                 {
-                    if (this->_sockbuf.socket ().waitShutdown (this->timeout ()))
+                    if (this->_sockbuf.socket ().waitShutdown (this->_sockbuf.deadline ()))
                     {
                         return;
                     }

@@ -467,6 +467,14 @@ TEST_F (TlsSocket, waitHandshake)
 {
     TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
+    Tls::Socket blocking (ctx, Tcp::Socket::Blocking);
+
+    ASSERT_EQ (blocking.connect ({_hostv4, _port}), 0) << join::lastError.message ();
+    ASSERT_FALSE (blocking.waitHandshake (_timeout));
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_FALSE (blocking.waitShutdown (_timeout));
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    blocking.close ();
 
     ASSERT_EQ (tls.open (Tls::v6 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (tls.waitHandshake (_timeout));
@@ -487,6 +495,8 @@ TEST_F (TlsSocket, waitHandshake)
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
     ASSERT_TRUE (tls.waitShutdown (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitShutdown ()) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitShutdown (std::chrono::steady_clock::now () + _timeout)) << join::lastError.message ();
     if (tls.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -628,6 +638,8 @@ TEST_F (TlsSocket, readExactly)
 
     ASSERT_EQ (tls.readExactly (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (tls.readExactly (data, sizeof (data), _timeout), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tls.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tls.handshake (), 0) << join::lastError.message ();
     ASSERT_TRUE (tls.waitReadyWrite (_timeout)) << join::lastError.message ();
@@ -717,6 +729,8 @@ TEST_F (TlsSocket, writeExactly)
     char data[] = {0x00, 0x65, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x5B, 0x22, 0x6B, 0x6F, 0x22, 0x5D};
 
     ASSERT_EQ (tls.writeExactly (data, sizeof (data)), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (tls.writeExactly (data, sizeof (data), _timeout), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tls.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tls.handshake (), 0) << join::lastError.message ();
