@@ -517,7 +517,7 @@ namespace join
          * @brief resolve host name and return all IP addresses found.
          * @param host host name to resolve.
          * @param family address family.
-         * @param timeout timeout in milliseconds (default: 5000).
+         * @param timeout timeout duration (default: 5 s).
          * @return the resolved IP address list.
          */
         IpAddressList resolveAllAddress (const std::string& host, int family,
@@ -559,7 +559,7 @@ namespace join
         /**
          * @brief resolve host name and return all IP addresses found.
          * @param host host name to resolve.
-         * @param timeout timeout in milliseconds (default: 5000).
+         * @param timeout timeout duration (default: 5 s).
          * @return the resolved IP address list.
          */
         IpAddressList resolveAllAddress (const std::string& host,
@@ -580,7 +580,7 @@ namespace join
          * @brief resolve host name using address family.
          * @param host host name to resolve.
          * @param family address family.
-         * @param timeout timeout in milliseconds (default: 5000).
+         * @param timeout timeout duration (default: 5 s).
          * @return the first resolved IP address found matching address family.
          */
         IpAddress resolveAddress (const std::string& host, int family,
@@ -597,7 +597,7 @@ namespace join
         /**
          * @brief resolve host name.
          * @param host host name to resolve.
-         * @param timeout timeout in milliseconds (default: 5000).
+         * @param timeout timeout duration (default: 5 s).
          * @return the first resolved IP address found.
          */
         IpAddress resolveAddress (const std::string& host, std::chrono::milliseconds timeout = std::chrono::seconds (5))
@@ -613,7 +613,7 @@ namespace join
         /**
          * @brief resolve all host address.
          * @param address host address to resolve.
-         * @param timeout timeout in milliseconds (default: 5000).
+         * @param timeout timeout duration (default: 5 s).
          * @return the resolved alias list.
          */
         AliasList resolveAllName (const IpAddress& address,
@@ -655,7 +655,7 @@ namespace join
         /**
          * @brief resolve host address.
          * @param address host address to resolve.
-         * @param timeout timeout in milliseconds (default: 5000).
+         * @param timeout timeout duration (default: 5 s).
          * @return the first resolved alias.
          */
         std::string resolveName (const IpAddress& address, std::chrono::milliseconds timeout = std::chrono::seconds (5))
