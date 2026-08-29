@@ -29,6 +29,10 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <vector>
+#include <thread>
+
 using join::Errc;
 using join::IpAddress;
 using join::ReactorThread;
@@ -98,6 +102,10 @@ protected:
     /// port.
     static const uint16_t _port;
 
+    /// ports of the acceptors used to test the operation deadlines.
+    static const uint16_t _stallport;
+    static const uint16_t _stallport2;
+
     /// timeout.
     static const std::chrono::milliseconds _timeout;
 };
@@ -105,6 +113,8 @@ protected:
 const std::string TcpSocket::_hostv4 = "127.0.0.1";
 const std::string TcpSocket::_hostv6 = "::1";
 const uint16_t TcpSocket::_port = 5000;
+const uint16_t TcpSocket::_stallport = 5002;
+const uint16_t TcpSocket::_stallport2 = 5003;
 const std::chrono::milliseconds TcpSocket::_timeout{1000};
 
 /**
@@ -224,6 +234,8 @@ TEST_F (TcpSocket, waitConnected)
         ASSERT_TRUE (tcpSocket.connecting ());
     }
     ASSERT_TRUE (tcpSocket.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket.waitConnected ()) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket.waitConnected (std::chrono::steady_clock::now () + _timeout)) << join::lastError.message ();
     if (tcpSocket.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -256,6 +268,9 @@ TEST_F (TcpSocket, waitDisconnected)
     Tcp::Socket tcpSocket;
 
     ASSERT_TRUE (tcpSocket.waitDisconnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket.waitDisconnected ()) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket.waitDisconnected (std::chrono::steady_clock::now () + _timeout))
+        << join::lastError.message ();
     if (tcpSocket.connect ({_hostv4, _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -308,6 +323,8 @@ TEST_F (TcpSocket, waitReadyRead)
     ASSERT_TRUE (tcpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (tcpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket.waitReadyRead ()) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket.waitReadyRead (std::chrono::steady_clock::now () + _timeout)) << join::lastError.message ();
     if (tcpSocket.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -351,6 +368,106 @@ TEST_F (TcpSocket, readExactly)
     ASSERT_EQ (tcpSocket.readExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     tcpSocket.close ();
+
+    Tcp::Acceptor stall;
+    Tcp::Socket dribbler;
+
+    ASSERT_EQ (stall.create ({IpAddress (_hostv4), _stallport}), 0) << join::lastError.message ();
+
+    if (dribbler.connect ({_hostv4, _stallport}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError);
+        ASSERT_TRUE (dribbler.waitConnected (_timeout)) << join::lastError.message ();
+    }
+
+    Tcp::Socket peer = stall.accept ();
+    ASSERT_TRUE (peer.connected ());
+
+    std::thread sender ([&peer] () {
+        for (int i = 0; i < 8; ++i)
+        {
+            std::this_thread::sleep_for (std::chrono::milliseconds (100));
+            peer.writeExactly ("x", 1);
+        }
+    });
+
+    char slow[8] = {};
+    auto beg = std::chrono::steady_clock::now ();
+
+    int result = dribbler.readExactly (slow, sizeof (slow), std::chrono::milliseconds (250));
+    std::error_code error = join::lastError;
+    auto elapsed = std::chrono::steady_clock::now () - beg;
+
+    sender.join ();
+    dribbler.close ();
+    peer.close ();
+    stall.close ();
+
+    ASSERT_EQ (result, -1);
+    ASSERT_EQ (error, Errc::TimedOut);
+    ASSERT_LT (elapsed, std::chrono::milliseconds (700));
+}
+
+/**
+ * @brief Test wait method.
+ */
+TEST_F (TcpSocket, wait)
+{
+    Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
+
+    ASSERT_EQ (tcpSocket.wait (true, false), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    ASSERT_EQ (tcpSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.wait (false, true), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
+    tcpSocket.close ();
+}
+
+/**
+ * @brief Test waitFor method.
+ */
+TEST_F (TcpSocket, waitFor)
+{
+    Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
+
+    ASSERT_EQ (tcpSocket.waitFor (true, false, _timeout), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    ASSERT_EQ (tcpSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.waitFor (false, true, _timeout), 0) << join::lastError.message ();
+
+    auto beg = std::chrono::steady_clock::now ();
+
+    ASSERT_EQ (tcpSocket.waitFor (true, false, std::chrono::milliseconds (100)), -1);
+    ASSERT_EQ (join::lastError, Errc::TimedOut);
+    ASSERT_GE (std::chrono::steady_clock::now () - beg, std::chrono::milliseconds (100));
+
+    ASSERT_EQ (tcpSocket.waitFor (true, false, std::chrono::nanoseconds::zero ()), -1);
+    ASSERT_EQ (join::lastError, Errc::TimedOut);
+
+    ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
+    tcpSocket.close ();
+}
+
+/**
+ * @brief Test waitUntil method.
+ */
+TEST_F (TcpSocket, waitUntil)
+{
+    Tcp::Socket tcpSocket (Tcp::Socket::Blocking);
+
+    ASSERT_EQ (tcpSocket.waitUntil (true, false, Tcp::Socket::TimePoint::max ()), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    ASSERT_EQ (tcpSocket.connect ({_hostv4, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (tcpSocket.waitUntil (false, true, Tcp::Socket::TimePoint::max ()), 0) << join::lastError.message ();
+
+    ASSERT_EQ (tcpSocket.waitUntil (true, false, std::chrono::steady_clock::now ()), -1);
+    ASSERT_EQ (join::lastError, Errc::TimedOut);
+
+    ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
+    tcpSocket.close ();
 }
 
 /**
@@ -368,6 +485,8 @@ TEST_F (TcpSocket, waitReadyWrite)
     }
     ASSERT_TRUE (tcpSocket.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE (tcpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket.waitReadyWrite ()) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket.waitReadyWrite (std::chrono::steady_clock::now () + _timeout)) << join::lastError.message ();
     if (tcpSocket.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -409,6 +528,34 @@ TEST_F (TcpSocket, writeExactly)
     ASSERT_TRUE (tcpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     tcpSocket.close ();
+
+    Tcp::Acceptor stall;
+    Tcp::Socket sender;
+
+    ASSERT_EQ (stall.create ({IpAddress (_hostv4), _stallport2}), 0) << join::lastError.message ();
+
+    if (sender.connect ({_hostv4, _stallport2}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError);
+        ASSERT_TRUE (sender.waitConnected (_timeout)) << join::lastError.message ();
+    }
+
+    Tcp::Socket peer = stall.accept ();
+    ASSERT_TRUE (peer.connected ());
+
+    ASSERT_EQ (sender.setOption (Tcp::Socket::SndBuffer, 4096), 0) << join::lastError.message ();
+    ASSERT_EQ (peer.setOption (Tcp::Socket::RcvBuffer, 4096), 0) << join::lastError.message ();
+
+    std::vector<char> bulk (1024 * 1024, 'x');
+    auto beg = std::chrono::steady_clock::now ();
+
+    ASSERT_EQ (sender.writeExactly (bulk.data (), bulk.size (), std::chrono::milliseconds (250)), -1);
+    ASSERT_EQ (join::lastError, Errc::TimedOut);
+    ASSERT_LT (std::chrono::steady_clock::now () - beg, std::chrono::milliseconds (700));
+
+    sender.close ();
+    peer.close ();
+    stall.close ();
 }
 
 /**
