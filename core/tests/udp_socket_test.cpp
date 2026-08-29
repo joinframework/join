@@ -88,12 +88,12 @@ protected:
     static const uint16_t _port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 const std::string UdpSocket::_host = "127.0.0.1";
 const uint16_t UdpSocket::_port = 5000;
-const int UdpSocket::_timeout = 1000;
+const std::chrono::milliseconds UdpSocket::_timeout{1000};
 
 /**
  * @brief Test open method.

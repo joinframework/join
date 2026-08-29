@@ -470,6 +470,23 @@ namespace join
 
         return {.tv_sec = scount, .tv_nsec = ncount};
     }
+
+    /**
+     * @brief converts duration to timespec.
+     * @param duration the duration to convert.
+     * @return timespec structure.
+     */
+    template <typename Rep, typename Period>
+    struct timespec toTimespec (std::chrono::duration<Rep, Period> duration)
+    {
+        auto secs = std::chrono::duration_cast<std::chrono::seconds> (duration);
+        auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration - secs);
+
+        auto scount = secs.count ();
+        auto ncount = ns.count ();
+
+        return {.tv_sec = scount, .tv_nsec = ncount};
+    }
 }
 
 #endif

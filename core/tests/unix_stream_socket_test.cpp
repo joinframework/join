@@ -107,12 +107,12 @@ protected:
     static const std::string _clientpath;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 const std::string UnixStreamSocket::_serverpath = "/tmp/unixserver_test.sock";
 const std::string UnixStreamSocket::_clientpath = "/tmp/unixclient_test.sock";
-const int UnixStreamSocket::_timeout = 1000;
+const std::chrono::milliseconds UnixStreamSocket::_timeout{1000};
 
 /**
  * @brief Test open method.

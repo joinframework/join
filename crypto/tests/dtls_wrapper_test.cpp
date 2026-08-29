@@ -216,10 +216,13 @@ protected:
         {
             char buffer[65536];
             Udp::Endpoint from;
-            ssize_t nread = _socket.readFrom (buffer, sizeof (buffer), &from);
-            if (nread > 0)
+            if (_socket.waitReadyRead (_timeout))
             {
-                _socket.writeTo (buffer, nread, from);
+                ssize_t nread = _socket.readFrom (buffer, sizeof (buffer), &from);
+                if (nread > 0)
+                {
+                    _socket.writeTo (buffer, nread, from);
+                }
             }
             _socket.waitShutdown (_timeout);
         }
@@ -229,7 +232,7 @@ protected:
     TlsContext _tlsContext{TlsContext::DtlsServer};
 
     /// socket.
-    Dtls::Socket _socket{_tlsContext, Udp::Socket::Blocking};
+    Dtls::Socket _socket{_tlsContext, Udp::Socket::NonBlocking};
 
     /// host.
     static const std::string _hostv4;
@@ -239,7 +242,7 @@ protected:
     static const uint16_t _port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// root certificate.
     static const std::string _rootcert;
@@ -260,7 +263,7 @@ protected:
 const std::string DtlsSocket::_hostv4 = "127.0.0.1";
 const std::string DtlsSocket::_hostv6 = "::1";
 const uint16_t DtlsSocket::_port = 5000;
-const int DtlsSocket::_timeout = 1000;
+const std::chrono::milliseconds DtlsSocket::_timeout{1000};
 const std::string DtlsSocket::_rootcert = "/tmp/tlssocket_test_root.cert";
 const std::string DtlsSocket::_certPath = "/tmp/certs";
 const std::string DtlsSocket::_certFile = _certPath + "/tlssocket_test.cert";

@@ -284,7 +284,7 @@ protected:
     static const uint16_t _port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// root certificate.
     static const std::string _rootcert;
@@ -316,7 +316,7 @@ protected:
 
 const std::string SmtpsClient::_host = "localhost";
 const uint16_t SmtpsClient::_port = 5000;
-const int SmtpsClient::_timeout = 1000;
+const std::chrono::milliseconds SmtpsClient::_timeout{1000};
 const std::string SmtpsClient::_rootcert = "/tmp/tlssocket_test_root.cert";
 const std::string SmtpsClient::_certPath = "/tmp/certs";
 const std::string SmtpsClient::_certFile = _certPath + "/tlssocket_test.cert";

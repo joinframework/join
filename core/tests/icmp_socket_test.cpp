@@ -60,14 +60,14 @@ protected:
     static const std::string _host;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// data.
     static std::unique_ptr<char[]> _data;
 };
 
 const std::string IcmpSocket::_host = "127.0.0.1";
-const int IcmpSocket::_timeout = 1000;
+const std::chrono::milliseconds IcmpSocket::_timeout{1000};
 std::unique_ptr<char[]> IcmpSocket::_data;
 
 /**

@@ -32,6 +32,8 @@
 #include <join/error.hpp>
 
 // C++.
+#include <algorithm>
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -53,6 +55,7 @@ namespace join
     public:
         using Ptr = std::unique_ptr<BasicSocket<Protocol>>;
         using Endpoint = typename Protocol::Endpoint;
+        using TimePoint = std::chrono::steady_clock::time_point;
 
         /**
          * @brief socket modes.
@@ -318,12 +321,31 @@ namespace join
 
         /**
          * @brief block until new data is available for reading.
-         * @param timeout timeout in milliseconds.
          * @return true if there is new data available for reading, false otherwise.
          */
-        bool waitReadyRead (int timeout = 0) const noexcept
+        bool waitReadyRead () const noexcept
         {
-            return (wait (true, false, timeout) == 0);
+            return (waitUntil (true, false, TimePoint::max ()) == 0);
+        }
+
+        /**
+         * @brief block until new data is available for reading, giving up after the given duration.
+         * @param timeout maximum time to wait.
+         * @return true if there is new data available for reading, false otherwise.
+         */
+        bool waitReadyRead (std::chrono::nanoseconds timeout) const noexcept
+        {
+            return (waitUntil (true, false, std::chrono::steady_clock::now () + timeout) == 0);
+        }
+
+        /**
+         * @brief block until new data is available for reading, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return true if there is new data available for reading, false otherwise.
+         */
+        bool waitReadyRead (TimePoint deadline) const noexcept
+        {
+            return (waitUntil (true, false, deadline) == 0);
         }
 
         /**
@@ -364,12 +386,31 @@ namespace join
 
         /**
          * @brief block until at least one byte can be written.
-         * @param timeout timeout in milliseconds.
          * @return true if data can be written, false otherwise.
          */
-        bool waitReadyWrite (int timeout = 0) const noexcept
+        bool waitReadyWrite () const noexcept
         {
-            return (wait (false, true, timeout) == 0);
+            return (waitUntil (false, true, TimePoint::max ()) == 0);
+        }
+
+        /**
+         * @brief block until at least one byte can be written, giving up after the given duration.
+         * @param timeout maximum time to wait.
+         * @return true if data can be written, false otherwise.
+         */
+        bool waitReadyWrite (std::chrono::nanoseconds timeout) const noexcept
+        {
+            return (waitUntil (false, true, std::chrono::steady_clock::now () + timeout) == 0);
+        }
+
+        /**
+         * @brief block until at least one byte can be written, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return true if data can be written, false otherwise.
+         */
+        bool waitReadyWrite (TimePoint deadline) const noexcept
+        {
+            return (waitUntil (false, true, deadline) == 0);
         }
 
         /**
@@ -613,6 +654,15 @@ namespace join
         }
 
         /**
+         * @brief get the blocking mode of the socket.
+         * @return the blocking mode of the socket.
+         */
+        Mode mode () const noexcept
+        {
+            return _mode;
+        }
+
+        /**
          * @brief get socket native handle.
          * @return socket native handle.
          */
@@ -625,10 +675,33 @@ namespace join
          * @brief wait for the socket handle to become ready.
          * @param wantRead set to true if want read
          * @param wantWrite set to true if want write.
-         * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int wait (bool wantRead, bool wantWrite, int timeout) const noexcept
+        int wait (bool wantRead, bool wantWrite) const noexcept
+        {
+            return waitUntil (wantRead, wantWrite, TimePoint::max ());
+        }
+
+        /**
+         * @brief wait for the socket handle to become ready, giving up after the given duration.
+         * @param wantRead set to true if want read
+         * @param wantWrite set to true if want write.
+         * @param timeout maximum time to wait.
+         * @return 0 on success, -1 on failure.
+         */
+        int waitFor (bool wantRead, bool wantWrite, std::chrono::nanoseconds timeout) const noexcept
+        {
+            return waitUntil (wantRead, wantWrite, std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief wait for the socket handle to become ready, giving up at the given time point.
+         * @param wantRead set to true if want read
+         * @param wantWrite set to true if want write.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return 0 on success, -1 on failure.
+         */
+        int waitUntil (bool wantRead, bool wantWrite, TimePoint deadline) const noexcept
         {
             struct pollfd handle;
             handle.fd = _handle;
@@ -645,7 +718,16 @@ namespace join
                 handle.events |= POLLOUT;
             }
 
-            int nset = (handle.fd > -1) ? ::poll (&handle, 1, timeout == 0 ? -1 : timeout) : -1;
+            struct timespec ts = {};
+            const struct timespec* remaining = nullptr;
+
+            if (deadline != TimePoint::max ())
+            {
+                ts = toTimespec (std::max (deadline - std::chrono::steady_clock::now (), TimePoint::duration::zero ()));
+                remaining = &ts;
+            }
+
+            int nset = (handle.fd > -1) ? ::ppoll (&handle, 1, remaining, nullptr) : -1;
             if (nset != 1)
             {
                 if (nset == -1)

@@ -224,7 +224,7 @@ protected:
     static const std::string _stallpath;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 Mutex UnixAsyncStreamSocket::_mut;
@@ -239,7 +239,7 @@ int UnixAsyncStreamSocket::_rearms = 0;
 const std::string UnixAsyncStreamSocket::_serverpath = "/tmp/unixasyncserver_test.sock";
 const std::string UnixAsyncStreamSocket::_clientpath = "/tmp/unixasyncclient_test.sock";
 const std::string UnixAsyncStreamSocket::_stallpath = "/tmp/unixasyncstall_test.sock";
-const int UnixAsyncStreamSocket::_timeout = 1000;
+const std::chrono::milliseconds UnixAsyncStreamSocket::_timeout{1000};
 
 /**
  * @brief Test open method.

@@ -38,6 +38,7 @@ namespace join
     {
     public:
         using Endpoint = typename BasicTls<Protocol>::Endpoint;
+        using TimePoint = typename BasicTls<Protocol>::TimePoint;
 
         /// inherit the base constructors.
         using BasicTls<Protocol>::BasicTls;
@@ -53,38 +54,79 @@ namespace join
 
         /**
          * @brief block until the underlying socket is connected.
-         * @param timeout timeout in milliseconds.
          * @return true if connected, false otherwise.
          */
-        bool waitConnected (int timeout = 0)
+        bool waitConnected ()
+        {
+            return this->_socket.waitConnected ();
+        }
+
+        /**
+         * @brief block until the underlying socket is connected, giving up after the given duration.
+         * @param timeout maximum time to wait.
+         * @return true if connected, false otherwise.
+         */
+        bool waitConnected (std::chrono::nanoseconds timeout)
         {
             return this->_socket.waitConnected (timeout);
         }
 
         /**
+         * @brief block until the underlying socket is connected, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return true if connected, false otherwise.
+         */
+        bool waitConnected (TimePoint deadline)
+        {
+            return this->_socket.waitConnected (deadline);
+        }
+
+        /**
          * @brief block until the underlying socket is disconnected.
-         * @param timeout timeout in milliseconds.
          * @return true if disconnected, false otherwise.
          */
-        bool waitDisconnected (int timeout = 0)
+        bool waitDisconnected ()
+        {
+            return this->_socket.waitDisconnected ();
+        }
+
+        /**
+         * @brief block until the underlying socket is disconnected, giving up after the given duration.
+         * @param timeout maximum time to wait.
+         * @return true if disconnected, false otherwise.
+         */
+        bool waitDisconnected (std::chrono::nanoseconds timeout)
         {
             return this->_socket.waitDisconnected (timeout);
         }
 
         /**
-         * @brief block until TLS handshake is finished.
-         * @param timeout timeout in milliseconds (0: infinite).
+         * @brief block until the underlying socket is disconnected, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return true if disconnected, false otherwise.
+         */
+        bool waitDisconnected (TimePoint deadline)
+        {
+            return this->_socket.waitDisconnected (deadline);
+        }
+
+        /// keep the base overloads visible, the override below hides them.
+        using BasicTls<Protocol>::waitHandshake;
+
+        /**
+         * @brief block until TLS handshake is finished, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
          * @return true if TLS handshake is finished.
          * @note waits for the transport connection first, then runs the common handshake.
          */
-        bool waitHandshake (int timeout) override
+        bool waitHandshake (TimePoint deadline) override
         {
-            if (!this->_socket.waitConnected (timeout))
+            if (!this->_socket.waitConnected (deadline))
             {
                 return false;
             }
 
-            return BasicTls<Protocol>::waitHandshake (timeout);
+            return BasicTls<Protocol>::waitHandshake (deadline);
         }
 
         /**

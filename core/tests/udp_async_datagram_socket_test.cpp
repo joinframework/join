@@ -205,7 +205,7 @@ protected:
     static const uint16_t _port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 Mutex UdpAsyncDatagramSocket::_mut;
@@ -222,7 +222,7 @@ int UdpAsyncDatagramSocket::_rearms = 0;
 Udp::Endpoint UdpAsyncDatagramSocket::_dest;
 const std::string UdpAsyncDatagramSocket::_host = "127.0.0.1";
 const uint16_t UdpAsyncDatagramSocket::_port = 5036;
-const int UdpAsyncDatagramSocket::_timeout = 1000;
+const std::chrono::milliseconds UdpAsyncDatagramSocket::_timeout{1000};
 
 /**
  * @brief Test open method.

@@ -31,6 +31,7 @@
 // C++.
 #include <streambuf>
 #include <utility>
+#include <chrono>
 #include <memory>
 
 namespace join
@@ -44,6 +45,7 @@ namespace join
     public:
         using Endpoint = typename Protocol::Endpoint;
         using Socket = typename Protocol::Socket;
+        using TimePoint = typename Socket::TimePoint;
 
         /**
          * @brief default constructor.
@@ -146,7 +148,7 @@ namespace join
                     return nullptr;
                 }
 
-                if (!_socket.waitConnected (_timeout))
+                if (!_socket.waitConnected (deadline ()))
                 {
                     _socket.close ();
                     return nullptr;
@@ -174,7 +176,7 @@ namespace join
                     return nullptr;
                 }
 
-                if (!_socket.waitDisconnected (_timeout))
+                if (!_socket.waitDisconnected (deadline ()))
                 {
                     return nullptr;
                 }
@@ -194,20 +196,30 @@ namespace join
 
         /**
          * @brief set the socket timeout.
-         * @param ms timeout in milliseconds.
+         * @param timeout maximum time granted to each stream operation, zero to remove the limit.
          */
-        void timeout (int ms)
+        void timeout (std::chrono::nanoseconds timeout)
         {
-            _timeout = ms;
+            _timeout = timeout;
         }
 
         /**
-         * @brief get the current timeout in milliseconds.
-         * @return the current timeout.
+         * @brief get the current timeout duration.
+         * @return the current timeout duration.
          */
-        int timeout () const
+        std::chrono::nanoseconds timeout () const
         {
             return _timeout;
+        }
+
+        /**
+         * @brief get the deadline of an operation started now.
+         * @return the deadline, max when the stream operations are not time bounded.
+         */
+        TimePoint deadline () const noexcept
+        {
+            return (_timeout == std::chrono::nanoseconds::zero ()) ? TimePoint::max ()
+                                                                   : std::chrono::steady_clock::now () + _timeout;
         }
 
         /**
@@ -246,7 +258,7 @@ namespace join
                     {
                         if (lastError == Errc::TemporaryError)
                         {
-                            if (_socket.waitReadyRead (_timeout))
+                            if (_socket.waitReadyRead (deadline ()))
                             {
                                 continue;
                             }
@@ -286,7 +298,7 @@ namespace join
                 std::streamsize pending = pptr () - pbase ();
                 if (pending)
                 {
-                    if (_socket.writeExactly (pbase (), pending, _timeout) == -1)
+                    if (_socket.writeExactly (pbase (), pending, deadline ()) == -1)
                     {
                         _socket.close ();
                         return traits_type::eof ();
@@ -323,8 +335,8 @@ namespace join
         /// internal buffer.
         std::unique_ptr<char[]> _buf;
 
-        /// timeout.
-        int _timeout = 30000;
+        /// timeout, zero when the stream operations are not time bounded.
+        std::chrono::nanoseconds _timeout = std::chrono::seconds (30);
 
         /// internal socket.
         Socket _socket;
@@ -485,18 +497,18 @@ namespace join
 
         /**
          * @brief set the socket timeout.
-         * @param ms timeout in milliseconds.
+         * @param timeout maximum time granted to each stream operation, zero to remove the limit.
          */
-        void timeout (int ms)
+        void timeout (std::chrono::nanoseconds timeout)
         {
-            _sockbuf.timeout (ms);
+            _sockbuf.timeout (timeout);
         }
 
         /**
-         * @brief get the current timeout in milliseconds.
-         * @return the current timeout.
+         * @brief get the current timeout duration.
+         * @return the current timeout duration.
          */
-        int timeout () const
+        std::chrono::nanoseconds timeout () const
         {
             return _sockbuf.timeout ();
         }

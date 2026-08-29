@@ -64,14 +64,14 @@ protected:
     static const uint32_t _groups;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// data.
     static std::unique_ptr<char[]> _data;
 };
 
 const uint32_t NetlinkSocket::_groups = RTMGRP_LINK;
-const int NetlinkSocket::_timeout = 1000;
+const std::chrono::milliseconds NetlinkSocket::_timeout{1000};
 std::unique_ptr<char[]> NetlinkSocket::_data;
 
 /**

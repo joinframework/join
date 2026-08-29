@@ -217,7 +217,7 @@ protected:
     static const uint16_t _stallport;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 };
 
 Mutex TcpAsyncStreamSocket::_mut;
@@ -232,7 +232,7 @@ int TcpAsyncStreamSocket::_rearms = 0;
 const IpAddress TcpAsyncStreamSocket::_host = "::1";
 const uint16_t TcpAsyncStreamSocket::_port = 5034;
 const uint16_t TcpAsyncStreamSocket::_stallport = 5035;
-const int TcpAsyncStreamSocket::_timeout = 1000;
+const std::chrono::milliseconds TcpAsyncStreamSocket::_timeout{1000};
 
 /**
  * @brief Test open method.

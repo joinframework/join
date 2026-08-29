@@ -52,6 +52,7 @@ namespace join
         using Option = typename BasicSocket<Protocol>::Option;
         using State = typename BasicSocket<Protocol>::State;
         using Endpoint = typename Protocol::Endpoint;
+        using TimePoint = typename BasicSocket<Protocol>::TimePoint;
 
         /**
          * @brief default constructor.
@@ -172,10 +173,29 @@ namespace join
 
         /**
          * @brief block until connected.
-         * @param timeout timeout in milliseconds.
          * @return true if connected, false otherwise.
          */
-        bool waitConnected (int timeout = 0)
+        bool waitConnected ()
+        {
+            return waitConnected (TimePoint::max ());
+        }
+
+        /**
+         * @brief block until connected, giving up after the given duration.
+         * @param timeout maximum time to wait.
+         * @return true if connected, false otherwise.
+         */
+        bool waitConnected (std::chrono::nanoseconds timeout)
+        {
+            return waitConnected (std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief block until connected, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return true if connected, false otherwise.
+         */
+        bool waitConnected (TimePoint deadline)
         {
             if (this->_state != State::Connected)
             {
@@ -185,7 +205,7 @@ namespace join
                     return false;
                 }
 
-                if (!this->waitReadyWrite (timeout))
+                if (this->waitUntil (false, true, deadline) == -1)
                 {
                     return false;
                 }
@@ -237,11 +257,36 @@ namespace join
 
         /**
          * @brief wait until the connection as been shut down.
-         * @param timeout timeout in milliseconds.
          * return true if the connection as been shut down, false otherwise.
          */
-        bool waitDisconnected (int timeout = 0)
+        bool waitDisconnected ()
         {
+            return waitDisconnected (TimePoint::max ());
+        }
+
+        /**
+         * @brief wait until the connection as been shut down, giving up after the given duration.
+         * @param timeout maximum time to wait.
+         * return true if the connection as been shut down, false otherwise.
+         */
+        bool waitDisconnected (std::chrono::nanoseconds timeout)
+        {
+            return waitDisconnected (std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief wait until the connection as been shut down, giving up at the given time point.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * return true if the connection as been shut down, false otherwise.
+         */
+        bool waitDisconnected (TimePoint deadline)
+        {
+            if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (this->_mode == Mode::Blocking)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return false;
+            }
+
             if ((this->_state != State::Disconnected) && (this->_state != State::Closed))
             {
                 if (this->_state != State::Disconnecting)
@@ -250,12 +295,9 @@ namespace join
                     return false;
                 }
 
-                auto start = std::chrono::steady_clock::now ();
-                int elapsed = 0;
-
-                while ((lastError == Errc::TemporaryError) && (elapsed <= timeout))
+                while (lastError == Errc::TemporaryError)
                 {
-                    if (!this->waitReadyRead (timeout - elapsed))
+                    if (this->waitUntil (true, false, deadline) == -1)
                     {
                         return false;
                     }
@@ -263,13 +305,6 @@ namespace join
                     if (disconnect () == 0)
                     {
                         return true;
-                    }
-
-                    if (timeout)
-                    {
-                        elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (
-                                      std::chrono::steady_clock::now () - start)
-                                      .count ();
                     }
                 }
 
@@ -310,11 +345,40 @@ namespace join
          * @brief read data until size is reached or an error occurred.
          * @param data buffer used to store the data received.
          * @param size number of bytes to read.
-         * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int readExactly (char* data, size_t size, int timeout = 0) noexcept
+        int readExactly (char* data, size_t size) noexcept
         {
+            return readExactly (data, size, TimePoint::max ());
+        }
+
+        /**
+         * @brief read data until size is reached, an error occurred or the given duration elapsed.
+         * @param data buffer used to store the data received.
+         * @param size number of bytes to read.
+         * @param timeout maximum time granted to the whole read.
+         * @return 0 on success, -1 on failure.
+         */
+        int readExactly (char* data, size_t size, std::chrono::nanoseconds timeout) noexcept
+        {
+            return readExactly (data, size, std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief read data until size is reached, an error occurred or the deadline expired.
+         * @param data buffer used to store the data received.
+         * @param size number of bytes to read.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return 0 on success, -1 on failure.
+         */
+        int readExactly (char* data, size_t size, TimePoint deadline) noexcept
+        {
+            if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (this->_mode == Mode::Blocking)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             size_t numRead = 0;
 
             while (numRead < size)
@@ -324,7 +388,7 @@ namespace join
                 {
                     if (lastError == Errc::TemporaryError)
                     {
-                        if (this->waitReadyRead (timeout))
+                        if (this->waitUntil (true, false, deadline) == 0)
                         {
                             continue;
                         }
@@ -343,11 +407,40 @@ namespace join
          * @brief write data until size is reached or an error occurred.
          * @param data data buffer to send.
          * @param size number of bytes to write.
-         * @param timeout timeout in milliseconds.
          * @return 0 on success, -1 on failure.
          */
-        int writeExactly (const char* data, size_t size, int timeout = 0) noexcept
+        int writeExactly (const char* data, size_t size) noexcept
         {
+            return writeExactly (data, size, TimePoint::max ());
+        }
+
+        /**
+         * @brief write data until size is reached, an error occurred or the given duration elapsed.
+         * @param data data buffer to send.
+         * @param size number of bytes to write.
+         * @param timeout maximum time granted to the whole write.
+         * @return 0 on success, -1 on failure.
+         */
+        int writeExactly (const char* data, size_t size, std::chrono::nanoseconds timeout) noexcept
+        {
+            return writeExactly (data, size, std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief write data until size is reached, an error occurred or the deadline expired.
+         * @param data data buffer to send.
+         * @param size number of bytes to write.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return 0 on success, -1 on failure.
+         */
+        int writeExactly (const char* data, size_t size, TimePoint deadline) noexcept
+        {
+            if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (this->_mode == Mode::Blocking)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             size_t numWrite = 0;
 
             while (numWrite < size)
@@ -357,7 +450,7 @@ namespace join
                 {
                     if (lastError == Errc::TemporaryError)
                     {
-                        if (this->waitReadyWrite (timeout))
+                        if (this->waitUntil (false, true, deadline) == 0)
                         {
                             continue;
                         }

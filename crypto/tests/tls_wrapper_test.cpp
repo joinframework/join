@@ -31,7 +31,10 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <atomic>
 #include <fstream>
+#include <thread>
+#include <vector>
 
 using join::Errc;
 using join::IpAddress;
@@ -254,10 +257,11 @@ protected:
 
     /// port.
     static const uint16_t _port;
+    static const uint16_t _stallport;
     static const uint16_t _invalid_port;
 
     /// timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// root certificate.
     static const std::string _rootcert;
@@ -278,8 +282,9 @@ protected:
 const std::string TlsSocket::_hostv4 = "127.0.0.1";
 const std::string TlsSocket::_hostv6 = "::1";
 const uint16_t TlsSocket::_port = 5000;
+const uint16_t TlsSocket::_stallport = 5004;
 const uint16_t TlsSocket::_invalid_port = 5032;
-const int TlsSocket::_timeout = 1000;
+const std::chrono::milliseconds TlsSocket::_timeout{1000};
 const std::string TlsSocket::_rootcert = "/tmp/tlssocket_test_root.cert";
 const std::string TlsSocket::_certPath = "/tmp/certs";
 const std::string TlsSocket::_certFile = _certPath + "/tlssocket_test.cert";
@@ -422,6 +427,8 @@ TEST_F (TlsSocket, waitConnected)
         ASSERT_TRUE (tls.connecting ());
     }
     ASSERT_TRUE (tls.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitConnected ()) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitConnected (std::chrono::steady_clock::now () + _timeout)) << join::lastError.message ();
     if (tls.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -465,6 +472,14 @@ TEST_F (TlsSocket, waitHandshake)
 {
     TlsContext ctx (TlsContext::TlsClient);
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
+    Tls::Socket blocking (ctx, Tcp::Socket::Blocking);
+
+    ASSERT_EQ (blocking.connect ({_hostv4, _port}), 0) << join::lastError.message ();
+    ASSERT_FALSE (blocking.waitHandshake (_timeout));
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_FALSE (blocking.waitShutdown (_timeout));
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    blocking.close ();
 
     ASSERT_EQ (tls.open (Tls::v6 ()), 0) << join::lastError.message ();
     ASSERT_FALSE (tls.waitHandshake (_timeout));
@@ -478,12 +493,15 @@ TEST_F (TlsSocket, waitHandshake)
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
     ASSERT_TRUE (tls.waitHandshake (_timeout)) << join::lastError.message ();
-    ASSERT_TRUE (tls.waitHandshake (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitHandshake ()) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitHandshake (std::chrono::steady_clock::now () + _timeout)) << join::lastError.message ();
     if (tls.shutdown () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
     }
     ASSERT_TRUE (tls.waitShutdown (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitShutdown ()) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitShutdown (std::chrono::steady_clock::now () + _timeout)) << join::lastError.message ();
     if (tls.disconnect () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -518,6 +536,8 @@ TEST_F (TlsSocket, waitDisconnected)
     Tls::Socket tls (ctx, Tcp::Socket::NonBlocking);
 
     ASSERT_TRUE (tls.waitDisconnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitDisconnected ()) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitDisconnected (std::chrono::steady_clock::now () + _timeout)) << join::lastError.message ();
     if (tls.connect ({_hostv4, _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -556,6 +576,8 @@ TEST_F (TlsSocket, waitReadyRead)
     ASSERT_TRUE (tls.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_EQ (tls.writeExactly (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (tls.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitReadyRead ()) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitReadyRead (std::chrono::steady_clock::now () + _timeout)) << join::lastError.message ();
     if (tls.shutdown () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -621,6 +643,8 @@ TEST_F (TlsSocket, readExactly)
 
     ASSERT_EQ (tls.readExactly (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (tls.readExactly (data, sizeof (data), _timeout), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tls.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tls.handshake (), 0) << join::lastError.message ();
     ASSERT_TRUE (tls.waitReadyWrite (_timeout)) << join::lastError.message ();
@@ -630,6 +654,19 @@ TEST_F (TlsSocket, readExactly)
     ASSERT_EQ (tls.shutdown (), 0) << join::lastError.message ();
     ASSERT_EQ (tls.disconnect (), 0) << join::lastError.message ();
     tls.close ();
+
+    Tls::Socket pending (ctx, Tcp::Socket::NonBlocking);
+    char over[sizeof (data) * 2] = {};
+
+    if (pending.connect ({_hostv4, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (pending.waitHandshake (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (pending.writeExactly (data, sizeof (data), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (pending.readExactly (over, sizeof (over), std::chrono::milliseconds (100)), -1);
+    ASSERT_EQ (join::lastError, Errc::TimedOut);
+    pending.close ();
 }
 
 /**
@@ -650,9 +687,12 @@ TEST_F (TlsSocket, waitReadyWrite)
     if (tls.handshake () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+        ASSERT_TRUE (tls.waitReadyWrite (_timeout)) << join::lastError.message ();
     }
     ASSERT_TRUE (tls.waitHandshake (_timeout)) << join::lastError.message ();
     ASSERT_TRUE (tls.waitReadyWrite (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitReadyWrite ()) << join::lastError.message ();
+    ASSERT_TRUE (tls.waitReadyWrite (std::chrono::steady_clock::now () + _timeout)) << join::lastError.message ();
     if (tls.shutdown () == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -695,6 +735,8 @@ TEST_F (TlsSocket, writeExactly)
 
     ASSERT_EQ (tls.writeExactly (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (tls.writeExactly (data, sizeof (data), _timeout), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (tls.connect ({_hostv4, _port}), 0) << join::lastError.message ();
     ASSERT_EQ (tls.handshake (), 0) << join::lastError.message ();
     ASSERT_TRUE (tls.waitReadyWrite (_timeout)) << join::lastError.message ();
@@ -703,6 +745,43 @@ TEST_F (TlsSocket, writeExactly)
     ASSERT_EQ (tls.shutdown (), 0) << join::lastError.message ();
     ASSERT_EQ (tls.disconnect (), 0) << join::lastError.message ();
     tls.close ();
+
+    Tcp::Acceptor stall;
+    ASSERT_EQ (stall.create ({IpAddress (_hostv4), _stallport}), 0) << join::lastError.message ();
+
+    std::atomic<bool> stop{false};
+    std::thread stalled ([this, &stall, &stop] () {
+        Tls::Socket peer (stall.accept (), _tlsContext);
+        peer.waitHandshake (_timeout);
+        while (!stop.load (std::memory_order_acquire))
+        {
+            std::this_thread::sleep_for (std::chrono::milliseconds (10));
+        }
+        peer.close ();
+    });
+
+    Tls::Socket sender (ctx, Tcp::Socket::NonBlocking);
+
+    if (sender.connect ({_hostv4, _stallport}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (sender.waitHandshake (_timeout)) << join::lastError.message ();
+
+    ASSERT_EQ (sender.setOption (Tcp::Socket::SndBuffer, 4096), 0) << join::lastError.message ();
+    ASSERT_EQ (sender.setOption (Tcp::Socket::RcvBuffer, 4096), 0) << join::lastError.message ();
+
+    std::vector<char> bulk (1024 * 1024, 'x');
+    auto beg = std::chrono::steady_clock::now ();
+
+    ASSERT_EQ (sender.writeExactly (bulk.data (), bulk.size (), std::chrono::milliseconds (250)), -1);
+    ASSERT_EQ (join::lastError, Errc::TimedOut);
+    ASSERT_LT (std::chrono::steady_clock::now () - beg, std::chrono::milliseconds (700));
+
+    sender.close ();
+    stop.store (true, std::memory_order_release);
+    stalled.join ();
+    stall.close ();
 }
 
 /**

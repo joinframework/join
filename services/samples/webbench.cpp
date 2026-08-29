@@ -31,6 +31,7 @@
 #include <join/utils.hpp>
 
 // C++.
+#include <chrono>
 #include <vector>
 #include <regex>
 
@@ -89,7 +90,7 @@ void benchmark (Client client, join::HttpRequest request, const std::string& fil
     void* addr = nullptr;
     struct stat sbuf;
 
-    client.timeout (timeout * 1000);
+    client.timeout (std::chrono::seconds (timeout));
 
     if (!file.empty ())
     {

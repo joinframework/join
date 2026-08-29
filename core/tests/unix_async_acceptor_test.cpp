@@ -128,7 +128,7 @@ protected:
     static const std::string _path;
 
     /// completion timeout.
-    static const int _timeout;
+    static const std::chrono::milliseconds _timeout;
 
     /// condition mutex.
     static Mutex _mut;
@@ -147,7 +147,7 @@ protected:
 };
 
 const std::string UnixAsyncAcceptor::_path = "/tmp/unixasyncacceptor_test.sock";
-const int UnixAsyncAcceptor::_timeout = 1000;
+const std::chrono::milliseconds UnixAsyncAcceptor::_timeout{1000};
 Mutex UnixAsyncAcceptor::_mut;
 Condition UnixAsyncAcceptor::_cond;
 std::error_code UnixAsyncAcceptor::_code;
