@@ -338,9 +338,9 @@ private:
      */
     enum class WakeupState
     {
-        Pending,  /**< the event loop is asleep or about to sleep, a wakeup write is required. */
-        Notified, /**< a wakeup has already been posted and not yet consumed. */
-        Polling,  /**< the event loop is busy-polling the command queue, no wakeup write is required. */
+        Sleeping, /**< the event loop is asleep or about to sleep, a wakeup write is required. */
+        Waking,   /**< the event loop is asleep but an eventfd wakeup is already in flight. */
+        Spinning, /**< the event loop is busy-polling and will pick up commands without a wakeup. */
     };
 
     /**
@@ -454,11 +454,6 @@ private:
     void prepareSqe (io_uring_sqe* sqe, IoOperation* op) noexcept;
 
     /**
-     * @brief re-arm the wakeup eventfd read on the ring.
-     */
-    void rearmWakeup () noexcept;
-
-    /**
      * @brief dispatch a completion queue entry to the appropriate handler.
      * @param cqe completion queue entry.
      */
@@ -543,9 +538,9 @@ private:
 
     /// event loop wakeup state.
 #ifdef JOIN_HAS_IO_URING
-    alignas (64) std::atomic<WakeupState> _wakeupState{WakeupState::Polling};
+    alignas (64) std::atomic<WakeupState> _wakeupState{WakeupState::Spinning};
 #else
-    alignas (64) std::atomic<WakeupState> _wakeupState{WakeupState::Pending};
+    alignas (64) std::atomic<WakeupState> _wakeupState{WakeupState::Sleeping};
 #endif
 
     /// eventfd descriptor.

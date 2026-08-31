@@ -57,7 +57,7 @@ inline join::BasicProactor::~BasicProactor () noexcept
 // =========================================================================
 inline void join::BasicProactor::run ()
 {
-    _wakeupState.store (WakeupState::Pending, std::memory_order_seq_cst);
+    _wakeupState.store (WakeupState::Sleeping, std::memory_order_seq_cst);
     _reactor.run ();
 }
 
@@ -160,17 +160,17 @@ inline int join::BasicProactor::writeCommand (const Command& cmd) noexcept
     std::atomic_thread_fence (std::memory_order_seq_cst);
 
     WakeupState state = _wakeupState.load (std::memory_order_relaxed);
-    if (state != WakeupState::Pending)
+    if (state != WakeupState::Sleeping)
     {
         return 0;
     }
 
-    if (_wakeupState.compare_exchange_strong (state, WakeupState::Notified, std::memory_order_seq_cst))
+    if (_wakeupState.compare_exchange_strong (state, WakeupState::Waking, std::memory_order_seq_cst))
     {
         uint64_t value = 1;
         if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
         {
-            _wakeupState.store (WakeupState::Pending, std::memory_order_seq_cst);  // LCOV_EXCL_LINE
+            _wakeupState.store (WakeupState::Sleeping, std::memory_order_seq_cst);  // LCOV_EXCL_LINE
         }
     }
 
@@ -185,7 +185,7 @@ inline void join::BasicProactor::readCommands () noexcept
 {
     uint64_t count;
     [[maybe_unused]] ssize_t nread = ::read (_wakeup, &count, sizeof (count));
-    _wakeupState.store (WakeupState::Pending, std::memory_order_relaxed);
+    _wakeupState.store (WakeupState::Sleeping, std::memory_order_relaxed);
     std::atomic_thread_fence (std::memory_order_seq_cst);
 
     Command cmd;
