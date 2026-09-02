@@ -57,6 +57,22 @@ TEST (IoOperation, makeAccept)
 }
 
 /**
+ * @brief Test makeAcceptMulti.
+ */
+TEST (IoOperation, makeAcceptMulti)
+{
+    auto op = IoOperation::makeAcceptMulti (8, SOCK_NONBLOCK | SOCK_CLOEXEC, nullptr);
+
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Accept));
+    ASSERT_TRUE (op.multishot);
+    ASSERT_EQ (op.handler, nullptr);
+    ASSERT_EQ (op.data.accept.fd, 8);
+    ASSERT_EQ (op.data.accept.addr, nullptr);
+    ASSERT_EQ (op.data.accept.addrlen, nullptr);
+    ASSERT_EQ (op.data.accept.flags, SOCK_NONBLOCK | SOCK_CLOEXEC);
+}
+
+/**
  * @brief Test makeConnect.
  */
 TEST (IoOperation, makeConnect)

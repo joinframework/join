@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22.1)
 
 if(JOIN_ENABLE_IO_URING)
-    pkg_check_modules(LIBURING REQUIRED liburing)
+    pkg_check_modules(LIBURING REQUIRED liburing>=2.3)
 endif()
 
 if(JOIN_ENABLE_NUMA)

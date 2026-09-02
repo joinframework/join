@@ -40,6 +40,7 @@ using join::HybridProactorThread;
 using join::IoOperation;
 using join::CompletionHandler;
 using join::Tcp;
+using join::LocalMem;
 
 /**
  * @brief Class used to test HybridProactor.
@@ -91,6 +92,7 @@ protected:
             ScopedLock<Mutex> lock (_mut);
             _result = result;
             _op = op;
+            ++_completions;
             CompletionHandler::onComplete (op, result);
         }
 
@@ -176,6 +178,9 @@ protected:
     /// last operation result.
     static int _result;
 
+    /// number of completions received.
+    static int _completions;
+
     /// read buffer.
     static char _buf[256];
 };
@@ -198,6 +203,7 @@ int HybridProactorTest::_resubmits = 0;
 int HybridProactorTest::_resubmitted = 0;
 int HybridProactorTest::_rejected = 0;
 int HybridProactorTest::_result = 0;
+int HybridProactorTest::_completions = 0;
 char HybridProactorTest::_buf[256] = {};
 
 /**
@@ -562,22 +568,20 @@ TEST_F (HybridProactorTest, waitStopped)
 
 #ifdef JOIN_HAS_IO_URING
 /**
- * @brief Test registerBuffers and unregisterBuffers.
+ * @brief Test registerFixedBuffers and unregisterFixedBuffers.
  */
-TEST_F (HybridProactorTest, registerBuffers)
+TEST_F (HybridProactorTest, registerFixedBuffers)
 {
     HybridProactor proactor;
 
-    std::vector<char> buf (4096);
-    iovec iov = {buf.data (), buf.size ()};
-    std::vector<iovec> iovecs = {iov};
+    LocalMem::Allocator<1, 1024, 4096> arena;
 
-    ASSERT_EQ (proactor.registerBuffers (iovecs), 0) << join::lastError.message ();
-    ASSERT_EQ (proactor.registerBuffers (iovecs), -1);
-    ASSERT_EQ (proactor.unregisterBuffers (), 0) << join::lastError.message ();
-    ASSERT_EQ (proactor.registerBuffers (iovecs), 0) << join::lastError.message ();
-    ASSERT_EQ (proactor.unregisterBuffers (), 0) << join::lastError.message ();
-    ASSERT_EQ (proactor.unregisterBuffers (), -1);
+    ASSERT_EQ (proactor.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.registerFixedBuffers (arena), -1);
+    ASSERT_EQ (proactor.unregisterFixedBuffers (), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.unregisterFixedBuffers (), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.unregisterFixedBuffers (), -1);
 }
 #endif
 
@@ -641,6 +645,44 @@ TEST_F (HybridProactorTest, asyncAccept)
         _op = nullptr;
         _result = 0;
     }
+}
+
+/**
+ * @brief Test multishot accept.
+ */
+TEST_F (HybridProactorTest, asyncAcceptMulti)
+{
+    _completions = 0;
+    _readOp = IoOperation::makeAcceptMulti (_acceptor.handle (), SOCK_NONBLOCK | SOCK_CLOEXEC, this);
+
+    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+
+    for (int i = 0; i < 2; ++i)
+    {
+        Tcp::Socket client (Tcp::Socket::NonBlocking);
+
+        if (client.connect ({_host, _port}) == -1)
+        {
+            ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+        }
+        ASSERT_TRUE (client.waitConnected (_timeout)) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+                return (_op == &_readOp) && (_completions == (i + 1));
+            }));
+            ASSERT_GE (_result, 0) << join::lastError.message ();
+            ::close (_result);
+        }
+
+        client.close ();
+    }
+
+    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_readOp, true, true), -1);
+
+    _op = nullptr;
+    _result = 0;
 }
 
 /**
@@ -736,13 +778,14 @@ TEST_F (HybridProactorTest, asyncWriteFixed)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     const char* msg = "asyncWriteFixed";
-    std::vector<char> regbuf (msg, msg + strlen (msg));
-    iovec iov = {regbuf.data (), regbuf.size ()};
-    std::vector<iovec> iovecs = {iov};
+    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    arena.tryAllocate (sizeof (_buf));
+    void* regbuf = arena.tryAllocate (sizeof (_buf));
+    ::memcpy (regbuf, msg, strlen (msg));
 
-    ASSERT_EQ (HybridProactorThread::proactor ().registerBuffers (iovecs), 0) << join::lastError.message ();
+    ASSERT_EQ (HybridProactorThread::proactor ().registerFixedBuffers (arena), 0) << join::lastError.message ();
 
-    _writeOp = IoOperation::makeWriteFixed (_server.handle (), regbuf.data (), regbuf.size (), 0, this);
+    _writeOp = IoOperation::makeWriteFixed (_server.handle (), regbuf, strlen (msg), 0, this);
     ASSERT_EQ (HybridProactorThread::proactor ().submit (&_writeOp, true, true), 0) << join::lastError.message ();
 
     {
@@ -759,7 +802,7 @@ TEST_F (HybridProactorTest, asyncWriteFixed)
     ASSERT_EQ (_client.readExactly (rbuf, strlen (msg), _timeout), 0) << join::lastError.message ();
     ASSERT_EQ (std::string (rbuf, strlen (msg)), msg);
 
-    ASSERT_EQ (HybridProactorThread::proactor ().unregisterBuffers (), 0) << join::lastError.message ();
+    ASSERT_EQ (HybridProactorThread::proactor ().unregisterFixedBuffers (), 0) << join::lastError.message ();
 }
 
 /**
@@ -774,13 +817,13 @@ TEST_F (HybridProactorTest, asyncReadFixed)
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    std::vector<char> regbuf (sizeof (_buf));
-    iovec iov = {regbuf.data (), regbuf.size ()};
-    std::vector<iovec> iovecs = {iov};
+    LocalMem::Allocator<4, 64, sizeof (_buf)> arena;
+    arena.tryAllocate (sizeof (_buf));
+    void* regbuf = arena.tryAllocate (sizeof (_buf));
 
-    ASSERT_EQ (HybridProactorThread::proactor ().registerBuffers (iovecs), 0) << join::lastError.message ();
+    ASSERT_EQ (HybridProactorThread::proactor ().registerFixedBuffers (arena), 0) << join::lastError.message ();
 
-    _readOp = IoOperation::makeReadFixed (_server.handle (), regbuf.data (), regbuf.size (), 0, this);
+    _readOp = IoOperation::makeReadFixed (_server.handle (), regbuf, sizeof (_buf), 1, this);
     ASSERT_EQ (HybridProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncReadFixed", strlen ("asyncReadFixed"), _timeout), 0)
         << join::lastError.message ();
@@ -790,12 +833,12 @@ TEST_F (HybridProactorTest, asyncReadFixed)
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
             return _op == &_readOp && _result > 0;
         }));
-        ASSERT_EQ (std::string (regbuf.data (), _result), "asyncReadFixed");
+        ASSERT_EQ (std::string (static_cast<char*> (regbuf), _result), "asyncReadFixed");
         _op = nullptr;
         _result = 0;
     }
 
-    ASSERT_EQ (HybridProactorThread::proactor ().unregisterBuffers (), 0) << join::lastError.message ();
+    ASSERT_EQ (HybridProactorThread::proactor ().unregisterFixedBuffers (), 0) << join::lastError.message ();
 }
 
 /**

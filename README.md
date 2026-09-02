@@ -90,7 +90,7 @@ sudo apt install pkg-config libssl-dev zlib1g-dev libgtest-dev libgmock-dev
 
 | Option | Library | Default | Description |
 | :--- | :--- | :---: | :--- |
-| `JOIN_ENABLE_IO_URING` | `liburing-dev` | `OFF` | Enables the io_uring based proactor backend for async I/O. |
+| `JOIN_ENABLE_IO_URING` | `liburing-dev` (>= 2.3) | `OFF` | Enables the io_uring based proactor backend for async I/O. |
 | `JOIN_ENABLE_NUMA` | `libnuma-dev` | `OFF` | Enables NUMA aware memory binding for `LocalMem` and `ShmMem`. |
 
 Install as needed:
@@ -125,7 +125,7 @@ cmake --build build
 | `JOIN_ENABLE_DATA` | `ON` | Build the data module. |
 | `JOIN_ENABLE_FABRIC` | `ON` | Build the fabric module. |
 | `JOIN_ENABLE_SERVICES` | `ON` | Build the services module (requires crypto, data, fabric). |
-| `JOIN_ENABLE_IO_URING` | `OFF` | Enable io_uring based proactor backend (requires `liburing-dev`). |
+| `JOIN_ENABLE_IO_URING` | `OFF` | Enable io_uring based proactor backend (requires `liburing-dev` >= 2.3). |
 | `JOIN_ENABLE_NUMA` | `OFF` | Enable NUMA support (requires `libnuma-dev`). |
 | `JOIN_ENABLE_SAMPLES` | `OFF` | Build sample programs. |
 | `JOIN_ENABLE_TESTS` | `OFF` | Build the test suite. |

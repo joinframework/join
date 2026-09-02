@@ -97,6 +97,15 @@ namespace join
                                        CompletionHandler* handler) noexcept;
 
         /**
+         * @brief build a multishot accept operation.
+         * @param fd listening socket file descriptor.
+         * @param flags accept flags.
+         * @param handler handler to notify on completion.
+         * @return initialized IoOperation.
+         */
+        static IoOperation makeAcceptMulti (int fd, int flags, CompletionHandler* handler) noexcept;
+
+        /**
          * @brief payload for connect.
          */
         struct ConnectData
@@ -302,6 +311,9 @@ namespace join
 
         /// link this SQE to the next one (next executes only if this succeeds, io_uring only).
         bool linked = false;
+
+        /// rearm the operation after each completion.
+        bool multishot = false;
 
         /// handler to dispatch to on completion.
         CompletionHandler* handler = nullptr;

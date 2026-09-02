@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/io_operation.hpp>
+#include <join/allocator.hpp>
 #ifdef JOIN_HAS_IO_URING
 #include <join/io_policy.hpp>
 #else
@@ -34,6 +35,7 @@
 #endif
 #include <join/backoff.hpp>
 #include <join/thread.hpp>
+#include <join/memory.hpp>
 #include <join/queue.hpp>
 
 // C++.
@@ -232,17 +234,18 @@ public:
 
 #ifdef JOIN_HAS_IO_URING
     /**
-     * @brief register fixed buffers with the io_uring instance.
-     * @param iovecs list of buffers to register.
+     * @brief register the arena chunks as fixed buffers.
+     * @param arena arena to register.
      * @return 0 on success, -1 on failure.
      */
-    int registerBuffers (const std::vector<iovec>& iovecs) noexcept;
+    template <size_t Count, size_t... Sizes>
+    int registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena) noexcept;
 
     /**
-     * @brief unregister previously registered fixed buffers from the io_uring instance.
+     * @brief unregister previously registered fixed buffers.
      * @return 0 on success, -1 on failure.
      */
-    int unregisterBuffers () noexcept;
+    int unregisterFixedBuffers () noexcept;
 #endif
 
 #ifdef JOIN_HAS_NUMA
@@ -424,6 +427,14 @@ private:
     void cancelAllOperations () noexcept;
 
     /**
+     * @brief invoke completion callback.
+     * @param op operation to dispatch, may be nullptr.
+     * @param result negative errno or bytes-transferred result.
+     * @param cancelled if true, dispatch to onCancel; otherwise to onComplete.
+     */
+    void notifyOperation (IoOperation* op, int result, bool cancelled) noexcept;
+
+    /**
      * @brief dispatch completion callback and reset operation state.
      * @param op operation to dispatch, may be nullptr.
      * @param result negative errno or bytes-transferred result.
@@ -440,6 +451,15 @@ private:
     void endOperation (IoOperation* op, int result, bool cancelled = false) noexcept;
 
 #ifdef JOIN_HAS_IO_URING
+    /**
+     * @brief register one fixed buffer per arena pool.
+     * @param arena arena to register.
+     * @param index sequence used to expand the pool sizes.
+     * @return 0 on success, -1 on failure.
+     */
+    template <size_t Count, size_t... Sizes, size_t... Is>
+    int registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena, std::index_sequence<Is...>) noexcept;
+
     /**
      * @brief get a free submission queue entry, submitting pending entries if the ring is full.
      * @return pointer to sqe, or nullptr if unavailable.
@@ -677,6 +697,30 @@ inline int join::BasicProactor::cancel (IoOperation* op, bool flush, bool sync) 
 
 // =========================================================================
 //   CLASS     : BasicProactor
+//   METHOD    : notifyOperation
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename Policy>
+void join::BasicProactor<Policy>::notifyOperation (IoOperation* op, int result, bool cancelled) noexcept
+#else
+inline void join::BasicProactor::notifyOperation (IoOperation* op, int result, bool cancelled) noexcept
+#endif
+{
+    if (JOIN_LIKELY (op->handler))
+    {
+        if (cancelled)
+        {
+            op->handler->onCancel (op, result);
+        }
+        else
+        {
+            op->handler->onComplete (op, result);
+        }
+    }
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
 //   METHOD    : dispatchOperation
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
@@ -692,18 +736,7 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
     }
 
     op->state = IoOperation::State::Idle;
-
-    if (JOIN_LIKELY (op->handler))
-    {
-        if (cancelled)
-        {
-            op->handler->onCancel (op, result);
-        }
-        else
-        {
-            op->handler->onComplete (op, result);
-        }
-    }
+    notifyOperation (op, result, cancelled);
 }
 
 #ifdef JOIN_HAS_IO_URING

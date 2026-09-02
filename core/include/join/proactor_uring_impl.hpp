@@ -179,27 +179,21 @@ void join::BasicProactor<Policy>::waitStopped () const noexcept
 
 // =========================================================================
 //   CLASS     : BasicProactor
-//   METHOD    : registerBuffers
+//   METHOD    : registerFixedBuffers
 // =========================================================================
 template <typename Policy>
-int join::BasicProactor<Policy>::registerBuffers (const std::vector<iovec>& iovecs) noexcept
+template <size_t Count, size_t... Sizes>
+int join::BasicProactor<Policy>::registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena) noexcept
 {
-    int ret = io_uring_register_buffers (&_ring, iovecs.data (), iovecs.size ());
-    if (JOIN_UNLIKELY (ret < 0))
-    {
-        lastError = std::error_code (-ret, std::system_category ());
-        return -1;
-    }
-
-    return 0;
+    return registerFixedBuffers (arena, std::make_index_sequence<sizeof...(Sizes)>{});
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
-//   METHOD    : unregisterBuffers
+//   METHOD    : unregisterFixedBuffers
 // =========================================================================
 template <typename Policy>
-int join::BasicProactor<Policy>::unregisterBuffers () noexcept
+int join::BasicProactor<Policy>::unregisterFixedBuffers () noexcept
 {
     int ret = io_uring_unregister_buffers (&_ring);
     if (JOIN_UNLIKELY (ret < 0))
@@ -465,8 +459,8 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
             }
             break;
 
-        default:
-            break;
+        default:    // LCOV_EXCL_LINE
+            break;  // LCOV_EXCL_LINE
     }
 
     if (JOIN_UNLIKELY (cmd.done))
@@ -616,6 +610,27 @@ void join::BasicProactor<Policy>::endOperation (IoOperation* op, int result, boo
 
 // =========================================================================
 //   CLASS     : BasicProactor
+//   METHOD    : registerFixedBuffers
+// =========================================================================
+template <typename Policy>
+template <size_t Count, size_t... Sizes, size_t... Is>
+int join::BasicProactor<Policy>::registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena,
+                                                       std::index_sequence<Is...>) noexcept
+{
+    iovec iovecs[] = {iovec{arena.template getPtr<Is> (0), Count * Sizes}...};
+
+    int ret = io_uring_register_buffers (&_ring, iovecs, sizeof...(Sizes));
+    if (JOIN_UNLIKELY (ret < 0))
+    {
+        lastError = std::error_code (-ret, std::system_category ());
+        return -1;
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
 //   METHOD    : getSqe
 // =========================================================================
 template <typename Policy>
@@ -641,8 +656,16 @@ void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation* op
     switch (static_cast<IoOperation::Opcode> (op->code))
     {
         case IoOperation::Opcode::Accept:
-            io_uring_prep_accept (sqe, op->data.accept.fd, op->data.accept.addr, op->data.accept.addrlen,
-                                  op->data.accept.flags);
+            if (op->multishot)
+            {
+                io_uring_prep_multishot_accept (sqe, op->data.accept.fd, op->data.accept.addr, op->data.accept.addrlen,
+                                                op->data.accept.flags);
+            }
+            else
+            {
+                io_uring_prep_accept (sqe, op->data.accept.fd, op->data.accept.addr, op->data.accept.addrlen,
+                                      op->data.accept.flags);
+            }
             break;
 
         case IoOperation::Opcode::Connect:
@@ -683,8 +706,8 @@ void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation* op
                                 op->data.stream.flags);
             break;
 
-        default:
-            io_uring_prep_nop (sqe);
+        default:                      // LCOV_EXCL_LINE
+            io_uring_prep_nop (sqe);  // LCOV_EXCL_LINE
     }
 
     io_uring_sqe_set_data (sqe, op);
@@ -713,10 +736,6 @@ template <typename Policy>
 void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::true_type) noexcept
 {
     IoOperation* op = static_cast<IoOperation*> (io_uring_cqe_get_data (cqe));
-    if (JOIN_UNLIKELY (op == nullptr))
-    {
-        return;
-    }
 
     if (JOIN_UNLIKELY (op == &_wakeupOp))
     {
@@ -728,14 +747,7 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::true_type
         return;
     }
 
-    if (JOIN_UNLIKELY (op->state == IoOperation::State::Idle))
-    {
-        return;  // LCOV_EXCL_LINE
-    }
-
-    int result = cqe->res;
-    bool cancelled = (result < 0) && (result == -ECANCELED || op->state == IoOperation::State::Cancelling);
-    endOperation (op, result, cancelled);
+    dispatchCqe (cqe, std::false_type{});
 }
 
 // =========================================================================
@@ -754,6 +766,12 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
     if (JOIN_UNLIKELY (op->state == IoOperation::State::Idle))
     {
         return;  // LCOV_EXCL_LINE
+    }
+
+    if ((cqe->flags & IORING_CQE_F_MORE) != 0)
+    {
+        notifyOperation (op, cqe->res, false);
+        return;
     }
 
     int result = cqe->res;

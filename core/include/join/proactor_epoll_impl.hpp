@@ -555,7 +555,17 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
     {
         return;
     }
-    endOperation (op, executeOp (op), false);
+
+    int result = executeOp (op);
+
+    if (op->multishot &&
+        ((result > 0) || ((result == 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::Accept)))))
+    {
+        notifyOperation (op, result, false);
+        return;
+    }
+
+    endOperation (op, result, false);
 }
 
 // =========================================================================

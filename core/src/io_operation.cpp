@@ -48,6 +48,23 @@ IoOperation IoOperation::makeAccept (int fd, sockaddr* addr, socklen_t* addrlen,
 
 // =========================================================================
 //   CLASS     : IoOperation
+//   METHOD    : makeAcceptMulti
+// =========================================================================
+IoOperation IoOperation::makeAcceptMulti (int fd, int flags, CompletionHandler* handler) noexcept
+{
+    IoOperation op;
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::Accept);
+    op.multishot = true;
+    op.handler = handler;
+    op.data.accept.fd = fd;
+    op.data.accept.addr = nullptr;
+    op.data.accept.addrlen = nullptr;
+    op.data.accept.flags = flags;
+    return op;
+}
+
+// =========================================================================
+//   CLASS     : IoOperation
 //   METHOD    : makeConnect
 // =========================================================================
 IoOperation IoOperation::makeConnect (int fd, const sockaddr* addr, socklen_t addrlen,
