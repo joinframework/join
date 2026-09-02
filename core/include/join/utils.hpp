@@ -487,6 +487,39 @@ namespace join
 
         return {.tv_sec = scount, .tv_nsec = ncount};
     }
+
+    /**
+     * @brief check if a value is a power of two.
+     * @param value value to check.
+     * @return true if the value is a power of two, false otherwise.
+     */
+    constexpr bool isPow2 (uint64_t value) noexcept
+    {
+        return (value != 0) && ((value & (value - 1)) == 0);
+    }
+
+    /**
+     * @brief round up to the next power of two.
+     * @param value value to round up.
+     * @return smallest power of two greater than or equal to value.
+     */
+    constexpr uint64_t nextPow2 (uint64_t value) noexcept
+    {
+        if (value == 0)
+        {
+            return 1;
+        }
+
+        value--;
+        value |= value >> 1;
+        value |= value >> 2;
+        value |= value >> 4;
+        value |= value >> 8;
+        value |= value >> 16;
+        value |= value >> 32;
+
+        return value + 1;
+    }
 }
 
 #endif

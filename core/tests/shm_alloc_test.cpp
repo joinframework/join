@@ -169,6 +169,44 @@ TEST_F (PosixAlloc, deallocate)
     EXPECT_NO_THROW (allocator.deallocate (dummyPtr));
 }
 
+/**
+ * @brief test getIndex.
+ */
+TEST_F (PosixAlloc, getIndex)
+{
+    ShmMem::Allocator<4, 64, 128> allocator (_name);
+
+    void* p1 = allocator.allocate (64);
+    ASSERT_NE (p1, nullptr);
+    ASSERT_EQ (allocator.getIndex (p1), 0);
+
+    void* p2 = allocator.allocate (64);
+    ASSERT_NE (p2, nullptr);
+    ASSERT_NE (allocator.getIndex (p2), allocator.getIndex (p1));
+
+    void* p3 = allocator.allocate (128);
+    ASSERT_NE (p3, nullptr);
+    ASSERT_EQ (allocator.getIndex<1> (p3), 0);
+}
+
+/**
+ * @brief test getPtr.
+ */
+TEST_F (PosixAlloc, getPtr)
+{
+    ShmMem::Allocator<4, 64, 128> allocator (_name);
+
+    void* p1 = allocator.allocate (64);
+    ASSERT_NE (p1, nullptr);
+    ASSERT_EQ (allocator.getPtr (allocator.getIndex (p1)), p1);
+
+    void* p2 = allocator.allocate (128);
+    ASSERT_NE (p2, nullptr);
+    ASSERT_EQ (allocator.getPtr<1> (allocator.getIndex<1> (p2)), p2);
+
+    ASSERT_NE (allocator.getPtr (1), allocator.getPtr (0));
+}
+
 #ifdef JOIN_HAS_NUMA
 /**
  * @brief test mbind.

@@ -67,7 +67,7 @@ namespace join
     template <size_t Size>
     union alignas (std::max_align_t) BasicChunk
     {
-        static_assert ((Size & (Size - 1)) == 0, "size must be a power of 2");
+        static_assert (isPow2 (Size), "size must be a power of 2");
         static_assert (Size % alignof (std::max_align_t) == 0, "size must respects maximum alignment requirement");
         static_assert (Size >= sizeof (uint64_t), "size must respects minimum size for storing index");
 
@@ -155,7 +155,7 @@ namespace join
                 Backoff backoff;
                 while (_segment->_magic.load (std::memory_order_acquire) != Segment::MAGIC)
                 {
-                    backoff ();
+                    backoff ();  // LCOV_EXCL_LINE
                 }
             }
         }
@@ -435,6 +435,30 @@ namespace join
                 return;
             }
             deallocateImplem<0> (p);
+        }
+
+        /**
+         * @brief get the index of a chunk in the pool.
+         * @param p pointer to the chunk (must be owned by the pool).
+         * @return index of the chunk.
+         */
+        template <size_t I = 0>
+        uint32_t getIndex (void* p) const noexcept
+        {
+            static_assert (I < sizeof...(Sizes), "pool index out of range");
+            return std::get<I> (_pools).getIndex (p);
+        }
+
+        /**
+         * @brief get the pointer to a chunk by index.
+         * @param idx index of the chunk (must be in range).
+         * @return pointer to the chunk.
+         */
+        template <size_t I = 0>
+        void* getPtr (uint32_t idx) const noexcept
+        {
+            static_assert (I < sizeof...(Sizes), "pool index out of range");
+            return std::get<I> (_pools).getPtr (idx);
         }
 
 #ifdef JOIN_HAS_NUMA

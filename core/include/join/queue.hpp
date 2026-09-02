@@ -140,7 +140,7 @@ namespace join
          */
         template <typename... Args>
         explicit BasicQueue (uint64_t capacity, Args&&... args)
-        : _capacity (roundPow2 (capacity))
+        : _capacity (nextPow2 (capacity))
         , _mask (_capacity - 1)
         , _elementSize (sizeof (Slot))
         , _totalSize (sizeof (QueueSync) + (_capacity * _elementSize))
@@ -426,27 +426,6 @@ namespace join
         }
 
     private:
-        /**
-         * @brief round up to next power of 2.
-         * @param v input value.
-         * @return smallest power of 2 >= v.
-         */
-        static constexpr uint64_t roundPow2 (uint64_t v) noexcept
-        {
-            if (v == 0)
-            {
-                return 1;
-            }
-            v--;
-            v |= v >> 1;
-            v |= v >> 2;
-            v |= v >> 4;
-            v |= v >> 8;
-            v |= v >> 16;
-            v |= v >> 32;
-            return v + 1;
-        }
-
         /**
          * @brief initialize slots for policies that do not require sequence numbers (SPSC).
          */

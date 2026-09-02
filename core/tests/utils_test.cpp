@@ -275,6 +275,42 @@ TEST (Utils, toTimespec)
 }
 
 /**
+ * @brief test isPow2.
+ */
+TEST (Utils, isPow2)
+{
+    ASSERT_FALSE (join::isPow2 (0));
+    ASSERT_TRUE (join::isPow2 (1));
+    ASSERT_TRUE (join::isPow2 (2));
+    ASSERT_FALSE (join::isPow2 (3));
+    ASSERT_TRUE (join::isPow2 (4));
+    ASSERT_FALSE (join::isPow2 (255));
+    ASSERT_TRUE (join::isPow2 (256));
+    ASSERT_FALSE (join::isPow2 (257));
+    ASSERT_TRUE (join::isPow2 (uint64_t (1) << 63));
+    ASSERT_FALSE (join::isPow2 (UINT64_MAX));
+}
+
+/**
+ * @brief test nextPow2.
+ */
+TEST (Utils, nextPow2)
+{
+    ASSERT_EQ (join::nextPow2 (0), 1U);
+    ASSERT_EQ (join::nextPow2 (1), 1U);
+    ASSERT_EQ (join::nextPow2 (2), 2U);
+    ASSERT_EQ (join::nextPow2 (3), 4U);
+    ASSERT_EQ (join::nextPow2 (5), 8U);
+    ASSERT_EQ (join::nextPow2 (255), 256U);
+    ASSERT_EQ (join::nextPow2 (256), 256U);
+    ASSERT_EQ (join::nextPow2 (257), 512U);
+    ASSERT_EQ (join::nextPow2 (uint64_t (1) << 63), uint64_t (1) << 63);
+
+    static_assert (join::nextPow2 (300) == 512, "nextPow2 must be usable at compile time");
+    static_assert (join::isPow2 (join::nextPow2 (300)), "nextPow2 must yield a power of two");
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char** argv)
