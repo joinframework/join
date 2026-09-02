@@ -687,8 +687,16 @@ TEST_F (ProactorTest, asyncAcceptMulti)
 
     ASSERT_EQ (ProactorThread::proactor ().submit (&_readOp, true, true), -1);
 
-    _op = nullptr;
-    _result = 0;
+    ASSERT_EQ (ProactorThread::proactor ().cancel (&_readOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == -ECANCELED;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
 }
 
 /**
