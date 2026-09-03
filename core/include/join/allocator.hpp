@@ -137,16 +137,7 @@ namespace join
 
             if (_segment->_magic.compare_exchange_strong (expected, 0xFFFFFFFFFFFFFFFF, std::memory_order_acq_rel))
             {
-                for (uint32_t i = 0; i < _count - 1; ++i)
-                {
-                    _segment->_chunks[i]._next = i + 1;
-                }
-                _segment->_chunks[_count - 1]._next = Segment::NULL_IDX;
-
-                TaggedIndex head;
-                head.idx = 0;
-                head.gen = 0;
-                _segment->_head.store (head.raw, std::memory_order_relaxed);
+                releaseAll ();
 
                 _segment->_magic.store (Segment::MAGIC, std::memory_order_release);
             }
@@ -247,6 +238,53 @@ namespace join
                     return;
                 }
             }
+        }
+
+        /**
+         * @brief reserve all chunks at once.
+         * @return true if all chunks were free and have been reserved, false otherwise.
+         */
+        bool reserveAll () noexcept
+        {
+            TaggedIndex cur, next;
+            cur.raw = _segment->_head.load (std::memory_order_acquire);
+
+            uint32_t n = 0;
+
+            for (uint32_t idx = cur.idx; idx != Segment::NULL_IDX; idx = _segment->_chunks[idx]._next)
+            {
+                ++n;
+            }
+
+            if (n != _count)
+            {
+                return false;
+            }
+
+            next.idx = Segment::NULL_IDX;
+            next.gen = cur.gen + 1;
+
+            return _segment->_head.compare_exchange_strong (cur.raw, next.raw, std::memory_order_acq_rel,
+                                                            std::memory_order_acquire);
+        }
+
+        /**
+         * @brief release all chunks at once.
+         */
+        void releaseAll () noexcept
+        {
+            for (uint32_t i = 0; i < _count - 1; ++i)
+            {
+                _segment->_chunks[i]._next = i + 1;
+            }
+            _segment->_chunks[_count - 1]._next = Segment::NULL_IDX;
+
+            TaggedIndex cur, next;
+            cur.raw = _segment->_head.load (std::memory_order_relaxed);
+            next.idx = 0;
+            next.gen = cur.gen + 1;
+
+            _segment->_head.store (next.raw, std::memory_order_release);
         }
 
         /**
@@ -459,6 +497,27 @@ namespace join
         {
             static_assert (I < sizeof...(Sizes), "pool index out of range");
             return std::get<I> (_pools).getPtr (idx);
+        }
+
+        /**
+         * @brief reserve all chunks of a pool at once.
+         * @return true if all chunks were free and have been reserved, false otherwise.
+         */
+        template <size_t I = 0>
+        bool reserveAll () noexcept
+        {
+            static_assert (I < sizeof...(Sizes), "pool index out of range");
+            return std::get<I> (_pools).reserveAll ();
+        }
+
+        /**
+         * @brief release all chunks of a pool at once.
+         */
+        template <size_t I = 0>
+        void releaseAll () noexcept
+        {
+            static_assert (I < sizeof...(Sizes), "pool index out of range");
+            std::get<I> (_pools).releaseAll ();
         }
 
 #ifdef JOIN_HAS_NUMA

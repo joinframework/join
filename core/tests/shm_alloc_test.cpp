@@ -207,6 +207,49 @@ TEST_F (PosixAlloc, getPtr)
     ASSERT_NE (allocator.getPtr (1), allocator.getPtr (0));
 }
 
+/**
+ * @brief test reserveAll.
+ */
+TEST_F (PosixAlloc, reserveAll)
+{
+    ShmMem::Allocator<4, 64, 128> allocator (_name);
+
+    ASSERT_TRUE (allocator.reserveAll ());
+    ASSERT_EQ (allocator.tryAllocate (64), nullptr);
+    allocator.releaseAll ();
+
+    ASSERT_TRUE (allocator.reserveAll<1> ());
+    ASSERT_EQ (allocator.tryAllocate (128), nullptr);
+    allocator.releaseAll<1> ();
+
+    void* p = allocator.tryAllocate (64);
+    ASSERT_NE (p, nullptr);
+    ASSERT_FALSE (allocator.reserveAll ());
+
+    allocator.deallocate (p);
+    ASSERT_TRUE (allocator.reserveAll ());
+}
+
+/**
+ * @brief test releaseAll.
+ */
+TEST_F (PosixAlloc, releaseAll)
+{
+    ShmMem::Allocator<4, 64, 128> allocator (_name);
+
+    ASSERT_TRUE (allocator.reserveAll ());
+    ASSERT_EQ (allocator.tryAllocate (64), nullptr);
+
+    allocator.releaseAll ();
+
+    for (int i = 0; i < 4; ++i)
+    {
+        ASSERT_NE (allocator.tryAllocate (64), nullptr) << i;
+    }
+
+    ASSERT_EQ (allocator.tryAllocate (64), nullptr);
+}
+
 #ifdef JOIN_HAS_NUMA
 /**
  * @brief test mbind.

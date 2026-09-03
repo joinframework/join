@@ -49,6 +49,22 @@ TEST (LocalMem, create)
 }
 
 /**
+ * @brief test empty.
+ */
+TEST (LocalMem, empty)
+{
+    LocalMem mem1;
+    const LocalMem& cmem1 = mem1;
+
+    ASSERT_THROW (mem1.get (), std::runtime_error);
+    ASSERT_THROW (cmem1.get (), std::runtime_error);
+
+    mem1 = LocalMem (4096);
+    ASSERT_NE (mem1.get (), nullptr);
+    ASSERT_NE (cmem1.get (), nullptr);
+}
+
+/**
  * @brief test get.
  */
 TEST (LocalMem, get)
