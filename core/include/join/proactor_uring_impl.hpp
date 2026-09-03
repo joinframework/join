@@ -205,6 +205,61 @@ int join::BasicProactor<Policy>::unregisterFixedBuffers () noexcept
     return 0;
 }
 
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : registerBufferRing
+// =========================================================================
+template <typename Policy>
+template <size_t Count, size_t Size>
+int join::BasicProactor<Policy>::registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
+{
+    if (JOIN_UNLIKELY (_bufferRings.count (group)))
+    {
+        lastError = make_error_code (Errc::InUse);
+        return -1;
+    }
+
+    auto it = _bufferRings.emplace (group, &_ring).first;
+
+    if (JOIN_UNLIKELY (it->second.registerBuffer (group, arena) == -1))
+    {
+        _bufferRings.erase (it);
+        return -1;
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : unregisterBufferRing
+// =========================================================================
+template <typename Policy>
+int join::BasicProactor<Policy>::unregisterBufferRing (uint16_t group)
+{
+    auto it = _bufferRings.find (group);
+    if (JOIN_UNLIKELY (it == _bufferRings.end ()))
+    {
+        lastError = make_error_code (Errc::NotFound);
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY (it->second.armed ()))
+    {
+        lastError = make_error_code (Errc::InUse);
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY (it->second.unregisterBuffer () == -1))
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
+
+    _bufferRings.erase (it);
+
+    return 0;
+}
+
 #ifdef JOIN_HAS_NUMA
 // =========================================================================
 //   CLASS     : BasicProactor
@@ -498,6 +553,20 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
         return -1;
     }
 
+    IoRingBuffer* ring = nullptr;
+
+    if (JOIN_UNLIKELY (op->multishot && (op->code != static_cast<uint8_t> (IoOperation::Opcode::Accept))))
+    {
+        auto it = _bufferRings.find (op->group);
+        if (JOIN_UNLIKELY (it == _bufferRings.end ()))
+        {
+            lastError = make_error_code (Errc::NotFound);
+            return -1;
+        }
+
+        ring = &it->second;
+    }
+
     io_uring_sqe* sqe = getSqe ();
     if (JOIN_UNLIKELY (sqe == nullptr))
     {
@@ -511,6 +580,12 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
     op->state = IoOperation::State::Submitted;
     op->index = static_cast<uint32_t> (_pendingOps.size ());
     _pendingOps.push_back (op);
+
+    if (JOIN_UNLIKELY (ring != nullptr))
+    {
+        op->ring = ring;
+        ring->bind ();
+    }
 
     if (JOIN_UNLIKELY (flush))
     {
@@ -697,8 +772,17 @@ void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation* op
             break;
 
         case IoOperation::Opcode::Recv:
-            io_uring_prep_recv (sqe, op->data.stream.fd, op->data.stream.buf, op->data.stream.len,
-                                op->data.stream.flags);
+            if (op->multishot)
+            {
+                io_uring_prep_recv_multishot (sqe, op->data.stream.fd, nullptr, 0, op->data.stream.flags);
+                sqe->flags |= IOSQE_BUFFER_SELECT;
+                sqe->buf_group = op->group;
+            }
+            else
+            {
+                io_uring_prep_recv (sqe, op->data.stream.fd, op->data.stream.buf, op->data.stream.len,
+                                    op->data.stream.flags);
+            }
             break;
 
         case IoOperation::Opcode::Send:
@@ -768,15 +852,31 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
         return;  // LCOV_EXCL_LINE
     }
 
+    IoRingBuffer* br = nullptr;
+    uint16_t bid = 0;
+
+    if ((cqe->flags & IORING_CQE_F_BUFFER) != 0)
+    {
+        bid = static_cast<uint16_t> (cqe->flags >> IORING_CQE_BUFFER_SHIFT);
+        br = op->ring;
+        op->data.stream.buf = br->get (bid);
+    }
+
     if ((cqe->flags & IORING_CQE_F_MORE) != 0)
     {
         notifyOperation (op, cqe->res, false);
-        return;
+    }
+    else
+    {
+        int result = cqe->res;
+        bool cancelled = (result < 0) && (result == -ECANCELED || op->state == IoOperation::State::Cancelling);
+        endOperation (op, result, cancelled);
     }
 
-    int result = cqe->res;
-    bool cancelled = (result < 0) && (result == -ECANCELED || op->state == IoOperation::State::Cancelling);
-    endOperation (op, result, cancelled);
+    if (br != nullptr)
+    {
+        br->recycle (bid);
+    }
 }
 
 // =========================================================================

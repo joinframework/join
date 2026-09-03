@@ -90,6 +90,10 @@ protected:
 
         {
             ScopedLock<Mutex> lock (_mut);
+            if ((op->ring != nullptr) && (result > 0))
+            {
+                ::memcpy (_buf, op->data.stream.buf, result);
+            }
             _result = result;
             _op = op;
             ++_completions;
@@ -586,6 +590,30 @@ TEST_F (HybridProactorTest, registerFixedBuffers)
 #endif
 
 /**
+ * @brief Test registerBufferRing and unregisterBufferRing.
+ */
+TEST_F (HybridProactorTest, registerBufferRing)
+{
+    HybridProactor proactor;
+
+    LocalMem::Allocator<4, 256> arena;
+
+    ASSERT_EQ (proactor.unregisterBufferRing (0), -1);
+    ASSERT_EQ (join::lastError, Errc::NotFound);
+
+    ASSERT_EQ (proactor.registerBufferRing (0, arena), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.registerBufferRing (0, arena), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (arena.tryAllocate (256), nullptr);
+
+    ASSERT_EQ (proactor.unregisterBufferRing (0), 0) << join::lastError.message ();
+    ASSERT_NE (arena.tryAllocate (256), nullptr);
+
+    ASSERT_EQ (proactor.registerBufferRing (1, arena), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+}
+
+/**
  * @brief Test async connect.
  */
 TEST_F (HybridProactorTest, asyncConnect)
@@ -996,6 +1024,63 @@ TEST_F (HybridProactorTest, asyncRecv)
         _op = nullptr;
         _result = 0;
     }
+}
+
+/**
+ * @brief Test multishot receive.
+ */
+TEST_F (HybridProactorTest, asyncRecvMulti)
+{
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _readOp = IoOperation::makeRecvMulti (_server.handle (), 1, 0, this);
+
+    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_readOp, true, true), -1);
+
+    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    ASSERT_EQ (HybridProactorThread::proactor ().registerBufferRing (0, arena), 0) << join::lastError.message ();
+
+    _completions = 0;
+    _readOp = IoOperation::makeRecvMulti (_server.handle (), 0, 0, this);
+
+    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+
+    const char* msg = "asyncRecvMulti";
+
+    for (int i = 0; i < 2; ++i)
+    {
+        ASSERT_EQ (_client.writeExactly (msg, strlen (msg), _timeout), 0) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+                return (_op == &_readOp) && (_completions == (i + 1));
+            }));
+            ASSERT_EQ (_result, static_cast<int> (strlen (msg)));
+            ASSERT_EQ (std::string (_buf, _result), msg);
+        }
+    }
+
+    ASSERT_EQ (HybridProactorThread::proactor ().unregisterBufferRing (0), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (HybridProactorThread::proactor ().cancel (&_readOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == -ECANCELED;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (HybridProactorThread::proactor ().unregisterBufferRing (0), 0) << join::lastError.message ();
 }
 
 /**
