@@ -25,6 +25,9 @@
 #ifndef JOIN_CORE_IO_OPERATION_HPP
 #define JOIN_CORE_IO_OPERATION_HPP
 
+// libjoin.
+#include <join/io_ring_buffer.hpp>
+
 // C.
 #include <sys/socket.h>
 #include <cstdint>
@@ -273,6 +276,16 @@ namespace join
                                      bool linked = false) noexcept;
 
         /**
+         * @brief build a multishot receive operation.
+         * @param fd socket file descriptor.
+         * @param group provided buffer group.
+         * @param flags recv flags.
+         * @param handler handler to notify on completion.
+         * @return initialized IoOperation.
+         */
+        static IoOperation makeRecvMulti (int fd, uint16_t group, int flags, CompletionHandler* handler) noexcept;
+
+        /**
          * @brief build a send operation.
          * @param fd socket file descriptor.
          * @param buf source buffer.
@@ -315,11 +328,17 @@ namespace join
         /// rearm the operation after each completion.
         bool multishot = false;
 
+        /// provided buffer group (io_uring only).
+        uint16_t group = 0;
+
         /// handler to dispatch to on completion.
         CompletionHandler* handler = nullptr;
 
         /// operation code specific payload.
         Data data = {};
+
+        /// buffer ring bound to this operation.
+        IoRingBuffer* ring = nullptr;
     };
 }
 

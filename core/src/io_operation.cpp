@@ -207,6 +207,24 @@ IoOperation IoOperation::makeRecv (int fd, void* buf, uint32_t len, int flags, C
 
 // =========================================================================
 //   CLASS     : IoOperation
+//   METHOD    : makeRecvMulti
+// =========================================================================
+IoOperation IoOperation::makeRecvMulti (int fd, uint16_t group, int flags, CompletionHandler* handler) noexcept
+{
+    IoOperation op;
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::Recv);
+    op.multishot = true;
+    op.group = group;
+    op.handler = handler;
+    op.data.stream.fd = fd;
+    op.data.stream.buf = nullptr;
+    op.data.stream.len = 0;
+    op.data.stream.flags = flags;
+    return op;
+}
+
+// =========================================================================
+//   CLASS     : IoOperation
 //   METHOD    : makeSend
 // =========================================================================
 IoOperation IoOperation::makeSend (int fd, const void* buf, uint32_t len, int flags, CompletionHandler* handler,

@@ -39,6 +39,7 @@
 #include <join/queue.hpp>
 
 // C++.
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -247,6 +248,23 @@ public:
      */
     int unregisterFixedBuffers () noexcept;
 #endif
+
+    /**
+     * @brief register a provided buffer ring.
+     * @param group buffer group id.
+     * @param arena arena owning the buffers, reserved until the ring is unregistered, must outlive the proactor.
+     * @return 0 on success, -1 on failure.
+     * @throw std::system_error if the descriptor ring cannot be mapped.
+     */
+    template <size_t Count, size_t Size>
+    int registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena);
+
+    /**
+     * @brief unregister a provided buffer ring.
+     * @param group buffer group id.
+     * @return 0 on success, -1 on failure.
+     */
+    int unregisterBufferRing (uint16_t group);
 
 #ifdef JOIN_HAS_NUMA
     /**
@@ -597,6 +615,9 @@ private:
     /// reactor instance.
     Reactor _reactor;
 #endif
+
+    /// registered provided buffer rings.
+    std::unordered_map<uint16_t, IoRingBuffer> _bufferRings;
 };
 
 // =========================================================================
@@ -736,6 +757,13 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
     }
 
     op->state = IoOperation::State::Idle;
+
+    if (op->ring != nullptr)
+    {
+        op->ring->unbind ();
+        op->ring = nullptr;
+    }
+
     notifyOperation (op, result, cancelled);
 }
 

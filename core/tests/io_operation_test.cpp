@@ -207,6 +207,23 @@ TEST (IoOperation, makeRecv)
 }
 
 /**
+ * @brief Test makeRecvMulti.
+ */
+TEST (IoOperation, makeRecvMulti)
+{
+    auto op = IoOperation::makeRecvMulti (8, 3, MSG_DONTWAIT, nullptr);
+
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Recv));
+    ASSERT_TRUE (op.multishot);
+    ASSERT_EQ (op.group, 3);
+    ASSERT_EQ (op.handler, nullptr);
+    ASSERT_EQ (op.data.stream.fd, 8);
+    ASSERT_EQ (op.data.stream.buf, nullptr);
+    ASSERT_EQ (op.data.stream.len, 0U);
+    ASSERT_EQ (op.data.stream.flags, MSG_DONTWAIT);
+}
+
+/**
  * @brief Test makeSend.
  */
 TEST (IoOperation, makeSend)

@@ -96,6 +96,57 @@ inline void join::BasicProactor::waitStopped () const noexcept
     _reactor.waitStopped ();
 }
 
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : registerBufferRing
+// =========================================================================
+template <size_t Count, size_t Size>
+int join::BasicProactor::registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
+{
+    if (JOIN_UNLIKELY (_bufferRings.count (group)))
+    {
+        lastError = make_error_code (Errc::InUse);
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY (_bufferRings[group].registerBuffer (group, arena) == -1))
+    {
+        _bufferRings.erase (group);
+        return -1;
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : unregisterBufferRing
+// =========================================================================
+inline int join::BasicProactor::unregisterBufferRing (uint16_t group)
+{
+    auto it = _bufferRings.find (group);
+    if (JOIN_UNLIKELY (it == _bufferRings.end ()))
+    {
+        lastError = make_error_code (Errc::NotFound);
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY (it->second.armed ()))
+    {
+        lastError = make_error_code (Errc::InUse);
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY (it->second.unregisterBuffer () == -1))
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
+
+    _bufferRings.erase (it);
+
+    return 0;
+}
+
 #ifdef JOIN_HAS_NUMA
 // =========================================================================
 //   CLASS     : BasicProactor
@@ -223,8 +274,8 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
             _reactor.stop (false);
             break;
 
-        default:
-            break;
+        default:    // LCOV_EXCL_LINE
+            break;  // LCOV_EXCL_LINE
     }
 
     if (JOIN_UNLIKELY (cmd.done))
@@ -259,6 +310,20 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
     {
         lastError = make_error_code (std::errc::device_or_resource_busy);
         return -1;
+    }
+
+    IoRingBuffer* ring = nullptr;
+
+    if (JOIN_UNLIKELY (op->multishot && (op->code != static_cast<uint8_t> (IoOperation::Opcode::Accept))))
+    {
+        auto it = _bufferRings.find (op->group);
+        if (JOIN_UNLIKELY (it == _bufferRings.end ()))
+        {
+            lastError = make_error_code (Errc::NotFound);
+            return -1;
+        }
+
+        ring = &it->second;
     }
 
     if (JOIN_UNLIKELY (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::Connect))
@@ -297,6 +362,12 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
     }
 
     op->state = IoOperation::State::Submitted;
+
+    if (JOIN_UNLIKELY (ring != nullptr))
+    {
+        op->ring = ring;
+        ring->bind ();
+    }
 
     return _reactor.addHandler (op->fd (), this, _readOps[op->fd ()] != nullptr, _writeOps[op->fd ()] != nullptr);
 }
@@ -556,16 +627,41 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
         return;
     }
 
+    IoRingBuffer* br = nullptr;
+    uint16_t bid = 0;
+
+    if (op->ring != nullptr)
+    {
+        int selected = op->ring->select ();
+        if (JOIN_UNLIKELY (selected == -1))
+        {
+            endOperation (op, -ENOBUFS, false);
+            return;
+        }
+
+        br = op->ring;
+        bid = static_cast<uint16_t> (selected);
+
+        op->data.stream.buf = br->get (bid);
+        op->data.stream.len = br->size ();
+    }
+
     int result = executeOp (op);
 
     if (op->multishot &&
         ((result > 0) || ((result == 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::Accept)))))
     {
         notifyOperation (op, result, false);
-        return;
+    }
+    else
+    {
+        endOperation (op, result, false);
     }
 
-    endOperation (op, result, false);
+    if (br != nullptr)
+    {
+        br->recycle (bid);
+    }
 }
 
 // =========================================================================
