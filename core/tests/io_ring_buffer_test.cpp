@@ -76,11 +76,25 @@ protected:
  */
 TEST_F (IoRingBufferTest, registerBuffer)
 {
+    ASSERT_NE (_arena.tryAllocate (256), nullptr);
+    ASSERT_EQ (_ring.registerBuffer (3, _arena), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    _arena.releaseAll ();
+
     ASSERT_EQ (_ring.registerBuffer (3, _arena), 0) << join::lastError.message ();
     ASSERT_EQ (_arena.tryAllocate (256), nullptr);
 
     ASSERT_EQ (_ring.registerBuffer (3, _arena), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
+
+#ifdef JOIN_HAS_IO_URING
+    LocalMem::Allocator<4, 256> arena;
+    IoRingBuffer ring (&_uring);
+
+    ASSERT_EQ (ring.registerBuffer (3, arena), -1);
+    ASSERT_NE (arena.tryAllocate (256), nullptr);
+#endif
 }
 
 /**
