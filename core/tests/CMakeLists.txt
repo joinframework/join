@@ -42,6 +42,11 @@ target_link_libraries(io_operation.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME io_operation.gtest COMMAND io_operation.gtest)
 install(TARGETS io_operation.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(io_ring_buffer.gtest io_ring_buffer_test.cpp)
+target_link_libraries(io_ring_buffer.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME io_ring_buffer.gtest COMMAND io_ring_buffer.gtest)
+install(TARGETS io_ring_buffer.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 if(JOIN_ENABLE_IO_URING)
     add_executable(io_policy.gtest io_policy_test.cpp)
     target_link_libraries(io_policy.gtest ${JOIN_CORE} GTest::gtest_main)
