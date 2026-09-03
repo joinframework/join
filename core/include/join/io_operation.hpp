@@ -328,7 +328,7 @@ namespace join
         /// rearm the operation after each completion.
         bool multishot = false;
 
-        /// provided buffer group (io_uring only).
+        /// provided buffer group.
         uint16_t group = 0;
 
         /// handler to dispatch to on completion.

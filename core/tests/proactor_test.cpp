@@ -614,6 +614,9 @@ TEST_F (ProactorTest, registerBufferRing)
 
     ASSERT_EQ (proactor.unregisterBufferRing (0), 0) << join::lastError.message ();
     ASSERT_NE (arena.tryAllocate (256), nullptr);
+
+    ASSERT_EQ (proactor.registerBufferRing (1, arena), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
 }
 
 /**
@@ -1042,6 +1045,10 @@ TEST_F (ProactorTest, asyncRecvMulti)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _readOp = IoOperation::makeRecvMulti (_server.handle (), 1, 0, this);
+
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_readOp, true, true), -1);
 
     LocalMem::Allocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (ProactorThread::proactor ().registerBufferRing (0, arena), 0) << join::lastError.message ();
