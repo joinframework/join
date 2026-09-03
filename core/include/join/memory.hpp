@@ -129,6 +129,11 @@ namespace join
         using Mpmc = SyncBinding<LocalMem, ::join::Mpmc>;
 
         /**
+         * @brief default constructor.
+         */
+        LocalMem () noexcept = default;
+
+        /**
          * @brief allocates a local anonymous memory segment.
          * @param size allocation size in bytes.
          * @throw std::system_error if mmap fails.
