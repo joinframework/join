@@ -31,7 +31,6 @@
 #include <join/condition.hpp>
 #include <join/function.hpp>
 #include <join/reactor.hpp>
-#include <join/queue.hpp>
 
 // C++.
 #include <unordered_map>
@@ -81,7 +80,7 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~NetlinkManager ();
+        virtual ~NetlinkManager () = default;
 
         /**
          * @brief get the event loop reactor.
@@ -108,34 +107,6 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::milliseconds timeout = std::chrono::seconds (5));
-
-        /**
-         * @brief push a job to be executed on the reactor thread.
-         * @param func function to execute on the reactor thread.
-         */
-        template <typename Func>
-        void pushJob (Func&& func) noexcept
-        {
-            Job job;
-            job.func = std::forward<Func> (func);
-
-            if (_reactor.isReactorThread ())
-            {
-                job.func ();
-                return;
-            }
-
-            _jobs.push (&job);
-
-            uint64_t v = 1;
-            [[maybe_unused]] ssize_t bytes = ::write (_wakeup, &v, sizeof (v));
-
-            Backoff backoff;
-            while (!job.done.load (std::memory_order_acquire))
-            {
-                backoff ();
-            }
-        }
 
         /**
          * @brief method called when data are ready to be read on handle.
@@ -232,30 +203,6 @@ namespace join
 
         /// protection mutex.
         Mutex _syncMutex;
-
-        /**
-         * @brief job to be executed on the reactor thread.
-         */
-        struct Job
-        {
-            /// job storage capacity, sized for the largest callable pushed.
-            static constexpr size_t _funcCapacity = 64;
-
-            /// function to execute.
-            Function<void (), _funcCapacity> func;
-
-            /// set to true when the job has been executed.
-            std::atomic<bool> done{false};
-        };
-
-        /// job queue size.
-        static constexpr size_t _jobQueueSize = 256;
-
-        /// job queue.
-        LocalMem::Mpsc::Queue<Job*> _jobs;
-
-        /// eventfd used to wake the reactor thread for pending jobs.
-        int _wakeup = -1;
 
         /// event loop reactor.
         Reactor& _reactor;

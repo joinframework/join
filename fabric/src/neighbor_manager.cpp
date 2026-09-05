@@ -28,6 +28,7 @@
 // C.
 #include <linux/rtnetlink.h>
 
+using join::Function;
 using join::NeighborManager;
 using join::NeighborList;
 using join::Neighbor;
@@ -161,9 +162,10 @@ uint64_t NeighborManager::addNeighborListener (const NeighborNotify& cb)
 {
     uint64_t id = ++_listenerCounter;
 
-    pushJob ([this, id, &cb] () {
+    Function<void ()> fn = [this, id, &cb] () {
         _neighborListeners.emplace (id, cb);
-    });
+    };
+    _reactor.invoke (&fn);
 
     return id;
 }
@@ -174,9 +176,10 @@ uint64_t NeighborManager::addNeighborListener (const NeighborNotify& cb)
 // =========================================================================
 void NeighborManager::removeNeighborListener (uint64_t id)
 {
-    pushJob ([this, id] () {
+    Function<void ()> fn = [this, id] () {
         _neighborListeners.erase (id);
-    });
+    };
+    _reactor.invoke (&fn);
 }
 
 // =========================================================================
@@ -354,8 +357,8 @@ void NeighborManager::onMessage (struct nlmsghdr* nlh)
             onNeighborMessage (nlh);
             break;
 
-        default:
-            break;
+        default:    // LCOV_EXCL_LINE
+            break;  // LCOV_EXCL_LINE
     }
 }
 
