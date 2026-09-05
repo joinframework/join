@@ -28,6 +28,7 @@
 // libjoin.
 #include <join/io_operation.hpp>
 #include <join/allocator.hpp>
+#include <join/function.hpp>
 #ifdef JOIN_HAS_IO_URING
 #include <join/io_policy.hpp>
 #else
@@ -208,6 +209,14 @@ public:
      */
     int cancel (IoOperation* op, bool flush = false, bool sync = false) noexcept;
 
+    /**
+     * @brief invoke a function from the proactor thread.
+     * @param fn function to invoke, shall remain valid until invoked.
+     * @param sync wait for operation completion if true.
+     * @return 0 on success, -1 on failure.
+     */
+    int invoke (Function<void ()>* fn, bool sync = true) noexcept;
+
 #ifdef JOIN_HAS_IO_URING
     /**
      * @brief flush pending submissions to the kernel.
@@ -371,6 +380,7 @@ private:
     {
         Submit, /**< submit an operation. */
         Cancel, /**< cancel an in-flight operation. */
+        Invoke, /**< invoke a function. */
         Stop,   /**< stop the event loop. */
 #ifdef JOIN_HAS_IO_URING
         Flush, /**< flush pending submissions to the kernel. */
@@ -387,6 +397,7 @@ private:
         bool flush;              /**< if true, call io_uring_submit after processing (io_uring only). */
         std::atomic<bool>* done; /**< set to true when the command is processed. */
         std::error_code* errc;   /**< filled with the error code on failure. */
+        Function<void ()>* fn;   /**< function to invoke, or nullptr for other commands. */
     };
 
     /**
@@ -443,6 +454,13 @@ private:
      * @brief cancel all in-flight operations.
      */
     void cancelAllOperations () noexcept;
+
+    /**
+     * @brief invoke function.
+     * @param fn function to invoke.
+     * @return 0 on success, -1 on failure.
+     */
+    int invokeFunction (Function<void ()>* fn) noexcept;
 
     /**
      * @brief invoke completion callback.
@@ -645,7 +663,7 @@ inline int join::BasicProactor::submit (IoOperation* op, bool flush, bool sync) 
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Submit, op, flush, pdone, perrc}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Submit, op, flush, pdone, perrc, nullptr}) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
@@ -693,7 +711,7 @@ inline int join::BasicProactor::cancel (IoOperation* op, bool flush, bool sync) 
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Cancel, op, flush, pdone, perrc}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Cancel, op, flush, pdone, perrc, nullptr}) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
@@ -712,6 +730,76 @@ inline int join::BasicProactor::cancel (IoOperation* op, bool flush, bool sync) 
             return -1;
         }
     }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : invoke
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename Policy>
+int join::BasicProactor<Policy>::invoke (Function<void ()>* fn, bool sync) noexcept
+#else
+inline int join::BasicProactor::invoke (Function<void ()>* fn, bool sync) noexcept
+#endif
+{
+    if (isProactorThread ())
+    {
+        return invokeFunction (fn);
+    }
+
+    std::atomic<bool> done{false}, *pdone = nullptr;
+    std::error_code errc, *perrc = nullptr;
+
+    if (JOIN_LIKELY (sync))
+    {
+        pdone = &done;
+        perrc = &errc;
+    }
+
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Invoke, nullptr, false, pdone, perrc, fn}) == -1))
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
+
+    if (JOIN_LIKELY (sync))
+    {
+        Backoff backoff;
+        while (!done.load (std::memory_order_acquire))
+        {
+            backoff ();
+        }
+
+        if (JOIN_UNLIKELY (errc))
+        {
+            lastError = errc;
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : invokeFunction
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename Policy>
+int join::BasicProactor<Policy>::invokeFunction (Function<void ()>* fn) noexcept
+#else
+inline int join::BasicProactor::invokeFunction (Function<void ()>* fn) noexcept
+#endif
+{
+    if (JOIN_UNLIKELY ((fn == nullptr) || !*fn))
+    {
+        lastError = make_error_code (std::errc::invalid_argument);
+        return -1;
+    }
+
+    (*fn) ();
 
     return 0;
 }

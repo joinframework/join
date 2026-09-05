@@ -35,6 +35,7 @@ using join::Mutex;
 using join::Condition;
 using join::ScopedLock;
 using join::Thread;
+using join::Function;
 using join::Reactor;
 using join::ReactorThread;
 using join::Tcp;
@@ -298,6 +299,45 @@ TEST_F (ReactorTest, delHandler)
     // test already deleted.
     ASSERT_EQ (reactor.delHandler (handle ()), -1);
     ASSERT_EQ (join::lastError, std::errc::no_such_file_or_directory);
+
+    reactor.stop ();
+    th.join ();
+}
+
+/**
+ * @brief Test invoke.
+ */
+TEST_F (ReactorTest, invoke)
+{
+    Reactor reactor;
+    Thread th ([&reactor] () {
+        reactor.run ();
+    });
+
+    ASSERT_EQ (reactor.invoke (nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    Function<void ()> empty;
+    ASSERT_EQ (reactor.invoke (&empty), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    std::atomic<int> counter{0};
+
+    Function<void ()> nested = [&counter] () {
+        ++counter;
+    };
+    Function<void ()> fn = [&reactor, &nested, &counter] () {
+        ASSERT_TRUE (reactor.isReactorThread ());
+        ASSERT_EQ (reactor.invoke (&nested), 0);
+        ++counter;
+    };
+
+    ASSERT_EQ (reactor.invoke (&fn), 0) << join::lastError.message ();
+    ASSERT_EQ (counter.load (), 2);
+
+    ASSERT_EQ (reactor.invoke (&nested, false), 0) << join::lastError.message ();
+    ASSERT_EQ (reactor.invoke (&nested), 0) << join::lastError.message ();
+    ASSERT_EQ (counter.load (), 4);
 
     reactor.stop ();
     th.join ();

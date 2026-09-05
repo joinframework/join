@@ -96,7 +96,7 @@ int join::BasicProactor<Policy>::flush (bool sync) noexcept
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Flush, nullptr, false, pdone, perrc}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Flush, nullptr, false, pdone, perrc, nullptr}) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
@@ -154,7 +154,7 @@ void join::BasicProactor<Policy>::stop (bool sync) noexcept
         return;
     }
 
-    writeCommand ({CommandType::Stop, nullptr, sync, nullptr, nullptr});
+    writeCommand ({CommandType::Stop, nullptr, sync, nullptr, nullptr, nullptr});
 
     if (JOIN_LIKELY (sync))
     {
@@ -494,6 +494,10 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
 
         case CommandType::Cancel:
             err = cancelOperation (cmd.op, cmd.flush);
+            break;
+
+        case CommandType::Invoke:
+            err = invokeFunction (cmd.fn);
             break;
 
         case CommandType::Stop:

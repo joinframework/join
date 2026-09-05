@@ -79,7 +79,7 @@ inline void join::BasicProactor::stop (bool sync) noexcept
         return;
     }
 
-    writeCommand ({CommandType::Stop, nullptr, sync, nullptr, nullptr});
+    writeCommand ({CommandType::Stop, nullptr, sync, nullptr, nullptr, nullptr});
 
     if (JOIN_LIKELY (sync))
     {
@@ -267,6 +267,10 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
 
         case CommandType::Cancel:
             err = cancelOperation (cmd.op, cmd.flush);
+            break;
+
+        case CommandType::Invoke:
+            err = invokeFunction (cmd.fn);
             break;
 
         case CommandType::Stop:
