@@ -26,6 +26,7 @@
 #define JOIN_CORE_REACTOR_HPP
 
 // libjoin.
+#include <join/function.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
 
@@ -185,6 +186,14 @@ namespace join
         int delHandler (int fd, bool sync = true) noexcept;
 
         /**
+         * @brief invoke a function from the reactor thread.
+         * @param fn function to invoke, shall remain valid until invoked.
+         * @param sync wait for operation completion if true.
+         * @return 0 on success, -1 on failure.
+         */
+        int invoke (Function<void ()>* fn, bool sync = true) noexcept;
+
+        /**
          * @brief run the event loop (blocking).
          */
         void run ();
@@ -244,6 +253,7 @@ namespace join
         {
             Add,
             Del,
+            Invoke,
             Stop
         };
 
@@ -258,6 +268,7 @@ namespace join
             EventHandler* handler;
             std::atomic<bool>* done;
             std::error_code* errc;
+            Function<void ()>* fn;
         };
 
         /**
@@ -275,6 +286,13 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int unregisterHandler (int fd) noexcept;
+
+        /**
+         * @brief invoke function.
+         * @param fn function to invoke.
+         * @return 0 on success, -1 on failure.
+         */
+        int invokeFunction (Function<void ()>* fn) noexcept;
 
         /**
          * @brief write command to queue and wake dispatcher.

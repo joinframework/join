@@ -36,6 +36,7 @@
 
 using join::Backoff;
 using join::EventHandler;
+using join::Function;
 using join::Reactor;
 using join::ReactorThread;
 
@@ -125,7 +126,7 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool wantRead, bool want
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Add, fd, events, handler, pdone, perrc}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Add, fd, events, handler, pdone, perrc, nullptr}) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
@@ -168,7 +169,50 @@ int Reactor::delHandler (int fd, bool sync) noexcept
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Del, fd, 0, nullptr, pdone, perrc}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Del, fd, 0, nullptr, pdone, perrc, nullptr}) == -1))
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
+
+    if (JOIN_LIKELY (sync))
+    {
+        Backoff backoff;
+        while (!done.load (std::memory_order_acquire))
+        {
+            backoff ();
+        }
+
+        if (JOIN_UNLIKELY (errc))
+        {
+            lastError = errc;
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : invoke
+// =========================================================================
+int Reactor::invoke (Function<void ()>* fn, bool sync) noexcept
+{
+    if (isReactorThread ())
+    {
+        return invokeFunction (fn);
+    }
+
+    std::atomic<bool> done{false}, *pdone = nullptr;
+    std::error_code errc, *perrc = nullptr;
+
+    if (JOIN_LIKELY (sync))
+    {
+        pdone = &done;
+        perrc = &errc;
+    }
+
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Invoke, -1, 0, nullptr, pdone, perrc, fn}) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
@@ -222,7 +266,7 @@ void Reactor::stop (bool sync) noexcept
         return;
     }
 
-    writeCommand ({CommandType::Stop, -1, 0, nullptr, nullptr, nullptr});
+    writeCommand ({CommandType::Stop, -1, 0, nullptr, nullptr, nullptr, nullptr});
 
     if (JOIN_LIKELY (sync))
     {
@@ -366,6 +410,23 @@ int Reactor::unregisterHandler (int fd) noexcept
 
 // =========================================================================
 //   CLASS     : Reactor
+//   METHOD    : invokeFunction
+// =========================================================================
+int Reactor::invokeFunction (Function<void ()>* fn) noexcept
+{
+    if (JOIN_UNLIKELY ((fn == nullptr) || !*fn))
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
+
+    (*fn) ();
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : Reactor
 //   METHOD    : writeCommand
 // =========================================================================
 int Reactor::writeCommand (const Command& cmd) noexcept
@@ -408,6 +469,10 @@ void Reactor::processCommand (const Command& cmd) noexcept
 
         case CommandType::Del:
             err = unregisterHandler (cmd.fd);
+            break;
+
+        case CommandType::Invoke:
+            err = invokeFunction (cmd.fn);
             break;
 
         case CommandType::Stop:

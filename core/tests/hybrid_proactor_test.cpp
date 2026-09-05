@@ -36,6 +36,7 @@ using join::Mutex;
 using join::Condition;
 using join::ScopedLock;
 using join::Thread;
+using join::Function;
 using join::HybridProactor;
 using join::HybridProactorThread;
 using join::IoOperation;
@@ -504,6 +505,45 @@ TEST_F (HybridProactorTest, chain)
         _op = nullptr;
         _result = 0;
     }
+
+    proactor.stop ();
+    th.join ();
+}
+
+/**
+ * @brief Test invoke.
+ */
+TEST_F (HybridProactorTest, invoke)
+{
+    HybridProactor proactor;
+    Thread th ([&proactor] () {
+        proactor.run ();
+    });
+
+    ASSERT_EQ (proactor.invoke (nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    Function<void ()> empty;
+    ASSERT_EQ (proactor.invoke (&empty), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    std::atomic<int> counter{0};
+
+    Function<void ()> nested = [&counter] () {
+        ++counter;
+    };
+    Function<void ()> fn = [&proactor, &nested, &counter] () {
+        ASSERT_TRUE (proactor.isProactorThread ());
+        ASSERT_EQ (proactor.invoke (&nested), 0);
+        ++counter;
+    };
+
+    ASSERT_EQ (proactor.invoke (&fn), 0) << join::lastError.message ();
+    ASSERT_EQ (counter.load (), 2);
+
+    ASSERT_EQ (proactor.invoke (&nested, false), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.invoke (&nested), 0) << join::lastError.message ();
+    ASSERT_EQ (counter.load (), 4);
 
     proactor.stop ();
     th.join ();
