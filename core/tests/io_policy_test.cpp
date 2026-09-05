@@ -39,6 +39,14 @@ using join::has_sq_thread_idle;
 using join::has_sq_thread_cpu;
 
 /**
+ * @brief policy pinning the submission queue thread.
+ */
+struct PinnedPolicy : IoSqpollPolicy
+{
+    static constexpr uint32_t sqThreadCpu = 0;
+};
+
+/**
  * @brief Test has_spin trait.
  */
 TEST (IoPolicy, has_spin)
@@ -95,7 +103,8 @@ TEST (IoPolicy, has_sq_thread_cpu)
 {
     ASSERT_FALSE (has_sq_thread_cpu<IoDefaultPolicy>::value);
     ASSERT_FALSE (has_sq_thread_cpu<IoHybridPolicy>::value);
-    ASSERT_TRUE (has_sq_thread_cpu<IoSqpollPolicy>::value);
+    ASSERT_FALSE (has_sq_thread_cpu<IoSqpollPolicy>::value);
+    ASSERT_TRUE (has_sq_thread_cpu<PinnedPolicy>::value);
 }
 
 /**

@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/datagram_socket.hpp>
 #include <join/condition.hpp>
 #include <join/proactor.hpp>
 #include <join/acceptor.hpp>
@@ -40,6 +41,7 @@ using join::ProactorThread;
 using join::IoOperation;
 using join::CompletionHandler;
 using join::Tcp;
+using join::Udp;
 using join::LocalMem;
 
 /**
@@ -94,7 +96,14 @@ protected:
             ScopedLock<Mutex> lock (_mut);
             if ((op->ring != nullptr) && (result > 0))
             {
-                ::memcpy (_buf, op->data.stream.buf, result);
+                if (op->code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg))
+                {
+                    ::memcpy (_buf, op->data.msg.msg->msg_iov->iov_base, result);
+                }
+                else
+                {
+                    ::memcpy (_buf, op->data.stream.buf, result);
+                }
             }
             _result = result;
             _op = op;
@@ -972,6 +981,124 @@ TEST_F (ProactorTest, asyncRecvmsg)
         _op = nullptr;
         _result = 0;
     }
+}
+
+/**
+ * @brief Test multishot recvmsg.
+ */
+TEST_F (ProactorTest, asyncRecvmsgMulti)
+{
+    Udp::Socket server (Udp::Socket::NonBlocking), client (Udp::Socket::Blocking);
+    ASSERT_EQ (server.bind ({_host, _port}), 0) << join::lastError.message ();
+
+    Udp::Endpoint to (_host, _port);
+
+    sockaddr_storage name = {};
+    iovec iov = {};
+    msghdr msg = {};
+    msg.msg_name = &name;
+    msg.msg_namelen = sizeof (name);
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+
+    _readOp = IoOperation::makeRecvmsgMulti (server.handle (), 1, &msg, 0, this);
+
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_readOp, true, true), -1);
+
+    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    ASSERT_EQ (ProactorThread::proactor ().registerBufferRing (0, arena), 0) << join::lastError.message ();
+
+    _completions = 0;
+    _readOp = IoOperation::makeRecvmsgMulti (server.handle (), 0, &msg, 0, this);
+
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+
+    const char* payload = "asyncRecvmsgMulti";
+
+    ASSERT_EQ (client.writeTo (payload, strlen (payload), to), static_cast<ssize_t> (strlen (payload)))
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_readOp) && (_completions == 1);
+        }));
+        ASSERT_EQ (_result, static_cast<int> (strlen (payload)));
+        ASSERT_EQ (std::string (_buf, _result), payload);
+        ASSERT_EQ (msg.msg_iov->iov_len, static_cast<size_t> (_result));
+        ASSERT_GT (msg.msg_namelen, 0U);
+        ASSERT_EQ (msg.msg_control, nullptr);
+    }
+
+    char big[sizeof (_buf)];
+    ::memset (big, 'x', sizeof (big));
+
+    ASSERT_EQ (client.writeTo (big, sizeof (big), to), static_cast<ssize_t> (sizeof (big)))
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_readOp) && (_completions == 2);
+        }));
+        ASSERT_GT (_result, 0);
+        ASSERT_LT (_result, static_cast<int> (sizeof (big)));
+        ASSERT_NE (msg.msg_flags & MSG_TRUNC, 0);
+    }
+
+    ASSERT_EQ (ProactorThread::proactor ().unregisterBufferRing (0), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (ProactorThread::proactor ().cancel (&_readOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_readOp) && (_result == -ECANCELED);
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    _completions = 0;
+
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (client.writeTo (payload, 0, to), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_readOp) && (_completions == 1);
+        }));
+        ASSERT_EQ (_result, 0);
+        ASSERT_EQ (msg.msg_iov->iov_len, 0U);
+        _op = nullptr;
+    }
+
+    ASSERT_EQ (ProactorThread::proactor ().unregisterBufferRing (0), 0) << join::lastError.message ();
+
+    LocalMem::Allocator<4, 64> small;
+    ASSERT_EQ (ProactorThread::proactor ().registerBufferRing (1, small), 0) << join::lastError.message ();
+
+    _completions = 0;
+    msg.msg_namelen = sizeof (name);
+    _readOp = IoOperation::makeRecvmsgMulti (server.handle (), 1, &msg, 0, this);
+
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (client.writeTo (payload, strlen (payload), to), static_cast<ssize_t> (strlen (payload)))
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_readOp) && (_completions == 1);
+        }));
+        ASSERT_EQ (_result, -EFAULT);
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (ProactorThread::proactor ().unregisterBufferRing (1), 0) << join::lastError.message ();
 }
 
 /**

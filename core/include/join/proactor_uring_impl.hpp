@@ -400,6 +400,7 @@ void join::BasicProactor<Policy>::initSqThreadCpu (io_uring_params&, std::false_
 template <typename Policy>
 void join::BasicProactor<Policy>::initSqThreadCpu (io_uring_params& params, std::true_type) noexcept
 {
+    params.flags |= IORING_SETUP_SQ_AFF;
     params.sq_thread_cpu = Policy::sqThreadCpu;
 }
 
@@ -764,7 +765,19 @@ void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation* op
             break;
 
         case IoOperation::Opcode::RecvMsg:
-            io_uring_prep_recvmsg (sqe, op->data.msg.fd, op->data.msg.msg, op->data.msg.flags);
+            if (op->multishot)
+            {
+                op->data.msg.msg->msg_namelen = op->data.msg.namelen;
+                op->data.msg.msg->msg_controllen = op->data.msg.controllen;
+                op->data.msg.msg->msg_iovlen = 0;
+                io_uring_prep_recvmsg_multishot (sqe, op->data.msg.fd, op->data.msg.msg, op->data.msg.flags);
+                sqe->flags |= IOSQE_BUFFER_SELECT;
+                sqe->buf_group = op->group;
+            }
+            else
+            {
+                io_uring_prep_recvmsg (sqe, op->data.msg.fd, op->data.msg.msg, op->data.msg.flags);
+            }
             break;
 
         case IoOperation::Opcode::SendMsg:
@@ -852,6 +865,7 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
         return;  // LCOV_EXCL_LINE
     }
 
+    int result = cqe->res;
     IoRingBuffer* br = nullptr;
     uint16_t bid = 0;
 
@@ -859,16 +873,46 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
     {
         bid = static_cast<uint16_t> (cqe->flags >> IORING_CQE_BUFFER_SHIFT);
         br = op->ring;
-        op->data.stream.buf = br->get (bid);
+
+        if (op->code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg))
+        {
+            msghdr reserved = {};
+            reserved.msg_namelen = op->data.msg.namelen;
+            reserved.msg_controllen = op->data.msg.controllen;
+
+            io_uring_recvmsg_out* out = io_uring_recvmsg_validate (br->get (bid), result, &reserved);
+            if (JOIN_UNLIKELY (out == nullptr))
+            {
+                result = -EFAULT;  // LCOV_EXCL_LINE
+            }
+            else
+            {
+                uint32_t payloadlen = io_uring_recvmsg_payload_length (out, result, &reserved);
+
+                op->data.msg.msg->msg_name = io_uring_recvmsg_name (out);
+                op->data.msg.msg->msg_control = io_uring_recvmsg_cmsg_firsthdr (out, &reserved);
+                op->data.msg.msg->msg_iov->iov_base = io_uring_recvmsg_payload (out, &reserved);
+                op->data.msg.msg->msg_iov->iov_len = payloadlen;
+                op->data.msg.msg->msg_iovlen = 1;
+                op->data.msg.msg->msg_namelen = out->namelen;
+                op->data.msg.msg->msg_controllen = out->controllen;
+                op->data.msg.msg->msg_flags = static_cast<int> (out->flags);
+
+                result = static_cast<int> (payloadlen);
+            }
+        }
+        else
+        {
+            op->data.stream.buf = br->get (bid);
+        }
     }
 
     if ((cqe->flags & IORING_CQE_F_MORE) != 0)
     {
-        notifyOperation (op, cqe->res, false);
+        notifyOperation (op, result, false);
     }
     else
     {
-        int result = cqe->res;
         bool cancelled = (result < 0) && (result == -ECANCELED || op->state == IoOperation::State::Cancelling);
         endOperation (op, result, cancelled);
     }

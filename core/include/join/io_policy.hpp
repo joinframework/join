@@ -50,7 +50,6 @@ namespace join
         static constexpr uint32_t flags = IORING_SETUP_SQPOLL;
         static constexpr uint32_t spin = 200;
         static constexpr uint32_t sqThreadIdle = 2000;
-        static constexpr uint32_t sqThreadCpu = 0;
     };
 
     template <typename...>

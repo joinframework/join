@@ -172,6 +172,26 @@ IoOperation IoOperation::makeRecvmsg (int fd, msghdr* msg, int flags, Completion
 
 // =========================================================================
 //   CLASS     : IoOperation
+//   METHOD    : makeRecvmsgMulti
+// =========================================================================
+IoOperation IoOperation::makeRecvmsgMulti (int fd, uint16_t group, msghdr* msg, int flags,
+                                           CompletionHandler* handler) noexcept
+{
+    IoOperation op;
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::RecvMsg);
+    op.multishot = true;
+    op.group = group;
+    op.handler = handler;
+    op.data.msg.fd = fd;
+    op.data.msg.msg = msg;
+    op.data.msg.flags = flags;
+    op.data.msg.namelen = msg->msg_namelen;
+    op.data.msg.controllen = static_cast<uint32_t> (msg->msg_controllen);
+    return op;
+}
+
+// =========================================================================
+//   CLASS     : IoOperation
 //   METHOD    : makeSendmsg
 // =========================================================================
 IoOperation IoOperation::makeSendmsg (int fd, const msghdr* msg, int flags, CompletionHandler* handler,
