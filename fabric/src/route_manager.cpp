@@ -28,6 +28,7 @@
 // C.
 #include <linux/rtnetlink.h>
 
+using join::Function;
 using join::RouteManager;
 using join::RouteList;
 using join::Route;
@@ -160,9 +161,10 @@ uint64_t RouteManager::addRouteListener (const RouteNotify& cb)
 {
     uint64_t id = ++_listenerCounter;
 
-    pushJob ([this, id, &cb] () {
+    Function<void ()> fn = [this, id, &cb] () {
         _routeListeners.emplace (id, cb);
-    });
+    };
+    _reactor.invoke (&fn);
 
     return id;
 }
@@ -173,9 +175,10 @@ uint64_t RouteManager::addRouteListener (const RouteNotify& cb)
 // =========================================================================
 void RouteManager::removeRouteListener (uint64_t id)
 {
-    pushJob ([this, id] () {
+    Function<void ()> fn = [this, id] () {
         _routeListeners.erase (id);
-    });
+    };
+    _reactor.invoke (&fn);
 }
 
 // =========================================================================

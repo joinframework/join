@@ -28,9 +28,7 @@
 // C++.
 #include <system_error>
 
-// C.
-#include <sys/eventfd.h>
-
+using join::Function;
 using join::Reactor;
 using join::NetlinkManager;
 
@@ -41,22 +39,11 @@ using join::NetlinkManager;
 NetlinkManager::NetlinkManager (uint32_t groups, Reactor& reactor)
 : _buffer (std::make_unique<char[]> (_bufferSize))
 , _seq (0)
-, _jobs (_jobQueueSize)
-, _wakeup (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
 , _reactor (reactor)
 {
     _socket.open (Netlink::rt ());
     _socket.bind (groups);
     _socket.setOption (Netlink::Socket::RcvBuffer, _rcvBufferSize);
-}
-
-// =========================================================================
-//   CLASS     : NetlinkManager
-//   METHOD    : ~NetlinkManager
-// =========================================================================
-NetlinkManager::~NetlinkManager ()
-{
-    ::close (_wakeup);
 }
 
 // =========================================================================
@@ -74,7 +61,6 @@ Reactor& NetlinkManager::reactor () const noexcept
 // =========================================================================
 void NetlinkManager::start ()
 {
-    _reactor.addHandler (_wakeup, this);
     _reactor.addHandler (_socket.handle (), this);
 }
 
@@ -85,7 +71,6 @@ void NetlinkManager::start ()
 void NetlinkManager::stop ()
 {
     _reactor.delHandler (_socket.handle ());
-    _reactor.delHandler (_wakeup);
 }
 
 // =========================================================================
@@ -118,10 +103,11 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
     {
         std::error_code error;
 
-        pushJob ([this, nlh, &result, &error] () {
+        Function<void ()> fn = [this, nlh, &result, &error] () {
             result = _socket.write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len);
             error = lastError;
-        });
+        };
+        _reactor.invoke (&fn);
 
         if (result == -1)
         {
@@ -175,22 +161,8 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 //   CLASS     : NetlinkManager
 //   METHOD    : onReadable
 // =========================================================================
-void NetlinkManager::onReadable (int fd)
+void NetlinkManager::onReadable ([[maybe_unused]] int fd)
 {
-    if (fd == _wakeup)
-    {
-        uint64_t v;
-        [[maybe_unused]] ssize_t bytes = ::read (_wakeup, &v, sizeof (v));
-
-        Job* job;
-        while (_jobs.tryPop (job) == 0)
-        {
-            job->func ();
-            job->done.store (true, std::memory_order_release);
-        }
-        return;
-    }
-
     ssize_t len = _socket.read (_buffer.get (), _bufferSize);
     if (len == -1)
     {
