@@ -125,7 +125,7 @@ public:
 protected:
     /**
      * @brief method called when an operation completes successfully.
-     * @param op completed operation.
+     * @param op completed operation, left idle when a multishot ended and can be resubmitted.
      * @param result number of bytes transferred, or operation-specific value.
      */
     virtual void onComplete ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result)
@@ -155,6 +155,9 @@ class join::BasicProactor : public join::EventHandler
 #endif
 {
 public:
+    /// function invoked on the proactor thread.
+    using InvokeHandler = Function<void (), 64>;
+
     /**
      * @brief initialize the proactor and its I/O backend.
      */
@@ -215,7 +218,7 @@ public:
      * @param sync wait for operation completion if true.
      * @return 0 on success, -1 on failure.
      */
-    int invoke (Function<void ()>* fn, bool sync = true) noexcept;
+    int invoke (InvokeHandler* fn, bool sync = true) noexcept;
 
 #ifdef JOIN_HAS_IO_URING
     /**
@@ -397,7 +400,7 @@ private:
         bool flush;              /**< if true, call io_uring_submit after processing (io_uring only). */
         std::atomic<bool>* done; /**< set to true when the command is processed. */
         std::error_code* errc;   /**< filled with the error code on failure. */
-        Function<void ()>* fn;   /**< function to invoke, or nullptr for other commands. */
+        InvokeHandler* fn;       /**< function to invoke, or nullptr for other commands. */
     };
 
     /**
@@ -460,7 +463,7 @@ private:
      * @param fn function to invoke.
      * @return 0 on success, -1 on failure.
      */
-    int invokeFunction (Function<void ()>* fn) noexcept;
+    int invokeFunction (InvokeHandler* fn) noexcept;
 
     /**
      * @brief invoke completion callback.
@@ -740,9 +743,9 @@ inline int join::BasicProactor::cancel (IoOperation* op, bool flush, bool sync) 
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
-int join::BasicProactor<Policy>::invoke (Function<void ()>* fn, bool sync) noexcept
+int join::BasicProactor<Policy>::invoke (InvokeHandler* fn, bool sync) noexcept
 #else
-inline int join::BasicProactor::invoke (Function<void ()>* fn, bool sync) noexcept
+inline int join::BasicProactor::invoke (InvokeHandler* fn, bool sync) noexcept
 #endif
 {
     if (isProactorThread ())
@@ -788,14 +791,14 @@ inline int join::BasicProactor::invoke (Function<void ()>* fn, bool sync) noexce
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
-int join::BasicProactor<Policy>::invokeFunction (Function<void ()>* fn) noexcept
+int join::BasicProactor<Policy>::invokeFunction (InvokeHandler* fn) noexcept
 #else
-inline int join::BasicProactor::invokeFunction (Function<void ()>* fn) noexcept
+inline int join::BasicProactor::invokeFunction (InvokeHandler* fn) noexcept
 #endif
 {
     if (JOIN_UNLIKELY ((fn == nullptr) || !*fn))
     {
-        lastError = make_error_code (std::errc::invalid_argument);
+        lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 

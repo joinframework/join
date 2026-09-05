@@ -36,7 +36,6 @@
 
 using join::Backoff;
 using join::EventHandler;
-using join::Function;
 using join::Reactor;
 using join::ReactorThread;
 
@@ -196,7 +195,7 @@ int Reactor::delHandler (int fd, bool sync) noexcept
 //   CLASS     : Reactor
 //   METHOD    : invoke
 // =========================================================================
-int Reactor::invoke (Function<void ()>* fn, bool sync) noexcept
+int Reactor::invoke (InvokeHandler* fn, bool sync) noexcept
 {
     if (isReactorThread ())
     {
@@ -412,7 +411,7 @@ int Reactor::unregisterHandler (int fd) noexcept
 //   CLASS     : Reactor
 //   METHOD    : invokeFunction
 // =========================================================================
-int Reactor::invokeFunction (Function<void ()>* fn) noexcept
+int Reactor::invokeFunction (InvokeHandler* fn) noexcept
 {
     if (JOIN_UNLIKELY ((fn == nullptr) || !*fn))
     {

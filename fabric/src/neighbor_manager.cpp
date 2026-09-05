@@ -28,7 +28,7 @@
 // C.
 #include <linux/rtnetlink.h>
 
-using join::Function;
+using join::Reactor;
 using join::NeighborManager;
 using join::NeighborList;
 using join::Neighbor;
@@ -162,7 +162,7 @@ uint64_t NeighborManager::addNeighborListener (const NeighborNotify& cb)
 {
     uint64_t id = ++_listenerCounter;
 
-    Function<void ()> fn = [this, id, &cb] () {
+    Reactor::InvokeHandler fn = [this, id, &cb] () {
         _neighborListeners.emplace (id, cb);
     };
     _reactor.invoke (&fn);
@@ -176,7 +176,7 @@ uint64_t NeighborManager::addNeighborListener (const NeighborNotify& cb)
 // =========================================================================
 void NeighborManager::removeNeighborListener (uint64_t id)
 {
-    Function<void ()> fn = [this, id] () {
+    Reactor::InvokeHandler fn = [this, id] () {
         _neighborListeners.erase (id);
     };
     _reactor.invoke (&fn);

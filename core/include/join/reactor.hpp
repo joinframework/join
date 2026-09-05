@@ -129,6 +129,9 @@ namespace join
     class Reactor
     {
     public:
+        /// function invoked on the reactor thread.
+        using InvokeHandler = Function<void (), 64>;
+
         /**
          * @brief default constructor.
          */
@@ -191,7 +194,7 @@ namespace join
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int invoke (Function<void ()>* fn, bool sync = true) noexcept;
+        int invoke (InvokeHandler* fn, bool sync = true) noexcept;
 
         /**
          * @brief run the event loop (blocking).
@@ -268,7 +271,7 @@ namespace join
             EventHandler* handler;
             std::atomic<bool>* done;
             std::error_code* errc;
-            Function<void ()>* fn;
+            InvokeHandler* fn;
         };
 
         /**
@@ -292,7 +295,7 @@ namespace join
          * @param fn function to invoke.
          * @return 0 on success, -1 on failure.
          */
-        int invokeFunction (Function<void ()>* fn) noexcept;
+        int invokeFunction (InvokeHandler* fn) noexcept;
 
         /**
          * @brief write command to queue and wake dispatcher.

@@ -30,7 +30,7 @@
 #include <linux/if_tun.h>
 #include <linux/veth.h>
 
-using join::Function;
+using join::Reactor;
 using join::Interface;
 using join::InterfaceList;
 using join::InterfaceManager;
@@ -132,7 +132,7 @@ uint64_t InterfaceManager::addLinkListener (const LinkNotify& cb)
 {
     uint64_t id = ++_listenerCounter;
 
-    Function<void ()> fn = [this, id, &cb] () {
+    Reactor::InvokeHandler fn = [this, id, &cb] () {
         _linkListeners.emplace (id, cb);
     };
     _reactor.invoke (&fn);
@@ -146,7 +146,7 @@ uint64_t InterfaceManager::addLinkListener (const LinkNotify& cb)
 // =========================================================================
 void InterfaceManager::removeLinkListener (uint64_t id)
 {
-    Function<void ()> fn = [this, id] () {
+    Reactor::InvokeHandler fn = [this, id] () {
         _linkListeners.erase (id);
     };
     _reactor.invoke (&fn);
@@ -160,7 +160,7 @@ uint64_t InterfaceManager::addAddressListener (const AddressNotify& cb)
 {
     uint64_t id = ++_listenerCounter;
 
-    Function<void ()> fn = [this, id, &cb] () {
+    Reactor::InvokeHandler fn = [this, id, &cb] () {
         _addressListeners.emplace (id, cb);
     };
     _reactor.invoke (&fn);
@@ -174,7 +174,7 @@ uint64_t InterfaceManager::addAddressListener (const AddressNotify& cb)
 // =========================================================================
 void InterfaceManager::removeAddressListener (uint64_t id)
 {
-    Function<void ()> fn = [this, id] () {
+    Reactor::InvokeHandler fn = [this, id] () {
         _addressListeners.erase (id);
     };
     _reactor.invoke (&fn);

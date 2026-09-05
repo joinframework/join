@@ -100,7 +100,7 @@ TEST (ErrorCategory, equivalent)
     code = std::make_error_code (std::errc::file_exists);
     EXPECT_EQ (code, Errc::InUse);
     code = std::make_error_code (std::errc::no_such_file_or_directory);
-    EXPECT_EQ (code, Errc::InvalidParam);
+    EXPECT_EQ (code, Errc::NotFound);
     code = std::make_error_code (std::errc::address_family_not_supported);
     EXPECT_EQ (code, Errc::InvalidParam);
     code = std::make_error_code (std::errc::invalid_argument);
