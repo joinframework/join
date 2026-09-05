@@ -794,8 +794,8 @@ void InterfaceManager::onMessage (struct nlmsghdr* nlh)
             onAddressMessage (nlh);
             break;
 
-        default:
-            break;
+        default:    // LCOV_EXCL_LINE
+            break;  // LCOV_EXCL_LINE
     }
 }
 

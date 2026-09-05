@@ -357,8 +357,8 @@ void NeighborManager::onMessage (struct nlmsghdr* nlh)
             onNeighborMessage (nlh);
             break;
 
-        default:
-            break;
+        default:    // LCOV_EXCL_LINE
+            break;  // LCOV_EXCL_LINE
     }
 }
 
