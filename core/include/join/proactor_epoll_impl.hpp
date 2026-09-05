@@ -621,6 +621,7 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
         readCommands ();
         return;
     }
+
     IoOperation* op = _readOps[fd];
     if (JOIN_UNLIKELY (op == nullptr))
     {
@@ -642,11 +643,45 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
         br = op->ring;
         bid = static_cast<uint16_t> (selected);
 
-        op->data.stream.buf = br->get (bid);
-        op->data.stream.len = br->size ();
+        if (op->code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg))
+        {
+            uint32_t reserved = op->data.msg.namelen + op->data.msg.controllen;
+            if (JOIN_UNLIKELY (reserved >= br->size ()))
+            {
+                endOperation (op, -EFAULT, false);
+                br->recycle (bid);
+                return;
+            }
+
+            char* base = static_cast<char*> (br->get (bid));
+
+            op->data.msg.msg->msg_name = base;
+            op->data.msg.msg->msg_namelen = op->data.msg.namelen;
+            op->data.msg.msg->msg_control = base + op->data.msg.namelen;
+            op->data.msg.msg->msg_controllen = op->data.msg.controllen;
+            op->data.msg.msg->msg_iov->iov_base = base + reserved;
+            op->data.msg.msg->msg_iov->iov_len = br->size () - reserved;
+            op->data.msg.msg->msg_iovlen = 1;
+            op->data.msg.msg->msg_flags = 0;
+        }
+        else
+        {
+            op->data.stream.buf = br->get (bid);
+            op->data.stream.len = br->size ();
+        }
     }
 
     int result = executeOp (op);
+
+    if ((br != nullptr) && (result >= 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)))
+    {
+        op->data.msg.msg->msg_iov->iov_len = static_cast<size_t> (result);
+
+        if (op->data.msg.msg->msg_controllen < sizeof (cmsghdr))
+        {
+            op->data.msg.msg->msg_control = nullptr;
+        }
+    }
 
     if (op->multishot &&
         ((result > 0) || ((result == 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::Accept)))))

@@ -172,6 +172,28 @@ TEST (IoOperation, makeRecvmsg)
 }
 
 /**
+ * @brief Test makeRecvmsgMulti.
+ */
+TEST (IoOperation, makeRecvmsgMulti)
+{
+    msghdr msg = {};
+    msg.msg_namelen = sizeof (struct sockaddr_storage);
+    msg.msg_controllen = CMSG_SPACE (sizeof (int));
+
+    auto op = IoOperation::makeRecvmsgMulti (8, 3, &msg, MSG_DONTWAIT, nullptr);
+
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::RecvMsg));
+    ASSERT_TRUE (op.multishot);
+    ASSERT_EQ (op.group, 3);
+    ASSERT_EQ (op.handler, nullptr);
+    ASSERT_EQ (op.data.msg.fd, 8);
+    ASSERT_EQ (op.data.msg.msg, &msg);
+    ASSERT_EQ (op.data.msg.flags, MSG_DONTWAIT);
+    ASSERT_EQ (op.data.msg.namelen, sizeof (struct sockaddr_storage));
+    ASSERT_EQ (op.data.msg.controllen, CMSG_SPACE (sizeof (int)));
+}
+
+/**
  * @brief Test makeSendmsg.
  */
 TEST (IoOperation, makeSendmsg)

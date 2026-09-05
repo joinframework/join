@@ -218,6 +218,12 @@ namespace join
 
             /// sendmsg / recvmsg flags.
             int flags;
+
+            /// reserved name area length.
+            uint32_t namelen;
+
+            /// reserved control area length.
+            uint32_t controllen;
         };
 
         /**
@@ -231,6 +237,18 @@ namespace join
          */
         static IoOperation makeRecvmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler,
                                         bool linked = false) noexcept;
+
+        /**
+         * @brief build a multishot receive-message operation.
+         * @param fd socket file descriptor.
+         * @param group provided buffer group.
+         * @param msg message header.
+         * @param flags recv flags.
+         * @param handler handler to notify on completion.
+         * @return initialized IoOperation.
+         */
+        static IoOperation makeRecvmsgMulti (int fd, uint16_t group, msghdr* msg, int flags,
+                                             CompletionHandler* handler) noexcept;
 
         /**
          * @brief build a send-message operation.
