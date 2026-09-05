@@ -28,7 +28,6 @@
 // C++.
 #include <system_error>
 
-using join::Function;
 using join::Reactor;
 using join::NetlinkManager;
 
@@ -103,7 +102,7 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
     {
         std::error_code error;
 
-        Function<void ()> fn = [this, nlh, &result, &error] () {
+        Reactor::InvokeHandler fn = [this, nlh, &result, &error] () {
             result = _socket.write (reinterpret_cast<const char*> (nlh), nlh->nlmsg_len);
             error = lastError;
         };

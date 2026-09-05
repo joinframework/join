@@ -91,11 +91,10 @@ bool ErrorCategory::equivalent (const std::error_code& code, int condition) cons
             return code == std::errc::already_connected || code == std::errc::connection_already_in_progress ||
                    code == std::errc::address_in_use || code == std::errc::file_exists;
         case Errc::InvalidParam:
-            return code == std::errc::no_such_file_or_directory || code == std::errc::address_family_not_supported ||
-                   code == std::errc::invalid_argument || code == std::errc::protocol_not_supported ||
-                   code == std::errc::not_a_socket || code == std::errc::bad_address ||
-                   code == std::errc::no_protocol_option || code == std::errc::destination_address_required ||
-                   code == std::errc::operation_not_supported;
+            return code == std::errc::address_family_not_supported || code == std::errc::invalid_argument ||
+                   code == std::errc::protocol_not_supported || code == std::errc::not_a_socket ||
+                   code == std::errc::bad_address || code == std::errc::no_protocol_option ||
+                   code == std::errc::destination_address_required || code == std::errc::operation_not_supported;
         case Errc::ConnectionRefused:
             return code == std::errc::connection_refused || code == std::errc::network_unreachable;
         case Errc::ConnectionClosed:
@@ -111,6 +110,8 @@ bool ErrorCategory::equivalent (const std::error_code& code, int condition) cons
                    code == std::errc::no_lock_available;
         case Errc::OperationFailed:
             return code == std::errc::bad_file_descriptor;
+        case Errc::NotFound:
+            return code == std::errc::no_such_file_or_directory;
         case Errc::MessageUnknown:
             return code == std::errc::no_message || code == std::errc::bad_message ||
                    code == std::errc::no_message_available;

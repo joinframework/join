@@ -103,15 +103,41 @@ inline void join::BasicProactor::waitStopped () const noexcept
 template <size_t Count, size_t Size>
 int join::BasicProactor::registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
 {
-    if (JOIN_UNLIKELY (_bufferRings.count (group)))
+    int result = 0;
+    std::error_code errc;
+
+    InvokeHandler fn = [this, group, &arena, &result, &errc] () {
+        if (JOIN_UNLIKELY (_bufferRings.count (group)))
+        {
+            lastError = make_error_code (Errc::InUse);
+            errc = lastError;
+            result = -1;
+            return;
+        }
+
+        if (JOIN_UNLIKELY (_bufferRings[group].registerBuffer (group, arena) == -1))
+        {
+            errc = lastError;
+            _bufferRings.erase (group);
+            result = -1;
+            return;
+        }
+    };
+
+    if (JOIN_UNLIKELY (!isRunning ()))
     {
-        lastError = make_error_code (Errc::InUse);
+        lastError = make_error_code (Errc::OperationFailed);
         return -1;
     }
 
-    if (JOIN_UNLIKELY (_bufferRings[group].registerBuffer (group, arena) == -1))
+    if (JOIN_UNLIKELY (invoke (&fn) == -1))
     {
-        _bufferRings.erase (group);
+        return -1;  // LCOV_EXCL_LINE
+    }
+
+    if (JOIN_UNLIKELY (result == -1))
+    {
+        lastError = errc;
         return -1;
     }
 
@@ -124,25 +150,55 @@ int join::BasicProactor::registerBufferRing (uint16_t group, LocalMem::Allocator
 // =========================================================================
 inline int join::BasicProactor::unregisterBufferRing (uint16_t group)
 {
-    auto it = _bufferRings.find (group);
-    if (JOIN_UNLIKELY (it == _bufferRings.end ()))
+    int result = 0;
+    std::error_code errc;
+
+    InvokeHandler fn = [this, group, &result, &errc] () {
+        auto it = _bufferRings.find (group);
+        if (JOIN_UNLIKELY (it == _bufferRings.end ()))
+        {
+            lastError = make_error_code (Errc::NotFound);
+            errc = lastError;
+            result = -1;
+            return;
+        }
+
+        if (JOIN_UNLIKELY (it->second.armed ()))
+        {
+            lastError = make_error_code (Errc::InUse);
+            errc = lastError;
+            result = -1;
+            return;
+        }
+
+        if (JOIN_UNLIKELY (it->second.unregisterBuffer () == -1))
+        {
+            // LCOV_EXCL_START
+            errc = lastError;
+            result = -1;
+            return;
+            // LCOV_EXCL_STOP
+        }
+
+        _bufferRings.erase (it);
+    };
+
+    if (JOIN_UNLIKELY (!isRunning ()))
     {
-        lastError = make_error_code (Errc::NotFound);
+        lastError = make_error_code (Errc::OperationFailed);
         return -1;
     }
 
-    if (JOIN_UNLIKELY (it->second.armed ()))
-    {
-        lastError = make_error_code (Errc::InUse);
-        return -1;
-    }
-
-    if (JOIN_UNLIKELY (it->second.unregisterBuffer () == -1))
+    if (JOIN_UNLIKELY (invoke (&fn) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
 
-    _bufferRings.erase (it);
+    if (JOIN_UNLIKELY (result == -1))
+    {
+        lastError = errc;
+        return -1;
+    }
 
     return 0;
 }
@@ -323,7 +379,7 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
         auto it = _bufferRings.find (op->group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
         {
-            lastError = make_error_code (Errc::NotFound);
+            lastError = make_error_code (std::errc::no_such_file_or_directory);
             return -1;
         }
 
@@ -677,6 +733,15 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
 
     int result = executeOp (op);
 
+    if (JOIN_UNLIKELY (result == -EAGAIN))
+    {
+        if (br != nullptr)
+        {
+            br->recycle (bid);
+        }
+        return;
+    }
+
     if ((br != nullptr) && (result >= 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)))
     {
         op->data.msg.msg->msg_iov->iov_len = static_cast<size_t> (result);
@@ -714,7 +779,15 @@ inline void join::BasicProactor::onWriteable (int fd) noexcept
     {
         return;
     }
-    endOperation (op, executeOp (op), false);
+
+    int result = executeOp (op);
+
+    if (JOIN_UNLIKELY ((result == -EAGAIN) && (op->code != static_cast<uint8_t> (IoOperation::Opcode::Connect))))
+    {
+        return;
+    }
+
+    endOperation (op, result, false);
 }
 
 // =========================================================================

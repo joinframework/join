@@ -36,7 +36,6 @@ using join::Mutex;
 using join::Condition;
 using join::ScopedLock;
 using join::Thread;
-using join::Function;
 using join::HybridProactor;
 using join::HybridProactorThread;
 using join::IoOperation;
@@ -523,16 +522,16 @@ TEST_F (HybridProactorTest, invoke)
     ASSERT_EQ (proactor.invoke (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    Function<void ()> empty;
+    HybridProactor::InvokeHandler empty;
     ASSERT_EQ (proactor.invoke (&empty), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     std::atomic<int> counter{0};
 
-    Function<void ()> nested = [&counter] () {
+    HybridProactor::InvokeHandler nested = [&counter] () {
         ++counter;
     };
-    Function<void ()> fn = [&proactor, &nested, &counter] () {
+    HybridProactor::InvokeHandler fn = [&proactor, &nested, &counter] () {
         ASSERT_TRUE (proactor.isProactorThread ());
         ASSERT_EQ (proactor.invoke (&nested), 0);
         ++counter;
@@ -647,6 +646,19 @@ TEST_F (HybridProactorTest, registerBufferRing)
 
     LocalMem::Allocator<4, 256> arena;
 
+    ASSERT_EQ (proactor.registerBufferRing (0, arena), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (proactor.unregisterBufferRing (0), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    Thread th ([&proactor] () {
+        proactor.run ();
+    });
+    while (!proactor.isRunning ())
+    {
+    }
+
     ASSERT_EQ (proactor.unregisterBufferRing (0), -1);
     ASSERT_EQ (join::lastError, Errc::NotFound);
 
@@ -660,6 +672,9 @@ TEST_F (HybridProactorTest, registerBufferRing)
 
     ASSERT_EQ (proactor.registerBufferRing (1, arena), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
+
+    proactor.stop ();
+    th.join ();
 }
 
 /**

@@ -35,7 +35,6 @@ using join::Mutex;
 using join::Condition;
 using join::ScopedLock;
 using join::Thread;
-using join::Function;
 using join::Reactor;
 using join::ReactorThread;
 using join::Tcp;
@@ -317,16 +316,16 @@ TEST_F (ReactorTest, invoke)
     ASSERT_EQ (reactor.invoke (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    Function<void ()> empty;
+    Reactor::InvokeHandler empty;
     ASSERT_EQ (reactor.invoke (&empty), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
     std::atomic<int> counter{0};
 
-    Function<void ()> nested = [&counter] () {
+    Reactor::InvokeHandler nested = [&counter] () {
         ++counter;
     };
-    Function<void ()> fn = [&reactor, &nested, &counter] () {
+    Reactor::InvokeHandler fn = [&reactor, &nested, &counter] () {
         ASSERT_TRUE (reactor.isReactorThread ());
         ASSERT_EQ (reactor.invoke (&nested), 0);
         ++counter;

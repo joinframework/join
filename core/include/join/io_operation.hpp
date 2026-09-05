@@ -241,7 +241,7 @@ namespace join
         /**
          * @brief build a multishot receive-message operation.
          * @param fd socket file descriptor.
-         * @param group provided buffer group.
+         * @param group provided buffer group, the selected buffer is only valid during the callback.
          * @param msg message header.
          * @param flags recv flags.
          * @param handler handler to notify on completion.
@@ -296,7 +296,7 @@ namespace join
         /**
          * @brief build a multishot receive operation.
          * @param fd socket file descriptor.
-         * @param group provided buffer group.
+         * @param group provided buffer group, the selected buffer is only valid during the callback.
          * @param flags recv flags.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.

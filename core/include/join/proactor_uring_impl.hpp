@@ -213,17 +213,42 @@ template <typename Policy>
 template <size_t Count, size_t Size>
 int join::BasicProactor<Policy>::registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
 {
-    if (JOIN_UNLIKELY (_bufferRings.count (group)))
+    int result = 0;
+    std::error_code errc;
+
+    InvokeHandler fn = [this, group, &arena, &result, &errc] () {
+        if (JOIN_UNLIKELY (_bufferRings.count (group)))
+        {
+            lastError = make_error_code (Errc::InUse);
+            errc = lastError;
+            result = -1;
+            return;
+        }
+
+        auto it = _bufferRings.emplace (group, &_ring).first;
+        if (JOIN_UNLIKELY (it->second.registerBuffer (group, arena) == -1))
+        {
+            errc = lastError;
+            _bufferRings.erase (it);
+            result = -1;
+            return;
+        }
+    };
+
+    if (JOIN_UNLIKELY (!isRunning ()))
     {
-        lastError = make_error_code (Errc::InUse);
+        lastError = make_error_code (Errc::OperationFailed);
         return -1;
     }
 
-    auto it = _bufferRings.emplace (group, &_ring).first;
-
-    if (JOIN_UNLIKELY (it->second.registerBuffer (group, arena) == -1))
+    if (JOIN_UNLIKELY (invoke (&fn) == -1))
     {
-        _bufferRings.erase (it);
+        return -1;  // LCOV_EXCL_LINE
+    }
+
+    if (JOIN_UNLIKELY (result == -1))
+    {
+        lastError = errc;
         return -1;
     }
 
@@ -237,25 +262,55 @@ int join::BasicProactor<Policy>::registerBufferRing (uint16_t group, LocalMem::A
 template <typename Policy>
 int join::BasicProactor<Policy>::unregisterBufferRing (uint16_t group)
 {
-    auto it = _bufferRings.find (group);
-    if (JOIN_UNLIKELY (it == _bufferRings.end ()))
+    int result = 0;
+    std::error_code errc;
+
+    InvokeHandler fn = [this, group, &result, &errc] () {
+        auto it = _bufferRings.find (group);
+        if (JOIN_UNLIKELY (it == _bufferRings.end ()))
+        {
+            lastError = make_error_code (Errc::NotFound);
+            errc = lastError;
+            result = -1;
+            return;
+        }
+
+        if (JOIN_UNLIKELY (it->second.armed ()))
+        {
+            lastError = make_error_code (Errc::InUse);
+            errc = lastError;
+            result = -1;
+            return;
+        }
+
+        if (JOIN_UNLIKELY (it->second.unregisterBuffer () == -1))
+        {
+            // LCOV_EXCL_START
+            errc = lastError;
+            result = -1;
+            return;
+            // LCOV_EXCL_STOP
+        }
+
+        _bufferRings.erase (it);
+    };
+
+    if (JOIN_UNLIKELY (!isRunning ()))
     {
-        lastError = make_error_code (Errc::NotFound);
+        lastError = make_error_code (Errc::OperationFailed);
         return -1;
     }
 
-    if (JOIN_UNLIKELY (it->second.armed ()))
-    {
-        lastError = make_error_code (Errc::InUse);
-        return -1;
-    }
-
-    if (JOIN_UNLIKELY (it->second.unregisterBuffer () == -1))
+    if (JOIN_UNLIKELY (invoke (&fn) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
 
-    _bufferRings.erase (it);
+    if (JOIN_UNLIKELY (result == -1))
+    {
+        lastError = errc;
+        return -1;
+    }
 
     return 0;
 }
@@ -565,7 +620,7 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
         auto it = _bufferRings.find (op->group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
         {
-            lastError = make_error_code (Errc::NotFound);
+            lastError = make_error_code (std::errc::no_such_file_or_directory);
             return -1;
         }
 
