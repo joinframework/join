@@ -53,6 +53,14 @@ protected:
     }
 
     /**
+     * @brief tear down the test suite.
+     */
+    static void TearDownTestSuite ()
+    {
+        ::sem_unlink (_name.c_str ());
+    }
+
+    /**
      * @brief set up the test fixture.
      */
     void SetUp () override

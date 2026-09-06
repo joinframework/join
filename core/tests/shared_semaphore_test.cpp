@@ -55,6 +55,14 @@ protected:
         ::shm_unlink (_name.c_str ());
     }
 
+    /**
+     * @brief tear down the test suite.
+     */
+    static void TearDownTestSuite ()
+    {
+        ::shm_unlink (_name.c_str ());
+    }
+
     /// shared memory segment name.
     static const std::string _name;
 };
