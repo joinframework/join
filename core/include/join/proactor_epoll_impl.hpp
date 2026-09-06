@@ -317,7 +317,7 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
             if (JOIN_UNLIKELY ((err != 0) && (cmd.done == nullptr) && (cmd.op != nullptr) &&
                                (cmd.op->state == IoOperation::State::Idle)))
             {
-                dispatchOperation (cmd.op, -lastError.value (), false);
+                dispatchOperation (cmd.op, -lastError.default_error_condition ().value (), false);
             }
             break;
 
@@ -356,7 +356,7 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
 {
     if (JOIN_UNLIKELY (op == nullptr))
     {
-        lastError = make_error_code (std::errc::invalid_argument);
+        lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 
@@ -379,7 +379,7 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
         auto it = _bufferRings.find (op->group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
         {
-            lastError = make_error_code (std::errc::no_such_file_or_directory);
+            lastError = make_error_code (Errc::NotFound);
             return -1;
         }
 
@@ -408,7 +408,7 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
     if (JOIN_UNLIKELY ((isWrite && (_writeOps[op->fd ()] != nullptr)) ||
                        (!isWrite && (_readOps[op->fd ()] != nullptr))))
     {
-        lastError = make_error_code (std::errc::invalid_argument);
+        lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 
