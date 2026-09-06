@@ -69,6 +69,8 @@ TEST (ErrorCategory, message)
  */
 TEST (ErrorCategory, default_error_condition)
 {
+    EXPECT_EQ (join::getErrorCategory ().default_error_condition (0),
+               std::error_condition (0, join::getErrorCategory ()));
     EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::InUse)), std::errc::address_in_use);
     EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::InvalidParam)),
                std::errc::invalid_argument);
@@ -92,8 +94,6 @@ TEST (ErrorCategory, default_error_condition)
     EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::TemporaryError)),
                std::errc::resource_unavailable_try_again);
     EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::UnknownError)), std::errc::io_error);
-    EXPECT_STREQ (ErrorCategory ().default_error_condition (0).category ().name (), "libjoin");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (0).value (), 0);
 }
 
 /**
@@ -170,34 +170,10 @@ TEST (ErrorCategory, equivalent)
     EXPECT_EQ (code, Errc::TemporaryError);
     code = std::make_error_code (std::errc::operation_in_progress);
     EXPECT_EQ (code, Errc::TemporaryError);
-    code = make_error_code (Errc::InUse);
-    EXPECT_EQ (code, std::errc::address_in_use);
+    code = std::make_error_code (std::errc::io_error);
+    EXPECT_NE (code, Errc::UnknownError);
     code = make_error_code (Errc::InvalidParam);
     EXPECT_EQ (code, std::errc::invalid_argument);
-    code = make_error_code (Errc::ConnectionRefused);
-    EXPECT_EQ (code, std::errc::connection_refused);
-    code = make_error_code (Errc::ConnectionClosed);
-    EXPECT_EQ (code, std::errc::connection_reset);
-    code = make_error_code (Errc::TimedOut);
-    EXPECT_EQ (code, std::errc::timed_out);
-    code = make_error_code (Errc::PermissionDenied);
-    EXPECT_EQ (code, std::errc::operation_not_permitted);
-    code = make_error_code (Errc::OutOfMemory);
-    EXPECT_EQ (code, std::errc::not_enough_memory);
-    code = make_error_code (Errc::OperationFailed);
-    EXPECT_EQ (code, std::errc::bad_file_descriptor);
-    code = make_error_code (Errc::NotFound);
-    EXPECT_EQ (code, std::errc::no_such_file_or_directory);
-    code = make_error_code (Errc::MessageUnknown);
-    EXPECT_EQ (code, std::errc::no_message);
-    code = make_error_code (Errc::MessageTooLong);
-    EXPECT_EQ (code, std::errc::message_size);
-    code = make_error_code (Errc::TemporaryError);
-    EXPECT_EQ (code, std::errc::resource_unavailable_try_again);
-    code = make_error_code (Errc::UnknownError);
-    EXPECT_EQ (code, std::errc::io_error);
-    code = make_error_code (Errc::NotFound);
-    EXPECT_NE (code, std::errc::permission_denied);
 }
 
 /**
