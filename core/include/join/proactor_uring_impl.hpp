@@ -543,7 +543,7 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
             if (JOIN_UNLIKELY ((err == -1) && (cmd.done == nullptr) && (cmd.op != nullptr) &&
                                (cmd.op->state == IoOperation::State::Idle)))
             {
-                dispatchOperation (cmd.op, -lastError.value (), false);
+                dispatchOperation (cmd.op, -lastError.default_error_condition ().value (), false);
             }
             break;
 
@@ -597,7 +597,7 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
 {
     if (JOIN_UNLIKELY (op == nullptr))
     {
-        lastError = make_error_code (std::errc::invalid_argument);
+        lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 
@@ -620,7 +620,7 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
         auto it = _bufferRings.find (op->group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
         {
-            lastError = make_error_code (std::errc::no_such_file_or_directory);
+            lastError = make_error_code (Errc::NotFound);
             return -1;
         }
 

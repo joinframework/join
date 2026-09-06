@@ -69,20 +69,31 @@ TEST (ErrorCategory, message)
  */
 TEST (ErrorCategory, default_error_condition)
 {
-    EXPECT_EQ (ErrorCategory ().default_error_condition (0).message (), "success");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (1).message (), "already in use");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (2).message (), "invalid parameters");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (3).message (), "connection refused");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (4).message (), "connection closed");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (5).message (), "timer expired");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (6).message (), "operation not permitted");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (7).message (), "cannot allocate memory");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (8).message (), "operation failed");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (9).message (), "resource not found");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (10).message (), "message unknown");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (11).message (), "message too long");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (12).message (), "temporary error");
-    EXPECT_EQ (ErrorCategory ().default_error_condition (13).message (), "unknown error");
+    EXPECT_EQ (join::getErrorCategory ().default_error_condition (0),
+               std::error_condition (0, join::getErrorCategory ()));
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::InUse)), std::errc::address_in_use);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::InvalidParam)),
+               std::errc::invalid_argument);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::ConnectionRefused)),
+               std::errc::connection_refused);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::ConnectionClosed)),
+               std::errc::connection_reset);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::TimedOut)), std::errc::timed_out);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::PermissionDenied)),
+               std::errc::operation_not_permitted);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::OutOfMemory)),
+               std::errc::not_enough_memory);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::OperationFailed)),
+               std::errc::bad_file_descriptor);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::NotFound)),
+               std::errc::no_such_file_or_directory);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::MessageUnknown)),
+               std::errc::no_message);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::MessageTooLong)),
+               std::errc::message_size);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::TemporaryError)),
+               std::errc::resource_unavailable_try_again);
+    EXPECT_EQ (ErrorCategory ().default_error_condition (static_cast<int> (Errc::UnknownError)), std::errc::io_error);
 }
 
 /**
@@ -159,6 +170,10 @@ TEST (ErrorCategory, equivalent)
     EXPECT_EQ (code, Errc::TemporaryError);
     code = std::make_error_code (std::errc::operation_in_progress);
     EXPECT_EQ (code, Errc::TemporaryError);
+    code = std::make_error_code (std::errc::io_error);
+    EXPECT_NE (code, Errc::UnknownError);
+    code = make_error_code (Errc::InvalidParam);
+    EXPECT_EQ (code, std::errc::invalid_argument);
 }
 
 /**

@@ -81,6 +81,45 @@ std::string ErrorCategory::message (int code) const noexcept
 
 // =========================================================================
 //   CLASS     : ErrorCategory
+//   METHOD    : default_error_condition
+// =========================================================================
+std::error_condition ErrorCategory::default_error_condition (int code) const noexcept
+{
+    switch (static_cast<Errc> (code))
+    {
+        case Errc::InUse:
+            return std::make_error_condition (std::errc::address_in_use);
+        case Errc::InvalidParam:
+            return std::make_error_condition (std::errc::invalid_argument);
+        case Errc::ConnectionRefused:
+            return std::make_error_condition (std::errc::connection_refused);
+        case Errc::ConnectionClosed:
+            return std::make_error_condition (std::errc::connection_reset);
+        case Errc::TimedOut:
+            return std::make_error_condition (std::errc::timed_out);
+        case Errc::PermissionDenied:
+            return std::make_error_condition (std::errc::operation_not_permitted);
+        case Errc::OutOfMemory:
+            return std::make_error_condition (std::errc::not_enough_memory);
+        case Errc::OperationFailed:
+            return std::make_error_condition (std::errc::bad_file_descriptor);
+        case Errc::NotFound:
+            return std::make_error_condition (std::errc::no_such_file_or_directory);
+        case Errc::MessageUnknown:
+            return std::make_error_condition (std::errc::no_message);
+        case Errc::MessageTooLong:
+            return std::make_error_condition (std::errc::message_size);
+        case Errc::TemporaryError:
+            return std::make_error_condition (std::errc::resource_unavailable_try_again);
+        case Errc::UnknownError:
+            return std::make_error_condition (std::errc::io_error);
+        default:
+            return std::error_condition (code, *this);
+    }
+}
+
+// =========================================================================
+//   CLASS     : ErrorCategory
 //   METHOD    : equivalent
 // =========================================================================
 bool ErrorCategory::equivalent (const std::error_code& code, int condition) const noexcept
@@ -131,7 +170,12 @@ bool ErrorCategory::equivalent (const std::error_code& code, int condition) cons
 // =========================================================================
 bool ErrorCategory::equivalent (int code, const std::error_condition& condition) const noexcept
 {
-    return *this == condition.category () && static_cast<int> (condition.value ()) == code;
+    if (*this == condition.category ())
+    {
+        return condition.value () == code;
+    }
+
+    return default_error_condition (code) == condition;
 }
 
 // =========================================================================
