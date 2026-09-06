@@ -37,6 +37,8 @@ using join::Mutex;
 using join::Condition;
 using join::ScopedLock;
 using join::UnixDgram;
+using join::Thread;
+using join::Proactor;
 
 /**
  * @brief Class used to test the unix asynchronous datagram socket API.
@@ -323,7 +325,8 @@ TEST_F (UnixAsyncDatagramSocket, disconnect)
  */
 TEST_F (UnixAsyncDatagramSocket, asyncWriteTo)
 {
-    UnixDgram::AsyncSocket client;
+    Proactor proactor;
+    UnixDgram::AsyncSocket client (proactor);
     UnixDgram::Endpoint dest (_serverpath);
 
     ASSERT_FALSE (client.opened ());
@@ -332,6 +335,10 @@ TEST_F (UnixAsyncDatagramSocket, asyncWriteTo)
 
     ASSERT_EQ (client.asyncWriteTo ("hello", 5, dest, nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
+
+    Thread th ([&proactor] () {
+        proactor.run ();
+    });
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -343,6 +350,9 @@ TEST_F (UnixAsyncDatagramSocket, asyncWriteTo)
     }
 
     client.close ();
+
+    proactor.stop ();
+    th.join ();
 }
 
 /**

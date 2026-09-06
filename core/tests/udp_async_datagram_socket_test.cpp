@@ -35,6 +35,8 @@ using join::Condition;
 using join::ScopedLock;
 using join::IpAddress;
 using join::Udp;
+using join::Thread;
+using join::Proactor;
 
 /**
  * @brief Class used to test the udp asynchronous datagram socket API.
@@ -312,7 +314,8 @@ TEST_F (UdpAsyncDatagramSocket, disconnect)
  */
 TEST_F (UdpAsyncDatagramSocket, asyncWriteTo)
 {
-    Udp::AsyncSocket client;
+    Proactor proactor;
+    Udp::AsyncSocket client (proactor);
     Udp::Endpoint dest (_host, _port);
 
     ASSERT_FALSE (client.opened ());
@@ -321,6 +324,10 @@ TEST_F (UdpAsyncDatagramSocket, asyncWriteTo)
 
     ASSERT_EQ (client.asyncWriteTo ("hello", 5, dest, nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
+
+    Thread th ([&proactor] () {
+        proactor.run ();
+    });
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -332,6 +339,9 @@ TEST_F (UdpAsyncDatagramSocket, asyncWriteTo)
     }
 
     client.close ();
+
+    proactor.stop ();
+    th.join ();
 }
 
 /**

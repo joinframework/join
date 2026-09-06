@@ -50,6 +50,14 @@ protected:
         ::sem_unlink (_name.c_str ());
     }
 
+    /**
+     * @brief tear down the test suite.
+     */
+    static void TearDownTestSuite ()
+    {
+        ::sem_unlink (_name.c_str ());
+    }
+
     /// semaphore name.
     static const std::string _name;
 };

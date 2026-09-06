@@ -35,6 +35,8 @@ using join::Condition;
 using join::ScopedLock;
 using join::IpAddress;
 using join::Icmp;
+using join::Thread;
+using join::Proactor;
 
 /**
  * @brief Class used to test the icmp asynchronous datagram socket API.
@@ -223,7 +225,8 @@ TEST_F (IcmpAsyncDatagramSocket, disconnect)
  */
 TEST_F (IcmpAsyncDatagramSocket, asyncWriteTo)
 {
-    Icmp::AsyncSocket client;
+    Proactor proactor;
+    Icmp::AsyncSocket client (proactor);
     Icmp::Endpoint dest (_host);
 
     ASSERT_FALSE (client.opened ());
@@ -232,6 +235,10 @@ TEST_F (IcmpAsyncDatagramSocket, asyncWriteTo)
 
     ASSERT_EQ (client.asyncWriteTo (_data, sizeof (_data), dest, nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
+
+    Thread th ([&proactor] () {
+        proactor.run ();
+    });
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -243,6 +250,9 @@ TEST_F (IcmpAsyncDatagramSocket, asyncWriteTo)
     }
 
     client.close ();
+
+    proactor.stop ();
+    th.join ();
 }
 
 /**
