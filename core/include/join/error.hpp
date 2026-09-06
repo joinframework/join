@@ -96,16 +96,23 @@ namespace join
         virtual std::string message (int code) const noexcept override;
 
         /**
-         * @brief find equivalent from Errc to system error code.
-         * @param code System error code.
+         * @brief translate an Errc to the system error condition representing it.
+         * @param code Errc.
+         * @return the equivalent system error condition.
+         */
+        virtual std::error_condition default_error_condition (int code) const noexcept override;
+
+        /**
+         * @brief check if the given error code is equivalent to an Errc.
+         * @param code system error code.
          * @param condition Errc.
          * @return true if equivalent, false otherwise.
          */
         virtual bool equivalent (const std::error_code& code, int condition) const noexcept override;
 
         /**
-         * @brief find equivalent from Errc to system error code.
-         * @param code System error code.
+         * @brief check if an Errc is equivalent to the given error condition.
+         * @param code Errc.
          * @param condition error condition.
          * @return true if equivalent, false otherwise.
          */

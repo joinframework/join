@@ -126,7 +126,7 @@ protected:
     /**
      * @brief method called when an operation completes successfully.
      * @param op completed operation, left idle when a multishot ended and can be resubmitted.
-     * @param result number of bytes transferred, or operation-specific value.
+     * @param result number of bytes transferred, operation-specific value, or negative errno on failure.
      */
     virtual void onComplete ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result)
     {
