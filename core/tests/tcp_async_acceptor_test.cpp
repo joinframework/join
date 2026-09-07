@@ -227,6 +227,9 @@ TEST_F (TcpAsyncAcceptor, movedPeer)
     ASSERT_EQ (server.asyncAccept (target, onReport), 0) << join::lastError.message ();
 
     Tcp::AsyncSocket moved (std::move (target));
+    Tcp::AsyncSocket assigned;
+
+    assigned = std::move (moved);
 
     ASSERT_EQ (client.connect ({_address, _port}), 0) << join::lastError.message ();
 
@@ -238,10 +241,11 @@ TEST_F (TcpAsyncAcceptor, movedPeer)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_TRUE (moved.connected ());
+    ASSERT_TRUE (assigned.connected ());
+    ASSERT_FALSE (moved.opened ());
     ASSERT_FALSE (target.opened ());
 
-    moved.close ();
+    assigned.close ();
     client.close ();
     server.close ();
 }

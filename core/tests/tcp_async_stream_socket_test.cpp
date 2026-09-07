@@ -776,6 +776,21 @@ TEST_F (TcpAsyncStreamSocket, cancelConnect)
     }
 
     client.close ();
+
+    Tcp::AsyncSocket closing;
+
+    ASSERT_EQ (closing.asyncConnect ({_blackhole, _port}, onConnect), 0) << join::lastError.message ();
+    ASSERT_TRUE (closing.connecting ());
+
+    closing.close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
 }
 
 /**

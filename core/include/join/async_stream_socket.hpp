@@ -208,7 +208,7 @@ namespace join
 
             if (this->_connectOp->reserve (*this->_proactor) == -1)
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             this->_socket._state = Socket::Connecting;
