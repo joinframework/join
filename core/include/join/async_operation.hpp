@@ -29,7 +29,9 @@
 #include <join/io_operation.hpp>
 #include <join/function.hpp>
 #include <join/protocol.hpp>
+#include <join/proactor.hpp>
 #include <join/backoff.hpp>
+#include <join/socket.hpp>
 #include <join/error.hpp>
 
 // C++.
@@ -49,7 +51,7 @@ namespace join
      * @brief asynchronous operation.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncOperation
+    class BasicAsyncOperation : public CompletionHandler
     {
         /// friendship with basic asynchronous socket
         friend class BasicAsyncSocket<Protocol, Proactor>;
@@ -227,13 +229,62 @@ namespace join
 
     public:
         using Endpoint = typename Protocol::Endpoint;
+        using Socket = BasicSocket<Protocol>;
 
         /// handler invoked on completion.
         using Handler = Function<void (const std::error_code&)>;
 
     protected:
+        /**
+         * @brief method called when the connection completes.
+         * @param op completed operation.
+         * @param result 0 on success, or negative errno.
+         */
+        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
+        {
+            complete ((result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code ());
+        }
+
+        /**
+         * @brief method called when the connection is cancelled.
+         * @param op cancelled operation.
+         * @param result negative errno.
+         */
+        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
+        {
+            complete (make_error_code (std::errc::operation_canceled));
+        }
+
+        /**
+         * @brief invoke the completion handler.
+         * @param code error code reported by the kernel.
+         */
+        void complete (const std::error_code& code) noexcept
+        {
+            this->dispatch ([this, &code] () {
+                Handler handler = std::move (_handler);
+
+                if (code)
+                {
+                    _socket->close ();
+                }
+                else
+                {
+                    _socket->_state = Socket::Connected;
+                }
+
+                if (JOIN_LIKELY (handler))
+                {
+                    handler (code);
+                }
+            });
+        }
+
         /// handler invoked on completion.
         Handler _handler;
+
+        /// socket owning this operation.
+        Socket* _socket = nullptr;
     };
 
     /**
@@ -256,6 +307,57 @@ namespace join
         using Handler = Function<void (const std::error_code&, size_t)>;
 
     protected:
+        /**
+         * @brief method called when the read completes.
+         * @param op completed operation.
+         * @param result number of bytes received, or negative errno.
+         */
+        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
+        {
+            complete ((result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code (),
+                      (result > 0) ? static_cast<size_t> (result) : 0);
+        }
+
+        /**
+         * @brief method called when the read is cancelled.
+         * @param op cancelled operation.
+         * @param result negative errno.
+         */
+        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
+        {
+            complete (make_error_code (std::errc::operation_canceled), 0);
+        }
+
+        /**
+         * @brief invoke the completion handler.
+         * @param code error code reported by the kernel.
+         * @param size number of bytes received.
+         */
+        void complete (const std::error_code& code, size_t size) noexcept
+        {
+            this->dispatch ([this, &code, size] () {
+                Handler handler = std::move (_handler);
+                std::error_code result = code;
+
+                if (_stream)
+                {
+                    if (JOIN_UNLIKELY (!result && (size == 0)))
+                    {
+                        result = make_error_code (Errc::ConnectionClosed);
+                    }
+                }
+                else if (JOIN_UNLIKELY (!result && (_msg.msg_flags & MSG_TRUNC)))
+                {
+                    result = make_error_code (Errc::MessageTooLong);
+                }
+
+                if (JOIN_LIKELY (handler))
+                {
+                    handler (result, size);
+                }
+            });
+        }
+
         /// handler invoked on completion.
         Handler _handler;
 
@@ -264,6 +366,9 @@ namespace join
 
         /// read scatter gather entry.
         iovec _iov = {};
+
+        /// report an empty read as a closed connection.
+        bool _stream = false;
     };
 
     /**
@@ -286,6 +391,44 @@ namespace join
         using Handler = Function<void (const std::error_code&, size_t)>;
 
     protected:
+        /**
+         * @brief method called when the write completes.
+         * @param op completed operation.
+         * @param result number of bytes sent, or negative errno.
+         */
+        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
+        {
+            complete ((result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code (),
+                      (result > 0) ? static_cast<size_t> (result) : 0);
+        }
+
+        /**
+         * @brief method called when the write is cancelled.
+         * @param op cancelled operation.
+         * @param result negative errno.
+         */
+        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
+        {
+            complete (make_error_code (std::errc::operation_canceled), 0);
+        }
+
+        /**
+         * @brief invoke the completion handler.
+         * @param code error code reported by the kernel.
+         * @param size number of bytes sent.
+         */
+        void complete (const std::error_code& code, size_t size) noexcept
+        {
+            this->dispatch ([this, &code, size] () {
+                Handler handler = std::move (_handler);
+
+                if (JOIN_LIKELY (handler))
+                {
+                    handler (code, size);
+                }
+            });
+        }
+
         /// handler invoked on completion.
         Handler _handler;
 

@@ -170,7 +170,8 @@ namespace join
             this->_readOp->_msg.msg_control = nullptr;
             this->_readOp->_msg.msg_controllen = 0;
             this->_readOp->_msg.msg_flags = 0;
-            this->_readOp->_op = IoOperation::makeRecvmsg (this->_socket.handle (), &this->_readOp->_msg, 0, this);
+            this->_readOp->_op =
+                IoOperation::makeRecvmsg (this->_socket.handle (), &this->_readOp->_msg, 0, this->_readOp.get ());
 
             if (this->_proactor->submit (&this->_readOp->_op, true, false) == -1)
             {
@@ -220,8 +221,8 @@ namespace join
             this->_writeOp->_msg.msg_control = nullptr;
             this->_writeOp->_msg.msg_controllen = 0;
             this->_writeOp->_msg.msg_flags = 0;
-            this->_writeOp->_op =
-                IoOperation::makeSendmsg (this->_socket.handle (), &this->_writeOp->_msg, MSG_NOSIGNAL, this);
+            this->_writeOp->_op = IoOperation::makeSendmsg (this->_socket.handle (), &this->_writeOp->_msg,
+                                                            MSG_NOSIGNAL, this->_writeOp.get ());
 
             if (this->_proactor->submit (&this->_writeOp->_op, true, false) == -1)
             {

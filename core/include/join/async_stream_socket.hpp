@@ -63,6 +63,8 @@ namespace join
         explicit BasicAsyncStreamSocket (Proactor& proactor = ProactorThread::proactor ())
         : BasicAsyncSocket<Protocol, Proactor> (proactor)
         {
+            this->_readOp->_stream = true;
+            _connectOp->_socket = &this->_socket;
         }
 
         /**
@@ -73,6 +75,8 @@ namespace join
         explicit BasicAsyncStreamSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
         : BasicAsyncSocket<Protocol, Proactor> (std::move (sock), proactor)
         {
+            this->_readOp->_stream = true;
+            _connectOp->_socket = &this->_socket;
         }
 
         /**
@@ -94,18 +98,12 @@ namespace join
          */
         BasicAsyncStreamSocket (BasicAsyncStreamSocket&& other) noexcept
         : BasicAsyncSocket<Protocol, Proactor> (std::move (other))
-        , _connectOp (nullptr)
+        , _connectOp (std::move (other._connectOp))
         {
-            if (other._connectOp != nullptr)
+            if (_connectOp != nullptr)
             {
-                other._connectOp->drain ([&other] () {
-                    other.cancelConnect ();
-                });
-
-                other._connectOp->release ();
+                _connectOp->_socket = &this->_socket;
             }
-
-            this->_connectOp = std::move (other._connectOp);
         }
 
         /**
@@ -117,16 +115,12 @@ namespace join
         {
             BasicAsyncSocket<Protocol, Proactor>::operator= (std::move (other));
 
-            if (other._connectOp != nullptr)
+            _connectOp = std::move (other._connectOp);
+
+            if (_connectOp != nullptr)
             {
-                other._connectOp->drain ([&other] () {
-                    other.cancelConnect ();
-                });
-
-                other._connectOp->release ();
+                _connectOp->_socket = &this->_socket;
             }
-
-            this->_connectOp = std::move (other._connectOp);
 
             return *this;
         }
@@ -201,7 +195,7 @@ namespace join
             this->_socket._remote = endpoint;
             _connectOp->_handler = std::move (handler);
             this->_connectOp->_op = IoOperation::makeConnect (this->_socket.handle (), this->_socket._remote.addr (),
-                                                              this->_socket._remote.length (), this);
+                                                              this->_socket._remote.length (), this->_connectOp.get ());
 
             if (this->_proactor->submit (&this->_connectOp->_op, true, false) == -1)
             {
@@ -273,84 +267,6 @@ namespace join
         }
 
     protected:
-        /**
-         * @brief method called when an operation completes.
-         * @param op completed operation.
-         * @param result number of bytes transferred, or operation specific value.
-         */
-        void onComplete (IoOperation* op, int result) override
-        {
-            dispatch (op, (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code (),
-                      (result > 0) ? static_cast<size_t> (result) : 0);
-        }
-
-        /**
-         * @brief method called when an operation is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel (IoOperation* op, [[maybe_unused]] int result) override
-        {
-            dispatch (op, make_error_code (std::errc::operation_canceled), 0);
-        }
-
-        /**
-         * @brief invoke the handler owning the given operation slot.
-         * @param op completed or cancelled operation.
-         * @param code error code to report.
-         * @param size number of bytes transferred.
-         */
-        void dispatch (IoOperation* op, const std::error_code& code, size_t size) noexcept
-        {
-            if (op == &this->_readOp->_op)
-            {
-                this->_readOp->dispatch ([this, &code, size] () {
-                    ReadHandler handler = std::move (this->_readOp->_handler);
-                    std::error_code result = code;
-                    if (JOIN_UNLIKELY (!result && (size == 0)))
-                    {
-                        result = make_error_code (Errc::ConnectionClosed);
-                    }
-                    if (JOIN_LIKELY (handler))
-                    {
-                        handler (result, size);
-                    }
-                });
-            }
-            else if (op == &this->_writeOp->_op)
-            {
-                this->_writeOp->dispatch ([this, &code, size] () {
-                    WriteHandler handler = std::move (this->_writeOp->_handler);
-                    if (JOIN_LIKELY (handler))
-                    {
-                        handler (code, size);
-                    }
-                });
-            }
-            else if (op == &this->_connectOp->_op)
-            {
-                this->_connectOp->dispatch ([this, &code] () {
-                    ConnectHandler handler = std::move (this->_connectOp->_handler);
-                    if (code)
-                    {
-                        this->_socket.close ();
-                    }
-                    else
-                    {
-                        this->_socket._state = Socket::Connected;
-                    }
-                    if (JOIN_LIKELY (handler))
-                    {
-                        handler (code);
-                    }
-                });
-            }
-            else
-            {
-                // do nothing.
-            }
-        }
-
         /// connect operation.
         std::unique_ptr<AsyncConnect> _connectOp{new AsyncConnect ()};
     };

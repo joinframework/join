@@ -52,7 +52,7 @@ namespace join
      * @brief basic asynchronous socket class.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncSocket : protected CompletionHandler
+    class BasicAsyncSocket
     {
     public:
         using Socket = typename Protocol::Socket;
@@ -103,32 +103,11 @@ namespace join
          * @param other other object to move.
          */
         BasicAsyncSocket (BasicAsyncSocket&& other) noexcept
-        : _proactor (other._proactor)
-        , _readOp (nullptr)
-        , _writeOp (nullptr)
+        : _socket (std::move (other._socket))
+        , _proactor (other._proactor)
+        , _readOp (std::move (other._readOp))
+        , _writeOp (std::move (other._writeOp))
         {
-            if (other._readOp != nullptr)
-            {
-                other._readOp->drain ([&other] () {
-                    other.cancelRead ();
-                });
-
-                other._readOp->release ();
-            }
-
-            if (other._writeOp != nullptr)
-            {
-                other._writeOp->drain ([&other] () {
-                    other.cancelWrite ();
-                });
-
-                other._writeOp->release ();
-            }
-
-            _socket = std::move (other._socket);
-
-            _readOp = std::move (other._readOp);
-            _writeOp = std::move (other._writeOp);
         }
 
         /**
@@ -139,24 +118,6 @@ namespace join
         BasicAsyncSocket& operator= (BasicAsyncSocket&& other) noexcept
         {
             close ();
-
-            if (other._readOp != nullptr)
-            {
-                other._readOp->drain ([&other] () {
-                    other.cancelRead ();
-                });
-
-                other._readOp->release ();
-            }
-
-            if (other._writeOp != nullptr)
-            {
-                other._writeOp->drain ([&other] () {
-                    other.cancelWrite ();
-                });
-
-                other._writeOp->release ();
-            }
 
             _socket = std::move (other._socket);
             _proactor = other._proactor;
@@ -262,7 +223,7 @@ namespace join
             _readOp->_msg.msg_control = nullptr;
             _readOp->_msg.msg_controllen = 0;
             _readOp->_msg.msg_flags = 0;
-            _readOp->_op = IoOperation::makeRecvmsg (_socket.handle (), &_readOp->_msg, 0, this);
+            _readOp->_op = IoOperation::makeRecvmsg (_socket.handle (), &_readOp->_msg, 0, _readOp.get ());
 
             if (_proactor->submit (&_readOp->_op, true, false) == -1)
             {
@@ -312,7 +273,8 @@ namespace join
             _writeOp->_msg.msg_control = nullptr;
             _writeOp->_msg.msg_controllen = 0;
             _writeOp->_msg.msg_flags = 0;
-            _writeOp->_op = IoOperation::makeSendmsg (_socket.handle (), &_writeOp->_msg, MSG_NOSIGNAL, this);
+            _writeOp->_op =
+                IoOperation::makeSendmsg (_socket.handle (), &_writeOp->_msg, MSG_NOSIGNAL, _writeOp.get ());
 
             if (_proactor->submit (&_writeOp->_op, true, false) == -1)
             {
@@ -459,66 +421,6 @@ namespace join
         }
 
     protected:
-        /**
-         * @brief method called when an operation completes.
-         * @param op completed operation.
-         * @param result number of bytes transferred, or operation specific value.
-         */
-        void onComplete (IoOperation* op, int result) override
-        {
-            dispatch (op, (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code (),
-                      (result > 0) ? static_cast<size_t> (result) : 0);
-        }
-
-        /**
-         * @brief method called when an operation is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel (IoOperation* op, [[maybe_unused]] int result) override
-        {
-            dispatch (op, make_error_code (std::errc::operation_canceled), 0);
-        }
-
-        /**
-         * @brief invoke the handler owning the given operation slot.
-         * @param op completed or cancelled operation.
-         * @param code error code to report.
-         * @param size number of bytes transferred.
-         */
-        void dispatch (IoOperation* op, const std::error_code& code, size_t size) noexcept
-        {
-            if (op == &_readOp->_op)
-            {
-                _readOp->dispatch ([this, &code, size] () {
-                    ReadHandler handler = std::move (_readOp->_handler);
-                    std::error_code result = code;
-                    if (JOIN_UNLIKELY (!result && (_readOp->_msg.msg_flags & MSG_TRUNC)))
-                    {
-                        result = make_error_code (Errc::MessageTooLong);
-                    }
-                    if (JOIN_LIKELY (handler))
-                    {
-                        handler (result, size);
-                    }
-                });
-            }
-            else if (op == &_writeOp->_op)
-            {
-                _writeOp->dispatch ([this, &code, size] () {
-                    WriteHandler handler = std::move (_writeOp->_handler);
-                    if (JOIN_LIKELY (handler))
-                    {
-                        handler (code, size);
-                    }
-                });
-            }
-            else
-            {
-                // do nothing.
-            }
-        }
-
         /// underlying synchronous socket.
         Socket _socket;
 

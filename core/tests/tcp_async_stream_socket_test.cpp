@@ -273,18 +273,20 @@ TEST_F (TcpAsyncStreamSocket, move)
 
     client3 = std::move (client2);
 
+    ASSERT_TRUE (client3.connected ());
+    ASSERT_FALSE (client2.opened ());
+
+    ASSERT_EQ (client3.asyncWrite ("hello", 5, nullptr), 0) << join::lastError.message ();
+
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
             return _completions >= 2;
         }));
-        ASSERT_EQ (_code, std::errc::operation_canceled);
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "hello");
     }
-
-    ASSERT_TRUE (client3.connected ());
-    ASSERT_FALSE (client2.opened ());
-
-    ASSERT_EQ (client3.asyncWrite ("hello", 5, nullptr), 0) << join::lastError.message ();
 
     client3.close ();
 }
