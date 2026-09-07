@@ -48,6 +48,18 @@ struct Proactor
     {
         return proactor;
     }
+
+    int submit ([[maybe_unused]] IoOperation* op, [[maybe_unused]] bool flush = false,
+                [[maybe_unused]] bool sync = false) noexcept
+    {
+        return 0;
+    }
+
+    int cancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] bool flush = false,
+                [[maybe_unused]] bool sync = false) noexcept
+    {
+        return 0;
+    }
 };
 
 /**
@@ -64,6 +76,8 @@ struct AsyncOperation : public join::BasicAsyncOperation<Tcp, Proactor>
  */
 struct AsyncAccept : public join::BasicAsyncAccept<Tcp, Proactor>
 {
+    using join::BasicAsyncAccept<Tcp, Proactor>::onComplete;
+    using join::BasicAsyncAccept<Tcp, Proactor>::onCancel;
     using join::BasicAsyncAccept<Tcp, Proactor>::_handler;
     using join::BasicAsyncAccept<Tcp, Proactor>::_remote;
     using join::BasicAsyncAccept<Tcp, Proactor>::_remoteLen;
@@ -77,7 +91,10 @@ struct AsyncAccept : public join::BasicAsyncAccept<Tcp, Proactor>
  */
 struct AsyncConnect : public join::BasicAsyncConnect<Tcp, Proactor>
 {
+    using join::BasicAsyncConnect<Tcp, Proactor>::onComplete;
+    using join::BasicAsyncConnect<Tcp, Proactor>::onCancel;
     using join::BasicAsyncConnect<Tcp, Proactor>::_handler;
+    using join::BasicAsyncConnect<Tcp, Proactor>::_socket;
     using join::BasicAsyncOperation<Tcp, Proactor>::_op;
     using join::BasicAsyncOperation<Tcp, Proactor>::_state;
 };
@@ -87,9 +104,12 @@ struct AsyncConnect : public join::BasicAsyncConnect<Tcp, Proactor>
  */
 struct AsyncRead : public join::BasicAsyncRead<Tcp, Proactor>
 {
+    using join::BasicAsyncRead<Tcp, Proactor>::onComplete;
+    using join::BasicAsyncRead<Tcp, Proactor>::onCancel;
     using join::BasicAsyncRead<Tcp, Proactor>::_handler;
     using join::BasicAsyncRead<Tcp, Proactor>::_msg;
     using join::BasicAsyncRead<Tcp, Proactor>::_iov;
+    using join::BasicAsyncRead<Tcp, Proactor>::_stream;
     using join::BasicAsyncOperation<Tcp, Proactor>::_op;
     using join::BasicAsyncOperation<Tcp, Proactor>::_state;
 };
@@ -99,6 +119,8 @@ struct AsyncRead : public join::BasicAsyncRead<Tcp, Proactor>
  */
 struct AsyncWrite : public join::BasicAsyncWrite<Tcp, Proactor>
 {
+    using join::BasicAsyncWrite<Tcp, Proactor>::onComplete;
+    using join::BasicAsyncWrite<Tcp, Proactor>::onCancel;
     using join::BasicAsyncWrite<Tcp, Proactor>::_handler;
     using join::BasicAsyncWrite<Tcp, Proactor>::_msg;
     using join::BasicAsyncWrite<Tcp, Proactor>::_iov;
@@ -263,4 +285,279 @@ TEST (AsyncOperation, dispatch)
     rearm = true;
     operation.dispatch (handler);
     ASSERT_EQ (operation._state.load (), AsyncOperation::Pending);
+}
+
+/**
+ * @brief Test onComplete.
+ */
+TEST (AsyncRead, onComplete)
+{
+    std::error_code code;
+    size_t size = 0;
+    int calls = 0;
+
+    auto report = [&code, &size, &calls] (const std::error_code& ec, size_t transferred) {
+        code = ec;
+        size = transferred;
+        ++calls;
+    };
+
+    AsyncRead read;
+
+    read._handler = report;
+    read.onComplete (&read._op, 16);
+    ASSERT_EQ (calls, 1);
+    ASSERT_FALSE (code) << code.message ();
+    ASSERT_EQ (size, 16);
+
+    read._handler = report;
+    read.onComplete (&read._op, -EAGAIN);
+    ASSERT_EQ (calls, 2);
+    ASSERT_EQ (code, std::errc::resource_unavailable_try_again) << code.message ();
+    ASSERT_EQ (size, 0);
+
+    read._msg.msg_flags = MSG_TRUNC;
+    read._handler = report;
+    read.onComplete (&read._op, 8);
+    ASSERT_EQ (calls, 3);
+    ASSERT_EQ (code, Errc::MessageTooLong) << code.message ();
+    ASSERT_EQ (size, 8);
+
+    read._msg.msg_flags = 0;
+    read._stream = true;
+    read._handler = report;
+    read.onComplete (&read._op, 4);
+    ASSERT_EQ (calls, 4);
+    ASSERT_FALSE (code) << code.message ();
+    ASSERT_EQ (size, 4);
+
+    read._handler = report;
+    read.onComplete (&read._op, 0);
+    ASSERT_EQ (calls, 5);
+    ASSERT_EQ (code, Errc::ConnectionClosed) << code.message ();
+    ASSERT_EQ (size, 0);
+
+    read._msg.msg_flags = MSG_TRUNC;
+    read._handler = report;
+    read.onComplete (&read._op, 2);
+    ASSERT_EQ (calls, 6);
+    ASSERT_FALSE (code) << code.message ();
+    ASSERT_EQ (size, 2);
+
+    ASSERT_NO_THROW (read.onComplete (&read._op, 1));
+    ASSERT_EQ (calls, 6);
+}
+
+/**
+ * @brief Test onCancel.
+ */
+TEST (AsyncRead, onCancel)
+{
+    std::error_code code;
+    size_t size = 1;
+    int calls = 0;
+
+    AsyncRead read;
+
+    read._handler = [&code, &size, &calls] (const std::error_code& ec, size_t transferred) {
+        code = ec;
+        size = transferred;
+        ++calls;
+    };
+    read.onCancel (&read._op, -ECANCELED);
+    ASSERT_EQ (calls, 1);
+    ASSERT_EQ (code, std::errc::operation_canceled) << code.message ();
+    ASSERT_EQ (size, 0);
+
+    ASSERT_NO_THROW (read.onCancel (&read._op, -ECANCELED));
+    ASSERT_EQ (calls, 1);
+}
+
+/**
+ * @brief Test onComplete.
+ */
+TEST (AsyncWrite, onComplete)
+{
+    std::error_code code;
+    size_t size = 0;
+    int calls = 0;
+
+    auto report = [&code, &size, &calls] (const std::error_code& ec, size_t transferred) {
+        code = ec;
+        size = transferred;
+        ++calls;
+    };
+
+    AsyncWrite write;
+
+    write._handler = report;
+    write.onComplete (&write._op, 32);
+    ASSERT_EQ (calls, 1);
+    ASSERT_FALSE (code) << code.message ();
+    ASSERT_EQ (size, 32);
+
+    write._handler = report;
+    write.onComplete (&write._op, -EPIPE);
+    ASSERT_EQ (calls, 2);
+    ASSERT_EQ (code, std::errc::broken_pipe) << code.message ();
+    ASSERT_EQ (size, 0);
+
+    ASSERT_NO_THROW (write.onComplete (&write._op, 1));
+    ASSERT_EQ (calls, 2);
+}
+
+/**
+ * @brief Test onCancel.
+ */
+TEST (AsyncWrite, onCancel)
+{
+    std::error_code code;
+    size_t size = 1;
+    int calls = 0;
+
+    AsyncWrite write;
+
+    write._handler = [&code, &size, &calls] (const std::error_code& ec, size_t transferred) {
+        code = ec;
+        size = transferred;
+        ++calls;
+    };
+    write.onCancel (&write._op, -ECANCELED);
+    ASSERT_EQ (calls, 1);
+    ASSERT_EQ (code, std::errc::operation_canceled) << code.message ();
+    ASSERT_EQ (size, 0);
+
+    ASSERT_NO_THROW (write.onCancel (&write._op, -ECANCELED));
+    ASSERT_EQ (calls, 1);
+}
+
+/**
+ * @brief Test onComplete.
+ */
+TEST (AsyncConnect, onComplete)
+{
+    std::error_code code;
+    int calls = 0;
+
+    auto report = [&code, &calls] (const std::error_code& ec) {
+        code = ec;
+        ++calls;
+    };
+
+    Tcp::Socket sock;
+    ASSERT_EQ (sock.open (Tcp::v6 ()), 0) << join::lastError.message ();
+
+    AsyncConnect connect;
+    connect._socket = &sock;
+
+    connect._handler = report;
+    connect.onComplete (&connect._op, 0);
+    ASSERT_EQ (calls, 1);
+    ASSERT_FALSE (code) << code.message ();
+    ASSERT_TRUE (sock.connected ());
+
+    connect._handler = report;
+    connect.onComplete (&connect._op, -ECONNREFUSED);
+    ASSERT_EQ (calls, 2);
+    ASSERT_EQ (code, std::errc::connection_refused) << code.message ();
+    ASSERT_FALSE (sock.opened ());
+
+    ASSERT_NO_THROW (connect.onComplete (&connect._op, 0));
+    ASSERT_EQ (calls, 2);
+}
+
+/**
+ * @brief Test onCancel.
+ */
+TEST (AsyncConnect, onCancel)
+{
+    std::error_code code;
+    int calls = 0;
+
+    Tcp::Socket sock;
+    ASSERT_EQ (sock.open (Tcp::v6 ()), 0) << join::lastError.message ();
+
+    AsyncConnect connect;
+    connect._socket = &sock;
+
+    connect._handler = [&code, &calls] (const std::error_code& ec) {
+        code = ec;
+        ++calls;
+    };
+    connect.onCancel (&connect._op, -ECANCELED);
+    ASSERT_EQ (calls, 1);
+    ASSERT_EQ (code, std::errc::operation_canceled) << code.message ();
+    ASSERT_FALSE (sock.opened ());
+
+    ASSERT_NO_THROW (connect.onCancel (&connect._op, -ECANCELED));
+    ASSERT_EQ (calls, 1);
+}
+
+/**
+ * @brief Test onComplete.
+ */
+TEST (AsyncAccept, onComplete)
+{
+    std::error_code code;
+    int calls = 0;
+
+    auto report = [&code, &calls] (const std::error_code& ec) {
+        code = ec;
+        ++calls;
+    };
+
+    Proactor proactor;
+    join::BasicAsyncStreamSocket<Tcp, Proactor> peer (proactor);
+
+    AsyncAccept accept;
+
+    accept._handler = report;
+    accept._peer = &peer;
+    accept.onComplete (&accept._op, -ECONNABORTED);
+    ASSERT_EQ (calls, 1);
+    ASSERT_EQ (code, std::errc::connection_aborted) << code.message ();
+    ASSERT_EQ (accept._peer, nullptr);
+    ASSERT_FALSE (peer.opened ());
+
+    int fd = ::socket (AF_INET6, SOCK_STREAM, 0);
+    ASSERT_NE (fd, -1);
+
+    accept._handler = report;
+    accept._peer = &peer;
+    accept._remote = Tcp::Endpoint ("::1", 5000);
+    accept.onComplete (&accept._op, fd);
+    ASSERT_EQ (calls, 2);
+    ASSERT_FALSE (code) << code.message ();
+    ASSERT_EQ (accept._peer, nullptr);
+    ASSERT_TRUE (peer.connected ());
+    ASSERT_EQ (peer.remoteEndpoint (), Tcp::Endpoint ("::1", 5000));
+
+    peer.close ();
+}
+
+/**
+ * @brief Test onCancel.
+ */
+TEST (AsyncAccept, onCancel)
+{
+    std::error_code code;
+    int calls = 0;
+
+    Proactor proactor;
+    join::BasicAsyncStreamSocket<Tcp, Proactor> peer (proactor);
+
+    AsyncAccept accept;
+
+    accept._handler = [&code, &calls] (const std::error_code& ec) {
+        code = ec;
+        ++calls;
+    };
+    accept._peer = &peer;
+    accept.onCancel (&accept._op, -ECANCELED);
+    ASSERT_EQ (calls, 1);
+    ASSERT_EQ (code, std::errc::operation_canceled) << code.message ();
+    ASSERT_EQ (accept._peer, nullptr);
+
+    ASSERT_NO_THROW (accept.onCancel (&accept._op, -ECANCELED));
+    ASSERT_EQ (calls, 1);
 }

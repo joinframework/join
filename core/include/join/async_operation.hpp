@@ -80,6 +80,9 @@ namespace join
             Closing,     /**< the socket is closing, no operation may be armed. */
         };
 
+        /// allocation and state alignment, in bytes.
+        static constexpr size_t alignment = 64;
+
         /**
          * @brief allocate a block honouring its extended alignment.
          * @param size allocation size in bytes.
@@ -87,7 +90,9 @@ namespace join
          */
         static void* operator new (size_t size)
         {
-            constexpr size_t alignment = 64;
+            static_assert (alignof (BasicAsyncOperation) <= alignment,
+                           "operation alignment exceeds the allocation alignment");
+
             size = (size + alignment - 1) & ~(alignment - 1);
 
             void* mem = ::aligned_alloc (alignment, size);
@@ -190,7 +195,7 @@ namespace join
         IoOperation _op = {};
 
         /// caller side operation state.
-        alignas (64) std::atomic<State> _state{Idle};
+        alignas (alignment) std::atomic<State> _state{Idle};
     };
 
     /**

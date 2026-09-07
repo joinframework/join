@@ -289,6 +289,27 @@ TEST_F (TcpAsyncStreamSocket, move)
     }
 
     client3.close ();
+
+    Tcp::AsyncSocket pending;
+
+    ASSERT_EQ (pending.asyncConnect ({_blackhole, _port}, onConnect), 0) << join::lastError.message ();
+    ASSERT_TRUE (pending.connecting ());
+
+    Tcp::AsyncSocket moved (std::move (pending));
+
+    ASSERT_TRUE (moved.connecting ());
+    ASSERT_FALSE (pending.opened ());
+    ASSERT_EQ (moved.cancelConnect (), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
+
+    moved.close ();
 }
 
 /**

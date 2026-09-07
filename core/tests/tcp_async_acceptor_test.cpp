@@ -215,6 +215,38 @@ TEST_F (TcpAsyncAcceptor, asyncAccept)
 }
 
 /**
+ * @brief Test asyncAccept method with a peer moved before the acceptation completes.
+ */
+TEST_F (TcpAsyncAcceptor, movedPeer)
+{
+    Tcp::AsyncAcceptor server;
+    Tcp::AsyncSocket target;
+    Tcp::Socket client (Tcp::Socket::Blocking);
+
+    ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (target, onReport), 0) << join::lastError.message ();
+
+    Tcp::AsyncSocket moved (std::move (target));
+
+    ASSERT_EQ (client.connect ({_address, _port}), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_TRUE (moved.connected ());
+    ASSERT_FALSE (target.opened ());
+
+    moved.close ();
+    client.close ();
+    server.close ();
+}
+
+/**
  * @brief Test asyncAccept method resubmitted from its own handler.
  */
 TEST_F (TcpAsyncAcceptor, resubmit)
