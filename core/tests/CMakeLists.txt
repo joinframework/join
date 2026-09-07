@@ -271,6 +271,11 @@ target_link_libraries(tcp_acceptor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME tcp_acceptor.gtest COMMAND tcp_acceptor.gtest)
 install(TARGETS tcp_acceptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(async_operation.gtest async_operation_test.cpp)
+target_link_libraries(async_operation.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME async_operation.gtest COMMAND async_operation.gtest)
+install(TARGETS async_operation.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(unix_async_datagram_socket.gtest unix_async_datagram_socket_test.cpp)
 target_link_libraries(unix_async_datagram_socket.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME unix_async_datagram_socket.gtest COMMAND unix_async_datagram_socket.gtest)

@@ -124,18 +124,9 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            AsyncOperation::State expected = AsyncOperation::Idle;
-
-            if (!this->_ops->write.state.compare_exchange_strong (expected, AsyncOperation::Pending,
-                                                                  std::memory_order_acquire, std::memory_order_acquire))
+            if (this->_ops->write.reserve (*this->_engine) == -1)
             {
-                if ((expected != AsyncOperation::Dispatching) || !this->_engine->isProactorThread ())
-                {
-                    lastError = make_error_code (Errc::InUse);
-                    return -1;
-                }
-
-                this->_ops->write.state.store (AsyncOperation::Pending, std::memory_order_release);
+                return -1;
             }
 
             this->_socket._state = Socket::Connecting;
@@ -147,7 +138,7 @@ namespace join
             if (this->_engine->submit (&this->_ops->write.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_ops->write.state.store (AsyncOperation::Idle, std::memory_order_release);
+                this->_ops->write.release ();
                 _onConnect.reset ();
                 this->_socket.close ();
                 return -1;
@@ -225,60 +216,53 @@ namespace join
         {
             if (op == &this->_ops->read.op)
             {
-                this->_ops->read.state.store (AsyncOperation::Dispatching, std::memory_order_release);
+                this->_ops->read.dispatch ([this, &code, size] () {
+                    ReadHandler handler = std::move (this->_onRead);
+                    std::error_code result = code;
 
-                ReadHandler handler = std::move (this->_onRead);
-                std::error_code result = code;
+                    if (JOIN_UNLIKELY (!result && (size == 0)))
+                    {
+                        result = make_error_code (Errc::ConnectionClosed);
+                    }
 
-                if (JOIN_UNLIKELY (!result && (size == 0)))
-                {
-                    result = make_error_code (Errc::ConnectionClosed);
-                }
+                    if (JOIN_LIKELY (handler))
+                    {
+                        handler (result, size);
+                    }
+                });
 
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (result, size);
-                }
-
-                AsyncOperation::State expected = AsyncOperation::Dispatching;
-                this->_ops->read.state.compare_exchange_strong (expected, AsyncOperation::Idle,
-                                                                std::memory_order_release, std::memory_order_relaxed);
                 return;
             }
 
-            this->_ops->write.state.store (AsyncOperation::Dispatching, std::memory_order_release);
-
-            if (JOIN_UNLIKELY (op->code == static_cast<uint8_t> (IoOperation::Opcode::Connect)))
-            {
-                ConnectHandler handler = std::move (_onConnect);
-
-                if (code)
+            this->_ops->write.dispatch ([this, op, &code, size] () {
+                if (JOIN_UNLIKELY (op->code == static_cast<uint8_t> (IoOperation::Opcode::Connect)))
                 {
-                    this->_socket.close ();
+                    ConnectHandler handler = std::move (_onConnect);
+
+                    if (code)
+                    {
+                        this->_socket.close ();
+                    }
+                    else
+                    {
+                        this->_socket._state = Socket::Connected;
+                    }
+
+                    if (JOIN_LIKELY (handler))
+                    {
+                        handler (code);
+                    }
                 }
                 else
                 {
-                    this->_socket._state = Socket::Connected;
-                }
+                    WriteHandler handler = std::move (this->_onWrite);
 
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (code);
+                    if (JOIN_LIKELY (handler))
+                    {
+                        handler (code, size);
+                    }
                 }
-            }
-            else
-            {
-                WriteHandler handler = std::move (this->_onWrite);
-
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (code, size);
-                }
-            }
-
-            AsyncOperation::State expected = AsyncOperation::Dispatching;
-            this->_ops->write.state.compare_exchange_strong (expected, AsyncOperation::Idle, std::memory_order_release,
-                                                             std::memory_order_relaxed);
+            });
         }
 
         /// handler invoked on connect completion.

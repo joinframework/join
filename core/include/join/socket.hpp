@@ -52,6 +52,10 @@ namespace join
     template <class Protocol>
     class BasicSocket
     {
+        /// friendship with basic asynchronous write operation
+        template <class P>
+        friend class BasicAsyncWrite;
+
     public:
         using Ptr = std::unique_ptr<BasicSocket<Protocol>>;
         using Endpoint = typename Protocol::Endpoint;

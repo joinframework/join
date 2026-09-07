@@ -45,6 +45,9 @@ namespace join
         using Socket = BasicDatagramSocket<Protocol>;
         using Endpoint = typename Protocol::Endpoint;
 
+        /// asynchronous operation slot.
+        using Operation = typename BasicAsyncSocket<Protocol, Engine>::Operation;
+
         /// handler invoked on read completion.
         using ReadHandler = typename BasicAsyncSocket<Protocol, Engine>::ReadHandler;
 
@@ -149,18 +152,9 @@ namespace join
                 return -1;
             }
 
-            AsyncOperation::State expected = AsyncOperation::Idle;
-
-            if (!this->_ops->read.state.compare_exchange_strong (expected, AsyncOperation::Pending,
-                                                                 std::memory_order_acquire, std::memory_order_acquire))
+            if (this->_ops->read.reserve (*this->_engine) == -1)
             {
-                if ((expected != AsyncOperation::Dispatching) || !this->_engine->isProactorThread ())
-                {
-                    lastError = make_error_code (Errc::InUse);
-                    return -1;
-                }
-
-                this->_ops->read.state.store (AsyncOperation::Pending, std::memory_order_release);
+                return -1;
             }
 
             this->_onRead = std::move (handler);
@@ -178,7 +172,7 @@ namespace join
             if (this->_engine->submit (&this->_ops->read.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_ops->read.state.store (AsyncOperation::Idle, std::memory_order_release);
+                this->_ops->read.release ();
                 this->_onRead.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
@@ -202,18 +196,9 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            AsyncOperation::State expected = AsyncOperation::Idle;
-
-            if (!this->_ops->write.state.compare_exchange_strong (expected, AsyncOperation::Pending,
-                                                                  std::memory_order_acquire, std::memory_order_acquire))
+            if (this->_ops->write.reserve (*this->_engine) == -1)
             {
-                if ((expected != AsyncOperation::Dispatching) || !this->_engine->isProactorThread ())
-                {
-                    lastError = make_error_code (Errc::InUse);
-                    return -1;
-                }
-
-                this->_ops->write.state.store (AsyncOperation::Pending, std::memory_order_release);
+                return -1;
             }
 
             this->_onWrite = std::move (handler);
@@ -232,7 +217,7 @@ namespace join
             if (this->_engine->submit (&this->_ops->write.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_ops->write.state.store (AsyncOperation::Idle, std::memory_order_release);
+                this->_ops->write.release ();
                 this->_onWrite.reset ();
                 return -1;
                 // LCOV_EXCL_STOP

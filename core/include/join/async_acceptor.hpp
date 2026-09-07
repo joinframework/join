@@ -57,6 +57,9 @@ namespace join
         using Socket = typename Protocol::Socket;
         using AsyncSocket = BasicAsyncStreamSocket<Protocol, Engine>;
 
+        /// asynchronous operation slot.
+        using Operation = BasicAsyncOperation<Protocol>;
+
         /// handler invoked on acceptation completion.
         using AcceptHandler = Function<void (const std::error_code&)>;
 
@@ -127,24 +130,13 @@ namespace join
                 return;
             }
 
-            Backoff backoff;
-            AsyncOperation::State expected = AsyncOperation::Idle;
-
-            while (!_ops->accept.state.compare_exchange_strong (expected, AsyncOperation::Closing,
-                                                                std::memory_order_acq_rel, std::memory_order_acquire))
-            {
-                if (expected == AsyncOperation::Pending)
-                {
-                    cancelAccept ();
-                }
-
-                backoff ();
-                expected = AsyncOperation::Idle;
-            }
+            _ops->accept.drain ([this] () {
+                cancelAccept ();
+            });
 
             _acceptor.close ();
 
-            _ops->accept.state.store (AsyncOperation::Idle, std::memory_order_release);
+            _ops->accept.release ();
         }
 
         /**
@@ -168,18 +160,9 @@ namespace join
                 return -1;
             }
 
-            AsyncOperation::State expected = AsyncOperation::Idle;
-
-            if (!_ops->accept.state.compare_exchange_strong (expected, AsyncOperation::Pending,
-                                                             std::memory_order_acquire, std::memory_order_acquire))
+            if (_ops->accept.reserve (*_engine) == -1)
             {
-                if ((expected != AsyncOperation::Dispatching) || !_engine->isProactorThread ())
-                {
-                    lastError = make_error_code (Errc::InUse);
-                    return -1;
-                }
-
-                _ops->accept.state.store (AsyncOperation::Pending, std::memory_order_release);
+                return -1;
             }
 
             _ops->peerLen = sizeof (struct sockaddr_storage);
@@ -191,7 +174,7 @@ namespace join
             if (_engine->submit (&_ops->accept.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _ops->accept.state.store (AsyncOperation::Idle, std::memory_order_release);
+                _ops->accept.release ();
                 _onAccept.reset ();
                 _peer = nullptr;
                 return -1;
@@ -207,7 +190,7 @@ namespace join
          */
         int cancelAccept () noexcept
         {
-            if (_ops->accept.state.load (std::memory_order_acquire) != AsyncOperation::Pending)
+            if (_ops->accept.state.load (std::memory_order_acquire) != Operation::Pending)
             {
                 return 0;
             }
@@ -307,7 +290,7 @@ namespace join
             }
 
             /// acceptation operation slot.
-            AsyncOperation accept;
+            Operation accept;
 
             /// peer endpoint, written by the kernel until the acceptation completes.
             Endpoint peer;
@@ -334,33 +317,29 @@ namespace join
         {
             Ops* ops = _ops.get ();
 
-            ops->accept.state.store (AsyncOperation::Dispatching, std::memory_order_release);
+            ops->accept.dispatch ([this, ops, result] () {
+                AcceptHandler handler = std::move (_onAccept);
 
-            AcceptHandler handler = std::move (_onAccept);
+                AsyncSocket* peer = _peer;
+                _peer = nullptr;
 
-            AsyncSocket* peer = _peer;
-            _peer = nullptr;
-
-            if (JOIN_UNLIKELY (result < 0))
-            {
-                if (JOIN_LIKELY (handler))
+                if (JOIN_UNLIKELY (result < 0))
                 {
-                    handler (std::error_code (-result, std::generic_category ()));
+                    if (JOIN_LIKELY (handler))
+                    {
+                        handler (std::error_code (-result, std::generic_category ()));
+                    }
                 }
-            }
-            else
-            {
-                peer->_socket = Socket (result, ops->peer);
-
-                if (JOIN_LIKELY (handler))
+                else
                 {
-                    handler (std::error_code ());
-                }
-            }
+                    peer->_socket = Socket (result, ops->peer);
 
-            AsyncOperation::State expected = AsyncOperation::Dispatching;
-            ops->accept.state.compare_exchange_strong (expected, AsyncOperation::Idle, std::memory_order_release,
-                                                       std::memory_order_relaxed);
+                    if (JOIN_LIKELY (handler))
+                    {
+                        handler (std::error_code ());
+                    }
+                }
+            });
         }
 
         /**

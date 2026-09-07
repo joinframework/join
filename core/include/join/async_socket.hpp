@@ -26,6 +26,7 @@
 #define JOIN_CORE_ASYNC_SOCKET_HPP
 
 // libjoin.
+#include <join/async_operation.hpp>
 #include <join/io_operation.hpp>
 #include <join/function.hpp>
 #include <join/utils.hpp>
@@ -48,28 +49,6 @@
 
 namespace join
 {
-    /**
-     * @brief asynchronous operation.
-     */
-    struct AsyncOperation
-    {
-        /**
-         * @brief caller side operation state.
-         */
-        enum State : uint8_t
-        {
-            Idle,        /**< no operation in flight and no completion handler running. */
-            Pending,     /**< an operation is in flight. */
-            Dispatching, /**< the completion handler is running. */
-            Closing,     /**< the socket is closing, no operation may be armed. */
-        };
-
-        /// operation.
-        IoOperation op = {};
-
-        /// caller side operation state.
-        alignas (64) std::atomic<State> state{Idle};
-    };
 
     /**
      * @brief basic asynchronous socket class.
@@ -81,6 +60,9 @@ namespace join
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
         using Option = typename Socket::Option;
+
+        /// asynchronous operation slot.
+        using Operation = BasicAsyncOperation<Protocol>;
 
         /// handler invoked on read completion.
         using ReadHandler = Function<void (const std::error_code&, size_t)>;
@@ -166,39 +148,17 @@ namespace join
                 return;
             }
 
-            Backoff backoff;
-            AsyncOperation::State expected = AsyncOperation::Idle;
-
-            while (!_ops->read.state.compare_exchange_strong (expected, AsyncOperation::Closing,
-                                                              std::memory_order_acq_rel, std::memory_order_acquire))
-            {
-                if (expected == AsyncOperation::Pending)
-                {
-                    cancelRead ();
-                }
-
-                backoff ();
-                expected = AsyncOperation::Idle;
-            }
-
-            expected = AsyncOperation::Idle;
-
-            while (!_ops->write.state.compare_exchange_strong (expected, AsyncOperation::Closing,
-                                                               std::memory_order_acq_rel, std::memory_order_acquire))
-            {
-                if (expected == AsyncOperation::Pending)
-                {
-                    cancelWrite ();
-                }
-
-                backoff ();
-                expected = AsyncOperation::Idle;
-            }
+            _ops->read.drain ([this] () {
+                cancelRead ();
+            });
+            _ops->write.drain ([this] () {
+                cancelWrite ();
+            });
 
             _socket.close ();
 
-            _ops->read.state.store (AsyncOperation::Idle, std::memory_order_release);
-            _ops->write.state.store (AsyncOperation::Idle, std::memory_order_release);
+            _ops->read.release ();
+            _ops->write.release ();
         }
 
         /**
@@ -216,18 +176,9 @@ namespace join
                 return -1;
             }
 
-            AsyncOperation::State expected = AsyncOperation::Idle;
-
-            if (!_ops->read.state.compare_exchange_strong (expected, AsyncOperation::Pending, std::memory_order_acquire,
-                                                           std::memory_order_acquire))
+            if (_ops->read.reserve (*_engine) == -1)
             {
-                if ((expected != AsyncOperation::Dispatching) || !_engine->isProactorThread ())
-                {
-                    lastError = make_error_code (Errc::InUse);
-                    return -1;
-                }
-
-                _ops->read.state.store (AsyncOperation::Pending, std::memory_order_release);
+                return -1;
             }
 
             _onRead = std::move (handler);
@@ -248,7 +199,7 @@ namespace join
             if (_engine->submit (&_ops->read.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _ops->read.state.store (AsyncOperation::Idle, std::memory_order_release);
+                _ops->read.release ();
                 _onRead.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
@@ -271,19 +222,9 @@ namespace join
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
-
-            AsyncOperation::State expected = AsyncOperation::Idle;
-
-            if (!_ops->write.state.compare_exchange_strong (expected, AsyncOperation::Pending,
-                                                            std::memory_order_acquire, std::memory_order_acquire))
+            -if (_ops->write.reserve (*_engine) == -1)
             {
-                if ((expected != AsyncOperation::Dispatching) || !_engine->isProactorThread ())
-                {
-                    lastError = make_error_code (Errc::InUse);
-                    return -1;
-                }
-
-                _ops->write.state.store (AsyncOperation::Pending, std::memory_order_release);
+                return -1;
             }
 
             _onWrite = std::move (handler);
@@ -304,7 +245,7 @@ namespace join
             if (_engine->submit (&_ops->write.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _ops->write.state.store (AsyncOperation::Idle, std::memory_order_release);
+                _ops->write.release ();
                 _onWrite.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
@@ -319,7 +260,7 @@ namespace join
          */
         int cancelRead () noexcept
         {
-            if (_ops->read.state.load (std::memory_order_acquire) != AsyncOperation::Pending)
+            if (_ops->read.state.load (std::memory_order_acquire) != Operation::Pending)
             {
                 return 0;
             }
@@ -338,7 +279,7 @@ namespace join
          */
         int cancelWrite () noexcept
         {
-            if (_ops->write.state.load (std::memory_order_acquire) != AsyncOperation::Pending)
+            if (_ops->write.state.load (std::memory_order_acquire) != Operation::Pending)
             {
                 return 0;
             }
@@ -478,7 +419,7 @@ namespace join
             }
 
             /// read operation slot.
-            AsyncOperation read;
+            Operation read;
 
             /// read message header, read by the kernel until the read completes.
             msghdr readMsg = {};
@@ -487,7 +428,7 @@ namespace join
             iovec readIov = {};
 
             /// connect or write operation slot.
-            AsyncOperation write;
+            Operation write;
 
             /// write message header, read by the kernel until the write completes.
             msghdr writeMsg = {};
@@ -542,39 +483,32 @@ namespace join
         {
             if (op == &_ops->read.op)
             {
-                _ops->read.state.store (AsyncOperation::Dispatching, std::memory_order_release);
+                _ops->read.dispatch ([this, &code, size] () {
+                    ReadHandler handler = std::move (_onRead);
+                    std::error_code result = code;
 
-                ReadHandler handler = std::move (_onRead);
-                std::error_code result = code;
+                    if (JOIN_UNLIKELY (!result && (_ops->readMsg.msg_flags & MSG_TRUNC)))
+                    {
+                        result = make_error_code (Errc::MessageTooLong);
+                    }
 
-                if (JOIN_UNLIKELY (!result && (_ops->readMsg.msg_flags & MSG_TRUNC)))
-                {
-                    result = make_error_code (Errc::MessageTooLong);
-                }
+                    if (JOIN_LIKELY (handler))
+                    {
+                        handler (result, size);
+                    }
+                });
 
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (result, size);
-                }
-
-                AsyncOperation::State expected = AsyncOperation::Dispatching;
-                _ops->read.state.compare_exchange_strong (expected, AsyncOperation::Idle, std::memory_order_release,
-                                                          std::memory_order_relaxed);
                 return;
             }
 
-            _ops->write.state.store (AsyncOperation::Dispatching, std::memory_order_release);
+            _ops->write.dispatch ([this, &code, size] () {
+                WriteHandler handler = std::move (_onWrite);
 
-            WriteHandler handler = std::move (_onWrite);
-
-            if (JOIN_LIKELY (handler))
-            {
-                handler (code, size);
-            }
-
-            AsyncOperation::State expected = AsyncOperation::Dispatching;
-            _ops->write.state.compare_exchange_strong (expected, AsyncOperation::Idle, std::memory_order_release,
-                                                       std::memory_order_relaxed);
+                if (JOIN_LIKELY (handler))
+                {
+                    handler (code, size);
+                }
+            });
         }
     };
 }
