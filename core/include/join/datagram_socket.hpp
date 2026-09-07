@@ -49,7 +49,7 @@ namespace join
         /**
          * @brief Default constructor.
          */
-        BasicDatagramSocket ()
+        BasicDatagramSocket () noexcept
         : BasicDatagramSocket (Mode::NonBlocking)
         {
         }
@@ -58,7 +58,7 @@ namespace join
          * @brief Create instance specifying the time to live.
          * @param ttl packet time to live.
          */
-        explicit BasicDatagramSocket (int ttl)
+        explicit BasicDatagramSocket (int ttl) noexcept
         : BasicDatagramSocket (Mode::NonBlocking, ttl)
         {
         }
@@ -68,7 +68,7 @@ namespace join
          * @param mode Set the socket blocking mode.
          * @param ttl packet time to live.
          */
-        explicit BasicDatagramSocket (Mode mode, int ttl = 60)
+        explicit BasicDatagramSocket (Mode mode, int ttl = 60) noexcept
         : BasicSocket<Protocol> (mode)
         , _ttl (ttl)
         {

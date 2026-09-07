@@ -38,48 +38,45 @@ namespace join
     /**
      * @brief asynchronous datagram socket class.
      */
-    template <class Protocol, class Engine>
-    class BasicAsyncDatagramSocket : public BasicAsyncSocket<Protocol, Engine>
+    template <class Protocol, class Proactor>
+    class BasicAsyncDatagramSocket : public BasicAsyncSocket<Protocol, Proactor>
     {
     public:
         using Socket = BasicDatagramSocket<Protocol>;
         using Endpoint = typename Protocol::Endpoint;
-
-        /// asynchronous operation slot.
-        using Operation = typename BasicAsyncSocket<Protocol, Engine>::Operation;
-
-        /// handler invoked on read completion.
-        using ReadHandler = typename BasicAsyncSocket<Protocol, Engine>::ReadHandler;
-
-        /// handler invoked on write completion.
-        using WriteHandler = typename BasicAsyncSocket<Protocol, Engine>::WriteHandler;
+        using AsyncOperation = BasicAsyncOperation<Protocol, Proactor>;
+        using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
+        using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
+        using State = typename AsyncOperation::State;
+        using ReadHandler = typename AsyncRead::Handler;
+        using WriteHandler = typename AsyncWrite::Handler;
 
         /**
          * @brief create the socket instance.
-         * @param engine engine driving the operations.
+         * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncDatagramSocket (Engine& engine = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Engine> (engine)
+        explicit BasicAsyncDatagramSocket (Proactor& proactor = ProactorThread::proactor ())
+        : BasicAsyncSocket<Protocol, Proactor> (proactor)
         {
         }
 
         /**
          * @brief create the socket instance specifying the time to live.
          * @param ttl packet time to live.
-         * @param engine engine driving the operations.
+         * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncDatagramSocket (int ttl, Engine& engine = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Engine> (Socket (ttl), engine)
+        explicit BasicAsyncDatagramSocket (int ttl, Proactor& proactor = ProactorThread::proactor ())
+        : BasicAsyncSocket<Protocol, Proactor> (Socket (ttl), proactor)
         {
         }
 
         /**
          * @brief create the socket instance adopting an already opened socket.
          * @param sock socket to adopt.
-         * @param engine engine driving the operations.
+         * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncDatagramSocket (Socket&& sock, Engine& engine = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Engine> (std::move (sock), engine)
+        explicit BasicAsyncDatagramSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
+        : BasicAsyncSocket<Protocol, Proactor> (std::move (sock), proactor)
         {
         }
 
@@ -100,14 +97,14 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicAsyncDatagramSocket (BasicAsyncDatagramSocket&& other) = delete;
+        BasicAsyncDatagramSocket (BasicAsyncDatagramSocket&& other) noexcept = default;
 
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicAsyncDatagramSocket& operator= (BasicAsyncDatagramSocket&& other) = delete;
+        BasicAsyncDatagramSocket& operator= (BasicAsyncDatagramSocket&& other) noexcept = default;
 
         /**
          * @brief destroy the socket instance.
@@ -152,28 +149,28 @@ namespace join
                 return -1;
             }
 
-            if (this->_ops->read.reserve (*this->_engine) == -1)
+            if (this->_readOp->reserve (*this->_proactor) == -1)
             {
                 return -1;
             }
 
-            this->_onRead = std::move (handler);
-            this->_ops->readIov.iov_base = data;
-            this->_ops->readIov.iov_len = maxSize;
-            this->_ops->readMsg.msg_name = endpoint.addr ();
-            this->_ops->readMsg.msg_namelen = sizeof (struct sockaddr_storage);
-            this->_ops->readMsg.msg_iov = &this->_ops->readIov;
-            this->_ops->readMsg.msg_iovlen = 1;
-            this->_ops->readMsg.msg_control = nullptr;
-            this->_ops->readMsg.msg_controllen = 0;
-            this->_ops->readMsg.msg_flags = 0;
-            this->_ops->read.op = IoOperation::makeRecvmsg (this->_socket.handle (), &this->_ops->readMsg, 0, this);
+            this->_readOp->_handler = std::move (handler);
+            this->_readOp->_iov.iov_base = data;
+            this->_readOp->_iov.iov_len = maxSize;
+            this->_readOp->_msg.msg_name = endpoint.addr ();
+            this->_readOp->_msg.msg_namelen = endpoint.length ();
+            this->_readOp->_msg.msg_iov = &this->_readOp->_iov;
+            this->_readOp->_msg.msg_iovlen = 1;
+            this->_readOp->_msg.msg_control = nullptr;
+            this->_readOp->_msg.msg_controllen = 0;
+            this->_readOp->_msg.msg_flags = 0;
+            this->_readOp->_op = IoOperation::makeRecvmsg (this->_socket.handle (), &this->_readOp->_msg, 0, this);
 
-            if (this->_engine->submit (&this->_ops->read.op, true, false) == -1)
+            if (this->_proactor->submit (&this->_readOp->_op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_ops->read.release ();
-                this->_onRead.reset ();
+                this->_readOp->release ();
+                this->_readOp->_handler.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -196,29 +193,29 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            if (this->_ops->write.reserve (*this->_engine) == -1)
+            if (this->_writeOp->reserve (*this->_proactor) == -1)
             {
                 return -1;
             }
 
-            this->_onWrite = std::move (handler);
-            this->_ops->writeIov.iov_base = const_cast<char*> (data);
-            this->_ops->writeIov.iov_len = size;
-            this->_ops->writeMsg.msg_name = endpoint.addr ();
-            this->_ops->writeMsg.msg_namelen = endpoint.length ();
-            this->_ops->writeMsg.msg_iov = &this->_ops->writeIov;
-            this->_ops->writeMsg.msg_iovlen = 1;
-            this->_ops->writeMsg.msg_control = nullptr;
-            this->_ops->writeMsg.msg_controllen = 0;
-            this->_ops->writeMsg.msg_flags = 0;
-            this->_ops->write.op =
-                IoOperation::makeSendmsg (this->_socket.handle (), &this->_ops->writeMsg, MSG_NOSIGNAL, this);
+            this->_writeOp->_handler = std::move (handler);
+            this->_writeOp->_iov.iov_base = const_cast<char*> (data);
+            this->_writeOp->_iov.iov_len = size;
+            this->_writeOp->_msg.msg_name = endpoint.addr ();
+            this->_writeOp->_msg.msg_namelen = endpoint.length ();
+            this->_writeOp->_msg.msg_iov = &this->_writeOp->_iov;
+            this->_writeOp->_msg.msg_iovlen = 1;
+            this->_writeOp->_msg.msg_control = nullptr;
+            this->_writeOp->_msg.msg_controllen = 0;
+            this->_writeOp->_msg.msg_flags = 0;
+            this->_writeOp->_op =
+                IoOperation::makeSendmsg (this->_socket.handle (), &this->_writeOp->_msg, MSG_NOSIGNAL, this);
 
-            if (this->_engine->submit (&this->_ops->write.op, true, false) == -1)
+            if (this->_proactor->submit (&this->_writeOp->_op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_ops->write.release ();
-                this->_onWrite.reset ();
+                this->_writeOp->release ();
+                this->_writeOp->_handler.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
             }

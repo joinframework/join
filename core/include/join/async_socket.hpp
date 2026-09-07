@@ -27,12 +27,11 @@
 
 // libjoin.
 #include <join/async_operation.hpp>
-#include <join/io_operation.hpp>
-#include <join/function.hpp>
-#include <join/utils.hpp>
 #include <join/proactor.hpp>
+#include <join/function.hpp>
 #include <join/backoff.hpp>
 #include <join/socket.hpp>
+#include <join/utils.hpp>
 
 // C++.
 #include <system_error>
@@ -49,44 +48,40 @@
 
 namespace join
 {
-
     /**
      * @brief basic asynchronous socket class.
      */
-    template <class Protocol, class Engine>
+    template <class Protocol, class Proactor>
     class BasicAsyncSocket : protected CompletionHandler
     {
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
         using Option = typename Socket::Option;
-
-        /// asynchronous operation slot.
-        using Operation = BasicAsyncOperation<Protocol>;
-
-        /// handler invoked on read completion.
-        using ReadHandler = Function<void (const std::error_code&, size_t)>;
-
-        /// handler invoked on write completion.
-        using WriteHandler = Function<void (const std::error_code&, size_t)>;
+        using AsyncOperation = BasicAsyncOperation<Protocol, Proactor>;
+        using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
+        using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
+        using State = typename AsyncOperation::State;
+        using ReadHandler = typename AsyncRead::Handler;
+        using WriteHandler = typename AsyncWrite::Handler;
 
         /**
          * @brief create the socket instance.
-         * @param engine engine driving the operations.
+         * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncSocket (Engine& engine = ProactorThread::proactor ())
-        : _engine (&engine)
+        explicit BasicAsyncSocket (Proactor& proactor = ProactorThread::proactor ())
+        : _proactor (&proactor)
         {
         }
 
         /**
          * @brief create the socket instance adopting an already opened socket.
          * @param sock socket to adopt.
-         * @param engine engine driving the operations.
+         * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncSocket (Socket&& sock, Engine& engine = ProactorThread::proactor ())
+        explicit BasicAsyncSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
         : _socket (std::move (sock))
-        , _engine (&engine)
+        , _proactor (&proactor)
         {
         }
 
@@ -107,14 +102,54 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicAsyncSocket (BasicAsyncSocket&& other) = delete;
+        BasicAsyncSocket (BasicAsyncSocket&& other) noexcept
+        : _proactor (other._proactor)
+        , _readOp (nullptr)
+        , _writeOp (nullptr)
+        {
+            other._readOp->drain ([&other] () {
+                other.cancelRead ();
+            });
+            other._readOp->release ();
+
+            other._writeOp->drain ([&other] () {
+                other.cancelWrite ();
+            });
+            other._writeOp->release ();
+
+            _socket = std::move (other._socket);
+
+            _readOp = std::move (other._readOp);
+            _writeOp = std::move (other._writeOp);
+        }
 
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicAsyncSocket& operator= (BasicAsyncSocket&& other) = delete;
+        BasicAsyncSocket& operator= (BasicAsyncSocket&& other) noexcept
+        {
+            close ();
+
+            other._readOp->drain ([&other] () {
+                other.cancelRead ();
+            });
+            other._readOp->release ();
+
+            other._writeOp->drain ([&other] () {
+                other.cancelWrite ();
+            });
+            other._writeOp->release ();
+
+            _socket = std::move (other._socket);
+            _proactor = other._proactor;
+
+            _readOp = std::move (other._readOp);
+            _writeOp = std::move (other._writeOp);
+
+            return *this;
+        }
 
         /**
          * @brief destroy the socket instance.
@@ -142,23 +177,24 @@ namespace join
             cancelRead ();
             cancelWrite ();
 
-            if (_engine->isProactorThread ())
+            if (_proactor->isProactorThread ())
             {
                 _socket.close ();
                 return;
             }
 
-            _ops->read.drain ([this] () {
+            _readOp->drain ([this] () {
                 cancelRead ();
             });
-            _ops->write.drain ([this] () {
+
+            _writeOp->drain ([this] () {
                 cancelWrite ();
             });
 
             _socket.close ();
 
-            _ops->read.release ();
-            _ops->write.release ();
+            _readOp->release ();
+            _writeOp->release ();
         }
 
         /**
@@ -176,31 +212,28 @@ namespace join
                 return -1;
             }
 
-            if (_ops->read.reserve (*_engine) == -1)
+            if (_readOp->reserve (*_proactor) == -1)
             {
                 return -1;
             }
 
-            _onRead = std::move (handler);
+            _readOp->_handler = std::move (handler);
+            _readOp->_iov.iov_base = data;
+            _readOp->_iov.iov_len = maxSize;
+            _readOp->_msg.msg_name = nullptr;
+            _readOp->_msg.msg_namelen = 0;
+            _readOp->_msg.msg_iov = &_readOp->_iov;
+            _readOp->_msg.msg_iovlen = 1;
+            _readOp->_msg.msg_control = nullptr;
+            _readOp->_msg.msg_controllen = 0;
+            _readOp->_msg.msg_flags = 0;
+            _readOp->_op = IoOperation::makeRecvmsg (_socket.handle (), &_readOp->_msg, 0, this);
 
-            _ops->readIov.iov_base = data;
-            _ops->readIov.iov_len = maxSize;
-
-            _ops->readMsg.msg_name = nullptr;
-            _ops->readMsg.msg_namelen = 0;
-            _ops->readMsg.msg_iov = &_ops->readIov;
-            _ops->readMsg.msg_iovlen = 1;
-            _ops->readMsg.msg_control = nullptr;
-            _ops->readMsg.msg_controllen = 0;
-            _ops->readMsg.msg_flags = 0;
-
-            _ops->read.op = IoOperation::makeRecvmsg (_socket.handle (), &_ops->readMsg, 0, this);
-
-            if (_engine->submit (&_ops->read.op, true, false) == -1)
+            if (_proactor->submit (&_readOp->_op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _ops->read.release ();
-                _onRead.reset ();
+                _readOp->release ();
+                _readOp->_handler.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -222,31 +255,29 @@ namespace join
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
-            -if (_ops->write.reserve (*_engine) == -1)
+
+            if (_writeOp->reserve (*_proactor) == -1)
             {
                 return -1;
             }
 
-            _onWrite = std::move (handler);
+            _writeOp->_handler = std::move (handler);
+            _writeOp->_iov.iov_base = const_cast<char*> (data);
+            _writeOp->_iov.iov_len = size;
+            _writeOp->_msg.msg_name = nullptr;
+            _writeOp->_msg.msg_namelen = 0;
+            _writeOp->_msg.msg_iov = &_writeOp->_iov;
+            _writeOp->_msg.msg_iovlen = 1;
+            _writeOp->_msg.msg_control = nullptr;
+            _writeOp->_msg.msg_controllen = 0;
+            _writeOp->_msg.msg_flags = 0;
+            _writeOp->_op = IoOperation::makeSendmsg (_socket.handle (), &_writeOp->_msg, MSG_NOSIGNAL, this);
 
-            _ops->writeIov.iov_base = const_cast<char*> (data);
-            _ops->writeIov.iov_len = size;
-
-            _ops->writeMsg.msg_name = nullptr;
-            _ops->writeMsg.msg_namelen = 0;
-            _ops->writeMsg.msg_iov = &_ops->writeIov;
-            _ops->writeMsg.msg_iovlen = 1;
-            _ops->writeMsg.msg_control = nullptr;
-            _ops->writeMsg.msg_controllen = 0;
-            _ops->writeMsg.msg_flags = 0;
-
-            _ops->write.op = IoOperation::makeSendmsg (_socket.handle (), &_ops->writeMsg, MSG_NOSIGNAL, this);
-
-            if (_engine->submit (&_ops->write.op, true, false) == -1)
+            if (_proactor->submit (&_writeOp->_op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _ops->write.release ();
-                _onWrite.reset ();
+                _writeOp->release ();
+                _writeOp->_handler.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -260,12 +291,12 @@ namespace join
          */
         int cancelRead () noexcept
         {
-            if (_ops->read.state.load (std::memory_order_acquire) != Operation::Pending)
+            if (_readOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending)
             {
                 return 0;
             }
 
-            if (_engine->cancel (&_ops->read.op, true, true) == -1)
+            if (_proactor->cancel (&_readOp->_op, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;
             }
@@ -274,17 +305,17 @@ namespace join
         }
 
         /**
-         * @brief cancel the connect or write operation in flight, if any.
+         * @brief cancel the write operation in flight, if any.
          * @return 0 on success, -1 on failure.
          */
         int cancelWrite () noexcept
         {
-            if (_ops->write.state.load (std::memory_order_acquire) != Operation::Pending)
+            if (_writeOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending)
             {
                 return 0;
             }
 
-            if (_engine->cancel (&_ops->write.op, true, true) == -1)
+            if (_proactor->cancel (&_writeOp->_op, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;
             }
@@ -388,71 +419,6 @@ namespace join
 
     protected:
         /**
-         * @brief operation block, kept at a stable address across moves.
-         */
-        struct Ops
-        {
-            /**
-             * @brief allocate a block honouring its extended alignment.
-             * @param size allocation size in bytes.
-             * @return pointer to the allocated storage.
-             */
-            static void* operator new (size_t size)
-            {
-                void* mem = ::aligned_alloc (alignof (Ops), size);
-
-                if (mem == nullptr)
-                {
-                    throw std::bad_alloc ();  // LCOV_EXCL_LINE
-                }
-
-                return mem;
-            }
-
-            /**
-             * @brief release storage allocated by operator new.
-             * @param mem storage to release.
-             */
-            static void operator delete (void* mem) noexcept
-            {
-                ::free (mem);
-            }
-
-            /// read operation slot.
-            Operation read;
-
-            /// read message header, read by the kernel until the read completes.
-            msghdr readMsg = {};
-
-            /// read scatter gather entry, read by the kernel until the read completes.
-            iovec readIov = {};
-
-            /// connect or write operation slot.
-            Operation write;
-
-            /// write message header, read by the kernel until the write completes.
-            msghdr writeMsg = {};
-
-            /// write scatter gather entry, read by the kernel until the write completes.
-            iovec writeIov = {};
-        };
-
-        /// underlying synchronous socket.
-        Socket _socket;
-
-        /// engine driving the operations.
-        Engine* _engine;
-
-        /// operation block.
-        const std::unique_ptr<Ops> _ops{new Ops ()};
-
-        /// handler invoked on read completion.
-        ReadHandler _onRead;
-
-        /// handler invoked on write completion.
-        WriteHandler _onWrite;
-
-        /**
          * @brief method called when an operation completes.
          * @param op completed operation.
          * @param result number of bytes transferred, or operation specific value.
@@ -481,35 +447,48 @@ namespace join
          */
         void dispatch (IoOperation* op, const std::error_code& code, size_t size) noexcept
         {
-            if (op == &_ops->read.op)
+            if (op == &_readOp->_op)
             {
-                _ops->read.dispatch ([this, &code, size] () {
-                    ReadHandler handler = std::move (_onRead);
+                _readOp->dispatch ([this, &code, size] () {
+                    ReadHandler handler = std::move (_readOp->_handler);
                     std::error_code result = code;
-
-                    if (JOIN_UNLIKELY (!result && (_ops->readMsg.msg_flags & MSG_TRUNC)))
+                    if (JOIN_UNLIKELY (!result && (_readOp->_msg.msg_flags & MSG_TRUNC)))
                     {
                         result = make_error_code (Errc::MessageTooLong);
                     }
-
                     if (JOIN_LIKELY (handler))
                     {
                         handler (result, size);
                     }
                 });
-
-                return;
             }
-
-            _ops->write.dispatch ([this, &code, size] () {
-                WriteHandler handler = std::move (_onWrite);
-
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (code, size);
-                }
-            });
+            else if (op == &_writeOp->_op)
+            {
+                _writeOp->dispatch ([this, &code, size] () {
+                    WriteHandler handler = std::move (_writeOp->_handler);
+                    if (JOIN_LIKELY (handler))
+                    {
+                        handler (code, size);
+                    }
+                });
+            }
+            else
+            {
+                // do nothing.
+            }
         }
+
+        /// underlying synchronous socket.
+        Socket _socket;
+
+        /// proactor driving the operations.
+        Proactor* _proactor;
+
+        /// read operation.
+        std::unique_ptr<AsyncRead> _readOp{new AsyncRead ()};
+
+        /// write operation.
+        std::unique_ptr<AsyncWrite> _writeOp{new AsyncWrite ()};
     };
 }
 

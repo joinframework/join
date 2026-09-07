@@ -28,19 +28,17 @@
 // libjoin.
 #include <join/io_operation.hpp>
 #include <join/function.hpp>
-#include <join/proactor.hpp>
+#include <join/protocol.hpp>
 #include <join/backoff.hpp>
-#include <join/socket.hpp>
 #include <join/error.hpp>
-#include <join/utils.hpp>
 
 // C++.
 #include <system_error>
-#include <utility>
 #include <atomic>
 #include <new>
 
 // C.
+#include <sys/socket.h>
 #include <cstdlib>
 #include <cstddef>
 #include <cstdint>
@@ -48,26 +46,22 @@
 namespace join
 {
     /**
-     * @brief basic asynchronous operation class.
+     * @brief asynchronous operation.
      */
-    template <class Protocol>
-    class BasicAsyncOperation : public CompletionHandler
+    template <class Protocol, class Proactor>
+    class BasicAsyncOperation
     {
         /// friendship with basic asynchronous socket
-        template <class P, class E>
-        friend class BasicAsyncSocket;
+        friend class BasicAsyncSocket<Protocol, Proactor>;
 
         /// friendship with basic asynchronous stream socket
-        template <class P, class E>
-        friend class BasicAsyncStreamSocket;
+        friend class BasicAsyncStreamSocket<Protocol, Proactor>;
 
         /// friendship with basic asynchronous datagram socket
-        template <class P, class E>
-        friend class BasicAsyncDatagramSocket;
+        friend class BasicAsyncDatagramSocket<Protocol, Proactor>;
 
         /// friendship with basic asynchronous stream acceptor
-        template <class P, class E>
-        friend class BasicAsyncStreamAcceptor;
+        friend class BasicAsyncStreamAcceptor<Protocol, Proactor>;
 
     public:
         using Endpoint = typename Protocol::Endpoint;
@@ -80,18 +74,20 @@ namespace join
             Idle,        /**< no operation in flight and no completion handler running. */
             Pending,     /**< an operation is in flight. */
             Dispatching, /**< the completion handler is running. */
-            Closing,     /**< the socket is closing, no operation may be reserved. */
+            Closing,     /**< the socket is closing, no operation may be armed. */
         };
 
         /**
-         * @brief allocate an operation honouring its extended alignment.
+         * @brief allocate a block honouring its extended alignment.
          * @param size allocation size in bytes.
          * @return pointer to the allocated storage.
          */
         static void* operator new (size_t size)
         {
-            void* mem = ::aligned_alloc (alignof (BasicAsyncOperation), size);
+            constexpr size_t alignment = 64;
+            size = (size + alignment - 1) & ~(alignment - 1);
 
+            void* mem = ::aligned_alloc (alignment, size);
             if (mem == nullptr)
             {
                 throw std::bad_alloc ();  // LCOV_EXCL_LINE
@@ -111,24 +107,23 @@ namespace join
 
         /**
          * @brief reserve the operation slot for a new operation.
-         * @param engine engine driving the operation.
+         * @param proactor proactor driving the operation.
          * @return 0 on success, -1 on failure.
          */
-        template <class Engine>
-        int reserve (Engine& engine) noexcept
+        int reserve (Proactor& proactor) noexcept
         {
             State expected = Idle;
 
-            if (!state.compare_exchange_strong (expected, Pending, std::memory_order_acquire,
-                                                std::memory_order_acquire))
+            if (!_state.compare_exchange_strong (expected, Pending, std::memory_order_acquire,
+                                                 std::memory_order_acquire))
             {
-                if ((expected != Dispatching) || !engine.isProactorThread ())
+                if ((expected != Dispatching) || !proactor.isProactorThread ())
                 {
                     lastError = make_error_code (Errc::InUse);
                     return -1;
                 }
 
-                state.store (Pending, std::memory_order_release);
+                _state.store (Pending, std::memory_order_release);
             }
 
             return 0;
@@ -139,7 +134,7 @@ namespace join
          */
         void release () noexcept
         {
-            state.store (Idle, std::memory_order_release);
+            _state.store (Idle, std::memory_order_release);
         }
 
         /**
@@ -152,8 +147,8 @@ namespace join
             Backoff backoff;
             State expected = Idle;
 
-            while (!state.compare_exchange_strong (expected, Closing, std::memory_order_acq_rel,
-                                                   std::memory_order_acquire))
+            while (!_state.compare_exchange_strong (expected, Closing, std::memory_order_acq_rel,
+                                                    std::memory_order_acquire))
             {
                 if (expected == Pending)
                 {
@@ -172,217 +167,133 @@ namespace join
         template <class Fn>
         void dispatch (Fn&& invoke) noexcept
         {
-            state.store (Dispatching, std::memory_order_release);
+            _state.store (Dispatching, std::memory_order_release);
 
             invoke ();
 
             State expected = Dispatching;
-            state.compare_exchange_strong (expected, Idle, std::memory_order_release, std::memory_order_relaxed);
+            _state.compare_exchange_strong (expected, Idle, std::memory_order_release, std::memory_order_relaxed);
         }
 
     protected:
         /// operation.
-        IoOperation op = {};
+        IoOperation _op = {};
 
         /// caller side operation state.
-        alignas (64) std::atomic<State> state{Idle};
+        alignas (64) std::atomic<State> _state{Idle};
     };
 
     /**
-     * @brief basic asynchronous read operation class.
+     * @brief asynchronous accept operation.
      */
-    template <class Protocol>
-    class BasicAsyncRead : public BasicAsyncOperation<Protocol>
+    template <class Protocol, class Proactor>
+    class BasicAsyncAccept : public BasicAsyncOperation<Protocol, Proactor>
     {
-        /// friendship with basic asynchronous socket
-        template <class P, class E>
-        friend class BasicAsyncSocket;
-
-        /// friendship with basic asynchronous stream socket
-        template <class P, class E>
-        friend class BasicAsyncStreamSocket;
-
-        /// friendship with basic asynchronous datagram socket
-        template <class P, class E>
-        friend class BasicAsyncDatagramSocket;
+        /// friendship with basic asynchronous stream acceptor
+        friend class BasicAsyncStreamAcceptor<Protocol, Proactor>;
 
     public:
-        /// handler invoked on read completion.
-        using Handler = Function<void (const std::error_code&, size_t)>;
-
-    protected:
-        /**
-         * @brief method called when the read completes.
-         * @param op completed operation.
-         * @param result number of bytes received, or negative errno.
-         */
-        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
-        {
-            complete ((result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code (),
-                      (result > 0) ? static_cast<size_t> (result) : 0);
-        }
-
-        /**
-         * @brief method called when the read is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
-        {
-            complete (make_error_code (std::errc::operation_canceled), 0);
-        }
-
-        /**
-         * @brief invoke the completion handler.
-         * @param code error code reported by the kernel.
-         * @param size number of bytes received.
-         */
-        void complete (const std::error_code& code, size_t size) noexcept
-        {
-            this->dispatch ([this, &code, size] () {
-                Handler h = std::move (handler);
-                std::error_code result = code;
-
-                if (stream)
-                {
-                    if (JOIN_UNLIKELY (!result && (size == 0)))
-                    {
-                        result = make_error_code (Errc::ConnectionClosed);
-                    }
-                }
-                else if (JOIN_UNLIKELY (!result && (msg.msg_flags & MSG_TRUNC)))
-                {
-                    result = make_error_code (Errc::MessageTooLong);
-                }
-
-                if (JOIN_LIKELY (h))
-                {
-                    h (result, size);
-                }
-            });
-        }
+        using Endpoint = typename Protocol::Endpoint;
+        using AsyncSocket = BasicAsyncStreamSocket<Protocol, Proactor>;
 
         /// handler invoked on completion.
-        Handler handler;
+        using Handler = Function<void (const std::error_code&)>;
 
-        /// message header, written by the kernel until the read completes.
-        msghdr msg = {};
+    protected:
+        /// handler invoked on completion.
+        Handler _handler;
 
-        /// scatter gather entry, written by the kernel until the read completes.
-        iovec iov = {};
+        /// remote endpoint.
+        Endpoint _remote;
 
-        /// report an empty read as a closed connection.
-        bool stream = false;
+        /// remote address length.
+        socklen_t _remoteLen = sizeof (struct sockaddr_storage);
+
+        /// socket receiving the accepted connection.
+        AsyncSocket* _peer = nullptr;
     };
 
     /**
-     * @brief basic asynchronous write operation class.
+     * @brief asynchronous connect operation.
      */
-    template <class Protocol>
-    class BasicAsyncWrite : public BasicAsyncOperation<Protocol>
+    template <class Protocol, class Proactor>
+    class BasicAsyncConnect : public BasicAsyncOperation<Protocol, Proactor>
     {
         /// friendship with basic asynchronous socket
-        template <class P, class E>
-        friend class BasicAsyncSocket;
+        friend class BasicAsyncSocket<Protocol, Proactor>;
 
         /// friendship with basic asynchronous stream socket
-        template <class P, class E>
-        friend class BasicAsyncStreamSocket;
-
-        /// friendship with basic asynchronous datagram socket
-        template <class P, class E>
-        friend class BasicAsyncDatagramSocket;
+        friend class BasicAsyncStreamSocket<Protocol, Proactor>;
 
     public:
-        using Endpoint = typename BasicAsyncOperation<Protocol>::Endpoint;
-        using Socket = BasicSocket<Protocol>;
-
-        /// handler invoked on write completion.
-        using Handler = Function<void (const std::error_code&, size_t)>;
-
-        /// handler invoked on connect completion.
-        using ConnectHandler = Function<void (const std::error_code&)>;
-
-    protected:
-        /**
-         * @brief method called when the write completes.
-         * @param op completed operation.
-         * @param result number of bytes sent, or negative errno.
-         */
-        void onComplete (IoOperation* op, int result) override
-        {
-            complete (op, (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code (),
-                      (result > 0) ? static_cast<size_t> (result) : 0);
-        }
-
-        /**
-         * @brief method called when the write is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel (IoOperation* op, [[maybe_unused]] int result) override
-        {
-            complete (op, make_error_code (std::errc::operation_canceled), 0);
-        }
-
-        /**
-         * @brief invoke the completion handler.
-         * @param op completed or cancelled operation.
-         * @param code error code to report.
-         * @param size number of bytes sent.
-         */
-        void complete (IoOperation* op, const std::error_code& code, size_t size) noexcept
-        {
-            if (JOIN_UNLIKELY (op->code == static_cast<uint8_t> (IoOperation::Opcode::Connect)))
-            {
-                this->dispatch ([this, &code] () {
-                    ConnectHandler h = std::move (connectHandler);
-
-                    if (code)
-                    {
-                        socket->close ();
-                    }
-                    else
-                    {
-                        socket->_state = Socket::Connected;
-                    }
-
-                    if (JOIN_LIKELY (h))
-                    {
-                        h (code);
-                    }
-                });
-
-                return;
-            }
-
-            this->dispatch ([this, &code, size] () {
-                Handler h = std::move (handler);
-
-                if (JOIN_LIKELY (h))
-                {
-                    h (code, size);
-                }
-            });
-        }
+        using Endpoint = typename Protocol::Endpoint;
 
         /// handler invoked on completion.
-        Handler handler;
+        using Handler = Function<void (const std::error_code&)>;
 
-        /// handler invoked on connect completion.
-        ConnectHandler connectHandler;
+    protected:
+        /// handler invoked on completion.
+        Handler _handler;
+    };
 
-        /// message header, read by the kernel until the write completes.
-        msghdr msg = {};
+    /**
+     * @brief asynchronous read operation.
+     */
+    template <class Protocol, class Proactor>
+    class BasicAsyncRead : public BasicAsyncOperation<Protocol, Proactor>
+    {
+        /// friendship with basic asynchronous socket
+        friend class BasicAsyncSocket<Protocol, Proactor>;
 
-        /// scatter gather entry, read by the kernel until the write completes.
-        iovec iov = {};
+        /// friendship with basic asynchronous stream socket
+        friend class BasicAsyncStreamSocket<Protocol, Proactor>;
 
-        /// remote endpoint, read by the kernel until the operation completes.
-        Endpoint remote;
+        /// friendship with basic asynchronous datagram socket
+        friend class BasicAsyncDatagramSocket<Protocol, Proactor>;
 
-        /// socket owning this operation slot.
-        Socket* socket = nullptr;
+    public:
+        /// handler invoked on completion.
+        using Handler = Function<void (const std::error_code&, size_t)>;
+
+    protected:
+        /// handler invoked on completion.
+        Handler _handler;
+
+        /// read message header.
+        msghdr _msg = {};
+
+        /// read scatter gather entry.
+        iovec _iov = {};
+    };
+
+    /**
+     * @brief asynchronous write operation.
+     */
+    template <class Protocol, class Proactor>
+    class BasicAsyncWrite : public BasicAsyncOperation<Protocol, Proactor>
+    {
+        /// friendship with basic asynchronous socket
+        friend class BasicAsyncSocket<Protocol, Proactor>;
+
+        /// friendship with basic asynchronous stream socket
+        friend class BasicAsyncStreamSocket<Protocol, Proactor>;
+
+        /// friendship with basic asynchronous datagram socket
+        friend class BasicAsyncDatagramSocket<Protocol, Proactor>;
+
+    public:
+        /// handler invoked on completion.
+        using Handler = Function<void (const std::error_code&, size_t)>;
+
+    protected:
+        /// handler invoked on completion.
+        Handler _handler;
+
+        /// write message header.
+        msghdr _msg = {};
+
+        /// write scatter gather entry.
+        iovec _iov = {};
     };
 }
 
