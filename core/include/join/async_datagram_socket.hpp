@@ -143,6 +143,12 @@ namespace join
          */
         int asyncReadFrom (char* data, size_t maxSize, Endpoint& endpoint, ReadHandler handler) noexcept
         {
+            if (JOIN_UNLIKELY (this->_readOp == nullptr))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
@@ -158,7 +164,7 @@ namespace join
             this->_readOp->_iov.iov_base = data;
             this->_readOp->_iov.iov_len = maxSize;
             this->_readOp->_msg.msg_name = endpoint.addr ();
-            this->_readOp->_msg.msg_namelen = endpoint.length ();
+            this->_readOp->_msg.msg_namelen = sizeof (struct sockaddr_storage);
             this->_readOp->_msg.msg_iov = &this->_readOp->_iov;
             this->_readOp->_msg.msg_iovlen = 1;
             this->_readOp->_msg.msg_control = nullptr;
@@ -188,6 +194,12 @@ namespace join
          */
         int asyncWriteTo (const char* data, size_t size, Endpoint& endpoint, WriteHandler handler) noexcept
         {
+            if (JOIN_UNLIKELY (this->_writeOp == nullptr))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             if (!this->_socket.opened () && (this->_socket.open (endpoint.protocol ()) == -1))
             {
                 return -1;  // LCOV_EXCL_LINE

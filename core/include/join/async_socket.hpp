@@ -107,15 +107,23 @@ namespace join
         , _readOp (nullptr)
         , _writeOp (nullptr)
         {
-            other._readOp->drain ([&other] () {
-                other.cancelRead ();
-            });
-            other._readOp->release ();
+            if (other._readOp != nullptr)
+            {
+                other._readOp->drain ([&other] () {
+                    other.cancelRead ();
+                });
 
-            other._writeOp->drain ([&other] () {
-                other.cancelWrite ();
-            });
-            other._writeOp->release ();
+                other._readOp->release ();
+            }
+
+            if (other._writeOp != nullptr)
+            {
+                other._writeOp->drain ([&other] () {
+                    other.cancelWrite ();
+                });
+
+                other._writeOp->release ();
+            }
 
             _socket = std::move (other._socket);
 
@@ -132,15 +140,23 @@ namespace join
         {
             close ();
 
-            other._readOp->drain ([&other] () {
-                other.cancelRead ();
-            });
-            other._readOp->release ();
+            if (other._readOp != nullptr)
+            {
+                other._readOp->drain ([&other] () {
+                    other.cancelRead ();
+                });
 
-            other._writeOp->drain ([&other] () {
-                other.cancelWrite ();
-            });
-            other._writeOp->release ();
+                other._readOp->release ();
+            }
+
+            if (other._writeOp != nullptr)
+            {
+                other._writeOp->drain ([&other] () {
+                    other.cancelWrite ();
+                });
+
+                other._writeOp->release ();
+            }
 
             _socket = std::move (other._socket);
             _proactor = other._proactor;
@@ -183,18 +199,31 @@ namespace join
                 return;
             }
 
-            _readOp->drain ([this] () {
-                cancelRead ();
-            });
+            if (_readOp != nullptr)
+            {
+                _readOp->drain ([this] () {
+                    cancelRead ();
+                });
+            }
 
-            _writeOp->drain ([this] () {
-                cancelWrite ();
-            });
+            if (_writeOp != nullptr)
+            {
+                _writeOp->drain ([this] () {
+                    cancelWrite ();
+                });
+            }
 
             _socket.close ();
 
-            _readOp->release ();
-            _writeOp->release ();
+            if (_readOp != nullptr)
+            {
+                _readOp->release ();
+            }
+
+            if (_writeOp != nullptr)
+            {
+                _writeOp->release ();
+            }
         }
 
         /**
@@ -206,6 +235,12 @@ namespace join
          */
         int asyncRead (char* data, size_t maxSize, ReadHandler handler) noexcept
         {
+            if (JOIN_UNLIKELY (_readOp == nullptr))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             if (JOIN_UNLIKELY (!_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
@@ -250,6 +285,12 @@ namespace join
          */
         int asyncWrite (const char* data, size_t size, WriteHandler handler) noexcept
         {
+            if (JOIN_UNLIKELY (_writeOp == nullptr))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             if (JOIN_UNLIKELY (!_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
@@ -291,7 +332,7 @@ namespace join
          */
         int cancelRead () noexcept
         {
-            if (_readOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending)
+            if ((_readOp == nullptr) || (_readOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending))
             {
                 return 0;
             }
@@ -310,7 +351,7 @@ namespace join
          */
         int cancelWrite () noexcept
         {
-            if (_writeOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending)
+            if ((_writeOp == nullptr) || (_writeOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending))
             {
                 return 0;
             }

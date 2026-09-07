@@ -96,10 +96,14 @@ namespace join
         : BasicAsyncSocket<Protocol, Proactor> (std::move (other))
         , _connectOp (nullptr)
         {
-            other._connectOp->drain ([&other] () {
-                other.cancelConnect ();
-            });
-            other._connectOp->release ();
+            if (other._connectOp != nullptr)
+            {
+                other._connectOp->drain ([&other] () {
+                    other.cancelConnect ();
+                });
+
+                other._connectOp->release ();
+            }
 
             this->_connectOp = std::move (other._connectOp);
         }
@@ -113,14 +117,46 @@ namespace join
         {
             BasicAsyncSocket<Protocol, Proactor>::operator= (std::move (other));
 
-            other._connectOp->drain ([&other] () {
-                other.cancelConnect ();
-            });
-            other._connectOp->release ();
+            if (other._connectOp != nullptr)
+            {
+                other._connectOp->drain ([&other] () {
+                    other.cancelConnect ();
+                });
+
+                other._connectOp->release ();
+            }
 
             this->_connectOp = std::move (other._connectOp);
 
             return *this;
+        }
+
+        /**
+         * @brief close the socket, cancelling the operations in flight.
+         */
+        void close () noexcept
+        {
+            cancelConnect ();
+
+            if (this->_proactor->isProactorThread ())
+            {
+                BasicAsyncSocket<Protocol, Proactor>::close ();
+                return;
+            }
+
+            if (_connectOp != nullptr)
+            {
+                _connectOp->drain ([this] () {
+                    cancelConnect ();
+                });
+            }
+
+            BasicAsyncSocket<Protocol, Proactor>::close ();
+
+            if (_connectOp != nullptr)
+            {
+                _connectOp->release ();
+            }
         }
 
         /**
@@ -139,6 +175,12 @@ namespace join
          */
         int asyncConnect (const Endpoint& endpoint, ConnectHandler handler) noexcept
         {
+            if (JOIN_UNLIKELY (_connectOp == nullptr))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             if (this->_socket.connected () || this->_socket.connecting ())
             {
                 lastError = make_error_code (Errc::InUse);
@@ -180,7 +222,8 @@ namespace join
          */
         int cancelConnect () noexcept
         {
-            if (_connectOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending)
+            if ((_connectOp == nullptr) ||
+                (_connectOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending))
             {
                 return 0;
             }
