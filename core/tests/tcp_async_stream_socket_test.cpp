@@ -239,6 +239,57 @@ const uint16_t TcpAsyncStreamSocket::_stallport = 5035;
 const std::chrono::milliseconds TcpAsyncStreamSocket::_timeout{1000};
 
 /**
+ * @brief Test move.
+ */
+TEST_F (TcpAsyncStreamSocket, move)
+{
+    Tcp::AsyncSocket client1, client3;
+
+    ASSERT_EQ (client1.asyncConnect ({_host, _port}, onConnect), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    Tcp::AsyncSocket client2 (std::move (client1));
+    ASSERT_TRUE (client2.connected ());
+    ASSERT_FALSE (client1.opened ());
+
+    ASSERT_EQ (client1.asyncRead (_buf, sizeof (_buf), nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client1.asyncWrite ("one", 3, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client1.asyncConnect ({_host, _port}, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client1.cancelRead (), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancelWrite (), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancelConnect (), 0) << join::lastError.message ();
+
+    ASSERT_EQ (client2.asyncRead (_buf, sizeof (_buf), onRead), 0) << join::lastError.message ();
+
+    client3 = std::move (client2);
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
+
+    ASSERT_TRUE (client3.connected ());
+    ASSERT_FALSE (client2.opened ());
+
+    ASSERT_EQ (client3.asyncWrite ("hello", 5, nullptr), 0) << join::lastError.message ();
+
+    client3.close ();
+}
+
+/**
  * @brief Test open method.
  */
 TEST_F (TcpAsyncStreamSocket, open)
