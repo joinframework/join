@@ -227,6 +227,51 @@ const uint16_t UdpAsyncDatagramSocket::_port = 5036;
 const std::chrono::milliseconds UdpAsyncDatagramSocket::_timeout{1000};
 
 /**
+ * @brief Test move.
+ */
+TEST_F (UdpAsyncDatagramSocket, move)
+{
+    Udp::AsyncSocket client1, client3;
+    Udp::Endpoint dest (_host, _port);
+
+    ASSERT_EQ (client1.open (dest.protocol ()), 0) << join::lastError.message ();
+    ASSERT_TRUE (client1.opened ());
+
+    Udp::AsyncSocket client2 (std::move (client1));
+    ASSERT_TRUE (client2.opened ());
+    ASSERT_FALSE (client1.opened ());
+
+    ASSERT_EQ (client1.asyncReadFrom (_buf, sizeof (_buf), _from, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client1.asyncWriteTo ("one", 3, dest, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client1.cancelRead (), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancelWrite (), 0) << join::lastError.message ();
+    client1.close ();
+
+    ASSERT_EQ (client2.asyncReadFrom (_buf, sizeof (_buf), _from, onRead), 0) << join::lastError.message ();
+
+    client3 = std::move (client2);
+
+    ASSERT_TRUE (client3.opened ());
+    ASSERT_FALSE (client2.opened ());
+
+    ASSERT_EQ (client3.asyncWriteTo ("hello", 5, dest, nullptr), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "hello");
+    }
+
+    client3.close ();
+}
+
+/**
  * @brief Test open method.
  */
 TEST_F (UdpAsyncDatagramSocket, open)

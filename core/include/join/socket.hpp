@@ -52,6 +52,10 @@ namespace join
     template <class Protocol>
     class BasicSocket
     {
+        /// friendship with basic asynchronous connect operation
+        template <class P, class E>
+        friend class BasicAsyncConnect;
+
     public:
         using Ptr = std::unique_ptr<BasicSocket<Protocol>>;
         using Endpoint = typename Protocol::Endpoint;
@@ -105,7 +109,7 @@ namespace join
         /**
          * @brief default constructor.
          */
-        BasicSocket ()
+        BasicSocket () noexcept
         : BasicSocket (Mode::NonBlocking)
         {
         }
@@ -114,7 +118,7 @@ namespace join
          * @brief create socket instance specifying the mode.
          * @param mode blocking mode.
          */
-        explicit BasicSocket (Mode mode)
+        explicit BasicSocket (Mode mode) noexcept
         : _mode (mode)
         {
         }

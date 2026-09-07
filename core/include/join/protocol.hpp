@@ -54,30 +54,30 @@ namespace join
     template <typename Policy>
     class BasicProactor;
 
-    template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
+    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
     class BasicAsyncSocket;
 
-    template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
+    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
     class BasicAsyncDatagramSocket;
 
-    template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
+    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
     class BasicAsyncStreamSocket;
 
-    template <class Protocol, class Engine = BasicProactor<IoDefaultPolicy>>
+    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
     class BasicAsyncStreamAcceptor;
 #else
     class BasicProactor;
 
-    template <class Protocol, class Engine = BasicProactor>
+    template <class Protocol, class Proactor = BasicProactor>
     class BasicAsyncSocket;
 
-    template <class Protocol, class Engine = BasicProactor>
+    template <class Protocol, class Proactor = BasicProactor>
     class BasicAsyncDatagramSocket;
 
-    template <class Protocol, class Engine = BasicProactor>
+    template <class Protocol, class Proactor = BasicProactor>
     class BasicAsyncStreamSocket;
 
-    template <class Protocol, class Engine = BasicProactor>
+    template <class Protocol, class Proactor = BasicProactor>
     class BasicAsyncStreamAcceptor;
 #endif
 

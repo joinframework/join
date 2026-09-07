@@ -39,6 +39,7 @@ set(PUBLIC_HEADERS
     include/join/stream_socket.hpp
     include/join/socket_stream.hpp
     include/join/acceptor.hpp
+    include/join/async_operation.hpp
     include/join/async_socket.hpp
     include/join/async_datagram_socket.hpp
     include/join/async_stream_socket.hpp

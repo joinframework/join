@@ -57,7 +57,7 @@ namespace join
         /**
          * @brief default constructor.
          */
-        BasicStreamSocket ()
+        BasicStreamSocket () noexcept
         : BasicStreamSocket (Mode::NonBlocking)
         {
         }
@@ -66,7 +66,7 @@ namespace join
          * @brief create instance specifying the mode.
          * @param mode Set the socket blocking mode.
          */
-        explicit BasicStreamSocket (Mode mode)
+        explicit BasicStreamSocket (Mode mode) noexcept
         : BasicSocket<Protocol> (mode)
         {
         }

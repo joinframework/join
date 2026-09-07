@@ -38,43 +38,49 @@ namespace join
     /**
      * @brief asynchronous stream socket class.
      */
-    template <class Protocol, class Engine>
-    class BasicAsyncStreamSocket : public BasicAsyncSocket<Protocol, Engine>
+    template <class Protocol, class Proactor>
+    class BasicAsyncStreamSocket : public BasicAsyncSocket<Protocol, Proactor>
     {
+        /// friendship with basic asynchronous accept operation
+        friend class BasicAsyncAccept<Protocol, Proactor>;
+
         /// friendship with basic asynchronous stream acceptor
-        template <class P, class E>
-        friend class BasicAsyncStreamAcceptor;
+        friend class BasicAsyncStreamAcceptor<Protocol, Proactor>;
 
     public:
         using Socket = BasicStreamSocket<Protocol>;
         using Endpoint = typename Protocol::Endpoint;
-
-        /// handler invoked on connect completion.
-        using ConnectHandler = Function<void (const std::error_code&)>;
-
-        /// handler invoked on read completion.
-        using ReadHandler = typename BasicAsyncSocket<Protocol, Engine>::ReadHandler;
-
-        /// handler invoked on write completion.
-        using WriteHandler = typename BasicAsyncSocket<Protocol, Engine>::WriteHandler;
+        using AsyncOperation = BasicAsyncOperation<Protocol, Proactor>;
+        using AsyncAccept = BasicAsyncAccept<Protocol, Proactor>;
+        using AsyncConnect = BasicAsyncConnect<Protocol, Proactor>;
+        using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
+        using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
+        using State = typename AsyncOperation::State;
+        using ConnectHandler = typename AsyncConnect::Handler;
+        using ReadHandler = typename AsyncRead::Handler;
+        using WriteHandler = typename AsyncWrite::Handler;
 
         /**
          * @brief create the socket instance.
-         * @param engine engine driving the operations.
+         * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncStreamSocket (Engine& engine = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Engine> (engine)
+        explicit BasicAsyncStreamSocket (Proactor& proactor = ProactorThread::proactor ())
+        : BasicAsyncSocket<Protocol, Proactor> (proactor)
         {
+            this->_readOp->_stream = true;
+            _connectOp->_socket = &this->_socket;
         }
 
         /**
          * @brief create the socket instance adopting an already connected socket.
          * @param sock socket to adopt.
-         * @param engine engine driving the operations.
+         * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncStreamSocket (Socket&& sock, Engine& engine = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Engine> (std::move (sock), engine)
+        explicit BasicAsyncStreamSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
+        : BasicAsyncSocket<Protocol, Proactor> (std::move (sock), proactor)
         {
+            this->_readOp->_stream = true;
+            _connectOp->_socket = &this->_socket;
         }
 
         /**
@@ -94,14 +100,78 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicAsyncStreamSocket (BasicAsyncStreamSocket&& other) = delete;
+        BasicAsyncStreamSocket (BasicAsyncStreamSocket&& other) noexcept
+        : BasicAsyncSocket<Protocol, Proactor> (std::move (other))
+        , _connectOp (std::move (other._connectOp))
+        , _pendingAccept (other._pendingAccept)
+        {
+            if (_connectOp != nullptr)
+            {
+                _connectOp->_socket = &this->_socket;
+            }
+
+            other._pendingAccept = nullptr;
+
+            if (_pendingAccept != nullptr)
+            {
+                _pendingAccept->_peer = this;
+            }
+        }
 
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
          * @return assigned object.
          */
-        BasicAsyncStreamSocket& operator= (BasicAsyncStreamSocket&& other) = delete;
+        BasicAsyncStreamSocket& operator= (BasicAsyncStreamSocket&& other) noexcept
+        {
+            BasicAsyncSocket<Protocol, Proactor>::operator= (std::move (other));
+
+            _connectOp = std::move (other._connectOp);
+
+            if (_connectOp != nullptr)
+            {
+                _connectOp->_socket = &this->_socket;
+            }
+
+            _pendingAccept = other._pendingAccept;
+            other._pendingAccept = nullptr;
+
+            if (_pendingAccept != nullptr)
+            {
+                _pendingAccept->_peer = this;
+            }
+
+            return *this;
+        }
+
+        /**
+         * @brief close the socket, cancelling the operations in flight.
+         */
+        void close () noexcept
+        {
+            cancelConnect ();
+
+            if (this->_proactor->isProactorThread ())
+            {
+                BasicAsyncSocket<Protocol, Proactor>::close ();
+                return;
+            }
+
+            if (_connectOp != nullptr)
+            {
+                _connectOp->drain ([this] () {
+                    cancelConnect ();
+                });
+            }
+
+            BasicAsyncSocket<Protocol, Proactor>::close ();
+
+            if (_connectOp != nullptr)
+            {
+                _connectOp->release ();
+            }
+        }
 
         /**
          * @brief destroy the socket instance.
@@ -119,39 +189,62 @@ namespace join
          */
         int asyncConnect (const Endpoint& endpoint, ConnectHandler handler) noexcept
         {
+            if (JOIN_UNLIKELY (_connectOp == nullptr))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            if (this->_socket.connected () || this->_socket.connecting ())
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
             if (!this->_socket.opened () && (this->_socket.open (endpoint.protocol ()) == -1))
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            AsyncOperation::State expected = AsyncOperation::Idle;
-
-            if (!this->_ops->write.state.compare_exchange_strong (expected, AsyncOperation::Pending,
-                                                                  std::memory_order_acquire, std::memory_order_acquire))
+            if (this->_connectOp->reserve (*this->_proactor) == -1)
             {
-                if ((expected != AsyncOperation::Dispatching) || !this->_engine->isProactorThread ())
-                {
-                    lastError = make_error_code (Errc::InUse);
-                    return -1;
-                }
-
-                this->_ops->write.state.store (AsyncOperation::Pending, std::memory_order_release);
+                return -1;  // LCOV_EXCL_LINE
             }
 
             this->_socket._state = Socket::Connecting;
             this->_socket._remote = endpoint;
-            _onConnect = std::move (handler);
-            this->_ops->write.op = IoOperation::makeConnect (this->_socket.handle (), this->_socket._remote.addr (),
-                                                             this->_socket._remote.length (), this);
+            _connectOp->_handler = std::move (handler);
+            this->_connectOp->_op = IoOperation::makeConnect (this->_socket.handle (), this->_socket._remote.addr (),
+                                                              this->_socket._remote.length (), this->_connectOp.get ());
 
-            if (this->_engine->submit (&this->_ops->write.op, true, false) == -1)
+            if (this->_proactor->submit (&this->_connectOp->_op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_ops->write.state.store (AsyncOperation::Idle, std::memory_order_release);
-                _onConnect.reset ();
+                this->_connectOp->release ();
+                _connectOp->_handler.reset ();
                 this->_socket.close ();
                 return -1;
                 // LCOV_EXCL_STOP
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief cancel the connect operation in flight, if any.
+         * @return 0 on success, -1 on failure.
+         */
+        int cancelConnect () noexcept
+        {
+            if ((_connectOp == nullptr) ||
+                (_connectOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending))
+            {
+                return 0;
+            }
+
+            if (this->_proactor->cancel (&_connectOp->_op, true, true) == -1)
+            {
+                return (lastError == Errc::OperationFailed) ? 0 : -1;
             }
 
             return 0;
@@ -194,95 +287,11 @@ namespace join
         }
 
     protected:
-        /**
-         * @brief method called when an operation completes.
-         * @param op completed operation.
-         * @param result number of bytes transferred, or operation specific value.
-         */
-        void onComplete (IoOperation* op, int result) override
-        {
-            dispatch (op, (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code (),
-                      (result > 0) ? static_cast<size_t> (result) : 0);
-        }
+        /// connect operation.
+        std::unique_ptr<AsyncConnect> _connectOp{new AsyncConnect ()};
 
-        /**
-         * @brief method called when an operation is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel (IoOperation* op, [[maybe_unused]] int result) override
-        {
-            dispatch (op, make_error_code (std::errc::operation_canceled), 0);
-        }
-
-        /**
-         * @brief invoke the handler owning the given operation slot.
-         * @param op completed or cancelled operation.
-         * @param code error code to report.
-         * @param size number of bytes transferred.
-         */
-        void dispatch (IoOperation* op, const std::error_code& code, size_t size) noexcept
-        {
-            if (op == &this->_ops->read.op)
-            {
-                this->_ops->read.state.store (AsyncOperation::Dispatching, std::memory_order_release);
-
-                ReadHandler handler = std::move (this->_onRead);
-                std::error_code result = code;
-
-                if (JOIN_UNLIKELY (!result && (size == 0)))
-                {
-                    result = make_error_code (Errc::ConnectionClosed);
-                }
-
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (result, size);
-                }
-
-                AsyncOperation::State expected = AsyncOperation::Dispatching;
-                this->_ops->read.state.compare_exchange_strong (expected, AsyncOperation::Idle,
-                                                                std::memory_order_release, std::memory_order_relaxed);
-                return;
-            }
-
-            this->_ops->write.state.store (AsyncOperation::Dispatching, std::memory_order_release);
-
-            if (JOIN_UNLIKELY (op->code == static_cast<uint8_t> (IoOperation::Opcode::Connect)))
-            {
-                ConnectHandler handler = std::move (_onConnect);
-
-                if (code)
-                {
-                    this->_socket.close ();
-                }
-                else
-                {
-                    this->_socket._state = Socket::Connected;
-                }
-
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (code);
-                }
-            }
-            else
-            {
-                WriteHandler handler = std::move (this->_onWrite);
-
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (code, size);
-                }
-            }
-
-            AsyncOperation::State expected = AsyncOperation::Dispatching;
-            this->_ops->write.state.compare_exchange_strong (expected, AsyncOperation::Idle, std::memory_order_release,
-                                                             std::memory_order_relaxed);
-        }
-
-        /// handler invoked on connect completion.
-        ConnectHandler _onConnect;
+        /// acceptation operation this socket is the target of, if any.
+        AsyncAccept* _pendingAccept = nullptr;
     };
 }
 
