@@ -41,6 +41,9 @@ namespace join
     template <class Protocol, class Proactor>
     class BasicAsyncStreamSocket : public BasicAsyncSocket<Protocol, Proactor>
     {
+        /// friendship with basic asynchronous accept operation
+        friend class BasicAsyncAccept<Protocol, Proactor>;
+
         /// friendship with basic asynchronous stream acceptor
         friend class BasicAsyncStreamAcceptor<Protocol, Proactor>;
 
@@ -48,6 +51,7 @@ namespace join
         using Socket = BasicStreamSocket<Protocol>;
         using Endpoint = typename Protocol::Endpoint;
         using AsyncOperation = BasicAsyncOperation<Protocol, Proactor>;
+        using AsyncAccept = BasicAsyncAccept<Protocol, Proactor>;
         using AsyncConnect = BasicAsyncConnect<Protocol, Proactor>;
         using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
         using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
@@ -99,10 +103,18 @@ namespace join
         BasicAsyncStreamSocket (BasicAsyncStreamSocket&& other) noexcept
         : BasicAsyncSocket<Protocol, Proactor> (std::move (other))
         , _connectOp (std::move (other._connectOp))
+        , _pendingAccept (other._pendingAccept)
         {
             if (_connectOp != nullptr)
             {
                 _connectOp->_socket = &this->_socket;
+            }
+
+            other._pendingAccept = nullptr;
+
+            if (_pendingAccept != nullptr)
+            {
+                _pendingAccept->_peer = this;
             }
         }
 
@@ -120,6 +132,14 @@ namespace join
             if (_connectOp != nullptr)
             {
                 _connectOp->_socket = &this->_socket;
+            }
+
+            _pendingAccept = other._pendingAccept;
+            other._pendingAccept = nullptr;
+
+            if (_pendingAccept != nullptr)
+            {
+                _pendingAccept->_peer = this;
             }
 
             return *this;
@@ -269,6 +289,9 @@ namespace join
     protected:
         /// connect operation.
         std::unique_ptr<AsyncConnect> _connectOp{new AsyncConnect ()};
+
+        /// acceptation operation this socket is the target of, if any.
+        AsyncAccept* _pendingAccept = nullptr;
     };
 }
 

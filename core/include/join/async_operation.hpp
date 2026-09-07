@@ -44,6 +44,7 @@
 #include <cstdlib>
 #include <cstddef>
 #include <cstdint>
+#include <cerrno>
 
 namespace join
 {
@@ -104,7 +105,14 @@ namespace join
          */
         static void operator delete (void* mem) noexcept
         {
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmismatched-new-delete"
+#endif
             ::free (mem);
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
         }
 
         /**
@@ -191,17 +199,76 @@ namespace join
     template <class Protocol, class Proactor>
     class BasicAsyncAccept : public BasicAsyncOperation<Protocol, Proactor>
     {
+        /// friendship with basic asynchronous stream socket
+        friend class BasicAsyncStreamSocket<Protocol, Proactor>;
+
         /// friendship with basic asynchronous stream acceptor
         friend class BasicAsyncStreamAcceptor<Protocol, Proactor>;
 
     public:
         using Endpoint = typename Protocol::Endpoint;
+        using Socket = typename Protocol::Socket;
         using AsyncSocket = BasicAsyncStreamSocket<Protocol, Proactor>;
 
         /// handler invoked on completion.
         using Handler = Function<void (const std::error_code&)>;
 
     protected:
+        /**
+         * @brief method called when the acceptation completes.
+         * @param op completed operation.
+         * @param result accepted file descriptor, or negative errno.
+         */
+        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
+        {
+            complete (result);
+        }
+
+        /**
+         * @brief method called when the acceptation is cancelled.
+         * @param op cancelled operation.
+         * @param result negative errno.
+         */
+        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
+        {
+            complete (-ECANCELED);
+        }
+
+        /**
+         * @brief invoke the completion handler.
+         * @param result accepted file descriptor, or negative errno.
+         */
+        void complete (int result) noexcept
+        {
+            this->dispatch ([this, result] () {
+                Handler handler = std::move (_handler);
+                AsyncSocket* peer = _peer;
+                _peer = nullptr;
+
+                if (peer != nullptr)
+                {
+                    peer->_pendingAccept = nullptr;
+                }
+
+                if (JOIN_UNLIKELY (result < 0))
+                {
+                    if (JOIN_LIKELY (handler))
+                    {
+                        handler (std::error_code (-result, std::generic_category ()));
+                    }
+                }
+                else
+                {
+                    peer->_socket = Socket (result, _remote);
+
+                    if (JOIN_LIKELY (handler))
+                    {
+                        handler (std::error_code ());
+                    }
+                }
+            });
+        }
+
         /// handler invoked on completion.
         Handler _handler;
 

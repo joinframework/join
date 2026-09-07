@@ -49,7 +49,7 @@ namespace join
      * @brief asynchronous stream acceptor class.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncStreamAcceptor : private CompletionHandler
+    class BasicAsyncStreamAcceptor
     {
     public:
         using Acceptor = BasicStreamAcceptor<Protocol>;
@@ -166,14 +166,16 @@ namespace join
             _acceptOp->_remoteLen = sizeof (struct sockaddr_storage);
             _acceptOp->_handler = std::move (handler);
             _acceptOp->_peer = &peer;
+            peer._pendingAccept = _acceptOp.get ();
             _acceptOp->_op = IoOperation::makeAccept (_acceptor.handle (), _acceptOp->_remote.addr (),
-                                                      &_acceptOp->_remoteLen, flags | SOCK_NONBLOCK, this);
+                                                      &_acceptOp->_remoteLen, flags | SOCK_NONBLOCK, _acceptOp.get ());
 
             if (_proactor->submit (&_acceptOp->_op, true, false) == -1)
             {
                 // LCOV_EXCL_START
                 _acceptOp->release ();
                 _acceptOp->_handler.reset ();
+                peer._pendingAccept = nullptr;
                 _acceptOp->_peer = nullptr;
                 return -1;
                 // LCOV_EXCL_STOP
@@ -256,62 +258,6 @@ namespace join
         }
 
     private:
-        /**
-         * @brief method called when the acceptation completes.
-         * @param op completed operation.
-         * @param result accepted file descriptor, or negative errno.
-         */
-        void onComplete (IoOperation* op, int result) override
-        {
-            dispatch (op, result);
-        }
-
-        /**
-         * @brief method called when the acceptation is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel (IoOperation* op, [[maybe_unused]] int result) override
-        {
-            dispatch (op, -ECANCELED);
-        }
-
-        /**
-         * @brief invoke the handler owning the acceptation slot.
-         * @param op completed or cancelled operation.
-         * @param result accepted file descriptor, or negative errno.
-         */
-        void dispatch (IoOperation* op, int result) noexcept
-        {
-            if (op == &_acceptOp->_op)
-            {
-                _acceptOp->dispatch ([this, result] () {
-                    AcceptHandler handler = std::move (_acceptOp->_handler);
-                    AsyncSocket* peer = _acceptOp->_peer;
-                    _acceptOp->_peer = nullptr;
-                    if (JOIN_UNLIKELY (result < 0))
-                    {
-                        if (JOIN_LIKELY (handler))
-                        {
-                            handler (std::error_code (-result, std::generic_category ()));
-                        }
-                    }
-                    else
-                    {
-                        peer->_socket = Socket (result, _acceptOp->_remote);
-                        if (JOIN_LIKELY (handler))
-                        {
-                            handler (std::error_code ());
-                        }
-                    }
-                });
-            }
-            else
-            {
-                // do nothing.
-            }
-        }
-
         /// underlying synchronous acceptor.
         Acceptor _acceptor;
 

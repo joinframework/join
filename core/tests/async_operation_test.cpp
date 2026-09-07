@@ -23,8 +23,7 @@
  */
 
 // libjoin.
-#include <join/async_operation.hpp>
-#include <join/protocol.hpp>
+#include <join/async_acceptor.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
