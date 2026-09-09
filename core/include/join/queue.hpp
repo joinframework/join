@@ -34,10 +34,10 @@
 #include <type_traits>
 #include <algorithm>
 #include <atomic>
-#include <cstring>
 
 // C.
 #include <sys/types.h>
+#include <cstring>
 
 namespace join
 {
