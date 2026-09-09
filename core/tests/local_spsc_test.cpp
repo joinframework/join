@@ -85,6 +85,34 @@ TEST (LocalSpsc, tryPushBatch)
     ASSERT_TRUE (queue.full ());
     ASSERT_EQ (queue.available (), 0);
     ASSERT_EQ (queue.pending (), full);
+
+    uint64_t alt[full] = {}, out[full] = {}, discard = 0;
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        alt[i] = full + i;
+        ASSERT_EQ (queue.tryPop (discard), 0) << join::lastError.message ();
+    }
+
+    for (uint64_t i = 0; i < half; ++i)
+    {
+        ASSERT_EQ (queue.tryPush (in[i]), 0) << join::lastError.message ();
+        ASSERT_EQ (queue.tryPop (discard), 0) << join::lastError.message ();
+    }
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (queue.tryPush (in[i]), 0) << join::lastError.message ();
+    }
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (queue.tryPop (discard), 0) << join::lastError.message ();
+    }
+    ASSERT_EQ (queue.tryPush (alt, full), full) << join::lastError.message ();
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (queue.tryPop (out[i]), 0) << join::lastError.message ();
+        ASSERT_EQ (out[i], alt[i]);
+    }
 }
 
 /**
@@ -190,6 +218,32 @@ TEST (LocalSpsc, tryPopBatch)
     for (uint64_t i = 0; i < full; ++i)
     {
         ASSERT_EQ (out[i], i);
+    }
+
+    uint64_t discard = 0;
+
+    for (uint64_t i = 0; i < half; ++i)
+    {
+        ASSERT_EQ (queue.tryPush (in[i]), 0) << join::lastError.message ();
+        ASSERT_EQ (queue.tryPop (discard), 0) << join::lastError.message ();
+    }
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (queue.tryPush (in[i]), 0) << join::lastError.message ();
+    }
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (queue.tryPop (discard), 0) << join::lastError.message ();
+    }
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (queue.tryPush (in[i]), 0) << join::lastError.message ();
+        out[i] = 0;
+    }
+    ASSERT_EQ (queue.tryPop (out, full), full) << join::lastError.message ();
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (out[i], in[i]);
     }
 }
 

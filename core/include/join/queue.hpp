@@ -37,6 +37,7 @@
 
 // C.
 #include <sys/types.h>
+#include <cstring>
 
 namespace join
 {
@@ -554,10 +555,14 @@ namespace join
             }
 
             uint64_t toWrite = std::min (static_cast<uint64_t> (size), avail);
+            uint64_t offset = head & mask;
+            uint64_t first = std::min (toWrite, capacity - offset);
 
-            for (uint64_t i = 0; i < toWrite; ++i)
+            std::memcpy (&segment->_elements[offset], elements, first * sizeof (Type));
+
+            if (toWrite > first)
             {
-                segment->_elements[(head + i) & mask].data = elements[i];
+                std::memcpy (&segment->_elements[0], elements + first, (toWrite - first) * sizeof (Type));
             }
 
             sync._head.store (head + toWrite, std::memory_order_release);
@@ -611,8 +616,7 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully popped, -1 otherwise.
          */
-        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t /*capacity*/,
-                               uint64_t mask) noexcept
+        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -636,10 +640,14 @@ namespace join
             }
 
             uint64_t toRead = std::min (static_cast<uint64_t> (size), pending);
+            uint64_t offset = tail & mask;
+            uint64_t first = std::min (toRead, capacity - offset);
 
-            for (uint64_t i = 0; i < toRead; ++i)
+            std::memcpy (elements, &segment->_elements[offset], first * sizeof (Type));
+
+            if (toRead > first)
             {
-                elements[i] = segment->_elements[(tail + i) & mask].data;
+                std::memcpy (elements + first, &segment->_elements[0], (toRead - first) * sizeof (Type));
             }
 
             sync._tail.store (tail + toRead, std::memory_order_release);

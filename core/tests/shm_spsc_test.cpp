@@ -131,6 +131,34 @@ TEST_F (ShmSpsc, tryPushBatch)
     ASSERT_TRUE (prod.full ());
     ASSERT_EQ (prod.available (), 0);
     ASSERT_EQ (prod.pending (), full);
+
+    uint64_t alt[full] = {}, out[full] = {}, discard = 0;
+
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        alt[i] = full + i;
+        ASSERT_EQ (prod.tryPop (discard), 0) << join::lastError.message ();
+    }
+
+    for (uint64_t i = 0; i < half; ++i)
+    {
+        ASSERT_EQ (prod.tryPush (in[i]), 0) << join::lastError.message ();
+        ASSERT_EQ (prod.tryPop (discard), 0) << join::lastError.message ();
+    }
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (prod.tryPush (in[i]), 0) << join::lastError.message ();
+    }
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (prod.tryPop (discard), 0) << join::lastError.message ();
+    }
+    ASSERT_EQ (prod.tryPush (alt, full), full) << join::lastError.message ();
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (prod.tryPop (out[i]), 0) << join::lastError.message ();
+        ASSERT_EQ (out[i], alt[i]);
+    }
 }
 
 /**
@@ -238,6 +266,32 @@ TEST_F (ShmSpsc, tryPopBatch)
     for (uint64_t i = 0; i < full; ++i)
     {
         ASSERT_EQ (out[i], i);
+    }
+
+    uint64_t discard = 0;
+
+    for (uint64_t i = 0; i < half; ++i)
+    {
+        ASSERT_EQ (prod.tryPush (in[i]), 0) << join::lastError.message ();
+        ASSERT_EQ (prod.tryPop (discard), 0) << join::lastError.message ();
+    }
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (prod.tryPush (in[i]), 0) << join::lastError.message ();
+    }
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (prod.tryPop (discard), 0) << join::lastError.message ();
+    }
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (prod.tryPush (in[i]), 0) << join::lastError.message ();
+        out[i] = 0;
+    }
+    ASSERT_EQ (prod.tryPop (out, full), full) << join::lastError.message ();
+    for (uint64_t i = 0; i < full; ++i)
+    {
+        ASSERT_EQ (out[i], in[i]);
     }
 }
 
