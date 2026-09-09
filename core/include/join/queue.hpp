@@ -472,8 +472,6 @@ namespace join
 
         /// shared memory segment.
         Segment* _segment = nullptr;
-
-
     };
 
     /**
@@ -493,8 +491,7 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (Segment* segment, const Type& element, uint64_t capacity,
-                            uint64_t mask) noexcept
+        static int tryPush (Segment* segment, const Type& element, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -532,8 +529,8 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully pushed, -1 otherwise.
          */
-        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size,
-                                uint64_t capacity, uint64_t mask) noexcept
+        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size, uint64_t capacity,
+                                uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -576,8 +573,7 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (Segment* segment, Type& element, uint64_t /*capacity*/,
-                           uint64_t mask) noexcept
+        static int tryPop (Segment* segment, Type& element, uint64_t /*capacity*/, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -615,8 +611,8 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully popped, -1 otherwise.
          */
-        static ssize_t tryPop (Segment* segment, Type* elements, size_t size,
-                               uint64_t /*capacity*/, uint64_t mask) noexcept
+        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t /*capacity*/,
+                               uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -669,8 +665,7 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (Segment* segment, const Type& element, uint64_t /*capacity*/,
-                            uint64_t mask) noexcept
+        static int tryPush (Segment* segment, const Type& element, uint64_t /*capacity*/, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -721,8 +716,8 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully pushed, -1 otherwise.
          */
-        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size,
-                                uint64_t capacity, uint64_t mask) noexcept
+        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size, uint64_t capacity,
+                                uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -770,8 +765,7 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (Segment* segment, Type& element, uint64_t capacity,
-                           uint64_t mask) noexcept
+        static int tryPop (Segment* segment, Type& element, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -808,8 +802,7 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully popped, -1 otherwise.
          */
-        static ssize_t tryPop (Segment* segment, Type* elements, size_t size,
-                               uint64_t capacity, uint64_t mask) noexcept
+        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -865,8 +858,7 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (Segment* segment, const Type& element, uint64_t capacity,
-                            uint64_t mask) noexcept
+        static int tryPush (Segment* segment, const Type& element, uint64_t capacity, uint64_t mask) noexcept
         {
             return Mpsc<Type, Backend>::tryPush (segment, element, capacity, mask);
         }
@@ -880,8 +872,8 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully pushed, -1 otherwise.
          */
-        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size,
-                                uint64_t capacity, uint64_t mask) noexcept
+        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size, uint64_t capacity,
+                                uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -934,8 +926,7 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (Segment* segment, Type& element, uint64_t capacity,
-                           uint64_t mask) noexcept
+        static int tryPop (Segment* segment, Type& element, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -987,8 +978,7 @@ namespace join
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully popped, -1 otherwise.
          */
-        static ssize_t tryPop (Segment* segment, Type* elements, size_t size,
-                               uint64_t capacity, uint64_t mask) noexcept
+        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
