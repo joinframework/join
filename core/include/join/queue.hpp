@@ -54,8 +54,14 @@ namespace join
         /// write position.
         alignas (64) std::atomic_uint64_t _head;
 
+        /// cached tail index for the producer side.
+        uint64_t _cachedTail;
+
         /// read position.
         alignas (64) std::atomic_uint64_t _tail;
+
+        /// cached head index for the consumer side.
+        uint64_t _cachedHead;
     };
 
     /**
@@ -153,7 +159,9 @@ namespace join
                                                                 std::memory_order_acq_rel))
             {
                 _segment->_sync._head.store (0, std::memory_order_relaxed);
+                _segment->_sync._cachedTail = 0;
                 _segment->_sync._tail.store (0, std::memory_order_relaxed);
+                _segment->_sync._cachedHead = 0;
 
                 initSlots<needs_seq<SyncPolicy>::value> ();
 
@@ -207,7 +215,7 @@ namespace join
          */
         int tryPush (const Type& element) noexcept
         {
-            return SyncPolicy::tryPush (_segment, element, _cachedTail, _capacity, _mask);
+            return SyncPolicy::tryPush (_segment, element, _capacity, _mask);
         }
 
         /**
@@ -218,7 +226,7 @@ namespace join
          */
         ssize_t tryPush (const Type* elements, size_t size) noexcept
         {
-            return SyncPolicy::tryPush (_segment, elements, size, _cachedTail, _capacity, _mask);
+            return SyncPolicy::tryPush (_segment, elements, size, _capacity, _mask);
         }
 
         /**
@@ -282,7 +290,7 @@ namespace join
          */
         int tryPop (Type& element) noexcept
         {
-            return SyncPolicy::tryPop (_segment, element, _cachedHead, _capacity, _mask);
+            return SyncPolicy::tryPop (_segment, element, _capacity, _mask);
         }
 
         /**
@@ -293,7 +301,7 @@ namespace join
          */
         ssize_t tryPop (Type* elements, size_t size) noexcept
         {
-            return SyncPolicy::tryPop (_segment, elements, size, _cachedHead, _capacity, _mask);
+            return SyncPolicy::tryPop (_segment, elements, size, _capacity, _mask);
         }
 
         /**
@@ -448,7 +456,7 @@ namespace join
         }
 
         /// memory segment capacity.
-        const uint64_t _capacity = 0;
+        alignas (64) const uint64_t _capacity = 0;
 
         /// bit mask for fast modulo.
         const uint64_t _mask = 0;
@@ -464,12 +472,6 @@ namespace join
 
         /// shared memory segment.
         Segment* _segment = nullptr;
-
-        /// cached tail index for the producer side.
-        alignas (64) uint64_t _cachedTail = 0;
-
-        /// cached head index for the consumer side.
-        alignas (64) uint64_t _cachedHead = 0;
     };
 
     /**
@@ -485,13 +487,11 @@ namespace join
          * @brief try to push element into the ring buffer.
          * @param segment shared memory segment.
          * @param element element to push.
-         * @param cachedTail producer-side cached index.
          * @param capacity memory segment capacity.
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (Segment* segment, const Type& element, uint64_t& cachedTail, uint64_t capacity,
-                            uint64_t mask) noexcept
+        static int tryPush (Segment* segment, const Type& element, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -504,10 +504,10 @@ namespace join
             auto& sync = segment->_sync;
             uint64_t head = sync._head.load (std::memory_order_relaxed);
 
-            if (JOIN_UNLIKELY ((head - cachedTail) == capacity))
+            if (JOIN_UNLIKELY ((head - sync._cachedTail) == capacity))
             {
-                cachedTail = sync._tail.load (std::memory_order_acquire);
-                if ((head - cachedTail) == capacity)
+                sync._cachedTail = sync._tail.load (std::memory_order_acquire);
+                if ((head - sync._cachedTail) == capacity)
                 {
                     lastError = make_error_code (Errc::TemporaryError);
                     return -1;
@@ -525,13 +525,12 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the first element.
          * @param size number of elements to push.
-         * @param cachedTail producer-side cached index.
          * @param capacity memory segment capacity.
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully pushed, -1 otherwise.
          */
-        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size, uint64_t& cachedTail,
-                                uint64_t capacity, uint64_t mask) noexcept
+        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size, uint64_t capacity,
+                                uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -541,12 +540,12 @@ namespace join
 
             auto& sync = segment->_sync;
             uint64_t head = sync._head.load (std::memory_order_relaxed);
-            uint64_t avail = capacity - (head - cachedTail);
+            uint64_t avail = capacity - (head - sync._cachedTail);
 
             if (JOIN_UNLIKELY (avail == 0))
             {
-                cachedTail = sync._tail.load (std::memory_order_acquire);
-                avail = capacity - (head - cachedTail);
+                sync._cachedTail = sync._tail.load (std::memory_order_acquire);
+                avail = capacity - (head - sync._cachedTail);
                 if (avail == 0)
                 {
                     lastError = make_error_code (Errc::TemporaryError);
@@ -570,13 +569,11 @@ namespace join
          * @brief try to pop element from the ring buffer.
          * @param segment shared memory segment.
          * @param element output element.
-         * @param cachedHead consumer-side cached index.
          * @param capacity memory segment capacity (not used).
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (Segment* segment, Type& element, uint64_t& cachedHead, uint64_t /*capacity*/,
-                           uint64_t mask) noexcept
+        static int tryPop (Segment* segment, Type& element, uint64_t /*capacity*/, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -589,10 +586,10 @@ namespace join
             auto& sync = segment->_sync;
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
 
-            if (cachedHead == tail)
+            if (sync._cachedHead == tail)
             {
-                cachedHead = sync._head.load (std::memory_order_acquire);
-                if (cachedHead == tail)
+                sync._cachedHead = sync._head.load (std::memory_order_acquire);
+                if (sync._cachedHead == tail)
                 {
                     lastError = make_error_code (Errc::TemporaryError);
                     return -1;
@@ -610,13 +607,12 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the output buffer.
          * @param size maximum number of elements to pop.
-         * @param cachedHead consumer-side cached index.
          * @param capacity memory segment capacity (not used).
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully popped, -1 otherwise.
          */
-        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t& cachedHead,
-                               uint64_t /*capacity*/, uint64_t mask) noexcept
+        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t /*capacity*/,
+                               uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -626,12 +622,12 @@ namespace join
 
             auto& sync = segment->_sync;
             uint64_t tail = sync._tail.load (std::memory_order_relaxed);
-            uint64_t pending = cachedHead - tail;
+            uint64_t pending = sync._cachedHead - tail;
 
             if (pending == 0)
             {
-                cachedHead = sync._head.load (std::memory_order_acquire);
-                pending = cachedHead - tail;
+                sync._cachedHead = sync._head.load (std::memory_order_acquire);
+                pending = sync._cachedHead - tail;
                 if (pending == 0)
                 {
                     lastError = make_error_code (Errc::TemporaryError);
@@ -665,13 +661,11 @@ namespace join
          * @brief try to push element into the ring buffer.
          * @param segment shared memory segment.
          * @param element element to push.
-         * @param cachedTail producer-side cached index (not used).
          * @param capacity memory segment capacity (not used).
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (Segment* segment, const Type& element, uint64_t& /*cachedTail*/, uint64_t /*capacity*/,
-                            uint64_t mask) noexcept
+        static int tryPush (Segment* segment, const Type& element, uint64_t /*capacity*/, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -718,13 +712,12 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the first element.
          * @param size number of elements to push.
-         * @param cachedTail producer-side cached index (not used).
          * @param capacity memory segment capacity.
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully pushed, -1 otherwise.
          */
-        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size, uint64_t& /*cachedTail*/,
-                                uint64_t capacity, uint64_t mask) noexcept
+        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size, uint64_t capacity,
+                                uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -768,13 +761,11 @@ namespace join
          * @brief try to pop element from the ring buffer.
          * @param segment shared memory segment.
          * @param element output element.
-         * @param cachedHead consumer-side cached index (not used).
          * @param capacity memory segment capacity.
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (Segment* segment, Type& element, uint64_t& /*cachedHead*/, uint64_t capacity,
-                           uint64_t mask) noexcept
+        static int tryPop (Segment* segment, Type& element, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -807,13 +798,11 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the output buffer.
          * @param size maximum number of elements to pop.
-         * @param cachedHead consumer-side cached index (not used).
          * @param capacity memory segment capacity.
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully popped, -1 otherwise.
          */
-        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t& /*cachedHead*/,
-                               uint64_t capacity, uint64_t mask) noexcept
+        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -865,15 +854,13 @@ namespace join
          * @brief try to push element into the ring buffer.
          * @param segment shared memory segment.
          * @param element element to push.
-         * @param cachedTail producer-side cached index.
          * @param capacity memory segment capacity.
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPush (Segment* segment, const Type& element, uint64_t& cachedTail, uint64_t capacity,
-                            uint64_t mask) noexcept
+        static int tryPush (Segment* segment, const Type& element, uint64_t capacity, uint64_t mask) noexcept
         {
-            return Mpsc<Type, Backend>::tryPush (segment, element, cachedTail, capacity, mask);
+            return Mpsc<Type, Backend>::tryPush (segment, element, capacity, mask);
         }
 
         /**
@@ -881,13 +868,12 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the first element.
          * @param size number of elements to push.
-         * @param cachedTail producer-side cached index (not used).
          * @param capacity memory segment capacity.
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully pushed, -1 otherwise.
          */
-        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size, uint64_t& /*cachedTail*/,
-                                uint64_t capacity, uint64_t mask) noexcept
+        static ssize_t tryPush (Segment* segment, const Type* elements, size_t size, uint64_t capacity,
+                                uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
@@ -936,13 +922,11 @@ namespace join
          * @brief try to pop element from the ring buffer.
          * @param segment shared memory segment.
          * @param element output element.
-         * @param cachedHead consumre-side cached index (not used).
          * @param capacity memory segment capacity.
          * @param mask bit mask for fast modulo.
          * @return 0 on success, -1 otherwise.
          */
-        static int tryPop (Segment* segment, Type& element, uint64_t& /*cachedHead*/, uint64_t capacity,
-                           uint64_t mask) noexcept
+        static int tryPop (Segment* segment, Type& element, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr))
             {
@@ -990,13 +974,11 @@ namespace join
          * @param segment shared memory segment.
          * @param elements pointer to the output buffer.
          * @param size maximum number of elements to pop.
-         * @param cachedHead consumre-side cached index (not used).
          * @param capacity memory segment capacity.
          * @param mask bit mask for fast modulo.
          * @return number of elements successfully popped, -1 otherwise.
          */
-        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t& /*cachedHead*/,
-                               uint64_t capacity, uint64_t mask) noexcept
+        static ssize_t tryPop (Segment* segment, Type* elements, size_t size, uint64_t capacity, uint64_t mask) noexcept
         {
             if (JOIN_UNLIKELY (segment == nullptr || elements == nullptr || size == 0))
             {
