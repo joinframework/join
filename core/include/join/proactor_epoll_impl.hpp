@@ -314,8 +314,7 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
     {
         case CommandType::Submit:
             err = submitOperation (cmd.op, cmd.flush);
-            if (JOIN_UNLIKELY ((err != 0) && (cmd.done == nullptr) && (cmd.op != nullptr) &&
-                               (cmd.op->state == IoOperation::State::Idle)))
+            if (JOIN_UNLIKELY ((err != 0) && (cmd.done == nullptr) && (cmd.op != nullptr) && !isPending (cmd.op)))
             {
                 dispatchOperation (cmd.op, -lastError.default_error_condition ().value (), false);
             }

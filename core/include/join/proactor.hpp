@@ -511,6 +511,13 @@ private:
     bool isPending (IoOperation* op) const noexcept;
 
     /**
+     * @brief wait for the operation to be unlocked.
+     * @param op operation to wait for.
+     * @return operation state.
+     */
+    static IoOperation::State waitUnlock (IoOperation* op) noexcept;
+
+    /**
      * @brief check if the operation can be submitted.
      * @param op operation to check.
      * @return true if the operation can be submitted.
@@ -982,6 +989,29 @@ inline void join::BasicProactor::unlock (IoOperation* op, IoOperation::State pre
 
 // =========================================================================
 //   CLASS     : BasicProactor
+//   METHOD    : waitUnlock
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename Policy>
+join::IoOperation::State join::BasicProactor<Policy>::waitUnlock (IoOperation* op) noexcept
+#else
+inline join::IoOperation::State join::BasicProactor::waitUnlock (IoOperation* op) noexcept
+#endif
+{
+    IoOperation::State state = op->state.load (std::memory_order_acquire);
+    Backoff backoff;
+
+    while (state == IoOperation::State::Moving)
+    {
+        backoff ();
+        state = op->state.load (std::memory_order_acquire);
+    }
+
+    return state;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
 //   METHOD    : submittable
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
@@ -991,7 +1021,7 @@ bool join::BasicProactor<Policy>::submittable (IoOperation* op) const noexcept
 inline bool join::BasicProactor::submittable (IoOperation* op) const noexcept
 #endif
 {
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
+    IoOperation::State state = waitUnlock (op);
 
     if (state == IoOperation::State::Idle)
     {
@@ -1017,10 +1047,22 @@ void join::BasicProactor<Policy>::setSubmitted (IoOperation* op) noexcept
 inline void join::BasicProactor::setSubmitted (IoOperation* op) noexcept
 #endif
 {
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
-    op->state.store (
-        (state == IoOperation::State::Idle) ? IoOperation::State::Submitted : IoOperation::State::Completing,
-        std::memory_order_relaxed);
+    for (;;)
+    {
+        IoOperation::State state = waitUnlock (op);
+
+        if ((state == IoOperation::State::Completing) || (state == IoOperation::State::Cancelling))
+        {
+            op->state.store (IoOperation::State::Completing, std::memory_order_relaxed);
+            return;
+        }
+
+        if (op->state.compare_exchange_weak (state, IoOperation::State::Submitted, std::memory_order_relaxed,
+                                             std::memory_order_relaxed))
+        {
+            return;
+        }
+    }
 }
 
 // =========================================================================
@@ -1034,7 +1076,7 @@ bool join::BasicProactor<Policy>::cancellable (IoOperation* op) const noexcept
 inline bool join::BasicProactor::cancellable (IoOperation* op) const noexcept
 #endif
 {
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
+    IoOperation::State state = waitUnlock (op);
 
     if (state == IoOperation::State::Submitted)
     {
@@ -1060,10 +1102,22 @@ void join::BasicProactor<Policy>::setCancelled (IoOperation* op) noexcept
 inline void join::BasicProactor::setCancelled (IoOperation* op) noexcept
 #endif
 {
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
-    op->state.store (
-        (state == IoOperation::State::Submitted) ? IoOperation::State::Cancelled : IoOperation::State::Cancelling,
-        std::memory_order_relaxed);
+    for (;;)
+    {
+        IoOperation::State state = waitUnlock (op);
+
+        if (state == IoOperation::State::Completing)
+        {
+            op->state.store (IoOperation::State::Cancelling, std::memory_order_relaxed);
+            return;
+        }
+
+        if (op->state.compare_exchange_weak (state, IoOperation::State::Cancelled, std::memory_order_relaxed,
+                                             std::memory_order_relaxed))
+        {
+            return;
+        }
+    }
 }
 
 // =========================================================================
