@@ -607,7 +607,7 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
         return -1;
     }
 
-    if (JOIN_UNLIKELY (!submittable (op)))
+    if (JOIN_UNLIKELY (op->state != IoOperation::State::Idle))
     {
         lastError = make_error_code (std::errc::device_or_resource_busy);
         return -1;
@@ -637,7 +637,7 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
     }
 
     prepareSqe (sqe, op);
-    setSubmitted (op);
+    op->state = IoOperation::State::Submitted;
     op->index = static_cast<uint32_t> (_pendingOps.size ());
     _pendingOps.push_back (op);
 
@@ -674,7 +674,7 @@ int join::BasicProactor<Policy>::cancelOperation (IoOperation* op, bool flush) n
         return -1;
     }
 
-    if (JOIN_UNLIKELY (!cancellable (op)))
+    if (JOIN_UNLIKELY (op->state != IoOperation::State::Submitted))
     {
         lastError = make_error_code (Errc::OperationFailed);
         return -1;
@@ -695,7 +695,7 @@ int join::BasicProactor<Policy>::cancelOperation (IoOperation* op, bool flush) n
         // LCOV_EXCL_STOP
     }
 
-    setCancelled (op);
+    op->state = IoOperation::State::Cancelling;
     io_uring_prep_cancel (sqe, op, 0);
     io_uring_sqe_set_data (sqe, nullptr);
 
@@ -741,16 +741,6 @@ void join::BasicProactor<Policy>::endOperation (IoOperation* op, int result, boo
     }
 
     dispatchOperation (op, result, cancelled);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : isPending
-// =========================================================================
-template <typename Policy>
-bool join::BasicProactor<Policy>::isPending (IoOperation* op) const noexcept
-{
-    return (op->index < _pendingOps.size ()) && (_pendingOps[op->index] == op);
 }
 
 // =========================================================================
@@ -982,7 +972,7 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
     }
     else
     {
-        bool cancelled = (result == -ECANCELED);
+        bool cancelled = (result < 0) && (result == -ECANCELED || op->state == IoOperation::State::Cancelling);
         endOperation (op, result, cancelled);
     }
 

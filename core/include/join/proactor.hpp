@@ -125,7 +125,7 @@ public:
 protected:
     /**
      * @brief method called when an operation completes successfully.
-     * @param op completed operation, can be resubmitted, shall remain valid until the call returns.
+     * @param op completed operation, left idle when a multishot ended and can be resubmitted.
      * @param result number of bytes transferred, operation-specific value, or negative errno on failure.
      */
     virtual void onComplete ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result)
@@ -304,20 +304,6 @@ public:
      * @return true if called from the proactor thread.
      */
     bool isProactorThread () const noexcept;
-
-    /**
-     * @brief lock the operation while its handler owner is moved.
-     * @param op operation to lock.
-     * @return state to restore on unlock.
-     */
-    IoOperation::State lock (IoOperation* op) noexcept;
-
-    /**
-     * @brief unlock the operation once its handler owner is moved.
-     * @param op operation to unlock.
-     * @param previous state returned by lock.
-     */
-    void unlock (IoOperation* op, IoOperation::State previous) noexcept;
 
 private:
 #ifdef JOIN_HAS_IO_URING
@@ -502,52 +488,6 @@ private:
      * @param cancelled if true, dispatch to onCancel; otherwise to onComplete.
      */
     void endOperation (IoOperation* op, int result, bool cancelled = false) noexcept;
-
-    /**
-     * @brief check if the operation is registered as in flight in the backend.
-     * @param op operation to check.
-     * @return true if in flight.
-     */
-    bool isPending (IoOperation* op) const noexcept;
-
-    /**
-     * @brief check if the operation can be submitted.
-     * @param op operation to check.
-     * @return true if the operation can be submitted.
-     */
-    bool submittable (IoOperation* op) const noexcept;
-
-    /**
-     * @brief mark the operation as submitted.
-     * @param op submitted operation.
-     */
-    static void setSubmitted (IoOperation* op) noexcept;
-
-    /**
-     * @brief check if the operation can be cancelled.
-     * @param op operation to check.
-     * @return true if the operation can be cancelled.
-     */
-    bool cancellable (IoOperation* op) const noexcept;
-
-    /**
-     * @brief mark the operation as cancelled.
-     * @param op cancelled operation.
-     */
-    static void setCancelled (IoOperation* op) noexcept;
-
-    /**
-     * @brief acquire the operation before running its completion handler.
-     * @param op operation to acquire.
-     * @return true if acquired, false if its completion handler is already running.
-     */
-    static bool acquire (IoOperation* op) noexcept;
-
-    /**
-     * @brief release the operation after its completion handler ran.
-     * @param op operation to release.
-     */
-    void release (IoOperation* op) noexcept;
 
 #ifdef JOIN_HAS_IO_URING
     /**
@@ -878,13 +818,6 @@ void join::BasicProactor<Policy>::notifyOperation (IoOperation* op, int result, 
 inline void join::BasicProactor::notifyOperation (IoOperation* op, int result, bool cancelled) noexcept
 #endif
 {
-    bool acquired = acquire (op);
-
-    if ((result < 0) && (op->state.load (std::memory_order_relaxed) == IoOperation::State::Cancelling))
-    {
-        cancelled = true;
-    }
-
     if (JOIN_LIKELY (op->handler))
     {
         if (cancelled)
@@ -895,11 +828,6 @@ inline void join::BasicProactor::notifyOperation (IoOperation* op, int result, b
         {
             op->handler->onComplete (op, result);
         }
-    }
-
-    if (acquired)
-    {
-        release (op);
     }
 }
 
@@ -919,6 +847,8 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
         return;  // LCOV_EXCL_LINE
     }
 
+    op->state = IoOperation::State::Idle;
+
     if (op->ring != nullptr)
     {
         op->ring->unbind ();
@@ -926,206 +856,6 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
     }
 
     notifyOperation (op, result, cancelled);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : lock
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-join::IoOperation::State join::BasicProactor<Policy>::lock (IoOperation* op) noexcept
-#else
-inline join::IoOperation::State join::BasicProactor::lock (IoOperation* op) noexcept
-#endif
-{
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
-
-    if (isProactorThread ())
-    {
-        return state;
-    }
-
-    Backoff backoff;
-
-    for (;;)
-    {
-        if ((state == IoOperation::State::Completing) || (state == IoOperation::State::Cancelling) ||
-            (state == IoOperation::State::Moving))
-        {
-            backoff ();
-            state = op->state.load (std::memory_order_relaxed);
-            continue;
-        }
-
-        if (op->state.compare_exchange_weak (state, IoOperation::State::Moving, std::memory_order_acquire,
-                                             std::memory_order_relaxed))
-        {
-            return state;
-        }
-    }
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : unlock
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::unlock (IoOperation* op, IoOperation::State previous) noexcept
-#else
-inline void join::BasicProactor::unlock (IoOperation* op, IoOperation::State previous) noexcept
-#endif
-{
-    op->state.store (previous, std::memory_order_release);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : submittable
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-bool join::BasicProactor<Policy>::submittable (IoOperation* op) const noexcept
-#else
-inline bool join::BasicProactor::submittable (IoOperation* op) const noexcept
-#endif
-{
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
-
-    if (state == IoOperation::State::Idle)
-    {
-        return true;
-    }
-
-    if ((state != IoOperation::State::Completing) && (state != IoOperation::State::Cancelling))
-    {
-        return false;
-    }
-
-    return !isPending (op);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : setSubmitted
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::setSubmitted (IoOperation* op) noexcept
-#else
-inline void join::BasicProactor::setSubmitted (IoOperation* op) noexcept
-#endif
-{
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
-    op->state.store (
-        (state == IoOperation::State::Idle) ? IoOperation::State::Submitted : IoOperation::State::Completing,
-        std::memory_order_relaxed);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : cancellable
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-bool join::BasicProactor<Policy>::cancellable (IoOperation* op) const noexcept
-#else
-inline bool join::BasicProactor::cancellable (IoOperation* op) const noexcept
-#endif
-{
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
-
-    if (state == IoOperation::State::Submitted)
-    {
-        return true;
-    }
-
-    if (state != IoOperation::State::Completing)
-    {
-        return false;
-    }
-
-    return isPending (op);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : setCancelled
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::setCancelled (IoOperation* op) noexcept
-#else
-inline void join::BasicProactor::setCancelled (IoOperation* op) noexcept
-#endif
-{
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
-    op->state.store (
-        (state == IoOperation::State::Submitted) ? IoOperation::State::Cancelled : IoOperation::State::Cancelling,
-        std::memory_order_relaxed);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : acquire
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-bool join::BasicProactor<Policy>::acquire (IoOperation* op) noexcept
-#else
-inline bool join::BasicProactor::acquire (IoOperation* op) noexcept
-#endif
-{
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
-
-    if ((state == IoOperation::State::Completing) || (state == IoOperation::State::Cancelling))
-    {
-        return false;  // LCOV_EXCL_LINE
-    }
-
-    Backoff backoff;
-
-    for (;;)
-    {
-        if (state == IoOperation::State::Moving)
-        {
-            backoff ();
-            state = op->state.load (std::memory_order_relaxed);
-            continue;
-        }
-
-        IoOperation::State next =
-            (state == IoOperation::State::Cancelled) ? IoOperation::State::Cancelling : IoOperation::State::Completing;
-
-        if (op->state.compare_exchange_weak (state, next, std::memory_order_acquire, std::memory_order_relaxed))
-        {
-            return true;
-        }
-    }
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : release
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::release (IoOperation* op) noexcept
-#else
-inline void join::BasicProactor::release (IoOperation* op) noexcept
-#endif
-{
-    IoOperation::State next = IoOperation::State::Idle;
-
-    if (isPending (op))
-    {
-        next = (op->state.load (std::memory_order_relaxed) == IoOperation::State::Cancelling)
-                   ? IoOperation::State::Cancelled
-                   : IoOperation::State::Submitted;
-    }
-
-    op->state.store (next, std::memory_order_release);
 }
 
 #ifdef JOIN_HAS_IO_URING
