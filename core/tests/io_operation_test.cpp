@@ -314,6 +314,38 @@ TEST (IoOperation, fd)
 }
 
 /**
+ * @brief Test copyConstruct.
+ */
+TEST (IoOperation, copyConstruct)
+{
+    auto op = IoOperation::makeRead (8, buffer, sizeof (buffer), nullptr, true);
+    op.state.store (IoOperation::State::Submitted);
+
+    IoOperation copy (op);
+
+    ASSERT_EQ (copy.code, static_cast<uint8_t> (IoOperation::Opcode::Read));
+    ASSERT_TRUE (copy.linked);
+    ASSERT_EQ (copy.data.rw.fd, 8);
+    ASSERT_EQ (copy.data.rw.buf, buffer);
+    ASSERT_EQ (copy.state.load (), IoOperation::State::Idle);
+}
+
+/**
+ * @brief Test copyAssign.
+ */
+TEST (IoOperation, copyAssign)
+{
+    IoOperation op;
+    op.state.store (IoOperation::State::Completing);
+
+    op = IoOperation::makeRead (8, buffer, sizeof (buffer), nullptr, true);
+
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Read));
+    ASSERT_EQ (op.data.rw.fd, 8);
+    ASSERT_EQ (op.state.load (), IoOperation::State::Completing);
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char** argv)
