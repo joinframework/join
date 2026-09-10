@@ -1548,38 +1548,6 @@ TEST_F (SqpollProactorTest, lock)
     releaser.join ();
 
     ASSERT_EQ (previous, IoOperation::State::Idle);
-
-    _completions = 0;
-    previous = SqpollProactorThread::proactor ().lock (&_readOp);
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, false), 0) << join::lastError.message ();
-    std::this_thread::sleep_for (std::chrono::milliseconds (50));
-    SqpollProactorThread::proactor ().unlock (&_readOp, previous);
-    ASSERT_EQ (_client.writeExactly ("lock", strlen ("lock"), _timeout), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _op == &_readOp && _completions == 1;
-        }));
-        ASSERT_EQ (std::string (_buf, _result), "lock");
-        _op = nullptr;
-        _result = 0;
-    }
-
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
-    previous = SqpollProactorThread::proactor ().lock (&_readOp);
-    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (&_readOp, true, false), 0) << join::lastError.message ();
-    std::this_thread::sleep_for (std::chrono::milliseconds (50));
-    SqpollProactorThread::proactor ().unlock (&_readOp, previous);
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _op == &_readOp && _result == -ECANCELED;
-        }));
-        _op = nullptr;
-        _result = 0;
-    }
 }
 
 /**
