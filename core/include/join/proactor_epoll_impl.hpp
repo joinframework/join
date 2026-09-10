@@ -366,7 +366,7 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
         return -1;
     }
 
-    if (JOIN_UNLIKELY (op->state != IoOperation::State::Idle))
+    if (JOIN_UNLIKELY (!submittable (op)))
     {
         lastError = make_error_code (std::errc::device_or_resource_busy);
         return -1;
@@ -421,7 +421,7 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
         _readOps[op->fd ()] = op;
     }
 
-    op->state = IoOperation::State::Submitted;
+    setSubmitted (op);
 
     if (JOIN_UNLIKELY (ring != nullptr))
     {
@@ -450,7 +450,7 @@ inline int join::BasicProactor::cancelOperation (IoOperation* op, [[maybe_unused
         return -1;
     }
 
-    if (JOIN_UNLIKELY (op->state != IoOperation::State::Submitted))
+    if (JOIN_UNLIKELY (!cancellable (op)))
     {
         lastError = make_error_code (Errc::OperationFailed);
         return -1;
@@ -462,15 +462,15 @@ inline int join::BasicProactor::cancelOperation (IoOperation* op, [[maybe_unused
         return -1;
     }
 
-    op->state = IoOperation::State::Cancelling;
     bool isWrite = isWriteOp (op->code);
 
     if (JOIN_UNLIKELY ((isWrite && (_writeOps[op->fd ()] != op)) || (!isWrite && (_readOps[op->fd ()] != op))))
     {
-        op->state = IoOperation::State::Submitted;
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
+
+    setCancelled (op);
 
     if (isWrite)
     {
@@ -553,6 +553,22 @@ inline void join::BasicProactor::endOperation (IoOperation* op, int result, bool
     }
 
     dispatchOperation (op, result, cancelled);
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : isPending
+// =========================================================================
+inline bool join::BasicProactor::isPending (IoOperation* op) const noexcept
+{
+    int fd = op->fd ();
+
+    if ((fd < 0) || (static_cast<size_t> (fd) >= _readOps.size ()))
+    {
+        return false;
+    }
+
+    return (isWriteOp (op->code) ? _writeOps[fd] : _readOps[fd]) == op;
 }
 
 // =========================================================================

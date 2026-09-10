@@ -31,6 +31,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <thread>
+
 using join::Errc;
 using join::Mutex;
 using join::Condition;
@@ -82,6 +85,17 @@ protected:
      */
     void onComplete (IoOperation* op, int result) override
     {
+        if (_holds > 0)
+        {
+            --_holds;
+            ScopedLock<Mutex> lock (_mut);
+            _held = true;
+            _cond.signal ();
+            _cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _released;
+            });
+        }
+
         if (_resubmits > 0)
         {
             --_resubmits;
@@ -112,6 +126,19 @@ protected:
         }
 
         _cond.signal ();
+
+        if (_cancels > 0)
+        {
+            --_cancels;
+            int cancelled = ProactorThread::proactor ().cancel (op, true, true);
+
+            {
+                ScopedLock<Mutex> lock (_mut);
+                _cancelled = cancelled;
+            }
+
+            _cond.signal ();
+        }
     }
 
     /**
@@ -192,6 +219,21 @@ protected:
     /// result of the rejected resubmission performed from a handler.
     static int _rejected;
 
+    /// number of cancellations left to perform from a handler.
+    static int _cancels;
+
+    /// result of the cancellation performed from a handler.
+    static int _cancelled;
+
+    /// number of completion handlers left to hold until released.
+    static int _holds;
+
+    /// set when a completion handler is held.
+    static bool _held;
+
+    /// set to release the held completion handler.
+    static bool _released;
+
     /// last operation result.
     static int _result;
 
@@ -219,6 +261,11 @@ IoOperation ProactorTest::_resubmitOp = {};
 int ProactorTest::_resubmits = 0;
 int ProactorTest::_resubmitted = 0;
 int ProactorTest::_rejected = 0;
+int ProactorTest::_cancels = 0;
+int ProactorTest::_cancelled = 0;
+int ProactorTest::_holds = 0;
+bool ProactorTest::_held = false;
+bool ProactorTest::_released = false;
 int ProactorTest::_result = 0;
 int ProactorTest::_completions = 0;
 char ProactorTest::_buf[256] = {};
@@ -411,12 +458,48 @@ TEST_F (ProactorTest, cancel)
     _spareOp.state = IoOperation::State::Submitted;
     ASSERT_EQ (proactor.cancel (&_spareOp, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    _spareOp.state = IoOperation::State::Idle;
 
     ASSERT_EQ (proactor.cancel (&_readOp, true, true), 0) << join::lastError.message ();
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
             return _op == &_readOp && _result == -ECANCELED;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    _resubmits = 1;
+    _resubmitted = -1;
+    _cancels = 1;
+    _cancelled = 1;
+
+    _resubmitOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_resubmitOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("cancel", strlen ("cancel"), _timeout), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_resubmitOp && _result == -ECANCELED && _cancelled == 0;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (_resubmitted, 0);
+
+    _cancels = 1;
+    _cancelled = 1;
+
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_resubmitOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("cancel", strlen ("cancel"), _timeout), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_resubmitOp && _result > 0 && _cancelled == -1;
         }));
         _op = nullptr;
         _result = 0;
@@ -1389,6 +1472,117 @@ TEST_F (ProactorTest, resubmit)
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
             return _op == &_resubmitOp && _result == -ECANCELED;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+}
+
+/**
+ * @brief Test lock.
+ */
+TEST_F (ProactorTest, lock)
+{
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _completions = 0;
+    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+
+    IoOperation::State previous = ProactorThread::proactor ().lock (&_readOp);
+    EXPECT_EQ (previous, IoOperation::State::Submitted);
+    EXPECT_EQ (_readOp.state.load (), IoOperation::State::Moving);
+    EXPECT_EQ (_client.writeExactly ("lock", strlen ("lock"), _timeout), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        EXPECT_FALSE (_cond.timedWait (lock, std::chrono::milliseconds (100), [&] () {
+            return _completions > 0;
+        }));
+    }
+
+    ProactorThread::proactor ().unlock (&_readOp, previous);
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _completions == 1;
+        }));
+        ASSERT_EQ (std::string (_buf, _result), "lock");
+        _op = nullptr;
+        _result = 0;
+    }
+
+    IoOperation::State state = IoOperation::State::Moving;
+    Proactor::InvokeHandler fn = [&state] () {
+        state = ProactorThread::proactor ().lock (&_readOp);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&fn), 0) << join::lastError.message ();
+    ASSERT_EQ (state, IoOperation::State::Idle);
+    ASSERT_EQ (_readOp.state.load (), IoOperation::State::Idle);
+
+    _holds = 1;
+    _held = false;
+    _released = false;
+
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("lock", strlen ("lock"), _timeout), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _held;
+        }));
+    }
+
+    Thread releaser ([] () {
+        std::this_thread::sleep_for (std::chrono::milliseconds (50));
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            _released = true;
+        }
+
+        _cond.signal ();
+    });
+
+    previous = ProactorThread::proactor ().lock (&_readOp);
+    ProactorThread::proactor ().unlock (&_readOp, previous);
+    releaser.join ();
+
+    ASSERT_EQ (previous, IoOperation::State::Idle);
+}
+
+/**
+ * @brief Test unlock.
+ */
+TEST_F (ProactorTest, unlock)
+{
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (ProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+
+    IoOperation::State previous = ProactorThread::proactor ().lock (&_readOp);
+    ProactorThread::proactor ().unlock (&_readOp, previous);
+    ASSERT_EQ (_readOp.state.load (), IoOperation::State::Submitted);
+
+    ASSERT_EQ (ProactorThread::proactor ().cancel (&_readOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == -ECANCELED;
         }));
         _op = nullptr;
         _result = 0;
