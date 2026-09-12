@@ -230,6 +230,19 @@ public:
 #endif
 
     /**
+     * @brief suspend an I/O operation.
+     * @param op operation to suspend.
+     */
+    void suspend (IoOperation* op) noexcept;
+
+    /**
+     * @brief resume an I/O operation.
+     * @param op operation to resume.
+     * @param handler new completion handler owning the operation.
+     */
+    void resume (IoOperation* op, CompletionHandler* handler) noexcept;
+
+    /**
      * @brief run the event loop (blocking).
      */
     void run ();
@@ -488,6 +501,12 @@ private:
      * @param cancelled if true, dispatch to onCancel; otherwise to onComplete.
      */
     void endOperation (IoOperation* op, int result, bool cancelled = false) noexcept;
+
+    /**
+     * @brief reset an operation that could not be submitted.
+     * @param op operation to reset.
+     */
+    void resetOperation (IoOperation* op) noexcept;
 
 #ifdef JOIN_HAS_IO_URING
     /**
@@ -787,6 +806,65 @@ inline int join::BasicProactor::invoke (InvokeHandler* fn, bool sync) noexcept
 
 // =========================================================================
 //   CLASS     : BasicProactor
+//   METHOD    : suspend
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename Policy>
+void join::BasicProactor<Policy>::suspend (IoOperation* op) noexcept
+#else
+inline void join::BasicProactor::suspend (IoOperation* op) noexcept
+#endif
+{
+    if (JOIN_UNLIKELY (op == nullptr))
+    {
+        return;
+    }
+
+    Backoff backoff;
+    for (;;)
+    {
+        IoOperation::State expected = op->state.load (std::memory_order_acquire);
+        if ((expected == IoOperation::State::Idle) || (expected == IoOperation::State::Submitted))
+        {
+            if (op->state.compare_exchange_strong (expected, IoOperation::State::Suspended, std::memory_order_acquire,
+                                                   std::memory_order_relaxed))
+            {
+                op->resume = expected;
+                return;
+            }
+        }
+        else if ((expected == IoOperation::State::Busy) && isProactorThread ())
+        {
+            return;
+        }
+
+        backoff ();
+    }
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : resume
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename Policy>
+void join::BasicProactor<Policy>::resume (IoOperation* op, CompletionHandler* handler) noexcept
+#else
+inline void join::BasicProactor::resume (IoOperation* op, CompletionHandler* handler) noexcept
+#endif
+{
+    if (JOIN_UNLIKELY (op == nullptr))
+    {
+        return;
+    }
+
+    op->handler = handler;
+    IoOperation::State expected = IoOperation::State::Suspended;
+    op->state.compare_exchange_strong (expected, op->resume, std::memory_order_release, std::memory_order_relaxed);
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
 //   METHOD    : invokeFunction
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
@@ -847,7 +925,22 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
         return;  // LCOV_EXCL_LINE
     }
 
-    op->state = IoOperation::State::Idle;
+    Backoff backoff;
+    for (;;)
+    {
+        IoOperation::State expected = op->state.load (std::memory_order_relaxed);
+        if (expected != IoOperation::State::Suspended)
+        {
+            if (op->state.compare_exchange_strong (expected, IoOperation::State::Busy, std::memory_order_acquire,
+                                                   std::memory_order_relaxed))
+            {
+                break;
+            }
+        }
+        backoff ();
+    }
+
+    op->resume = IoOperation::State::Idle;
 
     if (op->ring != nullptr)
     {
@@ -856,6 +949,28 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
     }
 
     notifyOperation (op, result, cancelled);
+    IoOperation::State expected = IoOperation::State::Busy;
+    op->state.compare_exchange_strong (expected, op->resume, std::memory_order_release, std::memory_order_relaxed);
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : resetOperation
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename Policy>
+void join::BasicProactor<Policy>::resetOperation (IoOperation* op) noexcept
+#else
+inline void join::BasicProactor::resetOperation (IoOperation* op) noexcept
+#endif
+{
+    IoOperation::State expected = IoOperation::State::Submitted;
+    if (!op->state.compare_exchange_strong (expected, IoOperation::State::Idle, std::memory_order_release,
+                                            std::memory_order_relaxed) &&
+        (expected != IoOperation::State::Busy))
+    {
+        op->resume = IoOperation::State::Idle;
+    }
 }
 
 #ifdef JOIN_HAS_IO_URING

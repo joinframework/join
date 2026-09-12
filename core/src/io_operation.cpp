@@ -31,6 +31,43 @@ using join::CompletionHandler;
 
 // =========================================================================
 //   CLASS     : IoOperation
+//   METHOD    : IoOperation
+// =========================================================================
+IoOperation::IoOperation (const IoOperation& other) noexcept
+{
+    code = other.code;
+    state.store (other.state.load (std::memory_order_relaxed), std::memory_order_relaxed);
+    resume = other.resume;
+    index = other.index;
+    linked = other.linked;
+    multishot = other.multishot;
+    group = other.group;
+    handler = other.handler;
+    data = other.data;
+    ring = other.ring;
+}
+
+// =========================================================================
+//   CLASS     : IoOperation
+//   METHOD    : operator=
+// =========================================================================
+IoOperation& IoOperation::operator= (const IoOperation& other) noexcept
+{
+    code = other.code;
+    state.store (other.state.load (std::memory_order_relaxed), std::memory_order_relaxed);
+    resume = other.resume;
+    index = other.index;
+    linked = other.linked;
+    multishot = other.multishot;
+    group = other.group;
+    handler = other.handler;
+    data = other.data;
+    ring = other.ring;
+    return *this;
+}
+
+// =========================================================================
+//   CLASS     : IoOperation
 //   METHOD    : makeAccept
 // =========================================================================
 IoOperation IoOperation::makeAccept (int fd, sockaddr* addr, socklen_t* addrlen, int flags,

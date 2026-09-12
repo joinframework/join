@@ -541,7 +541,7 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
         case CommandType::Submit:
             err = submitOperation (cmd.op, cmd.flush);
             if (JOIN_UNLIKELY ((err == -1) && (cmd.done == nullptr) && (cmd.op != nullptr) &&
-                               (cmd.op->state == IoOperation::State::Idle)))
+                               (cmd.op->state.load (std::memory_order_relaxed) == IoOperation::State::Idle)))
             {
                 dispatchOperation (cmd.op, -lastError.default_error_condition ().value (), false);
             }
@@ -607,10 +607,15 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
         return -1;
     }
 
-    if (JOIN_UNLIKELY (op->state != IoOperation::State::Idle))
+    IoOperation::State expected = IoOperation::State::Idle;
+    if (JOIN_UNLIKELY (!op->state.compare_exchange_strong (expected, IoOperation::State::Submitted,
+                                                           std::memory_order_acquire, std::memory_order_relaxed)))
     {
-        lastError = make_error_code (std::errc::device_or_resource_busy);
-        return -1;
+        if (expected != IoOperation::State::Busy)
+        {
+            lastError = make_error_code (std::errc::device_or_resource_busy);
+            return -1;
+        }
     }
 
     IoRingBuffer* ring = nullptr;
@@ -620,6 +625,7 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
         auto it = _bufferRings.find (op->group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
         {
+            resetOperation (op);
             lastError = make_error_code (Errc::NotFound);
             return -1;
         }
@@ -631,13 +637,13 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
     if (JOIN_UNLIKELY (sqe == nullptr))
     {
         // LCOV_EXCL_START
+        resetOperation (op);
         lastError = make_error_code (std::errc::no_buffer_space);
         return -1;
         // LCOV_EXCL_STOP
     }
 
     prepareSqe (sqe, op);
-    op->state = IoOperation::State::Submitted;
     op->index = static_cast<uint32_t> (_pendingOps.size ());
     _pendingOps.push_back (op);
 
@@ -650,6 +656,11 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
     if (JOIN_UNLIKELY (flush))
     {
         io_uring_submit (&_ring);
+    }
+
+    if (JOIN_UNLIKELY (expected == IoOperation::State::Busy))
+    {
+        op->resume = IoOperation::State::Submitted;
     }
 
     return 0;
@@ -674,7 +685,7 @@ int join::BasicProactor<Policy>::cancelOperation (IoOperation* op, bool flush) n
         return -1;
     }
 
-    if (JOIN_UNLIKELY (op->state != IoOperation::State::Submitted))
+    if (JOIN_UNLIKELY (op->state.load (std::memory_order_acquire) != IoOperation::State::Submitted))
     {
         lastError = make_error_code (Errc::OperationFailed);
         return -1;
@@ -695,7 +706,6 @@ int join::BasicProactor<Policy>::cancelOperation (IoOperation* op, bool flush) n
         // LCOV_EXCL_STOP
     }
 
-    op->state = IoOperation::State::Cancelling;
     io_uring_prep_cancel (sqe, op, 0);
     io_uring_sqe_set_data (sqe, nullptr);
 
@@ -716,6 +726,11 @@ void join::BasicProactor<Policy>::cancelAllOperations () noexcept
 {
     for (IoOperation* op : _pendingOps)
     {
+        Backoff backoff;
+        while (op->state.load (std::memory_order_acquire) == IoOperation::State::Suspended)
+        {
+            backoff ();
+        }
         cancelOperation (op, false);
     }
 }
@@ -924,6 +939,20 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
         return;  // LCOV_EXCL_LINE
     }
 
+    IoOperation::State current = op->state.load (std::memory_order_acquire);
+    Backoff backoff;
+
+    while (JOIN_UNLIKELY (current == IoOperation::State::Suspended))
+    {
+        backoff ();
+        current = op->state.load (std::memory_order_acquire);
+    }
+
+    if (JOIN_UNLIKELY (current == IoOperation::State::Idle))
+    {
+        return;  // LCOV_EXCL_LINE
+    }
+
     int result = cqe->res;
     IoRingBuffer* br = nullptr;
     uint16_t bid = 0;
@@ -972,8 +1001,7 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
     }
     else
     {
-        bool cancelled = (result < 0) && (result == -ECANCELED || op->state == IoOperation::State::Cancelling);
-        endOperation (op, result, cancelled);
+        endOperation (op, result, (result == -ECANCELED));
     }
 
     if (br != nullptr)

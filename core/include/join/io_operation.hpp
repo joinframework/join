@@ -28,6 +28,9 @@
 // libjoin.
 #include <join/io_ring_buffer.hpp>
 
+// C++.
+#include <atomic>
+
 // C.
 #include <sys/socket.h>
 #include <cstdint>
@@ -47,9 +50,10 @@ namespace join
          */
         enum class State : uint8_t
         {
-            Idle,       /**< operation is not in flight. */
-            Submitted,  /**< operation has been submitted and is awaiting completion. */
-            Cancelling, /**< operation has been canceled and is awaiting completion. */
+            Idle,      /**< operation is not in flight. */
+            Submitted, /**< operation is in flight. */
+            Busy,      /**< a completion is in progress. */
+            Suspended, /**< operation has been suspended. */
         };
 
         /**
@@ -68,6 +72,24 @@ namespace join
             Recv,       /**< receive data from a socket. */
             Send,       /**< send data on a socket. */
         };
+
+        /**
+         * @brief default constructor.
+         */
+        IoOperation () = default;
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        IoOperation (const IoOperation& other) noexcept;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to copy.
+         * @return current object.
+         */
+        IoOperation& operator= (const IoOperation& other) noexcept;
 
         /**
          * @brief payload for accept.
@@ -335,7 +357,10 @@ namespace join
         uint8_t code = 0;
 
         /// operation state.
-        State state = State::Idle;
+        std::atomic<State> state{State::Idle};
+
+        /// state to restore when the current hold is released.
+        State resume{State::Idle};
 
         /// index of this operation in the proactor pending ops (io_uring only).
         uint32_t index = 0;
