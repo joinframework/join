@@ -30,6 +30,7 @@
 #include <join/proactor.hpp>
 #include <join/function.hpp>
 #include <join/backoff.hpp>
+#include <join/memory.hpp>
 #include <join/socket.hpp>
 #include <join/utils.hpp>
 
@@ -38,6 +39,9 @@
 #include <utility>
 #include <memory>
 #include <string>
+#include <atomic>
+#include <array>
+#include <new>
 
 // C.
 #include <cstddef>
@@ -60,6 +64,19 @@ namespace join
         using ReadHandler = typename AsyncRead::Handler;
         using WriteHandler = typename AsyncWrite::Handler;
         using ConnectHandler = typename AsyncConnect::Handler;
+
+        /// number of concurrent operations per direction.
+        static constexpr size_t _opCount = 8;
+
+        /// size of a read operation slot.
+        static constexpr size_t _readSize = nextPow2 (sizeof (AsyncRead));
+
+        /// size of a write operation slot, large enough to also hold a connect operation.
+        static constexpr size_t _writeSize =
+            nextPow2 ((sizeof (AsyncWrite) > sizeof (AsyncConnect)) ? sizeof (AsyncWrite) : sizeof (AsyncConnect));
+
+        using ReadArena = LocalMem::Allocator<_opCount, _readSize>;
+        using WriteArena = LocalMem::Allocator<_opCount, _writeSize>;
 
         /**
          * @brief create the socket instance.
@@ -101,39 +118,36 @@ namespace join
         BasicAsyncSocket (BasicAsyncSocket&& other) noexcept
         : _proactor (other._proactor)
         {
-            if (other._readOp != nullptr)
+            for (auto& slot : other._readOps)
             {
-                _proactor->suspend (&other._readOp->op);
+                _proactor->suspend (slot.load (std::memory_order_acquire));
             }
 
-            if (other._writeOp != nullptr)
+            for (auto& slot : other._writeOps)
             {
-                _proactor->suspend (&other._writeOp->op);
-            }
-
-            if (other._connectOp != nullptr)
-            {
-                _proactor->suspend (&other._connectOp->op);
+                _proactor->suspend (slot.load (std::memory_order_acquire));
             }
 
             _socket = std::move (other._socket);
-            _readOp = std::move (other._readOp);
-            _writeOp = std::move (other._writeOp);
-            _connectOp = std::move (other._connectOp);
+            _readArena = std::move (other._readArena);
+            _writeArena = std::move (other._writeArena);
 
-            if (_readOp != nullptr)
+            for (size_t i = 0; i < other._readOps.size (); ++i)
             {
-                _proactor->resume (&_readOp->op, this);
+                _readOps[i].store (other._readOps[i].exchange (nullptr, std::memory_order_acq_rel),
+                                   std::memory_order_release);
+                _writeOps[i].store (other._writeOps[i].exchange (nullptr, std::memory_order_acq_rel),
+                                    std::memory_order_release);
             }
 
-            if (_writeOp != nullptr)
+            for (auto& slot : _readOps)
             {
-                _proactor->resume (&_writeOp->op, this);
+                _proactor->resume (slot.load (std::memory_order_acquire), this);
             }
 
-            if (_connectOp != nullptr)
+            for (auto& slot : _writeOps)
             {
-                _proactor->resume (&_connectOp->op, this);
+                _proactor->resume (slot.load (std::memory_order_acquire), this);
             }
         }
 
@@ -148,41 +162,37 @@ namespace join
 
             _proactor = other._proactor;
 
-            if (other._readOp != nullptr)
+            for (auto& slot : other._readOps)
             {
-                _proactor->suspend (&other._readOp->op);
+                _proactor->suspend (slot.load (std::memory_order_acquire));
             }
 
-            if (other._writeOp != nullptr)
+            for (auto& slot : other._writeOps)
             {
-                _proactor->suspend (&other._writeOp->op);
-            }
-
-            if (other._connectOp != nullptr)
-            {
-                _proactor->suspend (&other._connectOp->op);
+                _proactor->suspend (slot.load (std::memory_order_acquire));
             }
 
             _socket = std::move (other._socket);
-            _readOp = std::move (other._readOp);
-            _writeOp = std::move (other._writeOp);
-            _connectOp = std::move (other._connectOp);
+            _readArena = std::move (other._readArena);
+            _writeArena = std::move (other._writeArena);
 
-            if (_readOp != nullptr)
+            for (size_t i = 0; i < other._readOps.size (); ++i)
             {
-                _proactor->resume (&_readOp->op, this);
+                _readOps[i].store (other._readOps[i].exchange (nullptr, std::memory_order_acq_rel),
+                                   std::memory_order_release);
+                _writeOps[i].store (other._writeOps[i].exchange (nullptr, std::memory_order_acq_rel),
+                                    std::memory_order_release);
             }
 
-            if (_writeOp != nullptr)
+            for (auto& slot : _readOps)
             {
-                _proactor->resume (&_writeOp->op, this);
+                _proactor->resume (slot.load (std::memory_order_acquire), this);
             }
 
-            if (_connectOp != nullptr)
+            for (auto& slot : _writeOps)
             {
-                _proactor->resume (&_connectOp->op, this);
+                _proactor->resume (slot.load (std::memory_order_acquire), this);
             }
-
             return *this;
         }
 
@@ -213,14 +223,11 @@ namespace join
 
             do
             {
-                cancelRead ();
-                cancelWrite ();
-                cancelConnect ();
+                cancelAll ();
 
                 backoff ();
             }
-            while (!_proactor->isProactorThread () &&
-                   (pending (_readOp.get ()) || pending (_writeOp.get ()) || pending (_connectOp.get ())));
+            while (!_proactor->isProactorThread () && pendingAny ());
 
             _socket.close ();
         }
@@ -230,9 +237,12 @@ namespace join
          * @param data buffer used to store the data received, valid until the handler is invoked.
          * @param maxSize maximum number of bytes to read.
          * @param handler handler invoked on completion.
-         * @return 0 on success, -1 on failure.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
          */
-        int asyncRead (char* data, size_t maxSize, ReadHandler handler) noexcept
+        ssize_t asyncRead (char* data, size_t maxSize, ReadHandler handler, bool flush = true,
+                           bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!_socket.opened ()))
             {
@@ -240,33 +250,37 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!arm (_readOp.get ())))
+            AsyncRead* read = allocateRead ();
+            if (JOIN_UNLIKELY (read == nullptr))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            _readOp->handler = std::move (handler);
-            _readOp->iov.iov_base = data;
-            _readOp->iov.iov_len = maxSize;
-            _readOp->msg.msg_name = nullptr;
-            _readOp->msg.msg_namelen = 0;
-            _readOp->msg.msg_iov = &_readOp->iov;
-            _readOp->msg.msg_iovlen = 1;
-            _readOp->msg.msg_control = nullptr;
-            _readOp->msg.msg_controllen = 0;
-            _readOp->msg.msg_flags = 0;
-            _readOp->op = IoOperation::makeRecvmsg (_socket.handle (), &_readOp->msg, 0, this);
+            read->handler = std::move (handler);
+            read->iov.iov_base = data;
+            read->iov.iov_len = maxSize;
+            read->msg.msg_name = nullptr;
+            read->msg.msg_namelen = 0;
+            read->msg.msg_iov = &read->iov;
+            read->msg.msg_iovlen = 1;
+            read->msg.msg_control = nullptr;
+            read->msg.msg_controllen = 0;
+            read->msg.msg_flags = 0;
+            read->op = IoOperation::makeRecvmsg (_socket.handle (), &read->msg, 0, this, link);
+            read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            if (_proactor->submit (&_readOp->op, true, false) == -1)
+            size_t index = _readArena.getIndex (read);
+
+            if (_proactor->submit (&read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                _readOp->handler.reset ();
+                releaseRead (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
 
-            return 0;
+            return static_cast<ssize_t> (index);
         }
 
         /**
@@ -274,9 +288,12 @@ namespace join
          * @param data data buffer to send, valid until the handler is invoked.
          * @param size number of bytes to write.
          * @param handler handler invoked on completion.
-         * @return 0 on success, -1 on failure.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
          */
-        int asyncWrite (const char* data, size_t size, WriteHandler handler) noexcept
+        ssize_t asyncWrite (const char* data, size_t size, WriteHandler handler, bool flush = true,
+                            bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!_socket.opened ()))
             {
@@ -284,71 +301,69 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!arm (_writeOp.get ())))
+            AsyncWrite* write = allocateWrite ();
+            if (JOIN_UNLIKELY (write == nullptr))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            _writeOp->handler = std::move (handler);
-            _writeOp->iov.iov_base = const_cast<char*> (data);
-            _writeOp->iov.iov_len = size;
-            _writeOp->msg.msg_name = nullptr;
-            _writeOp->msg.msg_namelen = 0;
-            _writeOp->msg.msg_iov = &_writeOp->iov;
-            _writeOp->msg.msg_iovlen = 1;
-            _writeOp->msg.msg_control = nullptr;
-            _writeOp->msg.msg_controllen = 0;
-            _writeOp->msg.msg_flags = 0;
-            _writeOp->op = IoOperation::makeSendmsg (_socket.handle (), &_writeOp->msg, MSG_NOSIGNAL, this);
+            write->handler = std::move (handler);
+            write->iov.iov_base = const_cast<char*> (data);
+            write->iov.iov_len = size;
+            write->msg.msg_name = nullptr;
+            write->msg.msg_namelen = 0;
+            write->msg.msg_iov = &write->iov;
+            write->msg.msg_iovlen = 1;
+            write->msg.msg_control = nullptr;
+            write->msg.msg_controllen = 0;
+            write->msg.msg_flags = 0;
+            write->op = IoOperation::makeSendmsg (_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
+            write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            if (_proactor->submit (&_writeOp->op, true, false) == -1)
+            size_t index = _writeArena.getIndex (write);
+
+            if (_proactor->submit (&write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                _writeOp->handler.reset ();
+                releaseWrite (write);
                 return -1;
                 // LCOV_EXCL_STOP
             }
 
-            return 0;
+            return static_cast<ssize_t> (index);
         }
 
         /**
-         * @brief cancel the read operation in flight, if any.
+         * @brief cancel the read operation stored at the given index, if in flight.
+         * @param index index of the operation to cancel.
          * @return 0 on success, -1 on failure.
          */
-        int cancelRead () noexcept
+        int cancelRead (size_t index) noexcept
         {
-            if (!inFlight (_readOp.get ()))
+            if (JOIN_UNLIKELY (index >= _readOps.size ()))
             {
-                return 0;
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
             }
 
-            if (_proactor->cancel (&_readOp->op, true, true) == -1)
-            {
-                return (lastError == Errc::OperationFailed) ? 0 : -1;
-            }
-
-            return 0;
+            return cancelOp (_readOps[index].load (std::memory_order_acquire));
         }
 
         /**
-         * @brief cancel the write operation in flight, if any.
+         * @brief cancel the write operation stored at the given index, if in flight.
+         * @param index index of the operation to cancel.
          * @return 0 on success, -1 on failure.
          */
-        int cancelWrite () noexcept
+        int cancelWrite (size_t index) noexcept
         {
-            if (!inFlight (_writeOp.get ()))
+            if (JOIN_UNLIKELY (index >= _writeOps.size ()))
             {
-                return 0;
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
             }
 
-            if (_proactor->cancel (&_writeOp->op, true, true) == -1)
-            {
-                return (lastError == Errc::OperationFailed) ? 0 : -1;
-            }
-
-            return 0;
+            return cancelOp (_writeOps[index].load (std::memory_order_acquire));
         }
 
         /**
@@ -357,14 +372,14 @@ namespace join
          */
         int cancelConnect () noexcept
         {
-            if (!inFlight (_connectOp.get ()))
+            for (auto& slot : _writeOps)
             {
-                return 0;
-            }
+                IoOperation* op = slot.load (std::memory_order_acquire);
 
-            if (_proactor->cancel (&_connectOp->op, true, true) == -1)
-            {
-                return (lastError == Errc::OperationFailed) ? 0 : -1;
+                if ((op != nullptr) && (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::Connect))
+                {
+                    return cancelOp (op);
+                }
             }
 
             return 0;
@@ -475,18 +490,7 @@ namespace join
             std::error_code code =
                 (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code ();
 
-            if (op == &_readOp->op)
-            {
-                completeRead (code, (result > 0) ? static_cast<size_t> (result) : 0);
-            }
-            else if (op == &_writeOp->op)
-            {
-                completeWrite (code, (result > 0) ? static_cast<size_t> (result) : 0);
-            }
-            else
-            {
-                completeConnect (code);
-            }
+            dispatch (op, code, (result > 0) ? static_cast<size_t> (result) : 0);
         }
 
         /**
@@ -496,19 +500,28 @@ namespace join
          */
         void onCancel (IoOperation* op, [[maybe_unused]] int result) override
         {
-            std::error_code code = make_error_code (std::errc::operation_canceled);
+            dispatch (op, make_error_code (std::errc::operation_canceled), 0);
+        }
 
-            if (op == &_readOp->op)
+        /**
+         * @brief invoke the completion handler of the given operation, then release it.
+         * @param op completed operation.
+         * @param code error code reported by the kernel.
+         * @param size number of bytes transferred.
+         */
+        void dispatch (IoOperation* op, const std::error_code& code, size_t size) noexcept
+        {
+            if (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::RecvMsg)
             {
-                completeRead (code, 0);
+                completeRead (reinterpret_cast<AsyncRead*> (op), code, size);
             }
-            else if (op == &_writeOp->op)
+            else if (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::SendMsg)
             {
-                completeWrite (code, 0);
+                completeWrite (reinterpret_cast<AsyncWrite*> (op), code, size);
             }
             else
             {
-                completeConnect (code);
+                completeConnect (reinterpret_cast<AsyncConnect*> (op), code);
             }
         }
 
@@ -517,21 +530,26 @@ namespace join
          * @param code error code reported by the kernel.
          * @param size number of bytes received.
          */
-        void completeRead (const std::error_code& code, size_t size) noexcept
+        void completeRead (AsyncRead* read, const std::error_code& code, size_t size) noexcept
         {
-            ReadHandler handler = std::move (_readOp->handler);
+            ReadHandler handler = std::move (read->handler);
             std::error_code result = code;
 
-            if (_readOp->stream)
+            if (_socket.type () == SOCK_STREAM)
             {
                 if (JOIN_UNLIKELY (!result && (size == 0)))
                 {
                     result = make_error_code (Errc::ConnectionClosed);
                 }
             }
-            else if (JOIN_UNLIKELY (!result && (_readOp->msg.msg_flags & MSG_TRUNC)))
+            else if (JOIN_UNLIKELY (!result && (read->msg.msg_flags & MSG_TRUNC)))
             {
                 result = make_error_code (Errc::MessageTooLong);
+            }
+
+            if (JOIN_LIKELY (!read->op.multishot))
+            {
+                releaseRead (read);
             }
 
             if (JOIN_LIKELY (handler))
@@ -545,9 +563,14 @@ namespace join
          * @param code error code reported by the kernel.
          * @param size number of bytes sent.
          */
-        void completeWrite (const std::error_code& code, size_t size) noexcept
+        void completeWrite (AsyncWrite* write, const std::error_code& code, size_t size) noexcept
         {
-            WriteHandler handler = std::move (_writeOp->handler);
+            WriteHandler handler = std::move (write->handler);
+
+            if (JOIN_LIKELY (!write->op.multishot))
+            {
+                releaseWrite (write);
+            }
 
             if (JOIN_LIKELY (handler))
             {
@@ -559,9 +582,11 @@ namespace join
          * @brief invoke the connect completion handler.
          * @param code error code reported by the kernel.
          */
-        void completeConnect (const std::error_code& code) noexcept
+        void completeConnect (AsyncConnect* connect, const std::error_code& code) noexcept
         {
-            ConnectHandler handler = std::move (_connectOp->handler);
+            ConnectHandler handler = std::move (connect->handler);
+
+            releaseConnect (connect);
 
             if (code)
             {
@@ -583,32 +608,154 @@ namespace join
          * @param op operation to arm.
          * @return true if the operation was armed, false if already in flight.
          */
-        template <class Operation>
-        bool arm (Operation* op) noexcept
+        /**
+         * @brief allocate a read operation in the arena.
+         * @return allocated read operation, or nullptr if the arena is exhausted.
+         */
+        AsyncRead* allocateRead () noexcept
         {
-            return (op != nullptr) && CompletionHandler::arm (op->op);
+            void* chunk = _readArena.allocate (sizeof (AsyncRead));
+            if (JOIN_UNLIKELY (chunk == nullptr))
+            {
+                return nullptr;
+            }
+
+            AsyncRead* read = new (chunk) AsyncRead ();
+            _readOps[_readArena.getIndex (chunk)].store (&read->op, std::memory_order_release);
+
+            return read;
         }
 
         /**
-         * @brief check if an operation is in flight.
-         * @param op operation to check.
-         * @return true if the operation is in flight, false otherwise.
+         * @brief allocate a write operation in the arena.
+         * @return allocated write operation, or nullptr if the arena is exhausted.
          */
-        template <class Operation>
-        bool inFlight (const Operation* op) const noexcept
+        AsyncWrite* allocateWrite () noexcept
         {
-            return (op != nullptr) && CompletionHandler::inFlight (op->op);
+            void* chunk = _writeArena.allocate (sizeof (AsyncWrite));
+            if (JOIN_UNLIKELY (chunk == nullptr))
+            {
+                return nullptr;
+            }
+
+            AsyncWrite* write = new (chunk) AsyncWrite ();
+            _writeOps[_writeArena.getIndex (chunk)].store (&write->op, std::memory_order_release);
+
+            return write;
         }
 
         /**
-         * @brief check if an operation is in flight or completing.
-         * @param op operation to check.
-         * @return true if the operation is in flight or completing, false otherwise.
+         * @brief allocate a connect operation in the write arena.
+         * @return allocated connect operation, or nullptr if the arena is exhausted.
          */
-        template <class Operation>
-        bool pending (const Operation* op) const noexcept
+        AsyncConnect* allocateConnect () noexcept
         {
-            return (op != nullptr) && CompletionHandler::pending (op->op);
+            void* chunk = _writeArena.allocate (sizeof (AsyncConnect));
+            if (JOIN_UNLIKELY (chunk == nullptr))
+            {
+                return nullptr;
+            }
+
+            AsyncConnect* connect = new (chunk) AsyncConnect ();
+            _writeOps[_writeArena.getIndex (chunk)].store (&connect->op, std::memory_order_release);
+
+            return connect;
+        }
+
+        /**
+         * @brief return a read operation to the arena.
+         * @param read read operation to release.
+         */
+        void releaseRead (AsyncRead* read) noexcept
+        {
+            _readOps[_readArena.getIndex (read)].store (nullptr, std::memory_order_release);
+            read->~AsyncRead ();
+            _readArena.deallocate (read);
+        }
+
+        /**
+         * @brief return a write operation to the arena.
+         * @param write write operation to release.
+         */
+        void releaseWrite (AsyncWrite* write) noexcept
+        {
+            _writeOps[_writeArena.getIndex (write)].store (nullptr, std::memory_order_release);
+            write->~AsyncWrite ();
+            _writeArena.deallocate (write);
+        }
+
+        /**
+         * @brief return a connect operation to the write arena.
+         * @param connect connect operation to release.
+         */
+        void releaseConnect (AsyncConnect* connect) noexcept
+        {
+            _writeOps[_writeArena.getIndex (connect)].store (nullptr, std::memory_order_release);
+            connect->~AsyncConnect ();
+            _writeArena.deallocate (connect);
+        }
+
+        /**
+         * @brief cancel the given operation, if in flight.
+         * @param op operation to cancel.
+         * @return 0 on success, -1 on failure.
+         */
+        int cancelOp (IoOperation* op) noexcept
+        {
+            if ((op == nullptr) || !inFlight (*op))
+            {
+                return 0;
+            }
+
+            if (_proactor->cancel (op, true, true) == -1)
+            {
+                return (lastError == Errc::OperationFailed) ? 0 : -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief cancel every operation in flight.
+         */
+        void cancelAll () noexcept
+        {
+            for (auto& slot : _readOps)
+            {
+                cancelOp (slot.load (std::memory_order_acquire));
+            }
+
+            for (auto& slot : _writeOps)
+            {
+                cancelOp (slot.load (std::memory_order_acquire));
+            }
+        }
+
+        /**
+         * @brief check if at least one operation is in flight or completing.
+         * @return true if at least one operation is in flight or completing, false otherwise.
+         */
+        bool pendingAny () const noexcept
+        {
+            for (auto& slot : _readOps)
+            {
+                IoOperation* op = slot.load (std::memory_order_acquire);
+                if ((op != nullptr) && pending (*op))
+                {
+                    return true;
+                }
+            }
+
+            for (auto& slot : _writeOps)
+            {
+                IoOperation* op = slot.load (std::memory_order_acquire);
+                if ((op != nullptr) && pending (*op))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// proactor driving the operations.
@@ -617,14 +764,17 @@ namespace join
         /// underlying synchronous socket.
         Socket _socket;
 
-        /// read operation.
-        std::unique_ptr<AsyncRead> _readOp{new AsyncRead ()};
+        /// read operations arena.
+        ReadArena _readArena;
 
-        /// write operation.
-        std::unique_ptr<AsyncWrite> _writeOp{new AsyncWrite ()};
+        /// write operations arena.
+        WriteArena _writeArena;
 
-        /// connect operation.
-        std::unique_ptr<AsyncConnect> _connectOp{new AsyncConnect ()};
+        /// read operations in flight.
+        std::array<std::atomic<IoOperation*>, _opCount> _readOps{};
+
+        /// write and connect operations in flight.
+        std::array<std::atomic<IoOperation*>, _opCount> _writeOps{};
     };
 }
 

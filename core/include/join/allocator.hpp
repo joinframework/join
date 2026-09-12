@@ -65,7 +65,7 @@ namespace join
      * @brief basic chunk.
      */
     template <size_t Size>
-    union alignas (std::max_align_t) BasicChunk
+    union alignas (64) BasicChunk
     {
         static_assert (isPow2 (Size), "size must be a power of 2");
         static_assert (Size % alignof (std::max_align_t) == 0, "size must respects maximum alignment requirement");
@@ -196,6 +196,11 @@ namespace join
          */
         void* pop () noexcept
         {
+            if (JOIN_UNLIKELY (_segment == nullptr))
+            {
+                return nullptr;
+            }
+
             TaggedIndex cur, next;
             cur.raw = _segment->_head.load (std::memory_order_acquire);
 
@@ -473,6 +478,15 @@ namespace join
                 return;
             }
             deallocateImplem<0> (p);
+        }
+
+        /**
+         * @brief check if the arena still owns a memory region.
+         * @return true if the arena owns a memory region, false if it has been moved from.
+         */
+        bool hasBackend () const noexcept
+        {
+            return _backend.mapped ();
         }
 
         /**

@@ -606,16 +606,15 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
         return -1;
     }
 
-    IoOperation::State expected = IoOperation::State::Idle;
-    if (JOIN_UNLIKELY (!op->state.compare_exchange_strong (expected, IoOperation::State::Submitted,
-                                                           std::memory_order_acquire, std::memory_order_relaxed)))
+    Backoff backoff;
+    while (JOIN_UNLIKELY (op->state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
     {
-        if ((expected != IoOperation::State::Busy) && (expected != IoOperation::State::Submitted))
-        {
-            lastError = make_error_code (std::errc::device_or_resource_busy);
-            return -1;
-        }
+        backoff ();
     }
+
+    IoOperation::State expected = IoOperation::State::Idle;
+    op->state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
+                                       std::memory_order_relaxed);
 
     if (JOIN_UNLIKELY ((op->index < _pendingOps.size ()) && (_pendingOps[op->index] == op)))
     {

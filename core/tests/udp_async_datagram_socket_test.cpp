@@ -50,7 +50,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (server ().bind ({IpAddress::ipv6Wildcard, _port}), 0) << join::lastError.message ();
-        ASSERT_EQ (server ().asyncReadFrom (_echobuf, sizeof (_echobuf), _echofrom, onEchoRead), 0)
+        ASSERT_NE (server ().asyncReadFrom (_echobuf, sizeof (_echobuf), _echofrom, onEchoRead), -1)
             << join::lastError.message ();
 
         ScopedLock<Mutex> lock (_mut);
@@ -267,18 +267,18 @@ TEST_F (UdpAsyncDatagramSocket, move)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (client1.asyncWriteTo ("one", 3, dest, nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.cancelRead (), 0) << join::lastError.message ();
-    ASSERT_EQ (client1.cancelWrite (), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancelRead (0), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancelWrite (0), 0) << join::lastError.message ();
     client1.close ();
 
-    ASSERT_EQ (client2.asyncReadFrom (_buf, sizeof (_buf), _from, onRead), 0) << join::lastError.message ();
+    ASSERT_NE (client2.asyncReadFrom (_buf, sizeof (_buf), _from, onRead), -1) << join::lastError.message ();
 
     client3 = std::move (client2);
 
     ASSERT_TRUE (client3.opened ());
     ASSERT_FALSE (client2.opened ());
 
-    ASSERT_EQ (client3.asyncWriteTo ("hello", 5, dest, nullptr), 0) << join::lastError.message ();
+    ASSERT_NE (client3.asyncWriteTo ("hello", 5, dest, nullptr), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -298,8 +298,8 @@ TEST_F (UdpAsyncDatagramSocket, move)
 
     _current = &client4;
 
-    ASSERT_EQ (client4.asyncReadFrom (_buf, sizeof (_buf), _from, onReadAndMove), 0) << join::lastError.message ();
-    ASSERT_EQ (client4.asyncWriteTo ("moved", 5, dest, nullptr), 0) << join::lastError.message ();
+    ASSERT_NE (client4.asyncReadFrom (_buf, sizeof (_buf), _from, onReadAndMove), -1) << join::lastError.message ();
+    ASSERT_NE (client4.asyncWriteTo ("moved", 5, dest, nullptr), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -411,11 +411,8 @@ TEST_F (UdpAsyncDatagramSocket, asyncWriteTo)
     Udp::Endpoint dest (_host, _port);
 
     ASSERT_FALSE (client.opened ());
-    ASSERT_EQ (client.asyncWriteTo ("hello", 5, dest, onReport), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncWriteTo ("hello", 5, dest, onReport), -1) << join::lastError.message ();
     ASSERT_TRUE (client.opened ());
-
-    ASSERT_EQ (client.asyncWriteTo ("hello", 5, dest, nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
 
     Thread th ([&proactor] () {
         proactor.run ();
@@ -447,12 +444,9 @@ TEST_F (UdpAsyncDatagramSocket, asyncReadFrom)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
 
-    ASSERT_EQ (client.asyncReadFrom (_buf, sizeof (_buf), _from, nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
-
-    ASSERT_EQ (client.asyncWrite ("hello", 5, nullptr), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -480,7 +474,7 @@ TEST_F (UdpAsyncDatagramSocket, asyncWrite)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (client.asyncWrite ("hello", 5, onReport), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite ("hello", 5, onReport), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -505,8 +499,8 @@ TEST_F (UdpAsyncDatagramSocket, asyncRead)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (client.asyncRead (_buf, sizeof (_buf), onReport), 0) << join::lastError.message ();
-    ASSERT_EQ (client.asyncWrite ("hello", 5, nullptr), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -533,8 +527,8 @@ TEST_F (UdpAsyncDatagramSocket, resubmit)
     _rearms = 1;
 
     ASSERT_EQ (client.bind (Udp::Endpoint (_host, 0)), 0) << join::lastError.message ();
-    ASSERT_EQ (client.asyncReadFrom (_buf, sizeof (_buf), _from, onRead), 0) << join::lastError.message ();
-    ASSERT_EQ (client.asyncWriteTo ("one", 3, dest, nullptr), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onRead), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWriteTo ("one", 3, dest, nullptr), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -544,7 +538,7 @@ TEST_F (UdpAsyncDatagramSocket, resubmit)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_EQ (client.asyncWriteTo ("two", 3, dest, nullptr), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncWriteTo ("two", 3, dest, nullptr), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -557,7 +551,7 @@ TEST_F (UdpAsyncDatagramSocket, resubmit)
     _dest = Udp::Endpoint (_host, _port);
     _rearms = 1;
 
-    ASSERT_EQ (client.asyncWriteTo ("one", 3, _dest, onWrite), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncWriteTo ("one", 3, _dest, onWrite), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -581,7 +575,7 @@ TEST_F (UdpAsyncDatagramSocket, closeFromWriteHandler)
 
     _current = &client;
 
-    ASSERT_EQ (client.asyncWriteTo ("hello", 5, dest, onWriteAndClose), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncWriteTo ("hello", 5, dest, onWriteAndClose), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -604,8 +598,8 @@ TEST_F (UdpAsyncDatagramSocket, truncated)
     char small[4] = {};
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (client.asyncReadFrom (small, sizeof (small), _from, onReport), 0) << join::lastError.message ();
-    ASSERT_EQ (client.asyncWrite ("hello world", 11, nullptr), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (small, sizeof (small), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite ("hello world", 11, nullptr), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -628,7 +622,7 @@ TEST_F (UdpAsyncDatagramSocket, empty)
     Udp::Endpoint self (_host, uint16_t (_port + 2));
 
     ASSERT_EQ (client.bind (self), 0) << join::lastError.message ();
-    ASSERT_EQ (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
 
     ASSERT_EQ (sender.writeTo ("", 0, self), 0) << join::lastError.message ();
 
@@ -652,10 +646,10 @@ TEST_F (UdpAsyncDatagramSocket, cancelRead)
 {
     Udp::AsyncSocket client;
 
-    ASSERT_EQ (client.cancelRead (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
     ASSERT_EQ (client.bind (Udp::Endpoint (_host, 0)), 0) << join::lastError.message ();
-    ASSERT_EQ (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), 0) << join::lastError.message ();
-    ASSERT_EQ (client.cancelRead (), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -675,9 +669,9 @@ TEST_F (UdpAsyncDatagramSocket, cancelWrite)
 {
     Udp::AsyncSocket client;
 
-    ASSERT_EQ (client.cancelWrite (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.cancelWrite (0), 0) << join::lastError.message ();
     ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.cancelWrite (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.cancelWrite (0), 0) << join::lastError.message ();
     client.close ();
 }
 

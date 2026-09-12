@@ -129,9 +129,12 @@ namespace join
          * @param maxSize maximum number of bytes to read.
          * @param endpoint endpoint from where data are coming, valid until the handler is invoked.
          * @param handler handler invoked on completion.
-         * @return 0 on success, -1 on failure.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
          */
-        int asyncReadFrom (char* data, size_t maxSize, Endpoint& endpoint, ReadHandler handler) noexcept
+        ssize_t asyncReadFrom (char* data, size_t maxSize, Endpoint& endpoint, ReadHandler handler, bool flush = true,
+                               bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
@@ -139,33 +142,37 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!this->arm (this->_readOp.get ())))
+            AsyncRead* read = this->allocateRead ();
+            if (JOIN_UNLIKELY (read == nullptr))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            this->_readOp->handler = std::move (handler);
-            this->_readOp->iov.iov_base = data;
-            this->_readOp->iov.iov_len = maxSize;
-            this->_readOp->msg.msg_name = endpoint.addr ();
-            this->_readOp->msg.msg_namelen = sizeof (struct sockaddr_storage);
-            this->_readOp->msg.msg_iov = &this->_readOp->iov;
-            this->_readOp->msg.msg_iovlen = 1;
-            this->_readOp->msg.msg_control = nullptr;
-            this->_readOp->msg.msg_controllen = 0;
-            this->_readOp->msg.msg_flags = 0;
-            this->_readOp->op = IoOperation::makeRecvmsg (this->_socket.handle (), &this->_readOp->msg, 0, this);
+            read->handler = std::move (handler);
+            read->iov.iov_base = data;
+            read->iov.iov_len = maxSize;
+            read->msg.msg_name = endpoint.addr ();
+            read->msg.msg_namelen = sizeof (struct sockaddr_storage);
+            read->msg.msg_iov = &read->iov;
+            read->msg.msg_iovlen = 1;
+            read->msg.msg_control = nullptr;
+            read->msg.msg_controllen = 0;
+            read->msg.msg_flags = 0;
+            read->op = IoOperation::makeRecvmsg (this->_socket.handle (), &read->msg, 0, this, link);
+            read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            if (this->_proactor->submit (&this->_readOp->op, true, false) == -1)
+            size_t index = this->_readArena.getIndex (read);
+
+            if (this->_proactor->submit (&read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_readOp->handler.reset ();
+                this->releaseRead (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
 
-            return 0;
+            return static_cast<ssize_t> (index);
         }
 
         /**
@@ -174,11 +181,14 @@ namespace join
          * @param size number of bytes to write.
          * @param endpoint endpoint where to write the data, valid until the handler is invoked.
          * @param handler handler invoked on completion.
-         * @return 0 on success, -1 on failure.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
          */
-        int asyncWriteTo (const char* data, size_t size, Endpoint& endpoint, WriteHandler handler) noexcept
+        ssize_t asyncWriteTo (const char* data, size_t size, Endpoint& endpoint, WriteHandler handler,
+                              bool flush = true, bool link = false) noexcept
         {
-            if (JOIN_UNLIKELY (this->_writeOp == nullptr))
+            if (JOIN_UNLIKELY (!this->_writeArena.hasBackend ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
@@ -189,34 +199,37 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            if (JOIN_UNLIKELY (!this->arm (this->_writeOp.get ())))
+            AsyncWrite* write = this->allocateWrite ();
+            if (JOIN_UNLIKELY (write == nullptr))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            this->_writeOp->handler = std::move (handler);
-            this->_writeOp->iov.iov_base = const_cast<char*> (data);
-            this->_writeOp->iov.iov_len = size;
-            this->_writeOp->msg.msg_name = endpoint.addr ();
-            this->_writeOp->msg.msg_namelen = endpoint.length ();
-            this->_writeOp->msg.msg_iov = &this->_writeOp->iov;
-            this->_writeOp->msg.msg_iovlen = 1;
-            this->_writeOp->msg.msg_control = nullptr;
-            this->_writeOp->msg.msg_controllen = 0;
-            this->_writeOp->msg.msg_flags = 0;
-            this->_writeOp->op =
-                IoOperation::makeSendmsg (this->_socket.handle (), &this->_writeOp->msg, MSG_NOSIGNAL, this);
+            write->handler = std::move (handler);
+            write->iov.iov_base = const_cast<char*> (data);
+            write->iov.iov_len = size;
+            write->msg.msg_name = endpoint.addr ();
+            write->msg.msg_namelen = endpoint.length ();
+            write->msg.msg_iov = &write->iov;
+            write->msg.msg_iovlen = 1;
+            write->msg.msg_control = nullptr;
+            write->msg.msg_controllen = 0;
+            write->msg.msg_flags = 0;
+            write->op = IoOperation::makeSendmsg (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
+            write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            if (this->_proactor->submit (&this->_writeOp->op, true, false) == -1)
+            size_t index = this->_writeArena.getIndex (write);
+
+            if (this->_proactor->submit (&write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_writeOp->handler.reset ();
+                this->releaseWrite (write);
                 return -1;
                 // LCOV_EXCL_STOP
             }
 
-            return 0;
+            return static_cast<ssize_t> (index);
         }
 
         /**
