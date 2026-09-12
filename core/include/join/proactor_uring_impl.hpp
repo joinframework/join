@@ -613,8 +613,12 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
     }
 
     IoOperation::State expected = IoOperation::State::Idle;
-    op->state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
-                                       std::memory_order_relaxed);
+    if (!op->state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
+                                            std::memory_order_relaxed) &&
+        (expected == IoOperation::State::Busy))
+    {
+        op->state.store (IoOperation::State::Submitted, std::memory_order_release);
+    }
 
     if (JOIN_UNLIKELY ((op->index < _pendingOps.size ()) && (_pendingOps[op->index] == op)))
     {
@@ -660,11 +664,6 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
     if (JOIN_UNLIKELY (flush))
     {
         io_uring_submit (&_ring);
-    }
-
-    if (JOIN_UNLIKELY (expected == IoOperation::State::Busy))
-    {
-        op->resume = IoOperation::State::Submitted;
     }
 
     return 0;

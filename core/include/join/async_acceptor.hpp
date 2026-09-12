@@ -265,19 +265,21 @@ namespace join
         {
             AcceptHandler handler = std::move (_acceptOp.handler);
 
-            if (JOIN_UNLIKELY (result < 0))
+            if (JOIN_LIKELY (handler))
             {
-                if (JOIN_LIKELY (handler))
+                if (JOIN_UNLIKELY (result < 0))
                 {
                     handler (Socket (), std::error_code (-result, std::generic_category ()));
                 }
-                return;
+                else
+                {
+                    handler (Socket (result, _acceptOp.remote), std::error_code ());
+                }
             }
 
-            if (JOIN_LIKELY (handler))
-            {
-                handler (Socket (result, _acceptOp.remote), std::error_code ());
-            }
+            IoOperation::State expected = IoOperation::State::Busy;
+            _acceptOp.op.state.compare_exchange_strong (expected, IoOperation::State::Idle, std::memory_order_release,
+                                                        std::memory_order_relaxed);
         }
 
     private:

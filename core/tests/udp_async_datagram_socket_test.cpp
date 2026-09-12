@@ -292,7 +292,6 @@ TEST_F (UdpAsyncDatagramSocket, move)
 
     client3.close ();
 
-    // move the socket from within its own completion handler.
     Udp::AsyncSocket client4;
     ASSERT_EQ (client4.open (dest.protocol ()), 0) << join::lastError.message ();
 

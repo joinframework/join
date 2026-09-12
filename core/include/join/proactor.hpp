@@ -976,8 +976,6 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
         backoff ();  // LCOV_EXCL_LINE
     }
 
-    op->resume = IoOperation::State::Idle;
-
     if (op->ring != nullptr)
     {
         op->ring->unbind ();
@@ -985,8 +983,6 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
     }
 
     notifyOperation (op, result, cancelled);
-    IoOperation::State expected = IoOperation::State::Busy;
-    op->state.compare_exchange_strong (expected, op->resume, std::memory_order_release, std::memory_order_relaxed);
 }
 
 // =========================================================================

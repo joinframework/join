@@ -373,8 +373,12 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
     }
 
     IoOperation::State expected = IoOperation::State::Idle;
-    op->state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
-                                       std::memory_order_relaxed);
+    if (!op->state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
+                                            std::memory_order_relaxed) &&
+        (expected == IoOperation::State::Busy))
+    {
+        op->state.store (IoOperation::State::Submitted, std::memory_order_release);
+    }
 
     IoRingBuffer* ring = nullptr;
 
@@ -438,11 +442,6 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
     {
         op->ring = ring;
         ring->bind ();
-    }
-
-    if (JOIN_UNLIKELY (expected == IoOperation::State::Busy))
-    {
-        op->resume = IoOperation::State::Submitted;
     }
 
     return _reactor.addHandler (op->fd (), this, _readOps[op->fd ()] != nullptr, _writeOps[op->fd ()] != nullptr);

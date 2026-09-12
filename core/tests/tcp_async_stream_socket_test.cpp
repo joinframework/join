@@ -724,7 +724,7 @@ TEST_F (TcpAsyncStreamSocket, cancelRead)
                -1)
         << join::lastError.message ();
 
-    // the read arena holds _opCount operations at most.
+#ifdef JOIN_HAS_IO_URING
     for (size_t i = 1; i < Tcp::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), nullptr), -1) << join::lastError.message ();
@@ -732,6 +732,7 @@ TEST_F (TcpAsyncStreamSocket, cancelRead)
 
     ASSERT_EQ (client.asyncRead (_buf, sizeof (_buf), nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
+#endif
 
     ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
 
@@ -854,7 +855,7 @@ TEST_F (TcpAsyncStreamSocket, cancelWrite)
 
     ASSERT_NE (sender.asyncWrite (_buf, sizeof (_buf), onWrite), -1) << join::lastError.message ();
 
-    // the write arena holds _opCount operations at most.
+#ifdef JOIN_HAS_IO_URING
     for (size_t i = 1; i < Tcp::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (sender.asyncWrite (_buf, sizeof (_buf), nullptr), -1) << join::lastError.message ();
@@ -862,6 +863,7 @@ TEST_F (TcpAsyncStreamSocket, cancelWrite)
 
     ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
+#endif
 
     ASSERT_EQ (sender.asyncConnect ({_host, _stallport}, nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
