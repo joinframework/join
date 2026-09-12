@@ -38,6 +38,51 @@ static const uint16_t port = 5001;
 static char buffer[256] = {};
 
 /**
+ * @brief Test copy.
+ */
+TEST (IoOperation, copy)
+{
+    msghdr msg = {};
+    msg.msg_namelen = sizeof (struct sockaddr_storage);
+    msg.msg_controllen = CMSG_SPACE (sizeof (int));
+
+    auto op = IoOperation::makeRecvmsgMulti (8, 3, &msg, MSG_DONTWAIT, nullptr);
+    op.state.store (IoOperation::State::Submitted);
+    op.resume = IoOperation::State::Submitted;
+    op.index = 4;
+    op.linked = true;
+
+    IoOperation copy (op);
+
+    ASSERT_EQ (copy.code, op.code);
+    ASSERT_EQ (copy.state.load (), op.state.load ());
+    ASSERT_EQ (copy.resume, op.resume);
+    ASSERT_EQ (copy.index, op.index);
+    ASSERT_EQ (copy.linked, op.linked);
+    ASSERT_EQ (copy.multishot, op.multishot);
+    ASSERT_EQ (copy.group, op.group);
+    ASSERT_EQ (copy.handler, op.handler);
+    ASSERT_EQ (copy.data.msg.fd, op.data.msg.fd);
+    ASSERT_EQ (copy.data.msg.msg, op.data.msg.msg);
+    ASSERT_EQ (copy.ring, op.ring);
+
+    IoOperation assigned;
+    assigned = op;
+
+    ASSERT_EQ (assigned.code, op.code);
+    ASSERT_EQ (assigned.state.load (), op.state.load ());
+    ASSERT_EQ (assigned.resume, op.resume);
+    ASSERT_EQ (assigned.index, op.index);
+    ASSERT_EQ (assigned.linked, op.linked);
+    ASSERT_EQ (assigned.multishot, op.multishot);
+    ASSERT_EQ (assigned.group, op.group);
+    ASSERT_EQ (assigned.handler, op.handler);
+    ASSERT_EQ (assigned.data.msg.fd, op.data.msg.fd);
+    ASSERT_EQ (assigned.data.msg.msg, op.data.msg.msg);
+    ASSERT_EQ (assigned.ring, op.ring);
+}
+
+/**
  * @brief Test makeAccept.
  */
 TEST (IoOperation, makeAccept)

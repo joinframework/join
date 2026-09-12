@@ -510,6 +510,47 @@ TEST_F (HybridProactorTest, chain)
 }
 
 /**
+ * @brief Test suspend.
+ */
+TEST_F (HybridProactorTest, suspend)
+{
+    auto& proactor = HybridProactorThread::proactor ();
+    const char* msg = "suspend";
+
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+
+    proactor.suspend (&_readOp);
+    ASSERT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_FALSE (_cond.timedWait (lock, std::chrono::milliseconds (100), [&] () {
+            return _op == &_readOp;
+        }));
+    }
+
+    proactor.resume (&_readOp, this);
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_readOp) && (_result > 0);
+        }));
+        ASSERT_EQ (std::string (_buf, _result), "suspend");
+        _op = nullptr;
+        _result = 0;
+    }
+}
+
+/**
  * @brief Test invoke.
  */
 TEST_F (HybridProactorTest, invoke)
