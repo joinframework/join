@@ -618,6 +618,13 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
         }
     }
 
+    if (JOIN_UNLIKELY ((op->index < _pendingOps.size ()) && (_pendingOps[op->index] == op)))
+    {
+        resetOperation (op);
+        lastError = make_error_code (std::errc::device_or_resource_busy);
+        return -1;
+    }
+
     IoRingBuffer* ring = nullptr;
 
     if (JOIN_UNLIKELY (op->multishot && (op->code != static_cast<uint8_t> (IoOperation::Opcode::Accept))))
