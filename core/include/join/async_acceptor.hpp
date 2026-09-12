@@ -131,9 +131,12 @@ namespace join
                 return -1;
             }
 
-            IoOperation::State state = _acceptOp.op.state.load (std::memory_order_acquire);
+            IoOperation::State expected = IoOperation::State::Idle;
 
-            if (JOIN_UNLIKELY ((state != IoOperation::State::Idle) && (state != IoOperation::State::Busy)))
+            if (JOIN_UNLIKELY (!_acceptOp.op.state.compare_exchange_strong (expected, IoOperation::State::Submitted,
+                                                                            std::memory_order_acquire,
+                                                                            std::memory_order_relaxed) &&
+                               (expected != IoOperation::State::Busy)))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -161,6 +164,11 @@ namespace join
          */
         int cancelAccept () noexcept
         {
+            if (_acceptOp.op.state.load (std::memory_order_acquire) != IoOperation::State::Submitted)
+            {
+                return 0;
+            }
+
             if (_proactor->cancel (&_acceptOp.op, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;

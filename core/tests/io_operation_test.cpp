@@ -70,8 +70,8 @@ TEST (IoOperation, copy)
     assigned = op;
 
     ASSERT_EQ (assigned.code, op.code);
-    ASSERT_EQ (assigned.state.load (), op.state.load ());
-    ASSERT_EQ (assigned.resume, op.resume);
+    ASSERT_EQ (assigned.state.load (), IoOperation::State::Idle);
+    ASSERT_EQ (assigned.resume, IoOperation::State::Idle);
     ASSERT_EQ (assigned.index, op.index);
     ASSERT_EQ (assigned.linked, op.linked);
     ASSERT_EQ (assigned.multishot, op.multishot);

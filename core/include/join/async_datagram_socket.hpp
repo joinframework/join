@@ -139,7 +139,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!this->armable (this->_readOp->op)))
+            if (JOIN_UNLIKELY (!this->arm (this->_readOp)))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -189,7 +189,7 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            if (JOIN_UNLIKELY (!this->armable (this->_writeOp->op)))
+            if (JOIN_UNLIKELY (!this->arm (this->_writeOp)))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;

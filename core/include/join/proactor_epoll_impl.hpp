@@ -370,7 +370,7 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
     if (JOIN_UNLIKELY (!op->state.compare_exchange_strong (expected, IoOperation::State::Submitted,
                                                            std::memory_order_acquire, std::memory_order_relaxed)))
     {
-        if (expected != IoOperation::State::Busy)
+        if ((expected != IoOperation::State::Busy) && (expected != IoOperation::State::Submitted))
         {
             lastError = make_error_code (std::errc::device_or_resource_busy);
             return -1;

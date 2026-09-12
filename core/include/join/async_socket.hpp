@@ -29,6 +29,7 @@
 #include <join/async_operation.hpp>
 #include <join/proactor.hpp>
 #include <join/function.hpp>
+#include <join/backoff.hpp>
 #include <join/socket.hpp>
 #include <join/utils.hpp>
 
@@ -230,7 +231,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!armable (_readOp->op)))
+            if (JOIN_UNLIKELY (!arm (_readOp)))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -274,7 +275,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!armable (_writeOp->op)))
+            if (JOIN_UNLIKELY (!arm (_writeOp)))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -309,7 +310,7 @@ namespace join
          */
         int cancelRead () noexcept
         {
-            if (_readOp == nullptr)
+            if (!inFlight (_readOp))
             {
                 return 0;
             }
@@ -328,7 +329,7 @@ namespace join
          */
         int cancelWrite () noexcept
         {
-            if (_writeOp == nullptr)
+            if (!inFlight (_writeOp))
             {
                 return 0;
             }
@@ -347,7 +348,7 @@ namespace join
          */
         int cancelConnect () noexcept
         {
-            if (_connectOp == nullptr)
+            if (!inFlight (_connectOp))
             {
                 return 0;
             }
@@ -569,15 +570,30 @@ namespace join
         }
 
         /**
-         * @brief check if an operation can be armed.
-         * @param op operation to check.
-         * @return true if the operation can be armed, false otherwise.
+         * @brief arm an operation for submission.
+         * @param op operation to arm.
+         * @return true if the operation was armed, false if already in flight.
          */
-        bool armable (const IoOperation& op) const noexcept
+        template <class Operation>
+        bool arm (const std::unique_ptr<Operation>& op) noexcept
         {
-            IoOperation::State state = op.state.load (std::memory_order_acquire);
+            IoOperation::State expected = IoOperation::State::Idle;
 
-            return (state == IoOperation::State::Idle) || (state == IoOperation::State::Busy);
+            return (op != nullptr) &&
+                   (op->op.state.compare_exchange_strong (expected, IoOperation::State::Submitted,
+                                                          std::memory_order_acquire, std::memory_order_relaxed) ||
+                    (expected == IoOperation::State::Busy));
+        }
+
+        /**
+         * @brief check if an operation is in flight.
+         * @param op operation to check.
+         * @return true if the operation is in flight, false otherwise.
+         */
+        template <class Operation>
+        bool inFlight (const std::unique_ptr<Operation>& op) const noexcept
+        {
+            return (op != nullptr) && (op->op.state.load (std::memory_order_acquire) == IoOperation::State::Submitted);
         }
 
         /// proactor driving the operations.

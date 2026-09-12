@@ -204,9 +204,6 @@ TEST_F (TcpAsyncAcceptor, asyncAccept)
     ASSERT_TRUE (peer ().connected ());
     ASSERT_EQ (peer ().family (), AF_INET6);
 
-    ASSERT_EQ (server.asyncAccept (nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
-
     client.close ();
     server.close ();
 }

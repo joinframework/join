@@ -114,6 +114,12 @@ namespace join
                 return -1;
             }
 
+            if (JOIN_UNLIKELY (!this->arm (this->_connectOp)))
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
             if (!this->_socket.opened () && (this->_socket.open (endpoint.protocol ()) == -1))
             {
                 return -1;  // LCOV_EXCL_LINE
