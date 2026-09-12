@@ -55,7 +55,6 @@ protected:
         _completions = 0;
 
         peer ().close ();
-        spare ().close ();
     }
 
     /**
@@ -77,22 +76,18 @@ protected:
     }
 
     /**
-     * @brief get the socket receiving the connection accepted by a resubmitted acceptation.
-     * @return the socket receiving the connection accepted by a resubmitted acceptation.
-     */
-    static UnixStream::AsyncSocket& spare ()
-    {
-        static UnixStream::AsyncSocket sock;
-        return sock;
-    }
-
-    /**
      * @brief report a completion to the test thread.
+     * @param sock accepted socket.
      * @param ec error reported by the acceptor.
      */
-    static void onReport (const std::error_code& ec)
+    static void onReport (UnixStream::Socket&& sock, const std::error_code& ec)
     {
         ScopedLock<Mutex> lock (_mut);
+
+        if (!ec)
+        {
+            peer () = UnixStream::AsyncSocket (std::move (sock));
+        }
 
         _code = ec;
         ++_completions;
@@ -101,27 +96,41 @@ protected:
 
     /**
      * @brief handler resubmitting an acceptation from within itself.
+     * @param sock accepted socket.
      * @param ec error reported by the acceptor.
      */
-    static void onAccept (const std::error_code& ec)
+    static void onAccept (UnixStream::Socket&& sock, const std::error_code& ec)
     {
         if (!ec)
         {
-            _current->asyncAccept (spare (), onAccept);
+            _current->asyncAccept (onAccept);
         }
 
-        onReport (ec);
+        onReport (std::move (sock), ec);
+    }
+
+    /**
+     * @brief handler delaying its report to widen the completion window.
+     * @param sock accepted socket.
+     * @param ec error reported by the acceptor.
+     */
+    static void onSlowReport (UnixStream::Socket&& sock, const std::error_code& ec)
+    {
+        std::this_thread::sleep_for (std::chrono::milliseconds (100));
+
+        onReport (std::move (sock), ec);
     }
 
     /**
      * @brief handler closing the acceptor from within itself.
+     * @param sock accepted socket.
      * @param ec error reported by the acceptor.
      */
-    static void onAcceptAndClose (const std::error_code& ec)
+    static void onAcceptAndClose (UnixStream::Socket&& sock, const std::error_code& ec)
     {
         _current->close ();
 
-        onReport (ec);
+        onReport (std::move (sock), ec);
     }
 
     /// acceptor path.
@@ -177,6 +186,18 @@ TEST_F (UnixAsyncAcceptor, close)
     ASSERT_TRUE (server.opened ());
     server.close ();
     ASSERT_FALSE (server.opened ());
+
+    ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onSlowReport), 0) << join::lastError.message ();
+    server.close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_EQ (_completions, 1);
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
+
+    ASSERT_FALSE (server.opened ());
 }
 
 /**
@@ -187,14 +208,14 @@ TEST_F (UnixAsyncAcceptor, asyncAccept)
     UnixStream::AsyncAcceptor server;
     UnixStream::Socket client (UnixStream::Socket::Blocking);
 
-    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
 
-    ASSERT_EQ (server.asyncAccept (peer (), onReport), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onReport), 0) << join::lastError.message ();
 
-    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
     ASSERT_EQ (client.connect (_path), 0) << join::lastError.message ();
@@ -209,9 +230,6 @@ TEST_F (UnixAsyncAcceptor, asyncAccept)
 
     ASSERT_TRUE (peer ().connected ());
     ASSERT_EQ (peer ().family (), AF_UNIX);
-
-    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
 
     client.close ();
     server.close ();
@@ -229,7 +247,7 @@ TEST_F (UnixAsyncAcceptor, resubmit)
     _current = &server;
 
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (peer (), onAccept), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onAccept), 0) << join::lastError.message ();
     ASSERT_EQ (client1.connect (_path), 0) << join::lastError.message ();
 
     {
@@ -265,8 +283,8 @@ TEST_F (UnixAsyncAcceptor, discard)
     UnixStream::Socket client (UnixStream::Socket::Blocking);
 
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (peer (), nullptr), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (nullptr), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (client.connect (_path), 0) << join::lastError.message ();
 
@@ -275,7 +293,7 @@ TEST_F (UnixAsyncAcceptor, discard)
     for (int i = 0; (i < 100) && (rearmed == -1); ++i)
     {
         std::this_thread::sleep_for (std::chrono::milliseconds (10));
-        rearmed = server.asyncAccept (spare (), nullptr);
+        rearmed = server.asyncAccept (nullptr);
     }
 
     ASSERT_EQ (rearmed, 0) << join::lastError.message ();
@@ -295,7 +313,7 @@ TEST_F (UnixAsyncAcceptor, closeFromHandler)
     _current = &server;
 
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (peer (), onAcceptAndClose), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onAcceptAndClose), 0) << join::lastError.message ();
     ASSERT_EQ (client.connect (_path), 0) << join::lastError.message ();
 
     {
@@ -322,7 +340,7 @@ TEST_F (UnixAsyncAcceptor, cancelAccept)
     ASSERT_EQ (server.cancelAccept (), 0) << join::lastError.message ();
     ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
 
-    ASSERT_EQ (server.asyncAccept (peer (), onReport), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onReport), 0) << join::lastError.message ();
 
     ASSERT_EQ (server.cancelAccept (), 0) << join::lastError.message ();
 

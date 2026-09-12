@@ -50,7 +50,7 @@ protected:
     void SetUp () override
     {
         ASSERT_EQ (_server.create (_serverpath), 0) << join::lastError.message ();
-        ASSERT_EQ (_server.asyncAccept (peer (), onEchoAccept), 0) << join::lastError.message ();
+        ASSERT_EQ (_server.asyncAccept (onEchoAccept), 0) << join::lastError.message ();
 
         ScopedLock<Mutex> lock (_mut);
 
@@ -117,12 +117,14 @@ protected:
 
     /**
      * @brief adopt the socket accepted by the echo server.
+     * @param sock accepted socket.
      * @param ec error reported by the acceptor.
      */
-    static void onEchoAccept (const std::error_code& ec)
+    static void onEchoAccept (UnixStream::Socket&& sock, const std::error_code& ec)
     {
         if (!ec)
         {
+            peer () = UnixStream::AsyncSocket (std::move (sock));
             peer ().asyncRead (_echobuf, sizeof (_echobuf), onEchoRead);
         }
     }

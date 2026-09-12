@@ -145,7 +145,6 @@ void join::BasicProactor<Policy>::stop (bool sync) noexcept
     {
         _running.store (false, std::memory_order_release);
         cancelAllOperations ();
-        eventLoop ();
         return;
     }
 
@@ -540,7 +539,8 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
     {
         case CommandType::Submit:
             err = submitOperation (cmd.op, cmd.flush);
-            if (JOIN_UNLIKELY ((err == -1) && (cmd.done == nullptr) && (cmd.op != nullptr) && !isPending (cmd.op)))
+            if (JOIN_UNLIKELY ((err == -1) && (cmd.done == nullptr) && (cmd.op != nullptr) &&
+                               (cmd.op->state.load (std::memory_order_relaxed) == IoOperation::State::Idle)))
             {
                 dispatchOperation (cmd.op, -lastError.default_error_condition ().value (), false);
             }
@@ -606,7 +606,18 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
         return -1;
     }
 
-    if (JOIN_UNLIKELY (!submittable (op)))
+    IoOperation::State expected = IoOperation::State::Idle;
+    if (JOIN_UNLIKELY (!op->state.compare_exchange_strong (expected, IoOperation::State::Submitted,
+                                                           std::memory_order_acquire, std::memory_order_relaxed)))
+    {
+        if ((expected != IoOperation::State::Busy) && (expected != IoOperation::State::Submitted))
+        {
+            lastError = make_error_code (std::errc::device_or_resource_busy);
+            return -1;
+        }
+    }
+
+    if (JOIN_UNLIKELY ((op->index < _pendingOps.size ()) && (_pendingOps[op->index] == op)))
     {
         lastError = make_error_code (std::errc::device_or_resource_busy);
         return -1;
@@ -619,6 +630,7 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
         auto it = _bufferRings.find (op->group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
         {
+            resetOperation (op);
             lastError = make_error_code (Errc::NotFound);
             return -1;
         }
@@ -630,13 +642,13 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
     if (JOIN_UNLIKELY (sqe == nullptr))
     {
         // LCOV_EXCL_START
+        resetOperation (op);
         lastError = make_error_code (std::errc::no_buffer_space);
         return -1;
         // LCOV_EXCL_STOP
     }
 
     prepareSqe (sqe, op);
-    setSubmitted (op);
     op->index = static_cast<uint32_t> (_pendingOps.size ());
     _pendingOps.push_back (op);
 
@@ -649,6 +661,11 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
     if (JOIN_UNLIKELY (flush))
     {
         io_uring_submit (&_ring);
+    }
+
+    if (JOIN_UNLIKELY (expected == IoOperation::State::Busy))
+    {
+        op->resume = IoOperation::State::Submitted;
     }
 
     return 0;
@@ -673,7 +690,7 @@ int join::BasicProactor<Policy>::cancelOperation (IoOperation* op, bool flush) n
         return -1;
     }
 
-    if (JOIN_UNLIKELY (!cancellable (op)))
+    if (JOIN_UNLIKELY (op->state.load (std::memory_order_acquire) != IoOperation::State::Submitted))
     {
         lastError = make_error_code (Errc::OperationFailed);
         return -1;
@@ -694,7 +711,6 @@ int join::BasicProactor<Policy>::cancelOperation (IoOperation* op, bool flush) n
         // LCOV_EXCL_STOP
     }
 
-    setCancelled (op);
     io_uring_prep_cancel (sqe, op, 0);
     io_uring_sqe_set_data (sqe, nullptr);
 
@@ -715,6 +731,11 @@ void join::BasicProactor<Policy>::cancelAllOperations () noexcept
 {
     for (IoOperation* op : _pendingOps)
     {
+        Backoff backoff;
+        while (op->state.load (std::memory_order_acquire) == IoOperation::State::Suspended)
+        {
+            backoff ();  // LCOV_EXCL_LINE
+        }
         cancelOperation (op, false);
     }
 }
@@ -740,16 +761,6 @@ void join::BasicProactor<Policy>::endOperation (IoOperation* op, int result, boo
     }
 
     dispatchOperation (op, result, cancelled);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : isPending
-// =========================================================================
-template <typename Policy>
-bool join::BasicProactor<Policy>::isPending (IoOperation* op) const noexcept
-{
-    return (op->index < _pendingOps.size ()) && (_pendingOps[op->index] == op);
 }
 
 // =========================================================================
@@ -933,6 +944,20 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
         return;  // LCOV_EXCL_LINE
     }
 
+    IoOperation::State current = op->state.load (std::memory_order_acquire);
+    Backoff backoff;
+
+    while (JOIN_UNLIKELY (current == IoOperation::State::Suspended))
+    {
+        backoff ();
+        current = op->state.load (std::memory_order_acquire);
+    }
+
+    if (JOIN_UNLIKELY (current == IoOperation::State::Idle))
+    {
+        return;  // LCOV_EXCL_LINE
+    }
+
     int result = cqe->res;
     IoRingBuffer* br = nullptr;
     uint16_t bid = 0;
@@ -981,8 +1006,7 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
     }
     else
     {
-        bool cancelled = (result == -ECANCELED);
-        endOperation (op, result, cancelled);
+        endOperation (op, result, (result == -ECANCELED));
     }
 
     if (br != nullptr)

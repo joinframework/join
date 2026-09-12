@@ -36,15 +36,11 @@
 // C++.
 #include <system_error>
 #include <utility>
-#include <atomic>
 #include <memory>
 #include <string>
-#include <new>
 
 // C.
-#include <cstdlib>
 #include <cstddef>
-#include <cstdint>
 
 namespace join
 {
@@ -52,18 +48,18 @@ namespace join
      * @brief basic asynchronous socket class.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncSocket
+    class BasicAsyncSocket : public CompletionHandler
     {
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
         using Option = typename Socket::Option;
-        using AsyncOperation = BasicAsyncOperation<Protocol, Proactor>;
         using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
         using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
-        using State = typename AsyncOperation::State;
+        using AsyncConnect = BasicAsyncConnect<Protocol, Proactor>;
         using ReadHandler = typename AsyncRead::Handler;
         using WriteHandler = typename AsyncWrite::Handler;
+        using ConnectHandler = typename AsyncConnect::Handler;
 
         /**
          * @brief create the socket instance.
@@ -80,8 +76,8 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
-        : _socket (std::move (sock))
-        , _proactor (&proactor)
+        : _proactor (&proactor)
+        , _socket (std::move (sock))
         {
         }
 
@@ -103,11 +99,42 @@ namespace join
          * @param other other object to move.
          */
         BasicAsyncSocket (BasicAsyncSocket&& other) noexcept
-        : _socket (std::move (other._socket))
-        , _proactor (other._proactor)
-        , _readOp (std::move (other._readOp))
-        , _writeOp (std::move (other._writeOp))
+        : _proactor (other._proactor)
         {
+            if (other._readOp != nullptr)
+            {
+                _proactor->suspend (&other._readOp->op);
+            }
+
+            if (other._writeOp != nullptr)
+            {
+                _proactor->suspend (&other._writeOp->op);
+            }
+
+            if (other._connectOp != nullptr)
+            {
+                _proactor->suspend (&other._connectOp->op);
+            }
+
+            _socket = std::move (other._socket);
+            _readOp = std::move (other._readOp);
+            _writeOp = std::move (other._writeOp);
+            _connectOp = std::move (other._connectOp);
+
+            if (_readOp != nullptr)
+            {
+                _proactor->resume (&_readOp->op, this);
+            }
+
+            if (_writeOp != nullptr)
+            {
+                _proactor->resume (&_writeOp->op, this);
+            }
+
+            if (_connectOp != nullptr)
+            {
+                _proactor->resume (&_connectOp->op, this);
+            }
         }
 
         /**
@@ -119,11 +146,42 @@ namespace join
         {
             close ();
 
-            _socket = std::move (other._socket);
             _proactor = other._proactor;
 
+            if (other._readOp != nullptr)
+            {
+                _proactor->suspend (&other._readOp->op);
+            }
+
+            if (other._writeOp != nullptr)
+            {
+                _proactor->suspend (&other._writeOp->op);
+            }
+
+            if (other._connectOp != nullptr)
+            {
+                _proactor->suspend (&other._connectOp->op);
+            }
+
+            _socket = std::move (other._socket);
             _readOp = std::move (other._readOp);
             _writeOp = std::move (other._writeOp);
+            _connectOp = std::move (other._connectOp);
+
+            if (_readOp != nullptr)
+            {
+                _proactor->resume (&_readOp->op, this);
+            }
+
+            if (_writeOp != nullptr)
+            {
+                _proactor->resume (&_writeOp->op, this);
+            }
+
+            if (_connectOp != nullptr)
+            {
+                _proactor->resume (&_connectOp->op, this);
+            }
 
             return *this;
         }
@@ -151,40 +209,20 @@ namespace join
          */
         void close () noexcept
         {
-            cancelRead ();
-            cancelWrite ();
+            Backoff backoff;
 
-            if (_proactor->isProactorThread ())
+            do
             {
-                _socket.close ();
-                return;
-            }
+                cancelRead ();
+                cancelWrite ();
+                cancelConnect ();
 
-            if (_readOp != nullptr)
-            {
-                _readOp->drain ([this] () {
-                    cancelRead ();
-                });
+                backoff ();
             }
-
-            if (_writeOp != nullptr)
-            {
-                _writeOp->drain ([this] () {
-                    cancelWrite ();
-                });
-            }
+            while (!_proactor->isProactorThread () &&
+                   (pending (_readOp.get ()) || pending (_writeOp.get ()) || pending (_connectOp.get ())));
 
             _socket.close ();
-
-            if (_readOp != nullptr)
-            {
-                _readOp->release ();
-            }
-
-            if (_writeOp != nullptr)
-            {
-                _writeOp->release ();
-            }
         }
 
         /**
@@ -196,40 +234,34 @@ namespace join
          */
         int asyncRead (char* data, size_t maxSize, ReadHandler handler) noexcept
         {
-            if (JOIN_UNLIKELY (_readOp == nullptr))
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             if (JOIN_UNLIKELY (!_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
-            if (_readOp->reserve (*_proactor) == -1)
+            if (JOIN_UNLIKELY (!arm (_readOp.get ())))
             {
+                lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            _readOp->_handler = std::move (handler);
-            _readOp->_iov.iov_base = data;
-            _readOp->_iov.iov_len = maxSize;
-            _readOp->_msg.msg_name = nullptr;
-            _readOp->_msg.msg_namelen = 0;
-            _readOp->_msg.msg_iov = &_readOp->_iov;
-            _readOp->_msg.msg_iovlen = 1;
-            _readOp->_msg.msg_control = nullptr;
-            _readOp->_msg.msg_controllen = 0;
-            _readOp->_msg.msg_flags = 0;
-            _readOp->_op = IoOperation::makeRecvmsg (_socket.handle (), &_readOp->_msg, 0, _readOp.get ());
+            _readOp->handler = std::move (handler);
+            _readOp->iov.iov_base = data;
+            _readOp->iov.iov_len = maxSize;
+            _readOp->msg.msg_name = nullptr;
+            _readOp->msg.msg_namelen = 0;
+            _readOp->msg.msg_iov = &_readOp->iov;
+            _readOp->msg.msg_iovlen = 1;
+            _readOp->msg.msg_control = nullptr;
+            _readOp->msg.msg_controllen = 0;
+            _readOp->msg.msg_flags = 0;
+            _readOp->op = IoOperation::makeRecvmsg (_socket.handle (), &_readOp->msg, 0, this);
 
-            if (_proactor->submit (&_readOp->_op, true, false) == -1)
+            if (_proactor->submit (&_readOp->op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _readOp->release ();
-                _readOp->_handler.reset ();
+                _readOp->handler.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -246,41 +278,34 @@ namespace join
          */
         int asyncWrite (const char* data, size_t size, WriteHandler handler) noexcept
         {
-            if (JOIN_UNLIKELY (_writeOp == nullptr))
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             if (JOIN_UNLIKELY (!_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
-            if (_writeOp->reserve (*_proactor) == -1)
+            if (JOIN_UNLIKELY (!arm (_writeOp.get ())))
             {
+                lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            _writeOp->_handler = std::move (handler);
-            _writeOp->_iov.iov_base = const_cast<char*> (data);
-            _writeOp->_iov.iov_len = size;
-            _writeOp->_msg.msg_name = nullptr;
-            _writeOp->_msg.msg_namelen = 0;
-            _writeOp->_msg.msg_iov = &_writeOp->_iov;
-            _writeOp->_msg.msg_iovlen = 1;
-            _writeOp->_msg.msg_control = nullptr;
-            _writeOp->_msg.msg_controllen = 0;
-            _writeOp->_msg.msg_flags = 0;
-            _writeOp->_op =
-                IoOperation::makeSendmsg (_socket.handle (), &_writeOp->_msg, MSG_NOSIGNAL, _writeOp.get ());
+            _writeOp->handler = std::move (handler);
+            _writeOp->iov.iov_base = const_cast<char*> (data);
+            _writeOp->iov.iov_len = size;
+            _writeOp->msg.msg_name = nullptr;
+            _writeOp->msg.msg_namelen = 0;
+            _writeOp->msg.msg_iov = &_writeOp->iov;
+            _writeOp->msg.msg_iovlen = 1;
+            _writeOp->msg.msg_control = nullptr;
+            _writeOp->msg.msg_controllen = 0;
+            _writeOp->msg.msg_flags = 0;
+            _writeOp->op = IoOperation::makeSendmsg (_socket.handle (), &_writeOp->msg, MSG_NOSIGNAL, this);
 
-            if (_proactor->submit (&_writeOp->_op, true, false) == -1)
+            if (_proactor->submit (&_writeOp->op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _writeOp->release ();
-                _writeOp->_handler.reset ();
+                _writeOp->handler.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -294,12 +319,12 @@ namespace join
          */
         int cancelRead () noexcept
         {
-            if ((_readOp == nullptr) || (_readOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending))
+            if (!inFlight (_readOp.get ()))
             {
                 return 0;
             }
 
-            if (_proactor->cancel (&_readOp->_op, true, true) == -1)
+            if (_proactor->cancel (&_readOp->op, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;
             }
@@ -313,12 +338,31 @@ namespace join
          */
         int cancelWrite () noexcept
         {
-            if ((_writeOp == nullptr) || (_writeOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending))
+            if (!inFlight (_writeOp.get ()))
             {
                 return 0;
             }
 
-            if (_proactor->cancel (&_writeOp->_op, true, true) == -1)
+            if (_proactor->cancel (&_writeOp->op, true, true) == -1)
+            {
+                return (lastError == Errc::OperationFailed) ? 0 : -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief cancel the connect operation in flight, if any.
+         * @return 0 on success, -1 on failure.
+         */
+        int cancelConnect () noexcept
+        {
+            if (!inFlight (_connectOp.get ()))
+            {
+                return 0;
+            }
+
+            if (_proactor->cancel (&_connectOp->op, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;
             }
@@ -421,17 +465,166 @@ namespace join
         }
 
     protected:
-        /// underlying synchronous socket.
-        Socket _socket;
+        /**
+         * @brief method called when an operation completes.
+         * @param op completed operation.
+         * @param result number of bytes transferred, or negative errno.
+         */
+        void onComplete (IoOperation* op, int result) override
+        {
+            std::error_code code =
+                (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code ();
+
+            if (op == &_readOp->op)
+            {
+                completeRead (code, (result > 0) ? static_cast<size_t> (result) : 0);
+            }
+            else if (op == &_writeOp->op)
+            {
+                completeWrite (code, (result > 0) ? static_cast<size_t> (result) : 0);
+            }
+            else
+            {
+                completeConnect (code);
+            }
+        }
+
+        /**
+         * @brief method called when an operation is cancelled.
+         * @param op cancelled operation.
+         * @param result negative errno.
+         */
+        void onCancel (IoOperation* op, [[maybe_unused]] int result) override
+        {
+            std::error_code code = make_error_code (std::errc::operation_canceled);
+
+            if (op == &_readOp->op)
+            {
+                completeRead (code, 0);
+            }
+            else if (op == &_writeOp->op)
+            {
+                completeWrite (code, 0);
+            }
+            else
+            {
+                completeConnect (code);
+            }
+        }
+
+        /**
+         * @brief invoke the read completion handler.
+         * @param code error code reported by the kernel.
+         * @param size number of bytes received.
+         */
+        void completeRead (const std::error_code& code, size_t size) noexcept
+        {
+            ReadHandler handler = std::move (_readOp->handler);
+            std::error_code result = code;
+
+            if (_readOp->stream)
+            {
+                if (JOIN_UNLIKELY (!result && (size == 0)))
+                {
+                    result = make_error_code (Errc::ConnectionClosed);
+                }
+            }
+            else if (JOIN_UNLIKELY (!result && (_readOp->msg.msg_flags & MSG_TRUNC)))
+            {
+                result = make_error_code (Errc::MessageTooLong);
+            }
+
+            if (JOIN_LIKELY (handler))
+            {
+                handler (result, size);
+            }
+        }
+
+        /**
+         * @brief invoke the write completion handler.
+         * @param code error code reported by the kernel.
+         * @param size number of bytes sent.
+         */
+        void completeWrite (const std::error_code& code, size_t size) noexcept
+        {
+            WriteHandler handler = std::move (_writeOp->handler);
+
+            if (JOIN_LIKELY (handler))
+            {
+                handler (code, size);
+            }
+        }
+
+        /**
+         * @brief invoke the connect completion handler.
+         * @param code error code reported by the kernel.
+         */
+        void completeConnect (const std::error_code& code) noexcept
+        {
+            ConnectHandler handler = std::move (_connectOp->handler);
+
+            if (code)
+            {
+                _socket.close ();
+            }
+            else
+            {
+                _socket._state = Socket::Connected;
+            }
+
+            if (JOIN_LIKELY (handler))
+            {
+                handler (code);
+            }
+        }
+
+        /**
+         * @brief arm an operation for submission.
+         * @param op operation to arm.
+         * @return true if the operation was armed, false if already in flight.
+         */
+        template <class Operation>
+        bool arm (Operation* op) noexcept
+        {
+            return (op != nullptr) && CompletionHandler::arm (op->op);
+        }
+
+        /**
+         * @brief check if an operation is in flight.
+         * @param op operation to check.
+         * @return true if the operation is in flight, false otherwise.
+         */
+        template <class Operation>
+        bool inFlight (const Operation* op) const noexcept
+        {
+            return (op != nullptr) && CompletionHandler::inFlight (op->op);
+        }
+
+        /**
+         * @brief check if an operation is in flight or completing.
+         * @param op operation to check.
+         * @return true if the operation is in flight or completing, false otherwise.
+         */
+        template <class Operation>
+        bool pending (const Operation* op) const noexcept
+        {
+            return (op != nullptr) && CompletionHandler::pending (op->op);
+        }
 
         /// proactor driving the operations.
         Proactor* _proactor;
+
+        /// underlying synchronous socket.
+        Socket _socket;
 
         /// read operation.
         std::unique_ptr<AsyncRead> _readOp{new AsyncRead ()};
 
         /// write operation.
         std::unique_ptr<AsyncWrite> _writeOp{new AsyncWrite ()};
+
+        /// connect operation.
+        std::unique_ptr<AsyncConnect> _connectOp{new AsyncConnect ()};
     };
 }
 

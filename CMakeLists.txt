@@ -27,6 +27,7 @@ add_compile_options(
     -Wformat
     -Wformat-security
     -fstack-protector-strong
+    -faligned-new
     -Wno-address-of-packed-member
 )
 

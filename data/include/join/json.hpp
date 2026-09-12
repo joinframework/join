@@ -841,7 +841,10 @@ namespace join
                 return &member;
             });
             std::sort (members.begin (), members.end (), [] (const Member* a, const Member* b) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
                 std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cvt_utf8_utf16;
+#pragma GCC diagnostic pop
                 std::u16string wa = cvt_utf8_utf16.from_bytes (a->first.getString ().data ());
                 std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.getString ().data ());
                 return wa < wb;

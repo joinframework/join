@@ -31,9 +31,6 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-// C++.
-#include <thread>
-
 using join::Errc;
 using join::Mutex;
 using join::Condition;
@@ -85,23 +82,31 @@ protected:
      */
     void onComplete (IoOperation* op, int result) override
     {
-        if (_holds > 0)
-        {
-            --_holds;
-            ScopedLock<Mutex> lock (_mut);
-            _held = true;
-            _cond.signal ();
-            _cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-                return _released;
-            });
-        }
-
         if (_resubmits > 0)
         {
             --_resubmits;
             _resubmitted = HybridProactorThread::proactor ().submit (op, true, true);
             _rejected = HybridProactorThread::proactor ().submit (op, true, true);
             HybridProactorThread::proactor ().flush (true);
+        }
+
+        if (_cancelTarget != nullptr)
+        {
+            IoOperation* target = _cancelTarget;
+            _cancelTarget = nullptr;
+            _cancelResult = _handlerProactor->cancel (target, true, true);
+        }
+
+        if (_stopFromHandler)
+        {
+            _stopFromHandler = false;
+            _handlerProactor->stop ();
+        }
+
+        if (_suspendFromHandler)
+        {
+            _suspendFromHandler = false;
+            _handlerProactor->suspend (op);
         }
 
         {
@@ -124,19 +129,6 @@ protected:
         }
 
         _cond.signal ();
-
-        if (_cancels > 0)
-        {
-            --_cancels;
-            int cancelled = HybridProactorThread::proactor ().cancel (op, true, true);
-
-            {
-                ScopedLock<Mutex> lock (_mut);
-                _cancelled = cancelled;
-            }
-
-            _cond.signal ();
-        }
     }
 
     /**
@@ -158,6 +150,7 @@ protected:
             ScopedLock<Mutex> lock (_mut);
             _result = result;
             _op = op;
+            _cancelled = op;
             CompletionHandler::onCancel (op, result);
         }
 
@@ -215,20 +208,23 @@ protected:
     /// result of the rejected resubmission performed from a handler.
     static int _rejected;
 
-    /// number of cancellations left to perform from a handler.
-    static int _cancels;
+    /// proactor driven from within a handler, if any.
+    static HybridProactor* _handlerProactor;
+
+    /// operation cancelled from within a handler, if any.
+    static IoOperation* _cancelTarget;
 
     /// result of the cancellation performed from a handler.
-    static int _cancelled;
+    static int _cancelResult;
 
-    /// number of completion handlers left to hold until released.
-    static int _holds;
+    /// last operation reported as cancelled to the handler.
+    static IoOperation* _cancelled;
 
-    /// set when a completion handler is held.
-    static bool _held;
+    /// true to stop the proactor from within a handler.
+    static bool _stopFromHandler;
 
-    /// set to release the held completion handler.
-    static bool _released;
+    /// true to suspend the completing operation from within its own handler.
+    static bool _suspendFromHandler;
 
     /// last operation result.
     static int _result;
@@ -257,11 +253,12 @@ IoOperation HybridProactorTest::_resubmitOp = {};
 int HybridProactorTest::_resubmits = 0;
 int HybridProactorTest::_resubmitted = 0;
 int HybridProactorTest::_rejected = 0;
-int HybridProactorTest::_cancels = 0;
-int HybridProactorTest::_cancelled = 0;
-int HybridProactorTest::_holds = 0;
-bool HybridProactorTest::_held = false;
-bool HybridProactorTest::_released = false;
+HybridProactor* HybridProactorTest::_handlerProactor = nullptr;
+IoOperation* HybridProactorTest::_cancelTarget = nullptr;
+int HybridProactorTest::_cancelResult = 0;
+IoOperation* HybridProactorTest::_cancelled = nullptr;
+bool HybridProactorTest::_stopFromHandler = false;
+bool HybridProactorTest::_suspendFromHandler = false;
 int HybridProactorTest::_result = 0;
 int HybridProactorTest::_completions = 0;
 char HybridProactorTest::_buf[256] = {};
@@ -295,6 +292,41 @@ TEST_F (HybridProactorTest, stop)
         ASSERT_EQ (_result, -ECANCELED);
         _op = nullptr;
         _result = 0;
+    }
+
+    // stop the proactor from within a completion handler.
+    {
+        HybridProactor local;
+        Thread runner ([&local] () {
+            local.run ();
+        });
+
+        _handlerProactor = &local;
+        _stopFromHandler = true;
+
+        _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+        EXPECT_EQ (local.submit (&_readOp, true, true), 0) << join::lastError.message ();
+        EXPECT_EQ (_client.writeExactly ("stop", 4), 0) << join::lastError.message ();
+
+        bool completed = false;
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            completed = _cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+                return (_op == &_readOp) && (_result > 0);
+            });
+            _op = nullptr;
+            _result = 0;
+        }
+
+        local.stop ();
+        runner.join ();
+
+        ASSERT_TRUE (completed);
+        ASSERT_FALSE (_stopFromHandler);
+        ASSERT_FALSE (local.isRunning ());
+
+        _handlerProactor = nullptr;
     }
 
     for (int i = 0; i < 32; ++i)
@@ -370,12 +402,16 @@ TEST_F (HybridProactorTest, submit)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    _readOp.state = IoOperation::State::Submitted;
+    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+
     ASSERT_EQ (proactor.submit (&_readOp, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
 
-    _readOp.state = IoOperation::State::Idle;
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+    _spareOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _spareOp.state = IoOperation::State::Suspended;
+    ASSERT_EQ (proactor.submit (&_spareOp, true, true), -1);
+    ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
+    _spareOp.state = IoOperation::State::Idle;
 
     _invalidOp = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (&_invalidOp, true, false), 0) << join::lastError.message ();
@@ -454,7 +490,6 @@ TEST_F (HybridProactorTest, cancel)
     _spareOp.state = IoOperation::State::Submitted;
     ASSERT_EQ (proactor.cancel (&_spareOp, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    _spareOp.state = IoOperation::State::Idle;
 
     ASSERT_EQ (proactor.cancel (&_readOp, true, true), 0) << join::lastError.message ();
     {
@@ -466,40 +501,30 @@ TEST_F (HybridProactorTest, cancel)
         _result = 0;
     }
 
-    _resubmits = 1;
-    _resubmitted = -1;
-    _cancels = 1;
-    _cancelled = 1;
+    // cancel an operation from within a completion handler.
+    _spareOp = IoOperation::makeRead (_client.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (&_spareOp, true, true), 0) << join::lastError.message ();
 
-    _resubmitOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_resubmitOp, true, true), 0) << join::lastError.message ();
-    ASSERT_EQ (_client.writeExactly ("cancel", strlen ("cancel"), _timeout), 0) << join::lastError.message ();
+    _handlerProactor = &proactor;
+    _cancelTarget = &_spareOp;
+    _cancelResult = -1;
+    _cancelled = nullptr;
+
+    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("cancel", 6), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _op == &_resubmitOp && _result == -ECANCELED && _cancelled == 0;
+            return _cancelled == &_spareOp;
         }));
         _op = nullptr;
         _result = 0;
     }
 
-    ASSERT_EQ (_resubmitted, 0);
-
-    _cancels = 1;
-    _cancelled = 1;
-
-    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_resubmitOp, true, true), 0) << join::lastError.message ();
-    ASSERT_EQ (_client.writeExactly ("cancel", strlen ("cancel"), _timeout), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _op == &_resubmitOp && _result > 0 && _cancelled == -1;
-        }));
-        _op = nullptr;
-        _result = 0;
-    }
+    ASSERT_EQ (_cancelResult, 0);
+    _handlerProactor = nullptr;
 
     proactor.stop ();
     th.join ();
@@ -590,6 +615,69 @@ TEST_F (HybridProactorTest, chain)
 
     proactor.stop ();
     th.join ();
+}
+
+/**
+ * @brief Test suspend.
+ */
+TEST_F (HybridProactorTest, suspend)
+{
+    auto& proactor = HybridProactorThread::proactor ();
+    const char* msg = "suspend";
+
+    proactor.suspend (nullptr);
+    proactor.resume (nullptr, nullptr);
+
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+
+    proactor.suspend (&_readOp);
+    ASSERT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_FALSE (_cond.timedWait (lock, std::chrono::milliseconds (100), [&] () {
+            return _op == &_readOp;
+        }));
+    }
+
+    proactor.resume (&_readOp, this);
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_readOp) && (_result > 0);
+        }));
+        ASSERT_EQ (std::string (_buf, _result), "suspend");
+        _op = nullptr;
+        _result = 0;
+    }
+    // suspend the completing operation from within its own handler.
+    _handlerProactor = &proactor;
+    _suspendFromHandler = true;
+
+    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("busy", 4), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_readOp) && (_result > 0);
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_FALSE (_suspendFromHandler);
+    _handlerProactor = nullptr;
 }
 
 /**
@@ -1464,149 +1552,6 @@ TEST_F (HybridProactorTest, resubmit)
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
             return _op == &_resubmitOp && _result == -ECANCELED;
-        }));
-        _op = nullptr;
-        _result = 0;
-    }
-}
-
-/**
- * @brief Test lock.
- */
-TEST_F (HybridProactorTest, lock)
-{
-    if (_client.connect ({_host, _port}) == -1)
-    {
-        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-    }
-    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
-    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
-
-    _completions = 0;
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
-
-    IoOperation::State previous = HybridProactorThread::proactor ().lock (&_readOp);
-    EXPECT_EQ (previous, IoOperation::State::Submitted);
-    EXPECT_EQ (_readOp.state.load (), IoOperation::State::Moving);
-    EXPECT_EQ (_client.writeExactly ("lock", strlen ("lock"), _timeout), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        EXPECT_FALSE (_cond.timedWait (lock, std::chrono::milliseconds (100), [&] () {
-            return _completions > 0;
-        }));
-    }
-
-    HybridProactorThread::proactor ().unlock (&_readOp, previous);
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _op == &_readOp && _completions == 1;
-        }));
-        ASSERT_EQ (std::string (_buf, _result), "lock");
-        _op = nullptr;
-        _result = 0;
-    }
-
-    IoOperation::State state = IoOperation::State::Moving;
-    HybridProactor::InvokeHandler fn = [&state] () {
-        state = HybridProactorThread::proactor ().lock (&_readOp);
-    };
-    ASSERT_EQ (HybridProactorThread::proactor ().invoke (&fn), 0) << join::lastError.message ();
-    ASSERT_EQ (state, IoOperation::State::Idle);
-    ASSERT_EQ (_readOp.state.load (), IoOperation::State::Idle);
-
-    _holds = 1;
-    _held = false;
-    _released = false;
-
-    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
-    ASSERT_EQ (_client.writeExactly ("lock", strlen ("lock"), _timeout), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _held;
-        }));
-    }
-
-    Thread releaser ([] () {
-        std::this_thread::sleep_for (std::chrono::milliseconds (50));
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            _released = true;
-        }
-
-        _cond.signal ();
-    });
-
-    previous = HybridProactorThread::proactor ().lock (&_readOp);
-    HybridProactorThread::proactor ().unlock (&_readOp, previous);
-    releaser.join ();
-
-    ASSERT_EQ (previous, IoOperation::State::Idle);
-
-    _completions = 0;
-    previous = HybridProactorThread::proactor ().lock (&_readOp);
-    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_readOp, true, false), 0) << join::lastError.message ();
-    std::this_thread::sleep_for (std::chrono::milliseconds (50));
-    HybridProactorThread::proactor ().unlock (&_readOp, previous);
-    ASSERT_EQ (_client.writeExactly ("lock", strlen ("lock"), _timeout), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _op == &_readOp && _completions == 1;
-        }));
-        ASSERT_EQ (std::string (_buf, _result), "lock");
-        _op = nullptr;
-        _result = 0;
-    }
-
-    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
-    previous = HybridProactorThread::proactor ().lock (&_readOp);
-    ASSERT_EQ (HybridProactorThread::proactor ().cancel (&_readOp, true, false), 0) << join::lastError.message ();
-    std::this_thread::sleep_for (std::chrono::milliseconds (50));
-    HybridProactorThread::proactor ().unlock (&_readOp, previous);
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _op == &_readOp && _result == -ECANCELED;
-        }));
-        _op = nullptr;
-        _result = 0;
-    }
-}
-
-/**
- * @brief Test unlock.
- */
-TEST_F (HybridProactorTest, unlock)
-{
-    if (_client.connect ({_host, _port}) == -1)
-    {
-        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-    }
-    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
-    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
-
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (HybridProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
-
-    IoOperation::State previous = HybridProactorThread::proactor ().lock (&_readOp);
-    HybridProactorThread::proactor ().unlock (&_readOp, previous);
-    ASSERT_EQ (_readOp.state.load (), IoOperation::State::Submitted);
-
-    ASSERT_EQ (HybridProactorThread::proactor ().cancel (&_readOp, true, true), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _op == &_readOp && _result == -ECANCELED;
         }));
         _op = nullptr;
         _result = 0;

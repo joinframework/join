@@ -125,7 +125,7 @@ public:
 protected:
     /**
      * @brief method called when an operation completes successfully.
-     * @param op completed operation, can be resubmitted, shall remain valid until the call returns.
+     * @param op completed operation, left idle when a multishot ended and can be resubmitted.
      * @param result number of bytes transferred, operation-specific value, or negative errno on failure.
      */
     virtual void onComplete ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result)
@@ -141,6 +141,42 @@ protected:
     virtual void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result)
     {
         // do nothing.
+    }
+
+    /**
+     * @brief arm an operation for submission.
+     * @param op operation to arm.
+     * @return true if the operation was armed, false if already in flight.
+     */
+    bool arm (IoOperation& op) noexcept
+    {
+        IoOperation::State expected = IoOperation::State::Idle;
+
+        return op.state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
+                                                 std::memory_order_relaxed) ||
+               (expected == IoOperation::State::Busy);
+    }
+
+    /**
+     * @brief check if an operation is in flight.
+     * @param op operation to check.
+     * @return true if the operation is in flight, false otherwise.
+     */
+    bool inFlight (const IoOperation& op) const noexcept
+    {
+        return op.state.load (std::memory_order_acquire) == IoOperation::State::Submitted;
+    }
+
+    /**
+     * @brief check if an operation is in flight or completing.
+     * @param op operation to check.
+     * @return true if the operation is in flight or completing, false otherwise.
+     */
+    bool pending (const IoOperation& op) const noexcept
+    {
+        IoOperation::State state = op.state.load (std::memory_order_acquire);
+
+        return (state == IoOperation::State::Submitted) || (state == IoOperation::State::Busy);
     }
 };
 
@@ -230,6 +266,19 @@ public:
 #endif
 
     /**
+     * @brief suspend an I/O operation.
+     * @param op operation to suspend.
+     */
+    void suspend (IoOperation* op) noexcept;
+
+    /**
+     * @brief resume an I/O operation.
+     * @param op operation to resume.
+     * @param handler new completion handler owning the operation.
+     */
+    void resume (IoOperation* op, CompletionHandler* handler) noexcept;
+
+    /**
      * @brief run the event loop (blocking).
      */
     void run ();
@@ -304,20 +353,6 @@ public:
      * @return true if called from the proactor thread.
      */
     bool isProactorThread () const noexcept;
-
-    /**
-     * @brief lock the operation while its handler owner is moved.
-     * @param op operation to lock.
-     * @return state to restore on unlock.
-     */
-    IoOperation::State lock (IoOperation* op) noexcept;
-
-    /**
-     * @brief unlock the operation once its handler owner is moved.
-     * @param op operation to unlock.
-     * @param previous state returned by lock.
-     */
-    void unlock (IoOperation* op, IoOperation::State previous) noexcept;
 
 private:
 #ifdef JOIN_HAS_IO_URING
@@ -504,57 +539,10 @@ private:
     void endOperation (IoOperation* op, int result, bool cancelled = false) noexcept;
 
     /**
-     * @brief check if the operation is registered as in flight in the backend.
-     * @param op operation to check.
-     * @return true if in flight.
+     * @brief reset an operation that could not be submitted.
+     * @param op operation to reset.
      */
-    bool isPending (IoOperation* op) const noexcept;
-
-    /**
-     * @brief wait for the operation to be unlocked.
-     * @param op operation to wait for.
-     * @return operation state.
-     */
-    static IoOperation::State waitUnlock (IoOperation* op) noexcept;
-
-    /**
-     * @brief check if the operation can be submitted.
-     * @param op operation to check.
-     * @return true if the operation can be submitted.
-     */
-    bool submittable (IoOperation* op) const noexcept;
-
-    /**
-     * @brief mark the operation as submitted.
-     * @param op submitted operation.
-     */
-    static void setSubmitted (IoOperation* op) noexcept;
-
-    /**
-     * @brief check if the operation can be cancelled.
-     * @param op operation to check.
-     * @return true if the operation can be cancelled.
-     */
-    bool cancellable (IoOperation* op) const noexcept;
-
-    /**
-     * @brief mark the operation as cancelled.
-     * @param op cancelled operation.
-     */
-    static void setCancelled (IoOperation* op) noexcept;
-
-    /**
-     * @brief acquire the operation before running its completion handler.
-     * @param op operation to acquire.
-     * @return true if acquired, false if its completion handler is already running.
-     */
-    static bool acquire (IoOperation* op) noexcept;
-
-    /**
-     * @brief release the operation after its completion handler ran.
-     * @param op operation to release.
-     */
-    void release (IoOperation* op) noexcept;
+    void resetOperation (IoOperation* op) noexcept;
 
 #ifdef JOIN_HAS_IO_URING
     /**
@@ -854,6 +842,65 @@ inline int join::BasicProactor::invoke (InvokeHandler* fn, bool sync) noexcept
 
 // =========================================================================
 //   CLASS     : BasicProactor
+//   METHOD    : suspend
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename Policy>
+void join::BasicProactor<Policy>::suspend (IoOperation* op) noexcept
+#else
+inline void join::BasicProactor::suspend (IoOperation* op) noexcept
+#endif
+{
+    if (JOIN_UNLIKELY (op == nullptr))
+    {
+        return;
+    }
+
+    Backoff backoff;
+    for (;;)
+    {
+        IoOperation::State expected = op->state.load (std::memory_order_acquire);
+        if ((expected == IoOperation::State::Idle) || (expected == IoOperation::State::Submitted))
+        {
+            if (op->state.compare_exchange_strong (expected, IoOperation::State::Suspended, std::memory_order_acquire,
+                                                   std::memory_order_relaxed))
+            {
+                op->resume = expected;
+                return;
+            }
+        }
+        else if ((expected == IoOperation::State::Busy) && isProactorThread ())
+        {
+            return;
+        }
+
+        backoff ();
+    }
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : resume
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename Policy>
+void join::BasicProactor<Policy>::resume (IoOperation* op, CompletionHandler* handler) noexcept
+#else
+inline void join::BasicProactor::resume (IoOperation* op, CompletionHandler* handler) noexcept
+#endif
+{
+    if (JOIN_UNLIKELY (op == nullptr))
+    {
+        return;
+    }
+
+    op->handler = handler;
+    IoOperation::State expected = IoOperation::State::Suspended;
+    op->state.compare_exchange_strong (expected, op->resume, std::memory_order_release, std::memory_order_relaxed);
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
 //   METHOD    : invokeFunction
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
@@ -885,13 +932,6 @@ void join::BasicProactor<Policy>::notifyOperation (IoOperation* op, int result, 
 inline void join::BasicProactor::notifyOperation (IoOperation* op, int result, bool cancelled) noexcept
 #endif
 {
-    bool acquired = acquire (op);
-
-    if ((result < 0) && (op->state.load (std::memory_order_relaxed) == IoOperation::State::Cancelling))
-    {
-        cancelled = true;
-    }
-
     if (JOIN_LIKELY (op->handler))
     {
         if (cancelled)
@@ -902,11 +942,6 @@ inline void join::BasicProactor::notifyOperation (IoOperation* op, int result, b
         {
             op->handler->onComplete (op, result);
         }
-    }
-
-    if (acquired)
-    {
-        release (op);
     }
 }
 
@@ -926,6 +961,23 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
         return;  // LCOV_EXCL_LINE
     }
 
+    Backoff backoff;
+    for (;;)
+    {
+        IoOperation::State expected = op->state.load (std::memory_order_relaxed);
+        if (expected != IoOperation::State::Suspended)
+        {
+            if (op->state.compare_exchange_strong (expected, IoOperation::State::Busy, std::memory_order_acquire,
+                                                   std::memory_order_relaxed))
+            {
+                break;
+            }
+        }
+        backoff ();  // LCOV_EXCL_LINE
+    }
+
+    op->resume = IoOperation::State::Idle;
+
     if (op->ring != nullptr)
     {
         op->ring->unbind ();
@@ -933,253 +985,28 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
     }
 
     notifyOperation (op, result, cancelled);
+    IoOperation::State expected = IoOperation::State::Busy;
+    op->state.compare_exchange_strong (expected, op->resume, std::memory_order_release, std::memory_order_relaxed);
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
-//   METHOD    : lock
+//   METHOD    : resetOperation
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
-join::IoOperation::State join::BasicProactor<Policy>::lock (IoOperation* op) noexcept
+void join::BasicProactor<Policy>::resetOperation (IoOperation* op) noexcept
 #else
-inline join::IoOperation::State join::BasicProactor::lock (IoOperation* op) noexcept
+inline void join::BasicProactor::resetOperation (IoOperation* op) noexcept
 #endif
 {
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
-
-    if (isProactorThread ())
+    IoOperation::State expected = IoOperation::State::Submitted;
+    if (!op->state.compare_exchange_strong (expected, IoOperation::State::Idle, std::memory_order_release,
+                                            std::memory_order_relaxed) &&
+        (expected != IoOperation::State::Busy))  // LCOV_EXCL_LINE
     {
-        return state;
+        op->resume = IoOperation::State::Idle;  // LCOV_EXCL_LINE
     }
-
-    Backoff backoff;
-
-    for (;;)
-    {
-        if ((state == IoOperation::State::Completing) || (state == IoOperation::State::Cancelling) ||
-            (state == IoOperation::State::Moving))
-        {
-            backoff ();
-            state = op->state.load (std::memory_order_relaxed);
-            continue;
-        }
-
-        if (op->state.compare_exchange_weak (state, IoOperation::State::Moving, std::memory_order_acquire,
-                                             std::memory_order_relaxed))
-        {
-            return state;
-        }
-    }
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : unlock
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::unlock (IoOperation* op, IoOperation::State previous) noexcept
-#else
-inline void join::BasicProactor::unlock (IoOperation* op, IoOperation::State previous) noexcept
-#endif
-{
-    op->state.store (previous, std::memory_order_release);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : waitUnlock
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-join::IoOperation::State join::BasicProactor<Policy>::waitUnlock (IoOperation* op) noexcept
-#else
-inline join::IoOperation::State join::BasicProactor::waitUnlock (IoOperation* op) noexcept
-#endif
-{
-    IoOperation::State state = op->state.load (std::memory_order_acquire);
-    Backoff backoff;
-
-    while (state == IoOperation::State::Moving)
-    {
-        backoff ();
-        state = op->state.load (std::memory_order_acquire);
-    }
-
-    return state;
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : submittable
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-bool join::BasicProactor<Policy>::submittable (IoOperation* op) const noexcept
-#else
-inline bool join::BasicProactor::submittable (IoOperation* op) const noexcept
-#endif
-{
-    IoOperation::State state = waitUnlock (op);
-
-    if (state == IoOperation::State::Idle)
-    {
-        return true;
-    }
-
-    if ((state != IoOperation::State::Completing) && (state != IoOperation::State::Cancelling))
-    {
-        return false;
-    }
-
-    return !isPending (op);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : setSubmitted
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::setSubmitted (IoOperation* op) noexcept
-#else
-inline void join::BasicProactor::setSubmitted (IoOperation* op) noexcept
-#endif
-{
-    for (;;)
-    {
-        IoOperation::State state = waitUnlock (op);
-
-        if ((state == IoOperation::State::Completing) || (state == IoOperation::State::Cancelling))
-        {
-            op->state.store (IoOperation::State::Completing, std::memory_order_relaxed);
-            return;
-        }
-
-        if (op->state.compare_exchange_weak (state, IoOperation::State::Submitted, std::memory_order_relaxed,
-                                             std::memory_order_relaxed))
-        {
-            return;
-        }
-    }
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : cancellable
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-bool join::BasicProactor<Policy>::cancellable (IoOperation* op) const noexcept
-#else
-inline bool join::BasicProactor::cancellable (IoOperation* op) const noexcept
-#endif
-{
-    IoOperation::State state = waitUnlock (op);
-
-    if (state == IoOperation::State::Submitted)
-    {
-        return true;
-    }
-
-    if (state != IoOperation::State::Completing)
-    {
-        return false;
-    }
-
-    return isPending (op);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : setCancelled
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::setCancelled (IoOperation* op) noexcept
-#else
-inline void join::BasicProactor::setCancelled (IoOperation* op) noexcept
-#endif
-{
-    for (;;)
-    {
-        IoOperation::State state = waitUnlock (op);
-
-        if (state == IoOperation::State::Completing)
-        {
-            op->state.store (IoOperation::State::Cancelling, std::memory_order_relaxed);
-            return;
-        }
-
-        if (op->state.compare_exchange_weak (state, IoOperation::State::Cancelled, std::memory_order_relaxed,
-                                             std::memory_order_relaxed))
-        {
-            return;
-        }
-    }
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : acquire
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-bool join::BasicProactor<Policy>::acquire (IoOperation* op) noexcept
-#else
-inline bool join::BasicProactor::acquire (IoOperation* op) noexcept
-#endif
-{
-    IoOperation::State state = op->state.load (std::memory_order_relaxed);
-
-    if ((state == IoOperation::State::Completing) || (state == IoOperation::State::Cancelling))
-    {
-        return false;  // LCOV_EXCL_LINE
-    }
-
-    Backoff backoff;
-
-    for (;;)
-    {
-        if (state == IoOperation::State::Moving)
-        {
-            backoff ();
-            state = op->state.load (std::memory_order_relaxed);
-            continue;
-        }
-
-        IoOperation::State next =
-            (state == IoOperation::State::Cancelled) ? IoOperation::State::Cancelling : IoOperation::State::Completing;
-
-        if (op->state.compare_exchange_weak (state, next, std::memory_order_acquire, std::memory_order_relaxed))
-        {
-            return true;
-        }
-    }
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : release
-// =========================================================================
-#ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::release (IoOperation* op) noexcept
-#else
-inline void join::BasicProactor::release (IoOperation* op) noexcept
-#endif
-{
-    IoOperation::State next = IoOperation::State::Idle;
-
-    if (isPending (op))
-    {
-        next = (op->state.load (std::memory_order_relaxed) == IoOperation::State::Cancelling)
-                   ? IoOperation::State::Cancelled
-                   : IoOperation::State::Submitted;
-    }
-
-    op->state.store (next, std::memory_order_release);
 }
 
 #ifdef JOIN_HAS_IO_URING

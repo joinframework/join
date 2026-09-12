@@ -50,12 +50,10 @@ namespace join
          */
         enum class State : uint8_t
         {
-            Idle,       /**< no operation is in flight. */
-            Submitted,  /**< operation is in flight, awaiting completion. */
-            Completing, /**< completion handler is running. */
-            Cancelled,  /**< cancellation is in flight, awaiting completion. */
-            Cancelling, /**< completion handler is running, cancellation requested. */
-            Moving,     /**< handler owner is being moved. */
+            Idle,      /**< operation is not in flight. */
+            Submitted, /**< operation is in flight. */
+            Busy,      /**< a completion is in progress. */
+            Suspended, /**< operation has been suspended. */
         };
 
         /**
@@ -76,7 +74,7 @@ namespace join
         };
 
         /**
-         * @brief create instance.
+         * @brief default constructor.
          */
         IoOperation () = default;
 
@@ -87,7 +85,7 @@ namespace join
         IoOperation (const IoOperation& other) noexcept;
 
         /**
-         * @brief copy assignment operator, the state is left untouched.
+         * @brief copy assignment operator.
          * @param other other object to copy.
          * @return current object.
          */
@@ -360,6 +358,9 @@ namespace join
 
         /// operation state.
         std::atomic<State> state{State::Idle};
+
+        /// state to restore when the current hold is released.
+        State resume{State::Idle};
 
         /// index of this operation in the proactor pending ops (io_uring only).
         uint32_t index = 0;

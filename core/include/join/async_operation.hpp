@@ -29,486 +29,102 @@
 #include <join/io_operation.hpp>
 #include <join/function.hpp>
 #include <join/protocol.hpp>
-#include <join/proactor.hpp>
-#include <join/backoff.hpp>
-#include <join/socket.hpp>
-#include <join/error.hpp>
 
 // C++.
 #include <system_error>
-#include <atomic>
-#include <new>
 
 // C.
 #include <sys/socket.h>
-#include <cstdlib>
 #include <cstddef>
-#include <cstdint>
-#include <cerrno>
 
 namespace join
 {
     /**
-     * @brief asynchronous operation.
-     */
-    template <class Protocol, class Proactor>
-    class BasicAsyncOperation : public CompletionHandler
-    {
-        /// friendship with basic asynchronous socket
-        friend class BasicAsyncSocket<Protocol, Proactor>;
-
-        /// friendship with basic asynchronous stream socket
-        friend class BasicAsyncStreamSocket<Protocol, Proactor>;
-
-        /// friendship with basic asynchronous datagram socket
-        friend class BasicAsyncDatagramSocket<Protocol, Proactor>;
-
-        /// friendship with basic asynchronous stream acceptor
-        friend class BasicAsyncStreamAcceptor<Protocol, Proactor>;
-
-    public:
-        using Endpoint = typename Protocol::Endpoint;
-
-        /**
-         * @brief caller side operation state.
-         */
-        enum State : uint8_t
-        {
-            Idle,        /**< no operation in flight and no completion handler running. */
-            Pending,     /**< an operation is in flight. */
-            Dispatching, /**< the completion handler is running. */
-            Closing,     /**< the socket is closing, no operation may be armed. */
-        };
-
-        /// allocation and state alignment, in bytes.
-        static constexpr size_t alignment = 64;
-
-        /**
-         * @brief allocate a block honouring its extended alignment.
-         * @param size allocation size in bytes.
-         * @return pointer to the allocated storage.
-         */
-        static void* operator new (size_t size)
-        {
-            static_assert (alignof (BasicAsyncOperation) <= alignment,
-                           "operation alignment exceeds the allocation alignment");
-
-            size = (size + alignment - 1) & ~(alignment - 1);
-
-            void* mem = ::aligned_alloc (alignment, size);
-            if (mem == nullptr)
-            {
-                throw std::bad_alloc ();  // LCOV_EXCL_LINE
-            }
-
-            return mem;
-        }
-
-        /**
-         * @brief release storage allocated by operator new.
-         * @param mem storage to release.
-         */
-        static void operator delete (void* mem) noexcept
-        {
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmismatched-new-delete"
-#endif
-            ::free (mem);
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-        }
-
-        /**
-         * @brief reserve the operation slot for a new operation.
-         * @param proactor proactor driving the operation.
-         * @return 0 on success, -1 on failure.
-         */
-        int reserve (Proactor& proactor) noexcept
-        {
-            State expected = Idle;
-
-            if (!_state.compare_exchange_strong (expected, Pending, std::memory_order_acquire,
-                                                 std::memory_order_acquire))
-            {
-                if ((expected != Dispatching) || !proactor.isProactorThread ())
-                {
-                    lastError = make_error_code (Errc::InUse);
-                    return -1;
-                }
-
-                _state.store (Pending, std::memory_order_release);
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief release the operation slot.
-         */
-        void release () noexcept
-        {
-            _state.store (Idle, std::memory_order_release);
-        }
-
-        /**
-         * @brief wait for the operation in flight to end, then retain the slot.
-         * @param cancel callable cancelling the operation in flight.
-         */
-        template <class Cancel>
-        void drain (Cancel cancel) noexcept
-        {
-            Backoff backoff;
-            State expected = Idle;
-
-            while (!_state.compare_exchange_strong (expected, Closing, std::memory_order_acq_rel,
-                                                    std::memory_order_acquire))
-            {
-                if (expected == Pending)
-                {
-                    cancel ();
-                }
-
-                backoff ();
-                expected = Idle;
-            }
-        }
-
-        /**
-         * @brief run the completion handler, publishing the dispatch state around it.
-         * @param invoke callable running the completion handler.
-         */
-        template <class Fn>
-        void dispatch (Fn&& invoke) noexcept
-        {
-            _state.store (Dispatching, std::memory_order_release);
-
-            invoke ();
-
-            State expected = Dispatching;
-            _state.compare_exchange_strong (expected, Idle, std::memory_order_release, std::memory_order_relaxed);
-        }
-
-    protected:
-        /// operation.
-        IoOperation _op = {};
-
-        /// caller side operation state.
-        alignas (alignment) std::atomic<State> _state{Idle};
-    };
-
-    /**
      * @brief asynchronous accept operation.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncAccept : public BasicAsyncOperation<Protocol, Proactor>
+    struct BasicAsyncAccept
     {
-        /// friendship with basic asynchronous stream socket
-        friend class BasicAsyncStreamSocket<Protocol, Proactor>;
-
-        /// friendship with basic asynchronous stream acceptor
-        friend class BasicAsyncStreamAcceptor<Protocol, Proactor>;
-
-    public:
         using Endpoint = typename Protocol::Endpoint;
         using Socket = typename Protocol::Socket;
-        using AsyncSocket = BasicAsyncStreamSocket<Protocol, Proactor>;
 
         /// handler invoked on completion.
-        using Handler = Function<void (const std::error_code&)>;
+        using Handler = Function<void (Socket&&, const std::error_code&)>;
 
-    protected:
-        /**
-         * @brief method called when the acceptation completes.
-         * @param op completed operation.
-         * @param result accepted file descriptor, or negative errno.
-         */
-        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
-        {
-            complete (result);
-        }
-
-        /**
-         * @brief method called when the acceptation is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
-        {
-            complete (-ECANCELED);
-        }
-
-        /**
-         * @brief invoke the completion handler.
-         * @param result accepted file descriptor, or negative errno.
-         */
-        void complete (int result) noexcept
-        {
-            this->dispatch ([this, result] () {
-                Handler handler = std::move (_handler);
-                AsyncSocket* peer = _peer;
-                _peer = nullptr;
-
-                if (peer != nullptr)
-                {
-                    peer->_pendingAccept = nullptr;
-                }
-
-                if (JOIN_UNLIKELY (result < 0))
-                {
-                    if (JOIN_LIKELY (handler))
-                    {
-                        handler (std::error_code (-result, std::generic_category ()));
-                    }
-                }
-                else
-                {
-                    peer->_socket = Socket (result, _remote);
-
-                    if (JOIN_LIKELY (handler))
-                    {
-                        handler (std::error_code ());
-                    }
-                }
-            });
-        }
+        /// operation submitted to the proactor.
+        IoOperation op = {};
 
         /// handler invoked on completion.
-        Handler _handler;
+        Handler handler;
 
         /// remote endpoint.
-        Endpoint _remote;
+        Endpoint remote;
 
         /// remote address length.
-        socklen_t _remoteLen = sizeof (struct sockaddr_storage);
-
-        /// socket receiving the accepted connection.
-        AsyncSocket* _peer = nullptr;
+        socklen_t remoteLen = sizeof (struct sockaddr_storage);
     };
 
     /**
      * @brief asynchronous connect operation.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncConnect : public BasicAsyncOperation<Protocol, Proactor>
+    struct BasicAsyncConnect
     {
-        /// friendship with basic asynchronous socket
-        friend class BasicAsyncSocket<Protocol, Proactor>;
-
-        /// friendship with basic asynchronous stream socket
-        friend class BasicAsyncStreamSocket<Protocol, Proactor>;
-
-    public:
-        using Endpoint = typename Protocol::Endpoint;
-        using Socket = BasicSocket<Protocol>;
-
         /// handler invoked on completion.
         using Handler = Function<void (const std::error_code&)>;
 
-    protected:
-        /**
-         * @brief method called when the connection completes.
-         * @param op completed operation.
-         * @param result 0 on success, or negative errno.
-         */
-        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
-        {
-            complete ((result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code ());
-        }
-
-        /**
-         * @brief method called when the connection is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
-        {
-            complete (make_error_code (std::errc::operation_canceled));
-        }
-
-        /**
-         * @brief invoke the completion handler.
-         * @param code error code reported by the kernel.
-         */
-        void complete (const std::error_code& code) noexcept
-        {
-            this->dispatch ([this, &code] () {
-                Handler handler = std::move (_handler);
-
-                if (code)
-                {
-                    _socket->close ();
-                }
-                else
-                {
-                    _socket->_state = Socket::Connected;
-                }
-
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (code);
-                }
-            });
-        }
+        /// operation submitted to the proactor.
+        IoOperation op = {};
 
         /// handler invoked on completion.
-        Handler _handler;
-
-        /// socket owning this operation.
-        Socket* _socket = nullptr;
+        Handler handler;
     };
 
     /**
      * @brief asynchronous read operation.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncRead : public BasicAsyncOperation<Protocol, Proactor>
+    struct BasicAsyncRead
     {
-        /// friendship with basic asynchronous socket
-        friend class BasicAsyncSocket<Protocol, Proactor>;
-
-        /// friendship with basic asynchronous stream socket
-        friend class BasicAsyncStreamSocket<Protocol, Proactor>;
-
-        /// friendship with basic asynchronous datagram socket
-        friend class BasicAsyncDatagramSocket<Protocol, Proactor>;
-
-    public:
         /// handler invoked on completion.
         using Handler = Function<void (const std::error_code&, size_t)>;
 
-    protected:
-        /**
-         * @brief method called when the read completes.
-         * @param op completed operation.
-         * @param result number of bytes received, or negative errno.
-         */
-        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
-        {
-            complete ((result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code (),
-                      (result > 0) ? static_cast<size_t> (result) : 0);
-        }
-
-        /**
-         * @brief method called when the read is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
-        {
-            complete (make_error_code (std::errc::operation_canceled), 0);
-        }
-
-        /**
-         * @brief invoke the completion handler.
-         * @param code error code reported by the kernel.
-         * @param size number of bytes received.
-         */
-        void complete (const std::error_code& code, size_t size) noexcept
-        {
-            this->dispatch ([this, &code, size] () {
-                Handler handler = std::move (_handler);
-                std::error_code result = code;
-
-                if (_stream)
-                {
-                    if (JOIN_UNLIKELY (!result && (size == 0)))
-                    {
-                        result = make_error_code (Errc::ConnectionClosed);
-                    }
-                }
-                else if (JOIN_UNLIKELY (!result && (_msg.msg_flags & MSG_TRUNC)))
-                {
-                    result = make_error_code (Errc::MessageTooLong);
-                }
-
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (result, size);
-                }
-            });
-        }
+        /// operation submitted to the proactor.
+        IoOperation op = {};
 
         /// handler invoked on completion.
-        Handler _handler;
+        Handler handler;
 
         /// read message header.
-        msghdr _msg = {};
+        msghdr msg = {};
 
         /// read scatter gather entry.
-        iovec _iov = {};
+        iovec iov = {};
 
         /// report an empty read as a closed connection.
-        bool _stream = false;
+        bool stream = false;
     };
 
     /**
      * @brief asynchronous write operation.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncWrite : public BasicAsyncOperation<Protocol, Proactor>
+    struct BasicAsyncWrite
     {
-        /// friendship with basic asynchronous socket
-        friend class BasicAsyncSocket<Protocol, Proactor>;
-
-        /// friendship with basic asynchronous stream socket
-        friend class BasicAsyncStreamSocket<Protocol, Proactor>;
-
-        /// friendship with basic asynchronous datagram socket
-        friend class BasicAsyncDatagramSocket<Protocol, Proactor>;
-
-    public:
         /// handler invoked on completion.
         using Handler = Function<void (const std::error_code&, size_t)>;
 
-    protected:
-        /**
-         * @brief method called when the write completes.
-         * @param op completed operation.
-         * @param result number of bytes sent, or negative errno.
-         */
-        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
-        {
-            complete ((result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code (),
-                      (result > 0) ? static_cast<size_t> (result) : 0);
-        }
-
-        /**
-         * @brief method called when the write is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
-        {
-            complete (make_error_code (std::errc::operation_canceled), 0);
-        }
-
-        /**
-         * @brief invoke the completion handler.
-         * @param code error code reported by the kernel.
-         * @param size number of bytes sent.
-         */
-        void complete (const std::error_code& code, size_t size) noexcept
-        {
-            this->dispatch ([this, &code, size] () {
-                Handler handler = std::move (_handler);
-
-                if (JOIN_LIKELY (handler))
-                {
-                    handler (code, size);
-                }
-            });
-        }
+        /// operation submitted to the proactor.
+        IoOperation op = {};
 
         /// handler invoked on completion.
-        Handler _handler;
+        Handler handler;
 
         /// write message header.
-        msghdr _msg = {};
+        msghdr msg = {};
 
         /// write scatter gather entry.
-        iovec _iov = {};
+        iovec iov = {};
     };
 }
 

@@ -34,15 +34,17 @@ using join::CompletionHandler;
 //   METHOD    : IoOperation
 // =========================================================================
 IoOperation::IoOperation (const IoOperation& other) noexcept
-: code (other.code)
-, index (other.index)
-, linked (other.linked)
-, multishot (other.multishot)
-, group (other.group)
-, handler (other.handler)
-, data (other.data)
-, ring (other.ring)
 {
+    code = other.code;
+    state.store (other.state.load (std::memory_order_relaxed), std::memory_order_relaxed);
+    resume = other.resume;
+    index = other.index;
+    linked = other.linked;
+    multishot = other.multishot;
+    group = other.group;
+    handler = other.handler;
+    data = other.data;
+    ring = other.ring;
 }
 
 // =========================================================================

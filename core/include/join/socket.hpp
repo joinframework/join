@@ -52,9 +52,9 @@ namespace join
     template <class Protocol>
     class BasicSocket
     {
-        /// friendship with basic asynchronous connect operation
+        /// friendship with basic asynchronous socket
         template <class P, class E>
-        friend class BasicAsyncConnect;
+        friend class BasicAsyncSocket;
 
     public:
         using Ptr = std::unique_ptr<BasicSocket<Protocol>>;
