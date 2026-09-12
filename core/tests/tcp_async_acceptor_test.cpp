@@ -56,7 +56,6 @@ protected:
         _completions = 0;
 
         peer ().close ();
-        spare ().close ();
     }
 
     /**
@@ -70,22 +69,18 @@ protected:
     }
 
     /**
-     * @brief get the socket receiving the connection accepted by a resubmitted acceptation.
-     * @return the socket receiving the connection accepted by a resubmitted acceptation.
-     */
-    static Tcp::AsyncSocket& spare ()
-    {
-        static Tcp::AsyncSocket sock;
-        return sock;
-    }
-
-    /**
      * @brief report a completion to the test thread.
+     * @param sock accepted socket.
      * @param ec error reported by the acceptor.
      */
-    static void onReport (const std::error_code& ec)
+    static void onReport (Tcp::Socket&& sock, const std::error_code& ec)
     {
         ScopedLock<Mutex> lock (_mut);
+
+        if (!ec)
+        {
+            peer () = Tcp::AsyncSocket (std::move (sock));
+        }
 
         _code = ec;
         ++_completions;
@@ -94,27 +89,29 @@ protected:
 
     /**
      * @brief handler resubmitting an acceptation from within itself.
+     * @param sock accepted socket.
      * @param ec error reported by the acceptor.
      */
-    static void onAccept (const std::error_code& ec)
+    static void onAccept (Tcp::Socket&& sock, const std::error_code& ec)
     {
         if (!ec)
         {
-            _current->asyncAccept (spare (), onAccept);
+            _current->asyncAccept (onAccept);
         }
 
-        onReport (ec);
+        onReport (std::move (sock), ec);
     }
 
     /**
      * @brief handler closing the acceptor from within itself.
+     * @param sock accepted socket.
      * @param ec error reported by the acceptor.
      */
-    static void onAcceptAndClose (const std::error_code& ec)
+    static void onAcceptAndClose (Tcp::Socket&& sock, const std::error_code& ec)
     {
         _current->close ();
 
-        onReport (ec);
+        onReport (std::move (sock), ec);
     }
 
     /// acceptor address.
@@ -184,14 +181,14 @@ TEST_F (TcpAsyncAcceptor, asyncAccept)
     Tcp::AsyncAcceptor server;
     Tcp::Socket client (Tcp::Socket::Blocking);
 
-    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
 
-    ASSERT_EQ (server.asyncAccept (peer (), onReport), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onReport), 0) << join::lastError.message ();
 
-    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
     ASSERT_EQ (client.connect ({_address, _port}), 0) << join::lastError.message ();
@@ -207,45 +204,9 @@ TEST_F (TcpAsyncAcceptor, asyncAccept)
     ASSERT_TRUE (peer ().connected ());
     ASSERT_EQ (peer ().family (), AF_INET6);
 
-    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
-    client.close ();
-    server.close ();
-}
-
-/**
- * @brief Test asyncAccept method with a peer moved before the acceptation completes.
- */
-TEST_F (TcpAsyncAcceptor, movedPeer)
-{
-    Tcp::AsyncAcceptor server;
-    Tcp::AsyncSocket target;
-    Tcp::Socket client (Tcp::Socket::Blocking);
-
-    ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (target, onReport), 0) << join::lastError.message ();
-
-    Tcp::AsyncSocket moved (std::move (target));
-    Tcp::AsyncSocket assigned;
-
-    assigned = std::move (moved);
-
-    ASSERT_EQ (client.connect ({_address, _port}), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-    }
-
-    ASSERT_TRUE (assigned.connected ());
-    ASSERT_FALSE (moved.opened ());
-    ASSERT_FALSE (target.opened ());
-
-    assigned.close ();
     client.close ();
     server.close ();
 }
@@ -262,7 +223,7 @@ TEST_F (TcpAsyncAcceptor, resubmit)
     _current = &server;
 
     ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (peer (), onAccept), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onAccept), 0) << join::lastError.message ();
     ASSERT_EQ (client1.connect ({_address, _port}), 0) << join::lastError.message ();
 
     {
@@ -298,8 +259,8 @@ TEST_F (TcpAsyncAcceptor, discard)
     Tcp::Socket client (Tcp::Socket::Blocking);
 
     ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (peer (), nullptr), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (peer (), nullptr), -1);
+    ASSERT_EQ (server.asyncAccept (nullptr), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
     ASSERT_EQ (client.connect ({_address, _port}), 0) << join::lastError.message ();
 
@@ -308,7 +269,7 @@ TEST_F (TcpAsyncAcceptor, discard)
     for (int i = 0; (i < 100) && (rearmed == -1); ++i)
     {
         std::this_thread::sleep_for (std::chrono::milliseconds (10));
-        rearmed = server.asyncAccept (spare (), nullptr);
+        rearmed = server.asyncAccept (nullptr);
     }
 
     ASSERT_EQ (rearmed, 0) << join::lastError.message ();
@@ -328,7 +289,7 @@ TEST_F (TcpAsyncAcceptor, closeFromHandler)
     _current = &server;
 
     ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (peer (), onAcceptAndClose), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onAcceptAndClose), 0) << join::lastError.message ();
     ASSERT_EQ (client.connect ({_address, _port}), 0) << join::lastError.message ();
 
     {
@@ -355,7 +316,7 @@ TEST_F (TcpAsyncAcceptor, cancelAccept)
     ASSERT_EQ (server.cancelAccept (), 0) << join::lastError.message ();
     ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
 
-    ASSERT_EQ (server.asyncAccept (peer (), onReport), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onReport), 0) << join::lastError.message ();
 
     ASSERT_EQ (server.cancelAccept (), 0) << join::lastError.message ();
 

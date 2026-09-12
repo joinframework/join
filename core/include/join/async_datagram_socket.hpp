@@ -44,10 +44,8 @@ namespace join
     public:
         using Socket = BasicDatagramSocket<Protocol>;
         using Endpoint = typename Protocol::Endpoint;
-        using AsyncOperation = BasicAsyncOperation<Protocol, Proactor>;
         using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
         using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
-        using State = typename AsyncOperation::State;
         using ReadHandler = typename AsyncRead::Handler;
         using WriteHandler = typename AsyncWrite::Handler;
 
@@ -107,14 +105,6 @@ namespace join
         BasicAsyncDatagramSocket& operator= (BasicAsyncDatagramSocket&& other) noexcept = default;
 
         /**
-         * @brief destroy the socket instance.
-         */
-        ~BasicAsyncDatagramSocket ()
-        {
-            this->close ();
-        }
-
-        /**
          * @brief assign the default remote endpoint for this socket.
          * @param endpoint endpoint to assign.
          * @return 0 on success, -1 on failure.
@@ -143,41 +133,34 @@ namespace join
          */
         int asyncReadFrom (char* data, size_t maxSize, Endpoint& endpoint, ReadHandler handler) noexcept
         {
-            if (JOIN_UNLIKELY (this->_readOp == nullptr))
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
             }
 
-            if (this->_readOp->reserve (*this->_proactor) == -1)
+            if (JOIN_UNLIKELY (!this->armable (this->_readOp->op)))
             {
+                lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            this->_readOp->_handler = std::move (handler);
-            this->_readOp->_iov.iov_base = data;
-            this->_readOp->_iov.iov_len = maxSize;
-            this->_readOp->_msg.msg_name = endpoint.addr ();
-            this->_readOp->_msg.msg_namelen = sizeof (struct sockaddr_storage);
-            this->_readOp->_msg.msg_iov = &this->_readOp->_iov;
-            this->_readOp->_msg.msg_iovlen = 1;
-            this->_readOp->_msg.msg_control = nullptr;
-            this->_readOp->_msg.msg_controllen = 0;
-            this->_readOp->_msg.msg_flags = 0;
-            this->_readOp->_op =
-                IoOperation::makeRecvmsg (this->_socket.handle (), &this->_readOp->_msg, 0, this->_readOp.get ());
+            this->_readOp->handler = std::move (handler);
+            this->_readOp->iov.iov_base = data;
+            this->_readOp->iov.iov_len = maxSize;
+            this->_readOp->msg.msg_name = endpoint.addr ();
+            this->_readOp->msg.msg_namelen = sizeof (struct sockaddr_storage);
+            this->_readOp->msg.msg_iov = &this->_readOp->iov;
+            this->_readOp->msg.msg_iovlen = 1;
+            this->_readOp->msg.msg_control = nullptr;
+            this->_readOp->msg.msg_controllen = 0;
+            this->_readOp->msg.msg_flags = 0;
+            this->_readOp->op = IoOperation::makeRecvmsg (this->_socket.handle (), &this->_readOp->msg, 0, this);
 
-            if (this->_proactor->submit (&this->_readOp->_op, true, false) == -1)
+            if (this->_proactor->submit (&this->_readOp->op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_readOp->release ();
-                this->_readOp->_handler.reset ();
+                this->_readOp->handler.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -206,29 +189,29 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            if (this->_writeOp->reserve (*this->_proactor) == -1)
+            if (JOIN_UNLIKELY (!this->armable (this->_writeOp->op)))
             {
+                lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            this->_writeOp->_handler = std::move (handler);
-            this->_writeOp->_iov.iov_base = const_cast<char*> (data);
-            this->_writeOp->_iov.iov_len = size;
-            this->_writeOp->_msg.msg_name = endpoint.addr ();
-            this->_writeOp->_msg.msg_namelen = endpoint.length ();
-            this->_writeOp->_msg.msg_iov = &this->_writeOp->_iov;
-            this->_writeOp->_msg.msg_iovlen = 1;
-            this->_writeOp->_msg.msg_control = nullptr;
-            this->_writeOp->_msg.msg_controllen = 0;
-            this->_writeOp->_msg.msg_flags = 0;
-            this->_writeOp->_op = IoOperation::makeSendmsg (this->_socket.handle (), &this->_writeOp->_msg,
-                                                            MSG_NOSIGNAL, this->_writeOp.get ());
+            this->_writeOp->handler = std::move (handler);
+            this->_writeOp->iov.iov_base = const_cast<char*> (data);
+            this->_writeOp->iov.iov_len = size;
+            this->_writeOp->msg.msg_name = endpoint.addr ();
+            this->_writeOp->msg.msg_namelen = endpoint.length ();
+            this->_writeOp->msg.msg_iov = &this->_writeOp->iov;
+            this->_writeOp->msg.msg_iovlen = 1;
+            this->_writeOp->msg.msg_control = nullptr;
+            this->_writeOp->msg.msg_controllen = 0;
+            this->_writeOp->msg.msg_flags = 0;
+            this->_writeOp->op =
+                IoOperation::makeSendmsg (this->_socket.handle (), &this->_writeOp->msg, MSG_NOSIGNAL, this);
 
-            if (this->_proactor->submit (&this->_writeOp->_op, true, false) == -1)
+            if (this->_proactor->submit (&this->_writeOp->op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_writeOp->release ();
-                this->_writeOp->_handler.reset ();
+                this->_writeOp->handler.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
             }

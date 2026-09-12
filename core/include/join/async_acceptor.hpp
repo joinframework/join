@@ -30,17 +30,12 @@
 #include <join/acceptor.hpp>
 #include <join/function.hpp>
 #include <join/proactor.hpp>
-#include <join/backoff.hpp>
 
 // C++.
 #include <system_error>
 #include <utility>
-#include <atomic>
-#include <memory>
 
 // C.
-#include <cstdlib>
-#include <cstdint>
 #include <cerrno>
 
 namespace join
@@ -49,16 +44,14 @@ namespace join
      * @brief asynchronous stream acceptor class.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncStreamAcceptor
+    class BasicAsyncStreamAcceptor : public CompletionHandler
     {
     public:
         using Acceptor = BasicStreamAcceptor<Protocol>;
         using Endpoint = typename Protocol::Endpoint;
         using Socket = typename Protocol::Socket;
         using AsyncSocket = BasicAsyncStreamSocket<Protocol, Proactor>;
-        using AsyncOperation = BasicAsyncOperation<Protocol, Proactor>;
         using AsyncAccept = BasicAsyncAccept<Protocol, Proactor>;
-        using State = typename AsyncOperation::State;
         using AcceptHandler = typename AsyncAccept::Handler;
 
         /**
@@ -121,30 +114,16 @@ namespace join
         void close () noexcept
         {
             cancelAccept ();
-
-            if (_proactor->isProactorThread ())
-            {
-                _acceptor.close ();
-                return;
-            }
-
-            _acceptOp->drain ([this] () {
-                cancelAccept ();
-            });
-
             _acceptor.close ();
-
-            _acceptOp->release ();
         }
 
         /**
          * @brief start an asynchronous acceptation.
-         * @param peer closed socket receiving the accepted connection, valid until the handler is invoked.
          * @param handler handler invoked on completion.
          * @param flags accepted socket creation flags.
          * @return 0 on success, -1 on failure.
          */
-        int asyncAccept (AsyncSocket& peer, AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) noexcept
+        int asyncAccept (AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) noexcept
         {
             if (JOIN_UNLIKELY (!_acceptor.opened ()))
             {
@@ -152,31 +131,23 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (peer.opened ()))
+            IoOperation::State state = _acceptOp.op.state.load (std::memory_order_acquire);
+
+            if (JOIN_UNLIKELY ((state != IoOperation::State::Idle) && (state != IoOperation::State::Busy)))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
             }
 
-            if (_acceptOp->reserve (*_proactor) == -1)
-            {
-                return -1;
-            }
+            _acceptOp.remoteLen = sizeof (struct sockaddr_storage);
+            _acceptOp.handler = std::move (handler);
+            _acceptOp.op = IoOperation::makeAccept (_acceptor.handle (), _acceptOp.remote.addr (), &_acceptOp.remoteLen,
+                                                    flags | SOCK_NONBLOCK, this);
 
-            _acceptOp->_remoteLen = sizeof (struct sockaddr_storage);
-            _acceptOp->_handler = std::move (handler);
-            _acceptOp->_peer = &peer;
-            peer._pendingAccept = _acceptOp.get ();
-            _acceptOp->_op = IoOperation::makeAccept (_acceptor.handle (), _acceptOp->_remote.addr (),
-                                                      &_acceptOp->_remoteLen, flags | SOCK_NONBLOCK, _acceptOp.get ());
-
-            if (_proactor->submit (&_acceptOp->_op, true, false) == -1)
+            if (_proactor->submit (&_acceptOp.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _acceptOp->release ();
-                _acceptOp->_handler.reset ();
-                peer._pendingAccept = nullptr;
-                _acceptOp->_peer = nullptr;
+                _acceptOp.handler.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -190,12 +161,7 @@ namespace join
          */
         int cancelAccept () noexcept
         {
-            if (_acceptOp->_state.load (std::memory_order_acquire) != AsyncOperation::Pending)
-            {
-                return 0;
-            }
-
-            if (_proactor->cancel (&_acceptOp->_op, true, true) == -1)
+            if (_proactor->cancel (&_acceptOp.op, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;
             }
@@ -257,15 +223,59 @@ namespace join
             return _acceptor.handle ();
         }
 
-    private:
-        /// underlying synchronous acceptor.
-        Acceptor _acceptor;
+    protected:
+        /**
+         * @brief method called when the acceptation completes.
+         * @param op completed operation.
+         * @param result accepted file descriptor, or negative errno.
+         */
+        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
+        {
+            complete (result);
+        }
 
+        /**
+         * @brief method called when the acceptation is cancelled.
+         * @param op cancelled operation.
+         * @param result negative errno.
+         */
+        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
+        {
+            complete (-ECANCELED);
+        }
+
+        /**
+         * @brief invoke the completion handler.
+         * @param result accepted file descriptor, or negative errno.
+         */
+        void complete (int result) noexcept
+        {
+            AcceptHandler handler = std::move (_acceptOp.handler);
+
+            if (JOIN_UNLIKELY (result < 0))
+            {
+                if (JOIN_LIKELY (handler))
+                {
+                    handler (Socket (), std::error_code (-result, std::generic_category ()));
+                }
+                return;
+            }
+
+            if (JOIN_LIKELY (handler))
+            {
+                handler (Socket (result, _acceptOp.remote), std::error_code ());
+            }
+        }
+
+    private:
         /// proactor driving the operations.
         Proactor* _proactor;
 
+        /// underlying synchronous acceptor.
+        Acceptor _acceptor;
+
         /// accept operation.
-        std::unique_ptr<AsyncAccept> _acceptOp{new AsyncAccept ()};
+        AsyncAccept _acceptOp;
     };
 }
 
