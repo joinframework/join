@@ -171,6 +171,23 @@ protected:
     {
         return (op != nullptr) && (op->state.load (std::memory_order_acquire) == IoOperation::State::Submitted);
     }
+
+    /**
+     * @brief check if an operation is in flight or completing.
+     * @param op operation to check.
+     * @return true if the operation is in flight or completing, false otherwise.
+     */
+    bool pending (const IoOperation* op) const noexcept
+    {
+        if (op == nullptr)
+        {
+            return false;
+        }
+
+        IoOperation::State state = op->state.load (std::memory_order_acquire);
+
+        return (state == IoOperation::State::Submitted) || (state == IoOperation::State::Busy);
+    }
 };
 
 /**

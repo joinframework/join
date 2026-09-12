@@ -103,6 +103,18 @@ protected:
     }
 
     /**
+     * @brief handler delaying its report to widen the completion window.
+     * @param sock accepted socket.
+     * @param ec error reported by the acceptor.
+     */
+    static void onSlowReport (Tcp::Socket&& sock, const std::error_code& ec)
+    {
+        std::this_thread::sleep_for (std::chrono::milliseconds (100));
+
+        onReport (std::move (sock), ec);
+    }
+
+    /**
      * @brief handler closing the acceptor from within itself.
      * @param sock accepted socket.
      * @param ec error reported by the acceptor.
@@ -173,7 +185,7 @@ TEST_F (TcpAsyncAcceptor, close)
     ASSERT_FALSE (server.opened ());
 
     ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
-    ASSERT_EQ (server.asyncAccept (onReport), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onSlowReport), 0) << join::lastError.message ();
     server.close ();
 
     {

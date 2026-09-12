@@ -220,7 +220,7 @@ namespace join
                 backoff ();
             }
             while (!_proactor->isProactorThread () &&
-                   (inFlight (_readOp.get ()) || inFlight (_writeOp.get ()) || inFlight (_connectOp.get ())));
+                   (pending (_readOp.get ()) || pending (_writeOp.get ()) || pending (_connectOp.get ())));
 
             _socket.close ();
         }
@@ -598,6 +598,17 @@ namespace join
         bool inFlight (const Operation* op) const noexcept
         {
             return (op != nullptr) && CompletionHandler::inFlight (&op->op);
+        }
+
+        /**
+         * @brief check if an operation is in flight or completing.
+         * @param op operation to check.
+         * @return true if the operation is in flight or completing, false otherwise.
+         */
+        template <class Operation>
+        bool pending (const Operation* op) const noexcept
+        {
+            return (op != nullptr) && CompletionHandler::pending (&op->op);
         }
 
         /// proactor driving the operations.

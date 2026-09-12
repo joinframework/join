@@ -122,7 +122,7 @@ namespace join
 
                 backoff ();
             }
-            while (!_proactor->isProactorThread () && inFlight (&_acceptOp.op));
+            while (!_proactor->isProactorThread () && pending (&_acceptOp.op));
 
             _acceptor.close ();
         }
