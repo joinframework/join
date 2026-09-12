@@ -114,7 +114,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!this->arm (this->_connectOp)))
+            if (JOIN_UNLIKELY (!this->arm (this->_connectOp.get ())))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;

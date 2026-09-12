@@ -30,6 +30,7 @@
 #include <join/acceptor.hpp>
 #include <join/function.hpp>
 #include <join/proactor.hpp>
+#include <join/backoff.hpp>
 
 // C++.
 #include <system_error>
@@ -113,7 +114,16 @@ namespace join
          */
         void close () noexcept
         {
-            cancelAccept ();
+            Backoff backoff;
+
+            do
+            {
+                cancelAccept ();
+
+                backoff ();
+            }
+            while (!_proactor->isProactorThread () && inFlight (&_acceptOp.op));
+
             _acceptor.close ();
         }
 
@@ -131,12 +141,7 @@ namespace join
                 return -1;
             }
 
-            IoOperation::State expected = IoOperation::State::Idle;
-
-            if (JOIN_UNLIKELY (!_acceptOp.op.state.compare_exchange_strong (expected, IoOperation::State::Submitted,
-                                                                            std::memory_order_acquire,
-                                                                            std::memory_order_relaxed) &&
-                               (expected != IoOperation::State::Busy)))
+            if (JOIN_UNLIKELY (!arm (&_acceptOp.op)))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -164,7 +169,7 @@ namespace join
          */
         int cancelAccept () noexcept
         {
-            if (_acceptOp.op.state.load (std::memory_order_acquire) != IoOperation::State::Submitted)
+            if (!inFlight (&_acceptOp.op))
             {
                 return 0;
             }

@@ -412,6 +412,12 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
 
     bool isWrite = isWriteOp (op->code);
 
+    if (JOIN_UNLIKELY ((isWrite && (_writeOps[op->fd ()] == op)) || (!isWrite && (_readOps[op->fd ()] == op))))
+    {
+        lastError = make_error_code (std::errc::device_or_resource_busy);
+        return -1;
+    }
+
     if (JOIN_UNLIKELY ((isWrite && (_writeOps[op->fd ()] != nullptr)) ||
                        (!isWrite && (_readOps[op->fd ()] != nullptr))))
     {

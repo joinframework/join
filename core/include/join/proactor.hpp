@@ -142,6 +142,35 @@ protected:
     {
         // do nothing.
     }
+
+    /**
+     * @brief arm an operation for submission.
+     * @param op operation to arm.
+     * @return true if the operation was armed, false if already in flight.
+     */
+    bool arm (IoOperation* op) noexcept
+    {
+        if (op == nullptr)
+        {
+            return false;
+        }
+
+        IoOperation::State expected = IoOperation::State::Idle;
+
+        return op->state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
+                                                  std::memory_order_relaxed) ||
+               (expected == IoOperation::State::Busy);
+    }
+
+    /**
+     * @brief check if an operation is in flight.
+     * @param op operation to check.
+     * @return true if the operation is in flight, false otherwise.
+     */
+    bool inFlight (const IoOperation* op) const noexcept
+    {
+        return (op != nullptr) && (op->state.load (std::memory_order_acquire) == IoOperation::State::Submitted);
+    }
 };
 
 /**

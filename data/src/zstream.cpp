@@ -26,6 +26,9 @@
 #include <join/zstream.hpp>
 #include <join/error.hpp>
 
+// C.
+#include <cstdint>
+
 using join::Zstreambuf;
 using join::Zstream;
 

@@ -209,9 +209,18 @@ namespace join
          */
         void close () noexcept
         {
-            cancelRead ();
-            cancelWrite ();
-            cancelConnect ();
+            Backoff backoff;
+
+            do
+            {
+                cancelRead ();
+                cancelWrite ();
+                cancelConnect ();
+
+                backoff ();
+            }
+            while (!_proactor->isProactorThread () &&
+                   (inFlight (_readOp.get ()) || inFlight (_writeOp.get ()) || inFlight (_connectOp.get ())));
 
             _socket.close ();
         }
@@ -231,7 +240,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!arm (_readOp)))
+            if (JOIN_UNLIKELY (!arm (_readOp.get ())))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -275,7 +284,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!arm (_writeOp)))
+            if (JOIN_UNLIKELY (!arm (_writeOp.get ())))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -310,7 +319,7 @@ namespace join
          */
         int cancelRead () noexcept
         {
-            if (!inFlight (_readOp))
+            if (!inFlight (_readOp.get ()))
             {
                 return 0;
             }
@@ -329,7 +338,7 @@ namespace join
          */
         int cancelWrite () noexcept
         {
-            if (!inFlight (_writeOp))
+            if (!inFlight (_writeOp.get ()))
             {
                 return 0;
             }
@@ -348,7 +357,7 @@ namespace join
          */
         int cancelConnect () noexcept
         {
-            if (!inFlight (_connectOp))
+            if (!inFlight (_connectOp.get ()))
             {
                 return 0;
             }
@@ -575,14 +584,9 @@ namespace join
          * @return true if the operation was armed, false if already in flight.
          */
         template <class Operation>
-        bool arm (const std::unique_ptr<Operation>& op) noexcept
+        bool arm (Operation* op) noexcept
         {
-            IoOperation::State expected = IoOperation::State::Idle;
-
-            return (op != nullptr) &&
-                   (op->op.state.compare_exchange_strong (expected, IoOperation::State::Submitted,
-                                                          std::memory_order_acquire, std::memory_order_relaxed) ||
-                    (expected == IoOperation::State::Busy));
+            return (op != nullptr) && CompletionHandler::arm (&op->op);
         }
 
         /**
@@ -591,9 +595,9 @@ namespace join
          * @return true if the operation is in flight, false otherwise.
          */
         template <class Operation>
-        bool inFlight (const std::unique_ptr<Operation>& op) const noexcept
+        bool inFlight (const Operation* op) const noexcept
         {
-            return (op != nullptr) && (op->op.state.load (std::memory_order_acquire) == IoOperation::State::Submitted);
+            return (op != nullptr) && CompletionHandler::inFlight (&op->op);
         }
 
         /// proactor driving the operations.

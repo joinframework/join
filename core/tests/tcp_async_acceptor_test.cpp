@@ -171,6 +171,18 @@ TEST_F (TcpAsyncAcceptor, close)
     ASSERT_TRUE (server.opened ());
     server.close ();
     ASSERT_FALSE (server.opened ());
+
+    ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
+    ASSERT_EQ (server.asyncAccept (onReport), 0) << join::lastError.message ();
+    server.close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_EQ (_completions, 1);
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
+
+    ASSERT_FALSE (server.opened ());
 }
 
 /**

@@ -327,12 +327,10 @@ TEST_F (ProactorTest, submit)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    _readOp.state = IoOperation::State::Submitted;
+    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+
     ASSERT_EQ (proactor.submit (&_readOp, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
-
-    _readOp.state = IoOperation::State::Idle;
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
 
     _invalidOp = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (&_invalidOp, true, false), 0) << join::lastError.message ();
