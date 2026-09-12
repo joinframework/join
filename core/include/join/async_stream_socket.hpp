@@ -120,8 +120,10 @@ namespace join
             AsyncConnect* connect = this->allocateConnect ();
             if (JOIN_UNLIKELY (connect == nullptr))
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::InUse);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             this->_socket._state = Socket::Connecting;

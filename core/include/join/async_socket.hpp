@@ -604,11 +604,6 @@ namespace join
         }
 
         /**
-         * @brief arm an operation for submission.
-         * @param op operation to arm.
-         * @return true if the operation was armed, false if already in flight.
-         */
-        /**
          * @brief allocate a read operation in the arena.
          * @return allocated read operation, or nullptr if the arena is exhausted.
          */
@@ -653,7 +648,7 @@ namespace join
             void* chunk = _writeArena.allocate (sizeof (AsyncConnect));
             if (JOIN_UNLIKELY (chunk == nullptr))
             {
-                return nullptr;
+                return nullptr;  // LCOV_EXCL_LINE
             }
 
             AsyncConnect* connect = new (chunk) AsyncConnect ();
