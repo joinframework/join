@@ -148,17 +148,12 @@ protected:
      * @param op operation to arm.
      * @return true if the operation was armed, false if already in flight.
      */
-    bool arm (IoOperation* op) noexcept
+    bool arm (IoOperation& op) noexcept
     {
-        if (op == nullptr)
-        {
-            return false;
-        }
-
         IoOperation::State expected = IoOperation::State::Idle;
 
-        return op->state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
-                                                  std::memory_order_relaxed) ||
+        return op.state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
+                                                 std::memory_order_relaxed) ||
                (expected == IoOperation::State::Busy);
     }
 
@@ -167,9 +162,9 @@ protected:
      * @param op operation to check.
      * @return true if the operation is in flight, false otherwise.
      */
-    bool inFlight (const IoOperation* op) const noexcept
+    bool inFlight (const IoOperation& op) const noexcept
     {
-        return (op != nullptr) && (op->state.load (std::memory_order_acquire) == IoOperation::State::Submitted);
+        return op.state.load (std::memory_order_acquire) == IoOperation::State::Submitted;
     }
 
     /**
@@ -177,14 +172,9 @@ protected:
      * @param op operation to check.
      * @return true if the operation is in flight or completing, false otherwise.
      */
-    bool pending (const IoOperation* op) const noexcept
+    bool pending (const IoOperation& op) const noexcept
     {
-        if (op == nullptr)
-        {
-            return false;
-        }
-
-        IoOperation::State state = op->state.load (std::memory_order_acquire);
+        IoOperation::State state = op.state.load (std::memory_order_acquire);
 
         return (state == IoOperation::State::Submitted) || (state == IoOperation::State::Busy);
     }
@@ -983,7 +973,7 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
                 break;
             }
         }
-        backoff ();
+        backoff ();  // LCOV_EXCL_LINE
     }
 
     op->resume = IoOperation::State::Idle;
@@ -1013,9 +1003,9 @@ inline void join::BasicProactor::resetOperation (IoOperation* op) noexcept
     IoOperation::State expected = IoOperation::State::Submitted;
     if (!op->state.compare_exchange_strong (expected, IoOperation::State::Idle, std::memory_order_release,
                                             std::memory_order_relaxed) &&
-        (expected != IoOperation::State::Busy))
+        (expected != IoOperation::State::Busy))  // LCOV_EXCL_LINE
     {
-        op->resume = IoOperation::State::Idle;
+        op->resume = IoOperation::State::Idle;  // LCOV_EXCL_LINE
     }
 }
 

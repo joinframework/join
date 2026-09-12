@@ -586,7 +586,7 @@ namespace join
         template <class Operation>
         bool arm (Operation* op) noexcept
         {
-            return (op != nullptr) && CompletionHandler::arm (&op->op);
+            return (op != nullptr) && CompletionHandler::arm (op->op);
         }
 
         /**
@@ -597,7 +597,7 @@ namespace join
         template <class Operation>
         bool inFlight (const Operation* op) const noexcept
         {
-            return (op != nullptr) && CompletionHandler::inFlight (&op->op);
+            return (op != nullptr) && CompletionHandler::inFlight (op->op);
         }
 
         /**
@@ -608,7 +608,7 @@ namespace join
         template <class Operation>
         bool pending (const Operation* op) const noexcept
         {
-            return (op != nullptr) && CompletionHandler::pending (&op->op);
+            return (op != nullptr) && CompletionHandler::pending (op->op);
         }
 
         /// proactor driving the operations.

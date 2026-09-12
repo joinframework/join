@@ -153,6 +153,28 @@ protected:
     }
 
     /**
+     * @brief get the socket receiving the move performed from a handler.
+     * @return the socket receiving the move performed from a handler.
+     */
+    static Udp::AsyncSocket& moved ()
+    {
+        static Udp::AsyncSocket sock;
+        return sock;
+    }
+
+    /**
+     * @brief handler moving the socket from within itself.
+     * @param ec error reported by the socket.
+     * @param size number of bytes read.
+     */
+    static void onReadAndMove (const std::error_code& ec, size_t size)
+    {
+        moved () = std::move (*_current);
+
+        onReport (ec, size);
+    }
+
+    /**
      * @brief handler closing the socket from within itself.
      * @param ec error reported by the socket.
      * @param size number of bytes written.
@@ -269,6 +291,31 @@ TEST_F (UdpAsyncDatagramSocket, move)
     }
 
     client3.close ();
+
+    // move the socket from within its own completion handler.
+    Udp::AsyncSocket client4;
+    ASSERT_EQ (client4.open (dest.protocol ()), 0) << join::lastError.message ();
+
+    _current = &client4;
+
+    ASSERT_EQ (client4.asyncReadFrom (_buf, sizeof (_buf), _from, onReadAndMove), 0) << join::lastError.message ();
+    ASSERT_EQ (client4.asyncWriteTo ("moved", 5, dest, nullptr), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "moved");
+    }
+
+    ASSERT_TRUE (moved ().opened ());
+    ASSERT_FALSE (client4.opened ());
+
+    moved ().close ();
+    _current = nullptr;
 }
 
 /**

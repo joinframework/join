@@ -122,7 +122,7 @@ namespace join
 
                 backoff ();
             }
-            while (!_proactor->isProactorThread () && pending (&_acceptOp.op));
+            while (!_proactor->isProactorThread () && pending (_acceptOp.op));
 
             _acceptor.close ();
         }
@@ -141,7 +141,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!arm (&_acceptOp.op)))
+            if (JOIN_UNLIKELY (!arm (_acceptOp.op)))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -169,7 +169,7 @@ namespace join
          */
         int cancelAccept () noexcept
         {
-            if (!inFlight (&_acceptOp.op))
+            if (!inFlight (_acceptOp.op))
             {
                 return 0;
             }

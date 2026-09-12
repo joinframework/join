@@ -145,7 +145,6 @@ void join::BasicProactor<Policy>::stop (bool sync) noexcept
     {
         _running.store (false, std::memory_order_release);
         cancelAllOperations ();
-        eventLoop ();
         return;
     }
 
@@ -735,7 +734,7 @@ void join::BasicProactor<Policy>::cancelAllOperations () noexcept
         Backoff backoff;
         while (op->state.load (std::memory_order_acquire) == IoOperation::State::Suspended)
         {
-            backoff ();
+            backoff ();  // LCOV_EXCL_LINE
         }
         cancelOperation (op, false);
     }
