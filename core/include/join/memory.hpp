@@ -199,6 +199,15 @@ namespace join
         }
 
         /**
+         * @brief check if the memory is mapped.
+         * @return true if the memory is mapped, false otherwise.
+         */
+        bool mapped () const noexcept
+        {
+            return _ptr != nullptr;
+        }
+
+        /**
          * @brief get a const pointer to the memory at a given offset.
          * @param offset byte offset from the start of the memory.
          * @return pointer to the mapped memory at the specified offset, or nullptr if not opened.
@@ -399,6 +408,15 @@ namespace join
         ~ShmMem () noexcept
         {
             cleanup ();
+        }
+
+        /**
+         * @brief check if the shared memory is mapped.
+         * @return true if the shared memory is mapped, false otherwise.
+         */
+        bool mapped () const noexcept
+        {
+            return _ptr != nullptr;
         }
 
         /**

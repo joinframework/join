@@ -54,7 +54,6 @@ namespace join
         explicit BasicAsyncStreamSocket (Proactor& proactor = ProactorThread::proactor ())
         : BasicAsyncSocket<Protocol, Proactor> (proactor)
         {
-            this->_readOp->stream = true;
         }
 
         /**
@@ -65,7 +64,6 @@ namespace join
         explicit BasicAsyncStreamSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
         : BasicAsyncSocket<Protocol, Proactor> (std::move (sock), proactor)
         {
-            this->_readOp->stream = true;
         }
 
         /**
@@ -102,7 +100,7 @@ namespace join
          */
         int asyncConnect (const Endpoint& endpoint, ConnectHandler handler) noexcept
         {
-            if (JOIN_UNLIKELY (this->_connectOp == nullptr))
+            if (JOIN_UNLIKELY (!this->_writeArena.hasBackend ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
@@ -119,7 +117,8 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            if (JOIN_UNLIKELY (!this->arm (this->_connectOp.get ())))
+            AsyncConnect* connect = this->allocateConnect ();
+            if (JOIN_UNLIKELY (connect == nullptr))
             {
                 // LCOV_EXCL_START
                 lastError = make_error_code (Errc::InUse);
@@ -129,14 +128,15 @@ namespace join
 
             this->_socket._state = Socket::Connecting;
             this->_socket._remote = endpoint;
-            this->_connectOp->handler = std::move (handler);
-            this->_connectOp->op = IoOperation::makeConnect (this->_socket.handle (), this->_socket._remote.addr (),
-                                                             this->_socket._remote.length (), this);
+            connect->handler = std::move (handler);
+            connect->op = IoOperation::makeConnect (this->_socket.handle (), this->_socket._remote.addr (),
+                                                    this->_socket._remote.length (), this);
+            connect->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            if (this->_proactor->submit (&this->_connectOp->op, true, false) == -1)
+            if (this->_proactor->submit (&connect->op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->_connectOp->handler.reset ();
+                this->releaseConnect (connect);
                 this->_socket.close ();
                 return -1;
                 // LCOV_EXCL_STOP

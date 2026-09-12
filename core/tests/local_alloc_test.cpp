@@ -48,10 +48,16 @@ TEST (LocalAlloc, move)
 
     allocator2 = std::move (allocator1);
 
+    ASSERT_FALSE (allocator1.hasBackend ());
+    ASSERT_EQ (allocator1.allocate (64), nullptr);
+
     void* p2 = allocator2.allocate (64);
     ASSERT_EQ (p2, nullptr);
 
     LocalMem::Allocator<1, 64> allocator3 (std::move (allocator2));
+
+    ASSERT_FALSE (allocator2.hasBackend ());
+    ASSERT_TRUE (allocator3.hasBackend ());
 
     void* p3 = allocator3.allocate (64);
     ASSERT_EQ (p3, nullptr);

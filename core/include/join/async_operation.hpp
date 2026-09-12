@@ -100,9 +100,6 @@ namespace join
 
         /// read scatter gather entry.
         iovec iov = {};
-
-        /// report an empty read as a closed connection.
-        bool stream = false;
     };
 
     /**

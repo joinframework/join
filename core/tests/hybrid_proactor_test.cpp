@@ -407,12 +407,6 @@ TEST_F (HybridProactorTest, submit)
     ASSERT_EQ (proactor.submit (&_readOp, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
 
-    _spareOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    _spareOp.state = IoOperation::State::Suspended;
-    ASSERT_EQ (proactor.submit (&_spareOp, true, true), -1);
-    ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
-    _spareOp.state = IoOperation::State::Idle;
-
     _invalidOp = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (&_invalidOp, true, false), 0) << join::lastError.message ();
 
