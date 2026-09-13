@@ -122,6 +122,58 @@ protected:
         onReport (ec, size);
     }
 
+    /**
+     * @brief handler resubmitting a read from within itself.
+     */
+    static void onRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                        [[maybe_unused]] bool more)
+    {
+        if (!ec && (_rearms > 0))
+        {
+            --_rearms;
+            _current->asyncRead (_buf, sizeof (_buf), onRead);
+        }
+
+        onReport (ec, size);
+    }
+
+    /**
+     * @brief handler resubmitting a write from within itself.
+     */
+    static void onWrite (const std::error_code& ec, size_t size)
+    {
+        if (!ec && (_rearms > 0))
+        {
+            --_rearms;
+            _current->asyncWrite (_data, sizeof (_data), onWrite);
+        }
+
+        onReport (ec, size);
+    }
+
+    /**
+     * @brief handler closing the socket from within itself.
+     */
+    static void onWriteAndClose (const std::error_code& ec, size_t size)
+    {
+        _current->close ();
+        onReport (ec, size);
+    }
+
+    /**
+     * @brief wait for the expected number of completions.
+     * @param expected number of completions to wait for.
+     * @return true on success, false on timeout.
+     */
+    static bool wait (int expected)
+    {
+        ScopedLock<Mutex> lock (_mut);
+
+        return _cond.timedWait (lock, std::chrono::milliseconds (_timeout), [expected] () {
+            return _completions >= expected;
+        });
+    }
+
     /// condition mutex.
     static Mutex _mut;
 
@@ -149,6 +201,12 @@ protected:
     /// host.
     static const std::string _host;
 
+    /// socket used by the resubmitting handler.
+    static Icmp::AsyncSocket* _current;
+
+    /// number of resubmissions left to perform from a handler.
+    static int _rearms;
+
     /// timeout.
     static const std::chrono::milliseconds _timeout;
 };
@@ -162,7 +220,47 @@ char IcmpAsyncDatagramSocket::_buf[1024] = {};
 Icmp::Endpoint IcmpAsyncDatagramSocket::_from;
 char IcmpAsyncDatagramSocket::_data[sizeof (struct icmphdr)] = {};
 const std::string IcmpAsyncDatagramSocket::_host = "127.0.0.1";
+Icmp::AsyncSocket* IcmpAsyncDatagramSocket::_current = nullptr;
+int IcmpAsyncDatagramSocket::_rearms = 0;
 const std::chrono::milliseconds IcmpAsyncDatagramSocket::_timeout{1000};
+
+/**
+ * @brief Test move.
+ */
+TEST_F (IcmpAsyncDatagramSocket, move)
+{
+    Icmp::AsyncSocket client1, client3;
+
+    ASSERT_EQ (client1.connect (_host), 0) << join::lastError.message ();
+    ASSERT_TRUE (client1.opened ());
+
+    Icmp::AsyncSocket client2 (std::move (client1));
+    ASSERT_TRUE (client2.opened ());
+    ASSERT_FALSE (client1.opened ());
+
+    ASSERT_EQ (client1.asyncRead (_buf, sizeof (_buf), nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client1.asyncWrite (_data, sizeof (_data), nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client1.cancelRead (0), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancelWrite (0), 0) << join::lastError.message ();
+    client1.close ();
+
+    ASSERT_NE (client2.asyncRead (_buf, sizeof (_buf), onRead), -1) << join::lastError.message ();
+
+    client3 = std::move (client2);
+
+    ASSERT_TRUE (client3.opened ());
+    ASSERT_FALSE (client2.opened ());
+
+    ASSERT_NE (client3.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+
+    ASSERT_TRUE (wait (1));
+    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_GT (_transferred, 0u);
+
+    client3.close ();
+}
 
 /**
  * @brief Test open method.
@@ -378,6 +476,76 @@ TEST_F (IcmpAsyncDatagramSocket, asyncRead)
         }));
         ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
     }
+
+    client.close ();
+}
+
+/**
+ * @brief Test async operations resubmitted from their own handlers.
+ */
+TEST_F (IcmpAsyncDatagramSocket, resubmit)
+{
+    Icmp::AsyncSocket client;
+
+    _current = &client;
+    _rearms = 1;
+
+    ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onRead), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+
+    ASSERT_TRUE (wait (1));
+    ASSERT_FALSE (_code) << _code.message ();
+
+    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+
+    ASSERT_TRUE (wait (2));
+    ASSERT_FALSE (_code) << _code.message ();
+
+    _rearms = 1;
+    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), onWrite), -1) << join::lastError.message ();
+
+    ASSERT_TRUE (wait (4));
+    ASSERT_FALSE (_code) << _code.message ();
+
+    client.close ();
+    _current = nullptr;
+}
+
+/**
+ * @brief Test close called from within a write handler.
+ */
+TEST_F (IcmpAsyncDatagramSocket, closeFromWriteHandler)
+{
+    Icmp::AsyncSocket client;
+
+    _current = &client;
+
+    ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
+
+    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), onWriteAndClose), -1) << join::lastError.message ();
+
+    ASSERT_TRUE (wait (1));
+    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (client.opened ());
+
+    _current = nullptr;
+}
+
+/**
+ * @brief Test a datagram larger than the supplied buffer.
+ */
+TEST_F (IcmpAsyncDatagramSocket, truncated)
+{
+    Icmp::AsyncSocket client;
+    char small[sizeof (struct icmphdr) / 2] = {};
+
+    ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (small, sizeof (small), onReportRead), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+
+    ASSERT_TRUE (wait (1));
+    ASSERT_EQ (_code, Errc::MessageTooLong) << _code.message ();
 
     client.close ();
 }
