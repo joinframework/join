@@ -44,7 +44,7 @@ using join::Proactor;
 /**
  * @brief Class used to test the unix asynchronous stream socket API.
  */
-class TcpAsyncStreamSocket : public ::testing::Test
+class TcpAsyncSocket : public ::testing::Test
 {
 protected:
     /**
@@ -261,26 +261,26 @@ protected:
     static const std::chrono::milliseconds _timeout;
 };
 
-Mutex TcpAsyncStreamSocket::_mut;
-Condition TcpAsyncStreamSocket::_cond;
-std::error_code TcpAsyncStreamSocket::_code;
-int TcpAsyncStreamSocket::_completions = 0;
-size_t TcpAsyncStreamSocket::_transferred = 0;
-char TcpAsyncStreamSocket::_buf[1024] = {};
-bool TcpAsyncStreamSocket::_more = false;
-char TcpAsyncStreamSocket::_echobuf[1024] = {};
-Tcp::AsyncSocket* TcpAsyncStreamSocket::_current = nullptr;
-int TcpAsyncStreamSocket::_rearms = 0;
-const IpAddress TcpAsyncStreamSocket::_host = "::1";
-const IpAddress TcpAsyncStreamSocket::_blackhole = "192.0.2.1";
-const uint16_t TcpAsyncStreamSocket::_port = 5034;
-const uint16_t TcpAsyncStreamSocket::_stallport = 5035;
-const std::chrono::milliseconds TcpAsyncStreamSocket::_timeout{1000};
+Mutex TcpAsyncSocket::_mut;
+Condition TcpAsyncSocket::_cond;
+std::error_code TcpAsyncSocket::_code;
+int TcpAsyncSocket::_completions = 0;
+size_t TcpAsyncSocket::_transferred = 0;
+char TcpAsyncSocket::_buf[1024] = {};
+bool TcpAsyncSocket::_more = false;
+char TcpAsyncSocket::_echobuf[1024] = {};
+Tcp::AsyncSocket* TcpAsyncSocket::_current = nullptr;
+int TcpAsyncSocket::_rearms = 0;
+const IpAddress TcpAsyncSocket::_host = "::1";
+const IpAddress TcpAsyncSocket::_blackhole = "192.0.2.1";
+const uint16_t TcpAsyncSocket::_port = 5034;
+const uint16_t TcpAsyncSocket::_stallport = 5035;
+const std::chrono::milliseconds TcpAsyncSocket::_timeout{1000};
 
 /**
  * @brief Test move.
  */
-TEST_F (TcpAsyncStreamSocket, move)
+TEST_F (TcpAsyncSocket, move)
 {
     Tcp::AsyncSocket client1, client3;
 
@@ -354,7 +354,7 @@ TEST_F (TcpAsyncStreamSocket, move)
 /**
  * @brief Test open method.
  */
-TEST_F (TcpAsyncStreamSocket, open)
+TEST_F (TcpAsyncSocket, open)
 {
     Tcp::AsyncSocket client;
 
@@ -367,7 +367,7 @@ TEST_F (TcpAsyncStreamSocket, open)
 /**
  * @brief Test close method.
  */
-TEST_F (TcpAsyncStreamSocket, close)
+TEST_F (TcpAsyncSocket, close)
 {
     Tcp::AsyncSocket client;
 
@@ -375,12 +375,23 @@ TEST_F (TcpAsyncStreamSocket, close)
     ASSERT_TRUE (client.opened ());
     client.close ();
     ASSERT_FALSE (client.opened ());
+
+    for (int i = 0; i < 10; ++i)
+    {
+        Tcp::AsyncSocket closing;
+
+        ASSERT_EQ (closing.asyncConnect ({_blackhole, _port}, nullptr), 0) << join::lastError.message ();
+        ASSERT_TRUE (closing.connecting ());
+
+        closing.close ();
+        ASSERT_FALSE (closing.opened ());
+    }
 }
 
 /**
  * @brief Test bind method.
  */
-TEST_F (TcpAsyncStreamSocket, bind)
+TEST_F (TcpAsyncSocket, bind)
 {
     Tcp::AsyncSocket client;
 
@@ -392,7 +403,7 @@ TEST_F (TcpAsyncStreamSocket, bind)
 /**
  * @brief Test bindToDevice method.
  */
-TEST_F (TcpAsyncStreamSocket, bindToDevice)
+TEST_F (TcpAsyncSocket, bindToDevice)
 {
     Tcp::AsyncSocket client;
 
@@ -406,7 +417,7 @@ TEST_F (TcpAsyncStreamSocket, bindToDevice)
 /**
  * @brief Test asyncConnect method.
  */
-TEST_F (TcpAsyncStreamSocket, asyncConnect)
+TEST_F (TcpAsyncSocket, asyncConnect)
 {
     Tcp::AsyncSocket client;
 
@@ -478,7 +489,7 @@ TEST_F (TcpAsyncStreamSocket, asyncConnect)
 /**
  * @brief Test asyncReadMulti method.
  */
-TEST_F (TcpAsyncStreamSocket, asyncReadMulti)
+TEST_F (TcpAsyncSocket, asyncReadMulti)
 {
     Tcp::AsyncSocket client;
 
@@ -543,7 +554,7 @@ TEST_F (TcpAsyncStreamSocket, asyncReadMulti)
     }
 
     ASSERT_EQ (client.asyncReadMulti (0, nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     client.close ();
@@ -554,7 +565,7 @@ TEST_F (TcpAsyncStreamSocket, asyncReadMulti)
 /**
  * @brief Test asyncWrite method.
  */
-TEST_F (TcpAsyncStreamSocket, asyncWrite)
+TEST_F (TcpAsyncSocket, asyncWrite)
 {
     Tcp::AsyncSocket client;
 
@@ -605,7 +616,7 @@ TEST_F (TcpAsyncStreamSocket, asyncWrite)
 /**
  * @brief Test asyncRead method.
  */
-TEST_F (TcpAsyncStreamSocket, asyncRead)
+TEST_F (TcpAsyncSocket, asyncRead)
 {
     Tcp::AsyncSocket client;
 
@@ -677,13 +688,35 @@ TEST_F (TcpAsyncStreamSocket, asyncRead)
         ASSERT_EQ (_transferred, 0u);
     }
 
+    ASSERT_EQ (::close (client.handle ()), 0);
+
+    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf),
+                                 [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                                     [[maybe_unused]] bool more) {
+                                     ScopedLock<Mutex> lock (_mut);
+                                     _code = ec;
+                                     _transferred = size;
+                                     ++_completions;
+                                     _cond.signal ();
+                                 }),
+               -1)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 4;
+        }));
+        ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
+    }
+
     client.close ();
 }
 
 /**
  * @brief Test asyncRead method resubmitted from its own handler.
  */
-TEST_F (TcpAsyncStreamSocket, resubmit)
+TEST_F (TcpAsyncSocket, resubmit)
 {
     Tcp::AsyncSocket client;
 
@@ -751,7 +784,7 @@ TEST_F (TcpAsyncStreamSocket, resubmit)
 /**
  * @brief Test close from within the write completion handler.
  */
-TEST_F (TcpAsyncStreamSocket, closeFromWriteHandler)
+TEST_F (TcpAsyncSocket, closeFromWriteHandler)
 {
     Tcp::AsyncSocket client;
 
@@ -802,7 +835,7 @@ TEST_F (TcpAsyncStreamSocket, closeFromWriteHandler)
 /**
  * @brief Test cancelRead method.
  */
-TEST_F (TcpAsyncStreamSocket, cancelRead)
+TEST_F (TcpAsyncSocket, cancelRead)
 {
     Tcp::AsyncSocket client;
 
@@ -847,7 +880,7 @@ TEST_F (TcpAsyncStreamSocket, cancelRead)
     }
 
     ASSERT_EQ (client.asyncRead (_buf, sizeof (_buf), nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
@@ -866,7 +899,7 @@ TEST_F (TcpAsyncStreamSocket, cancelRead)
 /**
  * @brief Test cancelConnect method.
  */
-TEST_F (TcpAsyncStreamSocket, cancelConnect)
+TEST_F (TcpAsyncSocket, cancelConnect)
 {
     Tcp::AsyncSocket client;
 
@@ -921,7 +954,7 @@ TEST_F (TcpAsyncStreamSocket, cancelConnect)
 /**
  * @brief Test cancelWrite method.
  */
-TEST_F (TcpAsyncStreamSocket, cancelWrite)
+TEST_F (TcpAsyncSocket, cancelWrite)
 {
     Tcp::AsyncSocket client;
 
@@ -978,7 +1011,7 @@ TEST_F (TcpAsyncStreamSocket, cancelWrite)
     }
 
     ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     ASSERT_EQ (sender.asyncConnect ({_host, _stallport}, nullptr), -1);
@@ -1004,7 +1037,7 @@ TEST_F (TcpAsyncStreamSocket, cancelWrite)
 /**
  * @brief Test setOption method.
  */
-TEST_F (TcpAsyncStreamSocket, setOption)
+TEST_F (TcpAsyncSocket, setOption)
 {
     Tcp::AsyncSocket client;
 
@@ -1018,7 +1051,7 @@ TEST_F (TcpAsyncStreamSocket, setOption)
 /**
  * @brief Test localEndpoint method.
  */
-TEST_F (TcpAsyncStreamSocket, localEndpoint)
+TEST_F (TcpAsyncSocket, localEndpoint)
 {
     Tcp::AsyncSocket client;
 
@@ -1032,7 +1065,7 @@ TEST_F (TcpAsyncStreamSocket, localEndpoint)
 /**
  * @brief Test remoteEndpoint method.
  */
-TEST_F (TcpAsyncStreamSocket, remoteEndpoint)
+TEST_F (TcpAsyncSocket, remoteEndpoint)
 {
     Tcp::AsyncSocket client;
 
@@ -1062,7 +1095,7 @@ TEST_F (TcpAsyncStreamSocket, remoteEndpoint)
 /**
  * @brief Test opened method.
  */
-TEST_F (TcpAsyncStreamSocket, opened)
+TEST_F (TcpAsyncSocket, opened)
 {
     Tcp::AsyncSocket client;
 
@@ -1076,7 +1109,7 @@ TEST_F (TcpAsyncStreamSocket, opened)
 /**
  * @brief Test connected method.
  */
-TEST_F (TcpAsyncStreamSocket, connected)
+TEST_F (TcpAsyncSocket, connected)
 {
     Tcp::AsyncSocket client;
 
@@ -1107,7 +1140,7 @@ TEST_F (TcpAsyncStreamSocket, connected)
 /**
  * @brief Test connecting method.
  */
-TEST_F (TcpAsyncStreamSocket, connecting)
+TEST_F (TcpAsyncSocket, connecting)
 {
     Tcp::AsyncSocket client;
 
@@ -1120,7 +1153,7 @@ TEST_F (TcpAsyncStreamSocket, connecting)
 /**
  * @brief Test canRead method.
  */
-TEST_F (TcpAsyncStreamSocket, canRead)
+TEST_F (TcpAsyncSocket, canRead)
 {
     Tcp::AsyncSocket client;
 
@@ -1150,7 +1183,7 @@ TEST_F (TcpAsyncStreamSocket, canRead)
 /**
  * @brief Test mtu method.
  */
-TEST_F (TcpAsyncStreamSocket, mtu)
+TEST_F (TcpAsyncSocket, mtu)
 {
     Tcp::AsyncSocket client;
 
@@ -1181,7 +1214,7 @@ TEST_F (TcpAsyncStreamSocket, mtu)
 /**
  * @brief Test family method.
  */
-TEST_F (TcpAsyncStreamSocket, family)
+TEST_F (TcpAsyncSocket, family)
 {
     Tcp::AsyncSocket client;
 
@@ -1193,7 +1226,7 @@ TEST_F (TcpAsyncStreamSocket, family)
 /**
  * @brief Test type method.
  */
-TEST_F (TcpAsyncStreamSocket, type)
+TEST_F (TcpAsyncSocket, type)
 {
     Tcp::AsyncSocket client;
 
@@ -1205,7 +1238,7 @@ TEST_F (TcpAsyncStreamSocket, type)
 /**
  * @brief Test protocol method.
  */
-TEST_F (TcpAsyncStreamSocket, protocol)
+TEST_F (TcpAsyncSocket, protocol)
 {
     Tcp::AsyncSocket client;
 
@@ -1217,7 +1250,7 @@ TEST_F (TcpAsyncStreamSocket, protocol)
 /**
  * @brief Test handle method.
  */
-TEST_F (TcpAsyncStreamSocket, handle)
+TEST_F (TcpAsyncSocket, handle)
 {
     Tcp::AsyncSocket client;
 
@@ -1232,7 +1265,7 @@ TEST_F (TcpAsyncStreamSocket, handle)
 /**
  * @brief Test registerFixedBuffers method.
  */
-TEST_F (TcpAsyncStreamSocket, registerFixedBuffers)
+TEST_F (TcpAsyncSocket, registerFixedBuffers)
 {
     Proactor proactor;
     Tcp::AsyncSocket client (proactor);

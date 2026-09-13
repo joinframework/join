@@ -444,7 +444,28 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
         ring->bind ();
     }
 
-    return _reactor.addHandler (op->fd (), this, _readOps[op->fd ()] != nullptr, _writeOps[op->fd ()] != nullptr);
+    int err = _reactor.addHandler (op->fd (), this, _readOps[op->fd ()] != nullptr, _writeOps[op->fd ()] != nullptr);
+    if (JOIN_UNLIKELY (err == -1))
+    {
+        if (isWrite)
+        {
+            _writeOps[op->fd ()] = nullptr;
+        }
+        else
+        {
+            _readOps[op->fd ()] = nullptr;
+        }
+
+        if (JOIN_UNLIKELY (ring != nullptr))
+        {
+            op->ring->unbind ();
+            op->ring = nullptr;
+        }
+
+        resetOperation (op);
+    }
+
+    return err;
 }
 
 // =========================================================================

@@ -121,7 +121,7 @@ namespace join
             if (JOIN_UNLIKELY (connect == nullptr))
             {
                 // LCOV_EXCL_START
-                lastError = make_error_code (Errc::InUse);
+                lastError = make_error_code (Errc::OutOfMemory);
                 return -1;
                 // LCOV_EXCL_STOP
             }
