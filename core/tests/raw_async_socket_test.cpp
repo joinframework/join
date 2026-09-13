@@ -42,6 +42,8 @@ using join::ScopedLock;
 using join::IpAddress;
 using join::MacAddress;
 using join::Raw;
+using join::Proactor;
+using join::LocalMem;
 
 /**
  * @brief Class used to test the raw asynchronous socket API.
@@ -94,6 +96,7 @@ protected:
 
         _code = {};
         _completions = 0;
+        _more = false;
         _transferred = 0;
     }
 
@@ -164,6 +167,29 @@ protected:
     }
 
     /**
+     * @brief report a multishot completion to the waiting test.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param more true if the read stays armed.
+     */
+    static void onReportMulti (const std::error_code& ec, const char* data, size_t size, bool more)
+    {
+        ScopedLock<Mutex> lock (_mut);
+
+        if (!ec && (size <= sizeof (_buf)))
+        {
+            ::memcpy (_buf, data, size);
+        }
+
+        _code = ec;
+        _transferred = size;
+        _more = more;
+        ++_completions;
+        _cond.signal ();
+    }
+
+    /**
      * @brief wait for the expected number of completions.
      * @param expected number of completions to wait for.
      * @return true on success, false on timeout.
@@ -215,6 +241,9 @@ protected:
     /// socket used by the resubmitting handler.
     static Raw::AsyncSocket* _current;
 
+    /// last reported multishot state.
+    static bool _more;
+
     /// number of resubmissions left to perform from a handler.
     static int _rearms;
 
@@ -231,6 +260,7 @@ RawAsyncSocket::Packet RawAsyncSocket::_packet;
 char RawAsyncSocket::_buf[2048] = {};
 const std::string RawAsyncSocket::_interface = "lo";
 Raw::AsyncSocket* RawAsyncSocket::_current = nullptr;
+bool RawAsyncSocket::_more = false;
 int RawAsyncSocket::_rearms = 0;
 const std::chrono::milliseconds RawAsyncSocket::_timeout{1000};
 
@@ -323,6 +353,74 @@ TEST_F (RawAsyncSocket, bindToDevice)
     ASSERT_EQ (rawSocket.bindToDevice ("foo"), -1);
     rawSocket.close ();
 }
+
+/**
+ * @brief Test asyncReadMulti method.
+ */
+TEST_F (RawAsyncSocket, asyncReadMulti)
+{
+    Raw::AsyncSocket rawSocket;
+
+    ASSERT_EQ (rawSocket.asyncReadMulti (0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+
+    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    ASSERT_EQ (rawSocket.registerBufferRing (0, arena), 0) << join::lastError.message ();
+
+    ssize_t index = rawSocket.asyncReadMulti (0, onReportMulti);
+    ASSERT_NE (index, -1) << join::lastError.message ();
+
+    for (int i = 1; i <= 2; ++i)
+    {
+        ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+            << join::lastError.message ();
+
+        ASSERT_TRUE (wait (i));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_GT (_transferred, 0u);
+        ASSERT_TRUE (_more);
+    }
+
+    ASSERT_EQ (rawSocket.cancelRead (static_cast<size_t> (index)), 0) << join::lastError.message ();
+
+    ASSERT_TRUE (wait (3));
+    ASSERT_EQ (_code, std::errc::operation_canceled);
+    ASSERT_FALSE (_more);
+
+#ifdef JOIN_HAS_IO_URING
+    for (size_t i = 0; i < Raw::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (rawSocket.asyncReadMulti (0, nullptr), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (rawSocket.asyncReadMulti (0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+#endif
+
+    rawSocket.close ();
+
+    ASSERT_EQ (rawSocket.unregisterBufferRing (0), 0) << join::lastError.message ();
+}
+
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief Test registerFixedBuffers method.
+ */
+TEST_F (RawAsyncSocket, registerFixedBuffers)
+{
+    Proactor proactor;
+    Raw::AsyncSocket rawSocket (proactor);
+
+    LocalMem::Allocator<1, 1024, 4096> arena;
+
+    ASSERT_EQ (rawSocket.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.registerFixedBuffers (arena), -1);
+    ASSERT_EQ (rawSocket.unregisterFixedBuffers (), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.unregisterFixedBuffers (), -1);
+}
+#endif
 
 /**
  * @brief Test asyncWrite method.

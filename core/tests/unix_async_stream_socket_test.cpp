@@ -594,7 +594,7 @@ TEST_F (UnixAsyncStreamSocket, asyncReadMulti)
     }
 
     ASSERT_EQ (client.asyncReadMulti (0, nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     client.close ();

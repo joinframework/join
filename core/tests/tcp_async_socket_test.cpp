@@ -543,7 +543,7 @@ TEST_F (TcpAsyncSocket, asyncReadMulti)
     }
 
     ASSERT_EQ (client.asyncReadMulti (0, nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     client.close ();
@@ -869,7 +869,7 @@ TEST_F (TcpAsyncSocket, cancelRead)
     }
 
     ASSERT_EQ (client.asyncRead (_buf, sizeof (_buf), nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
@@ -1000,7 +1000,7 @@ TEST_F (TcpAsyncSocket, cancelWrite)
     }
 
     ASSERT_EQ (sender.asyncWrite (_buf, sizeof (_buf), nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     ASSERT_EQ (sender.asyncConnect ({_host, _stallport}, nullptr), -1);

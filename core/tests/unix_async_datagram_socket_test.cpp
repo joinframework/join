@@ -644,7 +644,7 @@ TEST_F (UnixAsyncDatagramSocket, asyncReadFromMulti)
     }
 
     ASSERT_EQ (client.asyncReadFromMulti (0, nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     client.close ();

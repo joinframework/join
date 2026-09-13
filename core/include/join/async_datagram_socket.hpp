@@ -146,7 +146,7 @@ namespace join
             AsyncRead* read = this->allocateRead ();
             if (JOIN_UNLIKELY (read == nullptr))
             {
-                lastError = make_error_code (Errc::InUse);
+                lastError = make_error_code (Errc::OutOfMemory);
                 return -1;
             }
 
@@ -194,7 +194,7 @@ namespace join
             AsyncRead* read = this->allocateRead ();
             if (JOIN_UNLIKELY (read == nullptr))
             {
-                lastError = make_error_code (Errc::InUse);
+                lastError = make_error_code (Errc::OutOfMemory);
                 return -1;
             }
 
@@ -249,7 +249,7 @@ namespace join
             AsyncWrite* write = this->allocateWrite ();
             if (JOIN_UNLIKELY (write == nullptr))
             {
-                lastError = make_error_code (Errc::InUse);
+                lastError = make_error_code (Errc::OutOfMemory);
                 return -1;
             }
 

@@ -40,6 +40,7 @@ using join::IpAddress;
 using join::Icmp;
 using join::Thread;
 using join::Proactor;
+using join::LocalMem;
 
 /**
  * @brief Class used to test the icmp asynchronous datagram socket API.
@@ -72,6 +73,7 @@ protected:
 
         _code = {};
         _completions = 0;
+        _more = false;
         _transferred = 0;
     }
 
@@ -174,6 +176,32 @@ protected:
         });
     }
 
+    /**
+     * @brief report a multishot completion to the test thread.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param from endpoint the datagram was received from.
+     * @param more true if the read stays armed.
+     */
+    static void onReportMulti (const std::error_code& ec, const char* data, size_t size, const Icmp::Endpoint& from,
+                               bool more)
+    {
+        ScopedLock<Mutex> lock (_mut);
+
+        if (!ec && (size <= sizeof (_buf)))
+        {
+            ::memcpy (_buf, data, size);
+        }
+
+        _code = ec;
+        _transferred = size;
+        _from = from;
+        _more = more;
+        ++_completions;
+        _cond.signal ();
+    }
+
     /// condition mutex.
     static Mutex _mut;
 
@@ -194,6 +222,9 @@ protected:
 
     /// endpoint the last datagram was received from.
     static Icmp::Endpoint _from;
+
+    /// last reported multishot state.
+    static bool _more;
 
     /// echo request sent by the tests.
     static char _data[sizeof (struct icmphdr)];
@@ -218,6 +249,7 @@ int IcmpAsyncSocket::_completions = 0;
 size_t IcmpAsyncSocket::_transferred = 0;
 char IcmpAsyncSocket::_buf[1024] = {};
 Icmp::Endpoint IcmpAsyncSocket::_from;
+bool IcmpAsyncSocket::_more = false;
 char IcmpAsyncSocket::_data[sizeof (struct icmphdr)] = {};
 const std::string IcmpAsyncSocket::_host = "127.0.0.1";
 Icmp::AsyncSocket* IcmpAsyncSocket::_current = nullptr;
@@ -414,6 +446,68 @@ TEST_F (IcmpAsyncSocket, asyncReadFrom)
     server.close ();
 
     ASSERT_EQ (_from, Icmp::Endpoint (_host));
+}
+
+/**
+ * @brief Test asyncReadFromMulti method.
+ */
+TEST_F (IcmpAsyncSocket, asyncReadFromMulti)
+{
+    Icmp::AsyncSocket client, server;
+
+    ASSERT_EQ (server.asyncReadFromMulti (0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (server.bind (_host), 0) << join::lastError.message ();
+
+    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    ASSERT_EQ (server.registerBufferRing (0, arena), 0) << join::lastError.message ();
+
+    ssize_t index = server.asyncReadFromMulti (0, onReportMulti);
+    ASSERT_NE (index, -1) << join::lastError.message ();
+
+    ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
+
+    for (int i = 1; i <= 2; ++i)
+    {
+        ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [i] () {
+                return _completions >= i;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+            ASSERT_GT (_transferred, 0u);
+            ASSERT_EQ (_from, Icmp::Endpoint (_host));
+            ASSERT_TRUE (_more);
+        }
+    }
+
+    ASSERT_EQ (server.cancelRead (static_cast<size_t> (index)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::operation_canceled;
+        }));
+        ASSERT_FALSE (_more);
+    }
+
+#ifdef JOIN_HAS_IO_URING
+    for (size_t i = 0; i < Icmp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (server.asyncReadFromMulti (0, nullptr), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (server.asyncReadFromMulti (0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+#endif
+
+    client.close ();
+    server.close ();
+
+    ASSERT_EQ (server.unregisterBufferRing (0), 0) << join::lastError.message ();
 }
 
 /**

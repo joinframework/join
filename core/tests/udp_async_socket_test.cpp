@@ -512,7 +512,7 @@ TEST_F (UdpAsyncSocket, asyncWriteTo)
     }
 
     ASSERT_EQ (client.asyncWriteTo ("hello", 5, dest, nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     client.close ();
@@ -553,7 +553,7 @@ TEST_F (UdpAsyncSocket, asyncReadFrom)
     }
 
     ASSERT_EQ (client.asyncReadFrom (_buf, sizeof (_buf), _from, nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     client.close ();
@@ -614,7 +614,7 @@ TEST_F (UdpAsyncSocket, asyncReadFromMulti)
     }
 
     ASSERT_EQ (client.asyncReadFromMulti (0, nullptr), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
     client.close ();
