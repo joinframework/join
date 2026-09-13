@@ -644,6 +644,18 @@ TEST_F (UdpAsyncDatagramSocket, asyncWrite)
         ASSERT_EQ (_transferred, 5u);
     }
 
+    ASSERT_EQ (::close (client.handle ()), 0);
+
+    ASSERT_NE (client.asyncWrite ("hello", 5, onReport), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
+    }
+
     client.close ();
 }
 
