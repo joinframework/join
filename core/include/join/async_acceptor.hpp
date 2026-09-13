@@ -53,7 +53,7 @@ namespace join
         using Socket = typename Protocol::Socket;
         using AsyncSocket = BasicAsyncStreamSocket<Protocol, Proactor>;
         using AsyncAccept = BasicAsyncAccept<Protocol, Proactor>;
-        using AcceptHandler = typename AsyncAccept::Handler;
+        using AcceptHandler = typename AsyncAccept::Accept;
 
         /**
          * @brief create the acceptor instance.
@@ -148,14 +148,49 @@ namespace join
             }
 
             _acceptOp.remoteLen = sizeof (struct sockaddr_storage);
-            _acceptOp.handler = std::move (handler);
+            _acceptOp.acceptHandler = std::move (handler);
             _acceptOp.op = IoOperation::makeAccept (_acceptor.handle (), _acceptOp.remote.addr (), &_acceptOp.remoteLen,
                                                     flags | SOCK_NONBLOCK, this);
 
             if (_proactor->submit (&_acceptOp.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                _acceptOp.handler.reset ();
+                _acceptOp.acceptHandler.reset ();
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief start an asynchronous multishot acceptation, staying armed until cancelled or failed.
+         * @param handler handler invoked on each acceptation, the last call reporting more as false.
+         * @param flags accepted socket creation flags.
+         * @return 0 on success, -1 on failure.
+         */
+        int asyncAcceptMulti (AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) noexcept
+        {
+            if (JOIN_UNLIKELY (!_acceptor.opened ()))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            if (JOIN_UNLIKELY (!arm (_acceptOp.op)))
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            _acceptOp.remote = Endpoint ();
+            _acceptOp.acceptHandler = std::move (handler);
+            _acceptOp.op = IoOperation::makeAcceptMulti (_acceptor.handle (), flags | SOCK_NONBLOCK, this);
+
+            if (_proactor->submit (&_acceptOp.op, true, false) == -1)
+            {
+                // LCOV_EXCL_START
+                _acceptOp.acceptHandler.reset ();
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -244,7 +279,7 @@ namespace join
          */
         void onComplete ([[maybe_unused]] IoOperation* op, int result) override
         {
-            complete (result);
+            completeAccept (result);
         }
 
         /**
@@ -254,27 +289,34 @@ namespace join
          */
         void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
         {
-            complete (-ECANCELED);
+            completeAccept (-ECANCELED);
         }
 
         /**
          * @brief invoke the completion handler.
          * @param result accepted file descriptor, or negative errno.
          */
-        void complete (int result) noexcept
+        void completeAccept (int result) noexcept
         {
-            AcceptHandler handler = std::move (_acceptOp.handler);
+            Socket sock = (result < 0) ? Socket () : Socket (result, _acceptOp.remote);
+            std::error_code code =
+                (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code ();
+
+            if (_acceptOp.op.more)
+            {
+                if (JOIN_LIKELY (_acceptOp.acceptHandler))
+                {
+                    _acceptOp.acceptHandler (std::move (sock), code, true);
+                }
+
+                return;
+            }
+
+            AcceptHandler handler = std::move (_acceptOp.acceptHandler);
 
             if (JOIN_LIKELY (handler))
             {
-                if (JOIN_UNLIKELY (result < 0))
-                {
-                    handler (Socket (), std::error_code (-result, std::generic_category ()));
-                }
-                else
-                {
-                    handler (Socket (result, _acceptOp.remote), std::error_code ());
-                }
+                handler (std::move (sock), code, false);
             }
 
             IoOperation::State expected = IoOperation::State::Busy;

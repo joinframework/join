@@ -523,6 +523,17 @@ namespace join
          */
         const Endpoint& remoteEndpoint () const noexcept
         {
+            if (_remote == Endpoint ())
+            {
+                struct sockaddr_storage sa;
+                socklen_t sa_len = sizeof (struct sockaddr_storage);
+
+                if (::getpeername (this->_handle, reinterpret_cast<struct sockaddr*> (&sa), &sa_len) != -1)
+                {
+                    _remote = Endpoint (reinterpret_cast<struct sockaddr*> (&sa), sa_len);
+                }
+            }
+
             return _remote;
         }
 
@@ -606,7 +617,7 @@ namespace join
 
     protected:
         /// remote endpoint.
-        Endpoint _remote;
+        mutable Endpoint _remote;
     };
 
     /**

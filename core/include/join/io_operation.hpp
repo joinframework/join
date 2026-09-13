@@ -371,6 +371,9 @@ namespace join
         /// rearm the operation after each completion.
         bool multishot = false;
 
+        /// true while a multishot operation stays armed.
+        bool more = false;
+
         /// provided buffer group.
         uint16_t group = 0;
 

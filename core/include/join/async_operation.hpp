@@ -49,13 +49,13 @@ namespace join
         using Socket = typename Protocol::Socket;
 
         /// handler invoked on completion.
-        using Handler = Function<void (Socket&&, const std::error_code&)>;
+        using Accept = Function<void (Socket&&, const std::error_code&, bool), 16>;
 
         /// operation submitted to the proactor.
         IoOperation op = {};
 
         /// handler invoked on completion.
-        Handler handler;
+        Accept acceptHandler;
 
         /// remote endpoint.
         Endpoint remote;
@@ -65,35 +65,27 @@ namespace join
     };
 
     /**
-     * @brief asynchronous connect operation.
-     */
-    template <class Protocol, class Proactor>
-    struct BasicAsyncConnect
-    {
-        /// handler invoked on completion.
-        using Handler = Function<void (const std::error_code&)>;
-
-        /// operation submitted to the proactor.
-        IoOperation op = {};
-
-        /// handler invoked on completion.
-        Handler handler;
-    };
-
-    /**
      * @brief asynchronous read operation.
      */
     template <class Protocol, class Proactor>
     struct BasicAsyncRead
     {
+        using Endpoint = typename Protocol::Endpoint;
+
         /// handler invoked on completion.
-        using Handler = Function<void (const std::error_code&, size_t)>;
+        using Read = Function<void (const std::error_code&, const char*, size_t, bool), 16>;
+
+        /// handler invoked on completion, reporting the endpoint the data are coming from.
+        using ReadFrom = Function<void (const std::error_code&, const char*, size_t, const Endpoint&, bool), 16>;
 
         /// operation submitted to the proactor.
         IoOperation op = {};
 
         /// handler invoked on completion.
-        Handler handler;
+        Read readHandler;
+
+        /// handler invoked on completion, reporting the endpoint the data are coming from.
+        ReadFrom readFromHandler;
 
         /// read message header.
         msghdr msg = {};
@@ -108,14 +100,20 @@ namespace join
     template <class Protocol, class Proactor>
     struct BasicAsyncWrite
     {
+        /// handler invoked on connection completion.
+        using Connect = Function<void (const std::error_code&), 16>;
+
         /// handler invoked on completion.
-        using Handler = Function<void (const std::error_code&, size_t)>;
+        using Write = Function<void (const std::error_code&, size_t), 16>;
 
         /// operation submitted to the proactor.
         IoOperation op = {};
 
+        /// handler invoked on connection completion.
+        Connect connectHandler;
+
         /// handler invoked on completion.
-        Handler handler;
+        Write writeHandler;
 
         /// write message header.
         msghdr msg = {};

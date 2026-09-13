@@ -45,6 +45,7 @@
 
 // C.
 #include <cstddef>
+#include <cstring>
 
 namespace join
 {
@@ -60,10 +61,10 @@ namespace join
         using Option = typename Socket::Option;
         using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
         using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
-        using AsyncConnect = BasicAsyncConnect<Protocol, Proactor>;
-        using ReadHandler = typename AsyncRead::Handler;
-        using WriteHandler = typename AsyncWrite::Handler;
-        using ConnectHandler = typename AsyncConnect::Handler;
+        using ReadHandler = typename AsyncRead::Read;
+        using ReadFromHandler = typename AsyncRead::ReadFrom;
+        using ConnectHandler = typename AsyncWrite::Connect;
+        using WriteHandler = typename AsyncWrite::Write;
 
         /// number of concurrent operations per direction.
         static constexpr size_t _opCount = 8;
@@ -71,9 +72,8 @@ namespace join
         /// size of a read operation slot.
         static constexpr size_t _readSize = nextPow2 (sizeof (AsyncRead));
 
-        /// size of a write operation slot, large enough to also hold a connect operation.
-        static constexpr size_t _writeSize =
-            nextPow2 ((sizeof (AsyncWrite) > sizeof (AsyncConnect)) ? sizeof (AsyncWrite) : sizeof (AsyncConnect));
+        /// size of a write operation slot.
+        static constexpr size_t _writeSize = nextPow2 (sizeof (AsyncWrite));
 
         using ReadArena = LocalMem::Allocator<_opCount, _readSize>;
         using WriteArena = LocalMem::Allocator<_opCount, _writeSize>;
@@ -257,7 +257,7 @@ namespace join
                 return -1;
             }
 
-            read->handler = std::move (handler);
+            read->readHandler = std::move (handler);
             read->iov.iov_base = data;
             read->iov.iov_len = maxSize;
             read->msg.msg_name = nullptr;
@@ -268,6 +268,45 @@ namespace join
             read->msg.msg_controllen = 0;
             read->msg.msg_flags = 0;
             read->op = IoOperation::makeRecvmsg (_socket.handle (), &read->msg, 0, this, link);
+            read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
+
+            size_t index = _readArena.getIndex (read);
+
+            if (_proactor->submit (&read->op, flush, false) == -1)
+            {
+                // LCOV_EXCL_START
+                releaseRead (read);
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            return static_cast<ssize_t> (index);
+        }
+
+        /**
+         * @brief start an asynchronous multishot read, staying armed until cancelled or failed.
+         * @param group provided buffer group to receive into, registered on the proactor.
+         * @param handler handler invoked on each completion, the buffer being valid during the call only.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncReadMulti (uint16_t group, ReadHandler handler, bool flush = true) noexcept
+        {
+            if (JOIN_UNLIKELY (!_socket.opened ()))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            AsyncRead* read = allocateRead ();
+            if (JOIN_UNLIKELY (read == nullptr))
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            read->readHandler = std::move (handler);
+            read->op = IoOperation::makeRecvMulti (_socket.handle (), group, 0, this);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = _readArena.getIndex (read);
@@ -308,7 +347,7 @@ namespace join
                 return -1;
             }
 
-            write->handler = std::move (handler);
+            write->writeHandler = std::move (handler);
             write->iov.iov_base = const_cast<char*> (data);
             write->iov.iov_len = size;
             write->msg.msg_name = nullptr;
@@ -383,6 +422,29 @@ namespace join
             }
 
             return 0;
+        }
+
+        /**
+         * @brief register a provided buffer ring on the proactor driving this socket.
+         * @param group buffer group id.
+         * @param arena arena owning the buffers, reserved until the ring is unregistered, must outlive the proactor.
+         * @return 0 on success, -1 on failure.
+         * @throw std::system_error if the descriptor ring cannot be mapped.
+         */
+        template <size_t Count, size_t Size>
+        int registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
+        {
+            return _proactor->registerBufferRing (group, arena);
+        }
+
+        /**
+         * @brief unregister a provided buffer ring from the proactor driving this socket.
+         * @param group buffer group id.
+         * @return 0 on success, -1 on failure.
+         */
+        int unregisterBufferRing (uint16_t group)
+        {
+            return _proactor->unregisterBufferRing (group);
         }
 
         /**
@@ -511,70 +573,19 @@ namespace join
          */
         void dispatch (IoOperation* op, const std::error_code& code, size_t size) noexcept
         {
-            if (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::RecvMsg)
+            IoOperation::Opcode opcode = static_cast<IoOperation::Opcode> (op->code);
+
+            if ((opcode == IoOperation::Opcode::RecvMsg) || (opcode == IoOperation::Opcode::Recv))
             {
                 completeRead (reinterpret_cast<AsyncRead*> (op), code, size);
             }
-            else if (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::SendMsg)
+            else if (opcode == IoOperation::Opcode::SendMsg)
             {
                 completeWrite (reinterpret_cast<AsyncWrite*> (op), code, size);
             }
             else
             {
-                completeConnect (reinterpret_cast<AsyncConnect*> (op), code);
-            }
-        }
-
-        /**
-         * @brief invoke the read completion handler.
-         * @param code error code reported by the kernel.
-         * @param size number of bytes received.
-         */
-        void completeRead (AsyncRead* read, const std::error_code& code, size_t size) noexcept
-        {
-            ReadHandler handler = std::move (read->handler);
-            std::error_code result = code;
-
-            if (_socket.type () == SOCK_STREAM)
-            {
-                if (JOIN_UNLIKELY (!result && (size == 0)))
-                {
-                    result = make_error_code (Errc::ConnectionClosed);
-                }
-            }
-            else if (JOIN_UNLIKELY (!result && (read->msg.msg_flags & MSG_TRUNC)))
-            {
-                result = make_error_code (Errc::MessageTooLong);
-            }
-
-            if (JOIN_LIKELY (!read->op.multishot))
-            {
-                releaseRead (read);
-            }
-
-            if (JOIN_LIKELY (handler))
-            {
-                handler (result, size);
-            }
-        }
-
-        /**
-         * @brief invoke the write completion handler.
-         * @param code error code reported by the kernel.
-         * @param size number of bytes sent.
-         */
-        void completeWrite (AsyncWrite* write, const std::error_code& code, size_t size) noexcept
-        {
-            WriteHandler handler = std::move (write->handler);
-
-            if (JOIN_LIKELY (!write->op.multishot))
-            {
-                releaseWrite (write);
-            }
-
-            if (JOIN_LIKELY (handler))
-            {
-                handler (code, size);
+                completeConnect (reinterpret_cast<AsyncWrite*> (op), code);
             }
         }
 
@@ -582,11 +593,11 @@ namespace join
          * @brief invoke the connect completion handler.
          * @param code error code reported by the kernel.
          */
-        void completeConnect (AsyncConnect* connect, const std::error_code& code) noexcept
+        void completeConnect (AsyncWrite* connect, const std::error_code& code) noexcept
         {
-            ConnectHandler handler = std::move (connect->handler);
+            ConnectHandler handler = std::move (connect->connectHandler);
 
-            releaseConnect (connect);
+            releaseWrite (connect);
 
             if (code)
             {
@@ -600,6 +611,94 @@ namespace join
             if (JOIN_LIKELY (handler))
             {
                 handler (code);
+            }
+        }
+
+        /**
+         * @brief invoke the read completion handler.
+         * @param read completed read operation.
+         * @param code error code reported by the kernel.
+         * @param size number of bytes received.
+         */
+        void completeRead (AsyncRead* read, const std::error_code& code, size_t size) noexcept
+        {
+            std::error_code result = code;
+            const char* data = nullptr;
+
+            if (static_cast<IoOperation::Opcode> (read->op.code) == IoOperation::Opcode::Recv)
+            {
+                data = static_cast<const char*> (read->op.data.stream.buf);
+            }
+            else
+            {
+                data = static_cast<const char*> (read->msg.msg_iov->iov_base);
+            }
+
+            if (_socket.type () == SOCK_STREAM)
+            {
+                if (JOIN_UNLIKELY (!result && (size == 0)))
+                {
+                    result = make_error_code (Errc::ConnectionClosed);
+                }
+            }
+            else if (JOIN_UNLIKELY (!result && (read->msg.msg_flags & MSG_TRUNC)))
+            {
+                result = make_error_code (Errc::MessageTooLong);
+            }
+
+            Endpoint from;
+
+            if (read->msg.msg_name != nullptr)
+            {
+                from = Endpoint (static_cast<const struct sockaddr*> (read->msg.msg_name), read->msg.msg_namelen);
+            }
+
+            if (read->op.more)
+            {
+                if (read->readFromHandler)
+                {
+                    read->readFromHandler (result, data, size, from, true);
+                }
+                else if (JOIN_LIKELY (read->readHandler))
+                {
+                    read->readHandler (result, data, size, true);
+                }
+
+                return;
+            }
+
+            ReadHandler handler = std::move (read->readHandler);
+            ReadFromHandler fromHandler = std::move (read->readFromHandler);
+
+            releaseRead (read);
+
+            if (fromHandler)
+            {
+                fromHandler (result, data, size, from, false);
+            }
+            else if (JOIN_LIKELY (handler))
+            {
+                handler (result, data, size, false);
+            }
+        }
+
+        /**
+         * @brief invoke the write completion handler.
+         * @param code error code reported by the kernel.
+         * @param size number of bytes sent.
+         */
+        void completeWrite (AsyncWrite* write, const std::error_code& code, size_t size) noexcept
+        {
+            WriteHandler handler = std::move (write->writeHandler);
+
+            if (JOIN_LIKELY (!write->op.multishot))
+            {
+                releaseWrite (write);
+            }
+
+            if (JOIN_LIKELY (handler))
+            {
+                handler (code, size);
             }
         }
 
@@ -640,24 +739,6 @@ namespace join
         }
 
         /**
-         * @brief allocate a connect operation in the write arena.
-         * @return allocated connect operation, or nullptr if the arena is exhausted.
-         */
-        AsyncConnect* allocateConnect () noexcept
-        {
-            void* chunk = _writeArena.allocate (sizeof (AsyncConnect));
-            if (JOIN_UNLIKELY (chunk == nullptr))
-            {
-                return nullptr;  // LCOV_EXCL_LINE
-            }
-
-            AsyncConnect* connect = new (chunk) AsyncConnect ();
-            _writeOps[_writeArena.getIndex (chunk)].store (&connect->op, std::memory_order_release);
-
-            return connect;
-        }
-
-        /**
          * @brief return a read operation to the arena.
          * @param read read operation to release.
          */
@@ -677,17 +758,6 @@ namespace join
             _writeOps[_writeArena.getIndex (write)].store (nullptr, std::memory_order_release);
             write->~AsyncWrite ();
             _writeArena.deallocate (write);
-        }
-
-        /**
-         * @brief return a connect operation to the write arena.
-         * @param connect connect operation to release.
-         */
-        void releaseConnect (AsyncConnect* connect) noexcept
-        {
-            _writeOps[_writeArena.getIndex (connect)].store (nullptr, std::memory_order_release);
-            connect->~AsyncConnect ();
-            _writeArena.deallocate (connect);
         }
 
         /**

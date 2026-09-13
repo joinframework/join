@@ -87,6 +87,38 @@ protected:
         _cond.signal ();
     }
 
+    /**
+     * @brief report a read completion to the test thread.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param more true if the read stays armed.
+     */
+    static void onReportRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                              [[maybe_unused]] bool more)
+    {
+        onReport (ec, size);
+    }
+
+    /**
+     * @brief report a read completion and the endpoint it came from to the test thread.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param from endpoint the datagram was received from.
+     * @param more true if the read stays armed.
+     */
+    static void onReportFrom (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                              const Icmp::Endpoint& from, [[maybe_unused]] bool more)
+    {
+        {
+            ScopedLock<Mutex> lock (_mut);
+            _from = from;
+        }
+
+        onReport (ec, size);
+    }
+
     /// condition mutex.
     static Mutex _mut;
 
@@ -263,7 +295,7 @@ TEST_F (IcmpAsyncDatagramSocket, asyncReadFrom)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (server.bind (_host), 0) << join::lastError.message ();
-    ASSERT_NE (server.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (server.asyncReadFrom (_buf, sizeof (_buf), _from, onReportFrom), -1) << join::lastError.message ();
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
     ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
@@ -319,7 +351,7 @@ TEST_F (IcmpAsyncDatagramSocket, asyncRead)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onReportRead), -1) << join::lastError.message ();
     ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
 
     {
@@ -343,7 +375,7 @@ TEST_F (IcmpAsyncDatagramSocket, cancelRead)
 
     ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
     ASSERT_EQ (client.bind (_host), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReportFrom), -1) << join::lastError.message ();
     ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
 
     {

@@ -112,6 +112,19 @@ protected:
     }
 
     /**
+     * @brief report a read completion to the waiting test.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param more true if the read stays armed.
+     */
+    static void onReadCompletion (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                                  [[maybe_unused]] bool more)
+    {
+        onCompletion (ec, size);
+    }
+
+    /**
      * @brief wait for the expected number of completions.
      * @param expected number of completions to wait for.
      * @return true on success, false on timeout.
@@ -257,7 +270,7 @@ TEST_F (RawAsyncSocket, asyncRead)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onCompletion), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onReadCompletion), -1) << join::lastError.message ();
 
     ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
         << join::lastError.message ();
@@ -267,7 +280,7 @@ TEST_F (RawAsyncSocket, asyncRead)
     ASSERT_GT (_transferred, 0u);
 
     // a message larger than the buffer must be reported as truncated.
-    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_packet) / 2, onCompletion), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_packet) / 2, onReadCompletion), -1) << join::lastError.message ();
     ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
         << join::lastError.message ();
 
@@ -287,7 +300,7 @@ TEST_F (RawAsyncSocket, cancelRead)
     ASSERT_EQ (rawSocket.cancelRead (0), 0) << join::lastError.message ();
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onCompletion), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onReadCompletion), -1) << join::lastError.message ();
     ASSERT_EQ (rawSocket.cancelRead (0), 0) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));

@@ -53,6 +53,7 @@ protected:
 
         _code = {};
         _completions = 0;
+        _more = false;
 
         peer ().close ();
     }
@@ -79,8 +80,9 @@ protected:
      * @brief report a completion to the test thread.
      * @param sock accepted socket.
      * @param ec error reported by the acceptor.
+     * @param more true if the acceptation stays armed.
      */
-    static void onReport (UnixStream::Socket&& sock, const std::error_code& ec)
+    static void onReport (UnixStream::Socket&& sock, const std::error_code& ec, bool more)
     {
         ScopedLock<Mutex> lock (_mut);
 
@@ -90,6 +92,7 @@ protected:
         }
 
         _code = ec;
+        _more = more;
         ++_completions;
         _cond.signal ();
     }
@@ -98,39 +101,42 @@ protected:
      * @brief handler resubmitting an acceptation from within itself.
      * @param sock accepted socket.
      * @param ec error reported by the acceptor.
+     * @param more true if the acceptation stays armed.
      */
-    static void onAccept (UnixStream::Socket&& sock, const std::error_code& ec)
+    static void onAccept (UnixStream::Socket&& sock, const std::error_code& ec, bool more)
     {
         if (!ec)
         {
             _current->asyncAccept (onAccept);
         }
 
-        onReport (std::move (sock), ec);
+        onReport (std::move (sock), ec, more);
     }
 
     /**
      * @brief handler delaying its report to widen the completion window.
      * @param sock accepted socket.
      * @param ec error reported by the acceptor.
+     * @param more true if the acceptation stays armed.
      */
-    static void onSlowReport (UnixStream::Socket&& sock, const std::error_code& ec)
+    static void onSlowReport (UnixStream::Socket&& sock, const std::error_code& ec, bool more)
     {
         std::this_thread::sleep_for (std::chrono::milliseconds (100));
 
-        onReport (std::move (sock), ec);
+        onReport (std::move (sock), ec, more);
     }
 
     /**
      * @brief handler closing the acceptor from within itself.
      * @param sock accepted socket.
      * @param ec error reported by the acceptor.
+     * @param more true if the acceptation stays armed.
      */
-    static void onAcceptAndClose (UnixStream::Socket&& sock, const std::error_code& ec)
+    static void onAcceptAndClose (UnixStream::Socket&& sock, const std::error_code& ec, bool more)
     {
         _current->close ();
 
-        onReport (std::move (sock), ec);
+        onReport (std::move (sock), ec, more);
     }
 
     /// acceptor path.
@@ -151,6 +157,9 @@ protected:
     /// number of completions reported.
     static int _completions;
 
+    /// last reported multishot state.
+    static bool _more;
+
     /// acceptor used by the resubmitting handler.
     static UnixStream::AsyncAcceptor* _current;
 };
@@ -161,6 +170,7 @@ Mutex UnixAsyncAcceptor::_mut;
 Condition UnixAsyncAcceptor::_cond;
 std::error_code UnixAsyncAcceptor::_code;
 int UnixAsyncAcceptor::_completions = 0;
+bool UnixAsyncAcceptor::_more = false;
 UnixStream::AsyncAcceptor* UnixAsyncAcceptor::_current = nullptr;
 
 /**
@@ -233,6 +243,53 @@ TEST_F (UnixAsyncAcceptor, asyncAccept)
 
     client.close ();
     server.close ();
+}
+
+/**
+ * @brief Test asyncAcceptMulti method.
+ */
+TEST_F (UnixAsyncAcceptor, asyncAcceptMulti)
+{
+    UnixStream::AsyncAcceptor server;
+
+    ASSERT_EQ (server.asyncAcceptMulti (nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (server.create (_path), 0) << join::lastError.message ();
+
+    ASSERT_EQ (server.asyncAcceptMulti (onReport), 0) << join::lastError.message ();
+
+    ASSERT_EQ (server.asyncAcceptMulti (nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    for (int i = 1; i <= 2; ++i)
+    {
+        UnixStream::Socket client (UnixStream::Socket::Blocking);
+
+        ASSERT_EQ (client.connect (_path), 0) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [i] () {
+                return _completions >= i;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+            ASSERT_TRUE (_more);
+        }
+
+        ASSERT_TRUE (peer ().connected ());
+        ASSERT_EQ (peer ().family (), AF_UNIX);
+
+        client.close ();
+    }
+
+    server.close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+        ASSERT_FALSE (_more);
+    }
 }
 
 /**

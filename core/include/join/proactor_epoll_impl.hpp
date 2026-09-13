@@ -782,6 +782,7 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
     if (op->multishot &&
         ((result > 0) || ((result == 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::Accept)))))
     {
+        op->more = true;
         notifyOperation (op, result, false);
     }
     else

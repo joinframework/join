@@ -46,8 +46,9 @@ namespace join
         using Endpoint = typename Protocol::Endpoint;
         using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
         using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
-        using ReadHandler = typename AsyncRead::Handler;
-        using WriteHandler = typename AsyncWrite::Handler;
+        using ReadHandler = typename AsyncRead::Read;
+        using ReadFromHandler = typename AsyncRead::ReadFrom;
+        using WriteHandler = typename AsyncWrite::Write;
 
         /**
          * @brief create the socket instance.
@@ -133,8 +134,8 @@ namespace join
          * @param link link this operation to the next one submitted.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncReadFrom (char* data, size_t maxSize, Endpoint& endpoint, ReadHandler handler, bool flush = true,
-                               bool link = false) noexcept
+        ssize_t asyncReadFrom (char* data, size_t maxSize, Endpoint& endpoint, ReadFromHandler handler,
+                               bool flush = true, bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
@@ -149,7 +150,7 @@ namespace join
                 return -1;
             }
 
-            read->handler = std::move (handler);
+            read->readFromHandler = std::move (handler);
             read->iov.iov_base = data;
             read->iov.iov_len = maxSize;
             read->msg.msg_name = endpoint.addr ();
@@ -160,6 +161,52 @@ namespace join
             read->msg.msg_controllen = 0;
             read->msg.msg_flags = 0;
             read->op = IoOperation::makeRecvmsg (this->_socket.handle (), &read->msg, 0, this, link);
+            read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
+
+            size_t index = this->_readArena.getIndex (read);
+
+            if (this->_proactor->submit (&read->op, flush, false) == -1)
+            {
+                // LCOV_EXCL_START
+                this->releaseRead (read);
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            return static_cast<ssize_t> (index);
+        }
+
+        /**
+         * @brief start an asynchronous multishot read, reporting the endpoint the data are coming from.
+         * @param group provided buffer group to receive into, registered on the proactor.
+         * @param handler handler invoked on each completion, buffer and endpoint valid during the call only.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncReadFromMulti (uint16_t group, ReadFromHandler handler, bool flush = true) noexcept
+        {
+            if (JOIN_UNLIKELY (!this->_socket.opened ()))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            AsyncRead* read = this->allocateRead ();
+            if (JOIN_UNLIKELY (read == nullptr))
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            read->readFromHandler = std::move (handler);
+            read->msg.msg_name = nullptr;
+            read->msg.msg_namelen = sizeof (struct sockaddr_storage);
+            read->msg.msg_iov = &read->iov;
+            read->msg.msg_iovlen = 1;
+            read->msg.msg_control = nullptr;
+            read->msg.msg_controllen = 0;
+            read->msg.msg_flags = 0;
+            read->op = IoOperation::makeRecvmsgMulti (this->_socket.handle (), group, &read->msg, 0, this);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_readArena.getIndex (read);
@@ -206,7 +253,7 @@ namespace join
                 return -1;
             }
 
-            write->handler = std::move (handler);
+            write->writeHandler = std::move (handler);
             write->iov.iov_base = const_cast<char*> (data);
             write->iov.iov_len = size;
             write->msg.msg_name = endpoint.addr ();

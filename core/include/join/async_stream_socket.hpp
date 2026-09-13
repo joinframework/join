@@ -44,8 +44,8 @@ namespace join
     public:
         using Socket = BasicStreamSocket<Protocol>;
         using Endpoint = typename Protocol::Endpoint;
-        using AsyncConnect = BasicAsyncConnect<Protocol, Proactor>;
-        using ConnectHandler = typename AsyncConnect::Handler;
+        using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
+        using ConnectHandler = typename AsyncWrite::Connect;
 
         /**
          * @brief create the socket instance.
@@ -117,7 +117,7 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            AsyncConnect* connect = this->allocateConnect ();
+            AsyncWrite* connect = this->allocateWrite ();
             if (JOIN_UNLIKELY (connect == nullptr))
             {
                 // LCOV_EXCL_START
@@ -128,7 +128,7 @@ namespace join
 
             this->_socket._state = Socket::Connecting;
             this->_socket._remote = endpoint;
-            connect->handler = std::move (handler);
+            connect->connectHandler = std::move (handler);
             connect->op = IoOperation::makeConnect (this->_socket.handle (), this->_socket._remote.addr (),
                                                     this->_socket._remote.length (), this);
             connect->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
@@ -136,7 +136,7 @@ namespace join
             if (this->_proactor->submit (&connect->op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseConnect (connect);
+                this->releaseWrite (connect);
                 this->_socket.close ();
                 return -1;
                 // LCOV_EXCL_STOP

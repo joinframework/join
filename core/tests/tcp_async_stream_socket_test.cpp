@@ -38,6 +38,7 @@ using join::Condition;
 using join::ScopedLock;
 using join::IpAddress;
 using join::Tcp;
+using join::LocalMem;
 
 /**
  * @brief Class used to test the unix asynchronous stream socket API.
@@ -57,6 +58,7 @@ protected:
 
         _code = {};
         _completions = 0;
+        _more = false;
         _transferred = 0;
         _rearms = 0;
     }
@@ -83,9 +85,12 @@ protected:
     /**
      * @brief receive the data to send back.
      * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
      * @param size number of bytes read.
+     * @param more true if the read stays armed.
      */
-    static void onEchoRead (const std::error_code& ec, size_t size)
+    static void onEchoRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                            [[maybe_unused]] bool more)
     {
         if (!ec)
         {
@@ -110,8 +115,9 @@ protected:
      * @brief adopt the socket accepted by the echo server.
      * @param sock accepted socket.
      * @param ec error reported by the acceptor.
+     * @param more true if the acceptation stays armed.
      */
-    static void onEchoAccept (Tcp::Socket&& sock, const std::error_code& ec)
+    static void onEchoAccept (Tcp::Socket&& sock, const std::error_code& ec, [[maybe_unused]] bool more)
     {
         if (!ec)
         {
@@ -163,9 +169,12 @@ protected:
     /**
      * @brief handler resubmitting a read from within itself.
      * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
      * @param size number of bytes read.
+     * @param more true if the read stays armed.
      */
-    static void onRead (const std::error_code& ec, size_t size)
+    static void onRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                        [[maybe_unused]] bool more)
     {
         if (!ec && (_rearms > 0))
         {
@@ -184,6 +193,29 @@ protected:
     /// echo server.
     Tcp::AsyncAcceptor _server;
 
+    /**
+     * @brief report a multishot completion to the test thread.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param more true if the read stays armed.
+     */
+    static void onReportMulti (const std::error_code& ec, const char* data, size_t size, bool more)
+    {
+        ScopedLock<Mutex> lock (_mut);
+
+        if (!ec && (size <= sizeof (_buf)))
+        {
+            ::memcpy (_buf, data, size);
+        }
+
+        _code = ec;
+        _transferred = size;
+        _more = more;
+        ++_completions;
+        _cond.signal ();
+    }
+
     /// condition mutex.
     static Mutex _mut;
 
@@ -201,6 +233,9 @@ protected:
 
     /// read buffer.
     static char _buf[1024];
+
+    /// last reported multishot state.
+    static bool _more;
 
     /// buffer used by the echo server.
     static char _echobuf[1024];
@@ -231,6 +266,7 @@ std::error_code TcpAsyncStreamSocket::_code;
 int TcpAsyncStreamSocket::_completions = 0;
 size_t TcpAsyncStreamSocket::_transferred = 0;
 char TcpAsyncStreamSocket::_buf[1024] = {};
+bool TcpAsyncStreamSocket::_more = false;
 char TcpAsyncStreamSocket::_echobuf[1024] = {};
 Tcp::AsyncSocket* TcpAsyncStreamSocket::_current = nullptr;
 int TcpAsyncStreamSocket::_rearms = 0;
@@ -439,6 +475,82 @@ TEST_F (TcpAsyncStreamSocket, asyncConnect)
 }
 
 /**
+ * @brief Test asyncReadMulti method.
+ */
+TEST_F (TcpAsyncStreamSocket, asyncReadMulti)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.asyncReadMulti (0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (client.asyncConnect ({_host, _port},
+                                    [] (const std::error_code& ec) {
+                                        ScopedLock<Mutex> lock (_mut);
+                                        _code = ec;
+                                        ++_completions;
+                                        _cond.signal ();
+                                    }),
+               0)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    ASSERT_EQ (client.registerBufferRing (0, arena), 0) << join::lastError.message ();
+
+    ssize_t index = client.asyncReadMulti (0, onReportMulti);
+    ASSERT_NE (index, -1) << join::lastError.message ();
+
+    for (int i = 2; i <= 3; ++i)
+    {
+        ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [i] () {
+                return _completions >= i;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+            ASSERT_EQ (_transferred, 5u);
+            ASSERT_EQ (std::string (_buf, 5), "hello");
+            ASSERT_TRUE (_more);
+        }
+    }
+
+    ASSERT_EQ (client.cancelRead (static_cast<size_t> (index)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 4;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+        ASSERT_FALSE (_more);
+    }
+
+#ifdef JOIN_HAS_IO_URING
+    for (size_t i = 0; i < Tcp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (client.asyncReadMulti (0, nullptr), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (client.asyncReadMulti (0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+#endif
+
+    client.close ();
+
+    ASSERT_EQ (client.unregisterBufferRing (0), 0) << join::lastError.message ();
+}
+
+/**
  * @brief Test asyncWrite method.
  */
 TEST_F (TcpAsyncStreamSocket, asyncWrite)
@@ -518,7 +630,8 @@ TEST_F (TcpAsyncStreamSocket, asyncRead)
     }
 
     ASSERT_NE (client.asyncRead (_buf, sizeof (_buf),
-                                 [] (const std::error_code& ec, size_t size) {
+                                 [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                                     [[maybe_unused]] bool more) {
                                      ScopedLock<Mutex> lock (_mut);
                                      _code = ec;
                                      _transferred = size;
@@ -541,7 +654,8 @@ TEST_F (TcpAsyncStreamSocket, asyncRead)
     }
 
     ASSERT_NE (client.asyncRead (_buf, sizeof (_buf),
-                                 [] (const std::error_code& ec, size_t size) {
+                                 [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                                     [[maybe_unused]] bool more) {
                                      ScopedLock<Mutex> lock (_mut);
                                      _code = ec;
                                      _transferred = size;
@@ -714,7 +828,8 @@ TEST_F (TcpAsyncStreamSocket, cancelRead)
     }
 
     ASSERT_NE (client.asyncRead (_buf, sizeof (_buf),
-                                 [] (const std::error_code& ec, size_t size) {
+                                 [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                                     [[maybe_unused]] bool more) {
                                      ScopedLock<Mutex> lock (_mut);
                                      _code = ec;
                                      _transferred = size;

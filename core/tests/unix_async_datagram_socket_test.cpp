@@ -92,9 +92,13 @@ protected:
     /**
      * @brief send back the datagram received by the echo server.
      * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
      * @param size number of bytes read.
+     * @param from endpoint the datagram was received from.
+     * @param more true if the read stays armed.
      */
-    static void onEchoRead (const std::error_code& ec, size_t size)
+    static void onEchoRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                            [[maybe_unused]] const UnixDgram::Endpoint& from, [[maybe_unused]] bool more)
     {
         if (!ec)
         {
@@ -131,11 +135,47 @@ protected:
     }
 
     /**
+     * @brief report a read completion to the test thread.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param more true if the read stays armed.
+     */
+    static void onReportRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                              [[maybe_unused]] bool more)
+    {
+        onReport (ec, size);
+    }
+
+    /**
+     * @brief report a read completion and the endpoint it came from to the test thread.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param from endpoint the datagram was received from.
+     * @param more true if the read stays armed.
+     */
+    static void onReportFrom (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                              const UnixDgram::Endpoint& from, [[maybe_unused]] bool more)
+    {
+        {
+            ScopedLock<Mutex> lock (_mut);
+            _from = from;
+        }
+
+        onReport (ec, size);
+    }
+
+    /**
      * @brief handler resubmitting a read from within itself.
      * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
      * @param size number of bytes read.
+     * @param from endpoint the datagram was received from.
+     * @param more true if the read stays armed.
      */
-    static void onRead (const std::error_code& ec, size_t size)
+    static void onRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                        [[maybe_unused]] const UnixDgram::Endpoint& from, [[maybe_unused]] bool more)
     {
         if (!ec && (_rearms > 0))
         {
@@ -364,7 +404,7 @@ TEST_F (UnixAsyncDatagramSocket, asyncReadFrom)
 
     ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReportFrom), -1) << join::lastError.message ();
 
     ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
 
@@ -421,7 +461,7 @@ TEST_F (UnixAsyncDatagramSocket, asyncRead)
 
     ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onReportRead), -1) << join::lastError.message ();
     ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
 
     {
@@ -521,7 +561,7 @@ TEST_F (UnixAsyncDatagramSocket, truncated)
 
     ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
     ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncReadFrom (small, sizeof (small), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (small, sizeof (small), _from, onReportFrom), -1) << join::lastError.message ();
     ASSERT_NE (client.asyncWrite ("hello world", 11, nullptr), -1) << join::lastError.message ();
 
     {
@@ -545,7 +585,7 @@ TEST_F (UnixAsyncDatagramSocket, empty)
     UnixDgram::Endpoint self (_clientpath);
 
     ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReportFrom), -1) << join::lastError.message ();
 
     ASSERT_EQ (sender.bind (_senderpath), 0) << join::lastError.message ();
     ASSERT_EQ (sender.writeTo ("", 0, self), 0) << join::lastError.message ();
@@ -572,7 +612,7 @@ TEST_F (UnixAsyncDatagramSocket, cancelRead)
 
     ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
     ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReportFrom), -1) << join::lastError.message ();
     ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
 
     {
