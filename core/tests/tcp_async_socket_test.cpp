@@ -375,6 +375,17 @@ TEST_F (TcpAsyncSocket, close)
     ASSERT_TRUE (client.opened ());
     client.close ();
     ASSERT_FALSE (client.opened ());
+
+    for (int i = 0; i < 10; ++i)
+    {
+        Tcp::AsyncSocket closing;
+
+        ASSERT_EQ (closing.asyncConnect ({_blackhole, _port}, nullptr), 0) << join::lastError.message ();
+        ASSERT_TRUE (closing.connecting ());
+
+        closing.close ();
+        ASSERT_FALSE (closing.opened ());
+    }
 }
 
 /**
