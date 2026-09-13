@@ -652,6 +652,45 @@ TEST_F (UnixAsyncDatagramSocket, asyncReadFromMulti)
     ASSERT_EQ (client.unregisterBufferRing (0), 0) << join::lastError.message ();
 }
 
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief Test asyncWriteFixed method.
+ */
+TEST_F (UnixAsyncDatagramSocket, asyncWriteFixed)
+{
+    UnixDgram::AsyncSocket client;
+    LocalMem::Allocator<1, 1024> arena;
+
+    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    ASSERT_NE (buf, nullptr);
+
+    ASSERT_EQ (client.asyncWriteFixed (buf, 5, 0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
+
+    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+
+    ::memcpy (buf, "hello", 5);
+
+    ASSERT_NE (client.asyncWriteFixed (buf, 5, 0, onReport), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+    }
+
+    client.close ();
+
+    ASSERT_EQ (client.unregisterFixedBuffers (), 0) << join::lastError.message ();
+}
+#endif
+
 /**
  * @brief Test asyncRead method.
  */
@@ -691,6 +730,45 @@ TEST_F (UnixAsyncDatagramSocket, asyncRead)
 
     client.close ();
 }
+
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief Test asyncReadFixed method.
+ */
+TEST_F (UnixAsyncDatagramSocket, asyncReadFixed)
+{
+    UnixDgram::AsyncSocket client;
+    LocalMem::Allocator<1, 1024> arena;
+
+    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    ASSERT_NE (buf, nullptr);
+
+    ASSERT_EQ (client.asyncReadFixed (buf, sizeof (_buf), 0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
+
+    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+
+    ASSERT_NE (client.asyncReadFixed (buf, sizeof (_buf), 0, onReportRead), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (buf, 5), "hello");
+    }
+
+    client.close ();
+
+    ASSERT_EQ (client.unregisterFixedBuffers (), 0) << join::lastError.message ();
+}
+#endif
 
 /**
  * @brief Test asyncReadFrom method resubmitted from its own handler.

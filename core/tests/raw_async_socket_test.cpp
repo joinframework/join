@@ -443,6 +443,39 @@ TEST_F (RawAsyncSocket, asyncWrite)
     rawSocket.close ();
 }
 
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief Test asyncWriteFixed method.
+ */
+TEST_F (RawAsyncSocket, asyncWriteFixed)
+{
+    Raw::AsyncSocket rawSocket;
+    LocalMem::Allocator<1, 2048> arena;
+
+    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    ASSERT_NE (buf, nullptr);
+
+    ASSERT_EQ (rawSocket.asyncWriteFixed (buf, sizeof (_packet), 0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (rawSocket.registerFixedBuffers (arena), 0) << join::lastError.message ();
+
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+
+    ::memcpy (buf, &_packet, sizeof (_packet));
+
+    ASSERT_NE (rawSocket.asyncWriteFixed (buf, sizeof (_packet), 0, onCompletion), -1) << join::lastError.message ();
+
+    ASSERT_TRUE (wait (1));
+    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_EQ (_transferred, sizeof (_packet));
+
+    rawSocket.close ();
+
+    ASSERT_EQ (rawSocket.unregisterFixedBuffers (), 0) << join::lastError.message ();
+}
+#endif
+
 /**
  * @brief Test asyncRead method.
  */
@@ -481,6 +514,39 @@ TEST_F (RawAsyncSocket, asyncRead)
 
     rawSocket.close ();
 }
+
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief Test asyncReadFixed method.
+ */
+TEST_F (RawAsyncSocket, asyncReadFixed)
+{
+    Raw::AsyncSocket rawSocket;
+    LocalMem::Allocator<1, 2048> arena;
+
+    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    ASSERT_NE (buf, nullptr);
+
+    ASSERT_EQ (rawSocket.asyncReadFixed (buf, sizeof (_buf), 0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (rawSocket.registerFixedBuffers (arena), 0) << join::lastError.message ();
+
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+
+    ASSERT_NE (rawSocket.asyncReadFixed (buf, sizeof (_buf), 0, onReadCompletion), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+        << join::lastError.message ();
+
+    ASSERT_TRUE (wait (1));
+    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_GT (_transferred, 0u);
+
+    rawSocket.close ();
+
+    ASSERT_EQ (rawSocket.unregisterFixedBuffers (), 0) << join::lastError.message ();
+}
+#endif
 
 /**
  * @brief Test async operations resubmitted from their own handlers.
