@@ -37,6 +37,7 @@ using join::IpAddress;
 using join::Udp;
 using join::Thread;
 using join::Proactor;
+using join::LocalMem;
 
 /**
  * @brief Class used to test the udp asynchronous datagram socket API.
@@ -58,6 +59,7 @@ protected:
         _code = {};
         _completions = 0;
         _transferred = 0;
+        _more = false;
         _rearms = 0;
     }
 
@@ -82,9 +84,13 @@ protected:
     /**
      * @brief send back the datagram received by the echo server.
      * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
      * @param size number of bytes read.
+     * @param from endpoint the datagram was received from.
+     * @param more true if the read stays armed.
      */
-    static void onEchoRead (const std::error_code& ec, size_t size)
+    static void onEchoRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                            [[maybe_unused]] const Udp::Endpoint& from, [[maybe_unused]] bool more)
     {
         if (!ec)
         {
@@ -121,11 +127,73 @@ protected:
     }
 
     /**
+     * @brief report a read completion to the test thread.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param more true if the read stays armed.
+     */
+    static void onReportRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                              [[maybe_unused]] bool more)
+    {
+        onReport (ec, size);
+    }
+
+    /**
+     * @brief report a read completion and the endpoint it came from to the test thread.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param from endpoint the datagram was received from.
+     * @param more true if the read stays armed.
+     */
+    static void onReportFrom (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                              const Udp::Endpoint& from, [[maybe_unused]] bool more)
+    {
+        {
+            ScopedLock<Mutex> lock (_mut);
+            _from = from;
+        }
+
+        onReport (ec, size);
+    }
+
+    /**
+     * @brief report a multishot completion to the test thread.
+     * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
+     * @param size number of bytes read.
+     * @param from endpoint the datagram was received from.
+     * @param more true if the read stays armed.
+     */
+    static void onReportMulti (const std::error_code& ec, const char* data, size_t size, const Udp::Endpoint& from,
+                               bool more)
+    {
+        ScopedLock<Mutex> lock (_mut);
+
+        if (!ec && (size <= sizeof (_buf)))
+        {
+            ::memcpy (_buf, data, size);
+        }
+
+        _code = ec;
+        _transferred = size;
+        _from = from;
+        _more = more;
+        ++_completions;
+        _cond.signal ();
+    }
+
+    /**
      * @brief handler resubmitting a read from within itself.
      * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
      * @param size number of bytes read.
+     * @param from endpoint the datagram was received from.
+     * @param more true if the read stays armed.
      */
-    static void onRead (const std::error_code& ec, size_t size)
+    static void onRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                        [[maybe_unused]] const Udp::Endpoint& from, [[maybe_unused]] bool more)
     {
         if (!ec && (_rearms > 0))
         {
@@ -165,9 +233,13 @@ protected:
     /**
      * @brief handler moving the socket from within itself.
      * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
      * @param size number of bytes read.
+     * @param from endpoint the datagram was received from.
+     * @param more true if the read stays armed.
      */
-    static void onReadAndMove (const std::error_code& ec, size_t size)
+    static void onReadAndMove (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                               [[maybe_unused]] const Udp::Endpoint& from, [[maybe_unused]] bool more)
     {
         moved () = std::move (*_current);
 
@@ -207,6 +279,9 @@ protected:
     /// endpoint the last datagram was received from.
     static Udp::Endpoint _from;
 
+    /// last reported multishot state.
+    static bool _more;
+
     /// buffer used by the echo server.
     static char _echobuf[1024];
 
@@ -239,6 +314,7 @@ int UdpAsyncDatagramSocket::_completions = 0;
 size_t UdpAsyncDatagramSocket::_transferred = 0;
 char UdpAsyncDatagramSocket::_buf[1024] = {};
 Udp::Endpoint UdpAsyncDatagramSocket::_from;
+bool UdpAsyncDatagramSocket::_more = false;
 char UdpAsyncDatagramSocket::_echobuf[1024] = {};
 Udp::Endpoint UdpAsyncDatagramSocket::_echofrom;
 Udp::AsyncSocket* UdpAsyncDatagramSocket::_current = nullptr;
@@ -426,6 +502,16 @@ TEST_F (UdpAsyncDatagramSocket, asyncWriteTo)
         ASSERT_EQ (_transferred, 5u);
     }
 
+#ifdef JOIN_HAS_IO_URING
+    for (size_t i = 0; i < Udp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (client.asyncWriteTo ("hello", 5, dest, nullptr), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (client.asyncWriteTo ("hello", 5, dest, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+#endif
+
     client.close ();
 
     proactor.stop ();
@@ -443,7 +529,7 @@ TEST_F (UdpAsyncDatagramSocket, asyncReadFrom)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReportFrom), -1) << join::lastError.message ();
 
     ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
 
@@ -457,9 +543,80 @@ TEST_F (UdpAsyncDatagramSocket, asyncReadFrom)
         ASSERT_EQ (std::string (_buf, 5), "hello");
     }
 
+#ifdef JOIN_HAS_IO_URING
+    for (size_t i = 0; i < Udp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, nullptr), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (client.asyncReadFrom (_buf, sizeof (_buf), _from, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+#endif
+
     client.close ();
 
     ASSERT_EQ (_from, Udp::Endpoint (_host, _port));
+}
+
+/**
+ * @brief Test asyncReadFromMulti method.
+ */
+TEST_F (UdpAsyncDatagramSocket, asyncReadFromMulti)
+{
+    Udp::AsyncSocket client;
+
+    ASSERT_EQ (client.asyncReadFromMulti (0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
+
+    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    ASSERT_EQ (client.registerBufferRing (0, arena), 0) << join::lastError.message ();
+
+    ssize_t index = client.asyncReadFromMulti (0, onReportMulti);
+    ASSERT_NE (index, -1) << join::lastError.message ();
+
+    for (int i = 1; i <= 2; ++i)
+    {
+        ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [i] () {
+                return _completions >= i;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+            ASSERT_EQ (_transferred, 5u);
+            ASSERT_EQ (std::string (_buf, 5), "hello");
+            ASSERT_EQ (_from, Udp::Endpoint (_host, _port));
+            ASSERT_TRUE (_more);
+        }
+    }
+
+    ASSERT_EQ (client.cancelRead (static_cast<size_t> (index)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+        ASSERT_FALSE (_more);
+    }
+
+#ifdef JOIN_HAS_IO_URING
+    for (size_t i = 0; i < Udp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (client.asyncReadFromMulti (0, nullptr), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (client.asyncReadFromMulti (0, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+#endif
+
+    client.close ();
+
+    ASSERT_EQ (client.unregisterBufferRing (0), 0) << join::lastError.message ();
 }
 
 /**
@@ -498,7 +655,7 @@ TEST_F (UdpAsyncDatagramSocket, asyncRead)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onReportRead), -1) << join::lastError.message ();
     ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
 
     {
@@ -597,7 +754,7 @@ TEST_F (UdpAsyncDatagramSocket, truncated)
     char small[4] = {};
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncReadFrom (small, sizeof (small), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (small, sizeof (small), _from, onReportFrom), -1) << join::lastError.message ();
     ASSERT_NE (client.asyncWrite ("hello world", 11, nullptr), -1) << join::lastError.message ();
 
     {
@@ -621,7 +778,7 @@ TEST_F (UdpAsyncDatagramSocket, empty)
     Udp::Endpoint self (_host, uint16_t (_port + 2));
 
     ASSERT_EQ (client.bind (self), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReportFrom), -1) << join::lastError.message ();
 
     ASSERT_EQ (sender.writeTo ("", 0, self), 0) << join::lastError.message ();
 
@@ -647,7 +804,7 @@ TEST_F (UdpAsyncDatagramSocket, cancelRead)
 
     ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
     ASSERT_EQ (client.bind (Udp::Endpoint (_host, 0)), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReportFrom), -1) << join::lastError.message ();
     ASSERT_EQ (client.cancelRead (0), 0) << join::lastError.message ();
 
     {

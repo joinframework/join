@@ -92,9 +92,12 @@ protected:
     /**
      * @brief receive the data to send back.
      * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
      * @param size number of bytes read.
+     * @param more true if the read stays armed.
      */
-    static void onEchoRead (const std::error_code& ec, size_t size)
+    static void onEchoRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                            [[maybe_unused]] bool more)
     {
         if (!ec)
         {
@@ -119,8 +122,9 @@ protected:
      * @brief adopt the socket accepted by the echo server.
      * @param sock accepted socket.
      * @param ec error reported by the acceptor.
+     * @param more true if the acceptation stays armed.
      */
-    static void onEchoAccept (UnixStream::Socket&& sock, const std::error_code& ec)
+    static void onEchoAccept (UnixStream::Socket&& sock, const std::error_code& ec, [[maybe_unused]] bool more)
     {
         if (!ec)
         {
@@ -172,9 +176,12 @@ protected:
     /**
      * @brief handler resubmitting a read from within itself.
      * @param ec error reported by the socket.
+     * @param data buffer holding the data received.
      * @param size number of bytes read.
+     * @param more true if the read stays armed.
      */
-    static void onRead (const std::error_code& ec, size_t size)
+    static void onRead (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                        [[maybe_unused]] bool more)
     {
         if (!ec && (_rearms > 0))
         {
@@ -445,7 +452,8 @@ TEST_F (UnixAsyncStreamSocket, asyncRead)
     }
 
     ASSERT_NE (client.asyncRead (_buf, sizeof (_buf),
-                                 [] (const std::error_code& ec, size_t size) {
+                                 [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                                     [[maybe_unused]] bool more) {
                                      ScopedLock<Mutex> lock (_mut);
                                      _code = ec;
                                      _transferred = size;
@@ -617,7 +625,8 @@ TEST_F (UnixAsyncStreamSocket, cancelRead)
     }
 
     ASSERT_NE (client.asyncRead (_buf, sizeof (_buf),
-                                 [] (const std::error_code& ec, size_t size) {
+                                 [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                                     [[maybe_unused]] bool more) {
                                      ScopedLock<Mutex> lock (_mut);
                                      _code = ec;
                                      _transferred = size;

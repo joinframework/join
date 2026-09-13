@@ -41,6 +41,7 @@ IoOperation::IoOperation (const IoOperation& other) noexcept
     index = other.index;
     linked = other.linked;
     multishot = other.multishot;
+    more = other.more;
     group = other.group;
     handler = other.handler;
     data = other.data;
@@ -57,6 +58,7 @@ IoOperation& IoOperation::operator= (const IoOperation& other) noexcept
     index = other.index;
     linked = other.linked;
     multishot = other.multishot;
+    more = other.more;
     group = other.group;
     handler = other.handler;
     data = other.data;

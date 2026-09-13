@@ -1000,6 +1000,7 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
 
     if ((cqe->flags & IORING_CQE_F_MORE) != 0)
     {
+        op->more = true;
         notifyOperation (op, result, false);
     }
     else

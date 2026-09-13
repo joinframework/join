@@ -982,6 +982,8 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
         op->ring = nullptr;
     }
 
+    op->more = false;
+
     notifyOperation (op, result, cancelled);
 }
 
