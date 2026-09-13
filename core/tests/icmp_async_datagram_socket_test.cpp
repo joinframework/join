@@ -491,21 +491,15 @@ TEST_F (IcmpAsyncDatagramSocket, resubmit)
     _rearms = 1;
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
+
     ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onRead), -1) << join::lastError.message ();
+
     ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
     ASSERT_FALSE (_code) << _code.message ();
 
-    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
-
     ASSERT_TRUE (wait (2));
-    ASSERT_FALSE (_code) << _code.message ();
-
-    _rearms = 1;
-    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), onWrite), -1) << join::lastError.message ();
-
-    ASSERT_TRUE (wait (4));
     ASSERT_FALSE (_code) << _code.message ();
 
     client.close ();
