@@ -44,7 +44,7 @@ using join::Proactor;
 /**
  * @brief Class used to test the icmp asynchronous datagram socket API.
  */
-class IcmpAsyncDatagramSocket : public ::testing::Test
+class IcmpAsyncSocket : public ::testing::Test
 {
 public:
     /**
@@ -211,23 +211,23 @@ protected:
     static const std::chrono::milliseconds _timeout;
 };
 
-Mutex IcmpAsyncDatagramSocket::_mut;
-Condition IcmpAsyncDatagramSocket::_cond;
-std::error_code IcmpAsyncDatagramSocket::_code;
-int IcmpAsyncDatagramSocket::_completions = 0;
-size_t IcmpAsyncDatagramSocket::_transferred = 0;
-char IcmpAsyncDatagramSocket::_buf[1024] = {};
-Icmp::Endpoint IcmpAsyncDatagramSocket::_from;
-char IcmpAsyncDatagramSocket::_data[sizeof (struct icmphdr)] = {};
-const std::string IcmpAsyncDatagramSocket::_host = "127.0.0.1";
-Icmp::AsyncSocket* IcmpAsyncDatagramSocket::_current = nullptr;
-int IcmpAsyncDatagramSocket::_rearms = 0;
-const std::chrono::milliseconds IcmpAsyncDatagramSocket::_timeout{1000};
+Mutex IcmpAsyncSocket::_mut;
+Condition IcmpAsyncSocket::_cond;
+std::error_code IcmpAsyncSocket::_code;
+int IcmpAsyncSocket::_completions = 0;
+size_t IcmpAsyncSocket::_transferred = 0;
+char IcmpAsyncSocket::_buf[1024] = {};
+Icmp::Endpoint IcmpAsyncSocket::_from;
+char IcmpAsyncSocket::_data[sizeof (struct icmphdr)] = {};
+const std::string IcmpAsyncSocket::_host = "127.0.0.1";
+Icmp::AsyncSocket* IcmpAsyncSocket::_current = nullptr;
+int IcmpAsyncSocket::_rearms = 0;
+const std::chrono::milliseconds IcmpAsyncSocket::_timeout{1000};
 
 /**
  * @brief Test move.
  */
-TEST_F (IcmpAsyncDatagramSocket, move)
+TEST_F (IcmpAsyncSocket, move)
 {
     Icmp::AsyncSocket client1, client3;
 
@@ -265,7 +265,7 @@ TEST_F (IcmpAsyncDatagramSocket, move)
 /**
  * @brief Test open method.
  */
-TEST_F (IcmpAsyncDatagramSocket, open)
+TEST_F (IcmpAsyncSocket, open)
 {
     Icmp::AsyncSocket client;
 
@@ -283,7 +283,7 @@ TEST_F (IcmpAsyncDatagramSocket, open)
 /**
  * @brief Test close method.
  */
-TEST_F (IcmpAsyncDatagramSocket, close)
+TEST_F (IcmpAsyncSocket, close)
 {
     Icmp::AsyncSocket client;
 
@@ -296,7 +296,7 @@ TEST_F (IcmpAsyncDatagramSocket, close)
 /**
  * @brief Test bind method.
  */
-TEST_F (IcmpAsyncDatagramSocket, bind)
+TEST_F (IcmpAsyncSocket, bind)
 {
     Icmp::AsyncSocket client;
 
@@ -311,7 +311,7 @@ TEST_F (IcmpAsyncDatagramSocket, bind)
 /**
  * @brief Test bindToDevice method.
  */
-TEST_F (IcmpAsyncDatagramSocket, bindToDevice)
+TEST_F (IcmpAsyncSocket, bindToDevice)
 {
     Icmp::AsyncSocket client;
 
@@ -325,7 +325,7 @@ TEST_F (IcmpAsyncDatagramSocket, bindToDevice)
 /**
  * @brief Test connect method.
  */
-TEST_F (IcmpAsyncDatagramSocket, connect)
+TEST_F (IcmpAsyncSocket, connect)
 {
     Icmp::AsyncSocket client;
 
@@ -341,7 +341,7 @@ TEST_F (IcmpAsyncDatagramSocket, connect)
 /**
  * @brief Test disconnect method.
  */
-TEST_F (IcmpAsyncDatagramSocket, disconnect)
+TEST_F (IcmpAsyncSocket, disconnect)
 {
     Icmp::AsyncSocket client;
 
@@ -356,7 +356,7 @@ TEST_F (IcmpAsyncDatagramSocket, disconnect)
 /**
  * @brief Test asyncWriteTo method.
  */
-TEST_F (IcmpAsyncDatagramSocket, asyncWriteTo)
+TEST_F (IcmpAsyncSocket, asyncWriteTo)
 {
     Proactor proactor;
     Icmp::AsyncSocket client (proactor);
@@ -388,7 +388,7 @@ TEST_F (IcmpAsyncDatagramSocket, asyncWriteTo)
 /**
  * @brief Test asyncReadFrom method.
  */
-TEST_F (IcmpAsyncDatagramSocket, asyncReadFrom)
+TEST_F (IcmpAsyncSocket, asyncReadFrom)
 {
     Icmp::AsyncSocket client, server;
 
@@ -419,7 +419,7 @@ TEST_F (IcmpAsyncDatagramSocket, asyncReadFrom)
 /**
  * @brief Test asyncWrite method.
  */
-TEST_F (IcmpAsyncDatagramSocket, asyncWrite)
+TEST_F (IcmpAsyncSocket, asyncWrite)
 {
     Icmp::AsyncSocket client;
 
@@ -456,7 +456,7 @@ TEST_F (IcmpAsyncDatagramSocket, asyncWrite)
 /**
  * @brief Test asyncRead method.
  */
-TEST_F (IcmpAsyncDatagramSocket, asyncRead)
+TEST_F (IcmpAsyncSocket, asyncRead)
 {
     Icmp::AsyncSocket client;
 
@@ -494,7 +494,7 @@ TEST_F (IcmpAsyncDatagramSocket, asyncRead)
 /**
  * @brief Test async operations resubmitted from their own handlers.
  */
-TEST_F (IcmpAsyncDatagramSocket, resubmit)
+TEST_F (IcmpAsyncSocket, resubmit)
 {
     Icmp::AsyncSocket client;
 
@@ -520,7 +520,7 @@ TEST_F (IcmpAsyncDatagramSocket, resubmit)
 /**
  * @brief Test close called from within a write handler.
  */
-TEST_F (IcmpAsyncDatagramSocket, closeFromWriteHandler)
+TEST_F (IcmpAsyncSocket, closeFromWriteHandler)
 {
     Icmp::AsyncSocket client;
 
@@ -540,7 +540,7 @@ TEST_F (IcmpAsyncDatagramSocket, closeFromWriteHandler)
 /**
  * @brief Test a datagram larger than the supplied buffer.
  */
-TEST_F (IcmpAsyncDatagramSocket, truncated)
+TEST_F (IcmpAsyncSocket, truncated)
 {
     Icmp::AsyncSocket client;
     char small[sizeof (struct icmphdr) / 2] = {};
@@ -558,7 +558,7 @@ TEST_F (IcmpAsyncDatagramSocket, truncated)
 /**
  * @brief Test cancelRead method.
  */
-TEST_F (IcmpAsyncDatagramSocket, cancelRead)
+TEST_F (IcmpAsyncSocket, cancelRead)
 {
     Icmp::AsyncSocket client;
 
@@ -581,7 +581,7 @@ TEST_F (IcmpAsyncDatagramSocket, cancelRead)
 /**
  * @brief Test cancelWrite method.
  */
-TEST_F (IcmpAsyncDatagramSocket, cancelWrite)
+TEST_F (IcmpAsyncSocket, cancelWrite)
 {
     Icmp::AsyncSocket client;
 
@@ -594,7 +594,7 @@ TEST_F (IcmpAsyncDatagramSocket, cancelWrite)
 /**
  * @brief Test setOption method.
  */
-TEST_F (IcmpAsyncDatagramSocket, setOption)
+TEST_F (IcmpAsyncSocket, setOption)
 {
     Icmp::AsyncSocket client;
 
@@ -608,7 +608,7 @@ TEST_F (IcmpAsyncDatagramSocket, setOption)
 /**
  * @brief Test localEndpoint method.
  */
-TEST_F (IcmpAsyncDatagramSocket, localEndpoint)
+TEST_F (IcmpAsyncSocket, localEndpoint)
 {
     Icmp::AsyncSocket client;
 
@@ -621,7 +621,7 @@ TEST_F (IcmpAsyncDatagramSocket, localEndpoint)
 /**
  * @brief Test remoteEndpoint method.
  */
-TEST_F (IcmpAsyncDatagramSocket, remoteEndpoint)
+TEST_F (IcmpAsyncSocket, remoteEndpoint)
 {
     Icmp::AsyncSocket client;
 
@@ -633,7 +633,7 @@ TEST_F (IcmpAsyncDatagramSocket, remoteEndpoint)
 /**
  * @brief Test opened method.
  */
-TEST_F (IcmpAsyncDatagramSocket, opened)
+TEST_F (IcmpAsyncSocket, opened)
 {
     Icmp::AsyncSocket client;
 
@@ -647,7 +647,7 @@ TEST_F (IcmpAsyncDatagramSocket, opened)
 /**
  * @brief Test connected method.
  */
-TEST_F (IcmpAsyncDatagramSocket, connected)
+TEST_F (IcmpAsyncSocket, connected)
 {
     Icmp::AsyncSocket client;
 
@@ -661,7 +661,7 @@ TEST_F (IcmpAsyncDatagramSocket, connected)
 /**
  * @brief Test canRead method.
  */
-TEST_F (IcmpAsyncDatagramSocket, canRead)
+TEST_F (IcmpAsyncSocket, canRead)
 {
     Icmp::AsyncSocket client;
 
@@ -675,7 +675,7 @@ TEST_F (IcmpAsyncDatagramSocket, canRead)
 /**
  * @brief Test mtu method.
  */
-TEST_F (IcmpAsyncDatagramSocket, mtu)
+TEST_F (IcmpAsyncSocket, mtu)
 {
     Icmp::AsyncSocket client;
 
@@ -689,7 +689,7 @@ TEST_F (IcmpAsyncDatagramSocket, mtu)
 /**
  * @brief Test ttl method.
  */
-TEST_F (IcmpAsyncDatagramSocket, ttl)
+TEST_F (IcmpAsyncSocket, ttl)
 {
     Icmp::AsyncSocket client;
 
@@ -703,7 +703,7 @@ TEST_F (IcmpAsyncDatagramSocket, ttl)
 /**
  * @brief Test family method.
  */
-TEST_F (IcmpAsyncDatagramSocket, family)
+TEST_F (IcmpAsyncSocket, family)
 {
     Icmp::AsyncSocket client;
 
@@ -715,7 +715,7 @@ TEST_F (IcmpAsyncDatagramSocket, family)
 /**
  * @brief Test type method.
  */
-TEST_F (IcmpAsyncDatagramSocket, type)
+TEST_F (IcmpAsyncSocket, type)
 {
     Icmp::AsyncSocket client;
 
@@ -725,7 +725,7 @@ TEST_F (IcmpAsyncDatagramSocket, type)
 /**
  * @brief Test protocol method.
  */
-TEST_F (IcmpAsyncDatagramSocket, protocol)
+TEST_F (IcmpAsyncSocket, protocol)
 {
     Icmp::AsyncSocket client;
 
@@ -741,7 +741,7 @@ TEST_F (IcmpAsyncDatagramSocket, protocol)
 /**
  * @brief Test handle method.
  */
-TEST_F (IcmpAsyncDatagramSocket, handle)
+TEST_F (IcmpAsyncSocket, handle)
 {
     Icmp::AsyncSocket client;
 

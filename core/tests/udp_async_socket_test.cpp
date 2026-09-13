@@ -45,7 +45,7 @@ using join::LocalMem;
 /**
  * @brief Class used to test the udp asynchronous datagram socket API.
  */
-class UdpAsyncDatagramSocket : public ::testing::Test
+class UdpAsyncSocket : public ::testing::Test
 {
 protected:
     /**
@@ -310,27 +310,27 @@ protected:
     static const std::chrono::milliseconds _timeout;
 };
 
-Mutex UdpAsyncDatagramSocket::_mut;
-Condition UdpAsyncDatagramSocket::_cond;
-std::error_code UdpAsyncDatagramSocket::_code;
-int UdpAsyncDatagramSocket::_completions = 0;
-size_t UdpAsyncDatagramSocket::_transferred = 0;
-char UdpAsyncDatagramSocket::_buf[1024] = {};
-Udp::Endpoint UdpAsyncDatagramSocket::_from;
-bool UdpAsyncDatagramSocket::_more = false;
-char UdpAsyncDatagramSocket::_echobuf[1024] = {};
-Udp::Endpoint UdpAsyncDatagramSocket::_echofrom;
-Udp::AsyncSocket* UdpAsyncDatagramSocket::_current = nullptr;
-int UdpAsyncDatagramSocket::_rearms = 0;
-Udp::Endpoint UdpAsyncDatagramSocket::_dest;
-const std::string UdpAsyncDatagramSocket::_host = "127.0.0.1";
-const uint16_t UdpAsyncDatagramSocket::_port = 5036;
-const std::chrono::milliseconds UdpAsyncDatagramSocket::_timeout{1000};
+Mutex UdpAsyncSocket::_mut;
+Condition UdpAsyncSocket::_cond;
+std::error_code UdpAsyncSocket::_code;
+int UdpAsyncSocket::_completions = 0;
+size_t UdpAsyncSocket::_transferred = 0;
+char UdpAsyncSocket::_buf[1024] = {};
+Udp::Endpoint UdpAsyncSocket::_from;
+bool UdpAsyncSocket::_more = false;
+char UdpAsyncSocket::_echobuf[1024] = {};
+Udp::Endpoint UdpAsyncSocket::_echofrom;
+Udp::AsyncSocket* UdpAsyncSocket::_current = nullptr;
+int UdpAsyncSocket::_rearms = 0;
+Udp::Endpoint UdpAsyncSocket::_dest;
+const std::string UdpAsyncSocket::_host = "127.0.0.1";
+const uint16_t UdpAsyncSocket::_port = 5036;
+const std::chrono::milliseconds UdpAsyncSocket::_timeout{1000};
 
 /**
  * @brief Test move.
  */
-TEST_F (UdpAsyncDatagramSocket, move)
+TEST_F (UdpAsyncSocket, move)
 {
     Udp::AsyncSocket client1, client3;
     Udp::Endpoint dest (_host, _port);
@@ -399,7 +399,7 @@ TEST_F (UdpAsyncDatagramSocket, move)
 /**
  * @brief Test open method.
  */
-TEST_F (UdpAsyncDatagramSocket, open)
+TEST_F (UdpAsyncSocket, open)
 {
     Udp::AsyncSocket client;
 
@@ -412,7 +412,7 @@ TEST_F (UdpAsyncDatagramSocket, open)
 /**
  * @brief Test close method.
  */
-TEST_F (UdpAsyncDatagramSocket, close)
+TEST_F (UdpAsyncSocket, close)
 {
     Udp::AsyncSocket client;
 
@@ -425,7 +425,7 @@ TEST_F (UdpAsyncDatagramSocket, close)
 /**
  * @brief Test bind method.
  */
-TEST_F (UdpAsyncDatagramSocket, bind)
+TEST_F (UdpAsyncSocket, bind)
 {
     Udp::AsyncSocket client;
 
@@ -437,7 +437,7 @@ TEST_F (UdpAsyncDatagramSocket, bind)
 /**
  * @brief Test bindToDevice method.
  */
-TEST_F (UdpAsyncDatagramSocket, bindToDevice)
+TEST_F (UdpAsyncSocket, bindToDevice)
 {
     Udp::AsyncSocket client;
 
@@ -451,7 +451,7 @@ TEST_F (UdpAsyncDatagramSocket, bindToDevice)
 /**
  * @brief Test connect method.
  */
-TEST_F (UdpAsyncDatagramSocket, connect)
+TEST_F (UdpAsyncSocket, connect)
 {
     Udp::AsyncSocket client;
 
@@ -467,7 +467,7 @@ TEST_F (UdpAsyncDatagramSocket, connect)
 /**
  * @brief Test disconnect method.
  */
-TEST_F (UdpAsyncDatagramSocket, disconnect)
+TEST_F (UdpAsyncSocket, disconnect)
 {
     Udp::AsyncSocket client;
 
@@ -482,7 +482,7 @@ TEST_F (UdpAsyncDatagramSocket, disconnect)
 /**
  * @brief Test asyncWriteTo method.
  */
-TEST_F (UdpAsyncDatagramSocket, asyncWriteTo)
+TEST_F (UdpAsyncSocket, asyncWriteTo)
 {
     Proactor proactor;
     Udp::AsyncSocket client (proactor);
@@ -524,7 +524,7 @@ TEST_F (UdpAsyncDatagramSocket, asyncWriteTo)
 /**
  * @brief Test asyncReadFrom method.
  */
-TEST_F (UdpAsyncDatagramSocket, asyncReadFrom)
+TEST_F (UdpAsyncSocket, asyncReadFrom)
 {
     Udp::AsyncSocket client;
 
@@ -564,7 +564,7 @@ TEST_F (UdpAsyncDatagramSocket, asyncReadFrom)
 /**
  * @brief Test asyncReadFromMulti method.
  */
-TEST_F (UdpAsyncDatagramSocket, asyncReadFromMulti)
+TEST_F (UdpAsyncSocket, asyncReadFromMulti)
 {
     Udp::AsyncSocket client;
 
@@ -625,7 +625,7 @@ TEST_F (UdpAsyncDatagramSocket, asyncReadFromMulti)
 /**
  * @brief Test asyncWrite method.
  */
-TEST_F (UdpAsyncDatagramSocket, asyncWrite)
+TEST_F (UdpAsyncSocket, asyncWrite)
 {
     Udp::AsyncSocket client;
 
@@ -662,7 +662,7 @@ TEST_F (UdpAsyncDatagramSocket, asyncWrite)
 /**
  * @brief Test asyncRead method.
  */
-TEST_F (UdpAsyncDatagramSocket, asyncRead)
+TEST_F (UdpAsyncSocket, asyncRead)
 {
     Udp::AsyncSocket client;
 
@@ -702,7 +702,7 @@ TEST_F (UdpAsyncDatagramSocket, asyncRead)
 /**
  * @brief Test asyncReadFrom method resubmitted from its own handler.
  */
-TEST_F (UdpAsyncDatagramSocket, resubmit)
+TEST_F (UdpAsyncSocket, resubmit)
 {
     Udp::AsyncSocket client;
     Udp::Endpoint dest (_host, _port);
@@ -752,7 +752,7 @@ TEST_F (UdpAsyncDatagramSocket, resubmit)
 /**
  * @brief Test close called from within a write handler.
  */
-TEST_F (UdpAsyncDatagramSocket, closeFromWriteHandler)
+TEST_F (UdpAsyncSocket, closeFromWriteHandler)
 {
     Udp::AsyncSocket client;
     Udp::Endpoint dest (_host, _port);
@@ -776,7 +776,7 @@ TEST_F (UdpAsyncDatagramSocket, closeFromWriteHandler)
 /**
  * @brief Test a datagram larger than the supplied buffer.
  */
-TEST_F (UdpAsyncDatagramSocket, truncated)
+TEST_F (UdpAsyncSocket, truncated)
 {
     Udp::AsyncSocket client;
     char small[4] = {};
@@ -799,7 +799,7 @@ TEST_F (UdpAsyncDatagramSocket, truncated)
 /**
  * @brief Test an empty datagram.
  */
-TEST_F (UdpAsyncDatagramSocket, empty)
+TEST_F (UdpAsyncSocket, empty)
 {
     Udp::AsyncSocket client;
     Udp::Socket sender;
@@ -826,7 +826,7 @@ TEST_F (UdpAsyncDatagramSocket, empty)
 /**
  * @brief Test cancelRead method.
  */
-TEST_F (UdpAsyncDatagramSocket, cancelRead)
+TEST_F (UdpAsyncSocket, cancelRead)
 {
     Udp::AsyncSocket client;
 
@@ -849,7 +849,7 @@ TEST_F (UdpAsyncDatagramSocket, cancelRead)
 /**
  * @brief Test cancelWrite method.
  */
-TEST_F (UdpAsyncDatagramSocket, cancelWrite)
+TEST_F (UdpAsyncSocket, cancelWrite)
 {
     Udp::AsyncSocket client;
 
@@ -862,7 +862,7 @@ TEST_F (UdpAsyncDatagramSocket, cancelWrite)
 /**
  * @brief Test setOption method.
  */
-TEST_F (UdpAsyncDatagramSocket, setOption)
+TEST_F (UdpAsyncSocket, setOption)
 {
     Udp::AsyncSocket client;
 
@@ -875,7 +875,7 @@ TEST_F (UdpAsyncDatagramSocket, setOption)
 /**
  * @brief Test localEndpoint method.
  */
-TEST_F (UdpAsyncDatagramSocket, localEndpoint)
+TEST_F (UdpAsyncSocket, localEndpoint)
 {
     Udp::AsyncSocket client;
 
@@ -888,7 +888,7 @@ TEST_F (UdpAsyncDatagramSocket, localEndpoint)
 /**
  * @brief Test remoteEndpoint method.
  */
-TEST_F (UdpAsyncDatagramSocket, remoteEndpoint)
+TEST_F (UdpAsyncSocket, remoteEndpoint)
 {
     Udp::AsyncSocket client;
 
@@ -901,7 +901,7 @@ TEST_F (UdpAsyncDatagramSocket, remoteEndpoint)
 /**
  * @brief Test opened method.
  */
-TEST_F (UdpAsyncDatagramSocket, opened)
+TEST_F (UdpAsyncSocket, opened)
 {
     Udp::AsyncSocket client;
 
@@ -915,7 +915,7 @@ TEST_F (UdpAsyncDatagramSocket, opened)
 /**
  * @brief Test connected method.
  */
-TEST_F (UdpAsyncDatagramSocket, connected)
+TEST_F (UdpAsyncSocket, connected)
 {
     Udp::AsyncSocket client;
 
@@ -929,7 +929,7 @@ TEST_F (UdpAsyncDatagramSocket, connected)
 /**
  * @brief Test canRead method.
  */
-TEST_F (UdpAsyncDatagramSocket, canRead)
+TEST_F (UdpAsyncSocket, canRead)
 {
     Udp::AsyncSocket client;
 
@@ -942,7 +942,7 @@ TEST_F (UdpAsyncDatagramSocket, canRead)
 /**
  * @brief Test mtu method.
  */
-TEST_F (UdpAsyncDatagramSocket, mtu)
+TEST_F (UdpAsyncSocket, mtu)
 {
     Udp::AsyncSocket client;
 
@@ -956,7 +956,7 @@ TEST_F (UdpAsyncDatagramSocket, mtu)
 /**
  * @brief Test ttl method.
  */
-TEST_F (UdpAsyncDatagramSocket, ttl)
+TEST_F (UdpAsyncSocket, ttl)
 {
     Udp::AsyncSocket client;
 
@@ -970,7 +970,7 @@ TEST_F (UdpAsyncDatagramSocket, ttl)
 /**
  * @brief Test family method.
  */
-TEST_F (UdpAsyncDatagramSocket, family)
+TEST_F (UdpAsyncSocket, family)
 {
     Udp::AsyncSocket client;
 
@@ -982,7 +982,7 @@ TEST_F (UdpAsyncDatagramSocket, family)
 /**
  * @brief Test type method.
  */
-TEST_F (UdpAsyncDatagramSocket, type)
+TEST_F (UdpAsyncSocket, type)
 {
     Udp::AsyncSocket client;
 
@@ -994,7 +994,7 @@ TEST_F (UdpAsyncDatagramSocket, type)
 /**
  * @brief Test protocol method.
  */
-TEST_F (UdpAsyncDatagramSocket, protocol)
+TEST_F (UdpAsyncSocket, protocol)
 {
     Udp::AsyncSocket client;
 
@@ -1006,7 +1006,7 @@ TEST_F (UdpAsyncDatagramSocket, protocol)
 /**
  * @brief Test handle method.
  */
-TEST_F (UdpAsyncDatagramSocket, handle)
+TEST_F (UdpAsyncSocket, handle)
 {
     Udp::AsyncSocket client;
 
