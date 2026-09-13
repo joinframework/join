@@ -30,9 +30,10 @@
 #include <gtest/gtest.h>
 
 // C.
-#include <netinet/ip.h>
-#include <netinet/udp.h>
 #include <net/ethernet.h>
+#include <netinet/udp.h>
+#include <netinet/ip.h>
+#include <unistd.h>
 
 using join::Errc;
 using join::Mutex;
@@ -286,6 +287,14 @@ TEST_F (RawAsyncSocket, asyncRead)
 
     ASSERT_TRUE (wait (2));
     ASSERT_EQ (_code, Errc::MessageTooLong) << _code.message ();
+
+
+    ASSERT_EQ (::close (rawSocket.handle ()), 0);
+
+    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onReadCompletion), -1) << join::lastError.message ();
+
+    ASSERT_TRUE (wait (3));
+    ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
 
     rawSocket.close ();
 }

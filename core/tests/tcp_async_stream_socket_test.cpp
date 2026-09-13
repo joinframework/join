@@ -677,6 +677,28 @@ TEST_F (TcpAsyncStreamSocket, asyncRead)
         ASSERT_EQ (_transferred, 0u);
     }
 
+    ASSERT_EQ (::close (client.handle ()), 0);
+
+    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf),
+                                 [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                                     [[maybe_unused]] bool more) {
+                                     ScopedLock<Mutex> lock (_mut);
+                                     _code = ec;
+                                     _transferred = size;
+                                     ++_completions;
+                                     _cond.signal ();
+                                 }),
+               -1)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 4;
+        }));
+        ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
+    }
+
     client.close ();
 }
 

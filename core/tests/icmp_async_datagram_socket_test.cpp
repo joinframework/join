@@ -29,6 +29,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C.
+#include <unistd.h>
+
 using join::Errc;
 using join::Mutex;
 using join::Condition;
@@ -361,6 +364,19 @@ TEST_F (IcmpAsyncDatagramSocket, asyncRead)
         }));
         ASSERT_FALSE (_code) << _code.message ();
         ASSERT_GT (_transferred, 0u);
+    }
+
+
+    ASSERT_EQ (::close (client.handle ()), 0);
+
+    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onReportRead), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
     }
 
     client.close ();
