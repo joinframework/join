@@ -447,6 +447,28 @@ namespace join
             return _proactor->unregisterBufferRing (group);
         }
 
+#ifdef JOIN_HAS_IO_URING
+        /**
+         * @brief register the arena chunks as fixed buffers on the proactor driving this socket.
+         * @param arena arena to register.
+         * @return 0 on success, -1 on failure.
+         */
+        template <size_t Count, size_t... Sizes>
+        int registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena) noexcept
+        {
+            return _proactor->registerFixedBuffers (arena);
+        }
+
+        /**
+         * @brief unregister the fixed buffers from the proactor driving this socket.
+         * @return 0 on success, -1 on failure.
+         */
+        int unregisterFixedBuffers () noexcept
+        {
+            return _proactor->unregisterFixedBuffers ();
+        }
+#endif
+
         /**
          * @brief assign the specified endpoint to the socket.
          * @param endpoint endpoint to assign to the socket.

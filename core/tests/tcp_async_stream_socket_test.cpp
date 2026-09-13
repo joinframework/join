@@ -39,6 +39,7 @@ using join::ScopedLock;
 using join::IpAddress;
 using join::Tcp;
 using join::LocalMem;
+using join::Proactor;
 
 /**
  * @brief Class used to test the unix asynchronous stream socket API.
@@ -1226,6 +1227,24 @@ TEST_F (TcpAsyncStreamSocket, handle)
     client.close ();
     ASSERT_EQ (client.handle (), -1);
 }
+
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief Test registerFixedBuffers method.
+ */
+TEST_F (TcpAsyncStreamSocket, registerFixedBuffers)
+{
+    Proactor proactor;
+    Tcp::AsyncSocket client (proactor);
+
+    LocalMem::Allocator<1, 1024, 4096> arena;
+
+    ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (client.registerFixedBuffers (arena), -1);
+    ASSERT_EQ (client.unregisterFixedBuffers (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.unregisterFixedBuffers (), -1);
+}
+#endif
 
 /**
  * @brief main function.
