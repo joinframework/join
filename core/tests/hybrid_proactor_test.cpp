@@ -55,6 +55,10 @@ protected:
      */
     void SetUp () override
     {
+        _op = nullptr;
+        _result = 0;
+        _completions = 0;
+
         ASSERT_EQ (_acceptor.create ({_host, _port}), 0) << join::lastError.message ();
     }
 
@@ -633,11 +637,11 @@ TEST_F (HybridProactorTest, suspend)
     ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
 
     proactor.suspend (&_readOp);
-    ASSERT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
+    EXPECT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
-        ASSERT_FALSE (_cond.timedWait (lock, std::chrono::milliseconds (100), [&] () {
+        EXPECT_FALSE (_cond.timedWait (lock, std::chrono::milliseconds (100), [&] () {
             return _op == &_readOp;
         }));
     }
