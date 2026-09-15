@@ -87,174 +87,6 @@ namespace join
     };
 
     /**
-     * @brief basic unix endpoint class.
-     */
-    template <class Protocol>
-    class BasicUnixEndpoint : public BasicEndpoint<Protocol>
-    {
-    public:
-        /**
-         * @brief default constructor.
-         */
-        constexpr BasicUnixEndpoint () noexcept
-        : BasicEndpoint<Protocol> ()
-        {
-        }
-
-        /**
-         * @brief create instance using socket address.
-         * @param addr socket address.
-         * @param len socket address length.
-         */
-        BasicUnixEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
-        : BasicEndpoint<Protocol> (addr, len)
-        {
-        }
-
-        /**
-         * @brief create instance using device name.
-         * @param dev device name to set.
-         */
-        BasicUnixEndpoint (const char* dev) noexcept
-        : BasicUnixEndpoint ()
-        {
-            struct sockaddr_un* sa = reinterpret_cast<struct sockaddr_un*> (&this->_addr);
-            strncpy (sa->sun_path, dev, sizeof (sa->sun_path) - 1);
-        }
-
-        /**
-         * @brief create instance using device name.
-         * @param dev device name to set.
-         */
-        BasicUnixEndpoint (const std::string& dev) noexcept
-        : BasicUnixEndpoint<Protocol> (dev.c_str ())
-        {
-        }
-
-        /**
-         * @brief get endpoint protocol.
-         * @return endpoint protocol.
-         */
-        constexpr Protocol protocol () const noexcept
-        {
-            return Protocol ();
-        }
-
-        /**
-         * @brief get socket address length.
-         * @return socket address length.
-         */
-        constexpr socklen_t length () const noexcept
-        {
-            return sizeof (struct sockaddr_un);
-        }
-
-        /**
-         * @brief set endpoint device name.
-         * @param dev device name to set.
-         */
-        void device (const std::string& dev) noexcept
-        {
-            struct sockaddr_un* sa = reinterpret_cast<struct sockaddr_un*> (&this->_addr);
-            strncpy (sa->sun_path, dev.c_str (), sizeof (sa->sun_path) - 1);
-        }
-
-        /**
-         * @brief get endpoint device name.
-         * @return endpoint device name.
-         */
-        std::string device () const
-        {
-            return reinterpret_cast<const struct sockaddr_un*> (&this->_addr)->sun_path;
-        }
-    };
-
-    /**
-     * @brief compare if endpoints are equal.
-     * @param a endpoint to compare.
-     * @param b endpoint to compare to.
-     * @return true if endpoints are equal, false otherwise.
-     */
-    template <class Protocol>
-    bool operator== (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
-    {
-        return a.device () == b.device ();
-    }
-
-    /**
-     * @brief compare if endpoints are not equal.
-     * @param a endpoint to compare.
-     * @param b endpoint to compare to.
-     * @return true if endpoints are not equal, false otherwise.
-     */
-    template <class Protocol>
-    bool operator!= (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
-    {
-        return !(a == b);
-    }
-
-    /**
-     * @brief compare if endpoint is lower.
-     * @param a endpoint to compare.
-     * @param b endpoint to compare to.
-     * @return true if lower, false otherwise.
-     */
-    template <class Protocol>
-    bool operator< (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
-    {
-        return a.device () < b.device ();
-    }
-
-    /**
-     * @brief compare if endpoint is greater.
-     * @param a endpoint to compare.
-     * @param b endpoint to compare to.
-     * @return true if greater, false otherwise.
-     */
-    template <class Protocol>
-    bool operator> (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
-    {
-        return b < a;
-    }
-
-    /**
-     * @brief compare if endpoint is lower or equal.
-     * @param a endpoint to compare.
-     * @param b endpoint to compare to.
-     * @return true if lower or equal, false otherwise.
-     */
-    template <class Protocol>
-    bool operator<= (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
-    {
-        return !(b < a);
-    }
-
-    /**
-     * @brief compare if endpoint is greater or equal.
-     * @param a endpoint to compare.
-     * @param b endpoint to compare to.
-     * @return true if greater or equal, false otherwise.
-     */
-    template <class Protocol>
-    bool operator>= (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
-    {
-        return !(a < b);
-    }
-
-    /**
-     * @brief push endpoint representation into a stream.
-     * @param os output stream.
-     * @param endpoint endpoint to push.
-     * @return output stream.
-     */
-    template <class Protocol>
-    std::ostream& operator<< (std::ostream& os, const BasicUnixEndpoint<Protocol>& endpoint)
-    {
-        os << endpoint.device ();
-        return os;
-    }
-
-    /**
      * @brief basic link layer endpoint class.
      */
     template <class Protocol>
@@ -421,6 +253,174 @@ namespace join
      */
     template <class Protocol>
     std::ostream& operator<< (std::ostream& os, const BasicLinkLayerEndpoint<Protocol>& endpoint)
+    {
+        os << endpoint.device ();
+        return os;
+    }
+
+    /**
+     * @brief basic unix endpoint class.
+     */
+    template <class Protocol>
+    class BasicUnixEndpoint : public BasicEndpoint<Protocol>
+    {
+    public:
+        /**
+         * @brief default constructor.
+         */
+        constexpr BasicUnixEndpoint () noexcept
+        : BasicEndpoint<Protocol> ()
+        {
+        }
+
+        /**
+         * @brief create instance using socket address.
+         * @param addr socket address.
+         * @param len socket address length.
+         */
+        BasicUnixEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
+        : BasicEndpoint<Protocol> (addr, len)
+        {
+        }
+
+        /**
+         * @brief create instance using device name.
+         * @param dev device name to set.
+         */
+        BasicUnixEndpoint (const char* dev) noexcept
+        : BasicUnixEndpoint ()
+        {
+            struct sockaddr_un* sa = reinterpret_cast<struct sockaddr_un*> (&this->_addr);
+            strncpy (sa->sun_path, dev, sizeof (sa->sun_path) - 1);
+        }
+
+        /**
+         * @brief create instance using device name.
+         * @param dev device name to set.
+         */
+        BasicUnixEndpoint (const std::string& dev) noexcept
+        : BasicUnixEndpoint<Protocol> (dev.c_str ())
+        {
+        }
+
+        /**
+         * @brief get endpoint protocol.
+         * @return endpoint protocol.
+         */
+        constexpr Protocol protocol () const noexcept
+        {
+            return Protocol ();
+        }
+
+        /**
+         * @brief get socket address length.
+         * @return socket address length.
+         */
+        constexpr socklen_t length () const noexcept
+        {
+            return sizeof (struct sockaddr_un);
+        }
+
+        /**
+         * @brief set endpoint device name.
+         * @param dev device name to set.
+         */
+        void device (const std::string& dev) noexcept
+        {
+            struct sockaddr_un* sa = reinterpret_cast<struct sockaddr_un*> (&this->_addr);
+            strncpy (sa->sun_path, dev.c_str (), sizeof (sa->sun_path) - 1);
+        }
+
+        /**
+         * @brief get endpoint device name.
+         * @return endpoint device name.
+         */
+        std::string device () const
+        {
+            return reinterpret_cast<const struct sockaddr_un*> (&this->_addr)->sun_path;
+        }
+    };
+
+    /**
+     * @brief compare if endpoints are equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if endpoints are equal, false otherwise.
+     */
+    template <class Protocol>
+    bool operator== (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
+    {
+        return a.device () == b.device ();
+    }
+
+    /**
+     * @brief compare if endpoints are not equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if endpoints are not equal, false otherwise.
+     */
+    template <class Protocol>
+    bool operator!= (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief compare if endpoint is lower.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if lower, false otherwise.
+     */
+    template <class Protocol>
+    bool operator< (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
+    {
+        return a.device () < b.device ();
+    }
+
+    /**
+     * @brief compare if endpoint is greater.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if greater, false otherwise.
+     */
+    template <class Protocol>
+    bool operator> (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
+    {
+        return b < a;
+    }
+
+    /**
+     * @brief compare if endpoint is lower or equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if lower or equal, false otherwise.
+     */
+    template <class Protocol>
+    bool operator<= (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
+    {
+        return !(b < a);
+    }
+
+    /**
+     * @brief compare if endpoint is greater or equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if greater or equal, false otherwise.
+     */
+    template <class Protocol>
+    bool operator>= (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
+    {
+        return !(a < b);
+    }
+
+    /**
+     * @brief push endpoint representation into a stream.
+     * @param os output stream.
+     * @param endpoint endpoint to push.
+     * @return output stream.
+     */
+    template <class Protocol>
+    std::ostream& operator<< (std::ostream& os, const BasicUnixEndpoint<Protocol>& endpoint)
     {
         os << endpoint.device ();
         return os;

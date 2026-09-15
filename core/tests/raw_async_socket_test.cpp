@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/async_socket.hpp>
+#include <join/async_raw_socket.hpp>
 #include <join/condition.hpp>
 
 // Libraries.

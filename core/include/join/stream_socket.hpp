@@ -26,7 +26,7 @@
 #define JOIN_CORE_STREAM_SOCKET_HPP
 
 // libjoin.
-#include <join/socket.hpp>
+#include <join/raw_socket.hpp>
 
 // C++.
 #include <chrono>
@@ -40,7 +40,7 @@ namespace join
      * @brief basic stream socket class.
      */
     template <class Protocol>
-    class BasicStreamSocket final : public BasicSocket<Protocol>
+    class BasicStreamSocket final : public BasicRawSocket<Protocol>
     {
         /// friendship with basic asynchronous stream socket
         template <class P, class E>
@@ -48,11 +48,11 @@ namespace join
 
     public:
         using Ptr = std::unique_ptr<BasicStreamSocket<Protocol>>;
-        using Mode = typename BasicSocket<Protocol>::Mode;
-        using Option = typename BasicSocket<Protocol>::Option;
-        using State = typename BasicSocket<Protocol>::State;
+        using Mode = typename BasicRawSocket<Protocol>::Mode;
+        using Option = typename BasicRawSocket<Protocol>::Option;
+        using State = typename BasicRawSocket<Protocol>::State;
         using Endpoint = typename Protocol::Endpoint;
-        using TimePoint = typename BasicSocket<Protocol>::TimePoint;
+        using TimePoint = typename BasicRawSocket<Protocol>::TimePoint;
 
         /**
          * @brief default constructor.
@@ -67,7 +67,7 @@ namespace join
          * @param mode Set the socket blocking mode.
          */
         explicit BasicStreamSocket (Mode mode) noexcept
-        : BasicSocket<Protocol> (mode)
+        : BasicRawSocket<Protocol> (mode)
         {
         }
 
@@ -78,7 +78,7 @@ namespace join
          * @param mode blocking mode the file descriptor was accepted with.
          */
         explicit BasicStreamSocket (int fd, const Endpoint& remote, Mode mode = Mode::NonBlocking)
-        : BasicSocket<Protocol> (mode)
+        : BasicRawSocket<Protocol> (mode)
         {
             this->_handle = fd;
             this->_state = State::Connected;
@@ -109,7 +109,7 @@ namespace join
          * @param other other object to move.
          */
         BasicStreamSocket (BasicStreamSocket&& other) noexcept
-        : BasicSocket<Protocol> (std::move (other))
+        : BasicRawSocket<Protocol> (std::move (other))
         , _remote (std::move (other._remote))
         {
         }
@@ -121,7 +121,7 @@ namespace join
          */
         BasicStreamSocket& operator= (BasicStreamSocket&& other) noexcept
         {
-            BasicSocket<Protocol>::operator= (std::move (other));
+            BasicRawSocket<Protocol>::operator= (std::move (other));
 
             _remote = std::move (other._remote);
 
@@ -319,7 +319,7 @@ namespace join
          */
         void close () noexcept override
         {
-            BasicSocket<Protocol>::close ();
+            BasicRawSocket<Protocol>::close ();
             _remote = {};
         }
 
@@ -331,7 +331,7 @@ namespace join
          */
         ssize_t read (char* data, size_t maxSize) noexcept
         {
-            ssize_t size = BasicSocket<Protocol>::read (data, maxSize);
+            ssize_t size = BasicRawSocket<Protocol>::read (data, maxSize);
             if (size == 0)
             {
                 lastError = make_error_code (Errc::ConnectionClosed);
@@ -504,7 +504,7 @@ namespace join
                     break;
 
                 default:
-                    return BasicSocket<Protocol>::setOption (option, value);
+                    return BasicRawSocket<Protocol>::setOption (option, value);
             }
 
             int result = ::setsockopt (this->_handle, optlevel, optname, &value, sizeof (value));
@@ -592,11 +592,11 @@ namespace join
             int result = -1, value = -1;
             socklen_t valueLen = sizeof (value);
 
-            if (this->_protocol.family () == AF_INET6)
+            if (this->family () == AF_INET6)
             {
                 result = ::getsockopt (this->_handle, IPPROTO_IPV6, IPV6_MTU, &value, &valueLen);
             }
-            else if (this->_protocol.family () == AF_INET)
+            else if (this->family () == AF_INET)
             {
                 result = ::getsockopt (this->_handle, IPPROTO_IP, IP_MTU, &value, &valueLen);
             }

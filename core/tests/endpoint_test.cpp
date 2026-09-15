@@ -28,9 +28,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+using join::Raw;
 using join::UnixDgram;
 using join::UnixStream;
-using join::Raw;
 using join::Udp;
 using join::Icmp;
 using join::Tcp;
@@ -40,14 +40,14 @@ using join::Tcp;
  */
 TEST (Endpoint, addr)
 {
+    Raw::Endpoint rawEndpoint;
+    ASSERT_NE (rawEndpoint.addr (), nullptr);
+
     UnixDgram::Endpoint unixDgramEndpoint;
     ASSERT_NE (unixDgramEndpoint.addr (), nullptr);
 
     UnixStream::Endpoint unixStreamEndpoint;
     ASSERT_NE (unixStreamEndpoint.addr (), nullptr);
-
-    Raw::Endpoint rawEndpoint;
-    ASSERT_NE (rawEndpoint.addr (), nullptr);
 
     Udp::Endpoint udpEndpoint;
     ASSERT_NE (udpEndpoint.addr (), nullptr);
@@ -64,14 +64,14 @@ TEST (Endpoint, addr)
  */
 TEST (Endpoint, length)
 {
+    Raw::Endpoint rawEndpoint;
+    ASSERT_EQ (rawEndpoint.length (), sizeof (struct sockaddr_ll));
+
     UnixDgram::Endpoint unixDgramEndpoint;
     ASSERT_EQ (unixDgramEndpoint.length (), sizeof (struct sockaddr_un));
 
     UnixStream::Endpoint unixStreamEndpoint;
     ASSERT_EQ (unixStreamEndpoint.length (), sizeof (struct sockaddr_un));
-
-    Raw::Endpoint rawEndpoint;
-    ASSERT_EQ (rawEndpoint.length (), sizeof (struct sockaddr_ll));
 
     Udp::Endpoint udpEndpoint4 (Udp::v4 ());
     ASSERT_EQ (udpEndpoint4.length (), sizeof (struct sockaddr_in));
@@ -97,6 +97,11 @@ TEST (Endpoint, length)
  */
 TEST (Endpoint, device)
 {
+    Raw::Endpoint rawEndpoint;
+    ASSERT_EQ (rawEndpoint.device (), "");
+    rawEndpoint.device ("lo");
+    ASSERT_EQ (rawEndpoint.device (), "lo");
+
     UnixDgram::Endpoint unixDgramEndpoint;
     ASSERT_EQ (unixDgramEndpoint.device (), "");
     unixDgramEndpoint.device ("/path/to/file");
@@ -106,11 +111,6 @@ TEST (Endpoint, device)
     ASSERT_EQ (unixStreamEndpoint.device (), "");
     unixStreamEndpoint.device ("/path/to/other");
     ASSERT_EQ (unixStreamEndpoint.device (), "/path/to/other");
-
-    Raw::Endpoint rawEndpoint;
-    ASSERT_EQ (rawEndpoint.device (), "");
-    rawEndpoint.device ("lo");
-    ASSERT_EQ (rawEndpoint.device (), "lo");
 
     Udp::Endpoint udpEndpoint (Udp::v6 ());
     ASSERT_EQ (udpEndpoint.device (), "");
@@ -242,11 +242,16 @@ TEST (Endpoint, equal)
 }
 
 /**
- * @brief thest the serialize method.
+ * @brief test the serialize method.
  */
 TEST (Endpoint, serialize)
 {
     std::stringstream stream;
+    Raw::Endpoint rawEndpoint ("lo");
+    ASSERT_NO_THROW (stream << rawEndpoint);
+    ASSERT_EQ (stream.str (), "lo");
+
+    stream.str ("");
     UnixDgram::Endpoint unixDgramEndpoint ("lo");
     ASSERT_NO_THROW (stream << unixDgramEndpoint);
     ASSERT_EQ (stream.str (), "lo");
@@ -254,11 +259,6 @@ TEST (Endpoint, serialize)
     stream.str ("");
     UnixStream::Endpoint unixStreamEndpoint ("lo");
     ASSERT_NO_THROW (stream << unixStreamEndpoint);
-    ASSERT_EQ (stream.str (), "lo");
-
-    stream.str ("");
-    Raw::Endpoint rawEndpoint ("lo");
-    ASSERT_NO_THROW (stream << rawEndpoint);
     ASSERT_EQ (stream.str (), "lo");
 
     stream.str ("");

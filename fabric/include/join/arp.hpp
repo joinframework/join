@@ -28,8 +28,8 @@
 // libjoin.
 #include <join/neighbor_manager.hpp>
 #include <join/mac_address.hpp>
+#include <join/raw_socket.hpp>
 #include <join/condition.hpp>
-#include <join/socket.hpp>
 
 // C++.
 #include <unordered_map>
