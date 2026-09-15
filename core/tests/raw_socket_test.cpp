@@ -24,6 +24,7 @@
 
 // libjoin.
 #include <join/datagram_socket.hpp>
+#include <join/raw_socket.hpp>
 #include <join/reactor.hpp>
 
 // Libraries.

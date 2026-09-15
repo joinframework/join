@@ -37,16 +37,19 @@ namespace join
     class BasicSocket;
 
     template <class Protocol>
+    class BasicRawSocket;
+
+    template <class Protocol>
     class BasicDatagramSocket;
 
     template <class Protocol>
     class BasicStreamSocket;
 
     template <class Protocol>
-    class BasicSocketStream;
+    class BasicStreamAcceptor;
 
     template <class Protocol>
-    class BasicStreamAcceptor;
+    class BasicSocketStream;
 
 #ifdef JOIN_HAS_IO_URING
     struct IoDefaultPolicy;
@@ -56,6 +59,9 @@ namespace join
 
     template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
     class BasicAsyncSocket;
+
+    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
+    class BasicAsyncRawSocket;
 
     template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
     class BasicAsyncDatagramSocket;
@@ -72,6 +78,9 @@ namespace join
     class BasicAsyncSocket;
 
     template <class Protocol, class Proactor = BasicProactor>
+    class BasicAsyncRawSocket;
+
+    template <class Protocol, class Proactor = BasicProactor>
     class BasicAsyncDatagramSocket;
 
     template <class Protocol, class Proactor = BasicProactor>
@@ -80,6 +89,53 @@ namespace join
     template <class Protocol, class Proactor = BasicProactor>
     class BasicAsyncStreamAcceptor;
 #endif
+
+    /**
+     * @brief RAW protocol class.
+     */
+    class Raw
+    {
+    public:
+        using Endpoint = BasicLinkLayerEndpoint<Raw>;
+        using Socket = BasicRawSocket<Raw>;
+        using AsyncSocket = BasicAsyncRawSocket<Raw>;
+
+        /**
+         * @brief default constructor.
+         */
+        constexpr Raw () noexcept = default;
+
+        /**
+         * @brief get the protocol ip address family.
+         * @return the protocol ip address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return AF_PACKET;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_RAW;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            if (BYTE_ORDER == LITTLE_ENDIAN)
+            {
+                return (ETH_P_ALL >> 8) | (ETH_P_ALL << 8);
+            }
+            return ETH_P_ALL;
+        }
+    };
 
     /**
      * @brief unix datagram protocol class.
@@ -167,53 +223,6 @@ namespace join
         constexpr int protocol () const noexcept
         {
             return 0;
-        }
-    };
-
-    /**
-     * @brief RAW protocol class.
-     */
-    class Raw
-    {
-    public:
-        using Endpoint = BasicLinkLayerEndpoint<Raw>;
-        using Socket = BasicSocket<Raw>;
-        using AsyncSocket = BasicAsyncSocket<Raw>;
-
-        /**
-         * @brief default constructor.
-         */
-        constexpr Raw () noexcept = default;
-
-        /**
-         * @brief get the protocol ip address family.
-         * @return the protocol ip address family.
-         */
-        constexpr int family () const noexcept
-        {
-            return AF_PACKET;
-        }
-
-        /**
-         * @brief get the protocol communication semantic.
-         * @return the protocol communication semantic.
-         */
-        constexpr int type () const noexcept
-        {
-            return SOCK_RAW;
-        }
-
-        /**
-         * @brief get the protocol type.
-         * @return the protocol type.
-         */
-        constexpr int protocol () const noexcept
-        {
-            if (BYTE_ORDER == LITTLE_ENDIAN)
-            {
-                return (ETH_P_ALL >> 8) | (ETH_P_ALL << 8);
-            }
-            return ETH_P_ALL;
         }
     };
 

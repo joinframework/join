@@ -26,7 +26,7 @@
 #define JOIN_CORE_DATAGRAM_SOCKET_HPP
 
 // libjoin.
-#include <join/socket.hpp>
+#include <join/raw_socket.hpp>
 
 // C.
 #include <cstring>
@@ -37,13 +37,13 @@ namespace join
      * @brief basic datagram socket class.
      */
     template <class Protocol>
-    class BasicDatagramSocket final : public BasicSocket<Protocol>
+    class BasicDatagramSocket final : public BasicRawSocket<Protocol>
     {
     public:
         using Ptr = std::unique_ptr<BasicDatagramSocket<Protocol>>;
-        using Mode = typename BasicSocket<Protocol>::Mode;
-        using Option = typename BasicSocket<Protocol>::Option;
-        using State = typename BasicSocket<Protocol>::State;
+        using Mode = typename BasicRawSocket<Protocol>::Mode;
+        using Option = typename BasicRawSocket<Protocol>::Option;
+        using State = typename BasicRawSocket<Protocol>::State;
         using Endpoint = typename Protocol::Endpoint;
 
         /**
@@ -69,7 +69,7 @@ namespace join
          * @param ttl packet time to live.
          */
         explicit BasicDatagramSocket (Mode mode, int ttl = 60) noexcept
-        : BasicSocket<Protocol> (mode)
+        : BasicRawSocket<Protocol> (mode)
         , _ttl (ttl)
         {
         }
@@ -92,7 +92,7 @@ namespace join
          * @param other Other object to move.
          */
         BasicDatagramSocket (BasicDatagramSocket&& other) noexcept
-        : BasicSocket<Protocol> (std::move (other))
+        : BasicRawSocket<Protocol> (std::move (other))
         , _remote (std::move (other._remote))
         , _ttl (other._ttl)
         {
@@ -106,7 +106,7 @@ namespace join
          */
         BasicDatagramSocket& operator= (BasicDatagramSocket&& other) noexcept
         {
-            BasicSocket<Protocol>::operator= (std::move (other));
+            BasicRawSocket<Protocol>::operator= (std::move (other));
 
             _remote = std::move (other._remote);
             _ttl = other._ttl;
@@ -128,7 +128,7 @@ namespace join
          */
         int open (const Protocol& protocol = Protocol ()) noexcept override
         {
-            int result = BasicSocket<Protocol>::open (protocol);
+            int result = BasicRawSocket<Protocol>::open (protocol);
             if (result == -1)
             {
                 return -1;
@@ -239,7 +239,7 @@ namespace join
          */
         void close () noexcept override
         {
-            BasicSocket<Protocol>::close ();
+            BasicRawSocket<Protocol>::close ();
             _remote = {};
         }
 
@@ -344,11 +344,11 @@ namespace join
             int result = -1, value = -1;
             socklen_t valueLen = sizeof (value);
 
-            if (this->_protocol.family () == AF_INET6)
+            if (this->family () == AF_INET6)
             {
                 result = ::getsockopt (this->_handle, IPPROTO_IPV6, IPV6_MTU, &value, &valueLen);
             }
-            else if (this->_protocol.family () == AF_INET)
+            else if (this->family () == AF_INET)
             {
                 result = ::getsockopt (this->_handle, IPPROTO_IP, IP_MTU, &value, &valueLen);
             }
