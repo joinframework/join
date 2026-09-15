@@ -114,10 +114,9 @@ namespace join
          */
         BasicAsyncRawSocket (BasicAsyncRawSocket&& other) noexcept
         : BasicAsyncSocket<Protocol, Proactor> (std::move (other))
+        , _readArena (std::move (other._readArena))
+        , _writeArena (std::move (other._writeArena))
         {
-            _readArena = std::move (other._readArena);
-            _writeArena = std::move (other._writeArena);
-
             for (size_t i = 0; i < other._readOps.size (); ++i)
             {
                 _readOps[i].store (other._readOps[i].exchange (nullptr, std::memory_order_acq_rel),
