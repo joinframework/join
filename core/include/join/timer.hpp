@@ -78,7 +78,7 @@ namespace join
             _ops->op = IoOperation::makeRead (_handle, &_ops->expirations,
                                               static_cast<uint32_t> (sizeof (_ops->expirations)), this);
 
-            if (_proactor.submit (&_ops->op, true, true) == -1)
+            if (_proactor.submit (_ops->op, true, true) == -1)
             {
                 // LCOV_EXCL_START
                 close (_handle);
@@ -123,7 +123,7 @@ namespace join
             Backoff backoff;
             while (_state.load (std::memory_order_acquire) != State::Closed)
             {
-                _proactor.cancel (&_ops->op, true, true);
+                _proactor.cancel (_ops->op, true, true);
                 backoff ();
             }
 
@@ -289,7 +289,7 @@ namespace join
          * @param op completed operation.
          * @param result bytes read, or negative errno.
          */
-        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
+        void onComplete ([[maybe_unused]] IoOperation& op, int result) override
         {
             uint64_t expirations = _ops->expirations;
 
@@ -302,7 +302,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (JOIN_UNLIKELY (_proactor.submit (&_ops->op) == -1))
+            if (JOIN_UNLIKELY (_proactor.submit (_ops->op) == -1))
             {
                 // LCOV_EXCL_START
                 _state.store (State::Closed, std::memory_order_release);
@@ -336,7 +336,7 @@ namespace join
          * @param op cancelled operation.
          * @param result negative errno.
          */
-        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
+        void onCancel ([[maybe_unused]] IoOperation& op, [[maybe_unused]] int result) override
         {
             _state.store (State::Closed, std::memory_order_release);
         }

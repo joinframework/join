@@ -129,8 +129,8 @@ namespace join
         }
 
         /**
-         * @brief set process id.
-         * @param pid process id.
+         * @brief set port id.
+         * @param pid port id, 0 to let the kernel assign one.
          */
         void pid (uint32_t pid) noexcept
         {
@@ -138,8 +138,8 @@ namespace join
         }
 
         /**
-         * @brief get process id.
-         * @return process id.
+         * @brief get port id.
+         * @return port id.
          */
         uint32_t pid () const noexcept
         {

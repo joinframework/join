@@ -316,16 +316,15 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
     switch (cmd.type)
     {
         case CommandType::Submit:
-            err = submitOperation (cmd.op, cmd.flush);
-            if (JOIN_UNLIKELY ((err != 0) && (cmd.done == nullptr) && (cmd.op != nullptr) &&
-                               (cmd.op->state == IoOperation::State::Idle)))
+            err = submitOperation (*cmd.op, cmd.flush);
+            if (JOIN_UNLIKELY ((err != 0) && (cmd.done == nullptr) && (cmd.op->state == IoOperation::State::Idle)))
             {
                 dispatchOperation (cmd.op, -lastError.default_error_condition ().value (), false);
             }
             break;
 
         case CommandType::Cancel:
-            err = cancelOperation (cmd.op, cmd.flush);
+            err = cancelOperation (*cmd.op, cmd.flush);
             break;
 
         case CommandType::Invoke:
@@ -355,40 +354,34 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : submitOperation
 // =========================================================================
-inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused]] bool flush) noexcept
+inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused]] bool flush) noexcept
 {
-    if (JOIN_UNLIKELY (op == nullptr))
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    if (JOIN_UNLIKELY (op->fd () < 0))
+    if (JOIN_UNLIKELY (op.fd () < 0))
     {
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
     Backoff backoff;
-    while (JOIN_UNLIKELY (op->state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
+    while (JOIN_UNLIKELY (op.state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
     {
         backoff ();
     }
 
     IoOperation::State expected = IoOperation::State::Idle;
-    if (!op->state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
-                                            std::memory_order_relaxed) &&
+    if (!op.state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
+                                           std::memory_order_relaxed) &&
         (expected == IoOperation::State::Busy))
     {
-        op->state.store (IoOperation::State::Submitted, std::memory_order_release);
+        op.state.store (IoOperation::State::Submitted, std::memory_order_release);
     }
 
     IoRingBuffer* ring = nullptr;
 
-    if (JOIN_UNLIKELY (op->multishot && ((op->code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)) ||
-                                         (op->code == static_cast<uint8_t> (IoOperation::Opcode::Recv)))))
+    if (JOIN_UNLIKELY (op.multishot && ((op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)) ||
+                                        (op.code == static_cast<uint8_t> (IoOperation::Opcode::Recv)))))
     {
-        auto it = _bufferRings.find (op->group);
+        auto it = _bufferRings.find (op.group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
         {
             resetOperation (op);
@@ -399,9 +392,9 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
         ring = &it->second;
     }
 
-    if (JOIN_UNLIKELY (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::Connect))
+    if (JOIN_UNLIKELY (static_cast<IoOperation::Opcode> (op.code) == IoOperation::Opcode::Connect))
     {
-        if (JOIN_UNLIKELY (::connect (op->data.connect.fd, op->data.connect.addr, op->data.connect.addrlen) == -1 &&
+        if (JOIN_UNLIKELY (::connect (op.data.connect.fd, op.data.connect.addr, op.data.connect.addrlen) == -1 &&
                            errno != EINPROGRESS))
         {
             lastError = std::error_code (errno, std::system_category ());
@@ -410,23 +403,22 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
         }
     }
 
-    if (JOIN_UNLIKELY (static_cast<size_t> (op->fd ()) >= _readOps.size ()))
+    if (JOIN_UNLIKELY (static_cast<size_t> (op.fd ()) >= _readOps.size ()))
     {
-        size_t newSize = static_cast<size_t> (op->fd ()) + 1;
+        size_t newSize = static_cast<size_t> (op.fd ()) + 1;
         _readOps.resize (newSize, nullptr);
         _writeOps.resize (newSize, nullptr);
     }
 
-    bool isWrite = isWriteOp (*op);
+    bool isWrite = isWriteOp (op);
 
-    if (JOIN_UNLIKELY ((isWrite && (_writeOps[op->fd ()] == op)) || (!isWrite && (_readOps[op->fd ()] == op))))
+    if (JOIN_UNLIKELY ((isWrite && (_writeOps[op.fd ()] == &op)) || (!isWrite && (_readOps[op.fd ()] == &op))))
     {
         lastError = make_error_code (std::errc::device_or_resource_busy);
         return -1;
     }
 
-    if (JOIN_UNLIKELY ((isWrite && (_writeOps[op->fd ()] != nullptr)) ||
-                       (!isWrite && (_readOps[op->fd ()] != nullptr))))
+    if (JOIN_UNLIKELY ((isWrite && (_writeOps[op.fd ()] != nullptr)) || (!isWrite && (_readOps[op.fd ()] != nullptr))))
     {
         resetOperation (op);
         lastError = make_error_code (Errc::InvalidParam);
@@ -435,35 +427,35 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
 
     if (isWrite)
     {
-        _writeOps[op->fd ()] = op;
+        _writeOps[op.fd ()] = &op;
     }
     else
     {
-        _readOps[op->fd ()] = op;
+        _readOps[op.fd ()] = &op;
     }
 
     if (JOIN_UNLIKELY (ring != nullptr))
     {
-        op->ring = ring;
+        op.ring = ring;
         ring->bind ();
     }
 
-    int err = _reactor.addHandler (op->fd (), this, _readOps[op->fd ()] != nullptr, _writeOps[op->fd ()] != nullptr);
+    int err = _reactor.addHandler (op.fd (), this, _readOps[op.fd ()] != nullptr, _writeOps[op.fd ()] != nullptr);
     if (JOIN_UNLIKELY (err == -1))
     {
         if (isWrite)
         {
-            _writeOps[op->fd ()] = nullptr;
+            _writeOps[op.fd ()] = nullptr;
         }
         else
         {
-            _readOps[op->fd ()] = nullptr;
+            _readOps[op.fd ()] = nullptr;
         }
 
         if (JOIN_UNLIKELY (ring != nullptr))
         {
-            op->ring->unbind ();
-            op->ring = nullptr;
+            op.ring->unbind ();
+            op.ring = nullptr;
         }
 
         resetOperation (op);
@@ -476,35 +468,29 @@ inline int join::BasicProactor::submitOperation (IoOperation* op, [[maybe_unused
 //   CLASS     : BasicProactor
 //   METHOD    : cancelOperation
 // =========================================================================
-inline int join::BasicProactor::cancelOperation (IoOperation* op, [[maybe_unused]] bool flush) noexcept
+inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused]] bool flush) noexcept
 {
-    if (JOIN_UNLIKELY (op == nullptr))
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    if (JOIN_UNLIKELY (op->fd () < 0))
+    if (JOIN_UNLIKELY (op.fd () < 0))
     {
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
-    if (JOIN_UNLIKELY (op->state != IoOperation::State::Submitted))
+    if (JOIN_UNLIKELY (op.state != IoOperation::State::Submitted))
     {
         lastError = make_error_code (Errc::OperationFailed);
         return -1;
     }
 
-    if (JOIN_UNLIKELY (static_cast<size_t> (op->fd ()) >= _readOps.size ()))
+    if (JOIN_UNLIKELY (static_cast<size_t> (op.fd ()) >= _readOps.size ()))
     {
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
-    bool isWrite = isWriteOp (*op);
+    bool isWrite = isWriteOp (op);
 
-    if (JOIN_UNLIKELY ((isWrite && (_writeOps[op->fd ()] != op)) || (!isWrite && (_readOps[op->fd ()] != op))))
+    if (JOIN_UNLIKELY ((isWrite && (_writeOps[op.fd ()] != &op)) || (!isWrite && (_readOps[op.fd ()] != &op))))
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
@@ -512,25 +498,25 @@ inline int join::BasicProactor::cancelOperation (IoOperation* op, [[maybe_unused
 
     if (isWrite)
     {
-        _writeOps[op->fd ()] = nullptr;
+        _writeOps[op.fd ()] = nullptr;
     }
     else
     {
-        _readOps[op->fd ()] = nullptr;
+        _readOps[op.fd ()] = nullptr;
     }
 
     int ret = 0;
 
-    if (_readOps[op->fd ()] == nullptr && _writeOps[op->fd ()] == nullptr)
+    if (_readOps[op.fd ()] == nullptr && _writeOps[op.fd ()] == nullptr)
     {
-        ret = _reactor.delHandler (op->fd ());
+        ret = _reactor.delHandler (op.fd ());
     }
     else
     {
-        ret = _reactor.addHandler (op->fd (), this, _readOps[op->fd ()] != nullptr, _writeOps[op->fd ()] != nullptr);
+        ret = _reactor.addHandler (op.fd (), this, _readOps[op.fd ()] != nullptr, _writeOps[op.fd ()] != nullptr);
     }
 
-    dispatchOperation (op, -ECANCELED, true);
+    dispatchOperation (&op, -ECANCELED, true);
 
     return ret;
 }
@@ -558,21 +544,16 @@ inline void join::BasicProactor::cancelAllOperations () noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : endOperation
 // =========================================================================
-inline void join::BasicProactor::endOperation (IoOperation* op, int result, bool cancelled) noexcept
+inline void join::BasicProactor::endOperation (IoOperation& op, int result, bool cancelled) noexcept
 {
-    if (JOIN_UNLIKELY (op == nullptr))
-    {
-        return;  // LCOV_EXCL_LINE
-    }
-
-    int fd = op->fd ();
+    int fd = op.fd ();
 
     if (JOIN_UNLIKELY (fd < 0 || static_cast<size_t> (fd) >= _readOps.size ()))
     {
         return;  // LCOV_EXCL_LINE
     }
 
-    if (isWriteOp (*op))
+    if (isWriteOp (op))
     {
         _writeOps[fd] = nullptr;
     }
@@ -590,7 +571,7 @@ inline void join::BasicProactor::endOperation (IoOperation* op, int result, bool
         _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
     }
 
-    dispatchOperation (op, result, cancelled);
+    dispatchOperation (&op, result, cancelled);
 }
 
 // =========================================================================
@@ -618,19 +599,19 @@ inline bool join::BasicProactor::isWriteOp (const IoOperation& op) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : executeOp
 // =========================================================================
-inline int join::BasicProactor::executeOp (IoOperation* op, uint32_t revents) noexcept
+inline int join::BasicProactor::executeOp (IoOperation& op, uint32_t revents) noexcept
 {
     for (;;)
     {
-        switch (static_cast<IoOperation::Opcode> (op->code))
+        switch (static_cast<IoOperation::Opcode> (op.code))
         {
             case IoOperation::Opcode::Poll:
-                return static_cast<int> (revents & (op->data.poll.events | POLLERR | POLLHUP | POLLRDHUP));
+                return static_cast<int> (revents & (op.data.poll.events | POLLERR | POLLHUP | POLLRDHUP));
 
             case IoOperation::Opcode::Accept:
                 {
-                    int fd = ::accept4 (op->data.accept.fd, op->data.accept.addr, op->data.accept.addrlen,
-                                        op->data.accept.flags);
+                    int fd = ::accept4 (op.data.accept.fd, op.data.accept.addr, op.data.accept.addrlen,
+                                        op.data.accept.flags);
                     if (JOIN_UNLIKELY ((fd == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -642,7 +623,7 @@ inline int join::BasicProactor::executeOp (IoOperation* op, uint32_t revents) no
                 {
                     int err = 0;
                     socklen_t len = sizeof (err);
-                    if (JOIN_UNLIKELY (::getsockopt (op->data.connect.fd, SOL_SOCKET, SO_ERROR, &err, &len) == -1))
+                    if (JOIN_UNLIKELY (::getsockopt (op.data.connect.fd, SOL_SOCKET, SO_ERROR, &err, &len) == -1))
                     {
                         return -errno;
                     }
@@ -652,7 +633,7 @@ inline int join::BasicProactor::executeOp (IoOperation* op, uint32_t revents) no
             case IoOperation::Opcode::Read:
             case IoOperation::Opcode::ReadFixed:
                 {
-                    ssize_t n = ::read (op->data.rw.fd, op->data.rw.buf, op->data.rw.len);
+                    ssize_t n = ::read (op.data.rw.fd, op.data.rw.buf, op.data.rw.len);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -663,7 +644,7 @@ inline int join::BasicProactor::executeOp (IoOperation* op, uint32_t revents) no
             case IoOperation::Opcode::Write:
             case IoOperation::Opcode::WriteFixed:
                 {
-                    ssize_t n = ::write (op->data.rw.fd, op->data.rw.buf, op->data.rw.len);
+                    ssize_t n = ::write (op.data.rw.fd, op.data.rw.buf, op.data.rw.len);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -673,7 +654,7 @@ inline int join::BasicProactor::executeOp (IoOperation* op, uint32_t revents) no
 
             case IoOperation::Opcode::RecvMsg:
                 {
-                    ssize_t n = ::recvmsg (op->data.msg.fd, op->data.msg.msg, op->data.msg.flags);
+                    ssize_t n = ::recvmsg (op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -683,7 +664,7 @@ inline int join::BasicProactor::executeOp (IoOperation* op, uint32_t revents) no
 
             case IoOperation::Opcode::SendMsg:
                 {
-                    ssize_t n = ::sendmsg (op->data.msg.fd, op->data.msg.msg, op->data.msg.flags);
+                    ssize_t n = ::sendmsg (op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -694,7 +675,7 @@ inline int join::BasicProactor::executeOp (IoOperation* op, uint32_t revents) no
             case IoOperation::Opcode::Recv:
                 {
                     ssize_t n =
-                        ::recv (op->data.stream.fd, op->data.stream.buf, op->data.stream.len, op->data.stream.flags);
+                        ::recv (op.data.stream.fd, op.data.stream.buf, op.data.stream.len, op.data.stream.flags);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -705,7 +686,7 @@ inline int join::BasicProactor::executeOp (IoOperation* op, uint32_t revents) no
             case IoOperation::Opcode::Send:
                 {
                     ssize_t n =
-                        ::send (op->data.stream.fd, op->data.stream.buf, op->data.stream.len, op->data.stream.flags);
+                        ::send (op.data.stream.fd, op.data.stream.buf, op.data.stream.len, op.data.stream.flags);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -746,12 +727,12 @@ inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
 
         if ((rOp != nullptr) && (rOp->code == static_cast<uint8_t> (IoOperation::Opcode::Poll)))
         {
-            rResult = executeOp (rOp, revents);
+            rResult = executeOp (*rOp, revents);
         }
 
         if ((wOp != nullptr) && (wOp->code == static_cast<uint8_t> (IoOperation::Opcode::Poll)))
         {
-            wResult = executeOp (wOp, revents);
+            wResult = executeOp (*wOp, revents);
         }
 
         dispatchOperation (rOp, rResult, false);
@@ -788,7 +769,7 @@ inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
         int selected = op->ring->select ();
         if (JOIN_UNLIKELY (selected == -1))
         {
-            endOperation (op, -ENOBUFS, false);
+            endOperation (*op, -ENOBUFS, false);
             return;
         }
 
@@ -800,7 +781,7 @@ inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
             uint32_t reserved = op->data.msg.namelen + op->data.msg.controllen;
             if (JOIN_UNLIKELY (reserved >= br->size ()))
             {
-                endOperation (op, -EFAULT, false);
+                endOperation (*op, -EFAULT, false);
                 br->recycle (bid);
                 return;
             }
@@ -823,7 +804,7 @@ inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
         }
     }
 
-    int result = executeOp (op, revents);
+    int result = executeOp (*op, revents);
 
     if (JOIN_UNLIKELY ((result == -EAGAIN) && (op->code != static_cast<uint8_t> (IoOperation::Opcode::Connect))))
     {
@@ -848,11 +829,11 @@ inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
         ((result > 0) || ((result == 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::Accept)))))
     {
         op->more = true;
-        notifyOperation (op, result, false);
+        notifyOperation (*op, result, false);
     }
     else
     {
-        endOperation (op, result, false);
+        endOperation (*op, result, false);
     }
 
     if (br != nullptr)

@@ -230,7 +230,7 @@ namespace join
 
             size_t index = _readArena.getIndex (read);
 
-            if (this->_proactor->submit (&read->op, flush, false) == -1)
+            if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 releaseRead (read);
@@ -274,7 +274,7 @@ namespace join
 
             size_t slot = _readArena.getIndex (read);
 
-            if (this->_proactor->submit (&read->op, flush, false) == -1)
+            if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 releaseRead (read);
@@ -314,7 +314,7 @@ namespace join
 
             size_t index = _readArena.getIndex (read);
 
-            if (this->_proactor->submit (&read->op, flush, false) == -1)
+            if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 releaseRead (read);
@@ -365,7 +365,7 @@ namespace join
 
             size_t index = _writeArena.getIndex (write);
 
-            if (this->_proactor->submit (&write->op, flush, false) == -1)
+            if (this->_proactor->submit (write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 releaseWrite (write);
@@ -409,7 +409,7 @@ namespace join
 
             size_t slot = _writeArena.getIndex (write);
 
-            if (this->_proactor->submit (&write->op, flush, false) == -1)
+            if (this->_proactor->submit (write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 releaseWrite (write);
@@ -490,22 +490,22 @@ namespace join
          * @param code error code reported by the kernel.
          * @param size number of bytes transferred.
          */
-        void dispatch (IoOperation* op, const std::error_code& code, size_t size) noexcept override
+        void dispatch (IoOperation& op, const std::error_code& code, size_t size) noexcept override
         {
-            IoOperation::Opcode opcode = static_cast<IoOperation::Opcode> (op->code);
+            IoOperation::Opcode opcode = static_cast<IoOperation::Opcode> (op.code);
 
             if ((opcode == IoOperation::Opcode::RecvMsg) || (opcode == IoOperation::Opcode::Recv) ||
                 (opcode == IoOperation::Opcode::ReadFixed))
             {
-                completeRead (reinterpret_cast<AsyncRead*> (op), code, size);
+                completeRead (reinterpret_cast<AsyncRead*> (&op), code, size);
             }
             else if ((opcode == IoOperation::Opcode::SendMsg) || (opcode == IoOperation::Opcode::WriteFixed))
             {
-                completeWrite (reinterpret_cast<AsyncWrite*> (op), code, size);
+                completeWrite (reinterpret_cast<AsyncWrite*> (&op), code, size);
             }
             else
             {
-                completeConnect (reinterpret_cast<AsyncWrite*> (op), code);
+                completeConnect (reinterpret_cast<AsyncWrite*> (&op), code);
             }
         }
 

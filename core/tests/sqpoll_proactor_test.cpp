@@ -68,11 +68,11 @@ protected:
     void TearDown () override
     {
         auto& proactor = SqpollProactorThread::proactor ();
-        proactor.cancel (&_readOp, true, true);
-        proactor.cancel (&_writeOp, true, true);
-        proactor.cancel (&_spareOp, true, true);
-        proactor.cancel (&_invalidOp, true, true);
-        proactor.cancel (&_resubmitOp, true, true);
+        proactor.cancel (_readOp, true, true);
+        proactor.cancel (_writeOp, true, true);
+        proactor.cancel (_spareOp, true, true);
+        proactor.cancel (_invalidOp, true, true);
+        proactor.cancel (_resubmitOp, true, true);
 
         _server.close ();
         _client.close ();
@@ -84,7 +84,7 @@ protected:
      * @param op completed operation.
      * @param result bytes transferred or negative errno.
      */
-    void onComplete (IoOperation* op, int result) override
+    void onComplete (IoOperation& op, int result) override
     {
         if (_resubmits > 0)
         {
@@ -98,7 +98,7 @@ protected:
         {
             IoOperation* target = _cancelTarget;
             _cancelTarget = nullptr;
-            _cancelResult = _handlerProactor->cancel (target, true, true);
+            _cancelResult = _handlerProactor->cancel (*target, true, true);
         }
 
         if (_stopFromHandler)
@@ -110,24 +110,24 @@ protected:
         if (_suspendFromHandler)
         {
             _suspendFromHandler = false;
-            _handlerProactor->suspend (op);
+            _handlerProactor->suspend (&op);
         }
 
         {
             ScopedLock<Mutex> lock (_mut);
-            if ((op->ring != nullptr) && (result > 0))
+            if ((op.ring != nullptr) && (result > 0))
             {
-                if (op->code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg))
+                if (op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg))
                 {
-                    ::memcpy (_buf, op->data.msg.msg->msg_iov->iov_base, result);
+                    ::memcpy (_buf, op.data.msg.msg->msg_iov->iov_base, result);
                 }
                 else
                 {
-                    ::memcpy (_buf, op->data.stream.buf, result);
+                    ::memcpy (_buf, op.data.stream.buf, result);
                 }
             }
             _result = result;
-            _op = op;
+            _op = &op;
             ++_completions;
             CompletionHandler::onComplete (op, result);
         }
@@ -140,7 +140,7 @@ protected:
      * @param op cancelled operation.
      * @param result negative errno.
      */
-    void onCancel (IoOperation* op, int result) override
+    void onCancel (IoOperation& op, int result) override
     {
         if (_resubmits > 0)
         {
@@ -153,8 +153,8 @@ protected:
         {
             ScopedLock<Mutex> lock (_mut);
             _result = result;
-            _op = op;
-            _cancelled = op;
+            _op = &op;
+            _cancelled = &op;
             CompletionHandler::onCancel (op, result);
         }
 
@@ -285,7 +285,7 @@ TEST_F (SqpollProactorTest, stop)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
     proactor.stop ();
     th.join ();
@@ -309,7 +309,7 @@ TEST_F (SqpollProactorTest, stop)
         _stopFromHandler = true;
 
         _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-        EXPECT_EQ (local.submit (&_readOp, true, true), 0) << join::lastError.message ();
+        EXPECT_EQ (local.submit (_readOp, true, true), 0) << join::lastError.message ();
         EXPECT_EQ (_client.writeExactly ("stop", 4), 0) << join::lastError.message ();
 
         bool completed = false;
@@ -391,11 +391,8 @@ TEST_F (SqpollProactorTest, submit)
         proactor.run ();
     });
 
-    ASSERT_EQ (proactor.submit (nullptr, true, true), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-
     _readOp = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), -1);
+    ASSERT_EQ (proactor.submit (_readOp, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     if (_client.connect ({_host, _port}) == -1)
@@ -406,13 +403,13 @@ TEST_F (SqpollProactorTest, submit)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), -1);
+    ASSERT_EQ (proactor.submit (_readOp, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
 
     _invalidOp = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.submit (&_invalidOp, true, false), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_invalidOp, true, false), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -425,10 +422,10 @@ TEST_F (SqpollProactorTest, submit)
 
 #ifndef JOIN_HAS_IO_URING
     _spareOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.submit (&_spareOp, true, true), -1);
+    ASSERT_EQ (proactor.submit (_spareOp, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    ASSERT_EQ (proactor.submit (&_spareOp, true, false), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_spareOp, true, false), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -440,7 +437,7 @@ TEST_F (SqpollProactorTest, submit)
     }
 #endif
 
-    ASSERT_EQ (proactor.cancel (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.cancel (_readOp, true, true), 0) << join::lastError.message ();
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
@@ -464,11 +461,8 @@ TEST_F (SqpollProactorTest, cancel)
         proactor.run ();
     });
 
-    ASSERT_EQ (proactor.cancel (nullptr, true, true), -1);
-    ASSERT_EQ (join::lastError, Errc::InvalidParam);
-
     _readOp = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.cancel (&_readOp, true, true), -1);
+    ASSERT_EQ (proactor.cancel (_readOp, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     if (_client.connect ({_host, _port}) == -1)
@@ -479,17 +473,17 @@ TEST_F (SqpollProactorTest, cancel)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.cancel (&_readOp, true, true), -1);
+    ASSERT_EQ (proactor.cancel (_readOp, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
     _spareOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
     _spareOp.state = IoOperation::State::Submitted;
-    ASSERT_EQ (proactor.cancel (&_spareOp, true, true), -1);
+    ASSERT_EQ (proactor.cancel (_spareOp, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    ASSERT_EQ (proactor.cancel (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.cancel (_readOp, true, true), 0) << join::lastError.message ();
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
@@ -501,7 +495,7 @@ TEST_F (SqpollProactorTest, cancel)
 
     // cancel an operation from within a completion handler.
     _spareOp = IoOperation::makeRead (_client.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.submit (&_spareOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_spareOp, true, true), 0) << join::lastError.message ();
 
     _handlerProactor = &proactor;
     _cancelTarget = &_spareOp;
@@ -509,7 +503,7 @@ TEST_F (SqpollProactorTest, cancel)
     _cancelled = nullptr;
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("cancel", 6), 0) << join::lastError.message ();
 
     {
@@ -546,7 +540,7 @@ TEST_F (SqpollProactorTest, flush)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.submit (&_readOp, false, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_readOp, false, true), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.flush (true), 0) << join::lastError.message ();
 
     ASSERT_EQ (_client.writeExactly ("flush", strlen ("flush"), _timeout), 0) << join::lastError.message ();
@@ -585,8 +579,8 @@ TEST_F (SqpollProactorTest, chain)
     _writeOp = IoOperation::makeWrite (_server.handle (), "ping", 4, this, true);
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
 
-    ASSERT_EQ (proactor.submit (&_writeOp, false, true), 0) << join::lastError.message ();
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_writeOp, false, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -634,7 +628,7 @@ TEST_F (SqpollProactorTest, suspend)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
     proactor.suspend (&_readOp);
     EXPECT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
@@ -662,7 +656,7 @@ TEST_F (SqpollProactorTest, suspend)
     _suspendFromHandler = true;
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (proactor.submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("busy", 4), 0) << join::lastError.message ();
 
     {
@@ -860,7 +854,7 @@ TEST_F (SqpollProactorTest, asyncPoll)
 
     _writeOp = IoOperation::makePoll (_server.handle (), POLLOUT, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_writeOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -873,7 +867,7 @@ TEST_F (SqpollProactorTest, asyncPoll)
 
     _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncPoll", strlen ("asyncPoll"), _timeout), 0) << join::lastError.message ();
 
     {
@@ -904,7 +898,7 @@ TEST_F (SqpollProactorTest, asyncPollMulti)
     _completions = 0;
     _readOp = IoOperation::makePollMulti (_server.handle (), POLLIN, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
 
     for (int i = 0; i < 2; ++i)
     {
@@ -921,7 +915,7 @@ TEST_F (SqpollProactorTest, asyncPollMulti)
         ASSERT_EQ (_server.readExactly (_buf, 4, _timeout), 0) << join::lastError.message ();
     }
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (_readOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -943,7 +937,7 @@ TEST_F (SqpollProactorTest, asyncConnect)
     ASSERT_EQ (_client.open (Tcp::v4 ()), 0) << join::lastError.message ();
 
     _readOp = IoOperation::makeConnect (_client.handle (), endpoint.addr (), endpoint.length (), this);
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
 
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
@@ -977,7 +971,7 @@ TEST_F (SqpollProactorTest, asyncAccept)
     _readOp = IoOperation::makeAccept (_acceptor.handle (), reinterpret_cast<sockaddr*> (&addr), &addrlen,
                                        SOCK_NONBLOCK | SOCK_CLOEXEC, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     if (_client.connect ({_host, _port}) == -1)
     {
         ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
@@ -1003,7 +997,7 @@ TEST_F (SqpollProactorTest, asyncAcceptMulti)
     _completions = 0;
     _readOp = IoOperation::makeAcceptMulti (_acceptor.handle (), SOCK_NONBLOCK | SOCK_CLOEXEC, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
 
     for (int i = 0; i < 2; ++i)
     {
@@ -1027,9 +1021,9 @@ TEST_F (SqpollProactorTest, asyncAcceptMulti)
         client.close ();
     }
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), -1);
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), -1);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (_readOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1066,7 +1060,7 @@ TEST_F (SqpollProactorTest, asyncWrite)
     const char* msg = "asyncWrite";
     _writeOp = IoOperation::makeWrite (_server.handle (), msg, strlen (msg), this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_writeOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1107,7 +1101,7 @@ TEST_F (SqpollProactorTest, asyncRead)
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRead", strlen ("asyncRead"), _timeout), 0) << join::lastError.message ();
 
     {
@@ -1142,7 +1136,7 @@ TEST_F (SqpollProactorTest, asyncWriteFixed)
     ASSERT_EQ (SqpollProactorThread::proactor ().registerFixedBuffers (arena), 0) << join::lastError.message ();
 
     _writeOp = IoOperation::makeWriteFixed (_server.handle (), regbuf, strlen (msg), 0, this);
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_writeOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1180,7 +1174,7 @@ TEST_F (SqpollProactorTest, asyncReadFixed)
     ASSERT_EQ (SqpollProactorThread::proactor ().registerFixedBuffers (arena), 0) << join::lastError.message ();
 
     _readOp = IoOperation::makeReadFixed (_server.handle (), regbuf, sizeof (_buf), 1, this);
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncReadFixed", strlen ("asyncReadFixed"), _timeout), 0)
         << join::lastError.message ();
 
@@ -1226,7 +1220,7 @@ TEST_F (SqpollProactorTest, asyncSendmsg)
     msg.msg_iovlen = 1;
     _writeOp = IoOperation::makeSendmsg (_server.handle (), &msg, 0, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_writeOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1271,7 +1265,7 @@ TEST_F (SqpollProactorTest, asyncRecvmsg)
     msg.msg_iovlen = 1;
     _readOp = IoOperation::makeRecvmsg (_server.handle (), &msg, 0, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRecvmsg", strlen ("asyncRecvmsg"), _timeout), 0)
         << join::lastError.message ();
 
@@ -1306,7 +1300,7 @@ TEST_F (SqpollProactorTest, asyncRecvmsgMulti)
 
     _readOp = IoOperation::makeRecvmsgMulti (server.handle (), 1, &msg, 0, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), -1);
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), -1);
 
     LocalMem::Allocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (SqpollProactorThread::proactor ().registerBufferRing (0, arena), 0) << join::lastError.message ();
@@ -1314,7 +1308,7 @@ TEST_F (SqpollProactorTest, asyncRecvmsgMulti)
     _completions = 0;
     _readOp = IoOperation::makeRecvmsgMulti (server.handle (), 0, &msg, 0, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
 
     const char* payload = "asyncRecvmsgMulti";
 
@@ -1352,7 +1346,7 @@ TEST_F (SqpollProactorTest, asyncRecvmsgMulti)
     ASSERT_EQ (SqpollProactorThread::proactor ().unregisterBufferRing (0), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (_readOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1365,7 +1359,7 @@ TEST_F (SqpollProactorTest, asyncRecvmsgMulti)
 
     _completions = 0;
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (client.writeTo (payload, 0, to), 0) << join::lastError.message ();
 
     {
@@ -1387,7 +1381,7 @@ TEST_F (SqpollProactorTest, asyncRecvmsgMulti)
     msg.msg_namelen = sizeof (name);
     _readOp = IoOperation::makeRecvmsgMulti (server.handle (), 1, &msg, 0, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (client.writeTo (payload, strlen (payload), to), static_cast<ssize_t> (strlen (payload)))
         << join::lastError.message ();
 
@@ -1419,7 +1413,7 @@ TEST_F (SqpollProactorTest, asyncSend)
     const char* msg = "asyncSend";
     _writeOp = IoOperation::makeSend (_server.handle (), msg, strlen (msg), 0, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_writeOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1450,7 +1444,7 @@ TEST_F (SqpollProactorTest, asyncRecv)
 
     _readOp = IoOperation::makeRecv (_server.handle (), _buf, sizeof (_buf), 0, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRecv", strlen ("asyncRecv"), _timeout), 0) << join::lastError.message ();
 
     {
@@ -1478,7 +1472,7 @@ TEST_F (SqpollProactorTest, asyncRecvMulti)
 
     _readOp = IoOperation::makeRecvMulti (_server.handle (), 1, 0, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), -1);
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), -1);
 
     LocalMem::Allocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (SqpollProactorThread::proactor ().registerBufferRing (0, arena), 0) << join::lastError.message ();
@@ -1486,7 +1480,7 @@ TEST_F (SqpollProactorTest, asyncRecvMulti)
     _completions = 0;
     _readOp = IoOperation::makeRecvMulti (_server.handle (), 0, 0, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
 
     const char* msg = "asyncRecvMulti";
 
@@ -1507,7 +1501,7 @@ TEST_F (SqpollProactorTest, asyncRecvMulti)
     ASSERT_EQ (SqpollProactorThread::proactor ().unregisterBufferRing (0), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (_readOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1545,7 +1539,7 @@ TEST_F (SqpollProactorTest, onClose)
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     _client.close ();
 
     {
@@ -1566,7 +1560,7 @@ TEST_F (SqpollProactorTest, onClose)
 
     _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     _client.close ();
 
     {
@@ -1603,7 +1597,7 @@ TEST_F (SqpollProactorTest, onError)
 
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     linger sl{.l_onoff = 1, .l_linger = 0};
     ASSERT_EQ (setsockopt (_client.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
     _client.close ();
@@ -1626,7 +1620,7 @@ TEST_F (SqpollProactorTest, onError)
 
     _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (setsockopt (_client.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
     _client.close ();
 
@@ -1659,7 +1653,7 @@ TEST_F (SqpollProactorTest, resubmit)
     _rejected = 0;
 
     _resubmitOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (&_resubmitOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_resubmitOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
 
     {
@@ -1674,7 +1668,7 @@ TEST_F (SqpollProactorTest, resubmit)
     ASSERT_EQ (_resubmitted, 0);
     ASSERT_EQ (_rejected, -1);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (&_resubmitOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (_resubmitOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
