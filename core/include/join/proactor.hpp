@@ -128,7 +128,7 @@ protected:
      * @param op completed operation, left idle when a multishot ended and can be resubmitted.
      * @param result number of bytes transferred, operation-specific value, or negative errno on failure.
      */
-    virtual void onComplete ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result)
+    virtual void onComplete ([[maybe_unused]] IoOperation& op, [[maybe_unused]] int result)
     {
         // do nothing.
     }
@@ -138,7 +138,7 @@ protected:
      * @param op cancelled operation.
      * @param result -ECANCELED, or other negative errno on failure.
      */
-    virtual void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result)
+    virtual void onCancel ([[maybe_unused]] IoOperation& op, [[maybe_unused]] int result)
     {
         // do nothing.
     }
@@ -237,7 +237,7 @@ public:
      * @param sync wait for submission acknowledgment if true (default: false).
      * @return 0 on success, -1 on failure.
      */
-    int submit (IoOperation* op, bool flush = false, bool sync = false) noexcept;
+    int submit (IoOperation& op, bool flush = false, bool sync = false) noexcept;
 
     /**
      * @brief cancel an in-flight operation.
@@ -246,7 +246,7 @@ public:
      * @param sync wait for cancellation acknowledgment if true (default: false).
      * @return 0 on success, -1 on failure (lastError set).
      */
-    int cancel (IoOperation* op, bool flush = false, bool sync = false) noexcept;
+    int cancel (IoOperation& op, bool flush = false, bool sync = false) noexcept;
 
     /**
      * @brief invoke a function from the proactor thread.
@@ -492,7 +492,7 @@ private:
      * @param flush if true, flush pending submissions to the kernel after submitting (io_uring only).
      * @return 0 on success, -1 on failure.
      */
-    int submitOperation (IoOperation* op, bool flush) noexcept;
+    int submitOperation (IoOperation& op, bool flush) noexcept;
 
     /**
      * @brief cancel an in-flight operation directly in the backend.
@@ -500,7 +500,7 @@ private:
      * @param flush if true, flush pending submissions to the kernel after cancelling (io_uring only).
      * @return 0 on success, -1 on failure.
      */
-    int cancelOperation (IoOperation* op, bool flush) noexcept;
+    int cancelOperation (IoOperation& op, bool flush) noexcept;
 
     /**
      * @brief cancel all in-flight operations.
@@ -516,11 +516,11 @@ private:
 
     /**
      * @brief invoke completion callback.
-     * @param op operation to dispatch, may be nullptr.
+     * @param op operation to dispatch.
      * @param result negative errno or bytes-transferred result.
      * @param cancelled if true, dispatch to onCancel; otherwise to onComplete.
      */
-    void notifyOperation (IoOperation* op, int result, bool cancelled) noexcept;
+    void notifyOperation (IoOperation& op, int result, bool cancelled) noexcept;
 
     /**
      * @brief dispatch completion callback and reset operation state.
@@ -532,17 +532,17 @@ private:
 
     /**
      * @brief end an operation, dispatching onCancel or onComplete.
-     * @param op operation to end, may be nullptr.
+     * @param op operation to end.
      * @param result negative errno or bytes-transferred result.
      * @param cancelled if true, dispatch to onCancel; otherwise to onComplete.
      */
-    void endOperation (IoOperation* op, int result, bool cancelled = false) noexcept;
+    void endOperation (IoOperation& op, int result, bool cancelled = false) noexcept;
 
     /**
      * @brief reset an operation that could not be submitted.
      * @param op operation to reset.
      */
-    void resetOperation (IoOperation* op) noexcept;
+    void resetOperation (IoOperation& op) noexcept;
 
 #ifdef JOIN_HAS_IO_URING
     /**
@@ -565,7 +565,7 @@ private:
      * @param sqe submission queue entry.
      * @param op operation to prepare.
      */
-    void prepareSqe (io_uring_sqe* sqe, IoOperation* op) noexcept;
+    void prepareSqe (io_uring_sqe* sqe, IoOperation& op) noexcept;
 
     /**
      * @brief dispatch a completion queue entry to the appropriate handler.
@@ -617,7 +617,7 @@ private:
      * @param op operation to execute.
      * @return bytes transferred (>= 0) or -errno (< 0).
      */
-    static int executeOp (IoOperation* op) noexcept;
+    static int executeOp (IoOperation& op) noexcept;
 
     /**
      * @brief method called when data are ready to be read on handle.
@@ -702,9 +702,9 @@ private:
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
-int join::BasicProactor<Policy>::submit (IoOperation* op, bool flush, bool sync) noexcept
+int join::BasicProactor<Policy>::submit (IoOperation& op, bool flush, bool sync) noexcept
 #else
-inline int join::BasicProactor::submit (IoOperation* op, bool flush, bool sync) noexcept
+inline int join::BasicProactor::submit (IoOperation& op, bool flush, bool sync) noexcept
 #endif
 {
     if (isProactorThread ())
@@ -721,7 +721,7 @@ inline int join::BasicProactor::submit (IoOperation* op, bool flush, bool sync) 
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Submit, op, flush, pdone, perrc, nullptr}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Submit, &op, flush, pdone, perrc, nullptr}) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
@@ -750,9 +750,9 @@ inline int join::BasicProactor::submit (IoOperation* op, bool flush, bool sync) 
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
-int join::BasicProactor<Policy>::cancel (IoOperation* op, bool flush, bool sync) noexcept
+int join::BasicProactor<Policy>::cancel (IoOperation& op, bool flush, bool sync) noexcept
 #else
-inline int join::BasicProactor::cancel (IoOperation* op, bool flush, bool sync) noexcept
+inline int join::BasicProactor::cancel (IoOperation& op, bool flush, bool sync) noexcept
 #endif
 {
     if (isProactorThread ())
@@ -769,7 +769,7 @@ inline int join::BasicProactor::cancel (IoOperation* op, bool flush, bool sync) 
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Cancel, op, flush, pdone, perrc, nullptr}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Cancel, &op, flush, pdone, perrc, nullptr}) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
@@ -927,20 +927,20 @@ inline int join::BasicProactor::invokeFunction (InvokeHandler* fn) noexcept
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
-void join::BasicProactor<Policy>::notifyOperation (IoOperation* op, int result, bool cancelled) noexcept
+void join::BasicProactor<Policy>::notifyOperation (IoOperation& op, int result, bool cancelled) noexcept
 #else
-inline void join::BasicProactor::notifyOperation (IoOperation* op, int result, bool cancelled) noexcept
+inline void join::BasicProactor::notifyOperation (IoOperation& op, int result, bool cancelled) noexcept
 #endif
 {
-    if (JOIN_LIKELY (op->handler))
+    if (JOIN_LIKELY (op.handler))
     {
         if (cancelled)
         {
-            op->handler->onCancel (op, result);
+            op.handler->onCancel (op, result);
         }
         else
         {
-            op->handler->onComplete (op, result);
+            op.handler->onComplete (op, result);
         }
     }
 }
@@ -984,7 +984,7 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
 
     op->more = false;
 
-    notifyOperation (op, result, cancelled);
+    notifyOperation (*op, result, cancelled);
 }
 
 // =========================================================================
@@ -993,17 +993,17 @@ inline void join::BasicProactor::dispatchOperation (IoOperation* op, int result,
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
-void join::BasicProactor<Policy>::resetOperation (IoOperation* op) noexcept
+void join::BasicProactor<Policy>::resetOperation (IoOperation& op) noexcept
 #else
-inline void join::BasicProactor::resetOperation (IoOperation* op) noexcept
+inline void join::BasicProactor::resetOperation (IoOperation& op) noexcept
 #endif
 {
     IoOperation::State expected = IoOperation::State::Submitted;
-    if (!op->state.compare_exchange_strong (expected, IoOperation::State::Idle, std::memory_order_release,
-                                            std::memory_order_relaxed) &&
+    if (!op.state.compare_exchange_strong (expected, IoOperation::State::Idle, std::memory_order_release,
+                                           std::memory_order_relaxed) &&
         (expected != IoOperation::State::Busy))  // LCOV_EXCL_LINE
     {
-        op->resume = IoOperation::State::Idle;  // LCOV_EXCL_LINE
+        op.resume = IoOperation::State::Idle;  // LCOV_EXCL_LINE
     }
 }
 

@@ -152,7 +152,7 @@ namespace join
             _acceptOp.op = IoOperation::makeAccept (_acceptor.handle (), _acceptOp.remote.addr (), &_acceptOp.remoteLen,
                                                     flags | SOCK_NONBLOCK, this);
 
-            if (_proactor->submit (&_acceptOp.op, true, false) == -1)
+            if (_proactor->submit (_acceptOp.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
                 _acceptOp.acceptHandler.reset ();
@@ -187,7 +187,7 @@ namespace join
             _acceptOp.acceptHandler = std::move (handler);
             _acceptOp.op = IoOperation::makeAcceptMulti (_acceptor.handle (), flags | SOCK_NONBLOCK, this);
 
-            if (_proactor->submit (&_acceptOp.op, true, false) == -1)
+            if (_proactor->submit (_acceptOp.op, true, false) == -1)
             {
                 // LCOV_EXCL_START
                 _acceptOp.acceptHandler.reset ();
@@ -209,7 +209,7 @@ namespace join
                 return 0;
             }
 
-            if (_proactor->cancel (&_acceptOp.op, true, true) == -1)
+            if (_proactor->cancel (_acceptOp.op, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;
             }
@@ -277,7 +277,7 @@ namespace join
          * @param op completed operation.
          * @param result accepted file descriptor, or negative errno.
          */
-        void onComplete ([[maybe_unused]] IoOperation* op, int result) override
+        void onComplete ([[maybe_unused]] IoOperation& op, int result) override
         {
             completeAccept (result);
         }
@@ -287,7 +287,7 @@ namespace join
          * @param op cancelled operation.
          * @param result negative errno.
          */
-        void onCancel ([[maybe_unused]] IoOperation* op, [[maybe_unused]] int result) override
+        void onCancel ([[maybe_unused]] IoOperation& op, [[maybe_unused]] int result) override
         {
             completeAccept (-ECANCELED);
         }

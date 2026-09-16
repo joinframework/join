@@ -133,7 +133,7 @@ namespace join
                                                     this->_socket._remote.length (), this);
             connect->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            if (this->_proactor->submit (&connect->op, true, false) == -1)
+            if (this->_proactor->submit (connect->op, true, false) == -1)
             {
                 // LCOV_EXCL_START
                 this->releaseWrite (connect);

@@ -248,7 +248,7 @@ namespace join
          * @param op completed operation.
          * @param result number of bytes transferred, or negative errno.
          */
-        void onComplete (IoOperation* op, int result) override
+        void onComplete (IoOperation& op, int result) override
         {
             std::error_code code =
                 (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code ();
@@ -261,7 +261,7 @@ namespace join
          * @param op cancelled operation.
          * @param result negative errno.
          */
-        void onCancel (IoOperation* op, [[maybe_unused]] int result) override
+        void onCancel (IoOperation& op, [[maybe_unused]] int result) override
         {
             dispatch (op, make_error_code (std::errc::operation_canceled), 0);
         }
@@ -272,7 +272,7 @@ namespace join
          * @param code error code reported by the kernel.
          * @param size number of bytes transferred.
          */
-        virtual void dispatch (IoOperation* op, const std::error_code& code, size_t size) noexcept = 0;
+        virtual void dispatch (IoOperation& op, const std::error_code& code, size_t size) noexcept = 0;
 
         /**
          * @brief suspend every operation in flight.
@@ -307,7 +307,7 @@ namespace join
                 return 0;
             }
 
-            if (_proactor->cancel (op, true, true) == -1)
+            if (_proactor->cancel (*op, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;
             }

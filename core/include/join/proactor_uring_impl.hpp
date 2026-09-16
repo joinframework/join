@@ -538,8 +538,8 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
     switch (cmd.type)
     {
         case CommandType::Submit:
-            err = submitOperation (cmd.op, cmd.flush);
-            if (JOIN_UNLIKELY ((err == -1) && (cmd.done == nullptr) && (cmd.op != nullptr) &&
+            err = submitOperation (*cmd.op, cmd.flush);
+            if (JOIN_UNLIKELY ((err == -1) && (cmd.done == nullptr) &&
                                (cmd.op->state.load (std::memory_order_relaxed) == IoOperation::State::Idle)))
             {
                 dispatchOperation (cmd.op, -lastError.default_error_condition ().value (), false);
@@ -547,7 +547,7 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
             break;
 
         case CommandType::Cancel:
-            err = cancelOperation (cmd.op, cmd.flush);
+            err = cancelOperation (*cmd.op, cmd.flush);
             break;
 
         case CommandType::Invoke:
@@ -592,35 +592,29 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
 //   METHOD    : submitOperation
 // =========================================================================
 template <typename Policy>
-int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) noexcept
+int join::BasicProactor<Policy>::submitOperation (IoOperation& op, bool flush) noexcept
 {
-    if (JOIN_UNLIKELY (op == nullptr))
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    if (JOIN_UNLIKELY (op->fd () < 0))
+    if (JOIN_UNLIKELY (op.fd () < 0))
     {
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
     Backoff backoff;
-    while (JOIN_UNLIKELY (op->state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
+    while (JOIN_UNLIKELY (op.state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
     {
         backoff ();
     }
 
     IoOperation::State expected = IoOperation::State::Idle;
-    if (!op->state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
-                                            std::memory_order_relaxed) &&
+    if (!op.state.compare_exchange_strong (expected, IoOperation::State::Submitted, std::memory_order_acquire,
+                                           std::memory_order_relaxed) &&
         (expected == IoOperation::State::Busy))
     {
-        op->state.store (IoOperation::State::Submitted, std::memory_order_release);
+        op.state.store (IoOperation::State::Submitted, std::memory_order_release);
     }
 
-    if (JOIN_UNLIKELY ((op->index < _pendingOps.size ()) && (_pendingOps[op->index] == op)))
+    if (JOIN_UNLIKELY ((op.index < _pendingOps.size ()) && (_pendingOps[op.index] == &op)))
     {
         lastError = make_error_code (std::errc::device_or_resource_busy);
         return -1;
@@ -628,9 +622,9 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
 
     IoRingBuffer* ring = nullptr;
 
-    if (JOIN_UNLIKELY (op->multishot && (op->code != static_cast<uint8_t> (IoOperation::Opcode::Accept))))
+    if (JOIN_UNLIKELY (op.multishot && (op.code != static_cast<uint8_t> (IoOperation::Opcode::Accept))))
     {
-        auto it = _bufferRings.find (op->group);
+        auto it = _bufferRings.find (op.group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
         {
             resetOperation (op);
@@ -652,12 +646,12 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
     }
 
     prepareSqe (sqe, op);
-    op->index = static_cast<uint32_t> (_pendingOps.size ());
-    _pendingOps.push_back (op);
+    op.index = static_cast<uint32_t> (_pendingOps.size ());
+    _pendingOps.push_back (&op);
 
     if (JOIN_UNLIKELY (ring != nullptr))
     {
-        op->ring = ring;
+        op.ring = ring;
         ring->bind ();
     }
 
@@ -674,27 +668,21 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation* op, bool flush) n
 //   METHOD    : cancelOperation
 // =========================================================================
 template <typename Policy>
-int join::BasicProactor<Policy>::cancelOperation (IoOperation* op, bool flush) noexcept
+int join::BasicProactor<Policy>::cancelOperation (IoOperation& op, bool flush) noexcept
 {
-    if (JOIN_UNLIKELY (op == nullptr))
-    {
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    if (JOIN_UNLIKELY (op->fd () < 0))
+    if (JOIN_UNLIKELY (op.fd () < 0))
     {
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
     }
 
-    if (JOIN_UNLIKELY (op->state.load (std::memory_order_acquire) != IoOperation::State::Submitted))
+    if (JOIN_UNLIKELY (op.state.load (std::memory_order_acquire) != IoOperation::State::Submitted))
     {
         lastError = make_error_code (Errc::OperationFailed);
         return -1;
     }
 
-    if (JOIN_UNLIKELY (op->index >= _pendingOps.size () || _pendingOps[op->index] != op))
+    if (JOIN_UNLIKELY (op.index >= _pendingOps.size () || _pendingOps[op.index] != &op))
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
@@ -709,7 +697,7 @@ int join::BasicProactor<Policy>::cancelOperation (IoOperation* op, bool flush) n
         // LCOV_EXCL_STOP
     }
 
-    io_uring_prep_cancel (sqe, op, 0);
+    io_uring_prep_cancel (sqe, &op, 0);
     io_uring_sqe_set_data (sqe, nullptr);
 
     if (JOIN_UNLIKELY (flush))
@@ -734,7 +722,7 @@ void join::BasicProactor<Policy>::cancelAllOperations () noexcept
         {
             backoff ();  // LCOV_EXCL_LINE
         }
-        cancelOperation (op, false);
+        cancelOperation (*op, false);
     }
 }
 
@@ -743,22 +731,17 @@ void join::BasicProactor<Policy>::cancelAllOperations () noexcept
 //   METHOD    : endOperation
 // =========================================================================
 template <typename Policy>
-void join::BasicProactor<Policy>::endOperation (IoOperation* op, int result, bool cancelled) noexcept
+void join::BasicProactor<Policy>::endOperation (IoOperation& op, int result, bool cancelled) noexcept
 {
-    if (JOIN_UNLIKELY (op == nullptr))
-    {
-        return;  // LCOV_EXCL_LINE
-    }
-
-    if (JOIN_LIKELY (op->index < _pendingOps.size () && _pendingOps[op->index] == op))
+    if (JOIN_LIKELY (op.index < _pendingOps.size () && _pendingOps[op.index] == &op))
     {
         IoOperation* last = _pendingOps.back ();
-        _pendingOps[op->index] = last;
-        last->index = op->index;
+        _pendingOps[op.index] = last;
+        last->index = op.index;
         _pendingOps.pop_back ();
     }
 
-    dispatchOperation (op, result, cancelled);
+    dispatchOperation (&op, result, cancelled);
 }
 
 // =========================================================================
@@ -804,89 +787,88 @@ io_uring_sqe* join::BasicProactor<Policy>::getSqe () noexcept
 //   METHOD    : prepareSqe
 // =========================================================================
 template <typename Policy>
-void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation* op) noexcept
+void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation& op) noexcept
 {
-    switch (static_cast<IoOperation::Opcode> (op->code))
+    switch (static_cast<IoOperation::Opcode> (op.code))
     {
         case IoOperation::Opcode::Accept:
-            if (op->multishot)
+            if (op.multishot)
             {
-                io_uring_prep_multishot_accept (sqe, op->data.accept.fd, op->data.accept.addr, op->data.accept.addrlen,
-                                                op->data.accept.flags);
+                io_uring_prep_multishot_accept (sqe, op.data.accept.fd, op.data.accept.addr, op.data.accept.addrlen,
+                                                op.data.accept.flags);
             }
             else
             {
-                io_uring_prep_accept (sqe, op->data.accept.fd, op->data.accept.addr, op->data.accept.addrlen,
-                                      op->data.accept.flags);
+                io_uring_prep_accept (sqe, op.data.accept.fd, op.data.accept.addr, op.data.accept.addrlen,
+                                      op.data.accept.flags);
             }
             break;
 
         case IoOperation::Opcode::Connect:
-            io_uring_prep_connect (sqe, op->data.connect.fd, op->data.connect.addr, op->data.connect.addrlen);
+            io_uring_prep_connect (sqe, op.data.connect.fd, op.data.connect.addr, op.data.connect.addrlen);
             break;
 
         case IoOperation::Opcode::Read:
-            io_uring_prep_read (sqe, op->data.rw.fd, op->data.rw.buf, op->data.rw.len, 0);
+            io_uring_prep_read (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0);
             break;
 
         case IoOperation::Opcode::Write:
-            io_uring_prep_write (sqe, op->data.rw.fd, op->data.rw.buf, op->data.rw.len, 0);
+            io_uring_prep_write (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0);
             break;
 
         case IoOperation::Opcode::ReadFixed:
-            io_uring_prep_read_fixed (sqe, op->data.rw.fd, op->data.rw.buf, op->data.rw.len, 0, op->data.rw.index);
+            io_uring_prep_read_fixed (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0, op.data.rw.index);
             break;
 
         case IoOperation::Opcode::WriteFixed:
-            io_uring_prep_write_fixed (sqe, op->data.rw.fd, op->data.rw.buf, op->data.rw.len, 0, op->data.rw.index);
+            io_uring_prep_write_fixed (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0, op.data.rw.index);
             break;
 
         case IoOperation::Opcode::RecvMsg:
-            if (op->multishot)
+            if (op.multishot)
             {
-                op->data.msg.msg->msg_namelen = op->data.msg.namelen;
-                op->data.msg.msg->msg_controllen = op->data.msg.controllen;
-                op->data.msg.msg->msg_iovlen = 0;
-                io_uring_prep_recvmsg_multishot (sqe, op->data.msg.fd, op->data.msg.msg, op->data.msg.flags);
+                op.data.msg.msg->msg_namelen = op.data.msg.namelen;
+                op.data.msg.msg->msg_controllen = op.data.msg.controllen;
+                op.data.msg.msg->msg_iovlen = 0;
+                io_uring_prep_recvmsg_multishot (sqe, op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
                 sqe->flags |= IOSQE_BUFFER_SELECT;
-                sqe->buf_group = op->group;
+                sqe->buf_group = op.group;
             }
             else
             {
-                io_uring_prep_recvmsg (sqe, op->data.msg.fd, op->data.msg.msg, op->data.msg.flags);
+                io_uring_prep_recvmsg (sqe, op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
             }
             break;
 
         case IoOperation::Opcode::SendMsg:
-            io_uring_prep_sendmsg (sqe, op->data.msg.fd, op->data.msg.msg, op->data.msg.flags);
+            io_uring_prep_sendmsg (sqe, op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
             break;
 
         case IoOperation::Opcode::Recv:
-            if (op->multishot)
+            if (op.multishot)
             {
-                io_uring_prep_recv_multishot (sqe, op->data.stream.fd, nullptr, 0, op->data.stream.flags);
+                io_uring_prep_recv_multishot (sqe, op.data.stream.fd, nullptr, 0, op.data.stream.flags);
                 sqe->flags |= IOSQE_BUFFER_SELECT;
-                sqe->buf_group = op->group;
+                sqe->buf_group = op.group;
             }
             else
             {
-                io_uring_prep_recv (sqe, op->data.stream.fd, op->data.stream.buf, op->data.stream.len,
-                                    op->data.stream.flags);
+                io_uring_prep_recv (sqe, op.data.stream.fd, op.data.stream.buf, op.data.stream.len,
+                                    op.data.stream.flags);
             }
             break;
 
         case IoOperation::Opcode::Send:
-            io_uring_prep_send (sqe, op->data.stream.fd, op->data.stream.buf, op->data.stream.len,
-                                op->data.stream.flags);
+            io_uring_prep_send (sqe, op.data.stream.fd, op.data.stream.buf, op.data.stream.len, op.data.stream.flags);
             break;
 
         default:                      // LCOV_EXCL_LINE
             io_uring_prep_nop (sqe);  // LCOV_EXCL_LINE
     }
 
-    io_uring_sqe_set_data (sqe, op);
+    io_uring_sqe_set_data (sqe, &op);
 
-    if (JOIN_UNLIKELY (op->linked))
+    if (JOIN_UNLIKELY (op.linked))
     {
         sqe->flags |= IOSQE_IO_LINK;
     }
@@ -913,10 +895,10 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::true_type
 
     if (JOIN_UNLIKELY (op == &_wakeupOp))
     {
-        endOperation (op, cqe->res, false);
+        endOperation (*op, cqe->res, false);
         if (JOIN_LIKELY (_running.load (std::memory_order_acquire)))
         {
-            submitOperation (&_wakeupOp, true);
+            submitOperation (_wakeupOp, true);
         }
         return;
     }
@@ -1001,11 +983,11 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
     if ((cqe->flags & IORING_CQE_F_MORE) != 0)
     {
         op->more = true;
-        notifyOperation (op, result, false);
+        notifyOperation (*op, result, false);
     }
     else
     {
-        endOperation (op, result, (result == -ECANCELED));
+        endOperation (*op, result, (result == -ECANCELED));
     }
 
     if (br != nullptr)
@@ -1033,7 +1015,7 @@ void join::BasicProactor<Policy>::eventLoop (std::false_type, std::false_type) n
 {
     if (JOIN_LIKELY (_running.load (std::memory_order_acquire)))
     {
-        submitOperation (&_wakeupOp, true);
+        submitOperation (_wakeupOp, true);
     }
 
     Backoff backoff;

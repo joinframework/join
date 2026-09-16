@@ -165,7 +165,7 @@ namespace join
 
             size_t index = this->_readArena.getIndex (read);
 
-            if (this->_proactor->submit (&read->op, flush, false) == -1)
+            if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 this->releaseRead (read);
@@ -211,7 +211,7 @@ namespace join
 
             size_t index = this->_readArena.getIndex (read);
 
-            if (this->_proactor->submit (&read->op, flush, false) == -1)
+            if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 this->releaseRead (read);
@@ -268,7 +268,7 @@ namespace join
 
             size_t index = this->_writeArena.getIndex (write);
 
-            if (this->_proactor->submit (&write->op, flush, false) == -1)
+            if (this->_proactor->submit (write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 this->releaseWrite (write);
