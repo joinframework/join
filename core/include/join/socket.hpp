@@ -183,9 +183,11 @@ namespace join
 
             if (_handle == -1)
             {
+                // LCOV_EXCL_START
                 lastError = std::error_code (errno, std::generic_category ());
                 close ();
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             _state = State::Disconnected;
@@ -216,7 +218,7 @@ namespace join
         {
             if ((_state == State::Closed) && (open (endpoint.protocol ()) == -1))
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             if (::bind (_handle, endpoint.addr (), endpoint.length ()) == -1)

@@ -127,7 +127,7 @@ namespace join
         {
             if ((this->_state == State::Closed) && (this->open (endpoint.protocol ()) == -1))
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             if (endpoint.protocol ().family () == AF_PACKET)
