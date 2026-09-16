@@ -606,42 +606,26 @@ private:
     void eventLoop (std::true_type, std::true_type) noexcept;
 #else
     /**
-     * @brief return true if opcode requires EPOLLOUT.
-     * @param code raw opcode value.
-     * @return true for Connect, Write, WriteFixed, SendMsg, Send.
+     * @brief return true if operation requires EPOLLOUT.
+     * @param op operation.
+     * @return true for Connect, Write, WriteFixed, SendMsg, Send and Poll without POLLIN.
      */
-    static bool isWriteOp (uint8_t code) noexcept;
+    static bool isWriteOp (const IoOperation& op) noexcept;
 
     /**
      * @brief execute the syscall described by op.
      * @param op operation to execute.
-     * @return bytes transferred (>= 0) or -errno (< 0).
+     * @param revents events reported by the reactor.
+     * @return bytes transferred or ready events (>= 0), or -errno (< 0).
      */
-    static int executeOp (IoOperation* op) noexcept;
+    static int executeOp (IoOperation* op, uint32_t revents) noexcept;
 
     /**
-     * @brief method called when data are ready to be read on handle.
+     * @brief method called when events are reported on handle.
      * @param fd file descriptor.
+     * @param revents events reported by the reactor.
      */
-    void onReadable (int fd) noexcept override;
-
-    /**
-     * @brief method called when data are ready to be written on handle.
-     * @param fd file descriptor.
-     */
-    void onWriteable (int fd) noexcept override;
-
-    /**
-     * @brief method called when handle was closed by the peer.
-     * @param fd file descriptor.
-     */
-    void onClose (int fd) noexcept override;
-
-    /**
-     * @brief method called when an error occurred on handle.
-     * @param fd file descriptor.
-     */
-    void onError (int fd) noexcept override;
+    void onEvent (int fd, uint32_t revents) noexcept override;
 #endif
 
     /// command queue size.

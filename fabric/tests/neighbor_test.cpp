@@ -47,12 +47,11 @@ public:
         [[maybe_unused]] int result;
 
         result = std::system ("ip netns add red");
-        result = std::system ("ip link add veth0 type veth peer name eth0 netns red");
-        result = std::system ("ip link set veth0 address 4e:ed:ed:ee:59:db");
+        result = std::system (
+            "ip link add veth0 address 4e:ed:ed:ee:59:db type veth peer name eth0 address 4e:ed:ed:ee:59:dc netns red");
         result = std::system ("ip addr add 192.168.100.1/24 brd 192.168.100.255 dev veth0");
         result = std::system ("ip -6 addr add 2001:db8::1235/64 dev veth0");
         result = std::system ("ip link set veth0 up arp on multicast on");
-        result = std::system ("ip -n red link set eth0 address 4e:ed:ed:ee:59:dc");
         result = std::system ("ip -n red addr add 192.168.100.2/24 brd 192.168.100.255 dev eth0");
         result = std::system ("ip -n red -6 addr add 2001:db8::1236/64 dev eth0");
         result = std::system ("ip -n red link set eth0 up arp on multicast on");

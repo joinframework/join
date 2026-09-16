@@ -83,6 +83,50 @@ TEST (IoOperation, copy)
 }
 
 /**
+ * @brief Test makePoll.
+ */
+TEST (IoOperation, makePoll)
+{
+    auto in = IoOperation::makePoll (8, POLLIN, nullptr);
+
+    ASSERT_EQ (in.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
+    ASSERT_FALSE (in.multishot);
+    ASSERT_EQ (in.handler, nullptr);
+    ASSERT_EQ (in.data.poll.fd, 8);
+    ASSERT_EQ (in.data.poll.events, static_cast<uint32_t> (POLLIN));
+
+    auto out = IoOperation::makePoll (9, POLLOUT, nullptr);
+
+    ASSERT_EQ (out.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
+    ASSERT_FALSE (out.multishot);
+    ASSERT_EQ (out.handler, nullptr);
+    ASSERT_EQ (out.data.poll.fd, 9);
+    ASSERT_EQ (out.data.poll.events, static_cast<uint32_t> (POLLOUT));
+}
+
+/**
+ * @brief Test makePollMulti.
+ */
+TEST (IoOperation, makePollMulti)
+{
+    auto in = IoOperation::makePollMulti (8, POLLIN, nullptr);
+
+    ASSERT_EQ (in.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
+    ASSERT_TRUE (in.multishot);
+    ASSERT_EQ (in.handler, nullptr);
+    ASSERT_EQ (in.data.poll.fd, 8);
+    ASSERT_EQ (in.data.poll.events, static_cast<uint32_t> (POLLIN));
+
+    auto out = IoOperation::makePollMulti (9, POLLOUT, nullptr);
+
+    ASSERT_EQ (out.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
+    ASSERT_TRUE (out.multishot);
+    ASSERT_EQ (out.handler, nullptr);
+    ASSERT_EQ (out.data.poll.fd, 9);
+    ASSERT_EQ (out.data.poll.events, static_cast<uint32_t> (POLLOUT));
+}
+
+/**
  * @brief Test makeAccept.
  */
 TEST (IoOperation, makeAccept)
@@ -313,6 +357,10 @@ TEST (IoOperation, makeSend)
 TEST (IoOperation, fd)
 {
     IoOperation op;
+
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::Poll);
+    op.data.poll.fd = 10;
+    ASSERT_EQ (op.fd (), 10);
 
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Accept);
     op.data.accept.fd = 0;

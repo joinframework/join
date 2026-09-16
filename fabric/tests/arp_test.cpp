@@ -53,16 +53,14 @@ public:
         [[maybe_unused]] int result;
 
         // create bridge.
-        result = std::system ("brctl addbr br0");
-        result = std::system ("ip link set br0 address 4e:ed:ed:ee:59:da");
+        result = std::system ("ip link add br0 address 4e:ed:ed:ee:59:da type bridge");
         result = std::system ("ip addr add 192.168.16.100/24 brd 192.168.16.255 dev br0");
         result = std::system ("ip link set br0 up");
 
         // create veth interface.
         result = std::system ("ip netns add red");
-        result = std::system ("ip link add veth0 type veth peer name eth0 netns red");
+        result = std::system ("ip link add veth0 type veth peer name eth0 address 4e:ed:ed:ee:59:db netns red");
         result = std::system ("ip link set veth0 up arp on multicast on");
-        result = std::system ("ip -n red link set eth0 address 4e:ed:ed:ee:59:db");
         result = std::system ("ip -n red addr add 192.168.16.200/24 brd 192.168.16.255 dev eth0");
         result = std::system ("ip -n red link set eth0 up arp on multicast on");
         result = std::system ("brctl addif br0 veth0");

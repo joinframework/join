@@ -523,22 +523,7 @@ void Reactor::dispatchEvent (const epoll_event& event)
 
     if (JOIN_LIKELY (isActive (fd)))
     {
-        if (JOIN_UNLIKELY (event.events & EPOLLERR))
-        {
-            it->second->onError (fd);
-        }
-        else if (JOIN_UNLIKELY (event.events & (EPOLLRDHUP | EPOLLHUP)))
-        {
-            it->second->onClose (fd);
-        }
-        else if (JOIN_LIKELY (event.events & EPOLLIN))
-        {
-            it->second->onReadable (fd);
-        }
-        else if (event.events & EPOLLOUT)
-        {
-            it->second->onWriteable (fd);
-        }
+        it->second->onEvent (fd, event.events);
     }
 }
 
