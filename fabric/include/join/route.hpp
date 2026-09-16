@@ -102,7 +102,6 @@ namespace join
 
     public:
         using Ptr = std::shared_ptr<Route>;
-        using List = std::vector<Ptr>;
 
         /**
          * @brief create instance.

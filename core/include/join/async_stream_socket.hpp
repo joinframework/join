@@ -38,8 +38,8 @@ namespace join
     /**
      * @brief asynchronous stream socket class.
      */
-    template <class Protocol, class Proactor>
-    class BasicAsyncStreamSocket : public BasicAsyncRawSocket<Protocol, Proactor>
+    template <class Protocol, class Proactor, size_t OpCount>
+    class BasicAsyncStreamSocket : public BasicAsyncRawSocket<Protocol, Proactor, OpCount>
     {
     public:
         using Socket = typename Protocol::Socket;
@@ -52,7 +52,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncStreamSocket (Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, Proactor> (proactor)
+        : BasicAsyncRawSocket<Protocol, Proactor, OpCount> (proactor)
         {
         }
 
@@ -62,7 +62,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncStreamSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, Proactor> (std::move (sock), proactor)
+        : BasicAsyncRawSocket<Protocol, Proactor, OpCount> (std::move (sock), proactor)
         {
         }
 

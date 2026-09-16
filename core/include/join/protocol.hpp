@@ -30,6 +30,7 @@
 
 // C.
 #include <net/ethernet.h>
+#include <cstddef>
 
 namespace join
 {
@@ -57,16 +58,16 @@ namespace join
     template <typename Policy>
     class BasicProactor;
 
-    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
+    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
     class BasicAsyncSocket;
 
-    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
+    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
     class BasicAsyncRawSocket;
 
-    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
+    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
     class BasicAsyncDatagramSocket;
 
-    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
+    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
     class BasicAsyncStreamSocket;
 
     template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
@@ -74,16 +75,16 @@ namespace join
 #else
     class BasicProactor;
 
-    template <class Protocol, class Proactor = BasicProactor>
+    template <class Protocol, class Proactor = BasicProactor, size_t OpCount = 16>
     class BasicAsyncSocket;
 
-    template <class Protocol, class Proactor = BasicProactor>
+    template <class Protocol, class Proactor = BasicProactor, size_t OpCount = 16>
     class BasicAsyncRawSocket;
 
-    template <class Protocol, class Proactor = BasicProactor>
+    template <class Protocol, class Proactor = BasicProactor, size_t OpCount = 16>
     class BasicAsyncDatagramSocket;
 
-    template <class Protocol, class Proactor = BasicProactor>
+    template <class Protocol, class Proactor = BasicProactor, size_t OpCount = 16>
     class BasicAsyncStreamSocket;
 
     template <class Protocol, class Proactor = BasicProactor>

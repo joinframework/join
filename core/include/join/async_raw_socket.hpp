@@ -46,8 +46,8 @@ namespace join
     /**
      * @brief asynchronous raw socket class.
      */
-    template <class Protocol, class Proactor>
-    class BasicAsyncRawSocket : public BasicAsyncSocket<Protocol, Proactor>
+    template <class Protocol, class Proactor, size_t OpCount>
+    class BasicAsyncRawSocket : public BasicAsyncSocket<Protocol, Proactor, OpCount>
     {
     public:
         using Socket = typename Protocol::Socket;
@@ -65,7 +65,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncRawSocket (Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Proactor> (proactor)
+        : BasicAsyncSocket<Protocol, Proactor, OpCount> (proactor)
         {
         }
 
@@ -75,7 +75,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncRawSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Proactor> (std::move (sock), proactor)
+        : BasicAsyncSocket<Protocol, Proactor, OpCount> (std::move (sock), proactor)
         {
         }
 
@@ -97,7 +97,7 @@ namespace join
          * @param other other object to move.
          */
         BasicAsyncRawSocket (BasicAsyncRawSocket&& other) noexcept
-        : BasicAsyncSocket<Protocol, Proactor> (std::move (other))
+        : BasicAsyncSocket<Protocol, Proactor, OpCount> (std::move (other))
         {
             this->resumeAll ();
         }
@@ -109,7 +109,7 @@ namespace join
          */
         BasicAsyncRawSocket& operator= (BasicAsyncRawSocket&& other) noexcept
         {
-            BasicAsyncSocket<Protocol, Proactor>::operator= (std::move (other));
+            BasicAsyncSocket<Protocol, Proactor, OpCount>::operator= (std::move (other));
 
             this->resumeAll ();
 
@@ -440,7 +440,7 @@ namespace join
             }
             else
             {
-                BasicAsyncSocket<Protocol, Proactor>::dispatch (op, code, size);
+                BasicAsyncSocket<Protocol, Proactor, OpCount>::dispatch (op, code, size);
             }
         }
 
