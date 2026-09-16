@@ -22,6 +22,9 @@
  * SOFTWARE.
  */
 
+// C.
+#include <poll.h>
+
 // =========================================================================
 //   CLASS     : BasicProactor
 //   METHOD    : BasicProactor
@@ -375,7 +378,8 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
 
     IoRingBuffer* ring = nullptr;
 
-    if (JOIN_UNLIKELY (op.multishot && (op.code != static_cast<uint8_t> (IoOperation::Opcode::Accept))))
+    if (JOIN_UNLIKELY (op.multishot && ((op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)) ||
+                                        (op.code == static_cast<uint8_t> (IoOperation::Opcode::Recv)))))
     {
         auto it = _bufferRings.find (op.group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
@@ -406,7 +410,7 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         _writeOps.resize (newSize, nullptr);
     }
 
-    bool isWrite = isWriteOp (op.code);
+    bool isWrite = isWriteOp (op);
 
     if (JOIN_UNLIKELY ((isWrite && (_writeOps[op.fd ()] == &op)) || (!isWrite && (_readOps[op.fd ()] == &op))))
     {
@@ -484,7 +488,7 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
         return -1;
     }
 
-    bool isWrite = isWriteOp (op.code);
+    bool isWrite = isWriteOp (op);
 
     if (JOIN_UNLIKELY ((isWrite && (_writeOps[op.fd ()] != &op)) || (!isWrite && (_readOps[op.fd ()] != &op))))
     {
@@ -549,7 +553,7 @@ inline void join::BasicProactor::endOperation (IoOperation& op, int result, bool
         return;  // LCOV_EXCL_LINE
     }
 
-    if (isWriteOp (op.code))
+    if (isWriteOp (op))
     {
         _writeOps[fd] = nullptr;
     }
@@ -574,25 +578,36 @@ inline void join::BasicProactor::endOperation (IoOperation& op, int result, bool
 //   CLASS     : BasicProactor
 //   METHOD    : isWriteOp
 // =========================================================================
-inline bool join::BasicProactor::isWriteOp (uint8_t code) noexcept
+inline bool join::BasicProactor::isWriteOp (const IoOperation& op) noexcept
 {
-    return code == static_cast<uint8_t> (IoOperation::Opcode::Connect) ||
-           code == static_cast<uint8_t> (IoOperation::Opcode::Write) ||
-           code == static_cast<uint8_t> (IoOperation::Opcode::WriteFixed) ||
-           code == static_cast<uint8_t> (IoOperation::Opcode::SendMsg) ||
-           code == static_cast<uint8_t> (IoOperation::Opcode::Send);
+    switch (static_cast<IoOperation::Opcode> (op.code))
+    {
+        case IoOperation::Opcode::Poll:
+            return (op.data.poll.events & POLLIN) == 0;
+        case IoOperation::Opcode::Connect:
+        case IoOperation::Opcode::Write:
+        case IoOperation::Opcode::WriteFixed:
+        case IoOperation::Opcode::SendMsg:
+        case IoOperation::Opcode::Send:
+            return true;
+        default:
+            return false;
+    }
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
 //   METHOD    : executeOp
 // =========================================================================
-inline int join::BasicProactor::executeOp (IoOperation& op) noexcept
+inline int join::BasicProactor::executeOp (IoOperation& op, uint32_t revents) noexcept
 {
     for (;;)
     {
         switch (static_cast<IoOperation::Opcode> (op.code))
         {
+            case IoOperation::Opcode::Poll:
+                return static_cast<int> (revents & (op.data.poll.events | POLLERR | POLLHUP | POLLRDHUP));
+
             case IoOperation::Opcode::Accept:
                 {
                     int fd = ::accept4 (op.data.accept.fd, op.data.accept.addr, op.data.accept.addrlen,
@@ -687,9 +702,9 @@ inline int join::BasicProactor::executeOp (IoOperation& op) noexcept
 
 // =========================================================================
 //   CLASS     : BasicProactor
-//   METHOD    : onReadable
+//   METHOD    : onEvent
 // =========================================================================
-inline void join::BasicProactor::onReadable (int fd) noexcept
+inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
 {
     if (JOIN_UNLIKELY (fd == _wakeup))
     {
@@ -697,7 +712,36 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
         return;
     }
 
-    IoOperation* op = _readOps[fd];
+    if (JOIN_UNLIKELY (revents & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)))
+    {
+        IoOperation* rOp = std::exchange (_readOps[fd], nullptr);
+        IoOperation* wOp = std::exchange (_writeOps[fd], nullptr);
+        if (JOIN_LIKELY (rOp || wOp))
+        {
+            _reactor.delHandler (fd);
+        }
+
+        int result = (revents & EPOLLERR) ? -ECONNRESET : 0;
+        int rResult = result;
+        int wResult = result;
+
+        if ((rOp != nullptr) && (rOp->code == static_cast<uint8_t> (IoOperation::Opcode::Poll)))
+        {
+            rResult = executeOp (*rOp, revents);
+        }
+
+        if ((wOp != nullptr) && (wOp->code == static_cast<uint8_t> (IoOperation::Opcode::Poll)))
+        {
+            wResult = executeOp (*wOp, revents);
+        }
+
+        dispatchOperation (rOp, rResult, false);
+        dispatchOperation (wOp, wResult, false);
+
+        return;
+    }
+
+    IoOperation* op = (revents & EPOLLIN) ? _readOps[fd] : _writeOps[fd];
     if (JOIN_UNLIKELY (op == nullptr))
     {
         return;
@@ -760,9 +804,9 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
         }
     }
 
-    int result = executeOp (*op);
+    int result = executeOp (*op, revents);
 
-    if (JOIN_UNLIKELY (result == -EAGAIN))
+    if (JOIN_UNLIKELY ((result == -EAGAIN) && (op->code != static_cast<uint8_t> (IoOperation::Opcode::Connect))))
     {
         if (br != nullptr)
         {
@@ -796,72 +840,4 @@ inline void join::BasicProactor::onReadable (int fd) noexcept
     {
         br->recycle (bid);
     }
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : onWriteable
-// =========================================================================
-inline void join::BasicProactor::onWriteable (int fd) noexcept
-{
-    IoOperation* op = _writeOps[fd];
-    if (JOIN_UNLIKELY (op == nullptr))
-    {
-        return;
-    }
-
-    IoOperation::State current = op->state.load (std::memory_order_acquire);
-    Backoff backoff;
-
-    while (JOIN_UNLIKELY (current == IoOperation::State::Suspended))
-    {
-        backoff ();
-        current = op->state.load (std::memory_order_acquire);
-    }
-
-    if (JOIN_UNLIKELY (current == IoOperation::State::Idle))
-    {
-        return;  // LCOV_EXCL_LINE
-    }
-
-    int result = executeOp (*op);
-
-    if (JOIN_UNLIKELY ((result == -EAGAIN) && (op->code != static_cast<uint8_t> (IoOperation::Opcode::Connect))))
-    {
-        return;
-    }
-
-    endOperation (*op, result, false);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : onClose
-// =========================================================================
-inline void join::BasicProactor::onClose (int fd) noexcept
-{
-    IoOperation* rOp = std::exchange (_readOps[fd], nullptr);
-    IoOperation* wOp = std::exchange (_writeOps[fd], nullptr);
-    if (JOIN_LIKELY (rOp || wOp))
-    {
-        _reactor.delHandler (fd);
-    }
-    dispatchOperation (rOp, 0, false);
-    dispatchOperation (wOp, 0, false);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : onError
-// =========================================================================
-inline void join::BasicProactor::onError (int fd) noexcept
-{
-    IoOperation* rOp = std::exchange (_readOps[fd], nullptr);
-    IoOperation* wOp = std::exchange (_writeOps[fd], nullptr);
-    if (JOIN_LIKELY (rOp || wOp))
-    {
-        _reactor.delHandler (fd);
-    }
-    dispatchOperation (rOp, -ECONNRESET, false);
-    dispatchOperation (wOp, -ECONNRESET, false);
 }

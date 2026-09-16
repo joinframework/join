@@ -114,10 +114,12 @@ TEST_F (NetlinkSocket, bind)
     Netlink::Socket netlinkSocket (Netlink::Socket::Blocking);
 
     ASSERT_EQ (netlinkSocket.connect (_groups), 0) << join::lastError.message ();
-    ASSERT_EQ (netlinkSocket.bind (_groups), 0) << join::lastError.message ();
+    ASSERT_EQ (netlinkSocket.bind ({Netlink::rt (), netlinkSocket.localEndpoint ().pid (), _groups}), 0)
+        << join::lastError.message ();
     ASSERT_EQ (netlinkSocket.disconnect (), 0) << join::lastError.message ();
 
-    ASSERT_EQ (netlinkSocket.bind (_groups), 0) << join::lastError.message ();
+    ASSERT_EQ (netlinkSocket.bind ({Netlink::rt (), netlinkSocket.localEndpoint ().pid (), _groups}), 0)
+        << join::lastError.message ();
     ASSERT_EQ (netlinkSocket.connect (_groups), 0) << join::lastError.message ();
     ASSERT_EQ (netlinkSocket.disconnect (), 0) << join::lastError.message ();
 
@@ -198,13 +200,13 @@ TEST_F (NetlinkSocket, canRead)
 TEST_F (NetlinkSocket, waitReadyRead)
 {
     Netlink::Socket netlinkSocket;
-    char data[1024];
 
     ASSERT_FALSE (netlinkSocket.waitReadyRead (_timeout));
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (netlinkSocket.connect (_groups), 0) << join::lastError.message ();
     ASSERT_TRUE (netlinkSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
-    ASSERT_EQ (netlinkSocket.write (data, sizeof (data)), sizeof (data)) << join::lastError.message ();
+    ASSERT_GT (netlinkSocket.write (_data.get (), reinterpret_cast<struct nlmsghdr*> (_data.get ())->nlmsg_len), 0)
+        << join::lastError.message ();
     ASSERT_TRUE (netlinkSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     netlinkSocket.close ();
 }
@@ -215,7 +217,7 @@ TEST_F (NetlinkSocket, waitReadyRead)
 TEST_F (NetlinkSocket, read)
 {
     Netlink::Socket netlinkSocket;
-    char data[1024];
+    char data[4096];
 
     ASSERT_EQ (netlinkSocket.read (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -246,7 +248,7 @@ TEST_F (NetlinkSocket, readFrom)
         << join::lastError.message ();
     ASSERT_TRUE (netlinkSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (netlinkSocket.readFrom (data, sizeof (data), &from), 0) << join::lastError.message ();
-    ASSERT_EQ (from, Netlink::Endpoint (_groups));
+    ASSERT_EQ (from, Netlink::Endpoint (Netlink::rt (), 0, 0));
     netlinkSocket.close ();
 }
 
@@ -404,7 +406,8 @@ TEST_F (NetlinkSocket, localEndpoint)
     ASSERT_EQ (netlinkSocket.localEndpoint (), Netlink::Endpoint{});
     ASSERT_EQ (netlinkSocket.bind (_groups), 0) << join::lastError.message ();
     ASSERT_EQ (netlinkSocket.connect (_groups), 0) << join::lastError.message ();
-    ASSERT_EQ (netlinkSocket.localEndpoint (), Netlink::Endpoint (_groups)) << join::lastError.message ();
+    ASSERT_NE (netlinkSocket.localEndpoint ().pid (), 0u);
+    ASSERT_EQ (netlinkSocket.localEndpoint ().groups (), _groups);
     netlinkSocket.close ();
 }
 

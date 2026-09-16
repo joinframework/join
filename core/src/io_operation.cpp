@@ -68,6 +68,35 @@ IoOperation& IoOperation::operator= (const IoOperation& other) noexcept
 
 // =========================================================================
 //   CLASS     : IoOperation
+//   METHOD    : makePoll
+// =========================================================================
+IoOperation IoOperation::makePoll (int fd, uint32_t events, CompletionHandler* handler) noexcept
+{
+    IoOperation op;
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::Poll);
+    op.handler = handler;
+    op.data.poll.fd = fd;
+    op.data.poll.events = events;
+    return op;
+}
+
+// =========================================================================
+//   CLASS     : IoOperation
+//   METHOD    : makePollMulti
+// =========================================================================
+IoOperation IoOperation::makePollMulti (int fd, uint32_t events, CompletionHandler* handler) noexcept
+{
+    IoOperation op;
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::Poll);
+    op.multishot = true;
+    op.handler = handler;
+    op.data.poll.fd = fd;
+    op.data.poll.events = events;
+    return op;
+}
+
+// =========================================================================
+//   CLASS     : IoOperation
 //   METHOD    : makeAccept
 // =========================================================================
 IoOperation IoOperation::makeAccept (int fd, sockaddr* addr, socklen_t* addrlen, int flags,
@@ -306,6 +335,8 @@ int IoOperation::fd () const noexcept
 {
     switch (static_cast<Opcode> (code))
     {
+        case Opcode::Poll:
+            return data.poll.fd;
         case Opcode::Accept:
             return data.accept.fd;
         case Opcode::Connect:

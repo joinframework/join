@@ -841,6 +841,93 @@ TEST_F (SqpollProactorTest, registerBufferRing)
 }
 
 /**
+ * @brief Test asyncPoll.
+ */
+TEST_F (SqpollProactorTest, asyncPoll)
+{
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _writeOp = IoOperation::makePoll (_server.handle (), POLLOUT, this);
+
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_writeOp) && ((_result & POLLOUT) != 0);
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("asyncPoll", strlen ("asyncPoll"), _timeout), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_readOp) && ((_result & POLLIN) != 0);
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (_server.readExactly (_buf, strlen ("asyncPoll"), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (std::string (_buf, strlen ("asyncPoll")), "asyncPoll");
+}
+
+/**
+ * @brief Test asyncPollMulti.
+ */
+TEST_F (SqpollProactorTest, asyncPollMulti)
+{
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _completions = 0;
+    _readOp = IoOperation::makePollMulti (_server.handle (), POLLIN, this);
+
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
+
+    for (int i = 0; i < 2; ++i)
+    {
+        ASSERT_EQ (_client.writeExactly ("poll", 4, _timeout), 0) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+                return (_op == &_readOp) && (_completions >= (i + 1));
+            }));
+            ASSERT_NE (_result & POLLIN, 0);
+        }
+
+        ASSERT_EQ (_server.readExactly (_buf, 4, _timeout), 0) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (SqpollProactorThread::proactor ().cancel (_readOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == -ECANCELED;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+}
+
+/**
  * @brief Test async connect.
  */
 TEST_F (SqpollProactorTest, asyncConnect)
@@ -1463,6 +1550,27 @@ TEST_F (SqpollProactorTest, onClose)
         _op = nullptr;
         _result = 0;
     }
+
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
+    _client.close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result > 0;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
 }
 
 /**
@@ -1498,6 +1606,28 @@ TEST_F (SqpollProactorTest, onError)
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
             return _op == &_readOp && _result == -ECONNRESET;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (setsockopt (_client.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
+    _client.close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && ((_result & POLLERR) != 0);
         }));
         _op = nullptr;
         _result = 0;

@@ -622,7 +622,8 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation& op, bool flush) n
 
     IoRingBuffer* ring = nullptr;
 
-    if (JOIN_UNLIKELY (op.multishot && (op.code != static_cast<uint8_t> (IoOperation::Opcode::Accept))))
+    if (JOIN_UNLIKELY (op.multishot && ((op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)) ||
+                                        (op.code == static_cast<uint8_t> (IoOperation::Opcode::Recv)))))
     {
         auto it = _bufferRings.find (op.group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
@@ -791,6 +792,17 @@ void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation& op
 {
     switch (static_cast<IoOperation::Opcode> (op.code))
     {
+        case IoOperation::Opcode::Poll:
+            if (op.multishot)
+            {
+                io_uring_prep_poll_multishot (sqe, op.data.poll.fd, op.data.poll.events);
+            }
+            else
+            {
+                io_uring_prep_poll_add (sqe, op.data.poll.fd, op.data.poll.events);
+            }
+            break;
+
         case IoOperation::Opcode::Accept:
             if (op.multishot)
             {

@@ -50,29 +50,25 @@ public:
     {
         [[maybe_unused]] int result;
 
-        result = std::system ("ip link add dummy0 type dummy");
-        result = std::system ("ip link set dummy0 address aa:66:d6:26:e4:59");
+        result = std::system ("ip link add dummy0 address aa:66:d6:26:e4:59 type dummy");
         result = std::system ("ip addr add 192.168.35.100/24 brd 192.168.35.255 dev dummy0");
         result = std::system ("ip -6 addr add 2001:db8::1234/64 dev dummy0");
         result = std::system ("ip link set dummy0 up arp on multicast on");
 
-        result = std::system ("ip link add link dummy0 name dummy0.10 type vlan id 10");
-        result = std::system ("ip link set dummy0.10 address aa:66:d6:26:e5:59");
+        result = std::system ("ip link add link dummy0 name dummy0.10 address aa:66:d6:26:e5:59 type vlan id 10");
         result = std::system ("ip addr add 192.168.10.1/24 brd 192.168.10.255 dev dummy0.10");
         result = std::system ("ip link set dev dummy0.10 up");
 
         result = std::system ("ip netns add red");
-        result = std::system ("ip link add veth0 type veth peer name eth0 netns red");
-        result = std::system ("ip link set veth0 address 4e:ed:ed:ee:59:db");
+        result = std::system (
+            "ip link add veth0 address 4e:ed:ed:ee:59:db type veth peer name eth0 address 4e:ed:ed:ee:59:dc netns red");
         result = std::system ("ip addr add 192.168.100.1/24 brd 192.168.100.255 dev veth0");
         result = std::system ("ip -6 addr add 2001:db8::1235/64 dev veth0");
         result = std::system ("ip link set veth0 up arp on multicast on");
-        result = std::system ("ip -n red link set eth0 address 4e:ed:ed:ee:59:dc");
         result = std::system ("ip -n red addr add 192.168.16.200/24 brd 192.168.16.255 dev eth0");
         result = std::system ("ip -n red link set eth0 up arp on multicast on");
 
-        result = std::system ("brctl addbr br0");
-        result = std::system ("ip link set br0 address 4e:ed:ed:ee:59:da");
+        result = std::system ("ip link add br0 address 4e:ed:ed:ee:59:da type bridge");
         result = std::system ("ip addr add 192.168.16.100/24 brd 192.168.16.255 dev br0");
         result = std::system ("ip -6 addr add 2001:db8::1236/64 dev veth0");
         result = std::system ("ip link set br0 up");

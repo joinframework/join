@@ -29,6 +29,7 @@
 #include <join/function.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
+#include <join/utils.hpp>
 
 // C++.
 #include <unordered_map>
@@ -83,6 +84,31 @@ namespace join
         virtual ~EventHandler () = default;
 
     protected:
+        /**
+         * @brief method called when events are reported on handle.
+         * @param fd file descriptor.
+         * @param revents events reported by the reactor.
+         */
+        virtual void onEvent (int fd, uint32_t revents)
+        {
+            if (JOIN_UNLIKELY (revents & EPOLLERR))
+            {
+                onError (fd);
+            }
+            else if (JOIN_UNLIKELY (revents & (EPOLLRDHUP | EPOLLHUP)))
+            {
+                onClose (fd);
+            }
+            else if (JOIN_LIKELY (revents & EPOLLIN))
+            {
+                onReadable (fd);
+            }
+            else if (revents & EPOLLOUT)
+            {
+                onWriteable (fd);
+            }
+        }
+
         /**
          * @brief method called when data are ready to be read on handle.
          * @param fd file descriptor.

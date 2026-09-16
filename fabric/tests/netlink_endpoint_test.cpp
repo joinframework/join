@@ -90,7 +90,7 @@ TEST (NetlinkEndpoint, serialize)
     Netlink::Endpoint netlinkEndpoint (RTMGRP_LINK);
     ASSERT_NO_THROW (stream << netlinkEndpoint);
     std::stringstream ss;
-    ss << "pid=" << getpid () << ",groups=" << uint32_t (RTMGRP_LINK);
+    ss << "pid=0,groups=" << uint32_t (RTMGRP_LINK);
     ASSERT_EQ (stream.str (), ss.str ());
 }
 
