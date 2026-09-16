@@ -51,7 +51,7 @@ namespace join
     class BasicSocket
     {
         /// friendship with basic asynchronous raw socket
-        template <class P, class E>
+        template <class P, class E, size_t N>
         friend class BasicAsyncRawSocket;
 
     public:

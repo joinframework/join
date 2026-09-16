@@ -49,7 +49,7 @@ namespace join
     /**
      * @brief basic asynchronous socket class.
      */
-    template <class Protocol, class Proactor>
+    template <class Protocol, class Proactor, size_t OpCount>
     class BasicAsyncSocket : public CompletionHandler
     {
     public:
@@ -59,7 +59,9 @@ namespace join
         using WaitHandler = typename AsyncWait::Wait;
 
         /// number of operations in flight.
-        static constexpr size_t _opCount = 16;
+        static constexpr size_t _opCount = OpCount;
+
+        static_assert (OpCount > 0, "a socket needs at least one operation slot");
 
         /// size of an operation slot.
         static constexpr size_t _opSize = nextPow2 (AsyncOp<Protocol, Proactor>::maxSize);

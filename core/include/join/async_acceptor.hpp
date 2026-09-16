@@ -51,7 +51,6 @@ namespace join
         using Acceptor = BasicStreamAcceptor<Protocol>;
         using Endpoint = typename Protocol::Endpoint;
         using Socket = typename Protocol::Socket;
-        using AsyncSocket = BasicAsyncStreamSocket<Protocol, Proactor>;
         using AsyncAccept = BasicAsyncAccept<Protocol, Proactor>;
         using AcceptHandler = typename AsyncAccept::Accept;
 

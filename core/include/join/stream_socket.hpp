@@ -43,7 +43,7 @@ namespace join
     class BasicStreamSocket final : public BasicRawSocket<Protocol>
     {
         /// friendship with basic asynchronous stream socket
-        template <class P, class E>
+        template <class P, class E, size_t N>
         friend class BasicAsyncStreamSocket;
 
     public:

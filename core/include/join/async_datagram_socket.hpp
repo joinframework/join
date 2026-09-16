@@ -38,15 +38,14 @@ namespace join
     /**
      * @brief asynchronous datagram socket class.
      */
-    template <class Protocol, class Proactor>
-    class BasicAsyncDatagramSocket : public BasicAsyncRawSocket<Protocol, Proactor>
+    template <class Protocol, class Proactor, size_t OpCount>
+    class BasicAsyncDatagramSocket : public BasicAsyncRawSocket<Protocol, Proactor, OpCount>
     {
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
         using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
         using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
-        using ReadHandler = typename AsyncRead::Read;
         using ReadFromHandler = typename AsyncRead::ReadFrom;
         using WriteHandler = typename AsyncWrite::Write;
 
@@ -55,7 +54,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncDatagramSocket (Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, Proactor> (proactor)
+        : BasicAsyncRawSocket<Protocol, Proactor, OpCount> (proactor)
         {
         }
 
@@ -65,7 +64,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncDatagramSocket (int ttl, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, Proactor> (Socket (ttl), proactor)
+        : BasicAsyncRawSocket<Protocol, Proactor, OpCount> (Socket (ttl), proactor)
         {
         }
 
@@ -75,7 +74,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncDatagramSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, Proactor> (std::move (sock), proactor)
+        : BasicAsyncRawSocket<Protocol, Proactor, OpCount> (std::move (sock), proactor)
         {
         }
 
