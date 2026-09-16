@@ -214,6 +214,21 @@ protected:
         char data[16] = {};
     };
 
+    /**
+     * @brief report a wait completion to the test thread.
+     * @param ec error reported by the socket.
+     * @param more true if the wait stays armed.
+     */
+    static void onReportWait (const std::error_code& ec, bool more)
+    {
+        ScopedLock<Mutex> lock (_mut);
+
+        _code = ec;
+        _more = more;
+        ++_completions;
+        _cond.signal ();
+    }
+
     /// mutex.
     static Mutex _mut;
 
@@ -282,8 +297,8 @@ TEST_F (RawAsyncSocket, move)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (client1.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.cancelRead (0), 0) << join::lastError.message ();
-    ASSERT_EQ (client1.cancelWrite (0), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
     client1.close ();
 
     ASSERT_NE (client2.asyncRead (_buf, sizeof (_buf), onRead), -1) << join::lastError.message ();
@@ -355,6 +370,116 @@ TEST_F (RawAsyncSocket, bindToDevice)
 }
 
 /**
+ * @brief Test asyncWait method.
+ */
+TEST_F (RawAsyncSocket, asyncWait)
+{
+    Raw::AsyncSocket rawSocket;
+
+    ASSERT_EQ (rawSocket.asyncWait (true, false, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+
+    ASSERT_EQ (rawSocket.asyncWait (true, true, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.asyncWait (false, false, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    ASSERT_NE (rawSocket.asyncWait (false, true, onReportWait), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_FALSE (_more);
+    }
+
+    ASSERT_NE (rawSocket.asyncWait (true, false, onReportWait), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_FALSE (_more);
+    }
+
+    while (::recv (rawSocket.handle (), _buf, sizeof (_buf), MSG_DONTWAIT) > 0)
+    {
+    }
+
+#ifdef JOIN_HAS_IO_URING
+    for (size_t i = 0; i < Raw::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (rawSocket.asyncWait (true, false, nullptr), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (rawSocket.asyncWait (true, false, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+#endif
+
+    rawSocket.close ();
+}
+
+/**
+ * @brief Test asyncWaitMulti method.
+ */
+TEST_F (RawAsyncSocket, asyncWaitMulti)
+{
+    Raw::AsyncSocket rawSocket;
+
+    ASSERT_EQ (rawSocket.asyncWaitMulti (true, false, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+
+    ASSERT_EQ (rawSocket.asyncWaitMulti (true, true, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    ASSERT_EQ (rawSocket.asyncWaitMulti (false, false, nullptr), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    ssize_t index = rawSocket.asyncWaitMulti (true, false, onReportWait);
+    ASSERT_NE (index, -1) << join::lastError.message ();
+
+    for (int i = 1; i <= 2; ++i)
+    {
+        ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+            << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&rawSocket, i] () {
+                return (_completions >= i) && (rawSocket.canRead () >= 1);
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+            ASSERT_TRUE (_more);
+        }
+
+        while (::recv (rawSocket.handle (), _buf, sizeof (_buf), MSG_DONTWAIT) > 0)
+        {
+        }
+    }
+
+    ASSERT_EQ (rawSocket.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::operation_canceled;
+        }));
+        ASSERT_FALSE (_more);
+    }
+
+    rawSocket.close ();
+}
+
+/**
  * @brief Test asyncReadMulti method.
  */
 TEST_F (RawAsyncSocket, asyncReadMulti)
@@ -383,7 +508,7 @@ TEST_F (RawAsyncSocket, asyncReadMulti)
         ASSERT_TRUE (_more);
     }
 
-    ASSERT_EQ (rawSocket.cancelRead (static_cast<size_t> (index)), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
 
     ASSERT_TRUE (wait (3));
     ASSERT_EQ (_code, std::errc::operation_canceled);
@@ -623,37 +748,77 @@ TEST_F (RawAsyncSocket, truncated)
 }
 
 /**
- * @brief Test cancelRead method.
+ * @brief Test cancel method.
  */
-TEST_F (RawAsyncSocket, cancelRead)
+TEST_F (RawAsyncSocket, cancel)
 {
-    Raw::AsyncSocket rawSocket;
+    {
+        Raw::AsyncSocket rawSocket;
 
-    ASSERT_EQ (rawSocket.cancelRead (0), 0) << join::lastError.message ();
+        ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (rawSocket.cancel (Raw::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onReadCompletion), -1) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.cancelRead (0), 0) << join::lastError.message ();
+        ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
 
-    ASSERT_TRUE (wait (1));
-    ASSERT_EQ (_code, std::errc::operation_canceled) << _code.message ();
+        ssize_t index = rawSocket.asyncWait (true, false, onReportWait);
+        ASSERT_NE (index, -1) << join::lastError.message ();
 
-    rawSocket.close ();
-}
+        ASSERT_EQ (rawSocket.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
 
-/**
- * @brief Test cancelWrite method.
- */
-TEST_F (RawAsyncSocket, cancelWrite)
-{
-    Raw::AsyncSocket rawSocket;
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 1;
+            }));
+            ASSERT_EQ (_code, std::errc::operation_canceled);
+            ASSERT_FALSE (_more);
+        }
 
-    ASSERT_EQ (rawSocket.cancelWrite (0), 0) << join::lastError.message ();
+        rawSocket.close ();
+    }
 
-    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.cancelWrite (0), 0) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _completions = 0;
+        _more = false;
+        _transferred = 0;
+    }
 
-    rawSocket.close ();
+    {
+        Raw::AsyncSocket rawSocket;
+
+        ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
+
+        ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+        ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onReadCompletion), -1) << join::lastError.message ();
+        ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
+
+        ASSERT_TRUE (wait (1));
+        ASSERT_EQ (_code, std::errc::operation_canceled) << _code.message ();
+
+        rawSocket.close ();
+    }
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _completions = 0;
+        _more = false;
+        _transferred = 0;
+    }
+
+    {
+        Raw::AsyncSocket rawSocket;
+
+        ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
+
+        ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
+        ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
+
+        rawSocket.close ();
+    }
 }
 
 /**

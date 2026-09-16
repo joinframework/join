@@ -53,6 +53,8 @@ public:
         // write keys to file system.
         writeFile (rsaPriKeyPath, rsaPriKey);
         writeFile (rsaPubKeyPath, rsaPubKey);
+        writeFile (x25519PriKeyPath, x25519PriKey);
+        writeFile (x25519PubKeyPath, x25519PubKey);
     }
 
     /**
@@ -63,6 +65,8 @@ public:
         // remove keys from file system.
         ::remove (rsaPriKeyPath.c_str ());
         ::remove (rsaPubKeyPath.c_str ());
+        ::remove (x25519PriKeyPath.c_str ());
+        ::remove (x25519PubKeyPath.c_str ());
     }
 
     /**
@@ -80,10 +84,14 @@ protected:
     /// key paths.
     static const std::string rsaPriKeyPath;
     static const std::string rsaPubKeyPath;
+    static const std::string x25519PriKeyPath;
+    static const std::string x25519PubKeyPath;
 
     /// keys.
     static const std::string rsaPriKey;
     static const std::string rsaPubKey;
+    static const std::string x25519PriKey;
+    static const std::string x25519PubKey;
 
     /// sample text.
     static const std::string sample;
@@ -100,6 +108,8 @@ protected:
 /// key paths.
 const std::string SignatureTest::rsaPriKeyPath = "/tmp/prikey.pem";
 const std::string SignatureTest::rsaPubKeyPath = "/tmp/pubkey.pem";
+const std::string SignatureTest::x25519PriKeyPath = "/tmp/x25519prikey.pem";
+const std::string SignatureTest::x25519PubKeyPath = "/tmp/x25519pubkey.pem";
 
 /// keys.
 const std::string SignatureTest::rsaPriKey =
@@ -139,6 +149,14 @@ const std::string SignatureTest::rsaPubKey =
     "0GkIZJJ8kQA/+EN0SbUmncJbd8tHi5IaDks4WhUgdDPKFDORVGfty9lNrHhFayuO\n"
     "rs5Q9BFfo7WuL4cqh7sTGhFcmdvsQfhHxSumWu0QxaFdrBiqayUQUsqQ35IBvrFn\n"
     "XwIDAQAB\n"
+    "-----END PUBLIC KEY-----\n";
+const std::string SignatureTest::x25519PriKey =
+    "-----BEGIN PRIVATE KEY-----\n"
+    "MC4CAQAwBQYDK2VuBCIEIPi5h9C12Mx9KY+bQ6Nnai3PH5yJwW7hDTlvVyCUEq9T\n"
+    "-----END PRIVATE KEY-----\n";
+const std::string SignatureTest::x25519PubKey =
+    "-----BEGIN PUBLIC KEY-----\n"
+    "MCowBQYDK2VuAyEA283b339f5kXpC5r+Ce1naj6X0FoVeOKTzl0Z/hz7iQY=\n"
     "-----END PUBLIC KEY-----\n";
 
 /// sample text.
@@ -264,7 +282,7 @@ TEST_F (SignatureTest, sign_failures)
     ASSERT_TRUE (Signature::sign (sample, rsaPriKeyPath, Digest::Algorithm (100)).empty ());
     ASSERT_EQ (join::lastError, DigestErrc::InvalidAlgorithm);
 
-    ASSERT_TRUE (Signature::sign (nullptr, 0, rsaPriKeyPath, Digest::Algorithm::SM3).empty ());
+    ASSERT_TRUE (Signature::sign (nullptr, 0, x25519PriKeyPath, Digest::Algorithm::SHA256).empty ());
     ASSERT_EQ (join::lastError, DigestErrc::InvalidAlgorithm);
 }
 
@@ -435,7 +453,7 @@ TEST_F (SignatureTest, verify_failures)
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa224sig), rsaPubKeyPath, Digest::Algorithm (100)));
     ASSERT_EQ (join::lastError, DigestErrc::InvalidAlgorithm);
 
-    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa224sig), rsaPubKeyPath, Digest::Algorithm::SM3));
+    ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa224sig), x25519PubKeyPath, Digest::Algorithm::SHA256));
     ASSERT_EQ (join::lastError, DigestErrc::InvalidAlgorithm);
 
     ASSERT_FALSE (Signature::verify (sample, Base64::decode (rsa224sig), rsaPubKeyPath, Digest::Algorithm::SHA256));

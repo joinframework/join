@@ -100,7 +100,7 @@ namespace join
          */
         int asyncConnect (const Endpoint& endpoint, ConnectHandler handler) noexcept
         {
-            if (JOIN_UNLIKELY (!this->_writeArena.hasBackend ()))
+            if (JOIN_UNLIKELY (!this->_arena.hasBackend ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
@@ -136,7 +136,7 @@ namespace join
             if (this->_proactor->submit (connect->op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseWrite (connect);
+                this->releaseOp (connect);
                 this->_socket.close ();
                 return -1;
                 // LCOV_EXCL_STOP

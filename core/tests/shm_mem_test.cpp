@@ -29,7 +29,10 @@
 #include <gtest/gtest.h>
 
 // C.
-#include <climits>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <cstring>
+#include <cerrno>
 
 using join::ShmMem;
 
@@ -63,7 +66,10 @@ const std::string PosixMem::_name = "/test_mem_shm";
 
 TEST_F (PosixMem, create)
 {
-    ASSERT_EQ (ShmMem::unlink (std::string (_POSIX_PATH_MAX + 1, 'x')), -1);
+    ASSERT_EQ (::mkdir ("/dev/shm/test_mem_dir", 0700), 0) << strerror (errno);
+    ASSERT_EQ (ShmMem::unlink ("/test_mem_dir"), -1);
+    ASSERT_EQ (join::lastError, std::errc::is_a_directory);
+    ASSERT_EQ (::rmdir ("/dev/shm/test_mem_dir"), 0) << strerror (errno);
 
     ASSERT_THROW (ShmMem (0, _name), std::system_error);
     ASSERT_THROW (ShmMem (4096, ""), std::system_error);

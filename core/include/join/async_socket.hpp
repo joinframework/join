@@ -26,14 +26,23 @@
 #define JOIN_CORE_ASYNC_SOCKET_HPP
 
 // libjoin.
+#include <join/async_operation.hpp>
 #include <join/proactor.hpp>
 #include <join/backoff.hpp>
 #include <join/memory.hpp>
 #include <join/socket.hpp>
+#include <join/utils.hpp>
 
 // C++.
 #include <system_error>
 #include <utility>
+#include <atomic>
+#include <array>
+#include <new>
+
+// C.
+#include <sys/socket.h>
+#include <poll.h>
 
 namespace join
 {
@@ -46,7 +55,18 @@ namespace join
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
+        using AsyncWait = BasicAsyncWait<Protocol, Proactor>;
+        using WaitHandler = typename AsyncWait::Wait;
 
+        /// number of operations in flight.
+        static constexpr size_t _opCount = 16;
+
+        /// size of an operation slot.
+        static constexpr size_t _opSize = nextPow2 (AsyncOp<Protocol, Proactor>::maxSize);
+
+        using OpArena = LocalMem::Allocator<_opCount, _opSize>;
+
+    protected:
         /**
          * @brief create the socket instance.
          * @param proactor proactor driving the operations.
@@ -74,13 +94,6 @@ namespace join
         BasicAsyncSocket (const BasicAsyncSocket& other) = delete;
 
         /**
-         * @brief copy assignment operator.
-         * @param other other object to assign.
-         * @return assigned object.
-         */
-        BasicAsyncSocket& operator= (const BasicAsyncSocket& other) = delete;
-
-        /**
          * @brief move constructor.
          * @param other other object to move.
          */
@@ -89,8 +102,23 @@ namespace join
         {
             other.suspendAll ();
 
+            _arena = std::move (other._arena);
+
+            for (size_t i = 0; i < other._ops.size (); ++i)
+            {
+                _ops[i].store (other._ops[i].exchange (nullptr, std::memory_order_acq_rel), std::memory_order_release);
+            }
+
             _socket = std::move (other._socket);
         }
+
+    public:
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to assign.
+         * @return assigned object.
+         */
+        BasicAsyncSocket& operator= (const BasicAsyncSocket& other) = delete;
 
         /**
          * @brief move assignment operator.
@@ -105,6 +133,13 @@ namespace join
 
             other.suspendAll ();
 
+            _arena = std::move (other._arena);
+
+            for (size_t i = 0; i < other._ops.size (); ++i)
+            {
+                _ops[i].store (other._ops[i].exchange (nullptr, std::memory_order_acq_rel), std::memory_order_release);
+            }
+
             _socket = std::move (other._socket);
 
             return *this;
@@ -113,7 +148,10 @@ namespace join
         /**
          * @brief destroy the socket instance.
          */
-        ~BasicAsyncSocket () = default;
+        ~BasicAsyncSocket ()
+        {
+            close ();
+        }
 
         /**
          * @brief open socket using the given protocol.
@@ -164,6 +202,114 @@ namespace join
         int unregisterBufferRing (uint16_t group)
         {
             return _proactor->unregisterBufferRing (group);
+        }
+
+        /**
+         * @brief start an asynchronous wait for the socket to become ready in one direction.
+         * @param wantRead wait until the socket is readable.
+         * @param wantWrite wait until the socket is writable.
+         * @param handler handler invoked on completion.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWait (bool wantRead, bool wantWrite, WaitHandler handler, bool flush = true) noexcept
+        {
+            if (JOIN_UNLIKELY (!_socket.opened ()))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            if (JOIN_UNLIKELY (wantRead == wantWrite))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            AsyncWait* wait = allocateOp<AsyncWait> ();
+            if (JOIN_UNLIKELY (wait == nullptr))
+            {
+                lastError = make_error_code (Errc::OutOfMemory);
+                return -1;
+            }
+
+            wait->waitHandler = std::move (handler);
+            wait->op = IoOperation::makePoll (_socket.handle (), wantRead ? POLLIN : POLLOUT, this);
+            wait->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
+
+            size_t index = _arena.getIndex (wait);
+
+            if (_proactor->submit (wait->op, flush, false) == -1)
+            {
+                // LCOV_EXCL_START
+                releaseOp (wait);
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            return static_cast<ssize_t> (index);
+        }
+
+        /**
+         * @brief start an asynchronous multishot wait, staying armed until cancelled or failed.
+         * @param wantRead wait until the socket is readable.
+         * @param wantWrite wait until the socket is writable.
+         * @param handler handler invoked on each completion, it must drain the socket or be invoked again at once.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWaitMulti (bool wantRead, bool wantWrite, WaitHandler handler, bool flush = true) noexcept
+        {
+            if (JOIN_UNLIKELY (!_socket.opened ()))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            if (JOIN_UNLIKELY (wantRead == wantWrite))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            AsyncWait* wait = allocateOp<AsyncWait> ();
+            if (JOIN_UNLIKELY (wait == nullptr))
+            {
+                lastError = make_error_code (Errc::OutOfMemory);
+                return -1;
+            }
+
+            wait->waitHandler = std::move (handler);
+            wait->op = IoOperation::makePollMulti (_socket.handle (), wantRead ? POLLIN : POLLOUT, this);
+            wait->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
+
+            size_t index = _arena.getIndex (wait);
+
+            if (_proactor->submit (wait->op, flush, false) == -1)
+            {
+                // LCOV_EXCL_START
+                releaseOp (wait);
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            return static_cast<ssize_t> (index);
+        }
+
+        /**
+         * @brief cancel the operation stored at the given index, if in flight.
+         * @param index index of the operation to cancel.
+         * @return 0 on success, -1 on failure.
+         */
+        int cancel (size_t index) noexcept
+        {
+            if (JOIN_UNLIKELY (index >= _ops.size ()))
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            return cancelOp (_ops[index].load (std::memory_order_acquire));
         }
 
 #ifdef JOIN_HAS_IO_URING
@@ -270,30 +416,158 @@ namespace join
          * @brief invoke the completion handler of the given operation, then release it.
          * @param op completed operation.
          * @param code error code reported by the kernel.
-         * @param size number of bytes transferred.
+         * @param size number of bytes transferred, or ready events.
          */
-        virtual void dispatch (IoOperation& op, const std::error_code& code, size_t size) noexcept = 0;
+        virtual void dispatch (IoOperation& op, const std::error_code& code, size_t size) noexcept
+        {
+            completeWait (reinterpret_cast<AsyncWait*> (&op), code, size);
+        }
+
+        /**
+         * @brief invoke the wait completion handler.
+         * @param wait completed wait operation.
+         * @param code error code reported by the kernel.
+         * @param revents ready events.
+         */
+        void completeWait (AsyncWait* wait, const std::error_code& code, size_t revents) noexcept
+        {
+            std::error_code result = code;
+
+            if (!result)
+            {
+                bool ready = (revents & wait->op.data.poll.events) != 0;
+
+                if (JOIN_UNLIKELY (revents & POLLERR))
+                {
+                    int err = 0;
+                    socklen_t len = sizeof (err);
+                    ::getsockopt (_socket.handle (), SOL_SOCKET, SO_ERROR, &err, &len);
+
+                    if (JOIN_LIKELY (err != 0))
+                    {
+                        result = std::error_code (err, std::generic_category ());
+                    }
+                    else
+                    {
+                        result = make_error_code (Errc::OperationFailed);  // LCOV_EXCL_LINE
+                    }
+                }
+                else if (JOIN_UNLIKELY ((revents & POLLHUP) && !ready))
+                {
+                    result = make_error_code (Errc::ConnectionClosed);
+                }
+            }
+
+            if (wait->op.more && !result && !(revents & POLLHUP))
+            {
+                if (JOIN_LIKELY (wait->waitHandler))
+                {
+                    wait->waitHandler (result, true);
+                }
+
+                return;
+            }
+
+            WaitHandler handler = std::move (wait->waitHandler);
+
+            if (wait->op.more)
+            {
+                cancelOp (&wait->op);
+            }
+            else
+            {
+                releaseOp (wait);
+            }
+
+            if (handler)
+            {
+                handler (result, false);
+            }
+        }
+
+        /**
+         * @brief allocate an operation in the arena.
+         * @return allocated operation, or nullptr if the arena is exhausted.
+         */
+        template <class Op>
+        Op* allocateOp () noexcept
+        {
+            static_assert (sizeof (Op) <= _opSize, "operation larger than an arena slot");
+
+            void* chunk = _arena.allocate (sizeof (Op));
+            if (JOIN_UNLIKELY (chunk == nullptr))
+            {
+                return nullptr;
+            }
+
+            Op* operation = new (chunk) Op ();
+            _ops[_arena.getIndex (chunk)].store (&operation->op, std::memory_order_release);
+
+            return operation;
+        }
+
+        /**
+         * @brief return an operation to the arena.
+         * @param operation operation to release.
+         */
+        template <class Op>
+        void releaseOp (Op* operation) noexcept
+        {
+            _ops[_arena.getIndex (operation)].store (nullptr, std::memory_order_release);
+            operation->~Op ();
+            _arena.deallocate (operation);
+        }
 
         /**
          * @brief suspend every operation in flight.
          */
-        virtual void suspendAll () noexcept = 0;
+        void suspendAll () noexcept
+        {
+            for (auto& slot : _ops)
+            {
+                _proactor->suspend (slot.load (std::memory_order_acquire));
+            }
+        }
 
         /**
          * @brief resume every suspended operation, redirecting it to this handler.
          */
-        virtual void resumeAll () noexcept = 0;
+        void resumeAll () noexcept
+        {
+            for (auto& slot : _ops)
+            {
+                _proactor->resume (slot.load (std::memory_order_acquire), this);
+            }
+        }
 
         /**
          * @brief cancel every operation in flight.
          */
-        virtual void cancelAll () noexcept = 0;
+        void cancelAll () noexcept
+        {
+            for (auto& slot : _ops)
+            {
+                cancelOp (slot.load (std::memory_order_acquire));
+            }
+        }
 
         /**
          * @brief check if at least one operation is in flight or completing.
          * @return true if at least one operation is in flight or completing, false otherwise.
          */
-        virtual bool pendingAny () const noexcept = 0;
+        bool pendingAny () const noexcept
+        {
+            for (auto& slot : _ops)
+            {
+                IoOperation* op = slot.load (std::memory_order_acquire);
+                if ((op != nullptr) && pending (*op))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         /**
          * @brief cancel the given operation, if in flight.
@@ -320,6 +594,12 @@ namespace join
 
         /// underlying synchronous socket.
         Socket _socket;
+
+        /// operations arena.
+        OpArena _arena;
+
+        /// operations in flight.
+        std::array<std::atomic<IoOperation*>, _opCount> _ops{};
     };
 }
 
