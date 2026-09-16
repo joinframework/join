@@ -26,8 +26,8 @@
 #define JOIN_CORE_ASYNC_DATAGRAM_SOCKET_HPP
 
 // libjoin.
+#include <join/async_raw_socket.hpp>
 #include <join/datagram_socket.hpp>
-#include <join/async_socket.hpp>
 
 // C++.
 #include <system_error>
@@ -39,10 +39,10 @@ namespace join
      * @brief asynchronous datagram socket class.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncDatagramSocket : public BasicAsyncSocket<Protocol, Proactor>
+    class BasicAsyncDatagramSocket : public BasicAsyncRawSocket<Protocol, Proactor>
     {
     public:
-        using Socket = BasicDatagramSocket<Protocol>;
+        using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
         using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
         using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
@@ -55,7 +55,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncDatagramSocket (Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Proactor> (proactor)
+        : BasicAsyncRawSocket<Protocol, Proactor> (proactor)
         {
         }
 
@@ -65,7 +65,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncDatagramSocket (int ttl, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Proactor> (Socket (ttl), proactor)
+        : BasicAsyncRawSocket<Protocol, Proactor> (Socket (ttl), proactor)
         {
         }
 
@@ -75,7 +75,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncDatagramSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Proactor> (std::move (sock), proactor)
+        : BasicAsyncRawSocket<Protocol, Proactor> (std::move (sock), proactor)
         {
         }
 

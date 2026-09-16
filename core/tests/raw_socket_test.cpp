@@ -24,6 +24,7 @@
 
 // libjoin.
 #include <join/datagram_socket.hpp>
+#include <join/raw_socket.hpp>
 #include <join/reactor.hpp>
 
 // Libraries.
@@ -184,6 +185,9 @@ TEST_F (RawSocket, close)
 TEST_F (RawSocket, bind)
 {
     Raw::Socket rawSocket (Raw::Socket::Blocking);
+
+    ASSERT_EQ (rawSocket.bind (Raw::Endpoint{}), -1);
+    ASSERT_EQ (join::lastError, std::errc::no_such_device);
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
     rawSocket.close ();

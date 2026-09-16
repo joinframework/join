@@ -35,12 +35,14 @@ set(PUBLIC_HEADERS
     include/join/endpoint.hpp
     include/join/protocol.hpp
     include/join/socket.hpp
+    include/join/raw_socket.hpp
     include/join/datagram_socket.hpp
     include/join/stream_socket.hpp
     include/join/socket_stream.hpp
     include/join/acceptor.hpp
     include/join/async_operation.hpp
     include/join/async_socket.hpp
+    include/join/async_raw_socket.hpp
     include/join/async_datagram_socket.hpp
     include/join/async_stream_socket.hpp
     include/join/async_acceptor.hpp

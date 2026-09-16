@@ -26,8 +26,8 @@
 #define JOIN_CORE_ASYNC_STREAM_SOCKET_HPP
 
 // libjoin.
+#include <join/async_raw_socket.hpp>
 #include <join/stream_socket.hpp>
-#include <join/async_socket.hpp>
 
 // C++.
 #include <system_error>
@@ -39,10 +39,10 @@ namespace join
      * @brief asynchronous stream socket class.
      */
     template <class Protocol, class Proactor>
-    class BasicAsyncStreamSocket : public BasicAsyncSocket<Protocol, Proactor>
+    class BasicAsyncStreamSocket : public BasicAsyncRawSocket<Protocol, Proactor>
     {
     public:
-        using Socket = BasicStreamSocket<Protocol>;
+        using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
         using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
         using ConnectHandler = typename AsyncWrite::Connect;
@@ -52,7 +52,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncStreamSocket (Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Proactor> (proactor)
+        : BasicAsyncRawSocket<Protocol, Proactor> (proactor)
         {
         }
 
@@ -62,7 +62,7 @@ namespace join
          * @param proactor proactor driving the operations.
          */
         explicit BasicAsyncStreamSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Proactor> (std::move (sock), proactor)
+        : BasicAsyncRawSocket<Protocol, Proactor> (std::move (sock), proactor)
         {
         }
 
