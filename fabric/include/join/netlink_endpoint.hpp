@@ -65,7 +65,7 @@ namespace join
         /**
          * @brief create instance using netlink groups.
          * @param protocol netlink protocol.
-         * @param pid process id.
+         * @param pid port id, 0 to let the kernel assign one.
          * @param groups netlink groups to set.
          */
         BasicNetlinkEndpoint (const Protocol& protocol, uint32_t pid, uint32_t groups) noexcept
@@ -79,7 +79,7 @@ namespace join
 
         /**
          * @brief create instance using netlink groups.
-         * @param pid process id.
+         * @param pid port id, 0 to let the kernel assign one.
          * @param groups netlink groups to set.
          */
         BasicNetlinkEndpoint (uint32_t pid, uint32_t groups) noexcept
@@ -93,7 +93,7 @@ namespace join
          * @param groups netlink groups to set.
          */
         BasicNetlinkEndpoint (const Protocol& protocol, uint32_t groups) noexcept
-        : BasicNetlinkEndpoint (protocol, getpid (), groups)
+        : BasicNetlinkEndpoint (protocol, 0, groups)
         {
         }
 
@@ -102,7 +102,7 @@ namespace join
          * @param groups netlink groups to set.
          */
         BasicNetlinkEndpoint (uint32_t groups) noexcept
-        : BasicNetlinkEndpoint (Protocol (), getpid (), groups)
+        : BasicNetlinkEndpoint (Protocol (), 0, groups)
         {
         }
 

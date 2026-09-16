@@ -59,8 +59,7 @@ public:
     {
         [[maybe_unused]] int result;
 
-        result = std::system (("ip link add " + _device + " type dummy").c_str ());
-        result = std::system (("ip link set " + _device + " address " + _mac).c_str ());
+        result = std::system (("ip link add " + _device + " address " + _mac + " type dummy").c_str ());
         result = std::system (("ip addr add " + _server + "/24 brd 192.168.24.255 dev " + _device).c_str ());
         result = std::system (("ip link set " + _device + " up arp on multicast on").c_str ());
 

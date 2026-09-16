@@ -61,6 +61,7 @@ namespace join
          */
         enum class Opcode : uint8_t
         {
+            Poll,       /**< wait for readiness on a file descriptor. */
             Accept,     /**< accept an incoming connection. */
             Connect,    /**< initiate an outgoing connection. */
             Read,       /**< read from a file descriptor. */
@@ -90,6 +91,36 @@ namespace join
          * @return current object.
          */
         IoOperation& operator= (const IoOperation& other) noexcept;
+
+        /**
+         * @brief payload for poll.
+         */
+        struct PollData
+        {
+            /// file descriptor.
+            int fd;
+
+            /// requested events.
+            uint32_t events;
+        };
+
+        /**
+         * @brief build a poll operation.
+         * @param fd file descriptor to watch.
+         * @param events requested events, POLLIN or POLLOUT.
+         * @param handler handler to notify on completion.
+         * @return initialized IoOperation.
+         */
+        static IoOperation makePoll (int fd, uint32_t events, CompletionHandler* handler) noexcept;
+
+        /**
+         * @brief build a multishot poll operation, staying armed until cancelled or failed.
+         * @param fd file descriptor to watch.
+         * @param events requested events, POLLIN or POLLOUT.
+         * @param handler handler to notify on completion.
+         * @return initialized IoOperation.
+         */
+        static IoOperation makePollMulti (int fd, uint32_t events, CompletionHandler* handler) noexcept;
 
         /**
          * @brief payload for accept.
@@ -340,6 +371,7 @@ namespace join
 
         union Data
         {
+            PollData poll;
             AcceptData accept;
             ConnectData connect;
             RwData rw;
