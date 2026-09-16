@@ -163,12 +163,12 @@ namespace join
             read->op = IoOperation::makeRecvmsg (this->_socket.handle (), &read->msg, 0, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_readArena.getIndex (read);
+            size_t index = this->_arena.getIndex (read);
 
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseRead (read);
+                this->releaseOp (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -209,12 +209,12 @@ namespace join
             read->op = IoOperation::makeRecvmsgMulti (this->_socket.handle (), group, &read->msg, 0, this);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_readArena.getIndex (read);
+            size_t index = this->_arena.getIndex (read);
 
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseRead (read);
+                this->releaseOp (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -235,7 +235,7 @@ namespace join
         ssize_t asyncWriteTo (const char* data, size_t size, Endpoint& endpoint, WriteHandler handler,
                               bool flush = true, bool link = false) noexcept
         {
-            if (JOIN_UNLIKELY (!this->_writeArena.hasBackend ()))
+            if (JOIN_UNLIKELY (!this->_arena.hasBackend ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
@@ -266,12 +266,12 @@ namespace join
             write->op = IoOperation::makeSendmsg (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_writeArena.getIndex (write);
+            size_t index = this->_arena.getIndex (write);
 
             if (this->_proactor->submit (write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseWrite (write);
+                this->releaseOp (write);
                 return -1;
                 // LCOV_EXCL_STOP
             }

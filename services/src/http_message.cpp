@@ -610,7 +610,7 @@ std::string HttpRequest::urn () const
 std::string HttpRequest::host () const
 {
     std::string host = header ("Host");
-    if (host.front () == '[')
+    if (!host.empty () && (host.front () == '['))
     {
         auto end = host.find ("]");
         if (end == std::string::npos)

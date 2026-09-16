@@ -32,6 +32,7 @@
 
 // C++.
 #include <system_error>
+#include <algorithm>
 
 // C.
 #include <sys/socket.h>
@@ -39,6 +40,22 @@
 
 namespace join
 {
+    /**
+     * @brief asynchronous wait operation.
+     */
+    template <class Protocol, class Proactor>
+    struct BasicAsyncWait
+    {
+        /// handler invoked on completion.
+        using Wait = Function<void (const std::error_code&, bool), 16>;
+
+        /// operation submitted to the proactor.
+        IoOperation op = {};
+
+        /// handler invoked on completion.
+        Wait waitHandler;
+    };
+
     /**
      * @brief asynchronous accept operation.
      */
@@ -120,6 +137,18 @@ namespace join
 
         /// write scatter gather entry.
         iovec iov = {};
+    };
+
+    /**
+     * @brief asynchronous operation traits.
+     */
+    template <class Protocol, class Proactor>
+    struct AsyncOp
+    {
+        /// size of the largest asynchronous operation.
+        static constexpr size_t maxSize =
+            std::max ({sizeof (BasicAsyncWait<Protocol, Proactor>), sizeof (BasicAsyncRead<Protocol, Proactor>),
+                       sizeof (BasicAsyncWrite<Protocol, Proactor>)});
     };
 }
 

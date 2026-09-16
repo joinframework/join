@@ -30,16 +30,12 @@
 #include <join/async_socket.hpp>
 #include <join/raw_socket.hpp>
 #include <join/function.hpp>
-#include <join/memory.hpp>
 #include <join/utils.hpp>
 
 // C++.
 #include <system_error>
 #include <utility>
 #include <string>
-#include <atomic>
-#include <array>
-#include <new>
 
 // C.
 #include <cstddef>
@@ -63,18 +59,6 @@ namespace join
         using ReadFromHandler = typename AsyncRead::ReadFrom;
         using ConnectHandler = typename AsyncWrite::Connect;
         using WriteHandler = typename AsyncWrite::Write;
-
-        /// number of concurrent operations per direction.
-        static constexpr size_t _opCount = 8;
-
-        /// size of a read operation slot.
-        static constexpr size_t _readSize = nextPow2 (sizeof (AsyncRead));
-
-        /// size of a write operation slot.
-        static constexpr size_t _writeSize = nextPow2 (sizeof (AsyncWrite));
-
-        using ReadArena = LocalMem::Allocator<_opCount, _readSize>;
-        using WriteArena = LocalMem::Allocator<_opCount, _writeSize>;
 
         /**
          * @brief create the socket instance.
@@ -114,18 +98,8 @@ namespace join
          */
         BasicAsyncRawSocket (BasicAsyncRawSocket&& other) noexcept
         : BasicAsyncSocket<Protocol, Proactor> (std::move (other))
-        , _readArena (std::move (other._readArena))
-        , _writeArena (std::move (other._writeArena))
         {
-            for (size_t i = 0; i < other._readOps.size (); ++i)
-            {
-                _readOps[i].store (other._readOps[i].exchange (nullptr, std::memory_order_acq_rel),
-                                   std::memory_order_release);
-                _writeOps[i].store (other._writeOps[i].exchange (nullptr, std::memory_order_acq_rel),
-                                    std::memory_order_release);
-            }
-
-            resumeAll ();
+            this->resumeAll ();
         }
 
         /**
@@ -137,18 +111,7 @@ namespace join
         {
             BasicAsyncSocket<Protocol, Proactor>::operator= (std::move (other));
 
-            _readArena = std::move (other._readArena);
-            _writeArena = std::move (other._writeArena);
-
-            for (size_t i = 0; i < other._readOps.size (); ++i)
-            {
-                _readOps[i].store (other._readOps[i].exchange (nullptr, std::memory_order_acq_rel),
-                                   std::memory_order_release);
-                _writeOps[i].store (other._writeOps[i].exchange (nullptr, std::memory_order_acq_rel),
-                                    std::memory_order_release);
-            }
-
-            resumeAll ();
+            this->resumeAll ();
 
             return *this;
         }
@@ -228,12 +191,12 @@ namespace join
             read->op = IoOperation::makeRecvmsg (this->_socket.handle (), &read->msg, 0, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = _readArena.getIndex (read);
+            size_t index = this->_arena.getIndex (read);
 
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                releaseRead (read);
+                this->releaseOp (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -272,12 +235,12 @@ namespace join
             read->op = IoOperation::makeReadFixed (this->_socket.handle (), data, maxSize, index, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t slot = _readArena.getIndex (read);
+            size_t slot = this->_arena.getIndex (read);
 
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                releaseRead (read);
+                this->releaseOp (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -312,12 +275,12 @@ namespace join
             read->op = IoOperation::makeRecvMulti (this->_socket.handle (), group, 0, this);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = _readArena.getIndex (read);
+            size_t index = this->_arena.getIndex (read);
 
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                releaseRead (read);
+                this->releaseOp (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -363,12 +326,12 @@ namespace join
             write->op = IoOperation::makeSendmsg (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = _writeArena.getIndex (write);
+            size_t index = this->_arena.getIndex (write);
 
             if (this->_proactor->submit (write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                releaseWrite (write);
+                this->releaseOp (write);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -407,12 +370,12 @@ namespace join
             write->op = IoOperation::makeWriteFixed (this->_socket.handle (), data, size, index, this, link);
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t slot = _writeArena.getIndex (write);
+            size_t slot = this->_arena.getIndex (write);
 
             if (this->_proactor->submit (write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                releaseWrite (write);
+                this->releaseOp (write);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -427,7 +390,7 @@ namespace join
          */
         int cancelConnect () noexcept
         {
-            for (auto& slot : _writeOps)
+            for (auto& slot : this->_ops)
             {
                 IoOperation* op = slot.load (std::memory_order_acquire);
 
@@ -438,38 +401,6 @@ namespace join
             }
 
             return 0;
-        }
-
-        /**
-         * @brief cancel the read operation stored at the given index, if in flight.
-         * @param index index of the operation to cancel.
-         * @return 0 on success, -1 on failure.
-         */
-        int cancelRead (size_t index) noexcept
-        {
-            if (JOIN_UNLIKELY (index >= _readOps.size ()))
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-            }
-
-            return this->cancelOp (_readOps[index].load (std::memory_order_acquire));
-        }
-
-        /**
-         * @brief cancel the write operation stored at the given index, if in flight.
-         * @param index index of the operation to cancel.
-         * @return 0 on success, -1 on failure.
-         */
-        int cancelWrite (size_t index) noexcept
-        {
-            if (JOIN_UNLIKELY (index >= _writeOps.size ()))
-            {
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-            }
-
-            return this->cancelOp (_writeOps[index].load (std::memory_order_acquire));
         }
 
         /**
@@ -503,9 +434,13 @@ namespace join
             {
                 completeWrite (reinterpret_cast<AsyncWrite*> (&op), code, size);
             }
-            else
+            else if (opcode == IoOperation::Opcode::Connect)
             {
                 completeConnect (reinterpret_cast<AsyncWrite*> (&op), code);
+            }
+            else
+            {
+                BasicAsyncSocket<Protocol, Proactor>::dispatch (op, code, size);
             }
         }
 
@@ -517,7 +452,7 @@ namespace join
         {
             ConnectHandler handler = std::move (connect->connectHandler);
 
-            releaseWrite (connect);
+            this->releaseOp (connect);
 
             if (code)
             {
@@ -596,7 +531,7 @@ namespace join
             ReadHandler handler = std::move (read->readHandler);
             ReadFromHandler fromHandler = std::move (read->readFromHandler);
 
-            releaseRead (read);
+            this->releaseOp (read);
 
             if (fromHandler)
             {
@@ -619,7 +554,7 @@ namespace join
 
             if (JOIN_LIKELY (!write->op.multishot))
             {
-                releaseWrite (write);
+                this->releaseOp (write);
             }
 
             if (JOIN_LIKELY (handler))
@@ -634,16 +569,7 @@ namespace join
          */
         AsyncRead* allocateRead () noexcept
         {
-            void* chunk = _readArena.allocate (sizeof (AsyncRead));
-            if (JOIN_UNLIKELY (chunk == nullptr))
-            {
-                return nullptr;
-            }
-
-            AsyncRead* read = new (chunk) AsyncRead ();
-            _readOps[_readArena.getIndex (chunk)].store (&read->op, std::memory_order_release);
-
-            return read;
+            return this->template allocateOp<AsyncRead> ();
         }
 
         /**
@@ -652,126 +578,8 @@ namespace join
          */
         AsyncWrite* allocateWrite () noexcept
         {
-            void* chunk = _writeArena.allocate (sizeof (AsyncWrite));
-            if (JOIN_UNLIKELY (chunk == nullptr))
-            {
-                return nullptr;
-            }
-
-            AsyncWrite* write = new (chunk) AsyncWrite ();
-            _writeOps[_writeArena.getIndex (chunk)].store (&write->op, std::memory_order_release);
-
-            return write;
+            return this->template allocateOp<AsyncWrite> ();
         }
-
-        /**
-         * @brief return a read operation to the arena.
-         * @param read read operation to release.
-         */
-        void releaseRead (AsyncRead* read) noexcept
-        {
-            _readOps[_readArena.getIndex (read)].store (nullptr, std::memory_order_release);
-            read->~AsyncRead ();
-            _readArena.deallocate (read);
-        }
-
-        /**
-         * @brief return a write operation to the arena.
-         * @param write write operation to release.
-         */
-        void releaseWrite (AsyncWrite* write) noexcept
-        {
-            _writeOps[_writeArena.getIndex (write)].store (nullptr, std::memory_order_release);
-            write->~AsyncWrite ();
-            _writeArena.deallocate (write);
-        }
-
-        /**
-         * @brief suspend every operation in flight.
-         */
-        void suspendAll () noexcept override
-        {
-            for (auto& slot : _readOps)
-            {
-                this->_proactor->suspend (slot.load (std::memory_order_acquire));
-            }
-
-            for (auto& slot : _writeOps)
-            {
-                this->_proactor->suspend (slot.load (std::memory_order_acquire));
-            }
-        }
-
-        /**
-         * @brief resume every suspended operation, redirecting it to this handler.
-         */
-        void resumeAll () noexcept override
-        {
-            for (auto& slot : _readOps)
-            {
-                this->_proactor->resume (slot.load (std::memory_order_acquire), this);
-            }
-
-            for (auto& slot : _writeOps)
-            {
-                this->_proactor->resume (slot.load (std::memory_order_acquire), this);
-            }
-        }
-
-        /**
-         * @brief cancel every operation in flight.
-         */
-        void cancelAll () noexcept override
-        {
-            for (auto& slot : _readOps)
-            {
-                this->cancelOp (slot.load (std::memory_order_acquire));
-            }
-
-            for (auto& slot : _writeOps)
-            {
-                this->cancelOp (slot.load (std::memory_order_acquire));
-            }
-        }
-
-        /**
-         * @brief check if at least one operation is in flight or completing.
-         * @return true if at least one operation is in flight or completing, false otherwise.
-         */
-        bool pendingAny () const noexcept override
-        {
-            for (auto& slot : _readOps)
-            {
-                IoOperation* op = slot.load (std::memory_order_acquire);
-                if ((op != nullptr) && this->pending (*op))
-                {
-                    return true;
-                }
-            }
-
-            for (auto& slot : _writeOps)
-            {
-                IoOperation* op = slot.load (std::memory_order_acquire);
-                if ((op != nullptr) && this->pending (*op))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// read operations arena.
-        ReadArena _readArena;
-
-        /// write operations arena.
-        WriteArena _writeArena;
-
-        /// read operations in flight.
-        std::array<std::atomic<IoOperation*>, _opCount> _readOps{};
-
-        /// write and connect operations in flight.
-        std::array<std::atomic<IoOperation*>, _opCount> _writeOps{};
     };
 }
 
