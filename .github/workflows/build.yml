@@ -144,20 +144,24 @@ jobs:
         run: ctest --preset ${{ matrix.compiler }}-debug
 
       - name: Generate coverage report
-        if: inputs.coverage && matrix.arch == 'amd64' && matrix.compiler == 'gcc'
+        if: inputs.coverage && matrix.arch == 'amd64'
         run: |
-          lcov --directory build/${{ matrix.compiler }}/debug --capture --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
-          genhtml lcov.info --prefix $GITHUB_WORKSPACE --output-directory coverage
+          if [ "${{ matrix.compiler }}" = "clang" ]; then
+            GCOV="--gcov-tool llvm-cov --gcov-tool gcov"
+            RC="--rc derive_function_end_line=0"
+          fi
+          lcov --directory build/${{ matrix.compiler }}/debug --capture $GCOV $RC --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
+          genhtml lcov.info $RC --prefix $GITHUB_WORKSPACE --output-directory coverage
 
       - name: Upload coverage data to GitHub
-        if: inputs.coverage && matrix.arch == 'amd64' && matrix.compiler == 'gcc'
+        if: inputs.coverage && matrix.arch == 'amd64'
         uses: actions/upload-artifact@v7.0.0
         with:
           name: ${{ matrix.compiler }}-${{ matrix.arch }}-coverage-data
           path: lcov.info
 
       - name: Upload coverage report to GitHub
-        if: inputs.coverage && matrix.arch == 'amd64' && matrix.compiler == 'gcc'
+        if: inputs.coverage && matrix.arch == 'amd64'
         uses: actions/upload-artifact@v7.0.0
         with:
           name: ${{ matrix.compiler }}-${{ matrix.arch }}-coverage-report

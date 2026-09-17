@@ -33,6 +33,9 @@
 
 // C.
 #include <linux/if_packet.h>
+#ifdef JOIN_HAS_XDP
+#include <linux/if_xdp.h>
+#endif
 #include <sys/un.h>
 #include <cstring>
 
@@ -257,6 +260,201 @@ namespace join
         os << endpoint.device ();
         return os;
     }
+
+#ifdef JOIN_HAS_XDP
+    /**
+     * @brief basic XDP endpoint class.
+     */
+    template <class Protocol>
+    class BasicXdpEndpoint : public BasicEndpoint<Protocol>
+    {
+    public:
+        /**
+         * @brief default constructor.
+         */
+        BasicXdpEndpoint () noexcept
+        : BasicEndpoint<Protocol> ()
+        {
+        }
+
+        /**
+         * @brief create instance using socket address.
+         * @param addr socket address.
+         * @param len socket address length.
+         */
+        BasicXdpEndpoint (const struct sockaddr* addr, socklen_t len) noexcept
+        : BasicEndpoint<Protocol> (addr, len)
+        {
+        }
+
+        /**
+         * @brief create instance using device name and queue.
+         * @param dev device name to set.
+         * @param queue queue number to set.
+         */
+        BasicXdpEndpoint (const char* dev, uint32_t queue = 0) noexcept
+        : BasicXdpEndpoint ()
+        {
+            struct sockaddr_xdp* sa = reinterpret_cast<struct sockaddr_xdp*> (&this->_addr);
+            sa->sxdp_ifindex = if_nametoindex (dev);
+            sa->sxdp_queue_id = queue;
+        }
+
+        /**
+         * @brief create instance using device name and queue.
+         * @param dev device name to set.
+         * @param queue queue number to set.
+         */
+        BasicXdpEndpoint (const std::string& dev, uint32_t queue = 0) noexcept
+        : BasicXdpEndpoint<Protocol> (dev.c_str (), queue)
+        {
+        }
+
+        /**
+         * @brief get endpoint protocol.
+         * @return endpoint protocol.
+         */
+        constexpr Protocol protocol () const noexcept
+        {
+            return Protocol ();
+        }
+
+        /**
+         * @brief get socket address length.
+         * @return socket address length.
+         */
+        constexpr socklen_t length () const noexcept
+        {
+            return sizeof (struct sockaddr_xdp);
+        }
+
+        /**
+         * @brief set endpoint device name.
+         * @param dev device name to set.
+         */
+        void device (const std::string& dev) noexcept
+        {
+            reinterpret_cast<struct sockaddr_xdp*> (&this->_addr)->sxdp_ifindex = if_nametoindex (dev.c_str ());
+        }
+
+        /**
+         * @brief get endpoint device name.
+         * @return endpoint device name.
+         */
+        std::string device () const
+        {
+            char ifname[IFNAMSIZ];
+            if (if_indextoname (reinterpret_cast<const struct sockaddr_xdp*> (&this->_addr)->sxdp_ifindex, ifname))
+            {
+                return ifname;
+            }
+            return {};
+        }
+
+        /**
+         * @brief set endpoint queue.
+         * @param queue queue number to set.
+         */
+        void queue (uint32_t queue) noexcept
+        {
+            reinterpret_cast<struct sockaddr_xdp*> (&this->_addr)->sxdp_queue_id = queue;
+        }
+
+        /**
+         * @brief get endpoint queue.
+         * @return endpoint queue.
+         */
+        uint32_t queue () const noexcept
+        {
+            return reinterpret_cast<const struct sockaddr_xdp*> (&this->_addr)->sxdp_queue_id;
+        }
+    };
+
+    /**
+     * @brief compare if endpoints are equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if endpoints are equal, false otherwise.
+     */
+    template <class Protocol>
+    bool operator== (const BasicXdpEndpoint<Protocol>& a, const BasicXdpEndpoint<Protocol>& b) noexcept
+    {
+        return a.device () == b.device () && a.queue () == b.queue ();
+    }
+
+    /**
+     * @brief compare if endpoints are not equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if endpoints are not equal, false otherwise.
+     */
+    template <class Protocol>
+    bool operator!= (const BasicXdpEndpoint<Protocol>& a, const BasicXdpEndpoint<Protocol>& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    /**
+     * @brief compare if endpoint is lower.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if lower, false otherwise.
+     */
+    template <class Protocol>
+    bool operator< (const BasicXdpEndpoint<Protocol>& a, const BasicXdpEndpoint<Protocol>& b) noexcept
+    {
+        return std::make_tuple (a.device (), a.queue ()) < std::make_tuple (b.device (), b.queue ());
+    }
+
+    /**
+     * @brief compare if endpoint is greater.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if greater, false otherwise.
+     */
+    template <class Protocol>
+    bool operator> (const BasicXdpEndpoint<Protocol>& a, const BasicXdpEndpoint<Protocol>& b) noexcept
+    {
+        return b < a;
+    }
+
+    /**
+     * @brief compare if endpoint is lower or equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if lower or equal.
+     */
+    template <class Protocol>
+    bool operator<= (const BasicXdpEndpoint<Protocol>& a, const BasicXdpEndpoint<Protocol>& b) noexcept
+    {
+        return !(b < a);
+    }
+
+    /**
+     * @brief compare if endpoint is greater or equal.
+     * @param a endpoint to compare.
+     * @param b endpoint to compare to.
+     * @return true if greater or equal.
+     */
+    template <class Protocol>
+    bool operator>= (const BasicXdpEndpoint<Protocol>& a, const BasicXdpEndpoint<Protocol>& b) noexcept
+    {
+        return !(a < b);
+    }
+
+    /**
+     * @brief push endpoint representation into a stream.
+     * @param os output stream.
+     * @param endpoint endpoint to push.
+     * @return output stream.
+     */
+    template <class Protocol>
+    std::ostream& operator<< (std::ostream& os, const BasicXdpEndpoint<Protocol>& endpoint)
+    {
+        os << endpoint.device () << ":" << endpoint.queue ();
+        return os;
+    }
+#endif
 
     /**
      * @brief basic unix endpoint class.

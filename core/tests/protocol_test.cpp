@@ -29,6 +29,9 @@
 #include <gtest/gtest.h>
 
 using join::Raw;
+#ifdef JOIN_HAS_XDP
+using join::Xdp;
+#endif
 using join::UnixDgram;
 using join::UnixStream;
 using join::Udp;
@@ -41,6 +44,9 @@ using join::Tcp;
 TEST (Protocol, family)
 {
     ASSERT_EQ (Raw ().family (), AF_PACKET);
+#ifdef JOIN_HAS_XDP
+    ASSERT_EQ (Xdp ().family (), AF_XDP);
+#endif
     ASSERT_EQ (UnixDgram ().family (), AF_UNIX);
     ASSERT_EQ (UnixStream ().family (), AF_UNIX);
     ASSERT_EQ (Udp ().family (), AF_INET);
@@ -60,6 +66,9 @@ TEST (Protocol, family)
 TEST (Protocol, type)
 {
     ASSERT_EQ (Raw ().type (), SOCK_RAW);
+#ifdef JOIN_HAS_XDP
+    ASSERT_EQ (Xdp ().type (), SOCK_RAW);
+#endif
     ASSERT_EQ (UnixDgram ().type (), SOCK_DGRAM);
     ASSERT_EQ (UnixStream ().type (), SOCK_STREAM);
     ASSERT_EQ (Udp ().type (), SOCK_DGRAM);
@@ -73,6 +82,9 @@ TEST (Protocol, type)
 TEST (Protocol, protocol)
 {
     ASSERT_EQ (Raw ().protocol (), ::htons (ETH_P_ALL));
+#ifdef JOIN_HAS_XDP
+    ASSERT_EQ (Xdp ().protocol (), 0);
+#endif
     ASSERT_EQ (UnixDgram ().protocol (), 0);
     ASSERT_EQ (UnixStream ().protocol (), 0);
     ASSERT_EQ (Udp ().protocol (), IPPROTO_UDP);

@@ -8,6 +8,7 @@
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_VERBOSE_MAKEFILE": "ON",
+        "JOIN_ENABLE_XDP": "ON",
         "JOIN_ENABLE_NUMA": "ON",
         "JOIN_ENABLE_SAMPLES": "ON",
         "JOIN_ENABLE_TESTS": "ON"
@@ -49,7 +50,8 @@
       "binaryDir": "${sourceDir}/build/gcc/release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "JOIN_ENABLE_COVERAGE": "OFF"
+        "JOIN_ENABLE_COVERAGE": "OFF",
+        "JOIN_ENABLE_IO_URING": "OFF"
       }
     },
     {
@@ -60,7 +62,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "JOIN_ENABLE_COVERAGE": "ON",
-        "JOIN_ENABLE_IO_URING": "ON"
+        "JOIN_ENABLE_IO_URING": "OFF"
       }
     },
     {
@@ -70,7 +72,8 @@
       "binaryDir": "${sourceDir}/build/clang/release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "JOIN_ENABLE_COVERAGE": "OFF"
+        "JOIN_ENABLE_COVERAGE": "OFF",
+        "JOIN_ENABLE_IO_URING": "ON"
       }
     }
   ],

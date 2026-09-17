@@ -29,6 +29,9 @@
 #include <gtest/gtest.h>
 
 using join::Raw;
+#ifdef JOIN_HAS_XDP
+using join::Xdp;
+#endif
 using join::UnixDgram;
 using join::UnixStream;
 using join::Udp;
@@ -42,6 +45,11 @@ TEST (Endpoint, addr)
 {
     Raw::Endpoint rawEndpoint;
     ASSERT_NE (rawEndpoint.addr (), nullptr);
+
+#ifdef JOIN_HAS_XDP
+    Xdp::Endpoint xdpEndpoint;
+    ASSERT_NE (xdpEndpoint.addr (), nullptr);
+#endif
 
     UnixDgram::Endpoint unixDgramEndpoint;
     ASSERT_NE (unixDgramEndpoint.addr (), nullptr);
@@ -66,6 +74,11 @@ TEST (Endpoint, length)
 {
     Raw::Endpoint rawEndpoint;
     ASSERT_EQ (rawEndpoint.length (), sizeof (struct sockaddr_ll));
+
+#ifdef JOIN_HAS_XDP
+    Xdp::Endpoint xdpEndpoint;
+    ASSERT_EQ (xdpEndpoint.length (), sizeof (struct sockaddr_xdp));
+#endif
 
     UnixDgram::Endpoint unixDgramEndpoint;
     ASSERT_EQ (unixDgramEndpoint.length (), sizeof (struct sockaddr_un));
@@ -102,6 +115,13 @@ TEST (Endpoint, device)
     rawEndpoint.device ("lo");
     ASSERT_EQ (rawEndpoint.device (), "lo");
 
+#ifdef JOIN_HAS_XDP
+    Xdp::Endpoint xdpEndpoint;
+    ASSERT_EQ (xdpEndpoint.device (), "");
+    xdpEndpoint.device ("lo");
+    ASSERT_EQ (xdpEndpoint.device (), "lo");
+#endif
+
     UnixDgram::Endpoint unixDgramEndpoint;
     ASSERT_EQ (unixDgramEndpoint.device (), "");
     unixDgramEndpoint.device ("/path/to/file");
@@ -127,6 +147,23 @@ TEST (Endpoint, device)
     tcpEndpoint.device ("lo");
     ASSERT_EQ (tcpEndpoint.device (), "lo");
 }
+
+#ifdef JOIN_HAS_XDP
+/**
+ * @brief test the queue method.
+ */
+TEST (Endpoint, queue)
+{
+    Xdp::Endpoint xdpEndpoint;
+    ASSERT_EQ (xdpEndpoint.queue (), 0);
+
+    xdpEndpoint.queue (1);
+    ASSERT_EQ (xdpEndpoint.queue (), 1);
+
+    xdpEndpoint.queue (7);
+    ASSERT_EQ (xdpEndpoint.queue (), 7);
+}
+#endif
 
 /**
  * @brief ip method.
@@ -215,6 +252,11 @@ TEST (Endpoint, protocol)
  */
 TEST (Endpoint, equal)
 {
+#ifdef JOIN_HAS_XDP
+    ASSERT_EQ (Xdp::Endpoint ("lo", 0), Xdp::Endpoint ("lo", 0));
+    ASSERT_NE (Xdp::Endpoint ("lo", 0), Xdp::Endpoint ("lo", 1));
+#endif
+
     ASSERT_EQ (UnixDgram::Endpoint ("/path/to/file"), UnixDgram::Endpoint ("/path/to/file"));
     ASSERT_NE (UnixDgram::Endpoint ("/path/to/file"), UnixDgram::Endpoint ("/path/to/other"));
     ASSERT_EQ (UnixDgram::Endpoint ("/path/to/other"), UnixDgram::Endpoint ("/path/to/other"));
@@ -250,6 +292,13 @@ TEST (Endpoint, serialize)
     Raw::Endpoint rawEndpoint ("lo");
     ASSERT_NO_THROW (stream << rawEndpoint);
     ASSERT_EQ (stream.str (), "lo");
+
+#ifdef JOIN_HAS_XDP
+    stream.str ("");
+    Xdp::Endpoint xdpEndpoint ("lo", 0);
+    ASSERT_NO_THROW (stream << xdpEndpoint);
+    ASSERT_EQ (stream.str (), "lo:0");
+#endif
 
     stream.str ("");
     UnixDgram::Endpoint unixDgramEndpoint ("lo");
