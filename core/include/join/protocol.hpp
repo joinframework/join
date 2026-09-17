@@ -30,6 +30,9 @@
 
 // C.
 #include <net/ethernet.h>
+#ifdef JOIN_HAS_XDP
+#include <linux/if_xdp.h>
+#endif
 #include <cstddef>
 
 namespace join
@@ -137,6 +140,49 @@ namespace join
             return ETH_P_ALL;
         }
     };
+
+#ifdef JOIN_HAS_XDP
+    /**
+     * @brief XDP protocol class.
+     */
+    class Xdp
+    {
+    public:
+        using Endpoint = BasicXdpEndpoint<Xdp>;
+
+        /**
+         * @brief default constructor.
+         */
+        constexpr Xdp () noexcept = default;
+
+        /**
+         * @brief get the protocol address family.
+         * @return the protocol address family.
+         */
+        constexpr int family () const noexcept
+        {
+            return AF_XDP;
+        }
+
+        /**
+         * @brief get the protocol communication semantic.
+         * @return the protocol communication semantic.
+         */
+        constexpr int type () const noexcept
+        {
+            return SOCK_RAW;
+        }
+
+        /**
+         * @brief get the protocol type.
+         * @return the protocol type.
+         */
+        constexpr int protocol () const noexcept
+        {
+            return 0;
+        }
+    };
+#endif
 
     /**
      * @brief unix datagram protocol class.

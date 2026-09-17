@@ -4,6 +4,10 @@ if(JOIN_ENABLE_IO_URING)
     pkg_check_modules(LIBURING REQUIRED liburing>=2.3)
 endif()
 
+if(JOIN_ENABLE_XDP)
+    pkg_check_modules(LIBXDP REQUIRED libxdp)
+endif()
+
 if(JOIN_ENABLE_NUMA)
     pkg_check_modules(NUMA REQUIRED numa)
 endif()
@@ -86,6 +90,7 @@ target_include_directories(${JOIN_CORE}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
         $<$<BOOL:${JOIN_ENABLE_IO_URING}>:${LIBURING_INCLUDE_DIRS}>
+        $<$<BOOL:${JOIN_ENABLE_XDP}>:${LIBXDP_INCLUDE_DIRS}>
         $<$<BOOL:${JOIN_ENABLE_NUMA}>:${NUMA_INCLUDE_DIRS}>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -95,11 +100,16 @@ target_link_libraries(${JOIN_CORE}
     PUBLIC
         Threads::Threads
         $<$<BOOL:${JOIN_ENABLE_IO_URING}>:${LIBURING_LIBRARIES}>
+        $<$<BOOL:${JOIN_ENABLE_XDP}>:${LIBXDP_LIBRARIES}>
         $<$<BOOL:${JOIN_ENABLE_NUMA}>:${NUMA_LIBRARIES}>
 )
 
 if(JOIN_ENABLE_IO_URING)
     target_compile_definitions(${JOIN_CORE} PUBLIC JOIN_HAS_IO_URING)
+endif()
+
+if(JOIN_ENABLE_XDP)
+    target_compile_definitions(${JOIN_CORE} PUBLIC JOIN_HAS_XDP)
 endif()
 
 if(JOIN_ENABLE_NUMA)

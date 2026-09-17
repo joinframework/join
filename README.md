@@ -91,11 +91,13 @@ sudo apt install pkg-config libssl-dev zlib1g-dev libgtest-dev libgmock-dev
 | Option | Library | Default | Description |
 | :--- | :--- | :---: | :--- |
 | `JOIN_ENABLE_IO_URING` | `liburing-dev` (>= 2.3) | `OFF` | Enables the io_uring based proactor backend for async I/O. |
+| `JOIN_ENABLE_XDP` | `libxdp-dev` | `OFF` | Enables AF_XDP support. |
 | `JOIN_ENABLE_NUMA` | `libnuma-dev` | `OFF` | Enables NUMA aware memory binding for `LocalMem` and `ShmMem`. |
 
 Install as needed:
 ```bash
 sudo apt install liburing-dev   # for JOIN_ENABLE_IO_URING
+sudo apt install libxdp-dev     # for JOIN_ENABLE_XDP
 sudo apt install libnuma-dev    # for JOIN_ENABLE_NUMA
 ```
 
@@ -111,6 +113,7 @@ With optional backends:
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release \
     -DJOIN_ENABLE_IO_URING=ON \
+    -DJOIN_ENABLE_XDP=ON \
     -DJOIN_ENABLE_NUMA=ON \
     -DJOIN_ENABLE_TESTS=ON
 cmake --build build
@@ -126,6 +129,7 @@ cmake --build build
 | `JOIN_ENABLE_FABRIC` | `ON` | Build the fabric module. |
 | `JOIN_ENABLE_SERVICES` | `ON` | Build the services module (requires crypto, data, fabric). |
 | `JOIN_ENABLE_IO_URING` | `OFF` | Enable io_uring based proactor backend (requires `liburing-dev` >= 2.3). |
+| `JOIN_ENABLE_XDP` | `OFF` | Enable AF_XDP support (requires `libxdp-dev`). |
 | `JOIN_ENABLE_NUMA` | `OFF` | Enable NUMA support (requires `libnuma-dev`). |
 | `JOIN_ENABLE_SAMPLES` | `OFF` | Build sample programs. |
 | `JOIN_ENABLE_TESTS` | `OFF` | Build the test suite. |
