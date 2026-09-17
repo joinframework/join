@@ -142,14 +142,21 @@ namespace join
     /**
      * @brief asynchronous operation traits.
      */
-    template <class Protocol, class Proactor>
-    struct AsyncOp
+    template <class... Ops>
+    struct BasicAsyncOpTraits
     {
+        static_assert (sizeof...(Ops) > 0, "traits must describe at least one operation");
+
         /// size of the largest asynchronous operation.
-        static constexpr size_t maxSize =
-            std::max ({sizeof (BasicAsyncWait<Protocol, Proactor>), sizeof (BasicAsyncRead<Protocol, Proactor>),
-                       sizeof (BasicAsyncWrite<Protocol, Proactor>)});
+        static constexpr size_t maxSize = std::max ({sizeof (Ops)...});
     };
+
+    /**
+     * @brief asynchronous socket operation traits.
+     */
+    template <class Protocol, class Proactor>
+    using AsyncOp = BasicAsyncOpTraits<BasicAsyncWait<Protocol, Proactor>, BasicAsyncRead<Protocol, Proactor>,
+                                       BasicAsyncWrite<Protocol, Proactor>>;
 }
 
 #endif

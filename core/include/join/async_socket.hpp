@@ -316,6 +316,15 @@ namespace join
 
 #ifdef JOIN_HAS_IO_URING
         /**
+         * @brief flush the pending submissions of the proactor driving this socket.
+         * @return 0 on success, -1 on failure.
+         */
+        int flush () noexcept
+        {
+            return _proactor->flush (false);
+        }
+
+        /**
          * @brief register the arena chunks as fixed buffers on the proactor driving this socket.
          * @param arena arena to register.
          * @return 0 on success, -1 on failure.
@@ -589,6 +598,28 @@ namespace join
             }
 
             return 0;
+        }
+
+        /**
+         * @brief check if an operation is in flight.
+         * @param op operation to check.
+         * @return true if the operation is in flight, false otherwise.
+         */
+        bool inFlight (const IoOperation& op) const noexcept
+        {
+            return op.state.load (std::memory_order_acquire) == IoOperation::State::Submitted;
+        }
+
+        /**
+         * @brief check if an operation is in flight or completing.
+         * @param op operation to check.
+         * @return true if the operation is in flight or completing, false otherwise.
+         */
+        bool pending (const IoOperation& op) const noexcept
+        {
+            IoOperation::State state = op.state.load (std::memory_order_acquire);
+
+            return (state == IoOperation::State::Submitted) || (state == IoOperation::State::Busy);
         }
 
         /// proactor driving the operations.
