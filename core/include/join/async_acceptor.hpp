@@ -36,9 +36,6 @@
 #include <system_error>
 #include <utility>
 
-// C.
-#include <cerrno>
-
 namespace join
 {
     /**
@@ -117,7 +114,7 @@ namespace join
 
             do
             {
-                cancelAccept ();
+                cancel ();
 
                 backoff ();
             }
@@ -130,9 +127,11 @@ namespace join
          * @brief start an asynchronous acceptation.
          * @param handler handler invoked on completion.
          * @param flags accepted socket creation flags.
+         * @param flush flush the submission queue.
          * @return 0 on success, -1 on failure.
          */
-        int asyncAccept (AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) noexcept
+        ssize_t asyncAccept (AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC,
+                             bool flush = true) noexcept
         {
             if (JOIN_UNLIKELY (!_acceptor.opened ()))
             {
@@ -140,7 +139,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!arm (_acceptOp.op)))
+            if (JOIN_UNLIKELY (!armOp ()))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -151,10 +150,11 @@ namespace join
             _acceptOp.op = IoOperation::makeAccept (_acceptor.handle (), _acceptOp.remote.addr (), &_acceptOp.remoteLen,
                                                     flags | SOCK_NONBLOCK, this);
 
-            if (_proactor->submit (_acceptOp.op, true, false) == -1)
+            if (_proactor->submit (_acceptOp.op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 _acceptOp.acceptHandler.reset ();
+                disarmOp (IoOperation::State::Submitted);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -166,9 +166,11 @@ namespace join
          * @brief start an asynchronous multishot acceptation, staying armed until cancelled or failed.
          * @param handler handler invoked on each acceptation, the last call reporting more as false.
          * @param flags accepted socket creation flags.
+         * @param flush flush the submission queue.
          * @return 0 on success, -1 on failure.
          */
-        int asyncAcceptMulti (AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC) noexcept
+        ssize_t asyncAcceptMulti (AcceptHandler handler, int flags = SOCK_NONBLOCK | SOCK_CLOEXEC,
+                                  bool flush = true) noexcept
         {
             if (JOIN_UNLIKELY (!_acceptor.opened ()))
             {
@@ -176,7 +178,7 @@ namespace join
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (!arm (_acceptOp.op)))
+            if (JOIN_UNLIKELY (!armOp ()))
             {
                 lastError = make_error_code (Errc::InUse);
                 return -1;
@@ -186,10 +188,11 @@ namespace join
             _acceptOp.acceptHandler = std::move (handler);
             _acceptOp.op = IoOperation::makeAcceptMulti (_acceptor.handle (), flags | SOCK_NONBLOCK, this);
 
-            if (_proactor->submit (_acceptOp.op, true, false) == -1)
+            if (_proactor->submit (_acceptOp.op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 _acceptOp.acceptHandler.reset ();
+                disarmOp (IoOperation::State::Submitted);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -201,7 +204,7 @@ namespace join
          * @brief cancel the acceptation in flight, if any.
          * @return 0 on success, -1 on failure.
          */
-        int cancelAccept () noexcept
+        int cancel () noexcept
         {
             if (!inFlight (_acceptOp.op))
             {
@@ -215,6 +218,17 @@ namespace join
 
             return 0;
         }
+
+#ifdef JOIN_HAS_IO_URING
+        /**
+         * @brief flush the pending submissions of the proactor driving this acceptor.
+         * @return 0 on success, -1 on failure.
+         */
+        int flush () noexcept
+        {
+            return _proactor->flush (false);
+        }
+#endif
 
         /**
          * @brief determine the local endpoint associated with this acceptor.
@@ -272,55 +286,112 @@ namespace join
 
     protected:
         /**
-         * @brief method called when the acceptation completes.
+         * @brief method called when an operation completes.
          * @param op completed operation.
          * @param result accepted file descriptor, or negative errno.
          */
-        void onComplete ([[maybe_unused]] IoOperation& op, int result) override
+        void onComplete (IoOperation& op, int result) override
         {
-            completeAccept (result);
-        }
-
-        /**
-         * @brief method called when the acceptation is cancelled.
-         * @param op cancelled operation.
-         * @param result negative errno.
-         */
-        void onCancel ([[maybe_unused]] IoOperation& op, [[maybe_unused]] int result) override
-        {
-            completeAccept (-ECANCELED);
-        }
-
-        /**
-         * @brief invoke the completion handler.
-         * @param result accepted file descriptor, or negative errno.
-         */
-        void completeAccept (int result) noexcept
-        {
-            Socket sock = (result < 0) ? Socket () : Socket (result, _acceptOp.remote);
             std::error_code code =
                 (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code ();
 
-            if (_acceptOp.op.more)
+            dispatch (op, code, (result > 0) ? static_cast<size_t> (result) : 0);
+        }
+
+        /**
+         * @brief method called when an operation is cancelled.
+         * @param op cancelled operation.
+         * @param result negative errno.
+         */
+        void onCancel (IoOperation& op, [[maybe_unused]] int result) override
+        {
+            dispatch (op, make_error_code (std::errc::operation_canceled), 0);
+        }
+
+        /**
+         * @brief invoke the completion handler of the given operation.
+         * @param op completed operation.
+         * @param code error code reported by the kernel.
+         * @param size accepted file descriptor, 0 when the operation failed or was cancelled.
+         */
+        virtual void dispatch (IoOperation& op, const std::error_code& code, size_t size) noexcept
+        {
+            completeAccept (reinterpret_cast<AsyncAccept*> (&op), code, size);
+        }
+
+        /**
+         * @brief invoke the accept completion handler.
+         * @param accept completed accept operation.
+         * @param code error code reported by the kernel.
+         * @param handle accepted file descriptor.
+         */
+        void completeAccept (AsyncAccept* accept, const std::error_code& code, size_t handle) noexcept
+        {
+            Socket sock = code ? Socket () : Socket (static_cast<int> (handle), accept->remote);
+
+            if (accept->op.more)
             {
-                if (JOIN_LIKELY (_acceptOp.acceptHandler))
+                if (JOIN_LIKELY (accept->acceptHandler))
                 {
-                    _acceptOp.acceptHandler (std::move (sock), code, true);
+                    accept->acceptHandler (std::move (sock), code, true);
                 }
 
                 return;
             }
 
-            AcceptHandler handler = std::move (_acceptOp.acceptHandler);
+            AcceptHandler handler = std::move (accept->acceptHandler);
 
             if (JOIN_LIKELY (handler))
             {
                 handler (std::move (sock), code, false);
             }
 
-            IoOperation::State expected = IoOperation::State::Busy;
+            disarmOp (IoOperation::State::Busy);
+        }
+
+        /**
+         * @brief reserve the accept operation for submission.
+         * @return true if the operation was reserved, false if already in flight.
+         */
+        bool armOp () noexcept
+        {
+            IoOperation::State expected = IoOperation::State::Idle;
+
+            return _acceptOp.op.state.compare_exchange_strong (expected, IoOperation::State::Submitted,
+                                                               std::memory_order_acquire, std::memory_order_relaxed) ||
+                   (expected == IoOperation::State::Busy);
+        }
+
+        /**
+         * @brief release the accept operation reservation.
+         * @param expected state the operation is expected to be in.
+         */
+        void disarmOp (IoOperation::State expected) noexcept
+        {
             _acceptOp.op.state.compare_exchange_strong (expected, IoOperation::State::Idle, std::memory_order_release,
                                                         std::memory_order_relaxed);
+        }
+
+        /**
+         * @brief check if an operation is in flight.
+         * @param op operation to check.
+         * @return true if the operation is in flight, false otherwise.
+         */
+        bool inFlight (const IoOperation& op) const noexcept
+        {
+            return op.state.load (std::memory_order_acquire) == IoOperation::State::Submitted;
+        }
+
+        /**
+         * @brief check if an operation is in flight or completing.
+         * @param op operation to check.
+         * @return true if the operation is in flight or completing, false otherwise.
+         */
+        bool pending (const IoOperation& op) const noexcept
+        {
+            IoOperation::State state = op.state.load (std::memory_order_acquire);
+
+            return (state == IoOperation::State::Submitted) || (state == IoOperation::State::Busy);
         }
 
     private:

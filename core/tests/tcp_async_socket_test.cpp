@@ -1629,6 +1629,29 @@ TEST_F (TcpAsyncSocket, handle)
 
 #ifdef JOIN_HAS_IO_URING
 /**
+ * @brief Test flush method.
+ */
+TEST_F (TcpAsyncSocket, flush)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+
+    ASSERT_NE (client.asyncWait (true, false, onReportWait, false), -1) << join::lastError.message ();
+    ASSERT_EQ (client.flush (), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_EQ (_code, Errc::ConnectionClosed);
+    }
+
+    client.close ();
+}
+
+/**
  * @brief Test registerFixedBuffers method.
  */
 TEST_F (TcpAsyncSocket, registerFixedBuffers)

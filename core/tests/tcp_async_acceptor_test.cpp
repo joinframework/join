@@ -385,18 +385,18 @@ TEST_F (TcpAsyncAcceptor, closeFromHandler)
 }
 
 /**
- * @brief Test cancelAccept method.
+ * @brief Test cancel method.
  */
-TEST_F (TcpAsyncAcceptor, cancelAccept)
+TEST_F (TcpAsyncAcceptor, cancel)
 {
     Tcp::AsyncAcceptor server;
 
-    ASSERT_EQ (server.cancelAccept (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.cancel (), 0) << join::lastError.message ();
     ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
 
     ASSERT_EQ (server.asyncAccept (onReport), 0) << join::lastError.message ();
 
-    ASSERT_EQ (server.cancelAccept (), 0) << join::lastError.message ();
+    ASSERT_EQ (server.cancel (), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -488,6 +488,37 @@ TEST_F (TcpAsyncAcceptor, handle)
     server.close ();
     ASSERT_EQ (server.handle (), -1);
 }
+
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief Test flush method.
+ */
+TEST_F (TcpAsyncAcceptor, flush)
+{
+    Tcp::AsyncAcceptor server;
+    Tcp::Socket client (Tcp::Socket::Blocking);
+
+    ASSERT_EQ (server.create ({_address, _port}), 0) << join::lastError.message ();
+
+    ASSERT_EQ (server.asyncAccept (onReport, SOCK_NONBLOCK | SOCK_CLOEXEC, false), 0) << join::lastError.message ();
+    ASSERT_EQ (server.flush (), 0) << join::lastError.message ();
+
+    ASSERT_EQ (client.connect ({_address, _port}), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_TRUE (peer ().connected ());
+
+    client.close ();
+    server.close ();
+}
+#endif
 
 /**
  * @brief main function.
