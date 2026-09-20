@@ -89,6 +89,9 @@ if(JOIN_ENABLE_DATA)
 endif()
 
 if(JOIN_ENABLE_FABRIC)
+    if(NOT JOIN_ENABLE_CRYPTO)
+        message(FATAL_ERROR "JOIN_ENABLE_FABRIC requires JOIN_ENABLE_CRYPTO")
+    endif()
     add_subdirectory(fabric)
 endif()
 
