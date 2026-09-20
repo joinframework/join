@@ -3,7 +3,10 @@
 include(CMakeFindDependencyMacro)
 
 find_dependency(Threads)
-find_dependency(OpenSSL)
+
+if(@JOIN_ENABLE_CRYPTO@)
+    find_dependency(OpenSSL)
+endif()
 
 set(join_KNOWN_COMPONENTS core crypto data fabric services)
 
@@ -19,7 +22,7 @@ foreach(comp ${join_FIND_COMPONENTS})
     endif()
 endforeach()
 
-if("data" IN_LIST join_FIND_COMPONENTS AND @JOIN_ENABLE_DATA@)
+if(@JOIN_ENABLE_DATA@ OR @JOIN_ENABLE_SERVICES@)
     find_dependency(ZLIB)
 endif()
 
@@ -50,31 +53,11 @@ endif()
 set(_join_missing_components "")
 
 foreach(comp ${join_FIND_COMPONENTS})
-    string(TOUPPER ${comp} comp_upper)
-
-    if(NOT TARGET join::${comp})
-        if(comp STREQUAL "core")
-            # Core should always exist
-            list(APPEND _join_missing_components ${comp})
-            set(join_${comp}_FOUND FALSE)
-        elseif(comp STREQUAL "crypto" AND NOT @JOIN_ENABLE_CRYPTO@)
-            list(APPEND _join_missing_components ${comp})
-            set(join_${comp}_FOUND FALSE)
-        elseif(comp STREQUAL "data" AND NOT @JOIN_ENABLE_DATA@)
-            list(APPEND _join_missing_components ${comp})
-            set(join_${comp}_FOUND FALSE)
-        elseif(comp STREQUAL "fabric" AND NOT @JOIN_ENABLE_FABRIC@)
-            list(APPEND _join_missing_components ${comp})
-            set(join_${comp}_FOUND FALSE)
-        elseif(comp STREQUAL "services" AND NOT @JOIN_ENABLE_SERVICES@)
-            list(APPEND _join_missing_components ${comp})
-            set(join_${comp}_FOUND FALSE)
-        else()
-            list(APPEND _join_missing_components ${comp})
-            set(join_${comp}_FOUND FALSE)
-        endif()
-    else()
+    if(TARGET join::${comp})
         set(join_${comp}_FOUND TRUE)
+    else()
+        list(APPEND _join_missing_components ${comp})
+        set(join_${comp}_FOUND FALSE)
     endif()
 endforeach()
 
