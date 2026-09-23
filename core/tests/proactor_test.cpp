@@ -58,6 +58,10 @@ protected:
         _op = nullptr;
         _result = 0;
         _completions = 0;
+        _iovlen = 0;
+        _namelen = 0;
+        _control = nullptr;
+        _flags = 0;
 
         ASSERT_EQ (_acceptor.create ({_host, _port}), 0) << join::lastError.message ();
     }
@@ -127,6 +131,13 @@ protected:
                 {
                     ::memcpy (_buf, op.data.stream.buf, result);
                 }
+            }
+            if (op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg))
+            {
+                _iovlen = op.data.msg.msg->msg_iov->iov_len;
+                _namelen = op.data.msg.msg->msg_namelen;
+                _control = op.data.msg.msg->msg_control;
+                _flags = op.data.msg.msg->msg_flags;
             }
             _result = result;
             _op = &op;
@@ -242,6 +253,18 @@ protected:
 
     /// read buffer.
     static char _buf[256];
+
+    /// payload length reported by the last recvmsg completion.
+    static size_t _iovlen;
+
+    /// name length reported by the last recvmsg completion.
+    static socklen_t _namelen;
+
+    /// control buffer reported by the last recvmsg completion.
+    static void* _control;
+
+    /// flags reported by the last recvmsg completion.
+    static int _flags;
 };
 
 Tcp::Acceptor ProactorTest::_acceptor;
@@ -269,6 +292,10 @@ bool ProactorTest::_stopFromHandler = false;
 bool ProactorTest::_suspendFromHandler = false;
 int ProactorTest::_result = 0;
 int ProactorTest::_completions = 0;
+size_t ProactorTest::_iovlen = 0;
+socklen_t ProactorTest::_namelen = 0;
+void* ProactorTest::_control = nullptr;
+int ProactorTest::_flags = 0;
 char ProactorTest::_buf[256] = {};
 
 /**
@@ -1330,9 +1357,9 @@ TEST_F (ProactorTest, asyncRecvmsgMulti)
         }));
         ASSERT_EQ (_result, static_cast<int> (strlen (payload)));
         ASSERT_EQ (std::string (_buf, _result), payload);
-        ASSERT_EQ (msg.msg_iov->iov_len, static_cast<size_t> (_result));
-        ASSERT_GT (msg.msg_namelen, 0U);
-        ASSERT_EQ (msg.msg_control, nullptr);
+        ASSERT_EQ (_iovlen, static_cast<size_t> (_result));
+        ASSERT_GT (_namelen, 0U);
+        ASSERT_EQ (_control, nullptr);
     }
 
     char big[sizeof (_buf)];
@@ -1348,7 +1375,7 @@ TEST_F (ProactorTest, asyncRecvmsgMulti)
         }));
         ASSERT_GT (_result, 0);
         ASSERT_LT (_result, static_cast<int> (sizeof (big)));
-        ASSERT_NE (msg.msg_flags & MSG_TRUNC, 0);
+        ASSERT_NE (_flags & MSG_TRUNC, 0);
     }
 
     ASSERT_EQ (ProactorThread::proactor ().unregisterBufferRing (0), -1);
@@ -1376,7 +1403,7 @@ TEST_F (ProactorTest, asyncRecvmsgMulti)
             return (_op == &_readOp) && (_completions == 1);
         }));
         ASSERT_EQ (_result, 0);
-        ASSERT_EQ (msg.msg_iov->iov_len, 0U);
+        ASSERT_EQ (_iovlen, 0U);
         _op = nullptr;
     }
 
