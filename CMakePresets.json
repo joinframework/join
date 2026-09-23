@@ -77,14 +77,26 @@
       }
     },
     {
-      "name": "clang-tsan",
+      "name": "clang-tsan-epoll",
       "inherits": "clang-base",
-      "displayName": "Clang TSan",
-      "binaryDir": "${sourceDir}/build/clang/tsan",
+      "displayName": "Clang TSan (epoll)",
+      "binaryDir": "${sourceDir}/build/clang/tsan-epoll",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "JOIN_ENABLE_COVERAGE": "OFF",
         "JOIN_ENABLE_IO_URING": "OFF",
+        "JOIN_ENABLE_TSAN": "ON"
+      }
+    },
+    {
+      "name": "clang-tsan-uring",
+      "inherits": "clang-base",
+      "displayName": "Clang TSan (uring)",
+      "binaryDir": "${sourceDir}/build/clang/tsan-uring",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "JOIN_ENABLE_COVERAGE": "OFF",
+        "JOIN_ENABLE_IO_URING": "ON",
         "JOIN_ENABLE_TSAN": "ON"
       }
     }
@@ -107,8 +119,12 @@
       "configurePreset": "clang-release"
     },
     {
-      "name": "clang-tsan",
-      "configurePreset": "clang-tsan"
+      "name": "clang-tsan-epoll",
+      "configurePreset": "clang-tsan-epoll"
+    },
+    {
+      "name": "clang-tsan-uring",
+      "configurePreset": "clang-tsan-uring"
     }
   ],
   "testPresets": [
@@ -141,8 +157,15 @@
       }
     },
     {
-      "name": "clang-tsan",
-      "configurePreset": "clang-tsan",
+      "name": "clang-tsan-epoll",
+      "configurePreset": "clang-tsan-epoll",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "clang-tsan-uring",
+      "configurePreset": "clang-tsan-uring",
       "output": {
         "outputOnFailure": true
       }
