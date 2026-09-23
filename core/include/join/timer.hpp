@@ -51,6 +51,9 @@ namespace join
     class BasicTimer : protected CompletionHandler
     {
     public:
+        template <size_t Capacity, uint64_t TickNs = 1'000'000>
+        using Wheel = BasicWheel<ClockPolicy, WaitPolicy<ClockPolicy>, Capacity, TickNs>;
+
         /**
          * @brief timer state.
          */

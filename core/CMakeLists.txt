@@ -53,6 +53,7 @@ set(PUBLIC_HEADERS
     include/join/cpu.hpp
     include/join/clock.hpp
     include/join/timer.hpp
+    include/join/wheel.hpp
     include/join/statistics.hpp
 )
 

@@ -81,6 +81,26 @@ target_link_libraries(monotonic_timer.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME monotonic_timer.gtest COMMAND monotonic_timer.gtest)
 install(TARGETS monotonic_timer.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(monotonic_timer_wheel.gtest monotonic_timer_wheel_test.cpp)
+target_link_libraries(monotonic_timer_wheel.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME monotonic_timer_wheel.gtest COMMAND monotonic_timer_wheel.gtest)
+install(TARGETS monotonic_timer_wheel.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(monotonic_wheel.gtest monotonic_wheel_test.cpp)
+target_link_libraries(monotonic_wheel.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME monotonic_wheel.gtest COMMAND monotonic_wheel.gtest)
+install(TARGETS monotonic_wheel.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(monotonicraw_wheel.gtest monotonicraw_wheel_test.cpp)
+target_link_libraries(monotonicraw_wheel.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME monotonicraw_wheel.gtest COMMAND monotonicraw_wheel.gtest)
+install(TARGETS monotonicraw_wheel.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(rdtsc_wheel.gtest rdtsc_wheel_test.cpp)
+target_link_libraries(rdtsc_wheel.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME rdtsc_wheel.gtest COMMAND rdtsc_wheel.gtest)
+install(TARGETS rdtsc_wheel.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(monotonic_stats.gtest monotonic_stats_test.cpp)
 target_link_libraries(monotonic_stats.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME monotonic_stats.gtest COMMAND monotonic_stats.gtest)
