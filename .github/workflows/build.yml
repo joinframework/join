@@ -15,6 +15,9 @@ on:
       scan:
         type: boolean
         default: false
+      tsan:
+        type: boolean
+        default: false
       doc:
         type: boolean
         default: false
@@ -39,6 +42,9 @@ on:
         type: boolean
         default: false
       scan:
+        type: boolean
+        default: false
+      tsan:
         type: boolean
         default: false
       doc:
@@ -166,6 +172,46 @@ jobs:
         with:
           name: ${{ matrix.compiler }}-${{ matrix.arch }}-coverage-report
           path: coverage/
+
+  tsan:
+    if: inputs.tsan
+
+    needs: [format]
+
+    runs-on: ubuntu-24.04
+
+    container:
+      image: joinframework/join-ci:latest
+      options: --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Configure
+        run: cmake --preset clang-tsan
+
+      - name: Build
+        run: cmake --build --preset clang-tsan
+
+      - name: Run tests
+        run: ctest --preset clang-tsan -T memcheck --overwrite MemoryCheckType=ThreadSanitizer
+        env:
+          TSAN_OPTIONS: "halt_on_error=0 exitcode=66 history_size=7"
+
+      - name: Upload thread sanitizer report to GitHub
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: clang-amd64-tsan-report
+          path: Testing/
 
   doc:
     if: inputs.doc

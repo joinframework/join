@@ -75,6 +75,18 @@
         "JOIN_ENABLE_COVERAGE": "OFF",
         "JOIN_ENABLE_IO_URING": "ON"
       }
+    },
+    {
+      "name": "clang-tsan",
+      "inherits": "clang-base",
+      "displayName": "Clang TSan",
+      "binaryDir": "${sourceDir}/build/clang/tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "JOIN_ENABLE_COVERAGE": "OFF",
+        "JOIN_ENABLE_IO_URING": "OFF",
+        "JOIN_ENABLE_TSAN": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -93,6 +105,10 @@
     {
       "name": "clang-release",
       "configurePreset": "clang-release"
+    },
+    {
+      "name": "clang-tsan",
+      "configurePreset": "clang-tsan"
     }
   ],
   "testPresets": [
@@ -120,6 +136,13 @@
     {
       "name": "clang-release",
       "configurePreset": "clang-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "clang-tsan",
+      "configurePreset": "clang-tsan",
       "output": {
         "outputOnFailure": true
       }
