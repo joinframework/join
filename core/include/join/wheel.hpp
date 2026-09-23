@@ -64,7 +64,7 @@ namespace join
 
     public:
         /**
-         * @brief create instance and start the run policy.
+         * @brief create instance, construct every timer node and start the run policy.
          * @param args arguments forwarded to the run policy.
          * @throw std::system_error if the arena, the command queue or the run policy cannot be created.
          */
@@ -75,10 +75,15 @@ namespace join
         , _generations (static_cast<std::atomic_uint32_t*> (_generationsMem.get ()))
         , _runner (std::forward<Args> (args)...)
         {
-            for (uint32_t place = 0; place < Capacity; ++place)
+            _arena.reserveAll ();
+
+            for (uint32_t index = 0; index < Capacity; ++index)
             {
-                new (&_generations[place]) std::atomic_uint32_t (0);
+                new (&_generations[index]) std::atomic_uint32_t (0);
+                new (_arena.getPtr (index)) Node ();
             }
+
+            _arena.releaseAll ();
 
             _tick.store (toTick (ClockPolicy::now ()), std::memory_order_release);
             _runner.start (*this, resolution ());
@@ -118,24 +123,10 @@ namespace join
             _runner.stop ();
             readCommands ();
 
-            for (size_t level = 0; level < _levels; ++level)
+            for (uint32_t index = 0; index < Capacity; ++index)
             {
-                for (size_t slot = 0; slot < _slots; ++slot)
-                {
-                    Node* node = _wheel[level][slot];
-
-                    while (node != nullptr)
-                    {
-                        Node* next = node->next;
-                        node->~Node ();
-                        node = next;
-                    }
-                }
-            }
-
-            for (uint32_t place = 0; place < Capacity; ++place)
-            {
-                _generations[place].~atomic ();
+                static_cast<Node*> (_arena.getPtr (index))->~Node ();
+                _generations[index].~atomic ();
             }
         }
 
@@ -156,8 +147,10 @@ namespace join
                 return -1;
             }
 
-            Node* node = new (ptr) Node ();
+            Node* node = static_cast<Node*> (ptr);
             node->callback = std::forward<Func> (callback);
+            node->interval.store (0, std::memory_order_relaxed);
+            node->state = State::Idle;
             node->deadline.store (_tick.load (std::memory_order_acquire) + ticksFor (duration),
                                   std::memory_order_relaxed);
 
@@ -200,9 +193,10 @@ namespace join
 
             const uint64_t ticks = ticksFor (duration);
 
-            Node* node = new (ptr) Node ();
+            Node* node = static_cast<Node*> (ptr);
             node->callback = std::forward<Func> (callback);
             node->interval.store (ticks, std::memory_order_relaxed);
+            node->state = State::Idle;
             node->deadline.store (_tick.load (std::memory_order_acquire) + ticks, std::memory_order_relaxed);
 
             const uint32_t place = _arena.getIndex (node);
@@ -612,7 +606,7 @@ namespace join
         {
             const uint32_t place = _arena.getIndex (node);
 
-            node->~Node ();
+            node->callback.reset ();
             _generations[place].fetch_add (1, std::memory_order_release);
             _arena.deallocate (node);
         }
