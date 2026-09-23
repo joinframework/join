@@ -955,11 +955,10 @@ namespace join
 
                 if (seq == (tail + 1))
                 {
-                    Type local = slot->data;
                     if (JOIN_LIKELY (sync._tail.compare_exchange_weak (tail, tail + 1, std::memory_order_acquire,
                                                                        std::memory_order_relaxed)))
                     {
-                        element = local;
+                        element = slot->data;
                         slot->_seq.store (tail + capacity, std::memory_order_release);
                         return 0;
                     }

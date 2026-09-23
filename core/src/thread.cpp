@@ -41,14 +41,14 @@ void* Invoker::_routine (void* context)
 {
     Invoker* self = static_cast<Invoker*> (context);
 
-    if (self->_core != -1)
+    if (self->_core.load (std::memory_order_relaxed) != -1)
     {
-        Thread::affinity (pthread_self (), self->_core);
+        Thread::affinity (pthread_self (), self->_core.load (std::memory_order_relaxed));
     }
 
-    if (self->_priority > 0)
+    if (self->_priority.load (std::memory_order_relaxed) > 0)
     {
-        Thread::priority (pthread_self (), self->_priority);
+        Thread::priority (pthread_self (), self->_priority.load (std::memory_order_relaxed));
     }
 
     return self->routine ();
@@ -116,7 +116,7 @@ int Thread::affinity (int core)
         return -1;
     }
 
-    _invoker->_core = (core < 0) ? -1 : core;
+    _invoker->_core.store ((core < 0) ? -1 : core, std::memory_order_relaxed);
 
     return 0;
 }
@@ -159,7 +159,7 @@ int Thread::affinity (pthread_t handle, int core)
 // =========================================================================
 int Thread::affinity () const noexcept
 {
-    return _invoker ? _invoker->_core : -1;
+    return _invoker ? _invoker->_core.load (std::memory_order_relaxed) : -1;
 }
 
 // =========================================================================
@@ -179,7 +179,7 @@ int Thread::priority (int prio)
         return -1;
     }
 
-    _invoker->_priority = prio;
+    _invoker->_priority.store (prio, std::memory_order_relaxed);
 
     return 0;
 }
@@ -190,9 +190,7 @@ int Thread::priority (int prio)
 // =========================================================================
 int Thread::priority (pthread_t handle, int prio)
 {
-    struct sched_param param
-    {
-    };
+    struct sched_param param{};
 
     param.sched_priority = prio;
 
@@ -224,7 +222,7 @@ int Thread::priority (pthread_t handle, int prio)
 // =========================================================================
 int Thread::priority () const noexcept
 {
-    return _invoker ? _invoker->_priority : 0;
+    return _invoker ? _invoker->_priority.load (std::memory_order_relaxed) : 0;
 }
 
 // =========================================================================

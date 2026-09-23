@@ -316,6 +316,7 @@ TEST_F (ShmMpmc, pushBenchmark)
         {
             consumers.emplace_back ([&] () {
                 ShmMem::Mpmc::Queue<uint64_t> cons (capacity, _name);
+                uint64_t data = 0;
                 for (uint64_t i = 0; i < msgPerConsumer; ++i)
                 {
                     while (cons.tryPop (data) == -1)
@@ -441,6 +442,7 @@ TEST_F (ShmMpmc, popBenchmark)
         {
             consumers.emplace_back ([&] () {
                 ShmMem::Mpmc::Queue<uint64_t> cons (capacity, _name);
+                uint64_t data = 0;
                 for (uint64_t i = 0; i < msgPerConsumer; ++i)
                 {
                     ScopedStats<Rdtsc::Stats> guard (stats);
