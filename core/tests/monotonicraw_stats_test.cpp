@@ -226,7 +226,7 @@ TEST (MonotonicRawStats, percentile)
 /**
  * @brief Test mbind.
  */
-TEST (RdtscStats, mbind)
+TEST (MonotonicRawStats, mbind)
 {
     MonotonicRaw::Stats stats;
 
@@ -238,7 +238,7 @@ TEST (RdtscStats, mbind)
 /**
  * @brief Test mlock.
  */
-TEST (RdtscStats, mlock)
+TEST (MonotonicRawStats, mlock)
 {
     MonotonicRaw::Stats stats;
 

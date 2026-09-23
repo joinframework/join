@@ -26,6 +26,7 @@
 #define JOIN_CORE_THREAD_HPP
 
 // C++.
+#include <system_error>
 #include <functional>
 #include <memory>
 #include <atomic>
@@ -51,6 +52,7 @@ namespace join
          * @brief creates a new thread of execution.
          * @param func callable object to execute in the new thread of execution.
          * @param args... arguments to pass to the callable object to execute.
+         * @throw std::system_error if the thread of execution cannot be created.
          */
         template <class Function, class... Args>
         explicit Invoker (Function&& func, Args&&... args)
@@ -64,6 +66,7 @@ namespace join
          * @param prio thread priority (0 = SCHED_OTHER, 1-99 = SCHED_FIFO).
          * @param func callable object to execute in the new thread of execution.
          * @param args... arguments to pass to the callable object to execute.
+         * @throw std::system_error if the thread of execution cannot be created.
          */
         template <class Function, class... Args>
         explicit Invoker (int core, int prio, Function&& func, Args&&... args)
@@ -72,7 +75,11 @@ namespace join
         , _priority (prio)
         , _done (false)
         {
-            pthread_create (&_handle, nullptr, _routine, this);
+            const int err = pthread_create (&_handle, nullptr, _routine, this);
+            if (err != 0)
+            {
+                throw std::system_error (err, std::system_category (), "pthread_create failed");  // LCOV_EXCL_LINE
+            }
         }
 
     public:
@@ -125,7 +132,7 @@ namespace join
         std::function<void ()> _func;
 
         /// thread handle.
-        pthread_t _handle;
+        pthread_t _handle = {};
 
         /// thread core affinity.
         int _core = -1;
@@ -155,6 +162,7 @@ namespace join
          * @brief creates a new thread object associated with a thread of execution.
          * @param func callable object to execute in the new thread.
          * @param args... arguments to pass to the new function.
+         * @throw std::system_error if the thread of execution cannot be created.
          */
         template <class Function, class... Args>
         explicit Thread (Function&& func, Args&&... args)
@@ -168,6 +176,7 @@ namespace join
          * @param prio thread priority (0 = SCHED_OTHER, 1-99 = SCHED_FIFO).
          * @param func callable object to execute in the new thread.
          * @param args... arguments to pass to the new function.
+         * @throw std::system_error if the thread of execution cannot be created.
          */
         template <class Function, class... Args>
         explicit Thread (int core, int prio, Function&& func, Args&&... args)

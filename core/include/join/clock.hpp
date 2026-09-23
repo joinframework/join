@@ -40,6 +40,15 @@ namespace join
     template <class ClockPolicy>
     class BasicStats;
 
+    template <class ClockPolicy>
+    class SpinPolicy;
+
+    template <class ClockPolicy>
+    class WaitPolicy;
+
+    template <class ClockPolicy, class RunPolicy, size_t Capacity, uint64_t TickNs>
+    class BasicWheel;
+
     /**
      * @brief minimal clock type used as a type tag for time_point parameterization.
      */
@@ -87,6 +96,9 @@ namespace join
         using Timer = BasicTimer<Monotonic>;
         using Stats = BasicStats<Monotonic>;
 
+        template <size_t Capacity, uint64_t TickNs = 1'000>
+        using Wheel = BasicWheel<Monotonic, SpinPolicy<Monotonic>, Capacity, TickNs>;
+
         /**
          * @brief default constructor.
          */
@@ -122,6 +134,9 @@ namespace join
         using Duration = std::chrono::nanoseconds;
         using TimePoint = std::chrono::time_point<NanoClock>;
         using Stats = BasicStats<MonotonicRaw>;
+
+        template <size_t Capacity, uint64_t TickNs = 1'000>
+        using Wheel = BasicWheel<MonotonicRaw, SpinPolicy<MonotonicRaw>, Capacity, TickNs>;
 
         /**
          * @brief default constructor.
@@ -159,6 +174,9 @@ namespace join
         using TimePoint = std::chrono::time_point<NanoClock>;
         using Stats = BasicStats<Rdtsc>;
 
+        template <size_t Capacity, uint64_t TickNs = 1'000>
+        using Wheel = BasicWheel<Rdtsc, SpinPolicy<Rdtsc>, Capacity, TickNs>;
+
         /**
          * @brief default constructor.
          */
@@ -168,8 +186,8 @@ namespace join
         }
 
         /**
-         * @brief read the current time.
-         * @return current time point.
+         * @brief read the current time, an Rdtsc instance shall have been constructed beforehand.
+         * @return current time point, zero if no instance has calibrated the multiplier yet.
          */
         static TimePoint now () noexcept
         {
@@ -186,11 +204,11 @@ namespace join
         {
 #if defined(__x86_64__)
             uint32_t lo, hi;
-            __asm__ volatile ("rdtsc" : "=a"(lo), "=d"(hi));
+            __asm__ volatile ("rdtsc" : "=a"(lo), "=d"(hi) : : "memory");
             return (static_cast<uint64_t> (hi) << 32) | lo;
 #elif defined(__aarch64__)
             uint64_t val;
-            __asm__ volatile ("mrs %0, cntvct_el0" : "=r"(val));
+            __asm__ volatile ("mrs %0, cntvct_el0" : "=r"(val) : : "memory");
             return val;
 #else
 #error "Rdtsc: unsupported architecture"
