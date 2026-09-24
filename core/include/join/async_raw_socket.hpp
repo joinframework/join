@@ -452,8 +452,6 @@ namespace join
         {
             ConnectHandler handler = std::move (connect->connectHandler);
 
-            this->releaseOp (connect);
-
             if (code)
             {
                 this->_socket.close ();
@@ -462,6 +460,8 @@ namespace join
             {
                 this->_socket._state = Socket::Connected;
             }
+
+            this->releaseOp (connect);
 
             if (JOIN_LIKELY (handler))
             {

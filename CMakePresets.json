@@ -55,6 +55,18 @@
       }
     },
     {
+      "name": "gcc-tsan",
+      "inherits": "gcc-base",
+      "displayName": "GCC TSan",
+      "binaryDir": "${sourceDir}/build/gcc/tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "JOIN_ENABLE_COVERAGE": "OFF",
+        "JOIN_ENABLE_IO_URING": "ON",
+        "JOIN_ENABLE_TSAN": "ON"
+      }
+    },
+    {
       "name": "clang-debug",
       "inherits": "clang-base",
       "displayName": "Clang Debug",
@@ -75,6 +87,18 @@
         "JOIN_ENABLE_COVERAGE": "OFF",
         "JOIN_ENABLE_IO_URING": "ON"
       }
+    },
+    {
+      "name": "clang-tsan",
+      "inherits": "clang-base",
+      "displayName": "Clang TSan",
+      "binaryDir": "${sourceDir}/build/clang/tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "JOIN_ENABLE_COVERAGE": "OFF",
+        "JOIN_ENABLE_IO_URING": "OFF",
+        "JOIN_ENABLE_TSAN": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -87,12 +111,20 @@
       "configurePreset": "gcc-release"
     },
     {
+      "name": "gcc-tsan",
+      "configurePreset": "gcc-tsan"
+    },
+    {
       "name": "clang-debug",
       "configurePreset": "clang-debug"
     },
     {
       "name": "clang-release",
       "configurePreset": "clang-release"
+    },
+    {
+      "name": "clang-tsan",
+      "configurePreset": "clang-tsan"
     }
   ],
   "testPresets": [
@@ -111,6 +143,13 @@
       }
     },
     {
+      "name": "gcc-tsan",
+      "configurePreset": "gcc-tsan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
       "name": "clang-debug",
       "configurePreset": "clang-debug",
       "output": {
@@ -120,6 +159,13 @@
     {
       "name": "clang-release",
       "configurePreset": "clang-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "clang-tsan",
+      "configurePreset": "clang-tsan",
       "output": {
         "outputOnFailure": true
       }

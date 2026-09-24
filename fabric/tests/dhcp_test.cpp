@@ -89,6 +89,22 @@ public:
     {
     }
 
+    /**
+     * @brief set up the test fixture.
+     */
+    void SetUp () override
+    {
+        start ();
+    }
+
+    /**
+     * @brief tear down the test fixture.
+     */
+    void TearDown () override
+    {
+        stop ();
+    }
+
 protected:
     /**
      * @brief how the server answers.
@@ -374,7 +390,24 @@ const std::string DhcpTest::_lease = "192.168.24.110";
 class Mute : public Dhcp::Server
 {
 public:
-    using Dhcp::Server::Server;
+    /**
+     * @brief create the Mute instance.
+     * @param interface interface to serve.
+     */
+    explicit Mute (const std::string& interface)
+    : Dhcp::Server (interface)
+    {
+        start ();
+    }
+
+    /**
+     * @brief destroy the Mute instance.
+     */
+    ~Mute ()
+    {
+        stop ();
+    }
+
     using Dhcp::Server::offer;
 
 protected:

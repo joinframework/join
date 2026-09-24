@@ -72,7 +72,7 @@ namespace join
         static_assert (Size >= sizeof (uint64_t), "size must respects minimum size for storing index");
 
         /// index of next free chunk.
-        uint32_t _next;
+        std::atomic_uint32_t _next;
 
         /// chunk data storage.
         uint8_t _data[Size];
@@ -211,7 +211,7 @@ namespace join
                     return nullptr;
                 }
 
-                next.idx = _segment->_chunks[cur.idx]._next;
+                next.idx = _segment->_chunks[cur.idx]._next.load (std::memory_order_relaxed);
                 next.gen = cur.gen + 1;
 
                 if (JOIN_LIKELY (_segment->_head.compare_exchange_weak (cur.raw, next.raw, std::memory_order_acq_rel,
@@ -234,7 +234,7 @@ namespace join
 
             for (;;)
             {
-                _segment->_chunks[next.idx]._next = cur.idx;
+                _segment->_chunks[next.idx]._next.store (cur.idx, std::memory_order_relaxed);
                 next.gen = cur.gen + 1;
 
                 if (JOIN_LIKELY (_segment->_head.compare_exchange_weak (cur.raw, next.raw, std::memory_order_release,
@@ -256,7 +256,8 @@ namespace join
 
             uint32_t n = 0;
 
-            for (uint32_t idx = cur.idx; idx != Segment::NULL_IDX; idx = _segment->_chunks[idx]._next)
+            for (uint32_t idx = cur.idx; idx != Segment::NULL_IDX;
+                 idx = _segment->_chunks[idx]._next.load (std::memory_order_relaxed))
             {
                 ++n;
             }
@@ -280,9 +281,9 @@ namespace join
         {
             for (uint32_t i = 0; i < _count - 1; ++i)
             {
-                _segment->_chunks[i]._next = i + 1;
+                _segment->_chunks[i]._next.store (i + 1, std::memory_order_relaxed);
             }
-            _segment->_chunks[_count - 1]._next = Segment::NULL_IDX;
+            _segment->_chunks[_count - 1]._next.store (Segment::NULL_IDX, std::memory_order_relaxed);
 
             TaggedIndex cur, next;
             cur.raw = _segment->_head.load (std::memory_order_relaxed);

@@ -1,4 +1,5 @@
 build*
+Testing/
 *version.hpp
 *.cproject
 *.project

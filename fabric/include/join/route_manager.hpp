@@ -137,7 +137,7 @@ namespace join
     /**
      * @brief kernel routing table manager class.
      */
-    class RouteManager : public NetlinkManager
+    class RouteManager : protected NetlinkManager
     {
     public:
         using RouteNotify = std::function<void (const RouteInfo& info)>;
@@ -323,7 +323,7 @@ namespace join
          * @brief dispatch a single RTM_* message to the derived class.
          * @param nlh the netlink message to process.
          */
-        void onMessage (struct nlmsghdr* nlh) override;
+        void onMessage (struct nlmsghdr* nlh) override final;
 
         /**
          * @brief handle a route add / update / delete notification.

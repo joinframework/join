@@ -46,7 +46,7 @@ using join::RealTime;
 TEST (RealTimer, setOneShot)
 {
     RealTime::Timer timer;
-    int count = 0;
+    std::atomic<int> count{0};
 
     timer.setOneShot (50ms, [&] {
         ++count;
@@ -82,7 +82,7 @@ TEST (RealTimer, setOneShot)
 TEST (RealTimer, setInterval)
 {
     RealTime::Timer timer;
-    int count = 0;
+    std::atomic<int> count{0};
 
     timer.setInterval (50ms, [&] {
         ++count;
@@ -96,7 +96,7 @@ TEST (RealTimer, setInterval)
     timer.cancel ();
 
     RealTime::Timer once;
-    int fired = 0;
+    std::atomic<int> fired{0};
 
     once.setInterval (0ms, [&] {
         ++fired;
@@ -112,7 +112,8 @@ TEST (RealTimer, setInterval)
 TEST (RealTimer, cancel)
 {
     RealTime::Timer timer;
-    int count1 = 0, count2 = 0;
+    std::atomic<int> count1{0};
+    int count2 = 0;
 
     timer.setInterval (50ms, [&] {
         count1++;

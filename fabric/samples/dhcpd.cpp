@@ -62,6 +62,15 @@ public:
     , _count (count)
     , _options (options)
     {
+        start ();
+    }
+
+    /**
+     * @brief destroy the server instance.
+     */
+    ~Server ()
+    {
+        stop ();
     }
 
 protected:

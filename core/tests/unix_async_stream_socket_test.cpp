@@ -78,8 +78,8 @@ protected:
      */
     void TearDown () override
     {
-        peer ().close ();
         _server.close ();
+        peer ().close ();
     }
 
     /**

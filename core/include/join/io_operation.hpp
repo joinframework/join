@@ -34,6 +34,7 @@
 // C.
 #include <sys/socket.h>
 #include <cstdint>
+#include <cstddef>
 
 namespace join
 {
@@ -77,7 +78,10 @@ namespace join
         /**
          * @brief default constructor.
          */
-        IoOperation () = default;
+        IoOperation () noexcept
+        {
+            state.store (State::Idle, std::memory_order_release);
+        }
 
         /**
          * @brief copy constructor.
@@ -385,17 +389,17 @@ namespace join
          */
         int fd () const noexcept;
 
+        /// index of this operation in the proactor pending ops (io_uring only).
+        uint32_t index = 0;
+
         /// operation code.
         uint8_t code = 0;
 
         /// operation state.
-        std::atomic<State> state{State::Idle};
+        std::atomic<State> state;
 
         /// state to restore when the current hold is released.
         State resume{State::Idle};
-
-        /// index of this operation in the proactor pending ops (io_uring only).
-        uint32_t index = 0;
 
         /// link this SQE to the next one (next executes only if this succeeds, io_uring only).
         bool linked = false;
@@ -418,6 +422,9 @@ namespace join
         /// buffer ring bound to this operation.
         IoRingBuffer* ring = nullptr;
     };
+
+    static_assert (offsetof (IoOperation, state) >= sizeof (uint32_t),
+                   "state must survive the arena free list link stored in the first bytes of a released chunk");
 }
 
 #endif

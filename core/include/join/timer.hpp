@@ -145,8 +145,8 @@ namespace join
 
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
             _callback = std::forward<Func> (callback);
-            _oneShot = true;
-            _ns = std::chrono::nanoseconds::zero ();
+            _oneShot.store (true, std::memory_order_relaxed);
+            _ns.store (std::chrono::nanoseconds::zero (), std::memory_order_relaxed);
             _state.store (State::Armed, std::memory_order_release);
 
             auto ts = toTimerSpec (ns);
@@ -172,8 +172,8 @@ namespace join
             auto elapsed = timePoint.time_since_epoch ();
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (elapsed);
             _callback = std::forward<Func> (callback);
-            _oneShot = true;
-            _ns = std::chrono::nanoseconds::zero ();
+            _oneShot.store (true, std::memory_order_relaxed);
+            _ns.store (std::chrono::nanoseconds::zero (), std::memory_order_relaxed);
             _state.store (State::Armed, std::memory_order_release);
 
             auto ts = toTimerSpec (ns);
@@ -192,8 +192,8 @@ namespace join
 
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
             _callback = std::forward<Func> (callback);
-            _oneShot = false;
-            _ns = ns;
+            _oneShot.store (false, std::memory_order_relaxed);
+            _ns.store (ns, std::memory_order_relaxed);
             _state.store (State::Armed, std::memory_order_release);
 
             auto ts = toTimerSpec (ns, true);
@@ -205,8 +205,8 @@ namespace join
          */
         void cancel () noexcept
         {
-            _oneShot = true;
-            _ns = std::chrono::nanoseconds::zero ();
+            _oneShot.store (true, std::memory_order_relaxed);
+            _ns.store (std::chrono::nanoseconds::zero (), std::memory_order_relaxed);
 
             struct itimerspec ts = {};
             timerfd_settime (_handle, 0, &ts, nullptr);
@@ -265,7 +265,7 @@ namespace join
          */
         std::chrono::nanoseconds interval () const noexcept
         {
-            return _ns;
+            return _ns.load (std::memory_order_relaxed);
         }
 
         /**
@@ -274,7 +274,7 @@ namespace join
          */
         bool oneShot () const noexcept
         {
-            return _oneShot;
+            return _oneShot.load (std::memory_order_relaxed);
         }
 
         /**
@@ -418,10 +418,10 @@ namespace join
         Function<void ()> _callback;
 
         /// interval.
-        std::chrono::nanoseconds _ns{};
+        std::atomic<std::chrono::nanoseconds> _ns{std::chrono::nanoseconds::zero ()};
 
         /// timer type
-        bool _oneShot = true;
+        std::atomic_bool _oneShot{true};
 
         /// timer handle.
         int _handle = -1;

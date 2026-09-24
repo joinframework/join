@@ -150,7 +150,7 @@ namespace join
     /**
      * @brief interface manager class.
      */
-    class InterfaceManager : public NetlinkManager
+    class InterfaceManager : protected NetlinkManager
     {
     public:
         using LinkNotify = std::function<void (const LinkInfo& info)>;
@@ -445,7 +445,7 @@ namespace join
          * @brief dispatch a single RTM_* message to the derived class.
          * @param nlh the netlink message to process.
          */
-        void onMessage (struct nlmsghdr* nlh) override;
+        void onMessage (struct nlmsghdr* nlh) override final;
 
         /**
          * @brief handle link notification.

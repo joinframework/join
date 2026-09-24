@@ -46,7 +46,7 @@ using join::Monotonic;
 TEST (MonotonicTimer, setOneShot)
 {
     Monotonic::Timer timer;
-    int count = 0;
+    std::atomic<int> count{0};
 
     timer.setOneShot (50ms, [&] {
         ++count;
@@ -82,7 +82,7 @@ TEST (MonotonicTimer, setOneShot)
 TEST (MonotonicTimer, setInterval)
 {
     Monotonic::Timer timer;
-    int count = 0;
+    std::atomic<int> count{0};
 
     timer.setInterval (50ms, [&] {
         ++count;
@@ -96,7 +96,7 @@ TEST (MonotonicTimer, setInterval)
     timer.cancel ();
 
     Monotonic::Timer once;
-    int fired = 0;
+    std::atomic<int> fired{0};
 
     once.setInterval (0ms, [&] {
         ++fired;
@@ -112,7 +112,8 @@ TEST (MonotonicTimer, setInterval)
 TEST (MonotonicTimer, cancel)
 {
     Monotonic::Timer timer;
-    int count1 = 0, count2 = 0;
+    std::atomic<int> count1{0};
+    int count2 = 0;
 
     timer.setInterval (50ms, [&] {
         count1++;

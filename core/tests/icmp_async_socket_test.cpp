@@ -163,6 +163,17 @@ protected:
     }
 
     /**
+     * @brief get the error reported by the last completion.
+     * @return copy of the reported error.
+     */
+    static std::error_code code ()
+    {
+        ScopedLock<Mutex> lock (_mut);
+
+        return _code;
+    }
+
+    /**
      * @brief wait for the expected number of completions.
      * @param expected number of completions to wait for.
      * @return true on success, false on timeout.
@@ -303,7 +314,7 @@ TEST_F (IcmpAsyncSocket, move)
     ASSERT_NE (client3.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
     ASSERT_GT (_transferred, 0u);
 
     client3.close ();
@@ -800,10 +811,10 @@ TEST_F (IcmpAsyncSocket, resubmit)
     ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
 
     ASSERT_TRUE (wait (2));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
 
     client.close ();
     _current = nullptr;
@@ -823,7 +834,7 @@ TEST_F (IcmpAsyncSocket, closeFromWriteHandler)
     ASSERT_NE (client.asyncWrite (_data, sizeof (_data), onWriteAndClose), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
     ASSERT_FALSE (client.opened ());
 
     _current = nullptr;
@@ -842,7 +853,7 @@ TEST_F (IcmpAsyncSocket, truncated)
     ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_EQ (_code, Errc::MessageTooLong) << _code.message ();
+    ASSERT_EQ (code (), Errc::MessageTooLong) << code ().message ();
 
     client.close ();
 }

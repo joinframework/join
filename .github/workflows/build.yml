@@ -15,6 +15,9 @@ on:
       scan:
         type: boolean
         default: false
+      tsan:
+        type: boolean
+        default: false
       doc:
         type: boolean
         default: false
@@ -39,6 +42,9 @@ on:
         type: boolean
         default: false
       scan:
+        type: boolean
+        default: false
+      tsan:
         type: boolean
         default: false
       doc:
@@ -166,6 +172,27 @@ jobs:
         with:
           name: ${{ matrix.compiler }}-${{ matrix.arch }}-coverage-report
           path: coverage/
+
+      - name: Configure (tsan)
+        if: inputs.tsan && matrix.arch == 'amd64'
+        run: cmake --preset ${{ matrix.compiler }}-tsan
+
+      - name: Build (tsan)
+        if: inputs.tsan && matrix.arch == 'amd64'
+        run: cmake --build --preset ${{ matrix.compiler }}-tsan
+
+      - name: Run tests (tsan)
+        if: inputs.tsan && matrix.arch == 'amd64'
+        run: ctest --test-dir build/${{ matrix.compiler }}/tsan -T memcheck --overwrite MemoryCheckType=ThreadSanitizer
+        env:
+          TSAN_OPTIONS: "halt_on_error=0 exitcode=66 history_size=7"
+
+      - name: Upload thread sanitizer report to GitHub
+        if: always() && inputs.tsan && matrix.arch == 'amd64'
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: ${{ matrix.compiler }}-${{ matrix.arch }}-tsan-report
+          path: build/${{ matrix.compiler }}/tsan/Testing/
 
   doc:
     if: inputs.doc

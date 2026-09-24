@@ -21,3 +21,4 @@ jobs:
 
     with:
       scan: true
+      tsan: true

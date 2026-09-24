@@ -196,6 +196,16 @@ public:
         });
     }
 
+    /**
+     * @brief get a snapshot of the received records.
+     * @return copy of the received records.
+     */
+    std::vector<ResourceRecord> records ()
+    {
+        ScopedLock<Mutex> lock (_mutex);
+        return _received;
+    }
+
     /// network interface to use.
     static const std::string _iface;
 
@@ -501,7 +511,7 @@ TEST_F (MdnsTest, goodbye)
     }
     EXPECT_EQ (_announcer6.goodbye (records6), 0) << lastError.message ();
     EXPECT_TRUE (_resolver6.waitForRecord (DnsMessage::RecordType::AAAA));
-    for (auto const& r : _resolver6._received)
+    for (auto const& r : _resolver6.records ())
     {
         if (r.type == DnsMessage::RecordType::AAAA)
         {
@@ -520,7 +530,7 @@ TEST_F (MdnsTest, goodbye)
     }
     EXPECT_EQ (_announcer4.goodbye (records4), 0) << lastError.message ();
     EXPECT_TRUE (_resolver4.waitForRecord (DnsMessage::RecordType::A));
-    for (auto const& r : _resolver4._received)
+    for (auto const& r : _resolver4.records ())
     {
         if (r.type == DnsMessage::RecordType::A)
         {
@@ -541,7 +551,7 @@ TEST_F (MdnsTest, browse)
     EXPECT_EQ (_resolver6.browse (MdnsAnnouncer::_serviceType), 0) << lastError.message ();
     EXPECT_TRUE (_resolver6.waitForRecord (DnsMessage::RecordType::PTR));
     bool found6 = false;
-    for (auto const& r : _resolver6._received)
+    for (auto const& r : _resolver6.records ())
     {
         if (r.type == DnsMessage::RecordType::PTR && r.name == MdnsAnnouncer::_service)
         {
@@ -558,7 +568,7 @@ TEST_F (MdnsTest, browse)
     EXPECT_EQ (_resolver4.browse (MdnsAnnouncer::_serviceType), 0) << lastError.message ();
     EXPECT_TRUE (_resolver4.waitForRecord (DnsMessage::RecordType::PTR));
     bool found4 = false;
-    for (auto const& r : _resolver4._received)
+    for (auto const& r : _resolver4.records ())
     {
         if (r.type == DnsMessage::RecordType::PTR && r.name == MdnsAnnouncer::_service)
         {

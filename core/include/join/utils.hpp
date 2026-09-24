@@ -32,6 +32,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <chrono>
 #include <random>
 #include <limits>
@@ -387,43 +388,46 @@ namespace join
     inline void dump (const void* data, unsigned long size, std::ostream& out = std::cout)
     {
         const uint8_t* buf = reinterpret_cast<const uint8_t*> (data);
+        std::ostringstream oss;
 
         for (int i = 0; i < int (size); i += 16)
         {
-            out << std::hex << std::uppercase << std::setw (8);
-            out << std::setfill ('0') << i << std::dec << ":";
+            oss << std::hex << std::uppercase << std::setw (8);
+            oss << std::setfill ('0') << i << std::dec << ":";
 
             for (int j = 0; j < 16; ++j)
             {
                 if (j % 4 == 0)
-                    out << std::dec << " ";
+                    oss << std::dec << " ";
 
                 if (i + j < int (size))
                 {
-                    out << std::hex << std::uppercase << std::setw (2);
-                    out << std::setfill ('0') << static_cast<int> (buf[i + j]);
+                    oss << std::hex << std::uppercase << std::setw (2);
+                    oss << std::setfill ('0') << static_cast<int> (buf[i + j]);
                 }
                 else
-                    out << std::dec << "  ";
+                    oss << std::dec << "  ";
             }
 
-            out << std::dec << " ";
+            oss << std::dec << " ";
 
             for (int j = 0; j < 16; ++j)
             {
                 if (i + j < int (size))
                 {
                     if (isprint (buf[i + j]))
-                        out << buf[i + j];
+                        oss << buf[i + j];
                     else
-                        out << ".";
+                        oss << ".";
                 }
             }
 
-            out << std::endl;
+            oss << "\n";
         }
 
-        out << std::endl;
+        oss << "\n";
+
+        out << oss.str () << std::flush;
     }
 
     /**

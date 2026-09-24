@@ -135,10 +135,10 @@ namespace join
         pthread_t _handle = {};
 
         /// thread core affinity.
-        int _core = -1;
+        std::atomic_int _core{-1};
 
         /// thread priority.
-        int _priority = 0;
+        std::atomic_int _priority{0};
 
         /// completed flag.
         std::atomic_bool _done;

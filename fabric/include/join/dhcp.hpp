@@ -83,8 +83,6 @@ namespace join
             {
                 throw std::system_error (lastError, "dhcp socket setup failed");  // LCOV_EXCL_LINE
             }
-
-            _reactor.addHandler (_socket.handle (), this);
         }
 
         /**
@@ -116,7 +114,20 @@ namespace join
         /**
          * @brief destroy the instance.
          */
-        virtual ~BasicDhcp ()
+        virtual ~BasicDhcp () = default;
+
+        /**
+         * @brief start receiving messages, to be called once fully constructed.
+         */
+        void start () noexcept
+        {
+            _reactor.addHandler (_socket.handle (), this);
+        }
+
+        /**
+         * @brief stop receiving messages, to be called before destruction starts.
+         */
+        void stop () noexcept
         {
             _reactor.delHandler (_socket.handle ());
         }
@@ -371,7 +382,7 @@ namespace join
      * @brief DHCP client.
      */
     template <class Protocol>
-    class BasicDhcpClient : public BasicDhcp<Protocol>
+    class BasicDhcpClient : protected BasicDhcp<Protocol>
     {
     public:
         using BasicDhcp<Protocol>::hardware;
@@ -403,12 +414,17 @@ namespace join
                 throw std::system_error (make_error_code (Errc::InvalidParam),
                                          "dhcp maximum message size is too small");
             }
+
+            this->start ();
         }
 
         /**
          * @brief destroy the instance.
          */
-        virtual ~BasicDhcpClient () = default;
+        virtual ~BasicDhcpClient ()
+        {
+            this->stop ();
+        }
 
         /**
          * @brief build a message carrying what every message a client sends has in common.
