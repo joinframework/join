@@ -524,9 +524,11 @@ namespace join
         template <class Op>
         void releaseOp (Op* operation) noexcept
         {
-            _ops[_arena.getIndex (operation)].store (nullptr, std::memory_order_release);
+            const uint32_t index = _arena.getIndex (operation);
+
             operation->~Op ();
             _arena.deallocate (operation);
+            _ops[index].store (nullptr, std::memory_order_release);
         }
 
         /**

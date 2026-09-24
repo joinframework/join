@@ -331,7 +331,7 @@ namespace join
          * @brief method called when data are ready to be read.
          * @param fd file descriptor.
          */
-        void onReadable (int fd) noexcept override;
+        void onReadable (int fd) noexcept override final;
 
         /// buffer size.
         static constexpr size_t _bufferSize = 4096;

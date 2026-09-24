@@ -134,9 +134,11 @@ namespace join
     /**
      * @brief ARP / NDP neighbor manager class.
      */
-    class NeighborManager : public NetlinkManager
+    class NeighborManager : protected NetlinkManager
     {
     public:
+        using NetlinkManager::reactor;
+
         using NeighborNotify = std::function<void (const NeighborInfo& info)>;
 
         /**
@@ -319,7 +321,7 @@ namespace join
          * @brief dispatch a single RTM_* message to the derived class.
          * @param nlh the netlink message to process.
          */
-        void onMessage (struct nlmsghdr* nlh) override;
+        void onMessage (struct nlmsghdr* nlh) override final;
 
         /**
          * @brief handle a neighbor add / update / delete notification.
