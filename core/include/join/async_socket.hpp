@@ -178,7 +178,7 @@ namespace join
 
                 backoff ();
             }
-            while (!_proactor->isProactorThread () && pendingAny ());
+            while (!_proactor->isProactorThread () && busy ());
 
             _socket.close ();
         }
@@ -401,6 +401,15 @@ namespace join
 
     protected:
         /**
+         * @brief completion state of the socket.
+         */
+        enum class Completion : uint8_t
+        {
+            Idle,    /**< no completion handler is running. */
+            Running, /**< a completion handler is running. */
+        };
+
+        /**
          * @brief method called when an operation completes.
          * @param op completed operation.
          * @param result number of bytes transferred, or negative errno.
@@ -410,7 +419,9 @@ namespace join
             std::error_code code =
                 (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code ();
 
+            _completion.store (Completion::Running, std::memory_order_release);
             dispatch (op, code, (result > 0) ? static_cast<size_t> (result) : 0);
+            _completion.store (Completion::Idle, std::memory_order_release);
         }
 
         /**
@@ -420,7 +431,9 @@ namespace join
          */
         void onCancel (IoOperation& op, [[maybe_unused]] int result) override
         {
+            _completion.store (Completion::Running, std::memory_order_release);
             dispatch (op, make_error_code (std::errc::operation_canceled), 0);
+            _completion.store (Completion::Idle, std::memory_order_release);
         }
 
         /**
@@ -511,7 +524,7 @@ namespace join
                 return nullptr;
             }
 
-            Op* operation = new (chunk) Op ();
+            Op* operation = new (chunk) Op;
             _ops[_arena.getIndex (chunk)].store (&operation->op, std::memory_order_release);
 
             return operation;
@@ -562,6 +575,15 @@ namespace join
             {
                 cancelOp (slot.load (std::memory_order_acquire));
             }
+        }
+
+        /**
+         * @brief check if the socket still has work to finish.
+         * @return true if an operation is pending or a completion handler is running.
+         */
+        bool busy () const noexcept
+        {
+            return pendingAny () || (_completion.load (std::memory_order_acquire) != Completion::Idle);
         }
 
         /**
@@ -623,6 +645,9 @@ namespace join
 
             return (state == IoOperation::State::Submitted) || (state == IoOperation::State::Busy);
         }
+
+        /// completion state of the socket.
+        std::atomic<Completion> _completion{Completion::Idle};
 
         /// proactor driving the operations.
         Proactor* _proactor;

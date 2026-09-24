@@ -190,6 +190,17 @@ protected:
     }
 
     /**
+     * @brief get the error reported by the last completion.
+     * @return copy of the reported error.
+     */
+    static std::error_code code ()
+    {
+        ScopedLock<Mutex> lock (_mut);
+
+        return _code;
+    }
+
+    /**
      * @brief wait for the expected number of completions.
      * @param expected number of completions to wait for.
      * @return true on success, false on timeout.
@@ -312,7 +323,7 @@ TEST_F (RawAsyncSocket, move)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
     ASSERT_GT (_transferred, 0u);
 
     client3.close ();
@@ -503,7 +514,7 @@ TEST_F (RawAsyncSocket, asyncReadMulti)
             << join::lastError.message ();
 
         ASSERT_TRUE (wait (i));
-        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_FALSE (code ()) << code ().message ();
         ASSERT_GT (_transferred, 0u);
         ASSERT_TRUE (_more);
     }
@@ -511,7 +522,7 @@ TEST_F (RawAsyncSocket, asyncReadMulti)
     ASSERT_EQ (rawSocket.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
 
     ASSERT_TRUE (wait (3));
-    ASSERT_EQ (_code, std::errc::operation_canceled);
+    ASSERT_EQ (code (), std::errc::operation_canceled);
     ASSERT_FALSE (_more);
 
 #ifdef JOIN_HAS_IO_URING
@@ -562,7 +573,7 @@ TEST_F (RawAsyncSocket, asyncWrite)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
     ASSERT_EQ (_transferred, sizeof (_packet));
 
     rawSocket.close ();
@@ -592,7 +603,7 @@ TEST_F (RawAsyncSocket, asyncWriteFixed)
     ASSERT_NE (rawSocket.asyncWriteFixed (buf, sizeof (_packet), 0, onCompletion), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
     ASSERT_EQ (_transferred, sizeof (_packet));
 
     rawSocket.close ();
@@ -618,7 +629,7 @@ TEST_F (RawAsyncSocket, asyncRead)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
     ASSERT_GT (_transferred, 0u);
 
     // a message larger than the buffer must be reported as truncated.
@@ -627,7 +638,7 @@ TEST_F (RawAsyncSocket, asyncRead)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (2));
-    ASSERT_EQ (_code, Errc::MessageTooLong) << _code.message ();
+    ASSERT_EQ (code (), Errc::MessageTooLong) << code ().message ();
 
 
     ASSERT_EQ (::close (rawSocket.handle ()), 0);
@@ -635,7 +646,7 @@ TEST_F (RawAsyncSocket, asyncRead)
     ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onReadCompletion), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (3));
-    ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
+    ASSERT_EQ (code (), std::errc::bad_file_descriptor) << code ().message ();
 
     rawSocket.close ();
 }
@@ -664,7 +675,7 @@ TEST_F (RawAsyncSocket, asyncReadFixed)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
     ASSERT_GT (_transferred, 0u);
 
     rawSocket.close ();
@@ -689,20 +700,20 @@ TEST_F (RawAsyncSocket, resubmit)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
 
     ASSERT_NE (client.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (2));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
 
     _rearms = 1;
     ASSERT_NE (client.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), onWrite), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (4));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
 
     client.close ();
     _current = nullptr;
@@ -722,7 +733,7 @@ TEST_F (RawAsyncSocket, closeFromWriteHandler)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
     ASSERT_FALSE (client.opened ());
 
     _current = nullptr;
@@ -742,7 +753,7 @@ TEST_F (RawAsyncSocket, truncated)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_EQ (_code, Errc::MessageTooLong) << _code.message ();
+    ASSERT_EQ (code (), Errc::MessageTooLong) << code ().message ();
 
     client.close ();
 }
@@ -796,7 +807,7 @@ TEST_F (RawAsyncSocket, cancel)
         ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
 
         ASSERT_TRUE (wait (1));
-        ASSERT_EQ (_code, std::errc::operation_canceled) << _code.message ();
+        ASSERT_EQ (code (), std::errc::operation_canceled) << code ().message ();
 
         rawSocket.close ();
     }
@@ -874,7 +885,7 @@ TEST_F (RawAsyncSocket, canRead)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (_code) << _code.message ();
+    ASSERT_FALSE (code ()) << code ().message ();
     ASSERT_GT (rawSocket.canRead (), 0) << join::lastError.message ();
 
     rawSocket.close ();

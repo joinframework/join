@@ -55,6 +55,18 @@
       }
     },
     {
+      "name": "gcc-tsan",
+      "inherits": "gcc-base",
+      "displayName": "GCC TSan",
+      "binaryDir": "${sourceDir}/build/gcc/tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "JOIN_ENABLE_COVERAGE": "OFF",
+        "JOIN_ENABLE_IO_URING": "ON",
+        "JOIN_ENABLE_TSAN": "ON"
+      }
+    },
+    {
       "name": "clang-debug",
       "inherits": "clang-base",
       "displayName": "Clang Debug",
@@ -77,26 +89,14 @@
       }
     },
     {
-      "name": "clang-tsan-epoll",
+      "name": "clang-tsan",
       "inherits": "clang-base",
-      "displayName": "Clang TSan (epoll)",
-      "binaryDir": "${sourceDir}/build/clang/tsan-epoll",
+      "displayName": "Clang TSan",
+      "binaryDir": "${sourceDir}/build/clang/tsan",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "JOIN_ENABLE_COVERAGE": "OFF",
         "JOIN_ENABLE_IO_URING": "OFF",
-        "JOIN_ENABLE_TSAN": "ON"
-      }
-    },
-    {
-      "name": "clang-tsan-uring",
-      "inherits": "clang-base",
-      "displayName": "Clang TSan (uring)",
-      "binaryDir": "${sourceDir}/build/clang/tsan-uring",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "JOIN_ENABLE_COVERAGE": "OFF",
-        "JOIN_ENABLE_IO_URING": "ON",
         "JOIN_ENABLE_TSAN": "ON"
       }
     }
@@ -111,6 +111,10 @@
       "configurePreset": "gcc-release"
     },
     {
+      "name": "gcc-tsan",
+      "configurePreset": "gcc-tsan"
+    },
+    {
       "name": "clang-debug",
       "configurePreset": "clang-debug"
     },
@@ -119,12 +123,8 @@
       "configurePreset": "clang-release"
     },
     {
-      "name": "clang-tsan-epoll",
-      "configurePreset": "clang-tsan-epoll"
-    },
-    {
-      "name": "clang-tsan-uring",
-      "configurePreset": "clang-tsan-uring"
+      "name": "clang-tsan",
+      "configurePreset": "clang-tsan"
     }
   ],
   "testPresets": [
@@ -138,6 +138,13 @@
     {
       "name": "gcc-release",
       "configurePreset": "gcc-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "gcc-tsan",
+      "configurePreset": "gcc-tsan",
       "output": {
         "outputOnFailure": true
       }
@@ -157,15 +164,8 @@
       }
     },
     {
-      "name": "clang-tsan-epoll",
-      "configurePreset": "clang-tsan-epoll",
-      "output": {
-        "outputOnFailure": true
-      }
-    },
-    {
-      "name": "clang-tsan-uring",
-      "configurePreset": "clang-tsan-uring",
+      "name": "clang-tsan",
+      "configurePreset": "clang-tsan",
       "output": {
         "outputOnFailure": true
       }

@@ -173,50 +173,26 @@ jobs:
           name: ${{ matrix.compiler }}-${{ matrix.arch }}-coverage-report
           path: coverage/
 
-  tsan:
-    if: inputs.tsan
+      - name: Configure (tsan)
+        if: inputs.tsan && matrix.arch == 'amd64'
+        run: cmake --preset ${{ matrix.compiler }}-tsan
 
-    needs: [format]
+      - name: Build (tsan)
+        if: inputs.tsan && matrix.arch == 'amd64'
+        run: cmake --build --preset ${{ matrix.compiler }}-tsan
 
-    strategy:
-      fail-fast: false
-      matrix:
-        backend: ["epoll", "uring"]
-
-    runs-on: ubuntu-24.04
-
-    container:
-      image: joinframework/join-ci:latest
-      options: --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0
-
-    permissions:
-      contents: read
-
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.2
-
-      - name: Configure
-        run: cmake --preset clang-tsan-${{ matrix.backend }}
-
-      - name: Build
-        run: cmake --build --preset clang-tsan-${{ matrix.backend }}
-
-      - name: Run tests
-        run: ctest --test-dir build/clang/tsan-${{ matrix.backend }} -T memcheck --overwrite MemoryCheckType=ThreadSanitizer
+      - name: Run tests (tsan)
+        if: inputs.tsan && matrix.arch == 'amd64'
+        run: ctest --test-dir build/${{ matrix.compiler }}/tsan -T memcheck --overwrite MemoryCheckType=ThreadSanitizer
         env:
           TSAN_OPTIONS: "halt_on_error=0 exitcode=66 history_size=7"
 
       - name: Upload thread sanitizer report to GitHub
-        if: always()
+        if: always() && inputs.tsan && matrix.arch == 'amd64'
         uses: actions/upload-artifact@v7.0.0
         with:
-          name: clang-amd64-tsan-${{ matrix.backend }}-report
-          path: build/clang/tsan-${{ matrix.backend }}/Testing/
+          name: ${{ matrix.compiler }}-${{ matrix.arch }}-tsan-report
+          path: build/${{ matrix.compiler }}/tsan/Testing/
 
   doc:
     if: inputs.doc

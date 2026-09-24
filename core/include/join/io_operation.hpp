@@ -78,7 +78,10 @@ namespace join
         /**
          * @brief default constructor.
          */
-        IoOperation () = default;
+        IoOperation () noexcept
+        {
+            state.store (State::Idle, std::memory_order_release);
+        }
 
         /**
          * @brief copy constructor.
@@ -393,7 +396,7 @@ namespace join
         uint8_t code = 0;
 
         /// operation state.
-        std::atomic<State> state{State::Idle};
+        std::atomic<State> state;
 
         /// state to restore when the current hold is released.
         State resume{State::Idle};
