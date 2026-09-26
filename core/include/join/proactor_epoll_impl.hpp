@@ -825,15 +825,8 @@ inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
 
     if (op->ring != nullptr)
     {
-        int selected = op->ring->select ();
-        if (JOIN_UNLIKELY (selected == -1))
-        {
-            endOperation (*op, -ENOBUFS, false);
-            return;
-        }
-
         br = op->ring;
-        bid = static_cast<uint16_t> (selected);
+        bid = static_cast<uint16_t> (br->select ());
 
         if (op->code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg))
         {
