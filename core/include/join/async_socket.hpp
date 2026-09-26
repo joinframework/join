@@ -571,7 +571,7 @@ namespace join
                 IoOperation* op = slot.load (std::memory_order_acquire);
                 if (op != nullptr)
                 {
-                    _proactor->resume (*op, this);
+                    _proactor->resume (*op, *this);
                 }
             }
         }

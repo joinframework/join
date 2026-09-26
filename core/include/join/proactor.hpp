@@ -240,7 +240,7 @@ public:
      * @param op operation to resume.
      * @param handler new completion handler owning the operation.
      */
-    void resume (IoOperation& op, CompletionHandler* handler) noexcept;
+    void resume (IoOperation& op, CompletionHandler& handler) noexcept;
 
     /**
      * @brief run the event loop (blocking).
@@ -836,12 +836,12 @@ inline void join::BasicProactor::suspend (IoOperation& op) noexcept
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
 template <typename Policy>
-void join::BasicProactor<Policy>::resume (IoOperation& op, CompletionHandler* handler) noexcept
+void join::BasicProactor<Policy>::resume (IoOperation& op, CompletionHandler& handler) noexcept
 #else
-inline void join::BasicProactor::resume (IoOperation& op, CompletionHandler* handler) noexcept
+inline void join::BasicProactor::resume (IoOperation& op, CompletionHandler& handler) noexcept
 #endif
 {
-    op.handler = handler;
+    op.handler = &handler;
     IoOperation::State expected = IoOperation::State::Suspended;
     op.state.compare_exchange_strong (expected, op.resume, std::memory_order_release, std::memory_order_relaxed);
 }

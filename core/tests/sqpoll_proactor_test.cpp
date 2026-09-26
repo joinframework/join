@@ -665,7 +665,7 @@ TEST_F (SqpollProactorTest, suspend)
         }));
     }
 
-    proactor.resume (_readOp, this);
+    proactor.resume (_readOp, *this);
 
     {
         ScopedLock<Mutex> lock (_mut);

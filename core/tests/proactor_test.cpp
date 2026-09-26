@@ -57,6 +57,7 @@ protected:
     {
         _op = nullptr;
         _result = 0;
+        _cancellations = 0;
         _completions = 0;
         _iovlen = 0;
         _namelen = 0;
@@ -170,6 +171,7 @@ protected:
             _result = result;
             _op = &op;
             _cancelled = &op;
+            ++_cancellations;
             CompletionHandler::onCancel (op, result);
         }
 
@@ -248,6 +250,9 @@ protected:
     /// last operation result.
     static int _result;
 
+    /// number of cancellations received.
+    static int _cancellations;
+
     /// number of completions received.
     static int _completions;
 
@@ -291,6 +296,7 @@ IoOperation* ProactorTest::_cancelled = nullptr;
 bool ProactorTest::_stopFromHandler = false;
 bool ProactorTest::_suspendFromHandler = false;
 int ProactorTest::_result = 0;
+int ProactorTest::_cancellations = 0;
 int ProactorTest::_completions = 0;
 size_t ProactorTest::_iovlen = 0;
 socklen_t ProactorTest::_namelen = 0;
@@ -318,16 +324,31 @@ TEST_F (ProactorTest, stop)
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
+    int fds[2];
+    ASSERT_EQ (::pipe2 (fds, O_NONBLOCK), 0) << strerror (errno);
+
+    char chunk[4096] = {};
+    while (::write (fds[1], chunk, sizeof (chunk)) > 0)
+    {
+    }
+
+    _writeOp = IoOperation::makeWrite (fds[1], chunk, sizeof (chunk), this);
+    ASSERT_EQ (proactor.submit (_writeOp, true, true), 0) << join::lastError.message ();
+
     proactor.stop ();
     th.join ();
 
     {
         ScopedLock<Mutex> lock (_mut);
-        ASSERT_EQ (_op, &_readOp);
+        ASSERT_TRUE ((_op == &_readOp) || (_op == &_writeOp));
         ASSERT_EQ (_result, -ECANCELED);
+        ASSERT_EQ (_cancellations, 2);
         _op = nullptr;
         _result = 0;
     }
+
+    ::close (fds[0]);
+    ::close (fds[1]);
 
     // stop the proactor from within a completion handler.
     {
@@ -671,7 +692,7 @@ TEST_F (ProactorTest, suspend)
         }));
     }
 
-    proactor.resume (_readOp, this);
+    proactor.resume (_readOp, *this);
 
     {
         ScopedLock<Mutex> lock (_mut);
