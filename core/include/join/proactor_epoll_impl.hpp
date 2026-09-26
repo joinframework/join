@@ -378,7 +378,7 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
             err = submitOperation (*cmd.op, cmd.flush);
             if (JOIN_UNLIKELY ((err != 0) && (cmd.done == nullptr) && (cmd.op->state == IoOperation::State::Idle)))
             {
-                dispatchOperation (cmd.op, -lastError.default_error_condition ().value (), false);
+                dispatchOperation (*cmd.op, -lastError.default_error_condition ().value (), false);
             }
             break;
 
@@ -575,7 +575,7 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
         ret = _reactor.addHandler (op.fd (), this, _readOps[op.fd ()] != nullptr, _writeOps[op.fd ()] != nullptr);
     }
 
-    dispatchOperation (&op, -ECANCELED, true);
+    dispatchOperation (op, -ECANCELED, true);
 
     return ret;
 }
@@ -594,8 +594,14 @@ inline void join::BasicProactor::cancelAllOperations () noexcept
         {
             _reactor.delHandler (fd);
         }
-        dispatchOperation (rOp, -ECANCELED, true);
-        dispatchOperation (wOp, -ECANCELED, true);
+        if (rOp != nullptr)
+        {
+            dispatchOperation (*rOp, -ECANCELED, true);
+        }
+        if (wOp != nullptr)
+        {
+            dispatchOperation (*wOp, -ECANCELED, true);
+        }
     }
 }
 
@@ -630,7 +636,7 @@ inline void join::BasicProactor::endOperation (IoOperation& op, int result, bool
         _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
     }
 
-    dispatchOperation (&op, result, cancelled);
+    dispatchOperation (op, result, cancelled);
 }
 
 // =========================================================================
@@ -794,8 +800,14 @@ inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
             wResult = executeOp (*wOp, revents);
         }
 
-        dispatchOperation (rOp, rResult, false);
-        dispatchOperation (wOp, wResult, false);
+        if (rOp != nullptr)
+        {
+            dispatchOperation (*rOp, rResult, false);
+        }
+        if (wOp != nullptr)
+        {
+            dispatchOperation (*wOp, wResult, false);
+        }
 
         return;
     }
