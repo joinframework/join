@@ -114,7 +114,7 @@ protected:
         if (_suspendFromHandler)
         {
             _suspendFromHandler = false;
-            _handlerProactor->suspend (&op);
+            _handlerProactor->suspend (op);
         }
 
         {
@@ -644,8 +644,6 @@ TEST_F (SqpollProactorTest, suspend)
     auto& proactor = SqpollProactorThread::proactor ();
     const char* msg = "suspend";
 
-    proactor.suspend (nullptr);
-    proactor.resume (nullptr, nullptr);
 
     if (_client.connect ({_host, _port}) == -1)
     {
@@ -657,7 +655,7 @@ TEST_F (SqpollProactorTest, suspend)
     _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
-    proactor.suspend (&_readOp);
+    proactor.suspend (_readOp);
     EXPECT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
 
     {
@@ -667,7 +665,7 @@ TEST_F (SqpollProactorTest, suspend)
         }));
     }
 
-    proactor.resume (&_readOp, this);
+    proactor.resume (_readOp, *this);
 
     {
         ScopedLock<Mutex> lock (_mut);
