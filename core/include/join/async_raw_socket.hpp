@@ -396,7 +396,7 @@ namespace join
 
                 if ((op != nullptr) && (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::Connect))
                 {
-                    return this->cancelOp (op);
+                    return this->cancelOp (*op);
                 }
             }
 
