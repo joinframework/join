@@ -228,7 +228,7 @@ namespace join
                 return -1;
             }
 
-            AsyncWait* wait = allocateOp<AsyncWait> ();
+            AsyncWait* wait = allocateOperation<AsyncWait> ();
             if (JOIN_UNLIKELY (wait == nullptr))
             {
                 lastError = make_error_code (Errc::OutOfMemory);
@@ -244,7 +244,7 @@ namespace join
             if (_proactor->submit (wait->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                releaseOp (wait);
+                releaseOperation (wait);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -274,7 +274,7 @@ namespace join
                 return -1;
             }
 
-            AsyncWait* wait = allocateOp<AsyncWait> ();
+            AsyncWait* wait = allocateOperation<AsyncWait> ();
             if (JOIN_UNLIKELY (wait == nullptr))
             {
                 lastError = make_error_code (Errc::OutOfMemory);
@@ -290,7 +290,7 @@ namespace join
             if (_proactor->submit (wait->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                releaseOp (wait);
+                releaseOperation (wait);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -313,7 +313,7 @@ namespace join
 
             IoOperation* op = _ops[index].load (std::memory_order_acquire);
 
-            return (op != nullptr) ? cancelOp (*op) : 0;
+            return (op != nullptr) ? cancelOperation (*op) : 0;
         }
 
 #ifdef JOIN_HAS_IO_URING
@@ -498,11 +498,11 @@ namespace join
 
             if (wait->op.more)
             {
-                cancelOp (wait->op);
+                cancelOperation (wait->op);
             }
             else
             {
-                releaseOp (wait);
+                releaseOperation (wait);
             }
 
             if (handler)
@@ -516,7 +516,7 @@ namespace join
          * @return allocated operation, or nullptr if the arena is exhausted.
          */
         template <class Op>
-        Op* allocateOp () noexcept
+        Op* allocateOperation () noexcept
         {
             static_assert (sizeof (Op) <= _opSize, "operation larger than an arena slot");
 
@@ -537,7 +537,7 @@ namespace join
          * @param operation operation to release.
          */
         template <class Op>
-        void releaseOp (Op* operation) noexcept
+        void releaseOperation (Op* operation) noexcept
         {
             const uint32_t index = _arena.getIndex (operation);
 
@@ -586,7 +586,7 @@ namespace join
                 IoOperation* op = slot.load (std::memory_order_acquire);
                 if (op != nullptr)
                 {
-                    cancelOp (*op);
+                    cancelOperation (*op);
                 }
             }
         }
@@ -623,7 +623,7 @@ namespace join
          * @param op operation to cancel.
          * @return 0 on success, -1 on failure.
          */
-        int cancelOp (IoOperation& op) noexcept
+        int cancelOperation (IoOperation& op) noexcept
         {
             if (!inFlight (op))
             {

@@ -579,11 +579,35 @@ private:
     void eventLoop (std::true_type, std::true_type) noexcept;
 #else
     /**
-     * @brief return true if operation requires EPOLLOUT.
-     * @param op operation.
-     * @return true for Connect, Write, WriteFixed, SendMsg, Send and Poll without POLLIN.
+     * @brief method called when events are reported on handle.
+     * @param fd file descriptor.
+     * @param revents events reported by the reactor.
      */
-    static bool isWriteOp (const IoOperation& op) noexcept;
+    void onEvent (int fd, uint32_t revents) noexcept override;
+
+    /**
+     * @brief complete every operation of a queue detached from its descriptor, in submission order.
+     * @param tail last operation of the queue.
+     * @param result result reported to the operations.
+     * @param revents events reported by the reactor, handed to poll operations.
+     * @param cancelled true if the operations are cancelled.
+     */
+    void drainQueue (IoOperation& tail, int result, uint32_t revents, bool cancelled) noexcept;
+
+    /**
+     * @brief notify every poll operation of a queue whose descriptor is ready and execute its first other operation.
+     * @param fd file descriptor.
+     * @param write true to serve the write queue, false to serve the read queue.
+     * @param revents events reported by the reactor.
+     */
+    void processQueue (int fd, bool write, uint32_t revents) noexcept;
+
+    /**
+     * @brief execute an operation whose descriptor is ready.
+     * @param op operation to execute.
+     * @param revents events reported by the reactor.
+     */
+    void processOperation (IoOperation& op, uint32_t revents) noexcept;
 
     /**
      * @brief execute the syscall described by op.
@@ -591,14 +615,21 @@ private:
      * @param revents events reported by the reactor.
      * @return bytes transferred or ready events (>= 0), or -errno (< 0).
      */
-    static int executeOp (IoOperation& op, uint32_t revents) noexcept;
+    static int executeOperation (IoOperation& op, uint32_t revents) noexcept;
 
     /**
-     * @brief method called when events are reported on handle.
-     * @param fd file descriptor.
-     * @param revents events reported by the reactor.
+     * @brief remove an operation from the queue of its descriptor and direction.
+     * @param op operation to remove.
+     * @return true if the operation was queued, false otherwise.
      */
-    void onEvent (int fd, uint32_t revents) noexcept override;
+    bool unqueueOperation (IoOperation& op) noexcept;
+
+    /**
+     * @brief return true if operation requires EPOLLOUT.
+     * @param op operation.
+     * @return true for Connect, Write, WriteFixed, SendMsg, Send and Poll without POLLIN.
+     */
+    static bool isWriteOperation (const IoOperation& op) noexcept;
 #endif
 
     /// command queue size.
