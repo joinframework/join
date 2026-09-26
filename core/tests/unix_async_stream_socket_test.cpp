@@ -104,7 +104,7 @@ protected:
     {
         if (!ec)
         {
-            peer ().asyncWrite (_echobuf, size, onEchoWrite);
+            peer ().asyncWrite (onEchoWrite, _echobuf, size);
         }
     }
 
@@ -117,7 +117,7 @@ protected:
     {
         if (!ec)
         {
-            peer ().asyncRead (_echobuf, sizeof (_echobuf), onEchoRead);
+            peer ().asyncRead (onEchoRead, _echobuf, sizeof (_echobuf));
         }
     }
 
@@ -132,7 +132,7 @@ protected:
         if (!ec)
         {
             peer () = UnixStream::AsyncSocket (std::move (sock));
-            peer ().asyncRead (_echobuf, sizeof (_echobuf), onEchoRead);
+            peer ().asyncRead (onEchoRead, _echobuf, sizeof (_echobuf));
         }
     }
 
@@ -146,7 +146,7 @@ protected:
         if (!ec && (_rearms > 0))
         {
             --_rearms;
-            _current->asyncWrite ("two", 3, onWrite);
+            _current->asyncWrite (onWrite, "two", 3);
         }
 
         ScopedLock<Mutex> lock (_mut);
@@ -166,7 +166,7 @@ protected:
         if (ec && (_rearms > 0))
         {
             --_rearms;
-            _current->asyncConnect (_serverpath, onConnect);
+            _current->asyncConnect (onConnect, _serverpath);
         }
 
         ScopedLock<Mutex> lock (_mut);
@@ -212,7 +212,7 @@ protected:
         if (!ec && (_rearms > 0))
         {
             --_rearms;
-            _current->asyncRead (_buf, sizeof (_buf), onRead);
+            _current->asyncRead (onRead, _buf, sizeof (_buf));
         }
 
         ScopedLock<Mutex> lock (_mut);
@@ -352,17 +352,17 @@ TEST_F (UnixAsyncStreamSocket, asyncWait)
 {
     UnixStream::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncWait (true, false, nullptr), -1);
+    ASSERT_EQ (client.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.open (), 0) << join::lastError.message ();
 
-    ASSERT_EQ (client.asyncWait (true, true, nullptr), -1);
+    ASSERT_EQ (client.asyncWait (nullptr, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.asyncWait (false, false, nullptr), -1);
+    ASSERT_EQ (client.asyncWait (nullptr, false, false), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    ASSERT_NE (client.asyncWait (true, false, onReportWait), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWait (onReportWait, true, false), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -375,13 +375,14 @@ TEST_F (UnixAsyncStreamSocket, asyncWait)
 
     client.close ();
 
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _serverpath),
                0)
         << join::lastError.message ();
 
@@ -393,7 +394,7 @@ TEST_F (UnixAsyncStreamSocket, asyncWait)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_NE (client.asyncWait (false, true, onReportWait), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWait (onReportWait, false, true), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -404,8 +405,8 @@ TEST_F (UnixAsyncStreamSocket, asyncWait)
         ASSERT_FALSE (_more);
     }
 
-    ASSERT_NE (client.asyncWait (true, false, onReportWait), -1) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWait (onReportWait, true, false), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -422,10 +423,10 @@ TEST_F (UnixAsyncStreamSocket, asyncWait)
 #ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < UnixStream::AsyncSocket::_opCount; ++i)
     {
-        ASSERT_NE (client.asyncWait (true, false, nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
     }
 
-    ASSERT_EQ (client.asyncWait (true, false, nullptr), -1);
+    ASSERT_EQ (client.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
     for (size_t i = 0; i < UnixStream::AsyncSocket::_opCount; ++i)
@@ -434,7 +435,7 @@ TEST_F (UnixAsyncStreamSocket, asyncWait)
     }
 #endif
 
-    ASSERT_NE (client.asyncWait (true, false, onReportWait), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWait (onReportWait, true, false), -1) << join::lastError.message ();
 
     peer ().close ();
 
@@ -457,16 +458,17 @@ TEST_F (UnixAsyncStreamSocket, asyncWaitMulti)
 {
     UnixStream::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncWaitMulti (true, false, nullptr), -1);
+    ASSERT_EQ (client.asyncWaitMulti (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _serverpath),
                0)
         << join::lastError.message ();
 
@@ -478,17 +480,17 @@ TEST_F (UnixAsyncStreamSocket, asyncWaitMulti)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_EQ (client.asyncWaitMulti (true, true, nullptr), -1);
+    ASSERT_EQ (client.asyncWaitMulti (nullptr, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.asyncWaitMulti (false, false, nullptr), -1);
+    ASSERT_EQ (client.asyncWaitMulti (nullptr, false, false), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    ssize_t index = client.asyncWaitMulti (true, false, onReportWait);
+    ssize_t index = client.asyncWaitMulti (onReportWait, true, false);
     ASSERT_NE (index, -1) << join::lastError.message ();
 
     for (int i = 2; i <= 3; ++i)
     {
-        ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -521,7 +523,7 @@ TEST_F (UnixAsyncStreamSocket, asyncWaitMulti)
         completions = _completions;
     }
 
-    ASSERT_NE (client.asyncWaitMulti (true, false, onReportWait), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWaitMulti (onReportWait, true, false), -1) << join::lastError.message ();
     ASSERT_EQ (::shutdown (client.handle (), SHUT_WR), 0) << strerror (errno);
     peer ().close ();
 
@@ -547,13 +549,14 @@ TEST_F (UnixAsyncStreamSocket, asyncConnect)
 {
     UnixStream::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncConnect ("/tmp/unixasyncmissing_test.sock",
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   "/tmp/unixasyncmissing_test.sock"),
                0)
         << join::lastError.message ();
 
@@ -569,13 +572,14 @@ TEST_F (UnixAsyncStreamSocket, asyncConnect)
     ASSERT_FALSE (client.connected ());
     ASSERT_FALSE (client.opened ());
 
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _serverpath),
                0)
         << join::lastError.message ();
 
@@ -596,7 +600,7 @@ TEST_F (UnixAsyncStreamSocket, asyncConnect)
     _current = &retry;
     _rearms = 1;
 
-    ASSERT_EQ (retry.asyncConnect ("/tmp/unixasyncmissing_test.sock", onConnect), 0) << join::lastError.message ();
+    ASSERT_EQ (retry.asyncConnect (onConnect, "/tmp/unixasyncmissing_test.sock"), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -619,16 +623,17 @@ TEST_F (UnixAsyncStreamSocket, asyncWrite)
 {
     UnixStream::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncWrite ("hello", 5, nullptr), -1);
+    ASSERT_EQ (client.asyncWrite (nullptr, "hello", 5), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _serverpath),
                0)
         << join::lastError.message ();
 
@@ -640,14 +645,15 @@ TEST_F (UnixAsyncStreamSocket, asyncWrite)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_NE (client.asyncWrite ("hello", 5,
-                                  [] (const std::error_code& ec, size_t size) {
-                                      ScopedLock<Mutex> lock (_mut);
-                                      _code = ec;
-                                      _transferred = size;
-                                      ++_completions;
-                                      _cond.signal ();
-                                  }),
+    ASSERT_NE (client.asyncWrite (
+                   [] (const std::error_code& ec, size_t size) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       _transferred = size;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   "hello", 5),
                -1)
         << join::lastError.message ();
 
@@ -670,7 +676,7 @@ TEST_F (UnixAsyncStreamSocket, move)
 {
     UnixStream::AsyncSocket client1, client3;
 
-    ASSERT_EQ (client1.asyncConnect (_serverpath, onConnect), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.asyncConnect (onConnect, _serverpath), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -684,24 +690,24 @@ TEST_F (UnixAsyncStreamSocket, move)
     ASSERT_TRUE (client2.connected ());
     ASSERT_FALSE (client1.opened ());
 
-    ASSERT_EQ (client1.asyncRead (_buf, sizeof (_buf), nullptr), -1);
+    ASSERT_EQ (client1.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.asyncWrite ("one", 3, nullptr), -1);
+    ASSERT_EQ (client1.asyncWrite (nullptr, "one", 3), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.asyncConnect (_serverpath, nullptr), -1);
+    ASSERT_EQ (client1.asyncConnect (nullptr, _serverpath), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
     ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
     ASSERT_EQ (client1.cancelConnect (), 0) << join::lastError.message ();
 
-    ASSERT_NE (client2.asyncRead (_buf, sizeof (_buf), onRead), -1) << join::lastError.message ();
+    ASSERT_NE (client2.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
 
     client3 = std::move (client2);
 
     ASSERT_TRUE (client3.connected ());
     ASSERT_FALSE (client2.opened ());
 
-    ASSERT_NE (client3.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client3.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -728,7 +734,7 @@ TEST_F (UnixAsyncStreamSocket, cancelConnect)
     ASSERT_EQ (client.cancelConnect (), 0) << join::lastError.message ();
     client.close ();
 
-    ASSERT_EQ (client.asyncConnect (_serverpath, onConnect), 0) << join::lastError.message ();
+    ASSERT_EQ (client.asyncConnect (onConnect, _serverpath), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -751,10 +757,10 @@ TEST_F (UnixAsyncStreamSocket, asyncReadMulti)
 {
     UnixStream::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncReadMulti (0, nullptr), -1);
+    ASSERT_EQ (client.asyncReadMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (client.asyncConnect (_serverpath, onConnect), 0) << join::lastError.message ();
+    ASSERT_EQ (client.asyncConnect (onConnect, _serverpath), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -767,12 +773,12 @@ TEST_F (UnixAsyncStreamSocket, asyncReadMulti)
     LocalMem::Allocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (client.registerBufferRing (0, arena), 0) << join::lastError.message ();
 
-    ssize_t index = client.asyncReadMulti (0, onReportMulti);
+    ssize_t index = client.asyncReadMulti (onReportMulti, 0);
     ASSERT_NE (index, -1) << join::lastError.message ();
 
     for (int i = 2; i <= 3; ++i)
     {
-        ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -800,10 +806,10 @@ TEST_F (UnixAsyncStreamSocket, asyncReadMulti)
 #ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < UnixStream::AsyncSocket::_opCount; ++i)
     {
-        ASSERT_NE (client.asyncReadMulti (0, nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncReadMulti (nullptr, 0), -1) << join::lastError.message ();
     }
 
-    ASSERT_EQ (client.asyncReadMulti (0, nullptr), -1);
+    ASSERT_EQ (client.asyncReadMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
@@ -842,12 +848,12 @@ TEST_F (UnixAsyncStreamSocket, asyncWriteFixed)
     char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
-    ASSERT_EQ (client.asyncWriteFixed (buf, 5, 0, nullptr), -1);
+    ASSERT_EQ (client.asyncWriteFixed (nullptr, buf, 5, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
 
-    ASSERT_EQ (client.asyncConnect (_serverpath, onConnect), 0) << join::lastError.message ();
+    ASSERT_EQ (client.asyncConnect (onConnect, _serverpath), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -859,7 +865,7 @@ TEST_F (UnixAsyncStreamSocket, asyncWriteFixed)
 
     ::memcpy (buf, "hello", 5);
 
-    ASSERT_NE (client.asyncWriteFixed (buf, 5, 0, onWrite), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWriteFixed (onWrite, buf, 5, 0), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -883,16 +889,17 @@ TEST_F (UnixAsyncStreamSocket, asyncRead)
 {
     UnixStream::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncRead (_buf, sizeof (_buf), nullptr), -1);
+    ASSERT_EQ (client.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _serverpath),
                0)
         << join::lastError.message ();
 
@@ -904,19 +911,20 @@ TEST_F (UnixAsyncStreamSocket, asyncRead)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf),
-                                 [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
-                                     [[maybe_unused]] bool more) {
-                                     ScopedLock<Mutex> lock (_mut);
-                                     _code = ec;
-                                     _transferred = size;
-                                     ++_completions;
-                                     _cond.signal ();
-                                 }),
-               -1)
+    ASSERT_NE (
+        client.asyncRead (
+            [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
+                ScopedLock<Mutex> lock (_mut);
+                _code = ec;
+                _transferred = size;
+                ++_completions;
+                _cond.signal ();
+            },
+            _buf, sizeof (_buf)),
+        -1)
         << join::lastError.message ();
 
-    ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -931,16 +939,17 @@ TEST_F (UnixAsyncStreamSocket, asyncRead)
 
     ASSERT_EQ (::close (client.handle ()), 0);
 
-    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf),
-                                 [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
-                                     [[maybe_unused]] bool more) {
-                                     ScopedLock<Mutex> lock (_mut);
-                                     _code = ec;
-                                     _transferred = size;
-                                     ++_completions;
-                                     _cond.signal ();
-                                 }),
-               -1)
+    ASSERT_NE (
+        client.asyncRead (
+            [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
+                ScopedLock<Mutex> lock (_mut);
+                _code = ec;
+                _transferred = size;
+                ++_completions;
+                _cond.signal ();
+            },
+            _buf, sizeof (_buf)),
+        -1)
         << join::lastError.message ();
 
     {
@@ -966,12 +975,12 @@ TEST_F (UnixAsyncStreamSocket, asyncReadFixed)
     char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
-    ASSERT_EQ (client.asyncReadFixed (buf, sizeof (_buf), 0, nullptr), -1);
+    ASSERT_EQ (client.asyncReadFixed (nullptr, buf, sizeof (_buf), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
 
-    ASSERT_EQ (client.asyncConnect (_serverpath, onConnect), 0) << join::lastError.message ();
+    ASSERT_EQ (client.asyncConnect (onConnect, _serverpath), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -981,8 +990,8 @@ TEST_F (UnixAsyncStreamSocket, asyncReadFixed)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_NE (client.asyncReadFixed (buf, sizeof (_buf), 0, onReportMulti), -1) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite ("hello", 5, nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFixed (onReportMulti, buf, sizeof (_buf), 0), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1011,13 +1020,14 @@ TEST_F (UnixAsyncStreamSocket, resubmit)
     _current = &client;
     _rearms = 1;
 
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _serverpath),
                0)
         << join::lastError.message ();
 
@@ -1029,8 +1039,8 @@ TEST_F (UnixAsyncStreamSocket, resubmit)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onRead), -1) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite ("one", 3, nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, "one", 3), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1041,7 +1051,7 @@ TEST_F (UnixAsyncStreamSocket, resubmit)
         ASSERT_EQ (_transferred, 3u);
     }
 
-    ASSERT_NE (client.asyncWrite ("two", 3, nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, "two", 3), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1055,7 +1065,7 @@ TEST_F (UnixAsyncStreamSocket, resubmit)
 
     _rearms = 1;
 
-    ASSERT_NE (client.asyncWrite ("three", 5, onWrite), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (onWrite, "three", 5), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1078,13 +1088,14 @@ TEST_F (UnixAsyncStreamSocket, closeFromWriteHandler)
 
     _current = &client;
 
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _serverpath),
                0)
         << join::lastError.message ();
 
@@ -1096,15 +1107,16 @@ TEST_F (UnixAsyncStreamSocket, closeFromWriteHandler)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_NE (client.asyncWrite ("hello", 5,
-                                  [] (const std::error_code& ec, [[maybe_unused]] size_t size) {
-                                      _current->close ();
+    ASSERT_NE (client.asyncWrite (
+                   [] (const std::error_code& ec, [[maybe_unused]] size_t size) {
+                       _current->close ();
 
-                                      ScopedLock<Mutex> lock (_mut);
-                                      _code = ec;
-                                      ++_completions;
-                                      _cond.signal ();
-                                  }),
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   "hello", 5),
                -1)
         << join::lastError.message ();
 
@@ -1132,13 +1144,14 @@ TEST_F (UnixAsyncStreamSocket, cancel)
         ASSERT_EQ (client.cancel (UnixStream::AsyncSocket::_opCount), -1);
         ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-        ASSERT_EQ (client.asyncConnect (_serverpath,
-                                        [] (const std::error_code& ec) {
-                                            ScopedLock<Mutex> lock (_mut);
-                                            _code = ec;
-                                            ++_completions;
-                                            _cond.signal ();
-                                        }),
+        ASSERT_EQ (client.asyncConnect (
+                       [] (const std::error_code& ec) {
+                           ScopedLock<Mutex> lock (_mut);
+                           _code = ec;
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       _serverpath),
                    0)
             << join::lastError.message ();
 
@@ -1150,7 +1163,7 @@ TEST_F (UnixAsyncStreamSocket, cancel)
             ASSERT_FALSE (_code) << _code.message ();
         }
 
-        ssize_t index = client.asyncWait (true, false, onReportWait);
+        ssize_t index = client.asyncWait (onReportWait, true, false);
         ASSERT_NE (index, -1) << join::lastError.message ();
 
         ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
@@ -1180,13 +1193,14 @@ TEST_F (UnixAsyncStreamSocket, cancel)
 
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
 
-        ASSERT_EQ (client.asyncConnect (_serverpath,
-                                        [] (const std::error_code& ec) {
-                                            ScopedLock<Mutex> lock (_mut);
-                                            _code = ec;
-                                            ++_completions;
-                                            _cond.signal ();
-                                        }),
+        ASSERT_EQ (client.asyncConnect (
+                       [] (const std::error_code& ec) {
+                           ScopedLock<Mutex> lock (_mut);
+                           _code = ec;
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       _serverpath),
                    0)
             << join::lastError.message ();
 
@@ -1198,15 +1212,16 @@ TEST_F (UnixAsyncStreamSocket, cancel)
             ASSERT_FALSE (_code) << _code.message ();
         }
 
-        ASSERT_NE (client.asyncRead (_buf, sizeof (_buf),
-                                     [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
-                                         [[maybe_unused]] bool more) {
-                                         ScopedLock<Mutex> lock (_mut);
-                                         _code = ec;
-                                         _transferred = size;
-                                         ++_completions;
-                                         _cond.signal ();
-                                     }),
+        ASSERT_NE (client.asyncRead (
+                       [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                           [[maybe_unused]] bool more) {
+                           ScopedLock<Mutex> lock (_mut);
+                           _code = ec;
+                           _transferred = size;
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       _buf, sizeof (_buf)),
                    -1)
             << join::lastError.message ();
 
@@ -1244,13 +1259,14 @@ TEST_F (UnixAsyncStreamSocket, cancel)
 
         ASSERT_EQ (stall.create (_stallpath), 0) << join::lastError.message ();
 
-        ASSERT_EQ (sender.asyncConnect (_stallpath,
-                                        [] (const std::error_code& ec) {
-                                            ScopedLock<Mutex> lock (_mut);
-                                            _code = ec;
-                                            ++_completions;
-                                            _cond.signal ();
-                                        }),
+        ASSERT_EQ (sender.asyncConnect (
+                       [] (const std::error_code& ec) {
+                           ScopedLock<Mutex> lock (_mut);
+                           _code = ec;
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       _stallpath),
                    0)
             << join::lastError.message ();
 
@@ -1276,9 +1292,9 @@ TEST_F (UnixAsyncStreamSocket, cancel)
 
         ASSERT_LT (filled, 4096);
 
-        ASSERT_NE (sender.asyncWrite (_buf, sizeof (_buf), onWrite), -1) << join::lastError.message ();
+        ASSERT_NE (sender.asyncWrite (onWrite, _buf, sizeof (_buf)), -1) << join::lastError.message ();
 
-        ASSERT_EQ (sender.asyncConnect (_stallpath, nullptr), -1);
+        ASSERT_EQ (sender.asyncConnect (nullptr, _stallpath), -1);
         ASSERT_EQ (join::lastError, Errc::InUse);
 
         ASSERT_EQ (sender.cancel (0), 0) << join::lastError.message ();
@@ -1291,7 +1307,7 @@ TEST_F (UnixAsyncStreamSocket, cancel)
             ASSERT_EQ (_code, std::errc::operation_canceled);
         }
 
-        ASSERT_NE (sender.asyncWrite (_buf, sizeof (_buf), nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (sender.asyncWrite (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
 
         sender.close ();
         peer.close ();
@@ -1336,13 +1352,14 @@ TEST_F (UnixAsyncStreamSocket, remoteEndpoint)
 
     ASSERT_EQ (client.remoteEndpoint (), UnixStream::Endpoint{});
 
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _serverpath),
                0)
         << join::lastError.message ();
 
@@ -1380,13 +1397,14 @@ TEST_F (UnixAsyncStreamSocket, connected)
 
     ASSERT_FALSE (client.connected ());
 
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _serverpath),
                0)
         << join::lastError.message ();
 
@@ -1424,13 +1442,14 @@ TEST_F (UnixAsyncStreamSocket, canRead)
 
     ASSERT_EQ (client.canRead (), -1);
 
-    ASSERT_EQ (client.asyncConnect (_serverpath,
-                                    [] (const std::error_code& ec) {
-                                        ScopedLock<Mutex> lock (_mut);
-                                        _code = ec;
-                                        ++_completions;
-                                        _cond.signal ();
-                                    }),
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _serverpath),
                0)
         << join::lastError.message ();
 

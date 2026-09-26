@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/dhcp_option.hpp>
+#include <join/utils.hpp>
 
 // C++.
 #include <sstream>
@@ -363,26 +364,6 @@ namespace join
             }
 
             address = IpAddress (&addr, sizeof (addr));
-
-            return true;
-        }
-
-        /**
-         * @brief read a fixed amount of bytes from a byte stream.
-         * @param data byte stream to read from.
-         * @param out buffer to read into.
-         * @param size number of bytes to read.
-         * @return true if every byte was read, false otherwise.
-         */
-        static bool extract (std::istream& data, void* out, size_t size)
-        {
-            data.read (reinterpret_cast<char*> (out), size);
-
-            if (data.fail ())
-            {
-                lastError = make_error_code (Errc::MessageTooLong);
-                return false;
-            }
 
             return true;
         }

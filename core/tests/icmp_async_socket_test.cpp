@@ -111,10 +111,13 @@ protected:
      * @param data buffer holding the data received.
      * @param size number of bytes read.
      * @param from endpoint the datagram was received from.
+     * @param control control messages received.
+     * @param controlSize size of the control messages.
      * @param more true if the read stays armed.
      */
     static void onReportFrom (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
-                              const Icmp::Endpoint& from, [[maybe_unused]] bool more)
+                              const Icmp::Endpoint& from, [[maybe_unused]] const char* control,
+                              [[maybe_unused]] size_t controlSize, [[maybe_unused]] bool more)
     {
         {
             ScopedLock<Mutex> lock (_mut);
@@ -133,7 +136,7 @@ protected:
         if (!ec && (_rearms > 0))
         {
             --_rearms;
-            _current->asyncRead (_buf, sizeof (_buf), onRead);
+            _current->asyncRead (onRead, _buf, sizeof (_buf));
         }
 
         onReport (ec, size);
@@ -147,7 +150,7 @@ protected:
         if (!ec && (_rearms > 0))
         {
             --_rearms;
-            _current->asyncWrite (_data, sizeof (_data), onWrite);
+            _current->asyncWrite (onWrite, _data, sizeof (_data));
         }
 
         onReport (ec, size);
@@ -193,10 +196,12 @@ protected:
      * @param data buffer holding the data received.
      * @param size number of bytes read.
      * @param from endpoint the datagram was received from.
+     * @param control control messages received.
+     * @param controlSize size of the control messages.
      * @param more true if the read stays armed.
      */
     static void onReportMulti (const std::error_code& ec, const char* data, size_t size, const Icmp::Endpoint& from,
-                               bool more)
+                               [[maybe_unused]] const char* control, [[maybe_unused]] size_t controlSize, bool more)
     {
         ScopedLock<Mutex> lock (_mut);
 
@@ -296,22 +301,22 @@ TEST_F (IcmpAsyncSocket, move)
     ASSERT_TRUE (client2.opened ());
     ASSERT_FALSE (client1.opened ());
 
-    ASSERT_EQ (client1.asyncRead (_buf, sizeof (_buf), nullptr), -1);
+    ASSERT_EQ (client1.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.asyncWrite (_data, sizeof (_data), nullptr), -1);
+    ASSERT_EQ (client1.asyncWrite (nullptr, _data, sizeof (_data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
     ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
     client1.close ();
 
-    ASSERT_NE (client2.asyncRead (_buf, sizeof (_buf), onRead), -1) << join::lastError.message ();
+    ASSERT_NE (client2.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
 
     client3 = std::move (client2);
 
     ASSERT_TRUE (client3.opened ());
     ASSERT_FALSE (client2.opened ());
 
-    ASSERT_NE (client3.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client3.asyncWrite (nullptr, _data, sizeof (_data)), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
     ASSERT_FALSE (code ()) << code ().message ();
@@ -387,17 +392,17 @@ TEST_F (IcmpAsyncSocket, asyncWait)
 {
     Icmp::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncWait (true, false, nullptr), -1);
+    ASSERT_EQ (client.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
 
-    ASSERT_EQ (client.asyncWait (true, true, nullptr), -1);
+    ASSERT_EQ (client.asyncWait (nullptr, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.asyncWait (false, false, nullptr), -1);
+    ASSERT_EQ (client.asyncWait (nullptr, false, false), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    ASSERT_NE (client.asyncWait (false, true, onReportWait), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWait (onReportWait, false, true), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -408,8 +413,8 @@ TEST_F (IcmpAsyncSocket, asyncWait)
         ASSERT_FALSE (_more);
     }
 
-    ASSERT_NE (client.asyncWait (true, false, onReportWait), -1) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWait (onReportWait, true, false), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, _data, sizeof (_data)), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -427,10 +432,10 @@ TEST_F (IcmpAsyncSocket, asyncWait)
 #ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Icmp::AsyncSocket::_opCount; ++i)
     {
-        ASSERT_NE (client.asyncWait (true, false, nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
     }
 
-    ASSERT_EQ (client.asyncWait (true, false, nullptr), -1);
+    ASSERT_EQ (client.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
@@ -444,22 +449,22 @@ TEST_F (IcmpAsyncSocket, asyncWaitMulti)
 {
     Icmp::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncWaitMulti (true, false, nullptr), -1);
+    ASSERT_EQ (client.asyncWaitMulti (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
 
-    ASSERT_EQ (client.asyncWaitMulti (true, true, nullptr), -1);
+    ASSERT_EQ (client.asyncWaitMulti (nullptr, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (client.asyncWaitMulti (false, false, nullptr), -1);
+    ASSERT_EQ (client.asyncWaitMulti (nullptr, false, false), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    ssize_t index = client.asyncWaitMulti (true, false, onReportWait);
+    ssize_t index = client.asyncWaitMulti (onReportWait, true, false);
     ASSERT_NE (index, -1) << join::lastError.message ();
 
     for (int i = 1; i <= 2; ++i)
     {
-        ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncWrite (nullptr, _data, sizeof (_data)), -1) << join::lastError.message ();
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -529,7 +534,7 @@ TEST_F (IcmpAsyncSocket, asyncWriteTo)
     Icmp::Endpoint dest (_host);
 
     ASSERT_FALSE (client.opened ());
-    ASSERT_NE (client.asyncWriteTo (_data, sizeof (_data), dest, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWriteTo (onReport, _data, sizeof (_data), dest), -1) << join::lastError.message ();
     ASSERT_TRUE (client.opened ());
 
     Thread th ([&proactor] () {
@@ -558,14 +563,14 @@ TEST_F (IcmpAsyncSocket, asyncReadFrom)
 {
     Icmp::AsyncSocket client, server;
 
-    ASSERT_EQ (server.asyncReadFrom (_buf, sizeof (_buf), _from, nullptr), -1);
+    ASSERT_EQ (server.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (server.bind (_host), 0) << join::lastError.message ();
-    ASSERT_NE (server.asyncReadFrom (_buf, sizeof (_buf), _from, onReportFrom), -1) << join::lastError.message ();
+    ASSERT_NE (server.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, _data, sizeof (_data)), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -589,7 +594,7 @@ TEST_F (IcmpAsyncSocket, asyncReadFromMulti)
 {
     Icmp::AsyncSocket client, server;
 
-    ASSERT_EQ (server.asyncReadFromMulti (0, nullptr), -1);
+    ASSERT_EQ (server.asyncReadFromMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (server.bind (_host), 0) << join::lastError.message ();
@@ -597,14 +602,14 @@ TEST_F (IcmpAsyncSocket, asyncReadFromMulti)
     LocalMem::Allocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (server.registerBufferRing (0, arena), 0) << join::lastError.message ();
 
-    ssize_t index = server.asyncReadFromMulti (0, onReportMulti);
+    ssize_t index = server.asyncReadFromMulti (onReportMulti, 0);
     ASSERT_NE (index, -1) << join::lastError.message ();
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
 
     for (int i = 1; i <= 2; ++i)
     {
-        ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncWrite (nullptr, _data, sizeof (_data)), -1) << join::lastError.message ();
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -631,10 +636,10 @@ TEST_F (IcmpAsyncSocket, asyncReadFromMulti)
 #ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Icmp::AsyncSocket::_opCount; ++i)
     {
-        ASSERT_NE (server.asyncReadFromMulti (0, nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (server.asyncReadFromMulti (nullptr, 0), -1) << join::lastError.message ();
     }
 
-    ASSERT_EQ (server.asyncReadFromMulti (0, nullptr), -1);
+    ASSERT_EQ (server.asyncReadFromMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
@@ -651,11 +656,11 @@ TEST_F (IcmpAsyncSocket, asyncWrite)
 {
     Icmp::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncWrite (_data, sizeof (_data), nullptr), -1);
+    ASSERT_EQ (client.asyncWrite (nullptr, _data, sizeof (_data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (onReport, _data, sizeof (_data)), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -668,7 +673,7 @@ TEST_F (IcmpAsyncSocket, asyncWrite)
 
     ASSERT_EQ (::close (client.handle ()), 0);
 
-    ASSERT_NE (client.asyncWrite ("hello", 5, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (onReport, "hello", 5), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -693,7 +698,7 @@ TEST_F (IcmpAsyncSocket, asyncWriteFixed)
     char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
-    ASSERT_EQ (client.asyncWriteFixed (buf, sizeof (_data), 0, nullptr), -1);
+    ASSERT_EQ (client.asyncWriteFixed (nullptr, buf, sizeof (_data), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
@@ -702,7 +707,7 @@ TEST_F (IcmpAsyncSocket, asyncWriteFixed)
 
     ::memcpy (buf, _data, sizeof (_data));
 
-    ASSERT_NE (client.asyncWriteFixed (buf, sizeof (_data), 0, onReport), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWriteFixed (onReport, buf, sizeof (_data), 0), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -726,12 +731,12 @@ TEST_F (IcmpAsyncSocket, asyncRead)
 {
     Icmp::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncRead (_buf, sizeof (_buf), nullptr), -1);
+    ASSERT_EQ (client.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onReportRead), -1) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (onReportRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, _data, sizeof (_data)), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -744,7 +749,7 @@ TEST_F (IcmpAsyncSocket, asyncRead)
 
     ASSERT_EQ (::close (client.handle ()), 0);
 
-    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onReportRead), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (onReportRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -769,15 +774,15 @@ TEST_F (IcmpAsyncSocket, asyncReadFixed)
     char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
-    ASSERT_EQ (client.asyncReadFixed (buf, sizeof (_buf), 0, nullptr), -1);
+    ASSERT_EQ (client.asyncReadFixed (nullptr, buf, sizeof (_buf), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
 
-    ASSERT_NE (client.asyncReadFixed (buf, sizeof (_buf), 0, onReportRead), -1) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFixed (onReportRead, buf, sizeof (_buf), 0), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, _data, sizeof (_data)), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -806,9 +811,9 @@ TEST_F (IcmpAsyncSocket, resubmit)
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
 
-    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onRead), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
 
-    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, _data, sizeof (_data)), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
     ASSERT_FALSE (code ()) << code ().message ();
@@ -831,7 +836,7 @@ TEST_F (IcmpAsyncSocket, closeFromWriteHandler)
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
 
-    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), onWriteAndClose), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (onWriteAndClose, _data, sizeof (_data)), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
     ASSERT_FALSE (code ()) << code ().message ();
@@ -849,8 +854,8 @@ TEST_F (IcmpAsyncSocket, truncated)
     char small[sizeof (struct icmphdr) / 2] = {};
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncRead (small, sizeof (small), onReportRead), -1) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite (_data, sizeof (_data), nullptr), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (onReportRead, small, sizeof (small)), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, _data, sizeof (_data)), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
     ASSERT_EQ (code (), Errc::MessageTooLong) << code ().message ();
@@ -872,7 +877,7 @@ TEST_F (IcmpAsyncSocket, cancel)
 
         ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
 
-        ssize_t index = client.asyncWait (true, false, onReportWait);
+        ssize_t index = client.asyncWait (onReportWait, true, false);
         ASSERT_NE (index, -1) << join::lastError.message ();
 
         ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
@@ -902,7 +907,7 @@ TEST_F (IcmpAsyncSocket, cancel)
 
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
         ASSERT_EQ (client.bind (_host), 0) << join::lastError.message ();
-        ASSERT_NE (client.asyncReadFrom (_buf, sizeof (_buf), _from, onReportFrom), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
 
         {

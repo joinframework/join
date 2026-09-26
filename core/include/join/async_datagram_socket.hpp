@@ -125,16 +125,19 @@ namespace join
 
         /**
          * @brief start an asynchronous read, reporting the endpoint the data are coming from.
+         * @param handler handler invoked on completion.
          * @param data buffer used to store the data received, valid until the handler is invoked.
          * @param maxSize maximum number of bytes to read.
          * @param endpoint endpoint from where data are coming, valid until the handler is invoked.
-         * @param handler handler invoked on completion.
+         * @param control buffer used to store the control messages received, valid until the handler is invoked.
+         * @param controlSize size of the control buffer, zero to receive no control message.
          * @param flush flush the submission queue.
          * @param link link this operation to the next one submitted.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncReadFrom (char* data, size_t maxSize, Endpoint& endpoint, ReadFromHandler handler,
-                               bool flush = true, bool link = false) noexcept
+        ssize_t asyncReadFrom (ReadFromHandler handler, char* data, size_t maxSize, Endpoint& endpoint,
+                               char* control = nullptr, size_t controlSize = 0, bool flush = true,
+                               bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
@@ -156,8 +159,8 @@ namespace join
             read->msg.msg_namelen = sizeof (struct sockaddr_storage);
             read->msg.msg_iov = &read->iov;
             read->msg.msg_iovlen = 1;
-            read->msg.msg_control = nullptr;
-            read->msg.msg_controllen = 0;
+            read->msg.msg_control = control;
+            read->msg.msg_controllen = controlSize;
             read->msg.msg_flags = 0;
             read->op = IoOperation::makeRecvmsg (this->_socket.handle (), &read->msg, 0, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
@@ -177,12 +180,14 @@ namespace join
 
         /**
          * @brief start an asynchronous multishot read, reporting the endpoint the data are coming from.
+         * @param handler handler invoked on completion.
          * @param group provided buffer group to receive into, registered on the proactor.
-         * @param handler handler invoked on each completion, buffer and endpoint valid during the call only.
+         * @param controlSize room reserved in each buffer for the control messages, zero to receive none.
          * @param flush flush the submission queue.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncReadFromMulti (uint16_t group, ReadFromHandler handler, bool flush = true) noexcept
+        ssize_t asyncReadFromMulti (ReadFromHandler handler, uint16_t group, size_t controlSize = 0,
+                                    bool flush = true) noexcept
         {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
@@ -203,7 +208,7 @@ namespace join
             read->msg.msg_iov = &read->iov;
             read->msg.msg_iovlen = 1;
             read->msg.msg_control = nullptr;
-            read->msg.msg_controllen = 0;
+            read->msg.msg_controllen = controlSize;
             read->msg.msg_flags = 0;
             read->op = IoOperation::makeRecvmsgMulti (this->_socket.handle (), group, &read->msg, 0, this);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
@@ -223,16 +228,19 @@ namespace join
 
         /**
          * @brief start an asynchronous write to the given endpoint.
+         * @param handler handler invoked on completion.
          * @param data data buffer to send, valid until the handler is invoked.
          * @param size number of bytes to write.
          * @param endpoint endpoint where to write the data, valid until the handler is invoked.
-         * @param handler handler invoked on completion.
+         * @param control control messages to send, valid until the handler is invoked.
+         * @param controlSize size of the control messages, zero to send none.
          * @param flush flush the submission queue.
          * @param link link this operation to the next one submitted.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncWriteTo (const char* data, size_t size, Endpoint& endpoint, WriteHandler handler,
-                              bool flush = true, bool link = false) noexcept
+        ssize_t asyncWriteTo (WriteHandler handler, const char* data, size_t size, Endpoint& endpoint,
+                              const char* control = nullptr, size_t controlSize = 0, bool flush = true,
+                              bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!this->_arena.hasBackend ()))
             {
@@ -259,8 +267,8 @@ namespace join
             write->msg.msg_namelen = endpoint.length ();
             write->msg.msg_iov = &write->iov;
             write->msg.msg_iovlen = 1;
-            write->msg.msg_control = nullptr;
-            write->msg.msg_controllen = 0;
+            write->msg.msg_control = const_cast<char*> (control);
+            write->msg.msg_controllen = controlSize;
             write->msg.msg_flags = 0;
             write->op = IoOperation::makeSendmsg (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);

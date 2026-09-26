@@ -111,3 +111,18 @@ add_executable(dhcp.gtest dhcp_test.cpp)
 target_link_libraries(dhcp.gtest ${JOIN_FABRIC} GTest::gtest_main)
 add_test(NAME dhcp.gtest COMMAND dhcp.gtest)
 install(TARGETS dhcp.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(ndp_protocol.gtest ndp_protocol_test.cpp)
+target_link_libraries(ndp_protocol.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME ndp_protocol.gtest COMMAND ndp_protocol.gtest)
+install(TARGETS ndp_protocol.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(ndp_message.gtest ndp_message_test.cpp)
+target_link_libraries(ndp_message.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME ndp_message.gtest COMMAND ndp_message.gtest)
+install(TARGETS ndp_message.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(ndp.gtest ndp_test.cpp)
+target_link_libraries(ndp.gtest ${JOIN_FABRIC} GTest::gtest_main)
+add_test(NAME ndp.gtest COMMAND ndp.gtest)
+install(TARGETS ndp.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)

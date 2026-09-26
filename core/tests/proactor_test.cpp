@@ -845,6 +845,9 @@ TEST_F (ProactorTest, registerBufferRing)
     ASSERT_EQ (proactor.registerBufferRing (0, arena), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
+    ASSERT_EQ (proactor.registerBufferRing (arena), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
     ASSERT_EQ (proactor.unregisterBufferRing (0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
@@ -868,6 +871,16 @@ TEST_F (ProactorTest, registerBufferRing)
 
     ASSERT_EQ (proactor.registerBufferRing (1, arena), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
+
+    LocalMem::Allocator<4, 256> first, second;
+
+    ASSERT_EQ (proactor.registerBufferRing (0, first), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.registerBufferRing (second), 1) << join::lastError.message ();
+    ASSERT_EQ (proactor.registerBufferRing (arena), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (proactor.unregisterBufferRing (0), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.unregisterBufferRing (1), 0) << join::lastError.message ();
 
     proactor.stop ();
     th.join ();

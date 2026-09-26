@@ -208,13 +208,13 @@ namespace join
 
         /**
          * @brief start an asynchronous wait for the socket to become ready in one direction.
+         * @param handler handler invoked on completion.
          * @param wantRead wait until the socket is readable.
          * @param wantWrite wait until the socket is writable.
-         * @param handler handler invoked on completion.
          * @param flush flush the submission queue.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncWait (bool wantRead, bool wantWrite, WaitHandler handler, bool flush = true) noexcept
+        ssize_t asyncWait (WaitHandler handler, bool wantRead, bool wantWrite, bool flush = true) noexcept
         {
             if (JOIN_UNLIKELY (!_socket.opened ()))
             {
@@ -254,13 +254,13 @@ namespace join
 
         /**
          * @brief start an asynchronous multishot wait, staying armed until cancelled or failed.
+         * @param handler handler invoked on completion.
          * @param wantRead wait until the socket is readable.
          * @param wantWrite wait until the socket is writable.
-         * @param handler handler invoked on each completion, it must drain the socket or be invoked again at once.
          * @param flush flush the submission queue.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncWaitMulti (bool wantRead, bool wantWrite, WaitHandler handler, bool flush = true) noexcept
+        ssize_t asyncWaitMulti (WaitHandler handler, bool wantRead, bool wantWrite, bool flush = true) noexcept
         {
             if (JOIN_UNLIKELY (!_socket.opened ()))
             {

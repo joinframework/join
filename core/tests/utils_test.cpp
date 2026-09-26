@@ -175,6 +175,28 @@ TEST (Utils, getline)
 }
 
 /**
+ * @brief Test extract.
+ */
+TEST (Utils, extract)
+{
+    std::stringstream stream;
+    char data[4] = {};
+
+    stream.clear ();
+    stream.str ("abc");
+    ASSERT_FALSE (join::extract (stream, data, sizeof (data)));
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
+
+    stream.clear ();
+    stream.str ("abcdef");
+    ASSERT_TRUE (join::extract (stream, data, sizeof (data)));
+    ASSERT_EQ (std::string (data, sizeof (data)), "abcd");
+    ASSERT_TRUE (join::extract (stream, data, 2));
+    ASSERT_EQ (std::string (data, 2), "ef");
+    ASSERT_FALSE (join::extract (stream, data, 1));
+}
+
+/**
  * @brief Test checksum.
  */
 TEST (Utils, checksum)

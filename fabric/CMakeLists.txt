@@ -22,6 +22,9 @@ set(PUBLIC_HEADERS
     include/join/dhcp_protocol.hpp
     include/join/dhcp_message.hpp
     include/join/dhcp.hpp
+    include/join/ndp_protocol.hpp
+    include/join/ndp_message.hpp
+    include/join/ndp.hpp
 )
 
 set(SOURCES
