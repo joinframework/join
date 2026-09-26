@@ -256,6 +256,66 @@ int join::BasicProactor<Policy>::registerBufferRing (uint16_t group, LocalMem::A
 
 // =========================================================================
 //   CLASS     : BasicProactor
+//   METHOD    : registerBufferRing
+// =========================================================================
+template <typename Policy>
+template <size_t Count, size_t Size>
+int join::BasicProactor<Policy>::registerBufferRing (LocalMem::Allocator<Count, Size>& arena)
+{
+    int result = 0;
+    std::error_code errc;
+
+    InvokeHandler fn = [this, &arena, &result, &errc] () {
+        uint32_t group = 0;
+
+        while ((group <= UINT16_MAX) && _bufferRings.count (static_cast<uint16_t> (group)))
+        {
+            ++group;
+        }
+
+        if (JOIN_UNLIKELY (group > UINT16_MAX))
+        {
+            // LCOV_EXCL_START
+            lastError = make_error_code (Errc::OutOfMemory);
+            errc = lastError;
+            result = -1;
+            return;
+            // LCOV_EXCL_STOP
+        }
+
+        auto it = _bufferRings.emplace (static_cast<uint16_t> (group), &_ring).first;
+        if (JOIN_UNLIKELY (it->second.registerBuffer (static_cast<uint16_t> (group), arena) == -1))
+        {
+            errc = lastError;
+            _bufferRings.erase (it);
+            result = -1;
+            return;
+        }
+
+        result = static_cast<int> (group);
+    };
+
+    if (JOIN_UNLIKELY (!isRunning ()))
+    {
+        lastError = make_error_code (Errc::OperationFailed);
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY (invoke (&fn) == -1))
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
+
+    if (JOIN_UNLIKELY (result == -1))
+    {
+        lastError = errc;
+    }
+
+    return result;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
 //   METHOD    : unregisterBufferRing
 // =========================================================================
 template <typename Policy>
