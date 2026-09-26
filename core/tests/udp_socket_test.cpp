@@ -411,6 +411,13 @@ TEST_F (UdpSocket, control)
     ASSERT_GT (ttlOf (in, inSize), 0);
     ASSERT_NE (ttlOf (in, inSize), 42);
 
+    inSize = sizeof (struct cmsghdr);
+
+    ASSERT_EQ (sender.writeTo ("hello", 5, receiver.localEndpoint ()), 5) << join::lastError.message ();
+    ASSERT_TRUE (receiver.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (receiver.readFrom (data, sizeof (data), &from, in, &inSize), -1);
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
+
     receiver.close ();
     sender.close ();
 }

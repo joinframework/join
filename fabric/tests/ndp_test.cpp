@@ -470,6 +470,12 @@ TEST_F (NdpTest, jumbo)
     ASSERT_GT (wireOf (huge).size (), size_t (_mtu));
     ASSERT_EQ (_server.advertise (huge), -1);
     ASSERT_EQ (lastError, std::errc::message_size) << lastError.message ();
+
+    RouterAdvertisement oversized = settings ();
+    oversized.prefixes.assign (2100, oversized.prefixes[0]);
+    ASSERT_GT (wireOf (oversized).size (), size_t (Ndp::maxMsgSize));
+    ASSERT_EQ (_server.advertise (oversized), -1);
+    ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 }
 
 /**

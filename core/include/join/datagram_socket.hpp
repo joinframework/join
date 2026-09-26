@@ -276,7 +276,7 @@ namespace join
                 return -1;
             }
 
-            if (message.msg_flags & MSG_TRUNC)
+            if (message.msg_flags & (MSG_TRUNC | MSG_CTRUNC))
             {
                 lastError = make_error_code (Errc::MessageTooLong);
                 return -1;

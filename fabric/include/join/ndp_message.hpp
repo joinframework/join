@@ -401,9 +401,16 @@ namespace join
          */
         struct __attribute__ ((packed)) RdnssHeader
         {
+            /// option type.
             uint8_t type;
+
+            /// option length in units of 8 octets.
             uint8_t len;
+
+            /// reserved.
             uint16_t reserved;
+
+            /// time in seconds the servers may be used for.
             uint32_t lifetime;
         };
 

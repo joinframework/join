@@ -253,10 +253,8 @@ namespace join
 
             if (size > Protocol::maxMsgSize)
             {
-                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::MessageTooLong);
                 return -1;
-                // LCOV_EXCL_STOP
             }
 
             Endpoint endpoint (IpAddress (destination.addr (), destination.length (), _index));

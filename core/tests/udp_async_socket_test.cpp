@@ -906,6 +906,19 @@ TEST_F (UdpAsyncSocket, control)
         ASSERT_EQ (_ttl, 42);
     }
 
+    ASSERT_NE (receiver.asyncReadFrom (onReportControl, _buf, sizeof (_buf), _from, in, sizeof (struct cmsghdr)), -1)
+        << join::lastError.message ();
+    ASSERT_NE (sender.asyncWriteTo (nullptr, "hello", 5, dest, out, ttlControl (out, 42)), -1)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, Errc::MessageTooLong);
+    }
+
     LocalMem::Allocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (receiver.registerBufferRing (1, arena), 0) << join::lastError.message ();
 
@@ -918,7 +931,7 @@ TEST_F (UdpAsyncSocket, control)
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 2;
+            return _completions >= 3;
         }));
         ASSERT_FALSE (_code) << _code.message ();
         ASSERT_EQ (_transferred, 5u);
@@ -930,7 +943,7 @@ TEST_F (UdpAsyncSocket, control)
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 3;
+            return _completions >= 4;
         }));
         ASSERT_EQ (_code, std::errc::operation_canceled);
     }

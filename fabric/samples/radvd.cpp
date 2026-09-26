@@ -30,6 +30,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <iostream>
+#include <random>
 
 // C.
 #include <unistd.h>
@@ -60,7 +61,7 @@ void usage ()
     std::cout << "usage: radvd [options] device\n";
     std::cout << "\n";
     std::cout << "  -h          display this help and exit\n";
-    std::cout << "  -i seconds  interval between two unsolicited advertisements (default: 200)\n";
+    std::cout << "  -i seconds  maximum interval between two unsolicited advertisements, 4 to 1800 (default: 200)\n";
     std::cout << "  -l seconds  router lifetime to advertise, 0 or interval to 9000 (default: 3 x interval)\n";
     std::cout << "  -M          advertise that addresses are available through DHCPv6\n";
     std::cout << "  -m mtu      link MTU to advertise\n";
@@ -133,7 +134,7 @@ int main (int argc, char* argv[])
             }
         }
 
-        if ((optind >= argc) || (interval <= 0))
+        if ((optind >= argc) || (interval < 4) || (interval > 1800))
         {
             usage ();
             return 1;
@@ -170,7 +171,9 @@ int main (int argc, char* argv[])
             server.advertise (advert, solicitation.src.isWildcard () ? IpAddress::ipv6AllNodes : solicitation.src);
         });
 
-        struct timespec timeout = {interval, 0};
+        std::mt19937 rng (std::random_device{}());
+        std::uniform_int_distribution<long> delay (interval * ((interval >= 9) ? 330L : 750L), interval * 1000L);
+        struct timespec timeout = {};
 
         do
         {
@@ -178,6 +181,9 @@ int main (int argc, char* argv[])
             {
                 throw std::system_error (lastError);
             }
+
+            long ms = delay (rng);
+            timeout = {ms / 1000, (ms % 1000) * 1000000};
         }
         while (sigtimedwait (&signals, nullptr, &timeout) == -1);
 

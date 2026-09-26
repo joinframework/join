@@ -502,7 +502,7 @@ namespace join
                     result = make_error_code (Errc::ConnectionClosed);
                 }
             }
-            else if (JOIN_UNLIKELY (!result && (read->msg.msg_flags & MSG_TRUNC)))
+            else if (JOIN_UNLIKELY (!result && (read->msg.msg_flags & (MSG_TRUNC | MSG_CTRUNC))))
             {
                 result = make_error_code (Errc::MessageTooLong);
             }
