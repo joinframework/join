@@ -311,7 +311,9 @@ namespace join
                 return -1;
             }
 
-            return cancelOp (_ops[index].load (std::memory_order_acquire));
+            IoOperation* op = _ops[index].load (std::memory_order_acquire);
+
+            return (op != nullptr) ? cancelOp (*op) : 0;
         }
 
 #ifdef JOIN_HAS_IO_URING
@@ -496,7 +498,7 @@ namespace join
 
             if (wait->op.more)
             {
-                cancelOp (&wait->op);
+                cancelOp (wait->op);
             }
             else
             {
@@ -551,7 +553,11 @@ namespace join
         {
             for (auto& slot : _ops)
             {
-                _proactor->suspend (slot.load (std::memory_order_acquire));
+                IoOperation* op = slot.load (std::memory_order_acquire);
+                if (op != nullptr)
+                {
+                    _proactor->suspend (*op);
+                }
             }
         }
 
@@ -562,7 +568,11 @@ namespace join
         {
             for (auto& slot : _ops)
             {
-                _proactor->resume (slot.load (std::memory_order_acquire), this);
+                IoOperation* op = slot.load (std::memory_order_acquire);
+                if (op != nullptr)
+                {
+                    _proactor->resume (*op, *this);
+                }
             }
         }
 
@@ -573,7 +583,11 @@ namespace join
         {
             for (auto& slot : _ops)
             {
-                cancelOp (slot.load (std::memory_order_acquire));
+                IoOperation* op = slot.load (std::memory_order_acquire);
+                if (op != nullptr)
+                {
+                    cancelOp (*op);
+                }
             }
         }
 
@@ -609,14 +623,14 @@ namespace join
          * @param op operation to cancel.
          * @return 0 on success, -1 on failure.
          */
-        int cancelOp (IoOperation* op) noexcept
+        int cancelOp (IoOperation& op) noexcept
         {
-            if ((op == nullptr) || !inFlight (*op))
+            if (!inFlight (op))
             {
                 return 0;
             }
 
-            if (_proactor->cancel (*op, true, true) == -1)
+            if (_proactor->cancel (op, true, true) == -1)
             {
                 return (lastError == Errc::OperationFailed) ? 0 : -1;
             }

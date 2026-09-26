@@ -602,7 +602,7 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
             if (JOIN_UNLIKELY ((err == -1) && (cmd.done == nullptr) &&
                                (cmd.op->state.load (std::memory_order_relaxed) == IoOperation::State::Idle)))
             {
-                dispatchOperation (cmd.op, -lastError.default_error_condition ().value (), false);
+                dispatchOperation (*cmd.op, -lastError.default_error_condition ().value (), false);
             }
             break;
 
@@ -802,7 +802,7 @@ void join::BasicProactor<Policy>::endOperation (IoOperation& op, int result, boo
         _pendingOps.pop_back ();
     }
 
-    dispatchOperation (&op, result, cancelled);
+    dispatchOperation (op, result, cancelled);
 }
 
 // =========================================================================
