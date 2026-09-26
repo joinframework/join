@@ -746,6 +746,16 @@ TEST_F (UdpAsyncSocket, asyncWriteTo)
     ASSERT_NE (client.asyncWriteTo (onReport, "hello", 5, dest), -1) << join::lastError.message ();
     ASSERT_TRUE (client.opened ());
 
+#ifdef JOIN_HAS_IO_URING
+    for (size_t i = 1; i < Udp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (client.asyncWriteTo (nullptr, "hello", 5, dest), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (client.asyncWriteTo (nullptr, "hello", 5, dest), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+#endif
+
     Thread th ([&proactor] () {
         proactor.run ();
     });
@@ -758,16 +768,6 @@ TEST_F (UdpAsyncSocket, asyncWriteTo)
         ASSERT_FALSE (_code) << _code.message ();
         ASSERT_EQ (_transferred, 5u);
     }
-
-#ifdef JOIN_HAS_IO_URING
-    for (size_t i = 0; i < Udp::AsyncSocket::_opCount; ++i)
-    {
-        ASSERT_NE (client.asyncWriteTo (nullptr, "hello", 5, dest), -1) << join::lastError.message ();
-    }
-
-    ASSERT_EQ (client.asyncWriteTo (nullptr, "hello", 5, dest), -1);
-    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     client.close ();
 
