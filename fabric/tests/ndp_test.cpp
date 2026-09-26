@@ -485,6 +485,7 @@ TEST_F (NdpTest, drop)
     });
 
     inject (wireOf (settings ()), IpAddress::ipv6AllNodes, 64);
+    inject (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00", 8), IpAddress::ipv6Routers, 64);
 
     inject (wireOf (settings ()), IpAddress::ipv6AllNodes, Ndp::hopLimit, _global);
 

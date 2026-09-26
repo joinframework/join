@@ -95,20 +95,23 @@ namespace join
 
             if (::setsockopt (_socket.handle (), IPPROTO_IPV6, IPV6_MULTICAST_IF, &_index, sizeof (_index)) == -1)
             {
-                throw std::system_error (errno, std::generic_category (),
-                                         "ndp multicast setup failed");  // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
+                throw std::system_error (errno, std::generic_category (), "ndp multicast setup failed");
+                // LCOV_EXCL_STOP
             }
 
             if (::setsockopt (_socket.handle (), IPPROTO_IPV6, IPV6_RECVHOPLIMIT, &on, sizeof (on)) == -1)
             {
-                throw std::system_error (errno, std::generic_category (),
-                                         "ndp hop limit setup failed");  // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
+                throw std::system_error (errno, std::generic_category (), "ndp hop limit setup failed");
+                // LCOV_EXCL_STOP
             }
 
             if (::setsockopt (_socket.handle (), IPPROTO_IPV6, IPV6_DONTFRAG, &on, sizeof (on)) == -1)
             {
-                throw std::system_error (errno, std::generic_category (),
-                                         "ndp dontfrag setup failed");  // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
+                throw std::system_error (errno, std::generic_category (), "ndp dontfrag setup failed");
+                // LCOV_EXCL_STOP
             }
 
             struct icmp6_filter filter;
@@ -117,8 +120,9 @@ namespace join
 
             if (::setsockopt (_socket.handle (), IPPROTO_ICMPV6, ICMP6_FILTER, &filter, sizeof (filter)) == -1)
             {
-                throw std::system_error (errno, std::generic_category (),
-                                         "ndp icmp6 filter setup failed");  // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
+                throw std::system_error (errno, std::generic_category (), "ndp icmp6 filter setup failed");
+                // LCOV_EXCL_STOP
             }
 
             if (!group.isWildcard ())
@@ -129,8 +133,9 @@ namespace join
 
                 if (::setsockopt (_socket.handle (), IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, &mreq, sizeof (mreq)) == -1)
                 {
-                    throw std::system_error (errno, std::generic_category (),
-                                             "ndp multicast membership setup failed");  // LCOV_EXCL_LINE
+                    // LCOV_EXCL_START
+                    throw std::system_error (errno, std::generic_category (), "ndp multicast membership setup failed");
+                    // LCOV_EXCL_STOP
                 }
             }
         }
