@@ -92,8 +92,10 @@ namespace join
         /// handler invoked on completion.
         using Read = Function<void (const std::error_code&, const char*, size_t, bool), 16>;
 
-        /// handler invoked on completion, reporting the endpoint the data are coming from.
-        using ReadFrom = Function<void (const std::error_code&, const char*, size_t, const Endpoint&, bool), 16>;
+        /// handler invoked on completion, reporting the endpoint the data are coming from and the control messages.
+        using ReadFrom =
+            Function<void (const std::error_code&, const char*, size_t, const Endpoint&, const char*, size_t, bool),
+                     16>;
 
         /// operation submitted to the proactor.
         IoOperation op = {};

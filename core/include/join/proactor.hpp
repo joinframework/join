@@ -285,6 +285,15 @@ public:
     int registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena);
 
     /**
+     * @brief register a provided buffer ring under the lowest free group id.
+     * @param arena arena owning the buffers, reserved until the ring is unregistered, must outlive the proactor.
+     * @return group id on success, -1 on failure.
+     * @throw std::system_error if the descriptor ring cannot be mapped.
+     */
+    template <size_t Count, size_t Size>
+    int registerBufferRing (LocalMem::Allocator<Count, Size>& arena);
+
+    /**
      * @brief unregister a provided buffer ring.
      * @param group buffer group id.
      * @return 0 on success, -1 on failure.

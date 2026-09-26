@@ -137,7 +137,7 @@ protected:
         if (!ec && (_rearms > 0))
         {
             --_rearms;
-            _current->asyncRead (_buf, sizeof (_buf), onRead);
+            _current->asyncRead (onRead, _buf, sizeof (_buf));
         }
 
         onCompletion (ec, size);
@@ -151,7 +151,7 @@ protected:
         if (!ec && (_rearms > 0))
         {
             --_rearms;
-            _current->asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), onWrite);
+            _current->asyncWrite (onWrite, reinterpret_cast<char*> (&_packet), sizeof (_packet));
         }
 
         onCompletion (ec, size);
@@ -304,22 +304,22 @@ TEST_F (RawAsyncSocket, move)
     ASSERT_TRUE (client2.opened ());
     ASSERT_FALSE (client1.opened ());
 
-    ASSERT_EQ (client1.asyncRead (_buf, sizeof (_buf), nullptr), -1);
+    ASSERT_EQ (client1.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1);
+    ASSERT_EQ (client1.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
     ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
     ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
     client1.close ();
 
-    ASSERT_NE (client2.asyncRead (_buf, sizeof (_buf), onRead), -1) << join::lastError.message ();
+    ASSERT_NE (client2.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
 
     client3 = std::move (client2);
 
     ASSERT_TRUE (client3.opened ());
     ASSERT_FALSE (client2.opened ());
 
-    ASSERT_NE (client3.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+    ASSERT_NE (client3.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
@@ -387,17 +387,17 @@ TEST_F (RawAsyncSocket, asyncWait)
 {
     Raw::AsyncSocket rawSocket;
 
-    ASSERT_EQ (rawSocket.asyncWait (true, false, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
 
-    ASSERT_EQ (rawSocket.asyncWait (true, true, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncWait (nullptr, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (rawSocket.asyncWait (false, false, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncWait (nullptr, false, false), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    ASSERT_NE (rawSocket.asyncWait (false, true, onReportWait), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncWait (onReportWait, false, true), -1) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -408,8 +408,8 @@ TEST_F (RawAsyncSocket, asyncWait)
         ASSERT_FALSE (_more);
     }
 
-    ASSERT_NE (rawSocket.asyncWait (true, false, onReportWait), -1) << join::lastError.message ();
-    ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+    ASSERT_NE (rawSocket.asyncWait (onReportWait, true, false), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     {
@@ -428,10 +428,10 @@ TEST_F (RawAsyncSocket, asyncWait)
 #ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Raw::AsyncSocket::_opCount; ++i)
     {
-        ASSERT_NE (rawSocket.asyncWait (true, false, nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (rawSocket.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
     }
 
-    ASSERT_EQ (rawSocket.asyncWait (true, false, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
@@ -445,22 +445,22 @@ TEST_F (RawAsyncSocket, asyncWaitMulti)
 {
     Raw::AsyncSocket rawSocket;
 
-    ASSERT_EQ (rawSocket.asyncWaitMulti (true, false, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncWaitMulti (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
 
-    ASSERT_EQ (rawSocket.asyncWaitMulti (true, true, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncWaitMulti (nullptr, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    ASSERT_EQ (rawSocket.asyncWaitMulti (false, false, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncWaitMulti (nullptr, false, false), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    ssize_t index = rawSocket.asyncWaitMulti (true, false, onReportWait);
+    ssize_t index = rawSocket.asyncWaitMulti (onReportWait, true, false);
     ASSERT_NE (index, -1) << join::lastError.message ();
 
     for (int i = 1; i <= 2; ++i)
     {
-        ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+        ASSERT_NE (rawSocket.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
             << join::lastError.message ();
 
         {
@@ -497,7 +497,7 @@ TEST_F (RawAsyncSocket, asyncReadMulti)
 {
     Raw::AsyncSocket rawSocket;
 
-    ASSERT_EQ (rawSocket.asyncReadMulti (0, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncReadMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
@@ -505,12 +505,12 @@ TEST_F (RawAsyncSocket, asyncReadMulti)
     LocalMem::Allocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (rawSocket.registerBufferRing (0, arena), 0) << join::lastError.message ();
 
-    ssize_t index = rawSocket.asyncReadMulti (0, onReportMulti);
+    ssize_t index = rawSocket.asyncReadMulti (onReportMulti, 0);
     ASSERT_NE (index, -1) << join::lastError.message ();
 
     for (int i = 1; i <= 2; ++i)
     {
-        ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+        ASSERT_NE (rawSocket.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
             << join::lastError.message ();
 
         ASSERT_TRUE (wait (i));
@@ -528,10 +528,10 @@ TEST_F (RawAsyncSocket, asyncReadMulti)
 #ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Raw::AsyncSocket::_opCount; ++i)
     {
-        ASSERT_NE (rawSocket.asyncReadMulti (0, nullptr), -1) << join::lastError.message ();
+        ASSERT_NE (rawSocket.asyncReadMulti (nullptr, 0), -1) << join::lastError.message ();
     }
 
-    ASSERT_EQ (rawSocket.asyncReadMulti (0, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncReadMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
 
@@ -565,11 +565,11 @@ TEST_F (RawAsyncSocket, asyncWrite)
 {
     Raw::AsyncSocket rawSocket;
 
-    ASSERT_EQ (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), onCompletion), -1)
+    ASSERT_NE (rawSocket.asyncWrite (onCompletion, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
@@ -591,7 +591,7 @@ TEST_F (RawAsyncSocket, asyncWriteFixed)
     char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
-    ASSERT_EQ (rawSocket.asyncWriteFixed (buf, sizeof (_packet), 0, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncWriteFixed (nullptr, buf, sizeof (_packet), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (rawSocket.registerFixedBuffers (arena), 0) << join::lastError.message ();
@@ -600,7 +600,7 @@ TEST_F (RawAsyncSocket, asyncWriteFixed)
 
     ::memcpy (buf, &_packet, sizeof (_packet));
 
-    ASSERT_NE (rawSocket.asyncWriteFixed (buf, sizeof (_packet), 0, onCompletion), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncWriteFixed (onCompletion, buf, sizeof (_packet), 0), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
     ASSERT_FALSE (code ()) << code ().message ();
@@ -619,13 +619,13 @@ TEST_F (RawAsyncSocket, asyncRead)
 {
     Raw::AsyncSocket rawSocket;
 
-    ASSERT_EQ (rawSocket.asyncRead (_buf, sizeof (_buf), nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onReadCompletion), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncRead (onReadCompletion, _buf, sizeof (_buf)), -1) << join::lastError.message ();
 
-    ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+    ASSERT_NE (rawSocket.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
@@ -633,8 +633,8 @@ TEST_F (RawAsyncSocket, asyncRead)
     ASSERT_GT (_transferred, 0u);
 
     // a message larger than the buffer must be reported as truncated.
-    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_packet) / 2, onReadCompletion), -1) << join::lastError.message ();
-    ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+    ASSERT_NE (rawSocket.asyncRead (onReadCompletion, _buf, sizeof (_packet) / 2), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (2));
@@ -643,7 +643,7 @@ TEST_F (RawAsyncSocket, asyncRead)
 
     ASSERT_EQ (::close (rawSocket.handle ()), 0);
 
-    ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onReadCompletion), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncRead (onReadCompletion, _buf, sizeof (_buf)), -1) << join::lastError.message ();
 
     ASSERT_TRUE (wait (3));
     ASSERT_EQ (code (), std::errc::bad_file_descriptor) << code ().message ();
@@ -663,15 +663,15 @@ TEST_F (RawAsyncSocket, asyncReadFixed)
     char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
-    ASSERT_EQ (rawSocket.asyncReadFixed (buf, sizeof (_buf), 0, nullptr), -1);
+    ASSERT_EQ (rawSocket.asyncReadFixed (nullptr, buf, sizeof (_buf), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (rawSocket.registerFixedBuffers (arena), 0) << join::lastError.message ();
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
 
-    ASSERT_NE (rawSocket.asyncReadFixed (buf, sizeof (_buf), 0, onReadCompletion), -1) << join::lastError.message ();
-    ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+    ASSERT_NE (rawSocket.asyncReadFixed (onReadCompletion, buf, sizeof (_buf), 0), -1) << join::lastError.message ();
+    ASSERT_NE (rawSocket.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
@@ -695,21 +695,21 @@ TEST_F (RawAsyncSocket, resubmit)
     _rearms = 1;
 
     ASSERT_EQ (client.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncRead (_buf, sizeof (_buf), onRead), -1) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+    ASSERT_NE (client.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
     ASSERT_FALSE (code ()) << code ().message ();
 
-    ASSERT_NE (client.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+    ASSERT_NE (client.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (2));
     ASSERT_FALSE (code ()) << code ().message ();
 
     _rearms = 1;
-    ASSERT_NE (client.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), onWrite), -1)
+    ASSERT_NE (client.asyncWrite (onWrite, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (4));
@@ -729,7 +729,7 @@ TEST_F (RawAsyncSocket, closeFromWriteHandler)
     _current = &client;
 
     ASSERT_EQ (client.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), onWriteAndClose), -1)
+    ASSERT_NE (client.asyncWrite (onWriteAndClose, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
@@ -748,8 +748,8 @@ TEST_F (RawAsyncSocket, truncated)
     char small[sizeof (_packet) / 2] = {};
 
     ASSERT_EQ (client.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncRead (small, sizeof (small), onReadCompletion), -1) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), nullptr), -1)
+    ASSERT_NE (client.asyncRead (onReadCompletion, small, sizeof (small)), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));
@@ -772,7 +772,7 @@ TEST_F (RawAsyncSocket, cancel)
 
         ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
 
-        ssize_t index = rawSocket.asyncWait (true, false, onReportWait);
+        ssize_t index = rawSocket.asyncWait (onReportWait, true, false);
         ASSERT_NE (index, -1) << join::lastError.message ();
 
         ASSERT_EQ (rawSocket.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
@@ -803,7 +803,7 @@ TEST_F (RawAsyncSocket, cancel)
         ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
 
         ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-        ASSERT_NE (rawSocket.asyncRead (_buf, sizeof (_buf), onReadCompletion), -1) << join::lastError.message ();
+        ASSERT_NE (rawSocket.asyncRead (onReadCompletion, _buf, sizeof (_buf)), -1) << join::lastError.message ();
         ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
 
         ASSERT_TRUE (wait (1));
@@ -881,7 +881,7 @@ TEST_F (RawAsyncSocket, canRead)
 
     ASSERT_EQ (rawSocket.canRead (), -1);
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-    ASSERT_NE (rawSocket.asyncWrite (reinterpret_cast<char*> (&_packet), sizeof (_packet), onCompletion), -1)
+    ASSERT_NE (rawSocket.asyncWrite (onCompletion, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
         << join::lastError.message ();
 
     ASSERT_TRUE (wait (1));

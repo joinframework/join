@@ -349,6 +349,26 @@ namespace join
     }
 
     /**
+     * @brief read a fixed amount of bytes from a byte stream.
+     * @param data byte stream to read from.
+     * @param out buffer to read into.
+     * @param size number of bytes to read.
+     * @return true if every byte was read, false otherwise.
+     */
+    inline bool extract (std::istream& data, void* out, size_t size)
+    {
+        data.read (reinterpret_cast<char*> (out), size);
+
+        if (data.fail ())
+        {
+            join::lastError = make_error_code (Errc::MessageTooLong);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * @brief get standard 1s complement checksum.
      * @param data data pointer.
      * @param len data len.

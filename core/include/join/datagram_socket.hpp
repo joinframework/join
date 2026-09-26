@@ -248,9 +248,12 @@ namespace join
          * @param data buffer used to store the data received.
          * @param maxSize maximum number of bytes to read.
          * @param endpoint endpoint from where data are coming (optional).
+         * @param control buffer used to store the control messages received (optional).
+         * @param controlSize size of the control buffer on input, size of the control messages received on output.
          * @return The number of bytes received, -1 on failure.
          */
-        ssize_t readFrom (char* data, size_t maxSize, Endpoint* endpoint = nullptr) noexcept
+        ssize_t readFrom (char* data, size_t maxSize, Endpoint* endpoint = nullptr, char* control = nullptr,
+                          size_t* controlSize = nullptr) noexcept
         {
             struct sockaddr_storage sa;
 
@@ -263,8 +266,8 @@ namespace join
             message.msg_namelen = sizeof (struct sockaddr_storage);
             message.msg_iov = &iov;
             message.msg_iovlen = 1;
-            message.msg_control = nullptr;
-            message.msg_controllen = 0;
+            message.msg_control = control;
+            message.msg_controllen = controlSize ? *controlSize : 0;
 
             ssize_t size = ::recvmsg (this->_handle, &message, 0);
             if (size == -1)
@@ -284,24 +287,45 @@ namespace join
                 *endpoint = Endpoint (reinterpret_cast<struct sockaddr*> (&sa), message.msg_namelen);
             }
 
+            if (controlSize != nullptr)
+            {
+                *controlSize = message.msg_controllen;
+            }
+
             return size;
         }
 
         /**
          * @brief write data on the socket.
          * @param data data buffer to send.
-         * @param maxSize maximum number of bytes to write.
+         * @param size number of bytes to write.
          * @param endpoint endpoint where to write the data.
+         * @param control control messages to send (optional).
+         * @param controlSize size of the control messages.
          * @return the number of bytes written, -1 on failure.
          */
-        ssize_t writeTo (const char* data, size_t maxSize, const Endpoint& endpoint) noexcept
+        ssize_t writeTo (const char* data, size_t size, const Endpoint& endpoint, const char* control = nullptr,
+                         size_t controlSize = 0) noexcept
         {
             if ((this->_state == State::Closed) && (open (endpoint.protocol ()) == -1))
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            ssize_t result = ::sendto (this->_handle, data, maxSize, 0, endpoint.addr (), endpoint.length ());
+            struct iovec iov;
+            iov.iov_base = const_cast<char*> (data);
+            iov.iov_len = size;
+
+            struct msghdr message;
+            message.msg_name = const_cast<struct sockaddr*> (endpoint.addr ());
+            message.msg_namelen = endpoint.length ();
+            message.msg_iov = &iov;
+            message.msg_iovlen = 1;
+            message.msg_control = const_cast<char*> (control);
+            message.msg_controllen = controlSize;
+            message.msg_flags = 0;
+
+            ssize_t result = ::sendmsg (this->_handle, &message, 0);
             if (result < 0)
             {
                 lastError = std::error_code (errno, std::generic_category ());

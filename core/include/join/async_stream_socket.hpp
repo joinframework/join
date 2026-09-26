@@ -94,11 +94,11 @@ namespace join
 
         /**
          * @brief start an asynchronous connection to the given endpoint.
-         * @param endpoint endpoint to connect to.
          * @param handler handler invoked on completion.
+         * @param endpoint endpoint to connect to.
          * @return 0 on success, -1 on failure.
          */
-        int asyncConnect (const Endpoint& endpoint, ConnectHandler handler) noexcept
+        int asyncConnect (ConnectHandler handler, const Endpoint& endpoint) noexcept
         {
             if (JOIN_UNLIKELY (!this->_arena.hasBackend ()))
             {

@@ -27,3 +27,11 @@ install(TARGETS dhclient RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 add_executable(dhcpd dhcpd.cpp)
 target_link_libraries(dhcpd ${JOIN_FABRIC})
 install(TARGETS dhcpd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+add_executable(radvd radvd.cpp)
+target_link_libraries(radvd ${JOIN_FABRIC})
+install(TARGETS radvd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+add_executable(rdisc6 rdisc6.cpp)
+target_link_libraries(rdisc6 ${JOIN_FABRIC})
+install(TARGETS rdisc6 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
