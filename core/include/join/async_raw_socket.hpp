@@ -155,14 +155,14 @@ namespace join
 
         /**
          * @brief start an asynchronous read.
+         * @param handler handler invoked on completion.
          * @param data buffer used to store the data received, valid until the handler is invoked.
          * @param maxSize maximum number of bytes to read.
-         * @param handler handler invoked on completion.
          * @param flush flush the submission queue.
          * @param link link this operation to the next one submitted.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncRead (char* data, size_t maxSize, ReadHandler handler, bool flush = true,
+        ssize_t asyncRead (ReadHandler handler, char* data, size_t maxSize, bool flush = true,
                            bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
@@ -207,15 +207,15 @@ namespace join
 #ifdef JOIN_HAS_IO_URING
         /**
          * @brief start an asynchronous read into a registered buffer.
+         * @param handler handler invoked on completion.
          * @param data registered buffer used to store the data received, valid until the handler is invoked.
          * @param maxSize maximum number of bytes to read.
          * @param index index of the registered buffer area the buffer belongs to.
-         * @param handler handler invoked on completion.
          * @param flush flush the submission queue.
          * @param link link this operation to the next one submitted.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncReadFixed (char* data, size_t maxSize, uint16_t index, ReadHandler handler, bool flush = true,
+        ssize_t asyncReadFixed (ReadHandler handler, char* data, size_t maxSize, uint16_t index, bool flush = true,
                                 bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
@@ -251,12 +251,12 @@ namespace join
 
         /**
          * @brief start an asynchronous multishot read, staying armed until cancelled or failed.
-         * @param group provided buffer group to receive into, registered on the proactor.
          * @param handler handler invoked on each completion, the buffer being valid during the call only.
+         * @param group provided buffer group to receive into, registered on the proactor.
          * @param flush flush the submission queue.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncReadMulti (uint16_t group, ReadHandler handler, bool flush = true) noexcept
+        ssize_t asyncReadMulti (ReadHandler handler, uint16_t group, bool flush = true) noexcept
         {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
@@ -290,14 +290,14 @@ namespace join
 
         /**
          * @brief start an asynchronous write.
+         * @param handler handler invoked on completion.
          * @param data data buffer to send, valid until the handler is invoked.
          * @param size number of bytes to write.
-         * @param handler handler invoked on completion.
          * @param flush flush the submission queue.
          * @param link link this operation to the next one submitted.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncWrite (const char* data, size_t size, WriteHandler handler, bool flush = true,
+        ssize_t asyncWrite (WriteHandler handler, const char* data, size_t size, bool flush = true,
                             bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
@@ -342,15 +342,15 @@ namespace join
 #ifdef JOIN_HAS_IO_URING
         /**
          * @brief start an asynchronous write from a registered buffer.
+         * @param handler handler invoked on completion.
          * @param data registered buffer to send, valid until the handler is invoked.
          * @param size number of bytes to write.
          * @param index index of the registered buffer area the buffer belongs to.
-         * @param handler handler invoked on completion.
          * @param flush flush the submission queue.
          * @param link link this operation to the next one submitted.
          * @return index of the operation on success, -1 on failure.
          */
-        ssize_t asyncWriteFixed (const char* data, size_t size, uint16_t index, WriteHandler handler, bool flush = true,
+        ssize_t asyncWriteFixed (WriteHandler handler, const char* data, size_t size, uint16_t index, bool flush = true,
                                  bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
@@ -514,11 +514,20 @@ namespace join
                 from = Endpoint (static_cast<const struct sockaddr*> (read->msg.msg_name), read->msg.msg_namelen);
             }
 
+            const char* control = nullptr;
+            size_t controlSize = 0;
+
+            if ((read->msg.msg_control != nullptr) && (read->msg.msg_controllen > 0))
+            {
+                control = static_cast<const char*> (read->msg.msg_control);
+                controlSize = read->msg.msg_controllen;
+            }
+
             if (read->op.more)
             {
                 if (read->readFromHandler)
                 {
-                    read->readFromHandler (result, data, size, from, true);
+                    read->readFromHandler (result, data, size, from, control, controlSize, true);
                 }
                 else if (JOIN_LIKELY (read->readHandler))
                 {
@@ -535,7 +544,7 @@ namespace join
 
             if (fromHandler)
             {
-                fromHandler (result, data, size, from, false);
+                fromHandler (result, data, size, from, control, controlSize, false);
             }
             else if (JOIN_LIKELY (handler))
             {

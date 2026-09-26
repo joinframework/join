@@ -81,6 +81,50 @@ protected:
     /// server.
     Udp::Socket _server;
 
+    /**
+     * @brief fill a control buffer asking to send a datagram with the given time to live.
+     * @param control control buffer, at least CMSG_SPACE (sizeof (int)) bytes long.
+     * @param ttl time to live.
+     * @return size of the control messages.
+     */
+    static size_t ttlControl (char* control, int ttl)
+    {
+        ::memset (control, 0, CMSG_SPACE (sizeof (int)));
+
+        struct cmsghdr* cmsg = reinterpret_cast<struct cmsghdr*> (control);
+        cmsg->cmsg_level = IPPROTO_IP;
+        cmsg->cmsg_type = IP_TTL;
+        cmsg->cmsg_len = CMSG_LEN (sizeof (int));
+        ::memcpy (CMSG_DATA (cmsg), &ttl, sizeof (ttl));
+
+        return CMSG_SPACE (sizeof (int));
+    }
+
+    /**
+     * @brief get the time to live reported by the control messages received.
+     * @param control control messages received.
+     * @param controlSize size of the control messages.
+     * @return the time to live, -1 if not reported.
+     */
+    static int ttlOf (const char* control, size_t controlSize)
+    {
+        struct msghdr msg = {};
+        msg.msg_control = const_cast<char*> (control);
+        msg.msg_controllen = controlSize;
+
+        for (struct cmsghdr* cmsg = CMSG_FIRSTHDR (&msg); cmsg != nullptr; cmsg = CMSG_NXTHDR (&msg, cmsg))
+        {
+            if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_TTL))
+            {
+                int ttl = 0;
+                ::memcpy (&ttl, CMSG_DATA (cmsg), sizeof (ttl));
+                return ttl;
+            }
+        }
+
+        return -1;
+    }
+
     /// host.
     static const std::string _host;
 
@@ -334,6 +378,41 @@ TEST_F (UdpSocket, writeTo)
     ASSERT_EQ (udpSocket.writeTo (data, sizeof (data), {_host, _port}), sizeof (data)) << join::lastError.message ();
     ASSERT_TRUE (udpSocket.waitReadyRead (_timeout));
     udpSocket.close ();
+}
+
+/**
+ * @brief Test the control messages of the readFrom and writeTo methods.
+ */
+TEST_F (UdpSocket, control)
+{
+    Udp::Socket receiver (Udp::Socket::Blocking), sender (Udp::Socket::Blocking);
+    alignas (struct cmsghdr) char out[CMSG_SPACE (sizeof (int))];
+    alignas (struct cmsghdr) char in[64];
+    size_t inSize = sizeof (in);
+    char data[16];
+    Udp::Endpoint from;
+    int on = 1;
+
+    ASSERT_EQ (receiver.bind ({_host, 0}), 0) << join::lastError.message ();
+    ASSERT_EQ (::setsockopt (receiver.handle (), IPPROTO_IP, IP_RECVTTL, &on, sizeof (on)), 0);
+
+    ASSERT_EQ (sender.writeTo ("hello", 5, receiver.localEndpoint (), out, ttlControl (out, 42)), 5)
+        << join::lastError.message ();
+    ASSERT_TRUE (receiver.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (receiver.readFrom (data, sizeof (data), &from, in, &inSize), 5) << join::lastError.message ();
+    ASSERT_EQ (ttlOf (in, inSize), 42);
+    ASSERT_EQ (from.port (), sender.localEndpoint ().port ());
+
+    inSize = sizeof (in);
+
+    ASSERT_EQ (sender.writeTo ("hello", 5, receiver.localEndpoint ()), 5) << join::lastError.message ();
+    ASSERT_TRUE (receiver.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (receiver.readFrom (data, sizeof (data), &from, in, &inSize), 5) << join::lastError.message ();
+    ASSERT_GT (ttlOf (in, inSize), 0);
+    ASSERT_NE (ttlOf (in, inSize), 42);
+
+    receiver.close ();
+    sender.close ();
 }
 
 /**

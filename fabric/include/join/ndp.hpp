@@ -268,27 +268,19 @@ namespace join
          */
         ssize_t receive (char* data, size_t maxSize, IpAddress& from)
         {
-            struct sockaddr_storage addr = {};
+            Endpoint endpoint;
             char control[CMSG_SPACE (sizeof (int))];
+            size_t controlSize = sizeof (control);
 
-            struct iovec iov;
-            iov.iov_base = data;
-            iov.iov_len = maxSize;
-
-            struct msghdr msg;
-            msg.msg_name = &addr;
-            msg.msg_namelen = sizeof (addr);
-            msg.msg_iov = &iov;
-            msg.msg_iovlen = 1;
-            msg.msg_control = control;
-            msg.msg_controllen = sizeof (control);
-            msg.msg_flags = 0;
-
-            ssize_t size = ::recvmsg (_socket.handle (), &msg, 0);
-            if ((size <= 0) || (msg.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) || (addr.ss_family != AF_INET6))
+            ssize_t size = _socket.readFrom (data, maxSize, &endpoint, control, &controlSize);
+            if (size <= 0)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
+
+            struct msghdr msg = {};
+            msg.msg_control = control;
+            msg.msg_controllen = controlSize;
 
             int hop = 0;
 
@@ -305,7 +297,7 @@ namespace join
                 return -1;
             }
 
-            from = IpAddress (*reinterpret_cast<struct sockaddr*> (&addr));
+            from = endpoint.ip ();
 
             return size;
         }
