@@ -420,7 +420,6 @@ TEST_F (UnixAsyncStreamSocket, asyncWait)
     ASSERT_EQ (::recv (client.handle (), _buf, sizeof (_buf), 0), 5) << strerror (errno);
     ASSERT_EQ (std::string (_buf, 5), "hello");
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < UnixStream::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
@@ -433,7 +432,6 @@ TEST_F (UnixAsyncStreamSocket, asyncWait)
     {
         ASSERT_EQ (client.cancel (i), 0) << join::lastError.message ();
     }
-#endif
 
     ASSERT_NE (client.asyncWait (onReportWait, true, false), -1) << join::lastError.message ();
 
@@ -803,7 +801,6 @@ TEST_F (UnixAsyncStreamSocket, asyncReadMulti)
         ASSERT_FALSE (_more);
     }
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < UnixStream::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncReadMulti (nullptr, 0), -1) << join::lastError.message ();
@@ -811,7 +808,6 @@ TEST_F (UnixAsyncStreamSocket, asyncReadMulti)
 
     ASSERT_EQ (client.asyncReadMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     client.close ();
 

@@ -38,7 +38,11 @@ IoOperation::IoOperation (const IoOperation& other) noexcept
     code = other.code;
     state.store (other.state.load (std::memory_order_relaxed), std::memory_order_relaxed);
     resume = other.resume;
+#ifdef JOIN_HAS_IO_URING
     index = other.index;
+#else
+    next = other.next;
+#endif
     linked = other.linked;
     multishot = other.multishot;
     more = other.more;
@@ -55,7 +59,11 @@ IoOperation::IoOperation (const IoOperation& other) noexcept
 IoOperation& IoOperation::operator= (const IoOperation& other) noexcept
 {
     code = other.code;
+#ifdef JOIN_HAS_IO_URING
     index = other.index;
+#else
+    next = other.next;
+#endif
     linked = other.linked;
     multishot = other.multishot;
     more = other.more;

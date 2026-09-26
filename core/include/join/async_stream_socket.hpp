@@ -136,7 +136,7 @@ namespace join
             if (this->_proactor->submit (connect->op, true, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseOp (connect);
+                this->releaseOperation (connect);
                 this->_socket.close ();
                 return -1;
                 // LCOV_EXCL_STOP

@@ -425,7 +425,6 @@ TEST_F (RawAsyncSocket, asyncWait)
     {
     }
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Raw::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (rawSocket.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
@@ -433,7 +432,6 @@ TEST_F (RawAsyncSocket, asyncWait)
 
     ASSERT_EQ (rawSocket.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     rawSocket.close ();
 }
@@ -525,7 +523,6 @@ TEST_F (RawAsyncSocket, asyncReadMulti)
     ASSERT_EQ (code (), std::errc::operation_canceled);
     ASSERT_FALSE (_more);
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Raw::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (rawSocket.asyncReadMulti (nullptr, 0), -1) << join::lastError.message ();
@@ -533,7 +530,6 @@ TEST_F (RawAsyncSocket, asyncReadMulti)
 
     ASSERT_EQ (rawSocket.asyncReadMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     rawSocket.close ();
 
