@@ -415,12 +415,6 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
 // =========================================================================
 inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused]] bool flush) noexcept
 {
-    if (JOIN_UNLIKELY (op.fd () < 0))
-    {
-        lastError = std::make_error_code (std::errc::bad_file_descriptor);
-        return -1;
-    }
-
     Backoff backoff;
     while (JOIN_UNLIKELY (op.state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
     {
@@ -433,6 +427,13 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         (expected == IoOperation::State::Busy))
     {
         op.state.store (IoOperation::State::Submitted, std::memory_order_release);
+    }
+
+    if (JOIN_UNLIKELY (op.fd () < 0))
+    {
+        resetOperation (op);
+        lastError = std::make_error_code (std::errc::bad_file_descriptor);
+        return -1;
     }
 
     IoRingBuffer* ring = nullptr;

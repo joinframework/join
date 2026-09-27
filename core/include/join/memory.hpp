@@ -65,6 +65,40 @@ namespace join
     template <typename, typename>
     struct Mpmc;
 
+    /**
+     * @brief get the system page size.
+     * @return the page size in bytes.
+     */
+    inline uint64_t pageSize () noexcept
+    {
+        long size = ::sysconf (_SC_PAGESIZE);
+        return (size > 0) ? static_cast<uint64_t> (size) : 4096;
+    }
+
+    /**
+     * @brief get the default huge page size.
+     * @return the huge page size in bytes, 0 if huge pages are not supported.
+     */
+    inline uint64_t hugePageSize () noexcept
+    {
+        static const uint64_t size = [] () {
+            uint64_t bytes = 0;
+            int fd = ::memfd_create ("hugepage", MFD_HUGETLB | MFD_CLOEXEC);
+            if (fd != -1)
+            {
+                struct stat st;
+                if (::fstat (fd, &st) == 0)
+                {
+                    bytes = static_cast<uint64_t> (st.st_blksize);
+                }
+                ::close (fd);
+            }
+            return bytes;
+        }();
+
+        return size;
+    }
+
 #ifdef JOIN_HAS_NUMA
     /**
      * @brief bind memory to a NUMA node.
@@ -140,10 +174,8 @@ namespace join
          */
         explicit LocalMem (uint64_t size)
         {
-            long sc = sysconf (_SC_PAGESIZE);
-            uint64_t pageSize = (sc > 0) ? static_cast<uint64_t> (sc) : _defaultPageSize;
-            _size = (size + pageSize - 1) & ~(pageSize - 1);
-
+            uint64_t page = pageSize ();
+            _size = (size + page - 1) & ~(page - 1);
             create ();
         }
 
@@ -279,15 +311,27 @@ namespace join
          */
         void create ()
         {
-            _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE,
-                           MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
-            if ((_ptr == MAP_FAILED) && ((errno == ENOMEM) || (errno == EINVAL)))
+            uint64_t huge = hugePageSize ();
+
+            if ((huge != 0) && (_size >= huge))
             {
-                // no hugepages available or no support.
-                _ptr =
-                    ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+                uint64_t size = (_size + huge - 1) & ~(huge - 1);
+
+                _ptr = ::mmap (nullptr, size, PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
+                if (_ptr != MAP_FAILED)
+                {
+                    _size = size;
+                    return;
+                }
+
+                if ((errno != ENOMEM) && (errno != EINVAL))
+                {
+                    throw std::system_error (errno, std::generic_category (), "mmap failed");  // LCOV_EXCL_LINE
+                }
             }
 
+            _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
             if (_ptr == MAP_FAILED)
             {
                 throw std::system_error (errno, std::generic_category (), "mmap failed");
@@ -308,9 +352,6 @@ namespace join
 
             _size = 0;
         }
-
-        /// default page size.
-        static constexpr uint64_t _defaultPageSize = 4096;
 
         /// memory size.
         uint64_t _size = 0;
@@ -341,15 +382,12 @@ namespace join
         explicit ShmMem (uint64_t size, const std::string& name)
         : _name (name)
         {
-            long sc = sysconf (_SC_PAGESIZE);
-            uint64_t pageSize = (sc > 0) ? static_cast<uint64_t> (sc) : _defaultPageSize;
-            _size = (size + pageSize - 1) & ~(pageSize - 1);
-
+            uint64_t page = pageSize ();
+            _size = (size + page - 1) & ~(page - 1);
             if (_size > static_cast<uint64_t> (std::numeric_limits<off_t>::max ()))
             {
                 throw std::overflow_error ("size will overflow");
             }
-
             create ();
         }
 
@@ -552,12 +590,7 @@ namespace join
                 }
             }
 
-            _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_HUGETLB, _fd, 0);
-            if ((_ptr == MAP_FAILED) && ((errno == ENOMEM) || (errno == EINVAL)))
-            {
-                // no hugepages available or no support.
-                _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_SHARED, _fd, 0);
-            }
+            _ptr = ::mmap (nullptr, _size, PROT_READ | PROT_WRITE, MAP_SHARED, _fd, 0);
 
             if (_ptr == MAP_FAILED)
             {
@@ -588,9 +621,6 @@ namespace join
             _name.clear ();
             _size = 0;
         }
-
-        /// default page size.
-        static constexpr uint64_t _defaultPageSize = 4096;
 
         /// shared memory size.
         uint64_t _size = 0;

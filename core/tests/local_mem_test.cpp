@@ -34,6 +34,24 @@
 using join::LocalMem;
 
 /**
+ * @brief test pageSize.
+ */
+TEST (LocalMem, pageSize)
+{
+    ASSERT_EQ (join::pageSize (), static_cast<uint64_t> (::sysconf (_SC_PAGESIZE)));
+}
+
+/**
+ * @brief test hugePageSize.
+ */
+TEST (LocalMem, hugePageSize)
+{
+    uint64_t size = join::hugePageSize ();
+    ASSERT_TRUE ((size == 0) || ((size > join::pageSize ()) && join::isPow2 (size)));
+    ASSERT_EQ (join::hugePageSize (), size);
+}
+
+/**
  * @brief test create.
  */
 TEST (LocalMem, create)
@@ -46,6 +64,9 @@ TEST (LocalMem, create)
     LocalMem mem2 (std::move (mem1));
     ASSERT_THROW (mem1.get (), std::runtime_error);
     ASSERT_NE (mem2.get (), nullptr);
+
+    LocalMem mem3 (std::max (join::hugePageSize (), join::pageSize ()));
+    ASSERT_NE (mem3.get (), nullptr);
 }
 
 /**
