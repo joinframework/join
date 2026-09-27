@@ -460,7 +460,6 @@ TEST_F (UnixAsyncDatagramSocket, asyncWait)
 
     ASSERT_EQ (::recv (client.handle (), _buf, sizeof (_buf), 0), 5) << strerror (errno);
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < UnixDgram::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
@@ -468,7 +467,6 @@ TEST_F (UnixAsyncDatagramSocket, asyncWait)
 
     ASSERT_EQ (client.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     client.close ();
 }
@@ -773,7 +771,6 @@ TEST_F (UnixAsyncDatagramSocket, asyncReadFromMulti)
         ASSERT_FALSE (_more);
     }
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < UnixDgram::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncReadFromMulti (nullptr, 0), -1) << join::lastError.message ();
@@ -781,7 +778,6 @@ TEST_F (UnixAsyncDatagramSocket, asyncReadFromMulti)
 
     ASSERT_EQ (client.asyncReadFromMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     client.close ();
 

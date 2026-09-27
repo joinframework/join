@@ -196,7 +196,7 @@ namespace join
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseOp (read);
+                this->releaseOperation (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -240,7 +240,7 @@ namespace join
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseOp (read);
+                this->releaseOperation (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -280,7 +280,7 @@ namespace join
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseOp (read);
+                this->releaseOperation (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -331,7 +331,7 @@ namespace join
             if (this->_proactor->submit (write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseOp (write);
+                this->releaseOperation (write);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -375,7 +375,7 @@ namespace join
             if (this->_proactor->submit (write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseOp (write);
+                this->releaseOperation (write);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -396,7 +396,7 @@ namespace join
 
                 if ((op != nullptr) && (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::Connect))
                 {
-                    return this->cancelOp (*op);
+                    return this->cancelOperation (*op);
                 }
             }
 
@@ -461,7 +461,7 @@ namespace join
                 this->_socket._state = Socket::Connected;
             }
 
-            this->releaseOp (connect);
+            this->releaseOperation (connect);
 
             if (JOIN_LIKELY (handler))
             {
@@ -540,7 +540,7 @@ namespace join
             ReadHandler handler = std::move (read->readHandler);
             ReadFromHandler fromHandler = std::move (read->readFromHandler);
 
-            this->releaseOp (read);
+            this->releaseOperation (read);
 
             if (fromHandler)
             {
@@ -563,7 +563,7 @@ namespace join
 
             if (JOIN_LIKELY (!write->op.multishot))
             {
-                this->releaseOp (write);
+                this->releaseOperation (write);
             }
 
             if (JOIN_LIKELY (handler))
@@ -578,7 +578,7 @@ namespace join
          */
         AsyncRead* allocateRead () noexcept
         {
-            return this->template allocateOp<AsyncRead> ();
+            return this->template allocateOperation<AsyncRead> ();
         }
 
         /**
@@ -587,7 +587,7 @@ namespace join
          */
         AsyncWrite* allocateWrite () noexcept
         {
-            return this->template allocateOp<AsyncWrite> ();
+            return this->template allocateOperation<AsyncWrite> ();
         }
     };
 }

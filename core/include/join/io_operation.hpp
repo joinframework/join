@@ -389,8 +389,13 @@ namespace join
          */
         int fd () const noexcept;
 
-        /// index of this operation in the proactor pending ops (io_uring only).
+#ifdef JOIN_HAS_IO_URING
+        /// index of this operation in the proactor pending ops.
         uint32_t index = 0;
+#else
+        /// next operation queued on the same descriptor and direction.
+        IoOperation* next = nullptr;
+#endif
 
         /// operation code.
         uint8_t code = 0;

@@ -504,7 +504,6 @@ TEST_F (TcpAsyncSocket, asyncWait)
     ASSERT_EQ (::recv (client.handle (), _buf, sizeof (_buf), 0), 5) << strerror (errno);
     ASSERT_EQ (std::string (_buf, 5), "hello");
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Tcp::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
@@ -517,7 +516,6 @@ TEST_F (TcpAsyncSocket, asyncWait)
     {
         ASSERT_EQ (client.cancel (i), 0) << join::lastError.message ();
     }
-#endif
 
     ASSERT_NE (client.asyncWait (onReportWait, true, false), -1) << join::lastError.message ();
 
@@ -763,7 +761,6 @@ TEST_F (TcpAsyncSocket, asyncReadMulti)
         ASSERT_FALSE (_more);
     }
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Tcp::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncReadMulti (nullptr, 0), -1) << join::lastError.message ();
@@ -771,7 +768,6 @@ TEST_F (TcpAsyncSocket, asyncReadMulti)
 
     ASSERT_EQ (client.asyncReadMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     client.close ();
 
@@ -1245,7 +1241,6 @@ TEST_F (TcpAsyncSocket, cancel)
                    -1)
             << join::lastError.message ();
 
-#ifdef JOIN_HAS_IO_URING
         for (size_t i = 1; i < Tcp::AsyncSocket::_opCount; ++i)
         {
             ASSERT_NE (client.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
@@ -1254,6 +1249,7 @@ TEST_F (TcpAsyncSocket, cancel)
         ASSERT_EQ (client.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
         ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
+#ifdef JOIN_HAS_IO_URING
         ASSERT_EQ (client.asyncReadFixed (nullptr, _buf, sizeof (_buf), 0), -1);
         ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif
@@ -1329,7 +1325,6 @@ TEST_F (TcpAsyncSocket, cancel)
 
         ASSERT_NE (sender.asyncWrite (onWrite, _buf, sizeof (_buf)), -1) << join::lastError.message ();
 
-#ifdef JOIN_HAS_IO_URING
         for (size_t i = 1; i < Tcp::AsyncSocket::_opCount; ++i)
         {
             ASSERT_NE (sender.asyncWrite (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
@@ -1338,6 +1333,7 @@ TEST_F (TcpAsyncSocket, cancel)
         ASSERT_EQ (sender.asyncWrite (nullptr, _buf, sizeof (_buf)), -1);
         ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
+#ifdef JOIN_HAS_IO_URING
         ASSERT_EQ (sender.asyncWriteFixed (nullptr, _buf, sizeof (_buf), 0), -1);
         ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 #endif

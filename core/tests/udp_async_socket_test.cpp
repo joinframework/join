@@ -595,7 +595,6 @@ TEST_F (UdpAsyncSocket, asyncWait)
     ASSERT_EQ (::recv (client.handle (), _buf, sizeof (_buf), 0), 5) << strerror (errno);
     ASSERT_EQ (std::string (_buf, 5), "hello");
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Udp::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
@@ -608,7 +607,6 @@ TEST_F (UdpAsyncSocket, asyncWait)
     {
         ASSERT_EQ (client.cancel (i), 0) << join::lastError.message ();
     }
-#endif
 
     client.close ();
     ASSERT_EQ (client.connect (closed), 0) << join::lastError.message ();
@@ -746,15 +744,13 @@ TEST_F (UdpAsyncSocket, asyncWriteTo)
     ASSERT_NE (client.asyncWriteTo (onReport, "hello", 5, dest), -1) << join::lastError.message ();
     ASSERT_TRUE (client.opened ());
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 1; i < Udp::AsyncSocket::_opCount; ++i)
     {
-        ASSERT_NE (client.asyncWriteTo (nullptr, "hello", 5, dest), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncWriteTo (onReport, "hello", 5, dest), -1) << join::lastError.message ();
     }
 
     ASSERT_EQ (client.asyncWriteTo (nullptr, "hello", 5, dest), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     Thread th ([&proactor] () {
         proactor.run ();
@@ -763,7 +759,7 @@ TEST_F (UdpAsyncSocket, asyncWriteTo)
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
+            return _completions >= static_cast<int> (Udp::AsyncSocket::_opCount);
         }));
         ASSERT_FALSE (_code) << _code.message ();
         ASSERT_EQ (_transferred, 5u);
@@ -800,7 +796,6 @@ TEST_F (UdpAsyncSocket, asyncReadFrom)
         ASSERT_EQ (std::string (_buf, 5), "hello");
     }
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Udp::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
@@ -808,7 +803,6 @@ TEST_F (UdpAsyncSocket, asyncReadFrom)
 
     ASSERT_EQ (client.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     client.close ();
 
@@ -861,7 +855,6 @@ TEST_F (UdpAsyncSocket, asyncReadFromMulti)
         ASSERT_FALSE (_more);
     }
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Udp::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncReadFromMulti (nullptr, 0), -1) << join::lastError.message ();
@@ -869,7 +862,6 @@ TEST_F (UdpAsyncSocket, asyncReadFromMulti)
 
     ASSERT_EQ (client.asyncReadFromMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     client.close ();
 

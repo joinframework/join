@@ -49,7 +49,11 @@ TEST (IoOperation, copy)
     auto op = IoOperation::makeRecvmsgMulti (8, 3, &msg, MSG_DONTWAIT, nullptr);
     op.state.store (IoOperation::State::Submitted);
     op.resume = IoOperation::State::Submitted;
+#ifdef JOIN_HAS_IO_URING
     op.index = 4;
+#else
+    op.next = &op;
+#endif
     op.linked = true;
 
     IoOperation copy (op);
@@ -57,7 +61,11 @@ TEST (IoOperation, copy)
     ASSERT_EQ (copy.code, op.code);
     ASSERT_EQ (copy.state.load (), op.state.load ());
     ASSERT_EQ (copy.resume, op.resume);
+#ifdef JOIN_HAS_IO_URING
     ASSERT_EQ (copy.index, op.index);
+#else
+    ASSERT_EQ (copy.next, op.next);
+#endif
     ASSERT_EQ (copy.linked, op.linked);
     ASSERT_EQ (copy.multishot, op.multishot);
     ASSERT_EQ (copy.group, op.group);
@@ -72,7 +80,11 @@ TEST (IoOperation, copy)
     ASSERT_EQ (assigned.code, op.code);
     ASSERT_EQ (assigned.state.load (), IoOperation::State::Idle);
     ASSERT_EQ (assigned.resume, IoOperation::State::Idle);
+#ifdef JOIN_HAS_IO_URING
     ASSERT_EQ (assigned.index, op.index);
+#else
+    ASSERT_EQ (assigned.next, op.next);
+#endif
     ASSERT_EQ (assigned.linked, op.linked);
     ASSERT_EQ (assigned.multishot, op.multishot);
     ASSERT_EQ (assigned.group, op.group);

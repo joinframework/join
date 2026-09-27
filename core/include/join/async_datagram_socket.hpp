@@ -170,7 +170,7 @@ namespace join
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseOp (read);
+                this->releaseOperation (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -218,7 +218,7 @@ namespace join
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseOp (read);
+                this->releaseOperation (read);
                 return -1;
                 // LCOV_EXCL_STOP
             }
@@ -278,7 +278,7 @@ namespace join
             if (this->_proactor->submit (write->op, flush, false) == -1)
             {
                 // LCOV_EXCL_START
-                this->releaseOp (write);
+                this->releaseOperation (write);
                 return -1;
                 // LCOV_EXCL_STOP
             }

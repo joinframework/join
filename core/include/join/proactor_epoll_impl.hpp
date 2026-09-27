@@ -469,29 +469,13 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         _writeOps.resize (newSize, nullptr);
     }
 
-    bool isWrite = isWriteOp (op);
-
-    if (JOIN_UNLIKELY ((isWrite && (_writeOps[op.fd ()] == &op)) || (!isWrite && (_readOps[op.fd ()] == &op))))
+    if (JOIN_UNLIKELY (op.next != nullptr))
     {
         lastError = make_error_code (std::errc::device_or_resource_busy);
         return -1;
     }
 
-    if (JOIN_UNLIKELY ((isWrite && (_writeOps[op.fd ()] != nullptr)) || (!isWrite && (_readOps[op.fd ()] != nullptr))))
-    {
-        resetOperation (op);
-        lastError = make_error_code (Errc::InvalidParam);
-        return -1;
-    }
-
-    if (isWrite)
-    {
-        _writeOps[op.fd ()] = &op;
-    }
-    else
-    {
-        _readOps[op.fd ()] = &op;
-    }
+    IoOperation*& last = isWriteOperation (op) ? _writeOps[op.fd ()] : _readOps[op.fd ()];
 
     if (JOIN_UNLIKELY (ring != nullptr))
     {
@@ -499,17 +483,22 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         ring->bind ();
     }
 
+    if (last != nullptr)
+    {
+        op.next = last->next;
+        last->next = &op;
+        last = &op;
+        return 0;
+    }
+
+    op.next = &op;
+    last = &op;
+
     int err = _reactor.addHandler (op.fd (), this, _readOps[op.fd ()] != nullptr, _writeOps[op.fd ()] != nullptr);
     if (JOIN_UNLIKELY (err == -1))
     {
-        if (isWrite)
-        {
-            _writeOps[op.fd ()] = nullptr;
-        }
-        else
-        {
-            _readOps[op.fd ()] = nullptr;
-        }
+        op.next = nullptr;
+        last = nullptr;
 
         if (JOIN_UNLIKELY (ring != nullptr))
         {
@@ -547,21 +536,10 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
         return -1;
     }
 
-    bool isWrite = isWriteOp (op);
-
-    if (JOIN_UNLIKELY ((isWrite && (_writeOps[op.fd ()] != &op)) || (!isWrite && (_readOps[op.fd ()] != &op))))
+    if (JOIN_UNLIKELY (!unqueueOperation (op)))
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
-    }
-
-    if (isWrite)
-    {
-        _writeOps[op.fd ()] = nullptr;
-    }
-    else
-    {
-        _readOps[op.fd ()] = nullptr;
     }
 
     int ret = 0;
@@ -570,7 +548,7 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
     {
         ret = _reactor.delHandler (op.fd ());
     }
-    else
+    else if ((isWriteOperation (op) ? _writeOps[op.fd ()] : _readOps[op.fd ()]) == nullptr)
     {
         ret = _reactor.addHandler (op.fd (), this, _readOps[op.fd ()] != nullptr, _writeOps[op.fd ()] != nullptr);
     }
@@ -596,11 +574,11 @@ inline void join::BasicProactor::cancelAllOperations () noexcept
         }
         if (rOp != nullptr)
         {
-            dispatchOperation (*rOp, -ECANCELED, true);
+            drainQueue (*rOp, -ECANCELED, 0, true);
         }
         if (wOp != nullptr)
         {
-            dispatchOperation (*wOp, -ECANCELED, true);
+            drainQueue (*wOp, -ECANCELED, 0, true);
         }
     }
 }
@@ -618,20 +596,13 @@ inline void join::BasicProactor::endOperation (IoOperation& op, int result, bool
         return;  // LCOV_EXCL_LINE
     }
 
-    if (isWriteOp (op))
-    {
-        _writeOps[fd] = nullptr;
-    }
-    else
-    {
-        _readOps[fd] = nullptr;
-    }
+    unqueueOperation (op);
 
     if (_readOps[fd] == nullptr && _writeOps[fd] == nullptr)
     {
         _reactor.delHandler (fd);
     }
-    else
+    else if ((isWriteOperation (op) ? _writeOps[fd] : _readOps[fd]) == nullptr)
     {
         _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
     }
@@ -641,30 +612,230 @@ inline void join::BasicProactor::endOperation (IoOperation& op, int result, bool
 
 // =========================================================================
 //   CLASS     : BasicProactor
-//   METHOD    : isWriteOp
+//   METHOD    : onEvent
 // =========================================================================
-inline bool join::BasicProactor::isWriteOp (const IoOperation& op) noexcept
+inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
 {
-    switch (static_cast<IoOperation::Opcode> (op.code))
+    if (JOIN_UNLIKELY (fd == _wakeup))
     {
-        case IoOperation::Opcode::Poll:
-            return (op.data.poll.events & POLLIN) == 0;
-        case IoOperation::Opcode::Connect:
-        case IoOperation::Opcode::Write:
-        case IoOperation::Opcode::WriteFixed:
-        case IoOperation::Opcode::SendMsg:
-        case IoOperation::Opcode::Send:
-            return true;
-        default:
-            return false;
+        readCommands ();
+        return;
+    }
+
+    if (JOIN_UNLIKELY (revents & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)))
+    {
+        IoOperation* rOp = std::exchange (_readOps[fd], nullptr);
+        IoOperation* wOp = std::exchange (_writeOps[fd], nullptr);
+        if (JOIN_LIKELY (rOp || wOp))
+        {
+            _reactor.delHandler (fd);
+        }
+
+        int result = (revents & EPOLLERR) ? -ECONNRESET : 0;
+
+        if (rOp != nullptr)
+        {
+            drainQueue (*rOp, result, revents, false);
+        }
+        if (wOp != nullptr)
+        {
+            drainQueue (*wOp, result, revents, false);
+        }
+
+        return;
+    }
+
+    if (revents & EPOLLIN)
+    {
+        processQueue (fd, false, revents);
+    }
+
+    if (revents & EPOLLOUT)
+    {
+        processQueue (fd, true, revents);
     }
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
-//   METHOD    : executeOp
+//   METHOD    : drainQueue
 // =========================================================================
-inline int join::BasicProactor::executeOp (IoOperation& op, uint32_t revents) noexcept
+inline void join::BasicProactor::drainQueue (IoOperation& tail, int result, uint32_t revents, bool cancelled) noexcept
+{
+    IoOperation* op = tail.next;
+    tail.next = nullptr;
+
+    while (op != nullptr)
+    {
+        IoOperation* next = op->next;
+        op->next = nullptr;
+
+        int res = result;
+
+        if ((revents != 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::Poll)))
+        {
+            res = executeOperation (*op, revents);
+        }
+
+        dispatchOperation (*op, res, cancelled);
+
+        op = next;
+    }
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : processQueue
+// =========================================================================
+inline void join::BasicProactor::processQueue (int fd, bool write, uint32_t revents) noexcept
+{
+    IoOperation* last = write ? _writeOps[fd] : _readOps[fd];
+    if (last == nullptr)
+    {
+        return;
+    }
+
+    size_t count = 1;
+    for (IoOperation* it = last->next; it != last; it = it->next)
+    {
+        ++count;
+    }
+
+    IoOperation* op = last->next;
+    bool consumed = false;
+
+    for (size_t i = 0; (op != nullptr) && (i < count); ++i)
+    {
+        IoOperation* following = (op == last) ? nullptr : op->next;
+        bool poll = (op->code == static_cast<uint8_t> (IoOperation::Opcode::Poll));
+
+        if (poll || !consumed)
+        {
+            consumed = consumed || !poll;
+            processOperation (*op, revents);
+        }
+
+        last = write ? _writeOps[fd] : _readOps[fd];
+        op = nullptr;
+
+        if ((following != nullptr) && (last != nullptr))
+        {
+            for (IoOperation* it = last->next;; it = it->next)
+            {
+                if (it == following)
+                {
+                    op = following;
+                    break;
+                }
+
+                if (it == last)
+                {
+                    break;
+                }
+            }
+        }
+    }
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : processOperation
+// =========================================================================
+inline void join::BasicProactor::processOperation (IoOperation& op, uint32_t revents) noexcept
+{
+    IoOperation::State current = op.state.load (std::memory_order_acquire);
+    Backoff backoff;
+
+    while (JOIN_UNLIKELY (current == IoOperation::State::Suspended))
+    {
+        backoff ();
+        current = op.state.load (std::memory_order_acquire);
+    }
+
+    if (JOIN_UNLIKELY (current == IoOperation::State::Idle))
+    {
+        return;  // LCOV_EXCL_LINE
+    }
+
+    IoRingBuffer* br = nullptr;
+    uint16_t bid = 0;
+
+    if (op.ring != nullptr)
+    {
+        br = op.ring;
+        bid = static_cast<uint16_t> (br->select ());
+
+        if (op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg))
+        {
+            uint32_t reserved = op.data.msg.namelen + op.data.msg.controllen;
+            if (JOIN_UNLIKELY (reserved >= br->size ()))
+            {
+                endOperation (op, -EFAULT, false);
+                br->recycle (bid);
+                return;
+            }
+
+            char* base = static_cast<char*> (br->get (bid));
+
+            op.data.msg.msg->msg_name = base;
+            op.data.msg.msg->msg_namelen = op.data.msg.namelen;
+            op.data.msg.msg->msg_control = base + op.data.msg.namelen;
+            op.data.msg.msg->msg_controllen = op.data.msg.controllen;
+            op.data.msg.msg->msg_iov->iov_base = base + reserved;
+            op.data.msg.msg->msg_iov->iov_len = br->size () - reserved;
+            op.data.msg.msg->msg_iovlen = 1;
+            op.data.msg.msg->msg_flags = 0;
+        }
+        else
+        {
+            op.data.stream.buf = br->get (bid);
+            op.data.stream.len = br->size ();
+        }
+    }
+
+    int result = executeOperation (op, revents);
+
+    if (JOIN_UNLIKELY ((result == -EAGAIN) && (op.code != static_cast<uint8_t> (IoOperation::Opcode::Connect))))
+    {
+        if (br != nullptr)
+        {
+            br->recycle (bid);
+        }
+        return;
+    }
+
+    if ((br != nullptr) && (result >= 0) && (op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)))
+    {
+        op.data.msg.msg->msg_iov->iov_len = static_cast<size_t> (result);
+
+        if (op.data.msg.msg->msg_controllen < sizeof (cmsghdr))
+        {
+            op.data.msg.msg->msg_control = nullptr;
+        }
+    }
+
+    if (op.multishot &&
+        ((result > 0) || ((result == 0) && (op.code == static_cast<uint8_t> (IoOperation::Opcode::Accept)))))
+    {
+        op.more = true;
+        notifyOperation (op, result, false);
+    }
+    else
+    {
+        endOperation (op, result, false);
+    }
+
+    if (br != nullptr)
+    {
+        br->recycle (bid);
+    }
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : executeOperation
+// =========================================================================
+inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t revents) noexcept
 {
     for (;;)
     {
@@ -767,141 +938,59 @@ inline int join::BasicProactor::executeOp (IoOperation& op, uint32_t revents) no
 
 // =========================================================================
 //   CLASS     : BasicProactor
-//   METHOD    : onEvent
+//   METHOD    : unqueueOperation
 // =========================================================================
-inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
+inline bool join::BasicProactor::unqueueOperation (IoOperation& op) noexcept
 {
-    if (JOIN_UNLIKELY (fd == _wakeup))
+    if (op.next == nullptr)
     {
-        readCommands ();
-        return;
+        return false;
     }
 
-    if (JOIN_UNLIKELY (revents & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)))
+    IoOperation*& last = isWriteOperation (op) ? _writeOps[op.fd ()] : _readOps[op.fd ()];
+    IoOperation* prev = last;
+
+    while (prev->next != &op)
     {
-        IoOperation* rOp = std::exchange (_readOps[fd], nullptr);
-        IoOperation* wOp = std::exchange (_writeOps[fd], nullptr);
-        if (JOIN_LIKELY (rOp || wOp))
-        {
-            _reactor.delHandler (fd);
-        }
-
-        int result = (revents & EPOLLERR) ? -ECONNRESET : 0;
-        int rResult = result;
-        int wResult = result;
-
-        if ((rOp != nullptr) && (rOp->code == static_cast<uint8_t> (IoOperation::Opcode::Poll)))
-        {
-            rResult = executeOp (*rOp, revents);
-        }
-
-        if ((wOp != nullptr) && (wOp->code == static_cast<uint8_t> (IoOperation::Opcode::Poll)))
-        {
-            wResult = executeOp (*wOp, revents);
-        }
-
-        if (rOp != nullptr)
-        {
-            dispatchOperation (*rOp, rResult, false);
-        }
-        if (wOp != nullptr)
-        {
-            dispatchOperation (*wOp, wResult, false);
-        }
-
-        return;
+        prev = prev->next;
     }
 
-    IoOperation* op = (revents & EPOLLIN) ? _readOps[fd] : _writeOps[fd];
-    if (JOIN_UNLIKELY (op == nullptr))
+    if (prev == &op)
     {
-        return;
-    }
-
-    IoOperation::State current = op->state.load (std::memory_order_acquire);
-    Backoff backoff;
-
-    while (JOIN_UNLIKELY (current == IoOperation::State::Suspended))
-    {
-        backoff ();
-        current = op->state.load (std::memory_order_acquire);
-    }
-
-    if (JOIN_UNLIKELY (current == IoOperation::State::Idle))
-    {
-        return;  // LCOV_EXCL_LINE
-    }
-
-    IoRingBuffer* br = nullptr;
-    uint16_t bid = 0;
-
-    if (op->ring != nullptr)
-    {
-        br = op->ring;
-        bid = static_cast<uint16_t> (br->select ());
-
-        if (op->code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg))
-        {
-            uint32_t reserved = op->data.msg.namelen + op->data.msg.controllen;
-            if (JOIN_UNLIKELY (reserved >= br->size ()))
-            {
-                endOperation (*op, -EFAULT, false);
-                br->recycle (bid);
-                return;
-            }
-
-            char* base = static_cast<char*> (br->get (bid));
-
-            op->data.msg.msg->msg_name = base;
-            op->data.msg.msg->msg_namelen = op->data.msg.namelen;
-            op->data.msg.msg->msg_control = base + op->data.msg.namelen;
-            op->data.msg.msg->msg_controllen = op->data.msg.controllen;
-            op->data.msg.msg->msg_iov->iov_base = base + reserved;
-            op->data.msg.msg->msg_iov->iov_len = br->size () - reserved;
-            op->data.msg.msg->msg_iovlen = 1;
-            op->data.msg.msg->msg_flags = 0;
-        }
-        else
-        {
-            op->data.stream.buf = br->get (bid);
-            op->data.stream.len = br->size ();
-        }
-    }
-
-    int result = executeOp (*op, revents);
-
-    if (JOIN_UNLIKELY ((result == -EAGAIN) && (op->code != static_cast<uint8_t> (IoOperation::Opcode::Connect))))
-    {
-        if (br != nullptr)
-        {
-            br->recycle (bid);
-        }
-        return;
-    }
-
-    if ((br != nullptr) && (result >= 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)))
-    {
-        op->data.msg.msg->msg_iov->iov_len = static_cast<size_t> (result);
-
-        if (op->data.msg.msg->msg_controllen < sizeof (cmsghdr))
-        {
-            op->data.msg.msg->msg_control = nullptr;
-        }
-    }
-
-    if (op->multishot &&
-        ((result > 0) || ((result == 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::Accept)))))
-    {
-        op->more = true;
-        notifyOperation (*op, result, false);
+        last = nullptr;
     }
     else
     {
-        endOperation (*op, result, false);
+        prev->next = op.next;
+
+        if (last == &op)
+        {
+            last = prev;
+        }
     }
 
-    if (br != nullptr)
+    op.next = nullptr;
+
+    return true;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : isWriteOperation
+// =========================================================================
+inline bool join::BasicProactor::isWriteOperation (const IoOperation& op) noexcept
+{
+    switch (static_cast<IoOperation::Opcode> (op.code))
     {
-        br->recycle (bid);
+        case IoOperation::Opcode::Poll:
+            return (op.data.poll.events & POLLIN) == 0;
+        case IoOperation::Opcode::Connect:
+        case IoOperation::Opcode::Write:
+        case IoOperation::Opcode::WriteFixed:
+        case IoOperation::Opcode::SendMsg:
+        case IoOperation::Opcode::Send:
+            return true;
+        default:
+            return false;
     }
 }

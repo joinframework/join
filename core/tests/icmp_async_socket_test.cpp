@@ -429,7 +429,6 @@ TEST_F (IcmpAsyncSocket, asyncWait)
     {
     }
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Icmp::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (client.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
@@ -437,7 +436,6 @@ TEST_F (IcmpAsyncSocket, asyncWait)
 
     ASSERT_EQ (client.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     client.close ();
 }
@@ -633,7 +631,6 @@ TEST_F (IcmpAsyncSocket, asyncReadFromMulti)
         ASSERT_FALSE (_more);
     }
 
-#ifdef JOIN_HAS_IO_URING
     for (size_t i = 0; i < Icmp::AsyncSocket::_opCount; ++i)
     {
         ASSERT_NE (server.asyncReadFromMulti (nullptr, 0), -1) << join::lastError.message ();
@@ -641,7 +638,6 @@ TEST_F (IcmpAsyncSocket, asyncReadFromMulti)
 
     ASSERT_EQ (server.asyncReadFromMulti (nullptr, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-#endif
 
     client.close ();
     server.close ();
