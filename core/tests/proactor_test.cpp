@@ -481,6 +481,17 @@ TEST_F (ProactorTest, submit)
         _result = 0;
     }
 
+    ASSERT_EQ (proactor.submit (_invalidOp, true, false), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_invalidOp && _result == -EBADF;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
     char spare[16] = {};
     _spareOp = IoOperation::makeRead (_server.handle (), spare, sizeof (spare), this);
     ASSERT_EQ (proactor.submit (_spareOp, true, true), 0) << join::lastError.message ();

@@ -654,12 +654,6 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
 template <typename Policy>
 int join::BasicProactor<Policy>::submitOperation (IoOperation& op, bool flush) noexcept
 {
-    if (JOIN_UNLIKELY (op.fd () < 0))
-    {
-        lastError = std::make_error_code (std::errc::bad_file_descriptor);
-        return -1;
-    }
-
     Backoff backoff;
     while (JOIN_UNLIKELY (op.state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
     {
@@ -672,6 +666,13 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation& op, bool flush) n
         (expected == IoOperation::State::Busy))
     {
         op.state.store (IoOperation::State::Submitted, std::memory_order_release);
+    }
+
+    if (JOIN_UNLIKELY (op.fd () < 0))
+    {
+        resetOperation (op);
+        lastError = std::make_error_code (std::errc::bad_file_descriptor);
+        return -1;
     }
 
     if (JOIN_UNLIKELY ((op.index < _pendingOps.size ()) && (_pendingOps[op.index] == &op)))
