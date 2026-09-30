@@ -146,7 +146,7 @@ int main (int argc, char* argv[])
 
         if (multiple)
         {
-            client.addAdvertisementListener ([&received] (const RouterAdvertisement& advert) {
+            client.setAdvertisementListener ([&received] (const RouterAdvertisement& advert) {
                 print (advert);
                 ++received;
             });

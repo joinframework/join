@@ -30,15 +30,13 @@
 #include <join/ndp_protocol.hpp>
 #include <join/ndp_message.hpp>
 #include <join/condition.hpp>
+#include <join/function.hpp>
 #include <join/reactor.hpp>
 #include <join/error.hpp>
 
 // C++.
-#include <unordered_map>
 #include <system_error>
-#include <functional>
 #include <algorithm>
-#include <atomic>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -339,7 +337,7 @@ namespace join
         using BasicNdp<Protocol>::index;
 
         /// advertisement notification callback.
-        using AdvertisementNotify = std::function<void (const RouterAdvertisement& advert)>;
+        using AdvertisementNotify = Function<void (const RouterAdvertisement& advert)>;
 
         /**
          * @brief create the BasicNdpClient instance.
@@ -427,16 +425,20 @@ namespace join
         }
 
         /**
-         * @brief register a callback called on every advertisement received, solicited or not.
+         * @brief set the callback called on every router advertisement received, solicited or not.
          * @param cb callback, called from the reactor thread.
-         * @return listener identifier, -1 on failure.
+         * @return 0 on success, -1 on failure.
          */
-        ssize_t addAdvertisementListener (const AdvertisementNotify& cb)
+        int setAdvertisementListener (AdvertisementNotify cb)
         {
-            ssize_t id = ++_listenerCounter;
+            bool busy = false;
 
-            Reactor::InvokeHandler fn = [this, id, &cb] () {
-                _listeners.emplace (id, cb);
+            Reactor::InvokeHandler fn = [this, &cb, &busy] () {
+                busy = _calling || _listener;
+                if (!busy)
+                {
+                    _listener = std::move (cb);
+                }
             };
 
             if (this->_reactor.invoke (&fn) == -1)
@@ -444,18 +446,24 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            return id;
+            if (busy)
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            return 0;
         }
 
         /**
-         * @brief unregister a callback.
-         * @param id listener identifier.
+         * @brief unset the router advertisement callback, it is no longer called once this returns.
          * @return 0 on success, -1 on failure.
          */
-        int removeAdvertisementListener (ssize_t id)
+        int unsetAdvertisementListener ()
         {
-            Reactor::InvokeHandler fn = [this, id] () {
-                _listeners.erase (id);
+            Reactor::InvokeHandler fn = [this] () {
+                _listener = nullptr;
+                _calling = false;
             };
 
             return this->_reactor.invoke (&fn);
@@ -487,13 +495,17 @@ namespace join
 
             advert.src = from;
 
-            auto listeners = _listeners;
-
-            for (auto& listener : listeners)
+            if (_listener)
             {
-                if (listener.second)
+                AdvertisementNotify listener = std::move (_listener);
+
+                _calling = true;
+                listener (advert);
+
+                if (_calling)
                 {
-                    listener.second (advert);
+                    _listener = std::move (listener);
+                    _calling = false;
                 }
             }
 
@@ -531,11 +543,11 @@ namespace join
         /// mutex for synchronous operations.
         Mutex _syncMutex;
 
-        /// advertisement listeners, only accessed from the reactor thread.
-        std::unordered_map<ssize_t, AdvertisementNotify> _listeners;
+        /// router advertisement listener, only accessed from the reactor thread.
+        AdvertisementNotify _listener;
 
-        /// listener id counter.
-        std::atomic<ssize_t> _listenerCounter{0};
+        /// set while the listener is being called and still set, only accessed from the reactor thread.
+        bool _calling = false;
     };
 
     /**
@@ -550,7 +562,7 @@ namespace join
         using BasicNdp<Protocol>::index;
 
         /// solicitation notification callback definition.
-        using SolicitationNotify = std::function<void (const RouterSolicitation& solicitation)>;
+        using SolicitationNotify = Function<void (const RouterSolicitation& solicitation)>;
 
         /**
          * @brief create the BasicNdpServer instance.
@@ -578,16 +590,20 @@ namespace join
         }
 
         /**
-         * @brief register a callback called on every solicitation received.
+         * @brief set the callback called on every router solicitation received.
          * @param cb callback, called from the reactor thread.
-         * @return listener identifier, -1 on failure.
+         * @return 0 on success, -1 on failure.
          */
-        ssize_t addSolicitationListener (const SolicitationNotify& cb)
+        int setSolicitationListener (SolicitationNotify cb)
         {
-            ssize_t id = ++_listenerCounter;
+            bool busy = false;
 
-            Reactor::InvokeHandler fn = [this, id, &cb] () {
-                _listeners.emplace (id, cb);
+            Reactor::InvokeHandler fn = [this, &cb, &busy] () {
+                busy = _calling || _listener;
+                if (!busy)
+                {
+                    _listener = std::move (cb);
+                }
             };
 
             if (this->_reactor.invoke (&fn) == -1)
@@ -595,18 +611,24 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            return id;
+            if (busy)
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            return 0;
         }
 
         /**
-         * @brief unregister a callback.
-         * @param id listener identifier.
+         * @brief unset the router solicitation callback, it is no longer called once this returns.
          * @return 0 on success, -1 on failure.
          */
-        int removeSolicitationListener (ssize_t id)
+        int unsetSolicitationListener ()
         {
-            Reactor::InvokeHandler fn = [this, id] () {
-                _listeners.erase (id);
+            Reactor::InvokeHandler fn = [this] () {
+                _listener = nullptr;
+                _calling = false;
             };
 
             return this->_reactor.invoke (&fn);
@@ -661,22 +683,26 @@ namespace join
 
             solicitation.src = from;
 
-            auto listeners = _listeners;
-
-            for (auto& listener : listeners)
+            if (_listener)
             {
-                if (listener.second)
+                SolicitationNotify listener = std::move (_listener);
+
+                _calling = true;
+                listener (solicitation);
+
+                if (_calling)
                 {
-                    listener.second (solicitation);
+                    _listener = std::move (listener);
+                    _calling = false;
                 }
             }
         }
 
-        /// solicitation listeners, only accessed from the reactor thread.
-        std::unordered_map<ssize_t, SolicitationNotify> _listeners;
+        /// router solicitation listener, only accessed from the reactor thread.
+        SolicitationNotify _listener;
 
-        /// listener id counter.
-        std::atomic<ssize_t> _listenerCounter{0};
+        /// set while the listener is being called and still set, only accessed from the reactor thread.
+        bool _calling = false;
     };
 }
 
