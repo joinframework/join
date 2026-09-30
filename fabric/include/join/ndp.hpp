@@ -371,7 +371,7 @@ namespace join
          * @brief send a router solicitation.
          * @return 0 on success, -1 on failure.
          */
-        int solicit () noexcept
+        int routerSolicit () noexcept
         {
             RouterSolicitation out;
             out.link = hardware ();
@@ -392,7 +392,8 @@ namespace join
          * @param timeout maximum wait duration.
          * @return 0 on success, -1 on failure.
          */
-        int solicit (RouterAdvertisement& advert, std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
+        int routerSolicit (RouterAdvertisement& advert,
+                           std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
             if (this->_reactor.isReactorThread ())
             {
@@ -406,7 +407,7 @@ namespace join
             pending.advert = &advert;
             _pending.push_back (&pending);
 
-            if (solicit () == -1)
+            if (routerSolicit () == -1)
             {
                 // LCOV_EXCL_START
                 _pending.erase (std::find (_pending.begin (), _pending.end (), &pending));
@@ -575,8 +576,8 @@ namespace join
          * @param destination destination address, the solicitor or all the nodes of the link.
          * @return 0 on success, -1 on failure.
          */
-        int advertise (const RouterAdvertisement& advert,
-                       const IpAddress& destination = IpAddress::ipv6AllNodes) noexcept
+        int routerAdvertise (const RouterAdvertisement& advert,
+                             const IpAddress& destination = IpAddress::ipv6AllNodes) noexcept
         {
             char payload[Protocol::maxMsgSize];
             ssize_t size = this->_message.serialize (advert, payload, sizeof (payload),
@@ -595,9 +596,10 @@ namespace join
          * @param solicitation solicitation to answer.
          * @return 0 on success, -1 on failure.
          */
-        int advertise (const RouterAdvertisement& advert, const RouterSolicitation& solicitation) noexcept
+        int routerAdvertise (const RouterAdvertisement& advert, const RouterSolicitation& solicitation) noexcept
         {
-            return advertise (advert, solicitation.src.isWildcard () ? IpAddress::ipv6AllNodes : solicitation.src);
+            return routerAdvertise (advert,
+                                    solicitation.src.isWildcard () ? IpAddress::ipv6AllNodes : solicitation.src);
         }
 
     private:

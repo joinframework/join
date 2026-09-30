@@ -146,7 +146,7 @@ public:
     {
         _server.setSolicitationListener ([this] (const RouterSolicitation& solicitation) {
             _solicitations.push (solicitation);
-            _server.advertise (settings (), solicitation);
+            _server.routerAdvertise (settings (), solicitation);
         });
     }
 
@@ -301,9 +301,9 @@ TEST_F (NdpTest, create)
 }
 
 /**
- * @brief test the solicit method.
+ * @brief test the routerSolicit method.
  */
-TEST_F (NdpTest, solicit)
+TEST_F (NdpTest, routerSolicit)
 {
     Inbox<RouterAdvertisement> adverts;
     Ndp::Client client (_device);
@@ -312,7 +312,7 @@ TEST_F (NdpTest, solicit)
         adverts.push (advert);
     });
 
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (1));
     checkSettings (adverts.messages ()[0]);
 
@@ -322,9 +322,9 @@ TEST_F (NdpTest, solicit)
 }
 
 /**
- * @brief test the solicit method waiting for the answer.
+ * @brief test the routerSolicit method waiting for the answer.
  */
-TEST_F (NdpTest, solicitSync)
+TEST_F (NdpTest, routerSolicitSync)
 {
     Inbox<RouterAdvertisement> adverts;
     Ndp::Client client (_device);
@@ -334,7 +334,7 @@ TEST_F (NdpTest, solicitSync)
     });
 
     RouterAdvertisement advert;
-    ASSERT_EQ (client.solicit (advert, timeout), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (advert, timeout), 0) << lastError.message ();
     checkSettings (advert);
     ASSERT_EQ (adverts.messages ().size (), 1u);
     checkSettings (adverts.messages ()[0]);
@@ -342,16 +342,16 @@ TEST_F (NdpTest, solicitSync)
     _server.unsetSolicitationListener ();
 
     RouterAdvertisement none;
-    ASSERT_EQ (client.solicit (none, std::chrono::milliseconds (200)), -1);
+    ASSERT_EQ (client.routerSolicit (none, std::chrono::milliseconds (200)), -1);
     ASSERT_EQ (lastError, Errc::TimedOut) << lastError.message ();
     ASSERT_TRUE (none.prefixes.empty ());
     ASSERT_EQ (adverts.messages ().size (), 1u);
 }
 
 /**
- * @brief test the solicit method called from a listener.
+ * @brief test the routerSolicit method called from a listener.
  */
-TEST_F (NdpTest, solicitFromListener)
+TEST_F (NdpTest, routerSolicitFromListener)
 {
     Inbox<RouterAdvertisement> adverts;
     Ndp::Client client (_device);
@@ -367,14 +367,14 @@ TEST_F (NdpTest, solicitFromListener)
         if (adverts.messages ().empty ())
         {
             RouterAdvertisement unused;
-            result.sync = client.solicit (unused);
+            result.sync = client.routerSolicit (unused);
             result.code = lastError;
-            result.async = client.solicit ();
+            result.async = client.routerSolicit ();
         }
         adverts.push (advert);
     });
 
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (2));
     ASSERT_EQ (result.sync, -1);
     ASSERT_EQ (result.code, std::errc::resource_deadlock_would_occur) << result.code.message ();
@@ -418,13 +418,13 @@ TEST_F (NdpTest, setAdvertisementListener)
     ASSERT_EQ (status, -1);
     ASSERT_EQ (lastError, Errc::InUse) << lastError.message ();
 
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
     ASSERT_TRUE (first.awaits (1));
     ASSERT_EQ (result.refused, -1);
     ASSERT_EQ (result.code, Errc::InUse) << result.code.message ();
     ASSERT_EQ (result.swapped, 0);
 
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
     ASSERT_TRUE (second.awaits (1));
     ASSERT_FALSE (first.awaits (2, std::chrono::milliseconds (200)));
 }
@@ -445,9 +445,9 @@ TEST_F (NdpTest, unsetAdvertisementListener)
     });
     ASSERT_EQ (status, 0) << lastError.message ();
 
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (1));
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
     ASSERT_FALSE (adverts.awaits (2, std::chrono::milliseconds (200)));
 
     status = client.setAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
@@ -455,11 +455,11 @@ TEST_F (NdpTest, unsetAdvertisementListener)
     });
     ASSERT_EQ (status, 0) << lastError.message ();
 
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (2));
 
     ASSERT_EQ (client.unsetAdvertisementListener (), 0) << lastError.message ();
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
     ASSERT_FALSE (adverts.awaits (3, std::chrono::milliseconds (200)));
 }
 
@@ -498,13 +498,13 @@ TEST_F (NdpTest, setSolicitationListener)
         });
     ASSERT_EQ (status, 0) << lastError.message ();
 
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_TRUE (first.awaits (1));
     ASSERT_EQ (result.refused, -1);
     ASSERT_EQ (result.code, Errc::InUse) << result.code.message ();
     ASSERT_EQ (result.swapped, 0);
 
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_TRUE (second.awaits (1));
     ASSERT_FALSE (first.awaits (2, std::chrono::milliseconds (200)));
 }
@@ -526,16 +526,16 @@ TEST_F (NdpTest, unsetSolicitationListener)
     });
     ASSERT_EQ (status, 0) << lastError.message ();
 
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_TRUE (solicitations.awaits (1));
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_FALSE (solicitations.awaits (2, std::chrono::milliseconds (200)));
 }
 
 /**
- * @brief test the advertise method.
+ * @brief test the routerAdvertise method.
  */
-TEST_F (NdpTest, advertise)
+TEST_F (NdpTest, routerAdvertise)
 {
     Inbox<RouterAdvertisement> adverts;
     Ndp::Client client (_device);
@@ -546,34 +546,34 @@ TEST_F (NdpTest, advertise)
 
     RouterAdvertisement bad = settings ();
     bad.prefixes[0].prefix = "192.168.24.0";
-    ASSERT_EQ (_server.advertise (bad), -1);
+    ASSERT_EQ (_server.routerAdvertise (bad), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
     bad.link = "4e:ed:ed:ee:59:dd";
-    ASSERT_EQ (_server.advertise (bad), -1);
+    ASSERT_EQ (_server.routerAdvertise (bad), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
-    ASSERT_EQ (_server.advertise (settings (), "192.168.24.255"), -1);
+    ASSERT_EQ (_server.routerAdvertise (settings (), "192.168.24.255"), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (1));
     checkSettings (adverts.messages ()[0]);
 
     RouterAdvertisement other = settings ();
     other.link = "4e:ed:ed:ee:59:dd";
-    ASSERT_EQ (_server.advertise (other), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (other), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (2));
     ASSERT_EQ (adverts.messages ()[1].link, MacAddress ("4e:ed:ed:ee:59:dd"));
 
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_TRUE (_solicitations.awaits (1));
     ASSERT_TRUE (adverts.awaits (3));
 
-    ASSERT_EQ (_server.advertise (settings (), _solicitations.messages ()[0]), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings (), _solicitations.messages ()[0]), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (4));
 
-    ASSERT_EQ (_server.advertise (settings (), RouterSolicitation ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings (), RouterSolicitation ()), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (5));
 }
 
@@ -592,20 +592,20 @@ TEST_F (NdpTest, jumbo)
     RouterAdvertisement big = settings ();
     big.prefixes.assign (250, big.prefixes[0]);
     ASSERT_GT (wireOf (big).size (), size_t (_mtu / 2));
-    ASSERT_EQ (_server.advertise (big), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (big), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (1));
     ASSERT_EQ (adverts.messages ()[0].prefixes.size (), 250u);
 
     RouterAdvertisement huge = settings ();
     huge.prefixes.assign (300, huge.prefixes[0]);
     ASSERT_GT (wireOf (huge).size (), size_t (_mtu));
-    ASSERT_EQ (_server.advertise (huge), -1);
+    ASSERT_EQ (_server.routerAdvertise (huge), -1);
     ASSERT_EQ (lastError, std::errc::message_size) << lastError.message ();
 
     RouterAdvertisement oversized = settings ();
     oversized.prefixes.assign (2100, oversized.prefixes[0]);
     ASSERT_GT (wireOf (oversized).size (), size_t (Ndp::maxMsgSize));
-    ASSERT_EQ (_server.advertise (oversized), -1);
+    ASSERT_EQ (_server.routerAdvertise (oversized), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 }
 

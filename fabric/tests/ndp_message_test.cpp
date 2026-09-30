@@ -80,7 +80,7 @@ static RouterAdvertisement sample ()
 /**
  * @brief Test serialize method with a router solicitation.
  */
-TEST (NdpMessage, serializeSolicitation)
+TEST (NdpMessage, serializeRouterSolicitation)
 {
     NdpMessage message;
     char data[64];
@@ -107,7 +107,7 @@ TEST (NdpMessage, serializeSolicitation)
 /**
  * @brief Test serialize method with a router advertisement.
  */
-TEST (NdpMessage, serializeAdvertisement)
+TEST (NdpMessage, serializeRouterAdvertisement)
 {
     NdpMessage message;
     char data[1024];
@@ -182,7 +182,7 @@ TEST (NdpMessage, serializeAdvertisement)
 /**
  * @brief Test deserialize method with a router solicitation.
  */
-TEST (NdpMessage, deserializeSolicitation)
+TEST (NdpMessage, deserializeRouterSolicitation)
 {
     NdpMessage message;
     RouterSolicitation packet;
@@ -233,7 +233,7 @@ TEST (NdpMessage, deserializeSolicitation)
 /**
  * @brief Test deserialize method with a router advertisement.
  */
-TEST (NdpMessage, deserializeAdvertisement)
+TEST (NdpMessage, deserializeRouterAdvertisement)
 {
     NdpMessage message;
     RouterAdvertisement packet;

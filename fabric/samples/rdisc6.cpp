@@ -158,14 +158,14 @@ int main (int argc, char* argv[])
 
             if (multiple)
             {
-                if (client.solicit () == -1)
+                if (client.routerSolicit () == -1)
                 {
                     throw std::system_error (lastError);
                 }
 
                 std::this_thread::sleep_for (std::chrono::milliseconds (wait));
             }
-            else if (client.solicit (advert, std::chrono::milliseconds (wait)) == 0)
+            else if (client.routerSolicit (advert, std::chrono::milliseconds (wait)) == 0)
             {
                 print (advert);
                 ++received;
