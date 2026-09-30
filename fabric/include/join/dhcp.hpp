@@ -28,6 +28,7 @@
 #include <join/dhcp_protocol.hpp>
 #include <join/dhcp_message.hpp>
 #include <join/condition.hpp>
+#include <join/function.hpp>
 #include <join/reactor.hpp>
 #include <join/utils.hpp>
 #include <join/error.hpp>
@@ -39,7 +40,6 @@
 #include <chrono>
 #include <memory>
 #include <string>
-#include <vector>
 
 // C.
 #include <net/ethernet.h>
@@ -119,22 +119,6 @@ namespace join
         virtual ~BasicDhcp () = default;
 
         /**
-         * @brief start receiving messages, to be called once fully constructed.
-         */
-        void start () noexcept
-        {
-            _reactor.addHandler (_socket.handle (), this);
-        }
-
-        /**
-         * @brief stop receiving messages, to be called before destruction starts.
-         */
-        void stop () noexcept
-        {
-            _reactor.delHandler (_socket.handle ());
-        }
-
-        /**
          * @brief get the name of the interface the instance is bound to.
          * @return the interface name.
          */
@@ -176,13 +160,33 @@ namespace join
         };
 
         /**
+         * @brief register with the reactor, to be called by the final class once fully constructed.
+         * @throw std::system_error if the registration failed.
+         */
+        void attach ()
+        {
+            if (_reactor.addHandler (_socket.handle (), this) == -1)
+            {
+                throw std::system_error (lastError, "dhcp reactor registration failed");  // LCOV_EXCL_LINE
+            }
+        }
+
+        /**
+         * @brief unregister from the reactor, to be called by the final class before destruction starts.
+         */
+        void detach () noexcept
+        {
+            _reactor.delHandler (_socket.handle ());
+        }
+
+        /**
          * @brief compute the checksum of a UDP datagram, RFC 768.
          * @param frame frame carrying the datagram, its checksum field must be zero.
          * @param payload datagram payload.
          * @param size payload size.
          * @return the checksum.
          */
-        static uint16_t udpChecksum (const Frame& frame, const char* payload, size_t size)
+        static uint16_t udpChecksum (const Frame& frame, const char* payload, size_t size) noexcept
         {
             Pseudo pseudo = {};
             pseudo.source = frame.ip.saddr;
@@ -190,12 +194,10 @@ namespace join
             pseudo.protocol = IPPROTO_UDP;
             pseudo.length = frame.udp.len;
 
-            std::vector<uint8_t> scratch (sizeof (pseudo) + sizeof (frame.udp) + size, 0);
-            ::memcpy (scratch.data (), &pseudo, sizeof (pseudo));
-            ::memcpy (scratch.data () + sizeof (pseudo), &frame.udp, sizeof (frame.udp));
-            ::memcpy (scratch.data () + sizeof (pseudo) + sizeof (frame.udp), payload, size);
-
-            uint16_t sum = join::checksum (reinterpret_cast<const uint16_t*> (scratch.data ()), scratch.size ());
+            uint16_t sum = join::checksum (reinterpret_cast<const uint16_t*> (&pseudo), sizeof (pseudo));
+            sum = join::checksum (reinterpret_cast<const uint16_t*> (&frame.udp), sizeof (frame.udp),
+                                  static_cast<uint16_t> (~sum));
+            sum = join::checksum (reinterpret_cast<const uint16_t*> (payload), size, static_cast<uint16_t> (~sum));
 
             return sum ? sum : 0xffff;
         }
@@ -378,7 +380,7 @@ namespace join
      * @brief DHCP client.
      */
     template <class Protocol>
-    class BasicDhcpClient : protected BasicDhcp<Protocol>
+    class BasicDhcpClient final : protected BasicDhcp<Protocol>
     {
     public:
         using BasicDhcp<Protocol>::hardware;
@@ -410,15 +412,15 @@ namespace join
                                          "dhcp maximum message size is too small");
             }
 
-            this->start ();
+            this->attach ();
         }
 
         /**
-         * @brief destroy the instance.
+         * @brief stop receiving messages and destroy the instance.
          */
-        virtual ~BasicDhcpClient ()
+        ~BasicDhcpClient ()
         {
-            this->stop ();
+            this->detach ();
         }
 
         /**
@@ -464,6 +466,12 @@ namespace join
         int exchange (DhcpPacket& request, DhcpPacket& answer, const IpAddress& destination, uint8_t expected,
                       std::chrono::milliseconds timeout = std::chrono::seconds (1))
         {
+            if (this->_reactor.isReactorThread ())
+            {
+                lastError = std::make_error_code (std::errc::resource_deadlock_would_occur);
+                return -1;
+            }
+
             std::stringstream data;
             if (this->_message.serialize (request, data) == -1)
             {
@@ -776,11 +784,14 @@ namespace join
      * @brief DHCP server.
      */
     template <class Protocol>
-    class BasicDhcpServer : public BasicDhcp<Protocol>
+    class BasicDhcpServer final : protected BasicDhcp<Protocol>
     {
     public:
         using BasicDhcp<Protocol>::hardware;
         using BasicDhcp<Protocol>::interface;
+
+        /// request notification callback.
+        using RequestNotify = Function<void (DhcpMessage::MessageType type, const DhcpPacket& request)>;
 
         /**
          * @brief create the BasicDhcpServer instance.
@@ -796,12 +807,16 @@ namespace join
         explicit BasicDhcpServer (const std::string& interface, Reactor& reactor = ReactorThread::reactor ())
         : BasicDhcp<Protocol> (interface, reactor)
         {
+            this->attach ();
         }
 
         /**
-         * @brief destroy the instance.
+         * @brief stop receiving messages and destroy the instance.
          */
-        virtual ~BasicDhcpServer () = default;
+        ~BasicDhcpServer ()
+        {
+            this->detach ();
+        }
 
         /**
          * @brief answer a DISCOVER message with an OFFER.
@@ -845,40 +860,54 @@ namespace join
             return reply (request, DhcpMessage::Nak, IpAddress::ipv4Wildcard, options);
         }
 
-    protected:
         /**
-         * @brief method called when a DISCOVER message is received.
-         * @param request message received.
+         * @brief set the callback called on every request received, whatever its message type.
+         * @param cb callback, called from the reactor thread, must not destroy the instance.
+         * @return 0 on success, -1 on failure.
          */
-        virtual void onDiscover (const DhcpPacket& request) = 0;
+        int setRequestListener (RequestNotify cb) noexcept
+        {
+            bool busy = false;
+
+            Reactor::InvokeHandler fn = [this, &cb, &busy] () {
+                busy = _calling || _listener;
+                if (!busy)
+                {
+                    _listener = std::move (cb);
+                }
+            };
+
+            if (this->_reactor.invoke (&fn) == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
+
+            if (busy)
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            return 0;
+        }
 
         /**
-         * @brief method called when a REQUEST message is received.
-         * @param request message received.
+         * @brief unset the request callback, it is no longer called once this returns.
+         * @return 0 on success, -1 on failure.
          */
-        virtual void onRequest (const DhcpPacket& request) = 0;
+        int unsetRequestListener () noexcept
+        {
+            Reactor::InvokeHandler fn = [this] () {
+                _listener = nullptr;
+                _calling = false;
+            };
 
-        /**
-         * @brief method called when a RELEASE message is received.
-         * @param request message received.
-         */
-        virtual void onRelease (const DhcpPacket& request) = 0;
-
-        /**
-         * @brief method called when a DECLINE message is received.
-         * @param request message received.
-         */
-        virtual void onDecline (const DhcpPacket& request) = 0;
-
-        /**
-         * @brief method called when an INFORM message is received.
-         * @param request message received.
-         */
-        virtual void onInform (const DhcpPacket& request) = 0;
+            return this->_reactor.invoke (&fn);
+        }
 
     private:
         /**
-         * @brief decode a message received from a client and dispatch it to the handler for its type.
+         * @brief decode a message received from a client and hand it to the listener.
          * @param fd file descriptor.
          */
         void onReadable ([[maybe_unused]] int fd) override final
@@ -908,30 +937,18 @@ namespace join
                 return;
             }
 
-            switch (*type)
+            if (_listener)
             {
-                case DhcpMessage::Discover:
-                    onDiscover (packet);
-                    break;
+                RequestNotify listener = std::move (_listener);
 
-                case DhcpMessage::Request:
-                    onRequest (packet);
-                    break;
+                _calling = true;
+                listener (static_cast<DhcpMessage::MessageType> (*type), packet);
 
-                case DhcpMessage::Release:
-                    onRelease (packet);
-                    break;
-
-                case DhcpMessage::Decline:
-                    onDecline (packet);
-                    break;
-
-                case DhcpMessage::Inform:
-                    onInform (packet);
-                    break;
-
-                default:
-                    break;
+                if (_calling)
+                {
+                    _listener = std::move (listener);
+                    _calling = false;
+                }
             }
         }
 
@@ -989,6 +1006,12 @@ namespace join
             return this->send (payload.data (), payload.size (), out.dest, server,
                                broadcast ? IpAddress::ipv4Broadcast : unicast);
         }
+
+        /// request listener, only accessed from the reactor thread.
+        RequestNotify _listener;
+
+        /// set while the listener is being called and still set, only accessed from the reactor thread.
+        bool _calling = false;
     };
 }
 

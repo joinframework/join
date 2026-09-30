@@ -46,7 +46,7 @@ using join::DhcpMessage;
 /**
  * @brief a DHCP server handing out addresses from a pool.
  */
-class Server : public Dhcp::Server
+class Server
 {
 public:
     /**
@@ -57,28 +57,41 @@ public:
      * @param options options to advertise to the clients.
      */
     Server (const std::string& device, const IpAddress& first, uint32_t count, const DhcpOption& options)
-    : Dhcp::Server (device)
-    , _first (ntohl (*reinterpret_cast<const uint32_t*> (first.addr ())))
+    : _first (ntohl (*reinterpret_cast<const uint32_t*> (first.addr ())))
     , _count (count)
     , _options (options)
+    , _dhcp (device)
     {
-        start ();
+        _dhcp.setRequestListener ([this] (DhcpMessage::MessageType type, const DhcpPacket& request) {
+            switch (type)
+            {
+                case DhcpMessage::Discover:
+                    onDiscover (request);
+                    break;
+                case DhcpMessage::Request:
+                    onRequest (request);
+                    break;
+                case DhcpMessage::Release:
+                    onRelease (request);
+                    break;
+                case DhcpMessage::Decline:
+                    onDecline (request);
+                    break;
+                case DhcpMessage::Inform:
+                    onInform (request);
+                    break;
+                default:
+                    break;
+            }
+        });
     }
 
-    /**
-     * @brief destroy the server instance.
-     */
-    ~Server ()
-    {
-        stop ();
-    }
-
-protected:
+private:
     /**
      * @brief offer an address to a client asking for one.
      * @param request message received.
      */
-    void onDiscover (const DhcpPacket& request) override
+    void onDiscover (const DhcpPacket& request)
     {
         IpAddress address = allocate (request);
 
@@ -89,14 +102,14 @@ protected:
         }
 
         std::cout << "offering " << address << " to " << request.hardware << std::endl;
-        offer (request, address, _options);
+        _dhcp.offer (request, address, _options);
     }
 
     /**
      * @brief acknowledge the address a client asks to keep.
      * @param request message received.
      */
-    void onRequest (const DhcpPacket& request) override
+    void onRequest (const DhcpPacket& request)
     {
         const IpAddress* wants = request.options.getIf<IpAddress> (DhcpOption::RequestedIpAddress);
         IpAddress address = (wants != nullptr) ? *wants : request.client;
@@ -105,19 +118,19 @@ protected:
         if ((lease == _leases.end ()) || (lease->second != address))
         {
             std::cout << "refusing " << address << " to " << request.hardware << std::endl;
-            nak (request, "address not leased to this client");
+            _dhcp.nak (request, "address not leased to this client");
             return;
         }
 
         std::cout << "acknowledging " << address << " to " << request.hardware << std::endl;
-        ack (request, address, _options);
+        _dhcp.ack (request, address, _options);
     }
 
     /**
      * @brief give the address of a client back to the pool.
      * @param request message received.
      */
-    void onRelease (const DhcpPacket& request) override
+    void onRelease (const DhcpPacket& request)
     {
         std::cout << "releasing " << request.client << " from " << request.hardware << std::endl;
         _leases.erase (request.hardware);
@@ -127,7 +140,7 @@ protected:
      * @brief drop an address a client reported as already in use.
      * @param request message received.
      */
-    void onDecline (const DhcpPacket& request) override
+    void onDecline (const DhcpPacket& request)
     {
         std::cout << "declined by " << request.hardware << std::endl;
         _leases.erase (request.hardware);
@@ -137,7 +150,7 @@ protected:
      * @brief answer a client asking only for the parameters.
      * @param request message received.
      */
-    void onInform (const DhcpPacket& request) override
+    void onInform (const DhcpPacket& request)
     {
         std::cout << "informing " << request.client << std::endl;
 
@@ -146,7 +159,7 @@ protected:
         options.erase (DhcpOption::RenewalTimeValue);
         options.erase (DhcpOption::RebindingTimeValue);
 
-        ack (request, IpAddress::ipv4Wildcard, options);
+        _dhcp.ack (request, IpAddress::ipv4Wildcard, options);
     }
 
     /**
@@ -194,6 +207,9 @@ protected:
 
     /// addresses handed out, indexed by client hardware address.
     std::map<MacAddress, IpAddress> _leases;
+
+    /// DHCP server, declared last so that it stops before the state its listener uses.
+    Dhcp::Server _dhcp;
 };
 
 // =========================================================================
