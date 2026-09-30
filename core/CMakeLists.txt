@@ -32,6 +32,7 @@ set(PUBLIC_HEADERS
     include/join/semaphore.hpp
     include/join/futex.hpp
     include/join/function.hpp
+    include/join/notifier.hpp
     include/join/thread.hpp
     include/join/thread_pool.hpp
     include/join/mac_address.hpp

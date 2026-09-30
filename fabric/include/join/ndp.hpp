@@ -30,6 +30,7 @@
 #include <join/ndp_protocol.hpp>
 #include <join/ndp_message.hpp>
 #include <join/condition.hpp>
+#include <join/notifier.hpp>
 #include <join/function.hpp>
 #include <join/reactor.hpp>
 #include <join/error.hpp>
@@ -426,33 +427,12 @@ namespace join
 
         /**
          * @brief set the callback called on every router advertisement received, solicited or not.
-         * @param cb callback, called from the reactor thread, must not destroy the instance.
+         * @param cb callback, called from the reactor thread, must not throw nor destroy the instance.
          * @return 0 on success, -1 on failure.
          */
         int setAdvertisementListener (AdvertisementNotify cb) noexcept
         {
-            bool busy = false;
-
-            Reactor::InvokeHandler fn = [this, &cb, &busy] () {
-                busy = _calling || _listener;
-                if (!busy)
-                {
-                    _listener = std::move (cb);
-                }
-            };
-
-            if (this->_reactor.invoke (&fn) == -1)
-            {
-                return -1;  // LCOV_EXCL_LINE
-            }
-
-            if (busy)
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            return 0;
+            return _listener.set (std::move (cb));
         }
 
         /**
@@ -461,12 +441,7 @@ namespace join
          */
         int unsetAdvertisementListener () noexcept
         {
-            Reactor::InvokeHandler fn = [this] () {
-                _listener = nullptr;
-                _calling = false;
-            };
-
-            return this->_reactor.invoke (&fn);
+            return _listener.unset ();
         }
 
     private:
@@ -495,19 +470,7 @@ namespace join
 
             advert.src = from;
 
-            if (_listener)
-            {
-                AdvertisementNotify listener = std::move (_listener);
-
-                _calling = true;
-                listener (advert);
-
-                if (_calling)
-                {
-                    _listener = std::move (listener);
-                    _calling = false;
-                }
-            }
+            _listener.notify (advert);
 
             ScopedLock<Mutex> lock (_syncMutex);
 
@@ -543,11 +506,8 @@ namespace join
         /// mutex for synchronous operations.
         Mutex _syncMutex;
 
-        /// router advertisement listener, only accessed from the reactor thread.
-        AdvertisementNotify _listener;
-
-        /// set while the listener is being called and still set, only accessed from the reactor thread.
-        bool _calling = false;
+        /// router advertisement listener.
+        Notifier<AdvertisementNotify, Reactor> _listener{this->_reactor};
     };
 
     /**
@@ -591,33 +551,12 @@ namespace join
 
         /**
          * @brief set the callback called on every router solicitation received.
-         * @param cb callback, called from the reactor thread, must not destroy the instance.
+         * @param cb callback, called from the reactor thread, must not throw nor destroy the instance.
          * @return 0 on success, -1 on failure.
          */
         int setSolicitationListener (SolicitationNotify cb) noexcept
         {
-            bool busy = false;
-
-            Reactor::InvokeHandler fn = [this, &cb, &busy] () {
-                busy = _calling || _listener;
-                if (!busy)
-                {
-                    _listener = std::move (cb);
-                }
-            };
-
-            if (this->_reactor.invoke (&fn) == -1)
-            {
-                return -1;  // LCOV_EXCL_LINE
-            }
-
-            if (busy)
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            return 0;
+            return _listener.set (std::move (cb));
         }
 
         /**
@@ -626,12 +565,7 @@ namespace join
          */
         int unsetSolicitationListener () noexcept
         {
-            Reactor::InvokeHandler fn = [this] () {
-                _listener = nullptr;
-                _calling = false;
-            };
-
-            return this->_reactor.invoke (&fn);
+            return _listener.unset ();
         }
 
         /**
@@ -684,26 +618,11 @@ namespace join
 
             solicitation.src = from;
 
-            if (_listener)
-            {
-                SolicitationNotify listener = std::move (_listener);
-
-                _calling = true;
-                listener (solicitation);
-
-                if (_calling)
-                {
-                    _listener = std::move (listener);
-                    _calling = false;
-                }
-            }
+            _listener.notify (solicitation);
         }
 
-        /// router solicitation listener, only accessed from the reactor thread.
-        SolicitationNotify _listener;
-
-        /// set while the listener is being called and still set, only accessed from the reactor thread.
-        bool _calling = false;
+        /// router solicitation listener.
+        Notifier<SolicitationNotify, Reactor> _listener{this->_reactor};
     };
 }
 

@@ -28,6 +28,7 @@
 #include <join/dhcp_protocol.hpp>
 #include <join/dhcp_message.hpp>
 #include <join/condition.hpp>
+#include <join/notifier.hpp>
 #include <join/function.hpp>
 #include <join/reactor.hpp>
 #include <join/utils.hpp>
@@ -873,33 +874,12 @@ namespace join
 
         /**
          * @brief set the callback called on every request received, whatever its message type.
-         * @param cb callback, called from the reactor thread, must not destroy the instance.
+         * @param cb callback, called from the reactor thread, must not throw nor destroy the instance.
          * @return 0 on success, -1 on failure.
          */
         int setRequestListener (RequestNotify cb) noexcept
         {
-            bool busy = false;
-
-            Reactor::InvokeHandler fn = [this, &cb, &busy] () {
-                busy = _calling || _listener;
-                if (!busy)
-                {
-                    _listener = std::move (cb);
-                }
-            };
-
-            if (this->_reactor.invoke (&fn) == -1)
-            {
-                return -1;  // LCOV_EXCL_LINE
-            }
-
-            if (busy)
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            return 0;
+            return _listener.set (std::move (cb));
         }
 
         /**
@@ -908,12 +888,7 @@ namespace join
          */
         int unsetRequestListener () noexcept
         {
-            Reactor::InvokeHandler fn = [this] () {
-                _listener = nullptr;
-                _calling = false;
-            };
-
-            return this->_reactor.invoke (&fn);
+            return _listener.unset ();
         }
 
     private:
@@ -948,19 +923,7 @@ namespace join
                 return;
             }
 
-            if (_listener)
-            {
-                RequestNotify listener = std::move (_listener);
-
-                _calling = true;
-                listener (static_cast<DhcpMessage::MessageType> (*type), packet);
-
-                if (_calling)
-                {
-                    _listener = std::move (listener);
-                    _calling = false;
-                }
-            }
+            _listener.notify (static_cast<DhcpMessage::MessageType> (*type), packet);
         }
 
         /**
@@ -1019,11 +982,8 @@ namespace join
                                broadcast ? IpAddress::ipv4Broadcast : unicast);
         }
 
-        /// request listener, only accessed from the reactor thread.
-        RequestNotify _listener;
-
-        /// set while the listener is being called and still set, only accessed from the reactor thread.
-        bool _calling = false;
+        /// request listener.
+        Notifier<RequestNotify, Reactor> _listener{this->_reactor};
     };
 }
 
