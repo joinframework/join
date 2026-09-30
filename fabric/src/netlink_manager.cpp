@@ -82,6 +82,12 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 
     if (sync)
     {
+        if (_reactor.isReactorThread ())
+        {
+            lastError = std::make_error_code (std::errc::resource_deadlock_would_occur);
+            return -1;
+        }
+
         ScopedLock<Mutex> lock (_syncMutex);
 
         auto inserted = _pending.emplace (nlh->nlmsg_seq, std::make_unique<PendingRequest> ());

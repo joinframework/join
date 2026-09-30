@@ -503,7 +503,6 @@ TEST_F (DhcpTest, compose)
 
     ASSERT_EQ (request.op, DhcpMessage::BootRequest);
     ASSERT_EQ (request.hardware, _mac);
-    ASSERT_EQ (request.src, _mac);
     ASSERT_EQ (request.dest, MacAddress::broadcast);
     ASSERT_EQ (request.client, IpAddress::ipv4Wildcard);
 
@@ -663,6 +662,18 @@ TEST_F (DhcpTest, renew)
 
     ASSERT_EQ (client.renew (answer, _lease, "192.168.24.217", std::chrono::milliseconds (20)), -1);
     ASSERT_EQ (lastError, std::errc::no_such_device_or_address) << lastError.message ();
+
+    int status = 0;
+    std::error_code code;
+
+    Reactor::InvokeHandler fn = [&client, &answer, &status, &code] () {
+        status = client.renew (answer, _lease, _server);
+        code = lastError;
+    };
+
+    ASSERT_EQ (ReactorThread::reactor ().invoke (&fn), 0) << lastError.message ();
+    ASSERT_EQ (status, -1);
+    ASSERT_EQ (code, std::errc::resource_deadlock_would_occur) << code.message ();
 }
 
 /**
@@ -698,6 +709,18 @@ TEST_F (DhcpTest, release)
 
     ASSERT_EQ (client.release (_lease, "192.168.24.217", std::chrono::milliseconds (20)), -1);
     ASSERT_EQ (lastError, std::errc::no_such_device_or_address) << lastError.message ();
+
+    int status = 0;
+    std::error_code code;
+
+    Reactor::InvokeHandler fn = [&client, &status, &code] () {
+        status = client.release (_lease, _server);
+        code = lastError;
+    };
+
+    ASSERT_EQ (ReactorThread::reactor ().invoke (&fn), 0) << lastError.message ();
+    ASSERT_EQ (status, -1);
+    ASSERT_EQ (code, std::errc::resource_deadlock_would_occur) << code.message ();
 }
 
 /**

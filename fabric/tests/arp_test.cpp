@@ -38,6 +38,8 @@ using join::MacAddress;
 using join::NeighborManager;
 using join::Errc;
 using join::Arp;
+using join::Reactor;
+using join::ReactorThread;
 
 /**
  * @brief Class used to test the ARP API.
@@ -115,6 +117,18 @@ TEST_F (ArpTest, request)
     ASSERT_EQ (lastError, std::errc::no_such_device_or_address) << lastError.message ();
 
     ASSERT_EQ (Arp::request ("br0", "192.168.16.200"), "4e:ed:ed:ee:59:db") << lastError.message ();
+
+    MacAddress mac = "4e:ed:ed:ee:59:db";
+    std::error_code code;
+
+    Reactor::InvokeHandler fn = [&mac, &code] () {
+        mac = Arp::request ("br0", "192.168.16.200");
+        code = lastError;
+    };
+
+    ASSERT_EQ (ReactorThread::reactor ().invoke (&fn), 0) << lastError.message ();
+    ASSERT_TRUE (mac.isWildcard ());
+    ASSERT_EQ (code, std::errc::resource_deadlock_would_occur) << code.message ();
 }
 
 /**

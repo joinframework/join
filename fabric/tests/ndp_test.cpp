@@ -463,6 +463,75 @@ TEST_F (NdpTest, unsetAdvertisementListener)
 }
 
 /**
+ * @brief test the setSolicitationListener method.
+ */
+TEST_F (NdpTest, setSolicitationListener)
+{
+    Inbox<RouterSolicitation> first, second;
+    Ndp::Client client (_device);
+
+    int status = _server.setSolicitationListener ([] (const RouterSolicitation&) {
+    });
+    ASSERT_EQ (status, -1);
+    ASSERT_EQ (lastError, Errc::InUse) << lastError.message ();
+
+    ASSERT_EQ (_server.unsetSolicitationListener (), 0) << lastError.message ();
+
+    struct
+    {
+        int refused = 0;
+        std::error_code code;
+        int swapped = -1;
+    } result;
+
+    status =
+        _server.setSolicitationListener ([this, &first, &second, &result] (const RouterSolicitation& solicitation) {
+            result.refused = _server.setSolicitationListener ([] (const RouterSolicitation&) {
+            });
+            result.code = lastError;
+            _server.unsetSolicitationListener ();
+            result.swapped = _server.setSolicitationListener ([&second] (const RouterSolicitation& solicitation) {
+                second.push (solicitation);
+            });
+            first.push (solicitation);
+        });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_TRUE (first.awaits (1));
+    ASSERT_EQ (result.refused, -1);
+    ASSERT_EQ (result.code, Errc::InUse) << result.code.message ();
+    ASSERT_EQ (result.swapped, 0);
+
+    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_TRUE (second.awaits (1));
+    ASSERT_FALSE (first.awaits (2, std::chrono::milliseconds (200)));
+}
+
+/**
+ * @brief test the unsetSolicitationListener method.
+ */
+TEST_F (NdpTest, unsetSolicitationListener)
+{
+    Inbox<RouterSolicitation> solicitations;
+    Ndp::Client client (_device);
+
+    ASSERT_EQ (_server.unsetSolicitationListener (), 0) << lastError.message ();
+    ASSERT_EQ (_server.unsetSolicitationListener (), 0) << lastError.message ();
+
+    int status = _server.setSolicitationListener ([this, &solicitations] (const RouterSolicitation& solicitation) {
+        _server.unsetSolicitationListener ();
+        solicitations.push (solicitation);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_TRUE (solicitations.awaits (1));
+    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_FALSE (solicitations.awaits (2, std::chrono::milliseconds (200)));
+}
+
+/**
  * @brief test the advertise method.
  */
 TEST_F (NdpTest, advertise)

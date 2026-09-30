@@ -368,7 +368,7 @@ namespace join
          * @brief send a router solicitation.
          * @return 0 on success, -1 on failure.
          */
-        int solicit ()
+        int solicit () noexcept
         {
             RouterSolicitation out;
             out.link = hardware ();
@@ -387,7 +387,7 @@ namespace join
          * @param timeout maximum wait duration.
          * @return 0 on success, -1 on failure.
          */
-        int solicit (RouterAdvertisement& advert, std::chrono::milliseconds timeout = std::chrono::seconds (1))
+        int solicit (RouterAdvertisement& advert, std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
             if (this->_reactor.isReactorThread ())
             {
@@ -640,7 +640,8 @@ namespace join
          * @param destination destination address, the solicitor or all the nodes of the link.
          * @return 0 on success, -1 on failure.
          */
-        int advertise (const RouterAdvertisement& advert, const IpAddress& destination = IpAddress::ipv6AllNodes)
+        int advertise (const RouterAdvertisement& advert,
+                       const IpAddress& destination = IpAddress::ipv6AllNodes) noexcept
         {
             std::stringstream data;
             if (this->_message.serialize (advert, data, advert.link.isWildcard () ? hardware () : advert.link) == -1)

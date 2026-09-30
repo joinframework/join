@@ -140,7 +140,7 @@ namespace join
         /**
          * @brief link, internet and transport headers a DHCP message is framed with.
          */
-        struct __attribute__ ((packed)) Frame
+        struct __attribute__ ((packed, aligned (2))) Frame
         {
             struct ethhdr eth;
             struct iphdr ip;
@@ -150,7 +150,7 @@ namespace join
         /**
          * @brief header the UDP checksum is computed over, RFC 768.
          */
-        struct __attribute__ ((packed)) Pseudo
+        struct __attribute__ ((packed, aligned (2))) Pseudo
         {
             uint32_t source;
             uint32_t destination;
@@ -435,7 +435,6 @@ namespace join
             packet.op = DhcpMessage::BootRequest;
             packet.id = randomize<uint32_t> ();
             packet.hardware = hardware ();
-            packet.src = hardware ();
             packet.dest = MacAddress::broadcast;
 
             packet.options.insert (DhcpOption::DhcpMessageType, type);
@@ -464,7 +463,7 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int exchange (DhcpPacket& request, DhcpPacket& answer, const IpAddress& destination, uint8_t expected,
-                      std::chrono::milliseconds timeout = std::chrono::seconds (1))
+                      std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
             if (this->_reactor.isReactorThread ())
             {
@@ -562,7 +561,7 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int discover (DhcpPacket& offer, const IpAddress& wants = IpAddress::ipv4Wildcard,
-                      std::chrono::milliseconds timeout = std::chrono::seconds (1))
+                      std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
             DhcpPacket out = compose (DhcpMessage::Discover);
 
@@ -585,7 +584,7 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int request (DhcpPacket& ack, const IpAddress& wants, const IpAddress& server,
-                     std::chrono::milliseconds timeout = std::chrono::seconds (1))
+                     std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
             DhcpPacket out = compose (DhcpMessage::Request);
 
@@ -605,8 +604,14 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int renew (DhcpPacket& ack, const IpAddress& client, const IpAddress& server,
-                   std::chrono::milliseconds timeout = std::chrono::seconds (1))
+                   std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
+            if (this->_reactor.isReactorThread ())
+            {
+                lastError = std::make_error_code (std::errc::resource_deadlock_would_occur);
+                return -1;
+            }
+
             MacAddress mac = Arp::get (interface (), server, timeout);
             if (mac.isWildcard ())
             {
@@ -630,7 +635,7 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int inform (DhcpPacket& ack, const IpAddress& client,
-                    std::chrono::milliseconds timeout = std::chrono::seconds (1))
+                    std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
             DhcpPacket out = compose (DhcpMessage::Inform);
 
@@ -648,8 +653,14 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int release (const IpAddress& client, const IpAddress& server,
-                     std::chrono::milliseconds timeout = std::chrono::seconds (1))
+                     std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
+            if (this->_reactor.isReactorThread ())
+            {
+                lastError = std::make_error_code (std::errc::resource_deadlock_would_occur);
+                return -1;
+            }
+
             MacAddress mac = Arp::get (interface (), server, timeout);
             if (mac.isWildcard ())
             {
@@ -680,7 +691,7 @@ namespace join
          * @param message human readable reason, empty to give none.
          * @return 0 on success, -1 on failure.
          */
-        int decline (const IpAddress& address, const IpAddress& server, const std::string& message = {})
+        int decline (const IpAddress& address, const IpAddress& server, const std::string& message = {}) noexcept
         {
             DhcpPacket out = compose (DhcpMessage::Decline);
 
@@ -825,7 +836,7 @@ namespace join
          * @param options options to advertise, the message type and the server identifier are added.
          * @return 0 on success, -1 on failure.
          */
-        int offer (const DhcpPacket& request, const IpAddress& address, const DhcpOption& options = {})
+        int offer (const DhcpPacket& request, const IpAddress& address, const DhcpOption& options = {}) noexcept
         {
             return reply (request, DhcpMessage::Offer, address, options);
         }
@@ -837,7 +848,7 @@ namespace join
          * @param options options to advertise, the message type and the server identifier are added.
          * @return 0 on success, -1 on failure.
          */
-        int ack (const DhcpPacket& request, const IpAddress& address, const DhcpOption& options = {})
+        int ack (const DhcpPacket& request, const IpAddress& address, const DhcpOption& options = {}) noexcept
         {
             return reply (request, DhcpMessage::Ack, address, options);
         }
@@ -848,7 +859,7 @@ namespace join
          * @param message human readable reason, empty to give none.
          * @return 0 on success, -1 on failure.
          */
-        int nak (const DhcpPacket& request, const std::string& message = {})
+        int nak (const DhcpPacket& request, const std::string& message = {}) noexcept
         {
             DhcpOption options;
 
@@ -960,7 +971,8 @@ namespace join
          * @param options options to advertise.
          * @return 0 on success, -1 on failure.
          */
-        int reply (const DhcpPacket& request, uint8_t type, const IpAddress& address, const DhcpOption& options)
+        int reply (const DhcpPacket& request, uint8_t type, const IpAddress& address,
+                   const DhcpOption& options) noexcept
         {
             const IpAddress server = IpAddress::ipv4Address (interface ());
             if (server.isWildcard ())
