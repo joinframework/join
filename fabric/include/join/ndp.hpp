@@ -426,10 +426,10 @@ namespace join
 
         /**
          * @brief set the callback called on every router advertisement received, solicited or not.
-         * @param cb callback, called from the reactor thread.
+         * @param cb callback, called from the reactor thread, must not destroy the instance.
          * @return 0 on success, -1 on failure.
          */
-        int setAdvertisementListener (AdvertisementNotify cb)
+        int setAdvertisementListener (AdvertisementNotify cb) noexcept
         {
             bool busy = false;
 
@@ -459,7 +459,7 @@ namespace join
          * @brief unset the router advertisement callback, it is no longer called once this returns.
          * @return 0 on success, -1 on failure.
          */
-        int unsetAdvertisementListener ()
+        int unsetAdvertisementListener () noexcept
         {
             Reactor::InvokeHandler fn = [this] () {
                 _listener = nullptr;
@@ -591,10 +591,10 @@ namespace join
 
         /**
          * @brief set the callback called on every router solicitation received.
-         * @param cb callback, called from the reactor thread.
+         * @param cb callback, called from the reactor thread, must not destroy the instance.
          * @return 0 on success, -1 on failure.
          */
-        int setSolicitationListener (SolicitationNotify cb)
+        int setSolicitationListener (SolicitationNotify cb) noexcept
         {
             bool busy = false;
 
@@ -624,7 +624,7 @@ namespace join
          * @brief unset the router solicitation callback, it is no longer called once this returns.
          * @return 0 on success, -1 on failure.
          */
-        int unsetSolicitationListener ()
+        int unsetSolicitationListener () noexcept
         {
             Reactor::InvokeHandler fn = [this] () {
                 _listener = nullptr;
