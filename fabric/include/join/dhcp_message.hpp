@@ -31,7 +31,6 @@
 
 // C++.
 #include <sstream>
-#include <memory>
 #include <vector>
 
 // C.
@@ -46,9 +45,6 @@ namespace join
      */
     struct DhcpPacket
     {
-        /// pointer to a DHCP message.
-        using Ptr = std::unique_ptr<DhcpPacket>;
-
         /// link layer source address, set by the transport.
         MacAddress src;
 

@@ -151,47 +151,47 @@ int main (int argc, char* argv[])
 
     if (!configured.empty ())
     {
-        DhcpPacket::Ptr parameters = client.inform (configured, std::chrono::milliseconds (timeout));
-        if (parameters == nullptr)
+        DhcpPacket parameters;
+        if (client.inform (parameters, configured, std::chrono::milliseconds (timeout)) == -1)
         {
             std::cout << "dhclient: no answer: " << lastError.message () << std::endl;
             return 1;
         }
 
         std::cout << "parameters for " << configured << std::endl;
-        std::cout << parameters->options;
+        std::cout << parameters.options;
 
         return 0;
     }
 
     std::cout << "soliciting a lease on " << device << " [" << client.hardware () << "]" << std::endl;
 
-    DhcpPacket::Ptr offer = client.discover (wants, std::chrono::milliseconds (timeout));
-    if (offer == nullptr)
+    DhcpPacket offer;
+    if (client.discover (offer, wants, std::chrono::milliseconds (timeout)) == -1)
     {
         std::cout << "dhclient: no offer: " << lastError.message () << std::endl;
         return 1;
     }
 
-    const IpAddress* from = offer->options.getIf<IpAddress> (DhcpOption::ServerIdentifier);
+    const IpAddress* from = offer.options.getIf<IpAddress> (DhcpOption::ServerIdentifier);
     if (from == nullptr)
     {
         std::cout << "dhclient: offer names no server, ignoring it" << std::endl;
         return 1;
     }
 
-    std::cout << "offer of " << offer->your << " from " << *from << std::endl;
+    std::cout << "offer of " << offer.your << " from " << *from << std::endl;
 
-    DhcpPacket::Ptr lease = client.request (offer->your, *from, std::chrono::milliseconds (timeout));
-    if (lease == nullptr)
+    DhcpPacket lease;
+    if (client.request (lease, offer.your, *from, std::chrono::milliseconds (timeout)) == -1)
     {
         const std::string reason = client.reason ();
         std::cout << "dhclient: request refused: " << (reason.empty () ? lastError.message () : reason) << std::endl;
         return 1;
     }
 
-    std::cout << "bound to " << lease->your << std::endl;
-    std::cout << lease->options;
+    std::cout << "bound to " << lease.your << std::endl;
+    std::cout << lease.options;
 
     return 0;
 }

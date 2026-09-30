@@ -32,6 +32,9 @@
 // C++.
 #include <system_error>
 
+// C.
+#include <poll.h>
+
 using join::lastError;
 using join::Errc;
 using join::IpAddress;
@@ -45,6 +48,51 @@ using join::DhcpOption;
 using join::DhcpPacket;
 using join::DhcpMessage;
 using join::Dhcp;
+using join::BasicDhcp;
+
+/**
+ * @brief Reads the interface like the DHCP transport does, without being attached to the reactor.
+ */
+class Probe : public BasicDhcp<Dhcp>
+{
+public:
+    /**
+     * @brief create the Probe instance.
+     * @param interface interface to bind to.
+     */
+    explicit Probe (const std::string& interface)
+    : BasicDhcp<Dhcp> (interface)
+    {
+    }
+
+    /**
+     * @brief wait for the next message that passes the transport checks, skipping the frames that do not.
+     * @return transaction identifier of the message, zero if none was read before the timeout.
+     */
+    uint32_t next ()
+    {
+        MacAddress from, to;
+        struct pollfd pfd = {_socket.handle (), POLLIN, 0};
+
+        while (::poll (&pfd, 1, 1000) > 0)
+        {
+            ssize_t size = receive (_buffer.get (), Dhcp::maxMsgSize, from, to);
+            if (size != -1)
+            {
+                std::stringstream stream;
+                stream.rdbuf ()->pubsetbuf (_buffer.get (), size);
+
+                DhcpPacket packet;
+                if (_message.deserialize (packet, stream) == 0)
+                {
+                    return packet.id;
+                }
+            }
+        }
+
+        return 0;
+    }
+};
 
 /**
  * @brief Class used to test the DHCP API.
@@ -139,11 +187,13 @@ protected:
             out.op = DhcpMessage::BootReply;
             out.id = request.id;
             out.hardware = request.hardware;
-            out.src = hardware ();
-            out.dest = request.src;
             out.your = _lease;
 
-            transmit (out, _server, _lease);
+            std::stringstream data;
+            _message.serialize (out, data);
+
+            const std::string payload = data.str ();
+            send (payload.data (), payload.size (), request.src, _server, _lease);
             return;
         }
 
@@ -507,23 +557,24 @@ TEST_F (DhcpTest, exchange)
 
     const uint32_t id = request.id;
 
-    DhcpPacket::Ptr answer = client.exchange (request, IpAddress::ipv4Broadcast, DhcpMessage::Offer);
-    ASSERT_NE (answer, nullptr) << lastError.message ();
-    ASSERT_EQ (answer->id, id);
-    ASSERT_EQ (answer->your, _lease);
+    DhcpPacket answer;
+    ASSERT_EQ (client.exchange (request, answer, IpAddress::ipv4Broadcast, DhcpMessage::Offer), 0)
+        << lastError.message ();
+    ASSERT_EQ (answer.id, id);
+    ASSERT_EQ (answer.your, _lease);
     ASSERT_EQ (_secs, 0);
 
     request.secs = 4;
 
-    answer = client.exchange (request, IpAddress::ipv4Broadcast, DhcpMessage::Offer);
-    ASSERT_NE (answer, nullptr) << lastError.message ();
-    ASSERT_EQ (answer->id, id);
+    ASSERT_EQ (client.exchange (request, answer, IpAddress::ipv4Broadcast, DhcpMessage::Offer), 0)
+        << lastError.message ();
+    ASSERT_EQ (answer.id, id);
     ASSERT_EQ (_secs, 4);
 
     DhcpPacket unanswered = client.compose (DhcpMessage::Offer);
-    ASSERT_EQ (
-        client.exchange (unanswered, IpAddress::ipv4Broadcast, DhcpMessage::Offer, std::chrono::milliseconds (100)),
-        nullptr);
+    ASSERT_EQ (client.exchange (unanswered, answer, IpAddress::ipv4Broadcast, DhcpMessage::Offer,
+                                std::chrono::milliseconds (100)),
+               -1);
     ASSERT_EQ (lastError, Errc::TimedOut) << lastError.message ();
 }
 
@@ -534,33 +585,32 @@ TEST_F (DhcpTest, discover)
 {
     Dhcp::Client client (_device, 1500, "foobar");
 
-    DhcpPacket::Ptr answer = client.discover (_lease);
-    ASSERT_NE (answer, nullptr) << lastError.message ();
+    DhcpPacket answer;
+    ASSERT_EQ (client.discover (answer, _lease), 0) << lastError.message ();
 
-    ASSERT_EQ (answer->op, DhcpMessage::BootReply);
-    ASSERT_EQ (answer->your, _lease);
-    ASSERT_EQ (answer->server, _server);
-    ASSERT_EQ (answer->client, IpAddress::ipv4Wildcard);
-    ASSERT_EQ (*answer->options.getIf<uint8_t> (DhcpOption::DhcpMessageType), DhcpMessage::Offer);
-    checkSettings (*answer);
+    ASSERT_EQ (answer.op, DhcpMessage::BootReply);
+    ASSERT_EQ (answer.your, _lease);
+    ASSERT_EQ (answer.server, _server);
+    ASSERT_EQ (answer.client, IpAddress::ipv4Wildcard);
+    ASSERT_EQ (*answer.options.getIf<uint8_t> (DhcpOption::DhcpMessageType), DhcpMessage::Offer);
+    checkSettings (answer);
 
-    answer = client.discover ();
-    ASSERT_NE (answer, nullptr) << lastError.message ();
-    ASSERT_EQ (answer->your, _lease);
+    ASSERT_EQ (client.discover (answer), 0) << lastError.message ();
+    ASSERT_EQ (answer.your, _lease);
 
     DhcpPacket filled = client.compose (DhcpMessage::Discover);
     filled.client = _lease;
 
-    answer = client.exchange (filled, IpAddress::ipv4Broadcast, DhcpMessage::Offer);
-    ASSERT_NE (answer, nullptr) << lastError.message ();
-    ASSERT_EQ (answer->client, IpAddress::ipv4Wildcard);
+    ASSERT_EQ (client.exchange (filled, answer, IpAddress::ipv4Broadcast, DhcpMessage::Offer), 0)
+        << lastError.message ();
+    ASSERT_EQ (answer.client, IpAddress::ipv4Wildcard);
 
     _behaviour = WrongType;
-    ASSERT_EQ (client.discover (_lease), nullptr);
+    ASSERT_EQ (client.discover (answer, _lease), -1);
     ASSERT_EQ (lastError, Errc::MessageUnknown) << lastError.message ();
 
     _behaviour = NoType;
-    ASSERT_EQ (client.discover (_lease), nullptr);
+    ASSERT_EQ (client.discover (answer, _lease), -1);
     ASSERT_EQ (lastError, Errc::MessageUnknown) << lastError.message ();
 
     _behaviour = Normal;
@@ -573,14 +623,14 @@ TEST_F (DhcpTest, request)
 {
     Dhcp::Client client (_device);
 
-    DhcpPacket::Ptr answer = client.request (_lease, _server);
-    ASSERT_NE (answer, nullptr) << lastError.message ();
+    DhcpPacket answer;
+    ASSERT_EQ (client.request (answer, _lease, _server), 0) << lastError.message ();
 
-    ASSERT_EQ (answer->your, _lease);
-    ASSERT_EQ (*answer->options.getIf<uint8_t> (DhcpOption::DhcpMessageType), DhcpMessage::Ack);
-    checkSettings (*answer);
+    ASSERT_EQ (answer.your, _lease);
+    ASSERT_EQ (*answer.options.getIf<uint8_t> (DhcpOption::DhcpMessageType), DhcpMessage::Ack);
+    checkSettings (answer);
 
-    ASSERT_EQ (client.request ("192.168.24.111", _server), nullptr);
+    ASSERT_EQ (client.request (answer, "192.168.24.111", _server), -1);
     ASSERT_EQ (lastError, Errc::ConnectionRefused) << lastError.message ();
 }
 
@@ -591,17 +641,18 @@ TEST_F (DhcpTest, reason)
 {
     Dhcp::Client client (_device);
 
-    ASSERT_NE (client.request (_lease, _server), nullptr) << lastError.message ();
+    DhcpPacket answer;
+    ASSERT_EQ (client.request (answer, _lease, _server), 0) << lastError.message ();
     ASSERT_TRUE (client.reason ().empty ());
 
     _behaviour = Refuse;
 
-    ASSERT_EQ (client.request (_lease, _server), nullptr);
+    ASSERT_EQ (client.request (answer, _lease, _server), -1);
     ASSERT_EQ (client.reason (), "address not available");
 
     _behaviour = Silent;
 
-    ASSERT_EQ (client.request (_lease, _server), nullptr);
+    ASSERT_EQ (client.request (answer, _lease, _server), -1);
     ASSERT_TRUE (client.reason ().empty ());
 }
 
@@ -612,17 +663,17 @@ TEST_F (DhcpTest, renew)
 {
     Dhcp::Client client (_device);
 
-    DhcpPacket::Ptr answer = client.renew (_lease, _server);
-    ASSERT_NE (answer, nullptr) << lastError.message ();
+    DhcpPacket answer;
+    ASSERT_EQ (client.renew (answer, _lease, _server), 0) << lastError.message ();
 
-    ASSERT_EQ (answer->your, _lease);
-    ASSERT_EQ (answer->client, _lease);
-    ASSERT_EQ (*answer->options.getIf<uint8_t> (DhcpOption::DhcpMessageType), DhcpMessage::Ack);
-    checkSettings (*answer);
+    ASSERT_EQ (answer.your, _lease);
+    ASSERT_EQ (answer.client, _lease);
+    ASSERT_EQ (*answer.options.getIf<uint8_t> (DhcpOption::DhcpMessageType), DhcpMessage::Ack);
+    checkSettings (answer);
 
     ASSERT_TRUE (awaits (DhcpMessage::Request));
 
-    ASSERT_EQ (client.renew (_lease, "192.168.24.217", std::chrono::milliseconds (20)), nullptr);
+    ASSERT_EQ (client.renew (answer, _lease, "192.168.24.217", std::chrono::milliseconds (20)), -1);
     ASSERT_EQ (lastError, std::errc::no_such_device_or_address) << lastError.message ();
 }
 
@@ -633,16 +684,16 @@ TEST_F (DhcpTest, inform)
 {
     Dhcp::Client client (_device);
 
-    DhcpPacket::Ptr answer = client.inform (_lease);
-    ASSERT_NE (answer, nullptr) << lastError.message ();
+    DhcpPacket answer;
+    ASSERT_EQ (client.inform (answer, _lease), 0) << lastError.message ();
 
-    ASSERT_EQ (*answer->options.getIf<uint8_t> (DhcpOption::DhcpMessageType), DhcpMessage::Ack);
-    ASSERT_EQ (*answer->options.getIf<IpAddress> (DhcpOption::SubnetMask), "255.255.255.0");
-    ASSERT_EQ (*answer->options.getIf<std::string> (DhcpOption::DomainName), "foo.local");
+    ASSERT_EQ (*answer.options.getIf<uint8_t> (DhcpOption::DhcpMessageType), DhcpMessage::Ack);
+    ASSERT_EQ (*answer.options.getIf<IpAddress> (DhcpOption::SubnetMask), "255.255.255.0");
+    ASSERT_EQ (*answer.options.getIf<std::string> (DhcpOption::DomainName), "foo.local");
 
-    ASSERT_FALSE (answer->options.contains (DhcpOption::IpAddressLeaseTime));
-    ASSERT_EQ (answer->your, IpAddress::ipv4Wildcard);
-    ASSERT_EQ (answer->client, _lease);
+    ASSERT_FALSE (answer.options.contains (DhcpOption::IpAddressLeaseTime));
+    ASSERT_EQ (answer.your, IpAddress::ipv4Wildcard);
+    ASSERT_EQ (answer.client, _lease);
 
     ASSERT_TRUE (awaits (DhcpMessage::Inform));
 }
@@ -690,7 +741,8 @@ TEST_F (DhcpTest, offer)
     request.flags = 0;
     ASSERT_EQ (offer (request, IpAddress::ipv4Wildcard), 0) << lastError.message ();
 
-    ASSERT_NE (client.discover (_lease), nullptr) << lastError.message ();
+    DhcpPacket answer;
+    ASSERT_EQ (client.discover (answer, _lease), 0) << lastError.message ();
 
     Mute mute (_bare);
     ASSERT_EQ (mute.offer (request, _lease), -1);
@@ -707,9 +759,9 @@ TEST_F (DhcpTest, ack)
     DhcpPacket request = requestOf (DhcpMessage::Request);
     ASSERT_EQ (ack (request, _lease, settings ()), 0) << lastError.message ();
 
-    DhcpPacket::Ptr answer = client.request (_lease, _server);
-    ASSERT_NE (answer, nullptr) << lastError.message ();
-    ASSERT_EQ (*answer->options.getIf<uint8_t> (DhcpOption::DhcpMessageType), DhcpMessage::Ack);
+    DhcpPacket answer;
+    ASSERT_EQ (client.request (answer, _lease, _server), 0) << lastError.message ();
+    ASSERT_EQ (*answer.options.getIf<uint8_t> (DhcpOption::DhcpMessageType), DhcpMessage::Ack);
 }
 
 /**
@@ -726,7 +778,8 @@ TEST_F (DhcpTest, nak)
 
     _behaviour = Refuse;
 
-    ASSERT_EQ (client.request (_lease, _server), nullptr);
+    DhcpPacket answer;
+    ASSERT_EQ (client.request (answer, _lease, _server), -1);
     ASSERT_EQ (lastError, Errc::ConnectionRefused) << lastError.message ();
 
     _behaviour = Normal;
@@ -737,50 +790,66 @@ TEST_F (DhcpTest, nak)
  */
 TEST_F (DhcpTest, receive)
 {
+    Probe probe (_device);
+
     DhcpPacket packet = requestOf (DhcpMessage::Ack);
     packet.op = DhcpMessage::BootReply;
     packet.dest = _mac;
     packet.your = _lease;
 
-    const std::string valid = frameOf (packet);
-    ASSERT_NE (receive (valid.data (), valid.size ()), nullptr) << lastError.message ();
+    DhcpPacket other = packet;
+    other.id = 0x55667788;
 
-    ASSERT_EQ (receive (valid.data (), sizeof (Frame)), nullptr);
+    const std::string valid = frameOf (packet);
+    const std::string marker = frameOf (other);
+
+    inject (valid);
+    ASSERT_EQ (probe.next (), packet.id);
+
+    inject (valid.substr (0, sizeof (Frame)));
+    inject (marker);
+    ASSERT_EQ (probe.next (), other.id);
 
     std::string wire = valid;
     reinterpret_cast<Frame*> (&wire[0])->eth.h_proto = htons (ETH_P_ARP);
-    ASSERT_EQ (receive (wire.data (), wire.size ()), nullptr);
+    inject (wire);
+    inject (marker);
+    ASSERT_EQ (probe.next (), other.id);
 
     wire = valid;
     reinterpret_cast<Frame*> (&wire[0])->ip.check ^= 0xffff;
-    ASSERT_EQ (receive (wire.data (), wire.size ()), nullptr);
+    inject (wire);
+    inject (marker);
+    ASSERT_EQ (probe.next (), other.id);
 
     wire = valid;
     reinterpret_cast<Frame*> (&wire[0])->udp.dest = htons (53);
-    ASSERT_EQ (receive (wire.data (), wire.size ()), nullptr);
+    inject (wire);
+    inject (marker);
+    ASSERT_EQ (probe.next (), other.id);
 
     wire = valid;
     reinterpret_cast<Frame*> (&wire[0])->udp.len = htons (2000);
-    ASSERT_EQ (receive (wire.data (), wire.size ()), nullptr);
+    inject (wire);
+    inject (marker);
+    ASSERT_EQ (probe.next (), other.id);
 
     wire = valid;
     reinterpret_cast<Frame*> (&wire[0])->udp.check ^= 0xffff;
-    ASSERT_EQ (receive (wire.data (), wire.size ()), nullptr);
-
-    wire = valid;
-    wire[sizeof (Frame) + DhcpMessage::headerSize - 1] ^= 0xff;
-    reinterpret_cast<Frame*> (&wire[0])->udp.check = 0;
-    ASSERT_EQ (receive (wire.data (), wire.size ()), nullptr);
+    inject (wire);
+    inject (marker);
+    ASSERT_EQ (probe.next (), other.id);
 }
 
 /**
- * @brief Test onMessage method.
+ * @brief Test onReadable method.
  */
-TEST_F (DhcpTest, onMessage)
+TEST_F (DhcpTest, onReadable)
 {
     Dhcp::Client client (_device), listener (_device);
 
-    ASSERT_NE (client.discover (_lease), nullptr) << lastError.message ();
+    DhcpPacket answer;
+    ASSERT_EQ (client.discover (answer, _lease), 0) << lastError.message ();
 
     inject (std::string (64, '\0'));
 
@@ -788,6 +857,11 @@ TEST_F (DhcpTest, onMessage)
     reply.op = DhcpMessage::BootReply;
     reply.dest = _mac;
     inject (frameOf (reply));
+
+    std::string corrupted = frameOf (reply);
+    corrupted[sizeof (Frame) + DhcpMessage::headerSize - 1] ^= 0xff;
+    reinterpret_cast<Frame*> (&corrupted[0])->udp.check = 0;
+    inject (corrupted);
 
     DhcpPacket bare = requestOf (DhcpMessage::Discover);
     bare.options.erase (DhcpOption::DhcpMessageType);
