@@ -33,7 +33,6 @@
 // C++.
 #include <unordered_set>
 #include <system_error>
-#include <sstream>
 #include <vector>
 #include <string>
 
@@ -166,101 +165,98 @@ namespace join
         ~DnsMessage () noexcept = default;
 
         /**
-         * @brief serialize a DNS packet into a byte stream.
+         * @brief serialize a DNS packet into a buffer.
          * @param packet DNS packet to serialize.
-         * @param data output stream.
-         * @return 0 on success, -1 on error.
+         * @param data buffer to serialize the packet into.
+         * @param maxSize buffer size.
+         * @return the packet size, -1 on error.
          */
-        int serialize (const DnsPacket& packet, std::stringstream& data) const
+        ssize_t serialize (const DnsPacket& packet, char* data, size_t maxSize) const
         {
+            char* cur = data;
+            const char* end = data + maxSize;
+            bool ok = true;
+
             uint16_t id = htons (packet.id);
-            data.write (reinterpret_cast<const char*> (&id), sizeof (id));
+            ok &= writeBytes (cur, end, &id, sizeof (id));
 
             uint16_t flags = htons (packet.flags);
-            data.write (reinterpret_cast<const char*> (&flags), sizeof (flags));
+            ok &= writeBytes (cur, end, &flags, sizeof (flags));
 
             uint16_t qcount = htons (static_cast<uint16_t> (packet.questions.size ()));
-            data.write (reinterpret_cast<const char*> (&qcount), sizeof (qcount));
+            ok &= writeBytes (cur, end, &qcount, sizeof (qcount));
 
             uint16_t ancount = htons (static_cast<uint16_t> (packet.answers.size ()));
-            data.write (reinterpret_cast<const char*> (&ancount), sizeof (ancount));
+            ok &= writeBytes (cur, end, &ancount, sizeof (ancount));
 
             uint16_t nscount = htons (static_cast<uint16_t> (packet.authorities.size ()));
-            data.write (reinterpret_cast<const char*> (&nscount), sizeof (nscount));
+            ok &= writeBytes (cur, end, &nscount, sizeof (nscount));
 
             uint16_t arcount = htons (static_cast<uint16_t> (packet.additionals.size ()));
-            data.write (reinterpret_cast<const char*> (&arcount), sizeof (arcount));
+            ok &= writeBytes (cur, end, &arcount, sizeof (arcount));
 
             for (auto const& question : packet.questions)
             {
-                if (encodeQuestion (question, data) == -1)
-                {
-                    return -1;  // LCOV_EXCL_LINE
-                }
+                ok &= encodeQuestion (question, cur, end);
             }
 
             for (auto const& answer : packet.answers)
             {
-                if (encodeResource (answer, data) == -1)
-                {
-                    return -1;  // LCOV_EXCL_LINE
-                }
+                ok &= encodeResource (answer, cur, end);
             }
 
             for (auto const& authority : packet.authorities)
             {
-                if (encodeResource (authority, data) == -1)
-                {
-                    return -1;  // LCOV_EXCL_LINE
-                }
+                ok &= encodeResource (authority, cur, end);
             }
 
             for (auto const& additional : packet.additionals)
             {
-                if (encodeResource (additional, data) == -1)
-                {
-                    return -1;  // LCOV_EXCL_LINE
-                }
+                ok &= encodeResource (additional, cur, end);
             }
 
-            return 0;
+            return ok ? cur - data : -1;
         }
 
         /**
-         * @brief deserialize a DNS packet from a byte stream.
+         * @brief deserialize a DNS packet from a buffer.
          * @param packet DNS packet to fill.
-         * @param data input stream.
+         * @param data buffer holding the packet to deserialize.
+         * @param size packet size.
          * @return 0 on success, -1 on error.
          */
-        int deserialize (DnsPacket& packet, std::stringstream& data) const
+        int deserialize (DnsPacket& packet, const char* data, size_t size) const
         {
-            data.read (reinterpret_cast<char*> (&packet.id), sizeof (packet.id));
+            const char* cur = data;
+            const char* end = data + size;
+            bool ok = true;
+
+            uint16_t qcount = 0, ancount = 0, nscount = 0, arcount = 0;
+
+            ok &= readBytes (cur, end, &packet.id, sizeof (packet.id));
+            ok &= readBytes (cur, end, &packet.flags, sizeof (packet.flags));
+            ok &= readBytes (cur, end, &qcount, sizeof (qcount));
+            ok &= readBytes (cur, end, &ancount, sizeof (ancount));
+            ok &= readBytes (cur, end, &nscount, sizeof (nscount));
+            ok &= readBytes (cur, end, &arcount, sizeof (arcount));
+
+            if (!ok)
+            {
+                return -1;
+            }
+
             packet.id = ntohs (packet.id);
-
-            data.read (reinterpret_cast<char*> (&packet.flags), sizeof (packet.flags));
             packet.flags = ntohs (packet.flags);
-
-            uint16_t qcount = 0;
-            data.read (reinterpret_cast<char*> (&qcount), sizeof (qcount));
             qcount = ntohs (qcount);
-
-            uint16_t ancount = 0;
-            data.read (reinterpret_cast<char*> (&ancount), sizeof (ancount));
             ancount = ntohs (ancount);
-
-            uint16_t nscount = 0;
-            data.read (reinterpret_cast<char*> (&nscount), sizeof (nscount));
             nscount = ntohs (nscount);
-
-            uint16_t arcount = 0;
-            data.read (reinterpret_cast<char*> (&arcount), sizeof (arcount));
             arcount = ntohs (arcount);
 
             packet.questions.clear ();
             for (uint16_t i = 0; i < qcount; ++i)
             {
                 QuestionRecord question;
-                if (decodeQuestion (question, data) == -1)
+                if (decodeQuestion (question, cur, data, end) == -1)
                 {
                     return -1;
                 }
@@ -271,9 +267,9 @@ namespace join
             for (uint16_t i = 0; i < ancount; ++i)
             {
                 ResourceRecord answer;
-                if (decodeResource (answer, data) == -1)
+                if (decodeResource (answer, cur, data, end) == -1)
                 {
-                    return -1;  // LCOV_EXCL_LINE
+                    return -1;
                 }
                 packet.answers.emplace_back (std::move (answer));
             }
@@ -282,9 +278,9 @@ namespace join
             for (uint16_t i = 0; i < nscount; ++i)
             {
                 ResourceRecord authority;
-                if (decodeResource (authority, data) == -1)
+                if (decodeResource (authority, cur, data, end) == -1)
                 {
-                    return -1;  // LCOV_EXCL_LINE
+                    return -1;
                 }
                 packet.authorities.emplace_back (std::move (authority));
             }
@@ -293,9 +289,9 @@ namespace join
             for (uint16_t i = 0; i < arcount; ++i)
             {
                 ResourceRecord additional;
-                if (decodeResource (additional, data) == -1)
+                if (decodeResource (additional, cur, data, end) == -1)
                 {
-                    return -1;  // LCOV_EXCL_LINE
+                    return -1;
                 }
                 packet.additionals.emplace_back (std::move (additional));
             }
@@ -369,35 +365,47 @@ namespace join
 
     private:
         /**
-         * @brief encode a DNS name into a byte stream.
+         * @brief encode a DNS name into a buffer.
          * @param name DNS name to encode.
-         * @param data output stream.
-         * @return 0 on success, -1 on error.
+         * @param cur current position in the buffer, advanced on success.
+         * @param end end of the buffer.
+         * @return true on success, false if the buffer is too small.
          */
-        int encodeName (const std::string& name, std::stringstream& data) const
+        bool encodeName (const std::string& name, char*& cur, const char* end) const
         {
-            std::istringstream iss (name);
+            bool ok = true;
 
-            for (std::string token; std::getline (iss, token, '.');)
+            for (size_t pos = 0; pos < name.size ();)
             {
-                uint8_t len = static_cast<uint8_t> (token.size ());
-                data.write (reinterpret_cast<const char*> (&len), 1);
-                data.write (token.data (), len);
+                size_t dot = name.find ('.', pos);
+                if (dot == std::string::npos)
+                {
+                    dot = name.size ();
+                }
+
+                uint8_t len = static_cast<uint8_t> (dot - pos);
+                ok &= writeBytes (cur, end, &len, sizeof (len));
+                ok &= writeBytes (cur, end, name.data () + pos, len);
+
+                pos = dot + 1;
             }
 
-            data << '\0';
+            uint8_t root = 0;
+            ok &= writeBytes (cur, end, &root, sizeof (root));
 
-            return 0;
+            return ok;
         }
 
         /**
-         * @brief decode a DNS name from a byte stream.
+         * @brief decode a DNS name from a buffer.
          * @param name decoded DNS name.
-         * @param data input stream.
+         * @param cur current position in the buffer, advanced on success.
+         * @param begin beginning of the packet, compression pointers are relative to it.
+         * @param end end of the buffer.
          * @param depth recursion depth.
          * @return 0 on success, -1 on error.
          */
-        int decodeName (std::string& name, std::stringstream& data, int depth = 0) const
+        int decodeName (std::string& name, const char*& cur, const char* begin, const char* end, int depth = 0) const
         {
             if (depth > 10)
             {
@@ -407,7 +415,7 @@ namespace join
             for (;;)
             {
                 uint8_t first = 0;
-                if (!data.read (reinterpret_cast<char*> (&first), sizeof (first)))
+                if (!readBytes (cur, end, &first, sizeof (first)))
                 {
                     return -1;
                 }
@@ -415,20 +423,23 @@ namespace join
                 if ((first & 0xC0) == 0xC0)
                 {
                     uint8_t second = 0;
-                    if (!data.read (reinterpret_cast<char*> (&second), sizeof (second)))
+                    if (!readBytes (cur, end, &second, sizeof (second)))
                     {
                         return -1;
                     }
 
-                    uint16_t ptr = ((first & 0x3F) << 8) | second;
-                    auto saved = data.tellg ();
+                    const size_t offset = ((first & 0x3F) << 8) | second;
+                    if (offset >= static_cast<size_t> (end - begin))
+                    {
+                        lastError = make_error_code (Errc::InvalidParam);
+                        return -1;
+                    }
 
-                    data.seekg (ptr);
-                    if (decodeName (name, data, depth + 1) == -1)
+                    const char* target = begin + offset;
+                    if (decodeName (name, target, begin, end, depth + 1) == -1)
                     {
                         return -1;
                     }
-                    data.seekg (saved);
                     break;
                 }
 
@@ -443,9 +454,9 @@ namespace join
 
                 name.reserve (name.size () + first + 1);
                 name.resize (name.size () + first);
-                if (!data.read (&name[name.size () - first], first))
+                if (!readBytes (cur, end, &name[name.size () - first], first))
                 {
-                    return -1;  // LCOV_EXCL_LINE
+                    return -1;
                 }
                 name += '.';
             }
@@ -454,12 +465,13 @@ namespace join
         }
 
         /**
-         * @brief encode a mail address into a byte stream.
+         * @brief encode a mail address into a buffer.
          * @param mail mail address to encode.
-         * @param data output stream.
-         * @return 0 on success, -1 on error.
+         * @param cur current position in the buffer, advanced on success.
+         * @param end end of the buffer.
+         * @return true on success, false if the buffer is too small.
          */
-        int encodeMail (const std::string& mail, std::stringstream& data) const
+        bool encodeMail (const std::string& mail, char*& cur, const char* end) const
         {
             std::string encodedMail = mail;
             size_t atPos = encodedMail.find ('@');
@@ -469,22 +481,22 @@ namespace join
                 encodedMail.replace (atPos, 1, ".");
             }
 
-            encodeName (encodedMail, data);
-
-            return 0;
+            return encodeName (encodedMail, cur, end);
         }
 
         /**
-         * @brief decode a mail address from a byte stream.
+         * @brief decode a mail address from a buffer.
          * @param mail decoded mail address.
-         * @param data input stream.
+         * @param cur current position in the buffer, advanced on success.
+         * @param begin beginning of the packet.
+         * @param end end of the buffer.
          * @return 0 on success, -1 on error.
          */
-        int decodeMail (std::string& mail, std::stringstream& data) const
+        int decodeMail (std::string& mail, const char*& cur, const char* begin, const char* end) const
         {
-            if (decodeName (mail, data) == -1)
+            if (decodeName (mail, cur, begin, end) == -1)
             {
-                return -1;  // LCOV_EXCL_LINE
+                return -1;
             }
 
             auto pos = mail.find ('.');
@@ -497,261 +509,289 @@ namespace join
         }
 
         /**
-         * @brief encode a question record into a byte stream.
+         * @brief encode a question record into a buffer.
          * @param question question record to encode.
-         * @param data output stream.
-         * @return 0 on success, -1 on error.
+         * @param cur current position in the buffer, advanced on success.
+         * @param end end of the buffer.
+         * @return true on success, false if the buffer is too small.
          */
-        int encodeQuestion (const QuestionRecord& question, std::stringstream& data) const
+        bool encodeQuestion (const QuestionRecord& question, char*& cur, const char* end) const
         {
-            encodeName (question.host, data);
+            bool ok = encodeName (question.host, cur, end);
 
             uint16_t type = htons (question.type);
-            data.write (reinterpret_cast<const char*> (&type), sizeof (type));
+            ok &= writeBytes (cur, end, &type, sizeof (type));
 
             uint16_t dnsclass = htons (question.dnsclass);
-            data.write (reinterpret_cast<const char*> (&dnsclass), sizeof (dnsclass));
+            ok &= writeBytes (cur, end, &dnsclass, sizeof (dnsclass));
 
-            return 0;
+            return ok;
         }
 
         /**
-         * @brief decode a question record from a byte stream.
+         * @brief decode a question record from a buffer.
          * @param question question record to fill.
-         * @param data input stream.
+         * @param cur current position in the buffer, advanced on success.
+         * @param begin beginning of the packet.
+         * @param end end of the buffer.
          * @return 0 on success, -1 on error.
          */
-        int decodeQuestion (QuestionRecord& question, std::stringstream& data) const
+        int decodeQuestion (QuestionRecord& question, const char*& cur, const char* begin, const char* end) const
         {
-            if (decodeName (question.host, data) == -1)
+            if (decodeName (question.host, cur, begin, end) == -1)
             {
                 return -1;
             }
 
-            data.read (reinterpret_cast<char*> (&question.type), sizeof (question.type));
-            question.type = ntohs (question.type);
+            bool ok = true;
+            ok &= readBytes (cur, end, &question.type, sizeof (question.type));
+            ok &= readBytes (cur, end, &question.dnsclass, sizeof (question.dnsclass));
 
-            data.read (reinterpret_cast<char*> (&question.dnsclass), sizeof (question.dnsclass));
+            if (!ok)
+            {
+                return -1;
+            }
+
+            question.type = ntohs (question.type);
             question.dnsclass = ntohs (question.dnsclass);
 
             return 0;
         }
 
         /**
-         * @brief encode a resource record into a byte stream.
+         * @brief encode a resource record into a buffer.
          * @param resource resource record to encode.
-         * @param data output stream.
-         * @return 0 on success, -1 on error.
+         * @param cur current position in the buffer, advanced on success.
+         * @param end end of the buffer.
+         * @return true on success, false if the buffer is too small.
          */
-        int encodeResource (const ResourceRecord& resource, std::stringstream& data) const
+        bool encodeResource (const ResourceRecord& resource, char*& cur, const char* end) const
         {
-            encodeName (resource.host, data);
+            bool ok = encodeName (resource.host, cur, end);
 
             uint16_t type = htons (resource.type);
-            data.write (reinterpret_cast<const char*> (&type), sizeof (type));
+            ok &= writeBytes (cur, end, &type, sizeof (type));
 
             uint16_t dnsclass = htons (resource.dnsclass);
-            data.write (reinterpret_cast<const char*> (&dnsclass), sizeof (dnsclass));
+            ok &= writeBytes (cur, end, &dnsclass, sizeof (dnsclass));
 
             uint32_t ttl = htonl (resource.ttl);
-            data.write (reinterpret_cast<const char*> (&ttl), sizeof (ttl));
+            ok &= writeBytes (cur, end, &ttl, sizeof (ttl));
 
             uint16_t dataLen = 0;
-            auto dataLenPos = data.tellp ();
-            data.write (reinterpret_cast<const char*> (&dataLen), sizeof (dataLen));
+            char* length = cur;
+            ok &= writeBytes (cur, end, &dataLen, sizeof (dataLen));
 
-            auto dataBegPos = data.tellp ();
+            char* rdata = cur;
 
             if (resource.type == RecordType::A)
             {
-                data.write (reinterpret_cast<const char*> (resource.addr.addr ()), sizeof (in_addr));
+                ok &= writeBytes (cur, end, resource.addr.addr (), sizeof (in_addr));
             }
             else if (resource.type == RecordType::AAAA)
             {
-                data.write (reinterpret_cast<const char*> (resource.addr.addr ()), sizeof (in6_addr));
+                ok &= writeBytes (cur, end, resource.addr.addr (), sizeof (in6_addr));
             }
             else if (resource.type == RecordType::NS)
             {
-                encodeName (resource.name, data);
+                ok &= encodeName (resource.name, cur, end);
             }
             else if (resource.type == RecordType::CNAME)
             {
-                encodeName (resource.name, data);
+                ok &= encodeName (resource.name, cur, end);
             }
             else if (resource.type == RecordType::PTR)
             {
-                encodeName (resource.name, data);
+                ok &= encodeName (resource.name, cur, end);
             }
             else if (resource.type == RecordType::MX)
             {
                 uint16_t mxpref = htons (resource.mxpref);
-                data.write (reinterpret_cast<const char*> (&mxpref), sizeof (mxpref));
-                encodeName (resource.name, data);
+                ok &= writeBytes (cur, end, &mxpref, sizeof (mxpref));
+                ok &= encodeName (resource.name, cur, end);
             }
             else if (resource.type == RecordType::SOA)
             {
-                encodeName (resource.name, data);
-                encodeMail (resource.mail, data);
+                ok &= encodeName (resource.name, cur, end);
+                ok &= encodeMail (resource.mail, cur, end);
 
                 uint32_t serial = htonl (resource.serial);
-                data.write (reinterpret_cast<const char*> (&serial), sizeof (serial));
+                ok &= writeBytes (cur, end, &serial, sizeof (serial));
 
                 uint32_t refresh = htonl (resource.refresh);
-                data.write (reinterpret_cast<const char*> (&refresh), sizeof (refresh));
+                ok &= writeBytes (cur, end, &refresh, sizeof (refresh));
 
                 uint32_t retry = htonl (resource.retry);
-                data.write (reinterpret_cast<const char*> (&retry), sizeof (retry));
+                ok &= writeBytes (cur, end, &retry, sizeof (retry));
 
                 uint32_t expire = htonl (resource.expire);
-                data.write (reinterpret_cast<const char*> (&expire), sizeof (expire));
+                ok &= writeBytes (cur, end, &expire, sizeof (expire));
 
                 uint32_t minimum = htonl (resource.minimum);
-                data.write (reinterpret_cast<const char*> (&minimum), sizeof (minimum));
+                ok &= writeBytes (cur, end, &minimum, sizeof (minimum));
             }
             else if (resource.type == RecordType::TXT)
             {
                 for (auto const& txt : resource.txts)
                 {
                     uint8_t size = static_cast<uint8_t> (txt.size ());
-                    data.write (reinterpret_cast<const char*> (&size), sizeof (size));
-                    data.write (txt.data (), size);
+                    ok &= writeBytes (cur, end, &size, sizeof (size));
+                    ok &= writeBytes (cur, end, txt.data (), size);
                 }
             }
             else if (resource.type == RecordType::SRV)
             {
                 uint16_t priority = htons (resource.priority);
-                data.write (reinterpret_cast<const char*> (&priority), sizeof (priority));
+                ok &= writeBytes (cur, end, &priority, sizeof (priority));
 
                 uint16_t weight = htons (resource.weight);
-                data.write (reinterpret_cast<const char*> (&weight), sizeof (weight));
+                ok &= writeBytes (cur, end, &weight, sizeof (weight));
 
                 uint16_t port = htons (resource.port);
-                data.write (reinterpret_cast<const char*> (&port), sizeof (port));
+                ok &= writeBytes (cur, end, &port, sizeof (port));
 
-                encodeName (resource.name, data);
+                ok &= encodeName (resource.name, cur, end);
             }
 
-            auto dataEndPos = data.tellp ();
-            dataLen = static_cast<uint16_t> (dataEndPos - dataBegPos);
+            if (ok)
+            {
+                dataLen = htons (static_cast<uint16_t> (cur - rdata));
+                ::memcpy (length, &dataLen, sizeof (dataLen));
+            }
 
-            data.seekp (dataLenPos);
-            dataLen = htons (dataLen);
-            data.write (reinterpret_cast<const char*> (&dataLen), sizeof (dataLen));
-            data.seekp (dataEndPos);
-
-            return 0;
+            return ok;
         }
 
         /**
-         * @brief decode a resource record from a byte stream.
+         * @brief decode a resource record from a buffer.
          * @param resource resource record to fill.
-         * @param data input stream.
+         * @param cur current position in the buffer, advanced on success.
+         * @param begin beginning of the packet.
+         * @param end end of the buffer.
          * @return 0 on success, -1 on error.
          */
-        int decodeResource (ResourceRecord& resource, std::stringstream& data) const
+        int decodeResource (ResourceRecord& resource, const char*& cur, const char* begin, const char* end) const
         {
-            if (decodeName (resource.host, data) == -1)
+            if (decodeName (resource.host, cur, begin, end) == -1)
             {
-                return -1;  // LCOV_EXCL_LINE
+                return -1;
             }
 
-            data.read (reinterpret_cast<char*> (&resource.type), sizeof (resource.type));
-            resource.type = ntohs (resource.type);
-
-            data.read (reinterpret_cast<char*> (&resource.dnsclass), sizeof (resource.dnsclass));
-            resource.dnsclass = ntohs (resource.dnsclass);
-
-            data.read (reinterpret_cast<char*> (&resource.ttl), sizeof (resource.ttl));
-            resource.ttl = ntohl (resource.ttl);
-
             uint16_t dataLen = 0;
-            data.read (reinterpret_cast<char*> (&dataLen), sizeof (dataLen));
+
+            bool ok = true;
+            ok &= readBytes (cur, end, &resource.type, sizeof (resource.type));
+            ok &= readBytes (cur, end, &resource.dnsclass, sizeof (resource.dnsclass));
+            ok &= readBytes (cur, end, &resource.ttl, sizeof (resource.ttl));
+            ok &= readBytes (cur, end, &dataLen, sizeof (dataLen));
+
+            if (!ok)
+            {
+                return -1;
+            }
+
+            resource.type = ntohs (resource.type);
+            resource.dnsclass = ntohs (resource.dnsclass);
+            resource.ttl = ntohl (resource.ttl);
             dataLen = ntohs (dataLen);
 
-            auto dataBegPos = data.tellg ();
+            if (dataLen > static_cast<size_t> (end - cur))
+            {
+                lastError = make_error_code (Errc::MessageTooLong);
+                return -1;
+            }
+
+            const char* rdataEnd = cur + dataLen;
 
             if (resource.type == RecordType::A)
             {
                 struct in_addr addr;
-                data.read (reinterpret_cast<char*> (&addr), sizeof (addr));
+                if (!readBytes (cur, end, &addr, sizeof (addr)))
+                {
+                    return -1;
+                }
                 resource.addr = IpAddress (&addr, sizeof (struct in_addr));
             }
             else if (resource.type == RecordType::AAAA)
             {
                 struct in6_addr addr;
-                data.read (reinterpret_cast<char*> (&addr), sizeof (addr));
+                if (!readBytes (cur, end, &addr, sizeof (addr)))
+                {
+                    return -1;
+                }
                 resource.addr = IpAddress (&addr, sizeof (struct in6_addr));
             }
             else if (resource.type == RecordType::NS)
             {
-                if (decodeName (resource.name, data) == -1)
+                if (decodeName (resource.name, cur, begin, end) == -1)
                 {
-                    return -1;  // LCOV_EXCL_LINE
+                    return -1;
                 }
             }
             else if (resource.type == RecordType::CNAME)
             {
-                if (decodeName (resource.name, data) == -1)
+                if (decodeName (resource.name, cur, begin, end) == -1)
                 {
-                    return -1;  // LCOV_EXCL_LINE
+                    return -1;
                 }
             }
             else if (resource.type == RecordType::PTR)
             {
-                if (decodeName (resource.name, data) == -1)
+                if (decodeName (resource.name, cur, begin, end) == -1)
                 {
-                    return -1;  // LCOV_EXCL_LINE
+                    return -1;
                 }
             }
             else if (resource.type == RecordType::MX)
             {
-                data.read (reinterpret_cast<char*> (&resource.mxpref), sizeof (resource.mxpref));
-                resource.mxpref = ntohs (resource.mxpref);
-
-                if (decodeName (resource.name, data) == -1)
+                if (!readBytes (cur, end, &resource.mxpref, sizeof (resource.mxpref)) ||
+                    (decodeName (resource.name, cur, begin, end) == -1))
                 {
-                    return -1;  // LCOV_EXCL_LINE
+                    return -1;
                 }
+
+                resource.mxpref = ntohs (resource.mxpref);
             }
             else if (resource.type == RecordType::SOA)
             {
-                if (decodeName (resource.name, data) == -1)
+                if ((decodeName (resource.name, cur, begin, end) == -1) ||
+                    (decodeMail (resource.mail, cur, begin, end) == -1))
                 {
-                    return -1;  // LCOV_EXCL_LINE
+                    return -1;
                 }
 
-                decodeMail (resource.mail, data);
+                ok &= readBytes (cur, end, &resource.serial, sizeof (resource.serial));
+                ok &= readBytes (cur, end, &resource.refresh, sizeof (resource.refresh));
+                ok &= readBytes (cur, end, &resource.retry, sizeof (resource.retry));
+                ok &= readBytes (cur, end, &resource.expire, sizeof (resource.expire));
+                ok &= readBytes (cur, end, &resource.minimum, sizeof (resource.minimum));
 
-                data.read (reinterpret_cast<char*> (&resource.serial), sizeof (resource.serial));
+                if (!ok)
+                {
+                    return -1;
+                }
+
                 resource.serial = ntohl (resource.serial);
-
-                data.read (reinterpret_cast<char*> (&resource.refresh), sizeof (resource.refresh));
                 resource.refresh = ntohl (resource.refresh);
-
-                data.read (reinterpret_cast<char*> (&resource.retry), sizeof (resource.retry));
                 resource.retry = ntohl (resource.retry);
-
-                data.read (reinterpret_cast<char*> (&resource.expire), sizeof (resource.expire));
                 resource.expire = ntohl (resource.expire);
-
-                data.read (reinterpret_cast<char*> (&resource.minimum), sizeof (resource.minimum));
                 resource.minimum = ntohl (resource.minimum);
             }
             else if (resource.type == RecordType::TXT)
             {
-                while (data.tellg () != -1 && (data.tellg () - dataBegPos < dataLen))
+                while (cur < rdataEnd)
                 {
                     uint8_t size = 0;
-                    if (!data.read (reinterpret_cast<char*> (&size), sizeof (size)))
+                    if (!readBytes (cur, end, &size, sizeof (size)))
                     {
                         return -1;  // LCOV_EXCL_LINE
                     }
 
                     std::string txt;
                     txt.resize (size);
-                    if (!data.read (&txt[0], size))
+                    if (!readBytes (cur, end, &txt[0], size))
                     {
-                        return -1;  // LCOV_EXCL_LINE
+                        return -1;
                     }
 
                     resource.txts.emplace_back (std::move (txt));
@@ -759,23 +799,22 @@ namespace join
             }
             else if (resource.type == RecordType::SRV)
             {
-                data.read (reinterpret_cast<char*> (&resource.priority), sizeof (resource.priority));
-                resource.priority = ntohs (resource.priority);
+                ok &= readBytes (cur, end, &resource.priority, sizeof (resource.priority));
+                ok &= readBytes (cur, end, &resource.weight, sizeof (resource.weight));
+                ok &= readBytes (cur, end, &resource.port, sizeof (resource.port));
 
-                data.read (reinterpret_cast<char*> (&resource.weight), sizeof (resource.weight));
-                resource.weight = ntohs (resource.weight);
-
-                data.read (reinterpret_cast<char*> (&resource.port), sizeof (resource.port));
-                resource.port = ntohs (resource.port);
-
-                if (decodeName (resource.name, data) == -1)
+                if (!ok || (decodeName (resource.name, cur, begin, end) == -1))
                 {
-                    return -1;  // LCOV_EXCL_LINE
+                    return -1;
                 }
+
+                resource.priority = ntohs (resource.priority);
+                resource.weight = ntohs (resource.weight);
+                resource.port = ntohs (resource.port);
             }
             else
             {
-                data.seekg (dataBegPos + static_cast<std::streamoff> (dataLen));
+                cur = rdataEnd;
             }
 
             return 0;

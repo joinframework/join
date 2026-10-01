@@ -121,11 +121,12 @@ TEST (DnsMessage, roundTrip)
     out.additionals.push_back (srv);
 
     DnsMessage codec;
-    std::stringstream stream;
-    ASSERT_EQ (codec.serialize (out, stream), 0);
+    char data[1024];
+    ssize_t size = codec.serialize (out, data, sizeof (data));
+    ASSERT_NE (size, -1) << join::lastError.message ();
 
     join::DnsPacket in;
-    ASSERT_EQ (codec.deserialize (in, stream), 0);
+    ASSERT_EQ (codec.deserialize (in, data, static_cast<size_t> (size)), 0) << join::lastError.message ();
 
     EXPECT_EQ (in.id, out.id);
     EXPECT_EQ (in.questions.size (), 1);
@@ -147,6 +148,20 @@ TEST (DnsMessage, roundTrip)
 
     EXPECT_EQ (in.additionals.size (), 1);
     EXPECT_EQ (in.additionals[0].port, 5060);
+
+    for (size_t length = 0; length < static_cast<size_t> (size); ++length)
+    {
+        ASSERT_EQ (codec.serialize (out, data, length), -1) << "length " << length;
+        ASSERT_EQ (join::lastError, join::Errc::MessageTooLong) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (codec.serialize (out, data, sizeof (data)), size);
+
+    for (size_t length = 0; length < static_cast<size_t> (size); ++length)
+    {
+        join::DnsPacket truncated;
+        ASSERT_EQ (codec.deserialize (truncated, data, length), -1) << "length " << length;
+    }
 }
 
 /**
@@ -155,17 +170,21 @@ TEST (DnsMessage, roundTrip)
 TEST (DnsMessage, recursiveError)
 {
     DnsMessage codec;
-    std::stringstream stream;
+    std::string wire;
 
     uint16_t header[] = {htons (0x1234), 0, htons (1), 0, 0, 0};
-    stream.write ((char*)header, 12);
+    wire.append ((char*)header, 12);
 
     uint16_t loop = htons (0xC000 | 12);
-    stream.write ((char*)&loop, 2);
+    wire.append ((char*)&loop, 2);
 
     join::DnsPacket packet;
-    stream.seekg (0);
-    EXPECT_EQ (codec.deserialize (packet, stream), -1);
+    EXPECT_EQ (codec.deserialize (packet, wire.data (), wire.size ()), -1);
+
+    uint16_t outside = htons (0xC000 | 14);
+    wire.replace (12, 2, (char*)&outside, 2);
+    EXPECT_EQ (codec.deserialize (packet, wire.data (), wire.size ()), -1);
+    EXPECT_EQ (join::lastError, join::Errc::InvalidParam) << join::lastError.message ();
 }
 
 /**
@@ -174,26 +193,25 @@ TEST (DnsMessage, recursiveError)
 TEST (DnsMessage, unknownRecord)
 {
     DnsMessage codec;
-    std::stringstream stream;
+    std::string wire;
 
     uint16_t header[] = {htons (1), 0, 0, htons (1), 0, 0};
-    stream.write ((char*)header, 12);
+    wire.append ((char*)header, 12);
 
-    stream << (uint8_t)4 << "test" << (uint8_t)0;
+    wire.append ("\x04test\x00", 6);
     uint16_t type = htons (99);
     uint16_t dclass = htons (1);
     uint32_t ttl = htonl (60);
     uint16_t dlen = htons (4);
-    stream.write ((char*)&type, 2);
-    stream.write ((char*)&dclass, 2);
-    stream.write ((char*)&ttl, 4);
-    stream.write ((char*)&dlen, 2);
-    stream.write ("data", 4);
+    wire.append ((char*)&type, 2);
+    wire.append ((char*)&dclass, 2);
+    wire.append ((char*)&ttl, 4);
+    wire.append ((char*)&dlen, 2);
+    wire.append ("data", 4);
 
     join::DnsPacket packet;
-    stream.seekg (0);
 
-    EXPECT_EQ (codec.deserialize (packet, stream), 0);
+    EXPECT_EQ (codec.deserialize (packet, wire.data (), wire.size ()), 0);
     ASSERT_EQ (packet.answers.size (), 1);
     EXPECT_EQ (packet.answers[0].type, 99);
 }
