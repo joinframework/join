@@ -30,7 +30,6 @@
 #include <join/utils.hpp>
 
 // C++.
-#include <sstream>
 #include <vector>
 
 // C.
@@ -130,12 +129,13 @@ namespace join
         };
 
         /**
-         * @brief serialize a DHCP message into a byte stream.
+         * @brief serialize a DHCP message into a buffer.
          * @param packet DHCP message to serialize.
-         * @param data byte stream to serialize the message into.
-         * @return 0 on success, -1 on failure.
+         * @param data buffer to serialize the message into.
+         * @param maxSize buffer size.
+         * @return the message size, -1 on failure.
          */
-        int serialize (const DhcpPacket& packet, std::stringstream& data) const
+        ssize_t serialize (const DhcpPacket& packet, char* data, size_t maxSize) const
         {
             if ((packet.op != BootRequest) && (packet.op != BootReply))
             {
@@ -143,62 +143,71 @@ namespace join
                 return -1;
             }
 
-            const std::streampos start = data.tellp ();
+            char* cur = data;
+            const char* end = data + maxSize;
+            bool ok = true;
 
             uint8_t head[4] = {packet.op, _ethernet, ETH_ALEN, 0};
-            data.write (reinterpret_cast<const char*> (head), sizeof (head));
+            ok &= writeBytes (cur, end, head, sizeof (head));
 
             uint32_t id = htonl (packet.id);
-            data.write (reinterpret_cast<const char*> (&id), sizeof (id));
+            ok &= writeBytes (cur, end, &id, sizeof (id));
 
             uint16_t secs = htons (packet.secs);
-            data.write (reinterpret_cast<const char*> (&secs), sizeof (secs));
+            ok &= writeBytes (cur, end, &secs, sizeof (secs));
 
             uint16_t flags = htons (packet.flags);
-            data.write (reinterpret_cast<const char*> (&flags), sizeof (flags));
+            ok &= writeBytes (cur, end, &flags, sizeof (flags));
 
-            writeAddress (data, packet.client);
-            writeAddress (data, packet.your);
-            writeAddress (data, packet.server);
-            writeAddress (data, packet.gateway);
+            ok &= writeAddress (cur, end, packet.client);
+            ok &= writeAddress (cur, end, packet.your);
+            ok &= writeAddress (cur, end, packet.server);
+            ok &= writeAddress (cur, end, packet.gateway);
 
             char chaddr[_chaddrSize] = {};
             ::memcpy (chaddr, packet.hardware.addr (), ETH_ALEN);
-            data.write (chaddr, sizeof (chaddr));
+            ok &= writeBytes (cur, end, chaddr, sizeof (chaddr));
 
             char padding[_snameSize + _fileSize] = {};
-            data.write (padding, sizeof (padding));
+            ok &= writeBytes (cur, end, padding, sizeof (padding));
 
             uint32_t cookie = htonl (magicCookie);
-            data.write (reinterpret_cast<const char*> (&cookie), sizeof (cookie));
+            ok &= writeBytes (cur, end, &cookie, sizeof (cookie));
 
-            if (serialize (packet.options, data) == -1)
+            if (!ok || (serialize (packet.options, cur, end) == -1))
             {
                 return -1;
             }
 
-            const std::streamoff written = data.tellp () - start;
-            if (written < static_cast<std::streamoff> (minMsgSize))
+            const size_t written = static_cast<size_t> (cur - data);
+            if (written < minMsgSize)
             {
                 const char pad[minMsgSize] = {};
-                data.write (pad, minMsgSize - written);
+                if (!writeBytes (cur, end, pad, minMsgSize - written))
+                {
+                    return -1;
+                }
             }
 
-            return 0;
+            return cur - data;
         }
 
         /**
-         * @brief deserialize a DHCP message from a byte stream.
+         * @brief deserialize a DHCP message from a buffer.
          * @param packet DHCP message to deserialize into.
-         * @param data byte stream holding the message to deserialize.
+         * @param data buffer holding the message to deserialize.
+         * @param size message size.
          * @return 0 on success, -1 on failure.
          */
-        int deserialize (DhcpPacket& packet, std::stringstream& data) const
+        int deserialize (DhcpPacket& packet, const char* data, size_t size) const
         {
             packet.options.clear ();
 
+            const char* cur = data;
+            const char* end = data + size;
+
             uint8_t head[4] = {};
-            if (!extract (data, head, sizeof (head)))
+            if (!readBytes (cur, end, head, sizeof (head)))
             {
                 return -1;
             }
@@ -214,8 +223,8 @@ namespace join
             uint32_t id = 0;
             uint16_t secs = 0, flags = 0;
 
-            if (!extract (data, &id, sizeof (id)) || !extract (data, &secs, sizeof (secs)) ||
-                !extract (data, &flags, sizeof (flags)))
+            if (!readBytes (cur, end, &id, sizeof (id)) || !readBytes (cur, end, &secs, sizeof (secs)) ||
+                !readBytes (cur, end, &flags, sizeof (flags)))
             {
                 return -1;
             }
@@ -224,14 +233,14 @@ namespace join
             packet.secs = ntohs (secs);
             packet.flags = ntohs (flags);
 
-            if (!readAddress (data, packet.client) || !readAddress (data, packet.your) ||
-                !readAddress (data, packet.server) || !readAddress (data, packet.gateway))
+            if (!readAddress (cur, end, packet.client) || !readAddress (cur, end, packet.your) ||
+                !readAddress (cur, end, packet.server) || !readAddress (cur, end, packet.gateway))
             {
                 return -1;
             }
 
             uint8_t chaddr[_chaddrSize] = {};
-            if (!extract (data, chaddr, sizeof (chaddr)))
+            if (!readBytes (cur, end, chaddr, sizeof (chaddr)))
             {
                 return -1;
             }
@@ -241,8 +250,8 @@ namespace join
             char sname[_snameSize] = {}, file[_fileSize] = {};
             uint32_t cookie = 0;
 
-            if (!extract (data, sname, sizeof (sname)) || !extract (data, file, sizeof (file)) ||
-                !extract (data, &cookie, sizeof (cookie)))
+            if (!readBytes (cur, end, sname, sizeof (sname)) || !readBytes (cur, end, file, sizeof (file)) ||
+                !readBytes (cur, end, &cookie, sizeof (cookie)))
             {
                 return -1;
             }
@@ -253,7 +262,7 @@ namespace join
                 return -1;
             }
 
-            if (deserialize (packet.options, data) == -1)
+            if (deserialize (packet.options, cur, end) == -1)
             {
                 return -1;
             }
@@ -261,12 +270,12 @@ namespace join
             const uint8_t* overload = packet.options.getIf<uint8_t> (DhcpOption::OptionOverload);
             if (overload != nullptr)
             {
-                if ((*overload & FileOverload) && !deserialize (packet.options, file, sizeof (file)))
+                if ((*overload & FileOverload) && (deserialize (packet.options, file, file + sizeof (file)) == -1))
                 {
                     return -1;
                 }
 
-                if ((*overload & SnameOverload) && !deserialize (packet.options, sname, sizeof (sname)))
+                if ((*overload & SnameOverload) && (deserialize (packet.options, sname, sname + sizeof (sname)) == -1))
                 {
                     return -1;
                 }
@@ -289,50 +298,41 @@ namespace join
 
     protected:
         /**
-         * @brief serialize an option list into a byte stream.
+         * @brief serialize an option list into a buffer.
          * @param options options to serialize.
-         * @param data byte stream to serialize the options into.
+         * @param cur current position in the buffer, advanced on success.
+         * @param end end of the buffer.
          * @return 0 on success, -1 on failure.
          */
-        int serialize (const DhcpOption& options, std::stringstream& data) const;
+        int serialize (const DhcpOption& options, char*& cur, const char* end) const;
 
         /**
-         * @brief deserialize an option list from a byte stream.
+         * @brief deserialize an option list from a buffer.
          * @param options option list to deserialize into.
-         * @param data byte stream holding the options to deserialize.
+         * @param cur beginning of the options.
+         * @param end end of the options.
          * @return 0 on success, -1 on failure.
          */
-        int deserialize (DhcpOption& options, std::stringstream& data) const;
+        int deserialize (DhcpOption& options, const char* cur, const char* end) const;
 
         /**
-         * @brief deserialize an option list from an overloaded field.
-         * @param options option list to deserialize into.
-         * @param field field holding the options to deserialize.
-         * @param size field size.
-         * @return true on success, false on failure.
-         */
-        bool deserialize (DhcpOption& options, const char* field, size_t size) const
-        {
-            std::stringstream data;
-            data.rdbuf ()->pubsetbuf (const_cast<char*> (field), size);
-            return (deserialize (options, data) != -1);
-        }
-
-        /**
-         * @brief write an option header into a byte stream.
-         * @param data byte stream to write to.
+         * @brief write an option header into a buffer.
+         * @param cur current position in the buffer, advanced on success.
+         * @param end end of the buffer.
          * @param code option code.
          * @param size option payload size.
-         * @return true if the payload fits in an option, false otherwise.
+         * @return true on success, false if the payload does not fit in an option or the header in the buffer.
          */
-        static bool writeHead (std::ostream& data, uint8_t code, size_t size);
+        static bool writeHead (char*& cur, const char* end, uint8_t code, size_t size);
 
         /**
-         * @brief write an IPv4 address into a byte stream.
-         * @param data byte stream to write to.
+         * @brief write an IPv4 address into a buffer.
+         * @param cur current position in the buffer, advanced on success.
+         * @param end end of the buffer.
          * @param address address to write.
+         * @return true on success, false if the buffer is too small.
          */
-        static void writeAddress (std::ostream& data, const IpAddress& address)
+        static bool writeAddress (char*& cur, const char* end, const IpAddress& address)
         {
             struct in_addr addr = {};
 
@@ -341,20 +341,21 @@ namespace join
                 ::memcpy (&addr, address.addr (), sizeof (addr));
             }
 
-            data.write (reinterpret_cast<const char*> (&addr), sizeof (addr));
+            return writeBytes (cur, end, &addr, sizeof (addr));
         }
 
         /**
-         * @brief read an IPv4 address from a byte stream.
-         * @param data byte stream to read from.
+         * @brief read an IPv4 address from a buffer.
+         * @param cur current position in the buffer, advanced on success.
+         * @param end end of the buffer.
          * @param address address read.
          * @return true on success, false on failure.
          */
-        static bool readAddress (std::istream& data, IpAddress& address)
+        static bool readAddress (const char*& cur, const char* end, IpAddress& address)
         {
             struct in_addr addr = {};
 
-            if (!extract (data, &addr, sizeof (addr)))
+            if (!readBytes (cur, end, &addr, sizeof (addr)))
             {
                 return false;
             }

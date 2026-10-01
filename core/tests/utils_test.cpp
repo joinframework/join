@@ -175,25 +175,55 @@ TEST (Utils, getline)
 }
 
 /**
- * @brief Test extract.
+ * @brief Test readBytes.
  */
-TEST (Utils, extract)
+TEST (Utils, readBytes)
 {
-    std::stringstream stream;
     char data[4] = {};
 
-    stream.clear ();
-    stream.str ("abc");
-    ASSERT_FALSE (join::extract (stream, data, sizeof (data)));
-    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
+    const char buffer[] = {'a', 'b', 'c', 'd', 'e', 'f'};
+    const char* cur = buffer;
+    const char* end = buffer + sizeof (buffer);
 
-    stream.clear ();
-    stream.str ("abcdef");
-    ASSERT_TRUE (join::extract (stream, data, sizeof (data)));
+    ASSERT_TRUE (join::readBytes (cur, end, data, sizeof (data)));
+    ASSERT_EQ (cur, buffer + 4);
     ASSERT_EQ (std::string (data, sizeof (data)), "abcd");
-    ASSERT_TRUE (join::extract (stream, data, 2));
+
+    ASSERT_FALSE (join::readBytes (cur, end, data, 3));
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
+    ASSERT_EQ (cur, buffer + 4);
+
+    ASSERT_TRUE (join::readBytes (cur, end, data, 2));
+    ASSERT_EQ (cur, end);
     ASSERT_EQ (std::string (data, 2), "ef");
-    ASSERT_FALSE (join::extract (stream, data, 1));
+
+    ASSERT_TRUE (join::readBytes (cur, end, data, 0));
+    ASSERT_FALSE (join::readBytes (cur, end, data, 1));
+}
+
+/**
+ * @brief Test writeBytes.
+ */
+TEST (Utils, writeBytes)
+{
+    char data[4] = {};
+    char* cur = data;
+    const char* end = data + sizeof (data);
+
+    ASSERT_TRUE (join::writeBytes (cur, end, "abc", 3));
+    ASSERT_EQ (cur, data + 3);
+    ASSERT_EQ (std::string (data, 3), "abc");
+
+    ASSERT_FALSE (join::writeBytes (cur, end, "de", 2));
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
+    ASSERT_EQ (cur, data + 3);
+
+    ASSERT_TRUE (join::writeBytes (cur, end, "d", 1));
+    ASSERT_EQ (cur, end);
+    ASSERT_EQ (std::string (data, sizeof (data)), "abcd");
+
+    ASSERT_TRUE (join::writeBytes (cur, end, "", 0));
+    ASSERT_FALSE (join::writeBytes (cur, end, "e", 1));
 }
 
 /**

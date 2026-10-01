@@ -349,21 +349,45 @@ namespace join
     }
 
     /**
-     * @brief read a fixed amount of bytes from a byte stream.
-     * @param data byte stream to read from.
-     * @param out buffer to read into.
+     * @brief read bytes from a buffer.
+     * @param cur current position, advanced on success.
+     * @param end end of the buffer.
+     * @param out where to copy the bytes.
      * @param size number of bytes to read.
-     * @return true if every byte was read, false otherwise.
+     * @return true on success, false if not enough bytes remain.
      */
-    inline bool extract (std::istream& data, void* out, size_t size)
+    inline bool readBytes (const char*& cur, const char* end, void* out, size_t size) noexcept
     {
-        data.read (reinterpret_cast<char*> (out), size);
-
-        if (data.fail ())
+        if (size > static_cast<size_t> (end - cur))
         {
             join::lastError = make_error_code (Errc::MessageTooLong);
             return false;
         }
+
+        ::memcpy (out, cur, size);
+        cur += size;
+
+        return true;
+    }
+
+    /**
+     * @brief write bytes to a buffer.
+     * @param cur current position, advanced on success.
+     * @param end end of the buffer.
+     * @param in bytes to write.
+     * @param size number of bytes to write.
+     * @return true on success, false if not enough room remains.
+     */
+    inline bool writeBytes (char*& cur, const char* end, const void* in, size_t size) noexcept
+    {
+        if (size > static_cast<size_t> (end - cur))
+        {
+            join::lastError = make_error_code (Errc::MessageTooLong);
+            return false;
+        }
+
+        ::memcpy (cur, in, size);
+        cur += size;
 
         return true;
     }

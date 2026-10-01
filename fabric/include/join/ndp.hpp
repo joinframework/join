@@ -252,8 +252,10 @@ namespace join
 
             if (size > Protocol::maxMsgSize)
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::MessageTooLong);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             Endpoint endpoint (IpAddress (destination.addr (), destination.length (), _index));
@@ -375,11 +377,13 @@ namespace join
             out.link = hardware ();
 
             char payload[Protocol::maxMsgSize];
-            std::stringstream data;
-            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
-            this->_message.serialize (out, data);
+            ssize_t size = this->_message.serialize (out, payload, sizeof (payload));
+            if (size == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
 
-            return this->send (payload, static_cast<size_t> (data.tellp ()), IpAddress::ipv6Routers);
+            return this->send (payload, static_cast<size_t> (size), IpAddress::ipv6Routers);
         }
 
         /**
@@ -459,11 +463,8 @@ namespace join
                 return;
             }
 
-            std::stringstream stream;
-            stream.rdbuf ()->pubsetbuf (this->_buffer.get (), size);
-
             RouterAdvertisement advert;
-            if (this->_message.deserialize (advert, stream) == -1)
+            if (this->_message.deserialize (advert, this->_buffer.get (), static_cast<size_t> (size)) == -1)
             {
                 return;
             }
@@ -578,14 +579,14 @@ namespace join
                        const IpAddress& destination = IpAddress::ipv6AllNodes) noexcept
         {
             char payload[Protocol::maxMsgSize];
-            std::stringstream data;
-            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
-            if (this->_message.serialize (advert, data, advert.link.isWildcard () ? hardware () : advert.link) == -1)
+            ssize_t size = this->_message.serialize (advert, payload, sizeof (payload),
+                                                     advert.link.isWildcard () ? hardware () : advert.link);
+            if (size == -1)
             {
                 return -1;
             }
 
-            return this->send (payload, static_cast<size_t> (data.tellp ()), destination);
+            return this->send (payload, static_cast<size_t> (size), destination);
         }
 
         /**
@@ -613,11 +614,8 @@ namespace join
                 return;
             }
 
-            std::stringstream stream;
-            stream.rdbuf ()->pubsetbuf (this->_buffer.get (), size);
-
             RouterSolicitation solicitation;
-            if (this->_message.deserialize (solicitation, stream) == -1)
+            if (this->_message.deserialize (solicitation, this->_buffer.get (), static_cast<size_t> (size)) == -1)
             {
                 return;
             }

@@ -83,44 +83,42 @@ static DhcpPacket sample ()
 TEST (DhcpMessage, serialize)
 {
     DhcpMessage message;
-    std::stringstream data;
+    char data[1500];
 
     DhcpPacket bad = sample ();
     bad.op = 0;
-    ASSERT_EQ (message.serialize (bad, data), -1);
+    ASSERT_EQ (message.serialize (bad, data, sizeof (data)), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
     DhcpPacket big = sample ();
     big.options.erase (DhcpOption::DomainName);
     ASSERT_TRUE (big.options.insert (DhcpOption::DomainName, std::string (256, 'a')));
-    ASSERT_EQ (message.serialize (big, data), -1);
+    ASSERT_EQ (message.serialize (big, data, sizeof (data)), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
     DhcpPacket bytes = sample ();
     bytes.options.erase (DhcpOption::ParameterRequestList);
     ASSERT_TRUE (bytes.options.insert (DhcpOption::ParameterRequestList, ByteList (256, DhcpOption::SubnetMask)));
-    ASSERT_EQ (message.serialize (bytes, data), -1);
+    ASSERT_EQ (message.serialize (bytes, data, sizeof (data)), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
     DhcpPacket words = sample ();
     words.options.erase (DhcpOption::PathMtuPlateauTable);
     ASSERT_TRUE (words.options.insert (DhcpOption::PathMtuPlateauTable, WordList (128, 1500)));
-    ASSERT_EQ (message.serialize (words, data), -1);
+    ASSERT_EQ (message.serialize (words, data, sizeof (data)), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
     DhcpPacket addresses = sample ();
     addresses.options.erase (DhcpOption::DomainNameServer);
     ASSERT_TRUE (addresses.options.insert (DhcpOption::DomainNameServer, IpList (64, IpAddress ("192.168.16.249"))));
-    ASSERT_EQ (message.serialize (addresses, data), -1);
+    ASSERT_EQ (message.serialize (addresses, data, sizeof (data)), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
-    data.str ("");
-    data.clear ();
-
     DhcpPacket packet = sample ();
-    ASSERT_EQ (message.serialize (packet, data), 0) << lastError.message ();
+    ssize_t size = message.serialize (packet, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
 
-    const std::string wire = data.str ();
+    const std::string wire (data, static_cast<size_t> (size));
     ASSERT_GT (wire.size (), headerSize);
 
     ASSERT_EQ (static_cast<uint8_t> (wire[0]), DhcpMessage::BootReply);
@@ -134,6 +132,20 @@ TEST (DhcpMessage, serialize)
 
     ASSERT_GE (wire.size (), minMsgSize);
     ASSERT_EQ (static_cast<uint8_t> (wire[wire.find_last_not_of ('\0')]), DhcpOption::End);
+
+    for (size_t length = 0; length < wire.size (); ++length)
+    {
+        ASSERT_EQ (message.serialize (packet, data, length), -1) << "length " << length;
+        ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
+    }
+
+    DhcpPacket bare;
+    bare.op = DhcpMessage::BootRequest;
+    bare.hardware = "50:7b:9d:13:82:df";
+    bare.options.insert (DhcpOption::DhcpMessageType, static_cast<uint8_t> (DhcpMessage::Discover));
+    ASSERT_EQ (message.serialize (bare, data, sizeof (data)), static_cast<ssize_t> (minMsgSize));
+    ASSERT_EQ (message.serialize (bare, data, minMsgSize - 1), -1);
+    ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 }
 
 /**
@@ -142,13 +154,15 @@ TEST (DhcpMessage, serialize)
 TEST (DhcpMessage, deserialize)
 {
     DhcpMessage message;
+    char data[1500];
 
     DhcpPacket packet = sample ();
-    std::stringstream data;
-    ASSERT_EQ (message.serialize (packet, data), 0) << lastError.message ();
+    ssize_t size = message.serialize (packet, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
+    const std::string wire (data, static_cast<size_t> (size));
 
     DhcpPacket decoded;
-    ASSERT_EQ (message.deserialize (decoded, data), 0) << lastError.message ();
+    ASSERT_EQ (message.deserialize (decoded, wire.data (), wire.size ()), 0) << lastError.message ();
 
     ASSERT_EQ (decoded.op, packet.op);
     ASSERT_EQ (decoded.hardware, packet.hardware);
@@ -164,21 +178,18 @@ TEST (DhcpMessage, deserialize)
     DhcpPacket ignored;
     for (size_t length : {size_t (2), size_t (6), size_t (20), size_t (35), size_t (100), headerSize - 1})
     {
-        std::stringstream truncated (data.str ().substr (0, length));
-        ASSERT_EQ (message.deserialize (ignored, truncated), -1) << "length " << length;
+        ASSERT_EQ (message.deserialize (ignored, wire.data (), length), -1) << "length " << length;
         ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
     }
 
-    std::string wire = data.str ();
-    wire[headerSize - 1] = 0;
-    std::stringstream corrupted (wire);
-    ASSERT_EQ (message.deserialize (ignored, corrupted), -1);
+    std::string corrupted = wire;
+    corrupted[headerSize - 1] = 0;
+    ASSERT_EQ (message.deserialize (ignored, corrupted.data (), corrupted.size ()), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
-    wire = data.str ();
-    wire[0] = 0;
-    std::stringstream unknown (wire);
-    ASSERT_EQ (message.deserialize (ignored, unknown), -1);
+    std::string unknown = wire;
+    unknown[0] = 0;
+    ASSERT_EQ (message.deserialize (ignored, unknown.data (), unknown.size ()), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
     DhcpPacket bare;
@@ -186,10 +197,10 @@ TEST (DhcpMessage, deserialize)
     bare.hardware = "50:7b:9d:13:82:df";
     bare.options.insert (DhcpOption::DhcpMessageType, static_cast<uint8_t> (DhcpMessage::Discover));
 
-    std::stringstream head;
-    ASSERT_EQ (message.serialize (bare, head), 0) << lastError.message ();
+    size = message.serialize (bare, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
 
-    const std::string bareWire = head.str ();
+    const std::string bareWire (data, static_cast<size_t> (size));
     std::string prefix = bareWire.substr (0, bareWire.find_last_not_of ('\0'));
     const uint8_t trailer[] = {DhcpOption::Pad,
                                DhcpOption::PolicyFilter,
@@ -210,9 +221,8 @@ TEST (DhcpMessage, deserialize)
                                DhcpOption::End};
     prefix.append (reinterpret_cast<const char*> (trailer), sizeof (trailer));
 
-    std::stringstream mixed (prefix);
     DhcpPacket lenient;
-    ASSERT_EQ (message.deserialize (lenient, mixed), 0) << lastError.message ();
+    ASSERT_EQ (message.deserialize (lenient, prefix.data (), prefix.size ()), 0) << lastError.message ();
     ASSERT_TRUE (lenient.options.contains (DhcpOption::DhcpMessageType));
     ASSERT_FALSE (lenient.options.contains (DhcpOption::PolicyFilter));
     ASSERT_FALSE (lenient.options.contains (DhcpOption::InterfaceMtu));
@@ -221,16 +231,14 @@ TEST (DhcpMessage, deserialize)
 
     std::string clipped = bareWire.substr (0, bareWire.find_last_not_of ('\0'));
     clipped.push_back (static_cast<char> (DhcpOption::DomainName));
-    std::stringstream headless (clipped);
     DhcpPacket short1;
-    ASSERT_EQ (message.deserialize (short1, headless), -1);
+    ASSERT_EQ (message.deserialize (short1, clipped.data (), clipped.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
     clipped.push_back (4);
     clipped.push_back (1);
-    std::stringstream starved (clipped);
     DhcpPacket short2;
-    ASSERT_EQ (message.deserialize (short2, starved), -1);
+    ASSERT_EQ (message.deserialize (short2, clipped.data (), clipped.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
     DhcpPacket overloaded;
@@ -240,25 +248,22 @@ TEST (DhcpMessage, deserialize)
     overloaded.options.insert (DhcpOption::OptionOverload,
                                static_cast<uint8_t> (DhcpMessage::FileOverload | DhcpMessage::SnameOverload));
 
-    std::stringstream carrier;
-    ASSERT_EQ (message.serialize (overloaded, carrier), 0) << lastError.message ();
+    size = message.serialize (overloaded, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
 
-    std::string frame = carrier.str ();
+    std::string frame (data, static_cast<size_t> (size));
     const uint8_t sname[] = {DhcpOption::Router, 4, 192, 168, 16, 254, DhcpOption::End};
     const uint8_t file[] = {DhcpOption::DomainName, 9, 'f', 'o', 'o', '.', 'l', 'o', 'c', 'a', 'l', DhcpOption::End};
     ::memcpy (&frame[44], sname, sizeof (sname));
     ::memcpy (&frame[108], file, sizeof (file));
 
-    std::stringstream spilled (frame);
     DhcpPacket recovered;
-    ASSERT_EQ (message.deserialize (recovered, spilled), 0) << lastError.message ();
+    ASSERT_EQ (message.deserialize (recovered, frame.data (), frame.size ()), 0) << lastError.message ();
     ASSERT_EQ (*recovered.options.getIf<IpList> (DhcpOption::Router), IpList{"192.168.16.254"});
     ASSERT_EQ (*recovered.options.getIf<std::string> (DhcpOption::DomainName), "foo.local");
 
     DhcpPacket reused = sample ();
-    std::stringstream again;
-    ASSERT_EQ (message.serialize (bare, again), 0) << lastError.message ();
-    ASSERT_EQ (message.deserialize (reused, again), 0) << lastError.message ();
+    ASSERT_EQ (message.deserialize (reused, bareWire.data (), bareWire.size ()), 0) << lastError.message ();
     ASSERT_EQ (reused.options.size (), 1);
     ASSERT_TRUE (reused.options.contains (DhcpOption::DhcpMessageType));
 
@@ -268,30 +273,28 @@ TEST (DhcpMessage, deserialize)
     spoiled.options.insert (DhcpOption::DhcpMessageType, static_cast<uint8_t> (DhcpMessage::Ack));
     spoiled.options.insert (DhcpOption::OptionOverload, static_cast<uint8_t> (DhcpMessage::FileOverload));
 
-    std::stringstream broken;
-    ASSERT_EQ (message.serialize (spoiled, broken), 0) << lastError.message ();
+    size = message.serialize (spoiled, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
 
-    std::string cut = broken.str ();
+    std::string cut (data, static_cast<size_t> (size));
     cut[108 + 126] = static_cast<char> (DhcpOption::DomainName);
     cut[108 + 127] = 9;
 
-    std::stringstream clippedFile (cut);
     DhcpPacket lost;
-    ASSERT_EQ (message.deserialize (lost, clippedFile), -1);
+    ASSERT_EQ (message.deserialize (lost, cut.data (), cut.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
     spoiled.options.erase (DhcpOption::OptionOverload);
     spoiled.options.insert (DhcpOption::OptionOverload, static_cast<uint8_t> (DhcpMessage::SnameOverload));
 
-    std::stringstream other;
-    ASSERT_EQ (message.serialize (spoiled, other), 0) << lastError.message ();
+    size = message.serialize (spoiled, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
 
-    cut = other.str ();
+    cut.assign (data, static_cast<size_t> (size));
     cut[44 + 62] = static_cast<char> (DhcpOption::Router);
     cut[44 + 63] = 4;
 
-    std::stringstream clippedSname (cut);
-    ASSERT_EQ (message.deserialize (lost, clippedSname), -1);
+    ASSERT_EQ (message.deserialize (lost, cut.data (), cut.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 }
 

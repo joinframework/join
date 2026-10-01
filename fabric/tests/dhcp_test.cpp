@@ -85,11 +85,8 @@ public:
             ssize_t size = receive (_buffer.get (), Dhcp::maxMsgSize, from, to);
             if (size != -1)
             {
-                std::stringstream stream;
-                stream.rdbuf ()->pubsetbuf (_buffer.get (), size);
-
                 DhcpPacket packet;
-                if (_message.deserialize (packet, stream) == 0)
+                if (_message.deserialize (packet, _buffer.get (), static_cast<size_t> (size)) == 0)
                 {
                     return packet.id;
                 }
@@ -208,12 +205,11 @@ protected:
             out.hardware = request.hardware;
             out.your = _lease;
 
-            std::stringstream data;
+            char payload[Dhcp::maxMsgSize];
             DhcpMessage message;
-            message.serialize (out, data);
+            ssize_t size = message.serialize (out, payload, sizeof (payload));
 
-            const std::string payload = data.str ();
-            Probe (_device).send (payload.data (), payload.size (), request.src, _server, _lease);
+            Probe (_device).send (payload, static_cast<size_t> (size), request.src, _server, _lease);
             return;
         }
 
@@ -346,10 +342,10 @@ protected:
     static std::string frameOf (const DhcpPacket& packet)
     {
         DhcpMessage message;
-        std::stringstream data;
-        message.serialize (packet, data);
+        char data[Dhcp::maxMsgSize];
+        ssize_t size = message.serialize (packet, data, sizeof (data));
 
-        const std::string payload = data.str ();
+        const std::string payload (data, static_cast<size_t> (size));
         std::string wire (sizeof (Probe::Frame) + payload.size (), '\0');
         ::memcpy (&wire[sizeof (Probe::Frame)], payload.data (), payload.size ());
 

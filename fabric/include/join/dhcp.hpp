@@ -473,9 +473,8 @@ namespace join
             }
 
             char payload[Protocol::maxMsgSize];
-            std::stringstream data;
-            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
-            if (this->_message.serialize (request, data) == -1)
+            ssize_t size = this->_message.serialize (request, payload, sizeof (payload));
+            if (size == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
@@ -495,8 +494,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (this->send (payload, static_cast<size_t> (data.tellp ()), request.dest, request.client, destination) ==
-                -1)
+            if (this->send (payload, static_cast<size_t> (size), request.dest, request.client, destination) == -1)
             {
                 // LCOV_EXCL_START
                 _pending.erase (request.id);
@@ -676,14 +674,13 @@ namespace join
             out.options.insert (DhcpOption::ServerIdentifier, server);
 
             char payload[Protocol::maxMsgSize];
-            std::stringstream data;
-            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
-            if (this->_message.serialize (out, data) == -1)
+            ssize_t size = this->_message.serialize (out, payload, sizeof (payload));
+            if (size == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            return this->send (payload, static_cast<size_t> (data.tellp ()), out.dest, client, server);
+            return this->send (payload, static_cast<size_t> (size), out.dest, client, server);
         }
 
         /**
@@ -706,14 +703,13 @@ namespace join
             }
 
             char payload[Protocol::maxMsgSize];
-            std::stringstream data;
-            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
-            if (this->_message.serialize (out, data) == -1)
+            ssize_t size = this->_message.serialize (out, payload, sizeof (payload));
+            if (size == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            return this->send (payload, static_cast<size_t> (data.tellp ()), out.dest, IpAddress::ipv4Wildcard,
+            return this->send (payload, static_cast<size_t> (size), out.dest, IpAddress::ipv4Wildcard,
                                IpAddress::ipv4Broadcast);
         }
 
@@ -731,11 +727,9 @@ namespace join
                 return;
             }
 
-            std::stringstream stream;
-            stream.rdbuf ()->pubsetbuf (this->_buffer.get (), size);
-
             DhcpPacket packet;
-            if ((this->_message.deserialize (packet, stream) == -1) || (packet.op != DhcpMessage::BootReply))
+            if ((this->_message.deserialize (packet, this->_buffer.get (), static_cast<size_t> (size)) == -1) ||
+                (packet.op != DhcpMessage::BootReply))
             {
                 return;
             }
@@ -906,11 +900,9 @@ namespace join
                 return;
             }
 
-            std::stringstream stream;
-            stream.rdbuf ()->pubsetbuf (this->_buffer.get (), size);
-
             DhcpPacket packet;
-            if ((this->_message.deserialize (packet, stream) == -1) || (packet.op != DhcpMessage::BootRequest))
+            if ((this->_message.deserialize (packet, this->_buffer.get (), static_cast<size_t> (size)) == -1) ||
+                (packet.op != DhcpMessage::BootRequest))
             {
                 return;
             }
@@ -972,14 +964,13 @@ namespace join
             const IpAddress& unicast = request.client.isWildcard () ? address : request.client;
 
             char payload[Protocol::maxMsgSize];
-            std::stringstream data;
-            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
-            if (this->_message.serialize (out, data) == -1)
+            ssize_t size = this->_message.serialize (out, payload, sizeof (payload));
+            if (size == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            return this->send (payload, static_cast<size_t> (data.tellp ()), out.dest, server,
+            return this->send (payload, static_cast<size_t> (size), out.dest, server,
                                broadcast ? IpAddress::ipv4Broadcast : unicast);
         }
 

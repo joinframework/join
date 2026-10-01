@@ -32,7 +32,6 @@
 #include <join/error.hpp>
 
 // C++.
-#include <sstream>
 #include <vector>
 
 // C.
@@ -151,39 +150,47 @@ namespace join
         };
 
         /**
-         * @brief serialize a router solicitation into a byte stream.
+         * @brief serialize a router solicitation into a buffer.
          * @param packet router solicitation to serialize.
-         * @param data byte stream to serialize the message into.
-         * @return 0 on success, -1 on failure.
+         * @param data buffer to serialize the message into.
+         * @param maxSize buffer size.
+         * @return the message size, -1 on failure.
          */
-        int serialize (const RouterSolicitation& packet, std::stringstream& data) const
+        ssize_t serialize (const RouterSolicitation& packet, char* data, size_t maxSize) const
         {
+            char* cur = data;
+            const char* end = data + maxSize;
+            bool ok = true;
+
             struct nd_router_solicit rs = {};
             rs.nd_rs_type = RouterSolicit;
-            data.write (reinterpret_cast<const char*> (&rs), sizeof (rs));
-            writeLinkAddress (data, packet.link);
-            return 0;
+            ok &= writeBytes (cur, end, &rs, sizeof (rs));
+            ok &= writeLinkAddress (cur, end, packet.link);
+
+            return ok ? cur - data : -1;
         }
 
         /**
-         * @brief serialize a router advertisement into a byte stream.
+         * @brief serialize a router advertisement into a buffer.
          * @param packet router advertisement to serialize.
-         * @param data byte stream to serialize the message into.
-         * @return 0 on success, -1 on failure.
+         * @param data buffer to serialize the message into.
+         * @param maxSize buffer size.
+         * @return the message size, -1 on failure.
          */
-        int serialize (const RouterAdvertisement& packet, std::stringstream& data) const
+        ssize_t serialize (const RouterAdvertisement& packet, char* data, size_t maxSize) const
         {
-            return serialize (packet, data, packet.link);
+            return serialize (packet, data, maxSize, packet.link);
         }
 
         /**
-         * @brief serialize a router advertisement into a byte stream with the given link layer address.
+         * @brief serialize a router advertisement into a buffer with the given link layer address.
          * @param packet router advertisement to serialize.
-         * @param data byte stream to serialize the message into.
+         * @param data buffer to serialize the message into.
+         * @param maxSize buffer size.
          * @param link link layer address to carry instead of the one of the advertisement.
-         * @return 0 on success, -1 on failure.
+         * @return the message size, -1 on failure.
          */
-        int serialize (const RouterAdvertisement& packet, std::stringstream& data, const MacAddress& link) const
+        ssize_t serialize (const RouterAdvertisement& packet, char* data, size_t maxSize, const MacAddress& link) const
         {
             for (auto const& prefix : packet.prefixes)
             {
@@ -218,6 +225,10 @@ namespace join
                 }
             }
 
+            char* cur = data;
+            const char* end = data + maxSize;
+            bool ok = true;
+
             struct nd_router_advert ra = {};
             ra.nd_ra_type = RouterAdvert;
             ra.nd_ra_curhoplimit = packet.hopLimit;
@@ -225,9 +236,9 @@ namespace join
             ra.nd_ra_router_lifetime = htons (packet.lifetime);
             ra.nd_ra_reachable = htonl (packet.reachable);
             ra.nd_ra_retransmit = htonl (packet.retransmit);
-            data.write (reinterpret_cast<const char*> (&ra), sizeof (ra));
+            ok &= writeBytes (cur, end, &ra, sizeof (ra));
 
-            writeLinkAddress (data, link);
+            ok &= writeLinkAddress (cur, end, link);
 
             if (packet.mtu)
             {
@@ -235,7 +246,7 @@ namespace join
                 mtu.nd_opt_mtu_type = Mtu;
                 mtu.nd_opt_mtu_len = sizeof (mtu) >> 3;
                 mtu.nd_opt_mtu_mtu = htonl (packet.mtu);
-                data.write (reinterpret_cast<const char*> (&mtu), sizeof (mtu));
+                ok &= writeBytes (cur, end, &mtu, sizeof (mtu));
             }
 
             for (auto const& prefix : packet.prefixes)
@@ -250,7 +261,7 @@ namespace join
                 pi.nd_opt_pi_valid_time = htonl (prefix.valid);
                 pi.nd_opt_pi_preferred_time = htonl (prefix.preferred);
                 ::memcpy (&pi.nd_opt_pi_prefix, masked.addr (), sizeof (pi.nd_opt_pi_prefix));
-                data.write (reinterpret_cast<const char*> (&pi), sizeof (pi));
+                ok &= writeBytes (cur, end, &pi, sizeof (pi));
             }
 
             for (auto const& rdnss : packet.rdnss)
@@ -259,27 +270,31 @@ namespace join
                 header.type = RecursiveDnsServer;
                 header.len = static_cast<uint8_t> (1 + (rdnss.servers.size () * 2));
                 header.lifetime = htonl (rdnss.lifetime);
-                data.write (reinterpret_cast<const char*> (&header), sizeof (header));
+                ok &= writeBytes (cur, end, &header, sizeof (header));
 
                 for (auto const& server : rdnss.servers)
                 {
-                    data.write (reinterpret_cast<const char*> (server.addr ()), sizeof (struct in6_addr));
+                    ok &= writeBytes (cur, end, server.addr (), sizeof (struct in6_addr));
                 }
             }
 
-            return 0;
+            return ok ? cur - data : -1;
         }
 
         /**
-         * @brief deserialize a router solicitation from a byte stream.
+         * @brief deserialize a router solicitation from a buffer.
          * @param packet router solicitation to deserialize into.
-         * @param data byte stream holding the message to deserialize.
+         * @param data buffer holding the message to deserialize.
+         * @param size message size.
          * @return 0 on success, -1 on failure.
          */
-        int deserialize (RouterSolicitation& packet, std::stringstream& data) const
+        int deserialize (RouterSolicitation& packet, const char* data, size_t size) const
         {
+            const char* cur = data;
+            const char* end = data + size;
+
             struct nd_router_solicit rs = {};
-            if (!extract (data, &rs, sizeof (rs)))
+            if (!readBytes (cur, end, &rs, sizeof (rs)))
             {
                 return -1;
             }
@@ -292,7 +307,7 @@ namespace join
 
             packet.link = MacAddress ();
 
-            return readOptions (data, [&packet] (const uint8_t* option, size_t size) {
+            return readOptions (cur, end, [&packet] (const uint8_t* option, size_t size) {
                 if ((option[0] == SourceLinkAddress) && (size >= _optionHeaderSize + ETH_ALEN))
                 {
                     packet.link = MacAddress (option + _optionHeaderSize, ETH_ALEN);
@@ -301,15 +316,19 @@ namespace join
         }
 
         /**
-         * @brief deserialize a router advertisement from a byte stream.
+         * @brief deserialize a router advertisement from a buffer.
          * @param packet router advertisement to deserialize into.
-         * @param data byte stream holding the message to deserialize.
+         * @param data buffer holding the message to deserialize.
+         * @param size message size.
          * @return 0 on success, -1 on failure.
          */
-        int deserialize (RouterAdvertisement& packet, std::stringstream& data) const
+        int deserialize (RouterAdvertisement& packet, const char* data, size_t size) const
         {
+            const char* cur = data;
+            const char* end = data + size;
+
             struct nd_router_advert ra = {};
-            if (!extract (data, &ra, sizeof (ra)))
+            if (!readBytes (cur, end, &ra, sizeof (ra)))
             {
                 return -1;
             }
@@ -330,7 +349,7 @@ namespace join
             packet.prefixes.clear ();
             packet.rdnss.clear ();
 
-            return readOptions (data, [&packet] (const uint8_t* option, size_t size) {
+            return readOptions (cur, end, [&packet] (const uint8_t* option, size_t size) {
                 switch (option[0])
                 {
                     case SourceLinkAddress:
@@ -415,49 +434,52 @@ namespace join
         };
 
         /**
-         * @brief write a link layer address option into a byte stream.
-         * @param data byte stream to write to.
+         * @brief write a link layer address option into a buffer.
+         * @param cur current position in the buffer, advanced on success.
+         * @param end end of the buffer.
          * @param link link layer address, nothing is written if wildcard.
+         * @return true on success, false if the buffer is too small.
          */
-        static void writeLinkAddress (std::ostream& data, const MacAddress& link)
+        static bool writeLinkAddress (char*& cur, const char* end, const MacAddress& link)
         {
             if (link.isWildcard ())
             {
-                return;
+                return true;
             }
 
             uint8_t option[_optionHeaderSize + ETH_ALEN] = {SourceLinkAddress, 1};
             ::memcpy (option + _optionHeaderSize, link.addr (), ETH_ALEN);
-            data.write (reinterpret_cast<const char*> (option), sizeof (option));
+
+            return writeBytes (cur, end, option, sizeof (option));
         }
 
         /**
          * @brief walk through the options of a message, RFC 4861 section 4.6.
-         * @param data byte stream holding the options.
+         * @param cur beginning of the options.
+         * @param end end of the options.
          * @param handler function called with each option, header included, and its size.
          * @return 0 on success, -1 if an option is malformed.
          */
         template <typename Handler>
-        static int readOptions (std::stringstream& data, Handler&& handler)
+        static int readOptions (const char* cur, const char* end, Handler&& handler)
         {
             uint8_t option[_maxOptionSize];
 
             for (;;)
             {
-                data.read (reinterpret_cast<char*> (option), _optionHeaderSize);
-                if (data.gcount () == 0)
+                if (cur == end)
                 {
                     return 0;
                 }
 
-                if ((static_cast<size_t> (data.gcount ()) != _optionHeaderSize) || (option[1] == 0))
+                if (!readBytes (cur, end, option, _optionHeaderSize) || (option[1] == 0))
                 {
                     lastError = make_error_code (Errc::InvalidParam);
                     return -1;
                 }
 
                 const size_t size = static_cast<size_t> (option[1]) << 3;
-                if (!extract (data, option + _optionHeaderSize, size - _optionHeaderSize))
+                if (!readBytes (cur, end, option + _optionHeaderSize, size - _optionHeaderSize))
                 {
                     return -1;
                 }

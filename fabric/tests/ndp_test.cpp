@@ -244,9 +244,10 @@ protected:
     static std::string wireOf (const RouterAdvertisement& advert)
     {
         NdpMessage message;
-        std::stringstream data;
-        message.serialize (advert, data);
-        return data.str ();
+        std::string data (1 << 20, '\0');
+        ssize_t size = message.serialize (advert, &data[0], data.size ());
+        data.resize ((size == -1) ? 0 : static_cast<size_t> (size));
+        return data;
     }
 
     /// interface name.
