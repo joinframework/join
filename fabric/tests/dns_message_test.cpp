@@ -162,6 +162,32 @@ TEST (DnsMessage, roundTrip)
         join::DnsPacket truncated;
         ASSERT_EQ (codec.deserialize (truncated, data, length), -1) << "length " << length;
     }
+
+    std::vector<join::ResourceRecord> records (out.answers);
+    records.insert (records.end (), out.authorities.begin (), out.authorities.end ());
+    records.insert (records.end (), out.additionals.begin (), out.additionals.end ());
+
+    for (auto const& record : records)
+    {
+        join::DnsPacket single;
+        single.answers.push_back (record);
+
+        size = codec.serialize (single, data, sizeof (data));
+        ASSERT_NE (size, -1) << join::lastError.message ();
+
+        const size_t rdata = 12 + record.host.size () + 2 + 10;
+
+        for (size_t length = rdata + 1; length < static_cast<size_t> (size); ++length)
+        {
+            std::string wire (data, length);
+            uint16_t dataLen = htons (static_cast<uint16_t> (length - rdata));
+            ::memcpy (&wire[rdata - sizeof (dataLen)], &dataLen, sizeof (dataLen));
+
+            join::DnsPacket truncated;
+            ASSERT_EQ (codec.deserialize (truncated, wire.data (), wire.size ()), -1)
+                << "type " << record.type << " length " << length;
+        }
+    }
 }
 
 /**
