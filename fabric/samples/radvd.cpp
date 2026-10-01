@@ -166,7 +166,7 @@ int main (int argc, char* argv[])
 
         Ndp::Server server (argv[optind]);
 
-        server.setSolicitationListener ([&server, &advert] (const RouterSolicitation& solicitation) {
+        server.setRouterSolicitationListener ([&server, &advert] (const RouterSolicitation& solicitation) {
             std::cout << "solicited by " << solicitation.src << std::endl;
             server.routerAdvertise (advert, solicitation);
         });
@@ -187,7 +187,7 @@ int main (int argc, char* argv[])
         }
         while (sigtimedwait (&signals, nullptr, &timeout) == -1);
 
-        server.unsetSolicitationListener ();
+        server.unsetRouterSolicitationListener ();
         advert.lifetime = 0;
         server.routerAdvertise (advert);
     }

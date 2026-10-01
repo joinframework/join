@@ -59,6 +59,12 @@ namespace join
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
 
+        /// neighbor solicitation notification callback.
+        using NeighborSolicitationNotify = Function<void (const NeighborSolicitation& solicitation)>;
+
+        /// neighbor advertisement notification callback.
+        using NeighborAdvertisementNotify = Function<void (const NeighborAdvertisement& advert)>;
+
         /**
          * @brief create the BasicNdp instance.
          */
@@ -116,6 +122,8 @@ namespace join
             struct icmp6_filter filter;
             ICMP6_FILTER_SETBLOCKALL (&filter);
             ICMP6_FILTER_SETPASS (accept, &filter);
+            ICMP6_FILTER_SETPASS (NdpMessage::NeighborAdvert, &filter);
+            ICMP6_FILTER_SETPASS (NdpMessage::NeighborSolicit, &filter);
 
             if (::setsockopt (_socket.handle (), IPPROTO_ICMPV6, ICMP6_FILTER, &filter, sizeof (filter)) == -1)
             {
@@ -171,6 +179,123 @@ namespace join
         virtual ~BasicNdp () = default;
 
         /**
+         * @brief send a neighbor solicitation and wait for the advertisement of the target.
+         * @param target address of the neighbor to resolve.
+         * @param advert receives the advertisement.
+         * @param timeout maximum wait duration.
+         * @return 0 on success, -1 on failure.
+         */
+        int neighborSolicit (const IpAddress& target, NeighborAdvertisement& advert,
+                             std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
+        {
+            if (_reactor.isReactorThread ())
+            {
+                lastError = std::make_error_code (std::errc::resource_deadlock_would_occur);
+                return -1;
+            }
+
+            NeighborSolicitation out;
+            out.target = target;
+            out.link = _hardware;
+
+            char payload[Protocol::maxMsgSize];
+            ssize_t size = _message.serialize (out, payload, sizeof (payload));
+            if (size == -1)
+            {
+                return -1;
+            }
+
+            const IpAddress group = IpAddress::ipv6SolicitedNodes | (target & ~IpAddress (104, AF_INET6));
+
+            ScopedLock<Mutex> lock (_neighborMutex);
+
+            NeighborRequest pending;
+            pending.target = IpAddress (target.addr (), target.length ());
+            pending.advert = &advert;
+            _neighborPending.push_back (&pending);
+
+            if (send (payload, static_cast<size_t> (size), group) == -1)
+            {
+                // LCOV_EXCL_START
+                _neighborPending.erase (std::find (_neighborPending.begin (), _neighborPending.end (), &pending));
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            bool answered = pending.cond.timedWait (lock, timeout, [&pending] {
+                return pending.done;
+            });
+
+            _neighborPending.erase (std::find (_neighborPending.begin (), _neighborPending.end (), &pending));
+
+            if (!answered)
+            {
+                lastError = make_error_code (Errc::TimedOut);
+                return -1;
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief send a neighbor advertisement, the interface hardware address is used if it carries none.
+         * @param advert advertisement to send.
+         * @param destination destination address, all the nodes of the link by default.
+         * @return 0 on success, -1 on failure.
+         */
+        int neighborAdvertise (const NeighborAdvertisement& advert,
+                               const IpAddress& destination = IpAddress::ipv6AllNodes) noexcept
+        {
+            char payload[Protocol::maxMsgSize];
+            ssize_t size = _message.serialize (advert, payload, sizeof (payload),
+                                               advert.link.isWildcard () ? _hardware : advert.link);
+            if (size == -1)
+            {
+                return -1;
+            }
+
+            return send (payload, static_cast<size_t> (size), destination);
+        }
+
+        /**
+         * @brief set the callback called on every neighbor solicitation received.
+         * @param cb callback, called from the reactor thread, must not throw nor destroy the instance.
+         * @return 0 on success, -1 on failure.
+         */
+        int setNeighborSolicitationListener (NeighborSolicitationNotify cb) noexcept
+        {
+            return _neighborSolicitationListener.set (std::move (cb));
+        }
+
+        /**
+         * @brief unset the neighbor solicitation callback, it is no longer called once this returns.
+         * @return 0 on success, -1 on failure.
+         */
+        int unsetNeighborSolicitationListener () noexcept
+        {
+            return _neighborSolicitationListener.unset ();
+        }
+
+        /**
+         * @brief set the callback called on every neighbor advertisement received, solicited or not.
+         * @param cb callback, called from the reactor thread, must not throw nor destroy the instance.
+         * @return 0 on success, -1 on failure.
+         */
+        int setNeighborAdvertisementListener (NeighborAdvertisementNotify cb) noexcept
+        {
+            return _neighborAdvertisementListener.set (std::move (cb));
+        }
+
+        /**
+         * @brief unset the neighbor advertisement callback, it is no longer called once this returns.
+         * @return 0 on success, -1 on failure.
+         */
+        int unsetNeighborAdvertisementListener () noexcept
+        {
+            return _neighborAdvertisementListener.unset ();
+        }
+
+        /**
          * @brief get the name of the interface the instance is bound to.
          * @return the interface name.
          */
@@ -198,23 +323,6 @@ namespace join
         }
 
     protected:
-        /**
-         * @brief get the index of the given interface.
-         * @param interface interface name.
-         * @return the interface index.
-         * @throw std::system_error if the interface is unknown.
-         */
-        static unsigned int lookup (const std::string& interface)
-        {
-            unsigned int index = ::if_nametoindex (interface.c_str ());
-            if (index == 0)
-            {
-                throw std::system_error (errno, std::generic_category (), "ndp interface lookup failed");
-            }
-
-            return index;
-        }
-
         /**
          * @brief register with the reactor, to be called by the final class once fully constructed.
          * @throw std::system_error if the registration failed.
@@ -306,6 +414,75 @@ namespace join
             return size;
         }
 
+        /**
+         * @brief hand a received neighbor message to its listener, and an advertisement to the solicitations waiting
+         * for it.
+         * @param size message size.
+         * @param from address the message came from.
+         * @return true if the message is a neighbor solicitation or advertisement, false otherwise.
+         */
+        bool onNeighborMessage (size_t size, const IpAddress& from) noexcept
+        {
+            const uint8_t type = static_cast<uint8_t> (_buffer[0]);
+
+            if (type == NdpMessage::NeighborSolicit)
+            {
+                NeighborSolicitation solicitation;
+                if ((_message.deserialize (solicitation, _buffer.get (), size) == 0) &&
+                    (!from.isWildcard () || solicitation.link.isWildcard ()))
+                {
+                    solicitation.src = from;
+                    _neighborSolicitationListener.notify (solicitation);
+                }
+
+                return true;
+            }
+
+            if (type != NdpMessage::NeighborAdvert)
+            {
+                return false;
+            }
+
+            NeighborAdvertisement advert;
+            if (_message.deserialize (advert, _buffer.get (), size) == 0)
+            {
+                advert.src = from;
+
+                _neighborAdvertisementListener.notify (advert);
+
+                ScopedLock<Mutex> lock (_neighborMutex);
+
+                for (NeighborRequest* pending : _neighborPending)
+                {
+                    if (!pending->done && (pending->target == advert.target))
+                    {
+                        *pending->advert = advert;
+                        pending->done = true;
+                        pending->cond.signal ();
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /**
+         * @brief get the index of the given interface.
+         * @param interface interface name.
+         * @return the interface index.
+         * @throw std::system_error if the interface is unknown.
+         */
+        static unsigned int lookup (const std::string& interface)
+        {
+            unsigned int index = ::if_nametoindex (interface.c_str ());
+            if (index == 0)
+            {
+                throw std::system_error (errno, std::generic_category (), "ndp interface lookup failed");
+            }
+
+            return index;
+        }
+
         /// underlying socket.
         Socket _socket;
 
@@ -326,6 +503,36 @@ namespace join
 
         /// event loop reactor.
         Reactor& _reactor;
+
+        /**
+         * @brief neighbor solicitation waiting for the advertisement of its target.
+         */
+        struct NeighborRequest
+        {
+            /// answer notification.
+            Condition cond;
+
+            /// address of the solicited neighbor.
+            IpAddress target{AF_INET6};
+
+            /// receives the advertisement.
+            NeighborAdvertisement* advert = nullptr;
+
+            /// set once the advertisement has been received.
+            bool done = false;
+        };
+
+        /// neighbor solicitations waiting for an advertisement.
+        std::vector<NeighborRequest*> _neighborPending;
+
+        /// neighbor solicitations protection mutex.
+        Mutex _neighborMutex;
+
+        /// neighbor solicitation listener.
+        Notifier<NeighborSolicitationNotify, Reactor> _neighborSolicitationListener{_reactor};
+
+        /// neighbor advertisement listener.
+        Notifier<NeighborAdvertisementNotify, Reactor> _neighborAdvertisementListener{_reactor};
     };
 
     /**
@@ -338,9 +545,17 @@ namespace join
         using BasicNdp<Protocol>::interface;
         using BasicNdp<Protocol>::hardware;
         using BasicNdp<Protocol>::index;
+        using BasicNdp<Protocol>::neighborSolicit;
+        using BasicNdp<Protocol>::neighborAdvertise;
+        using BasicNdp<Protocol>::setNeighborSolicitationListener;
+        using BasicNdp<Protocol>::unsetNeighborSolicitationListener;
+        using BasicNdp<Protocol>::setNeighborAdvertisementListener;
+        using BasicNdp<Protocol>::unsetNeighborAdvertisementListener;
+        using typename BasicNdp<Protocol>::NeighborSolicitationNotify;
+        using typename BasicNdp<Protocol>::NeighborAdvertisementNotify;
 
-        /// advertisement notification callback.
-        using AdvertisementNotify = Function<void (const RouterAdvertisement& advert)>;
+        /// router advertisement notification callback.
+        using RouterAdvertisementNotify = Function<void (const RouterAdvertisement& advert)>;
 
         /**
          * @brief create the BasicNdpClient instance.
@@ -401,9 +616,9 @@ namespace join
                 return -1;
             }
 
-            ScopedLock<Mutex> lock (_syncMutex);
+            ScopedLock<Mutex> lock (_routerMutex);
 
-            PendingRequest pending;
+            RouterRequest pending;
             pending.advert = &advert;
             _pending.push_back (&pending);
 
@@ -435,18 +650,18 @@ namespace join
          * @param cb callback, called from the reactor thread, must not throw nor destroy the instance.
          * @return 0 on success, -1 on failure.
          */
-        int setAdvertisementListener (AdvertisementNotify cb) noexcept
+        int setRouterAdvertisementListener (RouterAdvertisementNotify cb) noexcept
         {
-            return _listener.set (std::move (cb));
+            return _routerAdvertisementListener.set (std::move (cb));
         }
 
         /**
          * @brief unset the router advertisement callback, it is no longer called once this returns.
          * @return 0 on success, -1 on failure.
          */
-        int unsetAdvertisementListener () noexcept
+        int unsetRouterAdvertisementListener () noexcept
         {
-            return _listener.unset ();
+            return _routerAdvertisementListener.unset ();
         }
 
     private:
@@ -458,8 +673,17 @@ namespace join
         {
             IpAddress from;
             ssize_t size = this->receive (this->_buffer.get (), Protocol::maxMsgSize, from);
+            if (size == -1)
+            {
+                return;
+            }
 
-            if ((size == -1) || !from.isLinkLocal ())
+            if (this->onNeighborMessage (static_cast<size_t> (size), from))
+            {
+                return;
+            }
+
+            if (!from.isLinkLocal ())
             {
                 return;
             }
@@ -472,11 +696,11 @@ namespace join
 
             advert.src = from;
 
-            _listener.notify (advert);
+            _routerAdvertisementListener.notify (advert);
 
-            ScopedLock<Mutex> lock (_syncMutex);
+            ScopedLock<Mutex> lock (_routerMutex);
 
-            for (PendingRequest* pending : _pending)
+            for (RouterRequest* pending : _pending)
             {
                 if (!pending->done)
                 {
@@ -490,7 +714,7 @@ namespace join
         /**
          * @brief solicitation waiting for an advertisement.
          */
-        struct PendingRequest
+        struct RouterRequest
         {
             /// answer notification.
             Condition cond;
@@ -503,13 +727,13 @@ namespace join
         };
 
         /// solicitations waiting for an advertisement.
-        std::vector<PendingRequest*> _pending;
+        std::vector<RouterRequest*> _pending;
 
-        /// mutex for synchronous operations.
-        Mutex _syncMutex;
+        /// router solicitations protection mutex.
+        Mutex _routerMutex;
 
         /// router advertisement listener.
-        Notifier<AdvertisementNotify, Reactor> _listener{this->_reactor};
+        Notifier<RouterAdvertisementNotify, Reactor> _routerAdvertisementListener{this->_reactor};
     };
 
     /**
@@ -522,9 +746,17 @@ namespace join
         using BasicNdp<Protocol>::interface;
         using BasicNdp<Protocol>::hardware;
         using BasicNdp<Protocol>::index;
+        using BasicNdp<Protocol>::neighborSolicit;
+        using BasicNdp<Protocol>::neighborAdvertise;
+        using BasicNdp<Protocol>::setNeighborSolicitationListener;
+        using BasicNdp<Protocol>::unsetNeighborSolicitationListener;
+        using BasicNdp<Protocol>::setNeighborAdvertisementListener;
+        using BasicNdp<Protocol>::unsetNeighborAdvertisementListener;
+        using typename BasicNdp<Protocol>::NeighborSolicitationNotify;
+        using typename BasicNdp<Protocol>::NeighborAdvertisementNotify;
 
-        /// solicitation notification callback definition.
-        using SolicitationNotify = Function<void (const RouterSolicitation& solicitation)>;
+        /// router solicitation notification callback.
+        using RouterSolicitationNotify = Function<void (const RouterSolicitation& solicitation)>;
 
         /**
          * @brief create the BasicNdpServer instance.
@@ -556,18 +788,18 @@ namespace join
          * @param cb callback, called from the reactor thread, must not throw nor destroy the instance.
          * @return 0 on success, -1 on failure.
          */
-        int setSolicitationListener (SolicitationNotify cb) noexcept
+        int setRouterSolicitationListener (RouterSolicitationNotify cb) noexcept
         {
-            return _listener.set (std::move (cb));
+            return _routerSolicitationListener.set (std::move (cb));
         }
 
         /**
          * @brief unset the router solicitation callback, it is no longer called once this returns.
          * @return 0 on success, -1 on failure.
          */
-        int unsetSolicitationListener () noexcept
+        int unsetRouterSolicitationListener () noexcept
         {
-            return _listener.unset ();
+            return _routerSolicitationListener.unset ();
         }
 
         /**
@@ -616,6 +848,11 @@ namespace join
                 return;
             }
 
+            if (this->onNeighborMessage (static_cast<size_t> (size), from))
+            {
+                return;
+            }
+
             RouterSolicitation solicitation;
             if (this->_message.deserialize (solicitation, this->_buffer.get (), static_cast<size_t> (size)) == -1)
             {
@@ -629,11 +866,11 @@ namespace join
 
             solicitation.src = from;
 
-            _listener.notify (solicitation);
+            _routerSolicitationListener.notify (solicitation);
         }
 
         /// router solicitation listener.
-        Notifier<SolicitationNotify, Reactor> _listener{this->_reactor};
+        Notifier<RouterSolicitationNotify, Reactor> _routerSolicitationListener{this->_reactor};
     };
 }
 
