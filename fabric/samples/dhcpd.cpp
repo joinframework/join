@@ -86,6 +86,14 @@ public:
         });
     }
 
+    /**
+     * @brief destroy the server instance.
+     */
+    ~Server ()
+    {
+        _dhcp.unsetRequestListener ();
+    }
+
 private:
     /**
      * @brief offer an address to a client asking for one.

@@ -175,6 +175,11 @@ int main (int argc, char* argv[])
                 throw std::system_error (lastError);
             }
         }
+
+        if (multiple)
+        {
+            client.unsetAdvertisementListener ();
+        }
     }
     catch (const std::exception& e)
     {
