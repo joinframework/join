@@ -180,8 +180,8 @@ namespace join
             const std::streamoff written = data.tellp () - start;
             if (written < static_cast<std::streamoff> (minMsgSize))
             {
-                const std::string pad (static_cast<size_t> (minMsgSize - written), static_cast<char> (DhcpOption::Pad));
-                data.write (pad.data (), pad.size ());
+                const char pad[minMsgSize] = {};
+                data.write (pad, minMsgSize - written);
             }
 
             return 0;

@@ -374,12 +374,12 @@ namespace join
             RouterSolicitation out;
             out.link = hardware ();
 
+            char payload[Protocol::maxMsgSize];
             std::stringstream data;
+            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
             this->_message.serialize (out, data);
 
-            const std::string payload = data.str ();
-
-            return this->send (payload.data (), payload.size (), IpAddress::ipv6Routers);
+            return this->send (payload, static_cast<size_t> (data.tellp ()), IpAddress::ipv6Routers);
         }
 
         /**
@@ -577,15 +577,15 @@ namespace join
         int advertise (const RouterAdvertisement& advert,
                        const IpAddress& destination = IpAddress::ipv6AllNodes) noexcept
         {
+            char payload[Protocol::maxMsgSize];
             std::stringstream data;
+            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
             if (this->_message.serialize (advert, data, advert.link.isWildcard () ? hardware () : advert.link) == -1)
             {
                 return -1;
             }
 
-            const std::string payload = data.str ();
-
-            return this->send (payload.data (), payload.size (), destination);
+            return this->send (payload, static_cast<size_t> (data.tellp ()), destination);
         }
 
         /**

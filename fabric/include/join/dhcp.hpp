@@ -472,13 +472,13 @@ namespace join
                 return -1;
             }
 
+            char payload[Protocol::maxMsgSize];
             std::stringstream data;
+            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
             if (this->_message.serialize (request, data) == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
-
-            const std::string payload = data.str ();
 
             ScopedLock<Mutex> lock (_syncMutex);
 
@@ -495,7 +495,8 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (this->send (payload.data (), payload.size (), request.dest, request.client, destination) == -1)
+            if (this->send (payload, static_cast<size_t> (data.tellp ()), request.dest, request.client, destination) ==
+                -1)
             {
                 // LCOV_EXCL_START
                 _pending.erase (request.id);
@@ -674,15 +675,15 @@ namespace join
             out.client = client;
             out.options.insert (DhcpOption::ServerIdentifier, server);
 
+            char payload[Protocol::maxMsgSize];
             std::stringstream data;
+            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
             if (this->_message.serialize (out, data) == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            const std::string payload = data.str ();
-
-            return this->send (payload.data (), payload.size (), out.dest, client, server);
+            return this->send (payload, static_cast<size_t> (data.tellp ()), out.dest, client, server);
         }
 
         /**
@@ -704,15 +705,15 @@ namespace join
                 out.options.insert (DhcpOption::Message, message);
             }
 
+            char payload[Protocol::maxMsgSize];
             std::stringstream data;
+            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
             if (this->_message.serialize (out, data) == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            const std::string payload = data.str ();
-
-            return this->send (payload.data (), payload.size (), out.dest, IpAddress::ipv4Wildcard,
+            return this->send (payload, static_cast<size_t> (data.tellp ()), out.dest, IpAddress::ipv4Wildcard,
                                IpAddress::ipv4Broadcast);
         }
 
@@ -970,15 +971,15 @@ namespace join
 
             const IpAddress& unicast = request.client.isWildcard () ? address : request.client;
 
+            char payload[Protocol::maxMsgSize];
             std::stringstream data;
+            data.rdbuf ()->pubsetbuf (payload, sizeof (payload));
             if (this->_message.serialize (out, data) == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            const std::string payload = data.str ();
-
-            return this->send (payload.data (), payload.size (), out.dest, server,
+            return this->send (payload, static_cast<size_t> (data.tellp ()), out.dest, server,
                                broadcast ? IpAddress::ipv4Broadcast : unicast);
         }
 
