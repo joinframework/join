@@ -30,6 +30,7 @@
 #include <gtest/gtest.h>
 
 using join::lastError;
+using join::Errc;
 using join::Dns;
 using join::IpAddress;
 using join::IpAddressList;
@@ -86,6 +87,13 @@ protected:
             if (question.host.empty ())
             {
                 this->reply (query, {}, {}, {}, 1);
+                return;
+            }
+
+            if (question.host == _malformed)
+            {
+                uint16_t header[] = {htons (query.id), htons (0x8000), 0, htons (1), 0, 0};
+                _socket.writeTo (reinterpret_cast<const char*> (header), sizeof (header), {query.src, query.port});
                 return;
             }
 
@@ -202,6 +210,9 @@ protected:
 
     /// fake MX record.
     static constexpr const char* _fakeMX = "mail.fake.local";
+
+    /// host answered with a malformed response.
+    static constexpr const char* _malformed = "malformed.local";
 };
 
 const uint16_t DnsTest::_dnsPort = 5353;
@@ -571,6 +582,15 @@ TEST_F (DnsTest, resolveService)
     EXPECT_EQ (Dns::Resolver::resolveService ("smtps"), 465);
     EXPECT_EQ (Dns::Resolver::resolveService ("http"), 80);
     EXPECT_EQ (Dns::Resolver::resolveService ("https"), 443);
+}
+
+/**
+ * @brief test the onReadable method.
+ */
+TEST_F (DnsTest, onReadable)
+{
+    EXPECT_TRUE (_resolver->resolveAllAddress (_malformed, AF_INET).empty ());
+    EXPECT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 }
 
 /**

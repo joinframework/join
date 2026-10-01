@@ -879,9 +879,11 @@ namespace join
             if (size >= int (_headerSize))
             {
                 DnsPacket packet;
+                std::error_code error;
+
                 if (_message.deserialize (packet, _buffer.get (), static_cast<size_t> (size)) == -1)
                 {
-                    return;
+                    error = lastError;
                 }
 
                 auto local = _socket.localEndpoint ();
@@ -898,7 +900,7 @@ namespace join
                     if (it != _pending.end ())
                     {
                         it->second->packet = packet;
-                        it->second->ec = DnsMessage::decodeError (packet.flags & 0x000F);
+                        it->second->ec = error ? error : DnsMessage::decodeError (packet.flags & 0x000F);
                         if ((packet.flags & 0x0200) && it->second->ec == std::error_code{})
                         {
                             it->second->ec = make_error_code (Errc::MessageTooLong);
