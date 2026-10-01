@@ -168,7 +168,7 @@ int main (int argc, char* argv[])
 
         server.setSolicitationListener ([&server, &advert] (const RouterSolicitation& solicitation) {
             std::cout << "solicited by " << solicitation.src << std::endl;
-            server.advertise (advert, solicitation.src.isWildcard () ? IpAddress::ipv6AllNodes : solicitation.src);
+            server.advertise (advert, solicitation);
         });
 
         std::mt19937 rng (std::random_device{}());

@@ -146,7 +146,7 @@ public:
     {
         _server.setSolicitationListener ([this] (const RouterSolicitation& solicitation) {
             _solicitations.push (solicitation);
-            _server.advertise (settings (), solicitation.src);
+            _server.advertise (settings (), solicitation);
         });
     }
 
@@ -564,6 +564,16 @@ TEST_F (NdpTest, advertise)
     ASSERT_EQ (_server.advertise (other), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (2));
     ASSERT_EQ (adverts.messages ()[1].link, MacAddress ("4e:ed:ed:ee:59:dd"));
+
+    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_TRUE (_solicitations.awaits (1));
+    ASSERT_TRUE (adverts.awaits (3));
+
+    ASSERT_EQ (_server.advertise (settings (), _solicitations.messages ()[0]), 0) << lastError.message ();
+    ASSERT_TRUE (adverts.awaits (4));
+
+    ASSERT_EQ (_server.advertise (settings (), RouterSolicitation ()), 0) << lastError.message ();
+    ASSERT_TRUE (adverts.awaits (5));
 }
 
 /**

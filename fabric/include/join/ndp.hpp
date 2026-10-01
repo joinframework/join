@@ -588,6 +588,17 @@ namespace join
             return this->send (payload.data (), payload.size (), destination);
         }
 
+        /**
+         * @brief answer a router solicitation, to the solicitor or to all the nodes of the link if it has no address.
+         * @param advert advertisement to send, the interface hardware address is used if it carries none.
+         * @param solicitation solicitation to answer.
+         * @return 0 on success, -1 on failure.
+         */
+        int advertise (const RouterAdvertisement& advert, const RouterSolicitation& solicitation) noexcept
+        {
+            return advertise (advert, solicitation.src.isWildcard () ? IpAddress::ipv6AllNodes : solicitation.src);
+        }
+
     private:
         /**
          * @brief decode a router solicitation and hand it to the listeners.
