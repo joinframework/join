@@ -216,7 +216,7 @@ private:
     /// addresses handed out, indexed by client hardware address.
     std::map<MacAddress, IpAddress> _leases;
 
-    /// DHCP server, declared last so that it stops before the state its listener uses.
+    /// DHCP server.
     Dhcp::Server _dhcp;
 };
 
