@@ -166,9 +166,9 @@ int main (int argc, char* argv[])
 
         Ndp::Server server (argv[optind]);
 
-        server.addSolicitationListener ([&server, advert] (const RouterSolicitation& solicitation) {
+        server.setSolicitationListener ([&server, &advert] (const RouterSolicitation& solicitation) {
             std::cout << "solicited by " << solicitation.src << std::endl;
-            server.advertise (advert, solicitation.src.isWildcard () ? IpAddress::ipv6AllNodes : solicitation.src);
+            server.advertise (advert, solicitation);
         });
 
         std::mt19937 rng (std::random_device{}());
@@ -187,6 +187,7 @@ int main (int argc, char* argv[])
         }
         while (sigtimedwait (&signals, nullptr, &timeout) == -1);
 
+        server.unsetSolicitationListener ();
         advert.lifetime = 0;
         server.advertise (advert);
     }

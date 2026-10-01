@@ -156,11 +156,12 @@ namespace join
             ssize_t size = _socket.readFrom (_buffer.get (), Protocol::maxMsgSize, &from);
             if (size >= int (_headerSize))
             {
-                std::stringstream data;
-                data.rdbuf ()->pubsetbuf (_buffer.get (), size);
-
                 DnsPacket packet;
-                _message.deserialize (packet, data);
+                if (_message.deserialize (packet, _buffer.get (), static_cast<size_t> (size)) == -1)
+                {
+                    return;
+                }
+
                 packet.src = from.ip ();
                 packet.dest = _socket.localEndpoint ().ip ();
                 packet.port = from.port ();
@@ -179,25 +180,14 @@ namespace join
          */
         int send (DnsPacket& packet)
         {
-            std::stringstream data;
-            if (_message.serialize (packet, data) == -1)
+            char buffer[Protocol::maxMsgSize];
+            ssize_t size = _message.serialize (packet, buffer, sizeof (buffer));
+            if (size == -1)
             {
-                // LCOV_EXCL_START
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-                // LCOV_EXCL_STOP
+                return -1;  // LCOV_EXCL_LINE
             }
 
-            std::string buffer = data.str ();
-            if (buffer.size () > Protocol::maxMsgSize)
-            {
-                // LCOV_EXCL_START
-                lastError = make_error_code (Errc::MessageTooLong);
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-
-            if (_socket.writeTo (buffer.data (), buffer.size (), {packet.dest, packet.port}) == -1)
+            if (_socket.writeTo (buffer, static_cast<size_t> (size), {packet.dest, packet.port}) == -1)
             {
                 return -1;  // LCOV_EXCL_LINE
             }
@@ -685,11 +675,12 @@ namespace join
             ssize_t size = this->_socket.readFrom (this->_buffer.get (), Protocol::maxMsgSize, &from);
             if (size >= int (this->_headerSize))
             {
-                std::stringstream data;
-                data.rdbuf ()->pubsetbuf (this->_buffer.get (), size);
-
                 DnsPacket packet;
-                this->_message.deserialize (packet, data);
+                if (this->_message.deserialize (packet, this->_buffer.get (), static_cast<size_t> (size)) == -1)
+                {
+                    return;
+                }
+
                 IpAddress mcast = Protocol::multicastAddress (this->_socket.family ());
                 packet.src = from.ip ();
                 packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
@@ -826,22 +817,11 @@ namespace join
             packet.dest = IpAddress (mcast.addr (), mcast.length (), _ifindex);
             packet.port = Protocol::defaultPort;
 
-            std::stringstream data;
-            if (this->_message.serialize (packet, data) == -1)
+            char buffer[Protocol::maxMsgSize];
+            ssize_t size = this->_message.serialize (packet, buffer, sizeof (buffer));
+            if (size == -1)
             {
-                // LCOV_EXCL_START
-                lastError = make_error_code (Errc::InvalidParam);
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-
-            std::string buffer = data.str ();
-            if (buffer.size () > Protocol::maxMsgSize)
-            {
-                // LCOV_EXCL_START
-                lastError = make_error_code (Errc::MessageTooLong);
-                return -1;
-                // LCOV_EXCL_STOP
+                return -1;  // LCOV_EXCL_LINE
             }
 
             ScopedLock<Mutex> lock (_syncMutex);
@@ -856,7 +836,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (this->_socket.writeTo (buffer.data (), buffer.size (), {packet.dest, packet.port}) == -1)
+            if (this->_socket.writeTo (buffer, static_cast<size_t> (size), {packet.dest, packet.port}) == -1)
             {
                 // LCOV_EXCL_START
                 _pending.erase (inserted.first);

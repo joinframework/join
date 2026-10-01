@@ -28,6 +28,8 @@
 #include <join/dhcp_protocol.hpp>
 #include <join/dhcp_message.hpp>
 #include <join/condition.hpp>
+#include <join/notifier.hpp>
+#include <join/function.hpp>
 #include <join/reactor.hpp>
 #include <join/utils.hpp>
 #include <join/error.hpp>
@@ -37,13 +39,14 @@
 #include <unordered_map>
 #include <system_error>
 #include <chrono>
+#include <memory>
 #include <string>
-#include <vector>
 
 // C.
 #include <net/ethernet.h>
-#include <netinet/ip.h>
 #include <netinet/udp.h>
+#include <netinet/ip.h>
+#include <sys/uio.h>
 #include <net/if.h>
 
 namespace join
@@ -69,7 +72,7 @@ namespace join
          * @throw std::system_error if the interface is unknown or the socket could not be bound to it.
          */
         explicit BasicDhcp (const std::string& interface, Reactor& reactor = ReactorThread::reactor ())
-        : _buffer (std::make_unique<char[]> (sizeof (Frame) + Protocol::maxMsgSize))
+        : _buffer (std::make_unique<char[]> (Protocol::maxMsgSize))
         , _interface (interface)
         , _hardware (MacAddress::address (interface))
         , _reactor (reactor)
@@ -117,22 +120,6 @@ namespace join
         virtual ~BasicDhcp () = default;
 
         /**
-         * @brief start receiving messages, to be called once fully constructed.
-         */
-        void start () noexcept
-        {
-            _reactor.addHandler (_socket.handle (), this);
-        }
-
-        /**
-         * @brief stop receiving messages, to be called before destruction starts.
-         */
-        void stop () noexcept
-        {
-            _reactor.delHandler (_socket.handle ());
-        }
-
-        /**
          * @brief get the name of the interface the instance is bound to.
          * @return the interface name.
          */
@@ -154,7 +141,7 @@ namespace join
         /**
          * @brief link, internet and transport headers a DHCP message is framed with.
          */
-        struct __attribute__ ((packed)) Frame
+        struct __attribute__ ((packed, aligned (2))) Frame
         {
             struct ethhdr eth;
             struct iphdr ip;
@@ -164,7 +151,7 @@ namespace join
         /**
          * @brief header the UDP checksum is computed over, RFC 768.
          */
-        struct __attribute__ ((packed)) Pseudo
+        struct __attribute__ ((packed, aligned (2))) Pseudo
         {
             uint32_t source;
             uint32_t destination;
@@ -174,28 +161,23 @@ namespace join
         };
 
         /**
-         * @brief method called when a DHCP message is received.
-         * @param packet message received.
+         * @brief register with the reactor, to be called by the final class once fully constructed.
+         * @throw std::system_error if the registration failed.
          */
-        virtual void onMessage (DhcpPacket::Ptr packet) = 0;
+        void attach ()
+        {
+            if (_reactor.addHandler (_socket.handle (), this) == -1)
+            {
+                throw std::system_error (lastError, "dhcp reactor registration failed");  // LCOV_EXCL_LINE
+            }
+        }
 
         /**
-         * @brief method called when data are ready to be read.
-         * @param fd file descriptor.
+         * @brief unregister from the reactor, to be called by the final class before destruction starts.
          */
-        void onReadable ([[maybe_unused]] int fd) override final
+        void detach () noexcept
         {
-            ssize_t size = _socket.read (_buffer.get (), sizeof (Frame) + Protocol::maxMsgSize);
-            if (size <= 0)
-            {
-                return;  // LCOV_EXCL_LINE
-            }
-
-            DhcpPacket::Ptr packet = receive (_buffer.get (), static_cast<size_t> (size));
-            if (packet != nullptr)
-            {
-                onMessage (std::move (packet));
-            }
+            _reactor.delHandler (_socket.handle ());
         }
 
         /**
@@ -205,7 +187,7 @@ namespace join
          * @param size payload size.
          * @return the checksum.
          */
-        static uint16_t udpChecksum (const Frame& frame, const char* payload, size_t size)
+        static uint16_t udpChecksum (const Frame& frame, const char* payload, size_t size) noexcept
         {
             Pseudo pseudo = {};
             pseudo.source = frame.ip.saddr;
@@ -213,34 +195,27 @@ namespace join
             pseudo.protocol = IPPROTO_UDP;
             pseudo.length = frame.udp.len;
 
-            std::vector<uint8_t> scratch (sizeof (pseudo) + sizeof (frame.udp) + size, 0);
-            ::memcpy (scratch.data (), &pseudo, sizeof (pseudo));
-            ::memcpy (scratch.data () + sizeof (pseudo), &frame.udp, sizeof (frame.udp));
-            ::memcpy (scratch.data () + sizeof (pseudo) + sizeof (frame.udp), payload, size);
-
-            uint16_t sum = join::checksum (reinterpret_cast<const uint16_t*> (scratch.data ()), scratch.size ());
+            uint16_t sum = join::checksum (reinterpret_cast<const uint16_t*> (&pseudo), sizeof (pseudo));
+            sum = join::checksum (reinterpret_cast<const uint16_t*> (&frame.udp), sizeof (frame.udp),
+                                  static_cast<uint16_t> (~sum));
+            sum = join::checksum (reinterpret_cast<const uint16_t*> (payload), size, static_cast<uint16_t> (~sum));
 
             return sum ? sum : 0xffff;
         }
 
         /**
          * @brief frame a message and write it on the wire.
-         * @param packet message to send.
+         * @param data message to write.
+         * @param size message size.
+         * @param to link layer destination address.
          * @param source source address.
          * @param destination destination address.
          * @return 0 on success, -1 on failure.
          */
-        int transmit (const DhcpPacket& packet, const IpAddress& source, const IpAddress& destination)
+        int send (const char* data, size_t size, const MacAddress& to, const IpAddress& source,
+                  const IpAddress& destination) noexcept
         {
-            std::stringstream data;
-            if (_message.serialize (packet, data) == -1)
-            {
-                return -1;  // LCOV_EXCL_LINE
-            }
-
-            const std::string payload = data.str ();
-
-            if (payload.size () > Protocol::maxMsgSize)
+            if (size > Protocol::maxMsgSize)
             {
                 // LCOV_EXCL_START
                 lastError = make_error_code (Errc::MessageTooLong);
@@ -248,61 +223,95 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            const size_t size = sizeof (Frame) + payload.size ();
+            Frame frame = {};
 
-            std::vector<char> buffer (size, 0);
-            Frame* frame = reinterpret_cast<Frame*> (buffer.data ());
-            ::memcpy (buffer.data () + sizeof (Frame), payload.data (), payload.size ());
+            const bool boot = (size > 0) && (static_cast<uint8_t> (data[0]) == DhcpMessage::BootRequest);
+            const uint16_t datagram = static_cast<uint16_t> (sizeof (frame.udp) + size);
 
-            const bool boot = (packet.op == DhcpMessage::BootRequest);
-            const uint16_t datagram = static_cast<uint16_t> (sizeof (frame->udp) + payload.size ());
+            frame.udp.source = htons (boot ? Protocol::clientPort : Protocol::serverPort);
+            frame.udp.dest = htons (boot ? Protocol::serverPort : Protocol::clientPort);
+            frame.udp.len = htons (datagram);
 
-            frame->udp.source = htons (boot ? Protocol::clientPort : Protocol::serverPort);
-            frame->udp.dest = htons (boot ? Protocol::serverPort : Protocol::clientPort);
-            frame->udp.len = htons (datagram);
-            frame->udp.check = 0;
+            frame.ip.version = IPVERSION;
+            frame.ip.ihl = sizeof (frame.ip) >> 2;
+            frame.ip.tos = IPTOS_CLASS_CS6 | IPTOS_ECN_NOT_ECT;
+            frame.ip.tot_len = htons (static_cast<uint16_t> (sizeof (frame.ip) + datagram));
+            frame.ip.frag_off = htons (IP_DF);
+            frame.ip.ttl = IPDEFTTL;
+            frame.ip.protocol = IPPROTO_UDP;
+            ::memcpy (&frame.ip.saddr, source.addr (), sizeof (frame.ip.saddr));
+            ::memcpy (&frame.ip.daddr, destination.addr (), sizeof (frame.ip.daddr));
+            frame.ip.check = join::checksum (reinterpret_cast<const uint16_t*> (&frame.ip), sizeof (frame.ip));
 
-            frame->ip.version = IPVERSION;
-            frame->ip.ihl = sizeof (frame->ip) >> 2;
-            frame->ip.tos = IPTOS_CLASS_CS6 | IPTOS_ECN_NOT_ECT;
-            frame->ip.tot_len = htons (static_cast<uint16_t> (sizeof (frame->ip) + datagram));
-            frame->ip.frag_off = htons (IP_DF);
-            frame->ip.ttl = IPDEFTTL;
-            frame->ip.protocol = IPPROTO_UDP;
-            ::memcpy (&frame->ip.saddr, source.addr (), sizeof (frame->ip.saddr));
-            ::memcpy (&frame->ip.daddr, destination.addr (), sizeof (frame->ip.daddr));
-            frame->ip.check = 0;
-            frame->ip.check = join::checksum (reinterpret_cast<const uint16_t*> (&frame->ip), sizeof (frame->ip));
+            frame.udp.check = udpChecksum (frame, data, size);
 
-            frame->udp.check = udpChecksum (*frame, payload.data (), payload.size ());
+            ::memcpy (frame.eth.h_dest, to.addr (), ETH_ALEN);
+            ::memcpy (frame.eth.h_source, _hardware.addr (), ETH_ALEN);
+            frame.eth.h_proto = htons (ETH_P_IP);
 
-            ::memcpy (frame->eth.h_dest, packet.dest.addr (), ETH_ALEN);
-            ::memcpy (frame->eth.h_source, packet.src.addr (), ETH_ALEN);
-            frame->eth.h_proto = htons (ETH_P_IP);
+            struct iovec iov[2];
+            iov[0].iov_base = &frame;
+            iov[0].iov_len = sizeof (frame);
+            iov[1].iov_base = const_cast<char*> (data);
+            iov[1].iov_len = size;
 
-            return (_socket.write (buffer.data (), size) == -1) ? -1 : 0;
+            struct msghdr message = {};
+            message.msg_iov = iov;
+            message.msg_iovlen = 2;
+
+            if (::sendmsg (_socket.handle (), &message, 0) == -1)
+            {
+                lastError = std::error_code (errno, std::generic_category ());  // LCOV_EXCL_LINE
+                return -1;                                                      // LCOV_EXCL_LINE
+            }
+
+            return 0;
         }
 
         /**
-         * @brief decode a frame received on the wire.
-         * @param data frame received.
-         * @param size frame size.
-         * @return the message decoded, nullptr if the frame does not carry one.
+         * @brief read a message that passed the link, internet and transport checks.
+         * @param data buffer used to store the message.
+         * @param maxSize maximum number of bytes to read.
+         * @param from link layer address the message came from.
+         * @param to link layer address the message was sent to.
+         * @return the message size, -1 if nothing valid was read.
          */
-        DhcpPacket::Ptr receive (const char* data, size_t size) const
+        ssize_t receive (char* data, size_t maxSize, MacAddress& from, MacAddress& to) noexcept
         {
-            if (size < sizeof (Frame) + DhcpMessage::headerSize)
+            Frame frame;
+
+            struct iovec iov[2];
+            iov[0].iov_base = &frame;
+            iov[0].iov_len = sizeof (frame);
+            iov[1].iov_base = data;
+            iov[1].iov_len = maxSize;
+
+            struct msghdr message = {};
+            message.msg_iov = iov;
+            message.msg_iovlen = 2;
+
+            ssize_t size = ::recvmsg (_socket.handle (), &message, 0);
+            if (size == -1)
             {
-                return nullptr;
+                lastError = std::error_code (errno, std::generic_category ());  // LCOV_EXCL_LINE
+                return -1;                                                      // LCOV_EXCL_LINE
             }
 
-            Frame frame;
-            ::memcpy (&frame, data, sizeof (frame));
+            if (message.msg_flags & MSG_TRUNC)
+            {
+                lastError = make_error_code (Errc::MessageTooLong);  // LCOV_EXCL_LINE
+                return -1;                                           // LCOV_EXCL_LINE
+            }
+
+            if (size < static_cast<ssize_t> (sizeof (Frame) + DhcpMessage::headerSize))
+            {
+                return -1;
+            }
 
             if ((frame.eth.h_proto != htons (ETH_P_IP)) || (frame.ip.version != IPVERSION) ||
                 (frame.ip.ihl != (sizeof (frame.ip) >> 2)) || (frame.ip.protocol != IPPROTO_UDP))
             {
-                return nullptr;
+                return -1;
             }
 
             struct iphdr header = frame.ip;
@@ -311,7 +320,7 @@ namespace join
 
             if (check != join::checksum (reinterpret_cast<const uint16_t*> (&header), sizeof (header)))
             {
-                return nullptr;
+                return -1;
             }
 
             if (((frame.udp.source != htons (Protocol::serverPort)) ||
@@ -319,18 +328,17 @@ namespace join
                 ((frame.udp.source != htons (Protocol::clientPort)) ||
                  (frame.udp.dest != htons (Protocol::serverPort))))
             {
-                return nullptr;
+                return -1;
             }
 
             const size_t datagram = ntohs (frame.udp.len);
-            const size_t available = size - sizeof (frame.eth) - sizeof (frame.ip);
+            const size_t available = static_cast<size_t> (size) - sizeof (frame.eth) - sizeof (frame.ip);
 
             if ((datagram < sizeof (frame.udp)) || (datagram > available))
             {
-                return nullptr;
+                return -1;
             }
 
-            const char* payload = data + sizeof (Frame);
             const size_t payloadSize = datagram - sizeof (frame.udp);
 
             if (frame.udp.check)
@@ -338,25 +346,16 @@ namespace join
                 Frame probe = frame;
                 probe.udp.check = 0;
 
-                if (frame.udp.check != udpChecksum (probe, payload, payloadSize))
+                if (frame.udp.check != udpChecksum (probe, data, payloadSize))
                 {
-                    return nullptr;
+                    return -1;
                 }
             }
 
-            std::stringstream stream;
-            stream.rdbuf ()->pubsetbuf (const_cast<char*> (payload), payloadSize);
+            from = MacAddress (frame.eth.h_source, ETH_ALEN);
+            to = MacAddress (frame.eth.h_dest, ETH_ALEN);
 
-            DhcpPacket::Ptr packet = std::make_unique<DhcpPacket> ();
-            if (_message.deserialize (*packet, stream) == -1)
-            {
-                return nullptr;
-            }
-
-            packet->src = MacAddress (frame.eth.h_source, ETH_ALEN);
-            packet->dest = MacAddress (frame.eth.h_dest, ETH_ALEN);
-
-            return packet;
+            return static_cast<ssize_t> (payloadSize);
         }
 
         /// underlying socket.
@@ -382,12 +381,11 @@ namespace join
      * @brief DHCP client.
      */
     template <class Protocol>
-    class BasicDhcpClient : protected BasicDhcp<Protocol>
+    class BasicDhcpClient final : protected BasicDhcp<Protocol>
     {
     public:
         using BasicDhcp<Protocol>::hardware;
         using BasicDhcp<Protocol>::interface;
-        using BasicDhcp<Protocol>::transmit;
 
         /**
          * @brief create the BasicDhcpClient instance.
@@ -415,15 +413,15 @@ namespace join
                                          "dhcp maximum message size is too small");
             }
 
-            this->start ();
+            this->attach ();
         }
 
         /**
-         * @brief destroy the instance.
+         * @brief stop receiving messages and destroy the instance.
          */
-        virtual ~BasicDhcpClient ()
+        ~BasicDhcpClient ()
         {
-            this->stop ();
+            this->detach ();
         }
 
         /**
@@ -438,7 +436,6 @@ namespace join
             packet.op = DhcpMessage::BootRequest;
             packet.id = randomize<uint32_t> ();
             packet.hardware = hardware ();
-            packet.src = hardware ();
             packet.dest = MacAddress::broadcast;
 
             packet.options.insert (DhcpOption::DhcpMessageType, type);
@@ -460,75 +457,89 @@ namespace join
         /**
          * @brief send a message and wait for its answer.
          * @param request message to send.
+         * @param answer answer received.
          * @param destination destination address.
          * @param expected message type the answer must carry.
          * @param timeout answer timeout.
-         * @return the answer received, nullptr on failure.
+         * @return 0 on success, -1 on failure.
          */
-        DhcpPacket::Ptr exchange (DhcpPacket& request, const IpAddress& destination, uint8_t expected,
-                                  std::chrono::milliseconds timeout = std::chrono::seconds (1))
+        int exchange (DhcpPacket& request, DhcpPacket& answer, const IpAddress& destination, uint8_t expected,
+                      std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
+            if (this->_reactor.isReactorThread ())
+            {
+                lastError = std::make_error_code (std::errc::resource_deadlock_would_occur);
+                return -1;
+            }
+
+            char payload[Protocol::maxMsgSize];
+            ssize_t size = this->_message.serialize (request, payload, sizeof (payload));
+            if (size == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
+
             ScopedLock<Mutex> lock (_syncMutex);
 
             _reason.clear ();
 
-            auto inserted = _pending.emplace (request.id, std::make_unique<PendingRequest> ());
-            if (!inserted.second)
+            PendingRequest pending;
+            pending.answer = &answer;
+
+            if (!_pending.emplace (request.id, &pending).second)
             {
                 // LCOV_EXCL_START
                 lastError = make_error_code (Errc::InUse);
-                return nullptr;
+                return -1;
                 // LCOV_EXCL_STOP
             }
 
-            PendingRequest* pending = inserted.first->second.get ();
-
-            if (transmit (request, request.client, destination) == -1)
+            if (this->send (payload, static_cast<size_t> (size), request.dest, request.client, destination) == -1)
             {
                 // LCOV_EXCL_START
                 _pending.erase (request.id);
-                return nullptr;
+                return -1;
                 // LCOV_EXCL_STOP
             }
 
-            if (!pending->cond.timedWait (lock, timeout, [pending] {
-                    return pending->answer != nullptr;
-                }))
-            {
-                _pending.erase (request.id);
-                lastError = make_error_code (Errc::TimedOut);
-                return nullptr;
-            }
+            bool answered = pending.cond.timedWait (lock, timeout, [&pending] {
+                return pending.done;
+            });
 
-            DhcpPacket::Ptr answer = std::move (pending->answer);
             _pending.erase (request.id);
 
-            const uint8_t* type = answer->options.getIf<uint8_t> (DhcpOption::DhcpMessageType);
+            if (!answered)
+            {
+                lastError = make_error_code (Errc::TimedOut);
+                return -1;
+            }
+
+            const uint8_t* type = answer.options.getIf<uint8_t> (DhcpOption::DhcpMessageType);
             if (type == nullptr)
             {
                 lastError = make_error_code (Errc::MessageUnknown);
-                return nullptr;
+                return -1;
             }
 
             if (*type == DhcpMessage::Nak)
             {
-                const std::string* message = answer->options.getIf<std::string> (DhcpOption::Message);
+                const std::string* message = answer.options.getIf<std::string> (DhcpOption::Message);
                 if (message != nullptr)
                 {
                     _reason = *message;
                 }
 
                 lastError = make_error_code (Errc::ConnectionRefused);
-                return nullptr;
+                return -1;
             }
 
             if (*type != expected)
             {
                 lastError = make_error_code (Errc::MessageUnknown);
-                return nullptr;
+                return -1;
             }
 
-            return answer;
+            return 0;
         }
 
         /**
@@ -544,12 +555,13 @@ namespace join
 
         /**
          * @brief broadcast a DISCOVER message and wait for an OFFER.
+         * @param offer offer received.
          * @param wants address the client would like to get, wildcard to let the server choose.
          * @param timeout answer timeout.
-         * @return the offer received, nullptr on failure.
+         * @return 0 on success, -1 on failure.
          */
-        DhcpPacket::Ptr discover (const IpAddress& wants = IpAddress::ipv4Wildcard,
-                                  std::chrono::milliseconds timeout = std::chrono::seconds (1))
+        int discover (DhcpPacket& offer, const IpAddress& wants = IpAddress::ipv4Wildcard,
+                      std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
             DhcpPacket out = compose (DhcpMessage::Discover);
 
@@ -560,18 +572,19 @@ namespace join
                 out.options.insert (DhcpOption::RequestedIpAddress, wants);
             }
 
-            return exchange (out, IpAddress::ipv4Broadcast, DhcpMessage::Offer, timeout);
+            return exchange (out, offer, IpAddress::ipv4Broadcast, DhcpMessage::Offer, timeout);
         }
 
         /**
          * @brief broadcast a REQUEST message and wait for an ACK.
+         * @param ack acknowledgement received.
          * @param wants address the client asks to be assigned.
          * @param server address of the server the offer came from.
          * @param timeout answer timeout.
-         * @return the acknowledgement received, nullptr on failure.
+         * @return 0 on success, -1 on failure.
          */
-        DhcpPacket::Ptr request (const IpAddress& wants, const IpAddress& server,
-                                 std::chrono::milliseconds timeout = std::chrono::seconds (1))
+        int request (DhcpPacket& ack, const IpAddress& wants, const IpAddress& server,
+                     std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
             DhcpPacket out = compose (DhcpMessage::Request);
 
@@ -579,23 +592,30 @@ namespace join
             out.options.insert (DhcpOption::RequestedIpAddress, wants);
             out.options.insert (DhcpOption::ServerIdentifier, server);
 
-            return exchange (out, IpAddress::ipv4Broadcast, DhcpMessage::Ack, timeout);
+            return exchange (out, ack, IpAddress::ipv4Broadcast, DhcpMessage::Ack, timeout);
         }
 
         /**
          * @brief send a REQUEST message to the server holding the lease and wait for an ACK.
+         * @param ack acknowledgement received.
          * @param client address the client currently owns.
          * @param server address of the server holding the lease.
          * @param timeout answer timeout.
-         * @return the acknowledgement received, nullptr on failure.
+         * @return 0 on success, -1 on failure.
          */
-        DhcpPacket::Ptr renew (const IpAddress& client, const IpAddress& server,
-                               std::chrono::milliseconds timeout = std::chrono::seconds (1))
+        int renew (DhcpPacket& ack, const IpAddress& client, const IpAddress& server,
+                   std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
+            if (this->_reactor.isReactorThread ())
+            {
+                lastError = std::make_error_code (std::errc::resource_deadlock_would_occur);
+                return -1;
+            }
+
             MacAddress mac = Arp::get (interface (), server, timeout);
             if (mac.isWildcard ())
             {
-                return nullptr;
+                return -1;
             }
 
             DhcpPacket out = compose (DhcpMessage::Request);
@@ -604,23 +624,25 @@ namespace join
             out.client = client;
             out.options.insert (DhcpOption::ParameterRequestList, _defaultParams);
 
-            return exchange (out, server, DhcpMessage::Ack, timeout);
+            return exchange (out, ack, server, DhcpMessage::Ack, timeout);
         }
 
         /**
          * @brief ask a server for the parameters of an externally configured address.
+         * @param ack acknowledgement received.
          * @param client address the client already owns.
          * @param timeout answer timeout.
-         * @return the acknowledgement received, nullptr on failure.
+         * @return 0 on success, -1 on failure.
          */
-        DhcpPacket::Ptr inform (const IpAddress& client, std::chrono::milliseconds timeout = std::chrono::seconds (1))
+        int inform (DhcpPacket& ack, const IpAddress& client,
+                    std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
             DhcpPacket out = compose (DhcpMessage::Inform);
 
             out.client = client;
             out.options.insert (DhcpOption::ParameterRequestList, _defaultParams);
 
-            return exchange (out, IpAddress::ipv4Broadcast, DhcpMessage::Ack, timeout);
+            return exchange (out, ack, IpAddress::ipv4Broadcast, DhcpMessage::Ack, timeout);
         }
 
         /**
@@ -631,8 +653,14 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         int release (const IpAddress& client, const IpAddress& server,
-                     std::chrono::milliseconds timeout = std::chrono::seconds (1))
+                     std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
+            if (this->_reactor.isReactorThread ())
+            {
+                lastError = std::make_error_code (std::errc::resource_deadlock_would_occur);
+                return -1;
+            }
+
             MacAddress mac = Arp::get (interface (), server, timeout);
             if (mac.isWildcard ())
             {
@@ -645,7 +673,14 @@ namespace join
             out.client = client;
             out.options.insert (DhcpOption::ServerIdentifier, server);
 
-            return transmit (out, client, server);
+            char payload[Protocol::maxMsgSize];
+            ssize_t size = this->_message.serialize (out, payload, sizeof (payload));
+            if (size == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
+
+            return this->send (payload, static_cast<size_t> (size), out.dest, client, server);
         }
 
         /**
@@ -655,7 +690,7 @@ namespace join
          * @param message human readable reason, empty to give none.
          * @return 0 on success, -1 on failure.
          */
-        int decline (const IpAddress& address, const IpAddress& server, const std::string& message = {})
+        int decline (const IpAddress& address, const IpAddress& server, const std::string& message = {}) noexcept
         {
             DhcpPacket out = compose (DhcpMessage::Decline);
 
@@ -667,27 +702,48 @@ namespace join
                 out.options.insert (DhcpOption::Message, message);
             }
 
-            return transmit (out, IpAddress::ipv4Wildcard, IpAddress::ipv4Broadcast);
+            char payload[Protocol::maxMsgSize];
+            ssize_t size = this->_message.serialize (out, payload, sizeof (payload));
+            if (size == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
+
+            return this->send (payload, static_cast<size_t> (size), out.dest, IpAddress::ipv4Wildcard,
+                               IpAddress::ipv4Broadcast);
         }
 
-    protected:
+    private:
         /**
-         * @brief hand a received message to the request waiting for it.
-         * @param packet message received.
+         * @brief decode a message received from a server and hand it to the request waiting for it.
+         * @param fd file descriptor.
          */
-        void onMessage (DhcpPacket::Ptr packet) override final
+        void onReadable ([[maybe_unused]] int fd) override final
         {
-            if (packet->op != DhcpMessage::BootReply)
+            MacAddress from, to;
+            ssize_t size = this->receive (this->_buffer.get (), Protocol::maxMsgSize, from, to);
+            if (size == -1)
             {
                 return;
             }
 
+            DhcpPacket packet;
+            if ((this->_message.deserialize (packet, this->_buffer.get (), static_cast<size_t> (size)) == -1) ||
+                (packet.op != DhcpMessage::BootReply))
+            {
+                return;
+            }
+
+            packet.src = from;
+            packet.dest = to;
+
             ScopedLock<Mutex> lock (_syncMutex);
 
-            auto it = _pending.find (packet->id);
-            if (it != _pending.end ())
+            auto it = _pending.find (packet.id);
+            if ((it != _pending.end ()) && !it->second->done)
             {
-                it->second->answer = std::move (packet);
+                *it->second->answer = std::move (packet);
+                it->second->done = true;
                 it->second->cond.signal ();
             }
         }
@@ -700,15 +756,18 @@ namespace join
             /// answer notification.
             Condition cond;
 
-            /// answer received.
-            DhcpPacket::Ptr answer;
+            /// receives the answer.
+            DhcpPacket* answer = nullptr;
+
+            /// set once the answer has been received.
+            bool done = false;
         };
 
         /// options a client asks for by default.
         static const ByteList _defaultParams;
 
         /// messages waiting for their answer, indexed by transaction identifier.
-        std::unordered_map<uint32_t, std::unique_ptr<PendingRequest>> _pending;
+        std::unordered_map<uint32_t, PendingRequest*> _pending;
 
         /// mutex for synchronous operations.
         mutable Mutex _syncMutex;
@@ -732,12 +791,14 @@ namespace join
      * @brief DHCP server.
      */
     template <class Protocol>
-    class BasicDhcpServer : public BasicDhcp<Protocol>
+    class BasicDhcpServer final : protected BasicDhcp<Protocol>
     {
     public:
         using BasicDhcp<Protocol>::hardware;
         using BasicDhcp<Protocol>::interface;
-        using BasicDhcp<Protocol>::transmit;
+
+        /// request notification callback.
+        using RequestNotify = Function<void (DhcpMessage::MessageType type, const DhcpPacket& request)>;
 
         /**
          * @brief create the BasicDhcpServer instance.
@@ -753,12 +814,16 @@ namespace join
         explicit BasicDhcpServer (const std::string& interface, Reactor& reactor = ReactorThread::reactor ())
         : BasicDhcp<Protocol> (interface, reactor)
         {
+            this->attach ();
         }
 
         /**
-         * @brief destroy the instance.
+         * @brief stop receiving messages and destroy the instance.
          */
-        virtual ~BasicDhcpServer () = default;
+        ~BasicDhcpServer ()
+        {
+            this->detach ();
+        }
 
         /**
          * @brief answer a DISCOVER message with an OFFER.
@@ -767,7 +832,7 @@ namespace join
          * @param options options to advertise, the message type and the server identifier are added.
          * @return 0 on success, -1 on failure.
          */
-        int offer (const DhcpPacket& request, const IpAddress& address, const DhcpOption& options = {})
+        int offer (const DhcpPacket& request, const IpAddress& address, const DhcpOption& options = {}) noexcept
         {
             return reply (request, DhcpMessage::Offer, address, options);
         }
@@ -779,7 +844,7 @@ namespace join
          * @param options options to advertise, the message type and the server identifier are added.
          * @return 0 on success, -1 on failure.
          */
-        int ack (const DhcpPacket& request, const IpAddress& address, const DhcpOption& options = {})
+        int ack (const DhcpPacket& request, const IpAddress& address, const DhcpOption& options = {}) noexcept
         {
             return reply (request, DhcpMessage::Ack, address, options);
         }
@@ -790,7 +855,7 @@ namespace join
          * @param message human readable reason, empty to give none.
          * @return 0 on success, -1 on failure.
          */
-        int nak (const DhcpPacket& request, const std::string& message = {})
+        int nak (const DhcpPacket& request, const std::string& message = {}) noexcept
         {
             DhcpOption options;
 
@@ -802,79 +867,56 @@ namespace join
             return reply (request, DhcpMessage::Nak, IpAddress::ipv4Wildcard, options);
         }
 
-    protected:
         /**
-         * @brief method called when a DISCOVER message is received.
-         * @param request message received.
+         * @brief set the callback called on every request received, whatever its message type.
+         * @param cb callback, called from the reactor thread, must not throw nor destroy the instance.
+         * @return 0 on success, -1 on failure.
          */
-        virtual void onDiscover (const DhcpPacket& request) = 0;
-
-        /**
-         * @brief method called when a REQUEST message is received.
-         * @param request message received.
-         */
-        virtual void onRequest (const DhcpPacket& request) = 0;
-
-        /**
-         * @brief method called when a RELEASE message is received.
-         * @param request message received.
-         */
-        virtual void onRelease (const DhcpPacket& request) = 0;
-
-        /**
-         * @brief method called when a DECLINE message is received.
-         * @param request message received.
-         */
-        virtual void onDecline (const DhcpPacket& request) = 0;
-
-        /**
-         * @brief method called when an INFORM message is received.
-         * @param request message received.
-         */
-        virtual void onInform (const DhcpPacket& request) = 0;
-
-        /**
-         * @brief dispatch a received message to the handler for its type.
-         * @param packet message received.
-         */
-        void onMessage (DhcpPacket::Ptr packet) override final
+        int setRequestListener (RequestNotify cb) noexcept
         {
-            if (packet->op != DhcpMessage::BootRequest)
+            return _listener.set (std::move (cb));
+        }
+
+        /**
+         * @brief unset the request callback, it is no longer called once this returns.
+         * @return 0 on success, -1 on failure.
+         */
+        int unsetRequestListener () noexcept
+        {
+            return _listener.unset ();
+        }
+
+    private:
+        /**
+         * @brief decode a message received from a client and hand it to the listener.
+         * @param fd file descriptor.
+         */
+        void onReadable ([[maybe_unused]] int fd) override final
+        {
+            MacAddress from, to;
+            ssize_t size = this->receive (this->_buffer.get (), Protocol::maxMsgSize, from, to);
+            if (size == -1)
             {
                 return;
             }
 
-            const uint8_t* type = packet->options.getIf<uint8_t> (DhcpOption::DhcpMessageType);
+            DhcpPacket packet;
+            if ((this->_message.deserialize (packet, this->_buffer.get (), static_cast<size_t> (size)) == -1) ||
+                (packet.op != DhcpMessage::BootRequest))
+            {
+                return;
+            }
+
+            packet.src = from;
+            packet.dest = to;
+
+            const uint8_t* type = packet.options.getIf<uint8_t> (DhcpOption::DhcpMessageType);
             if (type == nullptr)
             {
                 return;
             }
 
-            switch (*type)
-            {
-                case DhcpMessage::Discover:
-                    onDiscover (*packet);
-                    break;
-
-                case DhcpMessage::Request:
-                    onRequest (*packet);
-                    break;
-
-                case DhcpMessage::Release:
-                    onRelease (*packet);
-                    break;
-
-                case DhcpMessage::Decline:
-                    onDecline (*packet);
-                    break;
-
-                case DhcpMessage::Inform:
-                    onInform (*packet);
-                    break;
-
-                default:
-                    break;
-            }
+            _listener.notify (static_cast<DhcpMessage::MessageType> (*type), packet);
         }
 
         /**
@@ -885,7 +927,8 @@ namespace join
          * @param options options to advertise.
          * @return 0 on success, -1 on failure.
          */
-        int reply (const DhcpPacket& request, uint8_t type, const IpAddress& address, const DhcpOption& options)
+        int reply (const DhcpPacket& request, uint8_t type, const IpAddress& address,
+                   const DhcpOption& options) noexcept
         {
             const IpAddress server = IpAddress::ipv4Address (interface ());
             if (server.isWildcard ())
@@ -907,7 +950,6 @@ namespace join
             out.your = address;
             out.server = server;
             out.gateway = request.gateway;
-            out.src = hardware ();
 
             out.options.insert (DhcpOption::DhcpMessageType, type);
             out.options.insert (DhcpOption::ServerIdentifier, server);
@@ -921,8 +963,19 @@ namespace join
 
             const IpAddress& unicast = request.client.isWildcard () ? address : request.client;
 
-            return transmit (out, server, broadcast ? IpAddress::ipv4Broadcast : unicast);
+            char payload[Protocol::maxMsgSize];
+            ssize_t size = this->_message.serialize (out, payload, sizeof (payload));
+            if (size == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
+
+            return this->send (payload, static_cast<size_t> (size), out.dest, server,
+                               broadcast ? IpAddress::ipv4Broadcast : unicast);
         }
+
+        /// request listener.
+        Notifier<RequestNotify, Reactor> _listener{this->_reactor};
     };
 }
 

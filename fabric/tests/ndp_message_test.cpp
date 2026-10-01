@@ -78,34 +78,30 @@ static RouterAdvertisement sample ()
 }
 
 /**
- * @brief make a byte stream reading the given bytes.
- * @param wire bytes to read.
- */
-static std::stringstream streamOf (const std::string& wire)
-{
-    return std::stringstream (wire);
-}
-
-/**
  * @brief Test serialize method with a router solicitation.
  */
 TEST (NdpMessage, serializeSolicitation)
 {
     NdpMessage message;
-    std::stringstream data;
+    char data[64];
 
     RouterSolicitation packet;
-    ASSERT_EQ (message.serialize (packet, data), 0) << lastError.message ();
-    ASSERT_EQ (data.str (), std::string ("\x85\x00\x00\x00\x00\x00\x00\x00", 8));
-
-    data.str ("");
-    data.clear ();
+    ssize_t size = message.serialize (packet, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
+    ASSERT_EQ (std::string (data, size), std::string ("\x85\x00\x00\x00\x00\x00\x00\x00", 8));
 
     packet.link = "4e:ed:ed:ee:59:db";
-    ASSERT_EQ (message.serialize (packet, data), 0) << lastError.message ();
-    ASSERT_EQ (data.str (), std::string ("\x85\x00\x00\x00\x00\x00\x00\x00"
-                                         "\x01\x01\x4e\xed\xed\xee\x59\xdb",
-                                         16));
+    size = message.serialize (packet, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
+    ASSERT_EQ (std::string (data, size), std::string ("\x85\x00\x00\x00\x00\x00\x00\x00"
+                                                      "\x01\x01\x4e\xed\xed\xee\x59\xdb",
+                                                      16));
+
+    for (size_t length = 0; length < 16; ++length)
+    {
+        ASSERT_EQ (message.serialize (packet, data, length), -1) << "length " << length;
+        ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
+    }
 }
 
 /**
@@ -114,48 +110,44 @@ TEST (NdpMessage, serializeSolicitation)
 TEST (NdpMessage, serializeAdvertisement)
 {
     NdpMessage message;
-    std::stringstream data;
+    char data[1024];
 
     RouterAdvertisement bad = sample ();
     bad.prefixes[0].prefix = "192.168.1.0";
-    ASSERT_EQ (message.serialize (bad, data), -1);
+    ASSERT_EQ (message.serialize (bad, data, sizeof (data)), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
     bad = sample ();
     bad.prefixes[0].length = 129;
-    ASSERT_EQ (message.serialize (bad, data), -1);
+    ASSERT_EQ (message.serialize (bad, data, sizeof (data)), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
     bad = sample ();
     bad.rdnss[1].servers.push_back ("192.168.1.53");
-    ASSERT_EQ (message.serialize (bad, data), -1);
+    ASSERT_EQ (message.serialize (bad, data, sizeof (data)), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
     bad = sample ();
     bad.rdnss[1].servers.clear ();
-    ASSERT_EQ (message.serialize (bad, data), -1);
+    ASSERT_EQ (message.serialize (bad, data, sizeof (data)), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
     bad = sample ();
     bad.rdnss[1].servers.assign (128, IpAddress ("2001:db8::53"));
-    ASSERT_EQ (message.serialize (bad, data), -1);
+    ASSERT_EQ (message.serialize (bad, data, sizeof (data)), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
-    data.str ("");
-    data.clear ();
-
     RouterAdvertisement minimal;
-    ASSERT_EQ (message.serialize (minimal, data), 0) << lastError.message ();
-    ASSERT_EQ (data.str (), std::string ("\x86\x00\x00\x00\x00\x00\x00\x00"
-                                         "\x00\x00\x00\x00\x00\x00\x00\x00",
-                                         16));
+    ssize_t size = message.serialize (minimal, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
+    ASSERT_EQ (std::string (data, size), std::string ("\x86\x00\x00\x00\x00\x00\x00\x00"
+                                                      "\x00\x00\x00\x00\x00\x00\x00\x00",
+                                                      16));
 
-    data.str ("");
-    data.clear ();
+    size = message.serialize (sample (), data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
 
-    ASSERT_EQ (message.serialize (sample (), data), 0) << lastError.message ();
-
-    const std::string wire = data.str ();
+    const std::string wire (data, size);
     ASSERT_EQ (wire.size (), 16u + 8u + 8u + 32u + 32u + 40u + 24u);
     ASSERT_EQ (wire.substr (0, 16), std::string ("\x86\x00\x00\x00\x40\xc0\x07\x08"
                                                  "\x00\x00\x75\x30\x00\x00\x03\xe8",
@@ -171,16 +163,20 @@ TEST (NdpMessage, serializeAdvertisement)
     ASSERT_EQ (wire.substr (96, 8), std::string ("\x19\x05\x00\x00\x00\x00\x0e\x10", 8));
     ASSERT_EQ (wire.substr (136, 8), std::string ("\x19\x03\x00\x00\x00\x00\x02\x58", 8));
 
+    for (size_t length = 0; length < wire.size (); ++length)
+    {
+        ASSERT_EQ (message.serialize (sample (), data, length), -1) << "length " << length;
+        ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
+    }
+
     RouterAdvertisement host = sample ();
     host.prefixes[0].prefix = "2001:db8:1::ffff";
 
-    data.str ("");
-    data.clear ();
-
-    ASSERT_EQ (message.serialize (host, data), 0) << lastError.message ();
-    ASSERT_EQ (data.str ().substr (48, 16), std::string ("\x20\x01\x0d\xb8\x00\x01\x00\x00"
-                                                         "\x00\x00\x00\x00\x00\x00\x00\x00",
-                                                         16));
+    size = message.serialize (host, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
+    ASSERT_EQ (std::string (data, size).substr (48, 16), std::string ("\x20\x01\x0d\xb8\x00\x01\x00\x00"
+                                                                      "\x00\x00\x00\x00\x00\x00\x00\x00",
+                                                                      16));
 }
 
 /**
@@ -191,46 +187,46 @@ TEST (NdpMessage, deserializeSolicitation)
     NdpMessage message;
     RouterSolicitation packet;
 
-    std::stringstream data = streamOf (std::string ("\x85\x00\x00\x00\x00\x00", 6));
-    ASSERT_EQ (message.deserialize (packet, data), -1);
+    std::string data = (std::string ("\x85\x00\x00\x00\x00\x00", 6));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
-    data = streamOf (std::string ("\x86\x00\x00\x00\x00\x00\x00\x00", 8));
-    ASSERT_EQ (message.deserialize (packet, data), -1);
+    data = (std::string ("\x86\x00\x00\x00\x00\x00\x00\x00", 8));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageUnknown) << lastError.message ();
 
-    data = streamOf (std::string ("\x85\x01\x00\x00\x00\x00\x00\x00", 8));
-    ASSERT_EQ (message.deserialize (packet, data), -1);
+    data = (std::string ("\x85\x01\x00\x00\x00\x00\x00\x00", 8));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageUnknown) << lastError.message ();
 
     data =
-        streamOf (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00"
-                               "\x01\x00\x4e\xed\xed\xee\x59\xdb",
-                               16));
-    ASSERT_EQ (message.deserialize (packet, data), -1);
+        (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00"
+                      "\x01\x00\x4e\xed\xed\xee\x59\xdb",
+                      16));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
-    data = streamOf (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00\x01", 9));
-    ASSERT_EQ (message.deserialize (packet, data), -1);
+    data = (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00\x01", 9));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
     data =
-        streamOf (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00"
-                               "\x01\x02\x4e\xed\xed\xee\x59\xdb",
-                               16));
-    ASSERT_EQ (message.deserialize (packet, data), -1);
+        (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00"
+                      "\x01\x02\x4e\xed\xed\xee\x59\xdb",
+                      16));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
-    data = streamOf (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00", 8));
-    ASSERT_EQ (message.deserialize (packet, data), 0) << lastError.message ();
+    data = (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00", 8));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), 0) << lastError.message ();
     ASSERT_TRUE (packet.link.isWildcard ());
 
     data =
-        streamOf (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00"
-                               "\x0e\x01\x00\x00\x00\x00\x00\x00"
-                               "\x01\x01\x4e\xed\xed\xee\x59\xdb",
-                               24));
-    ASSERT_EQ (message.deserialize (packet, data), 0) << lastError.message ();
+        (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00"
+                      "\x0e\x01\x00\x00\x00\x00\x00\x00"
+                      "\x01\x01\x4e\xed\xed\xee\x59\xdb",
+                      24));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), 0) << lastError.message ();
     ASSERT_EQ (packet.link, MacAddress ("4e:ed:ed:ee:59:db"));
 }
 
@@ -242,29 +238,30 @@ TEST (NdpMessage, deserializeAdvertisement)
     NdpMessage message;
     RouterAdvertisement packet;
 
-    std::stringstream data = streamOf (std::string ("\x86\x00\x00\x00\x00\x00\x00\x00", 8));
-    ASSERT_EQ (message.deserialize (packet, data), -1);
+    std::string data = (std::string ("\x86\x00\x00\x00\x00\x00\x00\x00", 8));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 
     data =
-        streamOf (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00"
-                               "\x00\x00\x00\x00\x00\x00\x00\x00",
-                               16));
-    ASSERT_EQ (message.deserialize (packet, data), -1);
+        (std::string ("\x85\x00\x00\x00\x00\x00\x00\x00"
+                      "\x00\x00\x00\x00\x00\x00\x00\x00",
+                      16));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageUnknown) << lastError.message ();
 
     data =
-        streamOf (std::string ("\x86\x01\x00\x00\x00\x00\x00\x00"
-                               "\x00\x00\x00\x00\x00\x00\x00\x00",
-                               16));
-    ASSERT_EQ (message.deserialize (packet, data), -1);
+        (std::string ("\x86\x01\x00\x00\x00\x00\x00\x00"
+                      "\x00\x00\x00\x00\x00\x00\x00\x00",
+                      16));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::MessageUnknown) << lastError.message ();
 
-    std::stringstream wire;
-    ASSERT_EQ (message.serialize (sample (), wire), 0) << lastError.message ();
+    char wire[1024];
+    ssize_t size = message.serialize (sample (), wire, sizeof (wire));
+    ASSERT_NE (size, -1) << lastError.message ();
 
-    data = streamOf (wire.str ());
-    ASSERT_EQ (message.deserialize (packet, data), 0) << lastError.message ();
+    data.assign (wire, size);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), 0) << lastError.message ();
 
     const RouterAdvertisement expected = sample ();
     ASSERT_EQ (packet.hopLimit, expected.hopLimit);
@@ -291,10 +288,10 @@ TEST (NdpMessage, deserializeAdvertisement)
     }
 
     data =
-        streamOf (std::string ("\x86\x00\x00\x00\x00\x00\x00\x00"
-                               "\x00\x00\x00\x00\x00\x00\x00\x00",
-                               16));
-    ASSERT_EQ (message.deserialize (packet, data), 0) << lastError.message ();
+        (std::string ("\x86\x00\x00\x00\x00\x00\x00\x00"
+                      "\x00\x00\x00\x00\x00\x00\x00\x00",
+                      16));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), 0) << lastError.message ();
     ASSERT_TRUE (packet.link.isWildcard ());
     ASSERT_EQ (packet.mtu, 0u);
     ASSERT_TRUE (packet.prefixes.empty ());
@@ -312,18 +309,18 @@ TEST (NdpMessage, deserializeAdvertisement)
     ignored += prefix;
     ignored += std::string ("\x03\x01\x40\xc0\x00\x00\x00\x00", 8);
 
-    data = streamOf (ignored);
-    ASSERT_EQ (message.deserialize (packet, data), 0) << lastError.message ();
+    data = ignored;
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), 0) << lastError.message ();
     ASSERT_EQ (packet.mtu, 0u);
     ASSERT_TRUE (packet.prefixes.empty ());
     ASSERT_TRUE (packet.rdnss.empty ());
 
     data =
-        streamOf (std::string ("\x86\x00\x00\x00\x00\x00\x00\x00"
-                               "\x00\x00\x00\x00\x00\x00\x00\x00"
-                               "\x05\x00\x00\x00\x00\x00\x05\xdc",
-                               24));
-    ASSERT_EQ (message.deserialize (packet, data), -1);
+        (std::string ("\x86\x00\x00\x00\x00\x00\x00\x00"
+                      "\x00\x00\x00\x00\x00\x00\x00\x00"
+                      "\x05\x00\x00\x00\x00\x00\x05\xdc",
+                      24));
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 }
 

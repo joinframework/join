@@ -33,6 +33,7 @@ using join::Neighbor;
 using join::NeighborManager;
 using join::MacAddress;
 using join::IpAddress;
+using join::Reactor;
 
 /**
  * @brief Class used to test the neighbor API.
@@ -189,6 +190,18 @@ TEST_F (NeighborManagerTest, addNeighborListener)
 TEST_F (NeighborManagerTest, addNeighbor)
 {
     NeighborManager mgr;
+
+    int status = 0;
+    std::error_code code;
+
+    Reactor::InvokeHandler fn = [&mgr, &status, &code] () {
+        status = mgr.addNeighbor ("veth0", "192.168.100.3", "4e:ed:ed:ee:59:dd", NUD_PERMANENT, true);
+        code = lastError;
+    };
+
+    ASSERT_EQ (mgr.reactor ().invoke (&fn), 0) << lastError.message ();
+    ASSERT_EQ (status, -1);
+    ASSERT_EQ (code, std::errc::resource_deadlock_would_occur) << code.message ();
 
     ASSERT_EQ (mgr.addNeighbor (if_nametoindex ("veth0"), "192.168.100.3", "4e:ed:ed:ee:59:dd", NUD_PERMANENT, true), 0)
         << lastError.message ();

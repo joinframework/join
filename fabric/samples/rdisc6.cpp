@@ -146,7 +146,7 @@ int main (int argc, char* argv[])
 
         if (multiple)
         {
-            client.addAdvertisementListener ([&received] (const RouterAdvertisement& advert) {
+            client.setAdvertisementListener ([&received] (const RouterAdvertisement& advert) {
                 print (advert);
                 ++received;
             });
@@ -174,6 +174,11 @@ int main (int argc, char* argv[])
             {
                 throw std::system_error (lastError);
             }
+        }
+
+        if (multiple)
+        {
+            client.unsetAdvertisementListener ();
         }
     }
     catch (const std::exception& e)

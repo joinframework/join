@@ -161,6 +161,12 @@ namespace join
         template <typename Rep, typename Period>
         MacAddress request (const IpAddress& ip, std::chrono::duration<Rep, Period> timeout)
         {
+            if (_reactor.isReactorThread ())
+            {
+                lastError = std::make_error_code (std::errc::resource_deadlock_would_occur);
+                return {};
+            }
+
             if (ip.family () != AF_INET)
             {
                 lastError = make_error_code (Errc::InvalidParam);

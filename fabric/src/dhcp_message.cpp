@@ -37,7 +37,7 @@ using join::DhcpMessage;
 //   CLASS     : DhcpMessage
 //   METHOD    : writeHead
 // =========================================================================
-bool DhcpMessage::writeHead (std::ostream& data, uint8_t code, size_t size)
+bool DhcpMessage::writeHead (char*& cur, const char* end, uint8_t code, size_t size)
 {
     if (size > maxOptionSize)
     {
@@ -46,17 +46,18 @@ bool DhcpMessage::writeHead (std::ostream& data, uint8_t code, size_t size)
     }
 
     uint8_t head[2] = {code, static_cast<uint8_t> (size)};
-    data.write (reinterpret_cast<const char*> (head), sizeof (head));
 
-    return true;
+    return writeBytes (cur, end, head, sizeof (head));
 }
 
 // =========================================================================
 //   CLASS     : DhcpMessage
 //   METHOD    : serialize
 // =========================================================================
-int DhcpMessage::serialize (const DhcpOption& options, std::stringstream& data) const
+int DhcpMessage::serialize (const DhcpOption& options, char*& cur, const char* end) const
 {
+    bool ok = true;
+
     for (auto const& option : options)
     {
         const DhcpOption::Info* info = DhcpOption::describe (option.first);
@@ -70,104 +71,77 @@ int DhcpMessage::serialize (const DhcpOption& options, std::stringstream& data) 
             case DhcpOption::Byte:
                 {
                     uint8_t value = option.second.get<uint8_t> ();
-                    if (!writeHead (data, option.first, sizeof (value)))
-                    {
-                        return -1;  // LCOV_EXCL_LINE
-                    }
-                    data.write (reinterpret_cast<const char*> (&value), sizeof (value));
+                    ok &= writeHead (cur, end, option.first, sizeof (value));
+                    ok &= writeBytes (cur, end, &value, sizeof (value));
                     break;
                 }
 
             case DhcpOption::Word:
                 {
                     uint16_t value = htons (option.second.get<uint16_t> ());
-                    if (!writeHead (data, option.first, sizeof (value)))
-                    {
-                        return -1;  // LCOV_EXCL_LINE
-                    }
-                    data.write (reinterpret_cast<const char*> (&value), sizeof (value));
+                    ok &= writeHead (cur, end, option.first, sizeof (value));
+                    ok &= writeBytes (cur, end, &value, sizeof (value));
                     break;
                 }
 
             case DhcpOption::Long:
                 {
                     uint32_t value = htonl (option.second.get<uint32_t> ());
-                    if (!writeHead (data, option.first, sizeof (value)))
-                    {
-                        return -1;  // LCOV_EXCL_LINE
-                    }
-                    data.write (reinterpret_cast<const char*> (&value), sizeof (value));
+                    ok &= writeHead (cur, end, option.first, sizeof (value));
+                    ok &= writeBytes (cur, end, &value, sizeof (value));
                     break;
                 }
 
             case DhcpOption::SLong:
                 {
                     uint32_t value = htonl (static_cast<uint32_t> (option.second.get<int32_t> ()));
-                    if (!writeHead (data, option.first, sizeof (value)))
-                    {
-                        return -1;  // LCOV_EXCL_LINE
-                    }
-                    data.write (reinterpret_cast<const char*> (&value), sizeof (value));
+                    ok &= writeHead (cur, end, option.first, sizeof (value));
+                    ok &= writeBytes (cur, end, &value, sizeof (value));
                     break;
                 }
 
             case DhcpOption::Text:
                 {
                     const std::string& value = option.second.get<std::string> ();
-                    if (!writeHead (data, option.first, value.size ()))
-                    {
-                        return -1;
-                    }
-                    data.write (value.data (), value.size ());
+                    ok &= writeHead (cur, end, option.first, value.size ());
+                    ok &= writeBytes (cur, end, value.data (), value.size ());
                     break;
                 }
 
             case DhcpOption::Ip:
                 {
                     const IpAddress& value = option.second.get<IpAddress> ();
-                    if (!writeHead (data, option.first, IpAddress::ipv4Length))
-                    {
-                        return -1;  // LCOV_EXCL_LINE
-                    }
-                    data.write (reinterpret_cast<const char*> (value.addr ()), IpAddress::ipv4Length);
+                    ok &= writeHead (cur, end, option.first, IpAddress::ipv4Length);
+                    ok &= writeBytes (cur, end, value.addr (), IpAddress::ipv4Length);
                     break;
                 }
 
             case DhcpOption::Mac:
                 {
                     const MacAddress& value = option.second.get<MacAddress> ();
-                    if (!writeHead (data, option.first, sizeof (_ethernet) + ETH_ALEN))
-                    {
-                        return -1;  // LCOV_EXCL_LINE
-                    }
                     const uint8_t htype = _ethernet;
-                    data.write (reinterpret_cast<const char*> (&htype), sizeof (htype));
-                    data.write (reinterpret_cast<const char*> (value.addr ()), ETH_ALEN);
+                    ok &= writeHead (cur, end, option.first, sizeof (_ethernet) + ETH_ALEN);
+                    ok &= writeBytes (cur, end, &htype, sizeof (htype));
+                    ok &= writeBytes (cur, end, value.addr (), ETH_ALEN);
                     break;
                 }
 
             case DhcpOption::Bytes:
                 {
                     const ByteList& value = option.second.get<ByteList> ();
-                    if (!writeHead (data, option.first, value.size ()))
-                    {
-                        return -1;
-                    }
-                    data.write (reinterpret_cast<const char*> (value.data ()), value.size ());
+                    ok &= writeHead (cur, end, option.first, value.size ());
+                    ok &= writeBytes (cur, end, value.data (), value.size ());
                     break;
                 }
 
             case DhcpOption::Words:
                 {
                     const WordList& value = option.second.get<WordList> ();
-                    if (!writeHead (data, option.first, value.size () * sizeof (uint16_t)))
-                    {
-                        return -1;
-                    }
+                    ok &= writeHead (cur, end, option.first, value.size () * sizeof (uint16_t));
                     for (auto const& element : value)
                     {
                         uint16_t word = htons (element);
-                        data.write (reinterpret_cast<const char*> (&word), sizeof (word));
+                        ok &= writeBytes (cur, end, &word, sizeof (word));
                     }
                     break;
                 }
@@ -175,39 +149,36 @@ int DhcpMessage::serialize (const DhcpOption& options, std::stringstream& data) 
             case DhcpOption::Ips:
                 {
                     const IpList& value = option.second.get<IpList> ();
-                    if (!writeHead (data, option.first, value.size () * IpAddress::ipv4Length))
-                    {
-                        return -1;
-                    }
+                    ok &= writeHead (cur, end, option.first, value.size () * IpAddress::ipv4Length);
                     for (auto const& element : value)
                     {
-                        data.write (reinterpret_cast<const char*> (element.addr ()), IpAddress::ipv4Length);
+                        ok &= writeBytes (cur, end, element.addr (), IpAddress::ipv4Length);
                     }
                     break;
                 }
         }
     }
 
-    uint8_t end = DhcpOption::End;
-    data.write (reinterpret_cast<const char*> (&end), sizeof (end));
+    const uint8_t last = DhcpOption::End;
+    ok &= writeBytes (cur, end, &last, sizeof (last));
 
-    return 0;
+    return ok ? 0 : -1;
 }
 
 // =========================================================================
 //   CLASS     : DhcpMessage
 //   METHOD    : deserialize
 // =========================================================================
-int DhcpMessage::deserialize (DhcpOption& options, std::stringstream& data) const
+int DhcpMessage::deserialize (DhcpOption& options, const char* cur, const char* end) const
 {
     for (;;)
     {
-        uint8_t code = 0;
-        data.read (reinterpret_cast<char*> (&code), sizeof (code));
-        if (data.fail ())
+        if (cur == end)
         {
             return 0;
         }
+
+        const uint8_t code = static_cast<uint8_t> (*cur++);
 
         if (code == DhcpOption::Pad)
         {
@@ -220,13 +191,13 @@ int DhcpMessage::deserialize (DhcpOption& options, std::stringstream& data) cons
         }
 
         uint8_t size = 0;
-        if (!extract (data, &size, sizeof (size)))
+        if (!readBytes (cur, end, &size, sizeof (size)))
         {
             return -1;
         }
 
-        ByteList payload (size);
-        if (size && !extract (data, payload.data (), size))
+        uint8_t payload[maxOptionSize];
+        if (!readBytes (cur, end, payload, size))
         {
             return -1;
         }
@@ -273,32 +244,32 @@ int DhcpMessage::deserialize (DhcpOption& options, std::stringstream& data) cons
                 break;
 
             case DhcpOption::Text:
-                options.insert (code, std::string (payload.begin (), payload.end ()));
+                options.insert (code, std::string (payload, payload + size));
                 break;
 
             case DhcpOption::Ip:
                 if (size == IpAddress::ipv4Length)
                 {
-                    options.insert (code, IpAddress (payload.data (), IpAddress::ipv4Length));
+                    options.insert (code, IpAddress (payload, IpAddress::ipv4Length));
                 }
                 break;
 
             case DhcpOption::Mac:
                 if ((size == sizeof (_ethernet) + ETH_ALEN) && (payload[0] == _ethernet))
                 {
-                    options.insert (code, MacAddress (payload.data () + sizeof (_ethernet), ETH_ALEN));
+                    options.insert (code, MacAddress (payload + sizeof (_ethernet), ETH_ALEN));
                 }
                 break;
 
             case DhcpOption::Bytes:
-                options.insert (code, payload);
+                options.insert (code, ByteList (payload, payload + size));
                 break;
 
             case DhcpOption::Words:
                 if ((size % sizeof (uint16_t)) == 0)
                 {
                     WordList words;
-                    for (size_t i = 0; i < payload.size (); i += sizeof (uint16_t))
+                    for (size_t i = 0; i < size; i += sizeof (uint16_t))
                     {
                         words.push_back (static_cast<uint16_t> ((payload[i] << 8) | payload[i + 1]));
                     }
@@ -310,9 +281,9 @@ int DhcpMessage::deserialize (DhcpOption& options, std::stringstream& data) cons
                 if ((size % IpAddress::ipv4Length) == 0)
                 {
                     IpList addresses;
-                    for (size_t i = 0; i < payload.size (); i += IpAddress::ipv4Length)
+                    for (size_t i = 0; i < size; i += IpAddress::ipv4Length)
                     {
-                        addresses.push_back (IpAddress (payload.data () + i, IpAddress::ipv4Length));
+                        addresses.push_back (IpAddress (payload + i, IpAddress::ipv4Length));
                     }
                     options.insert (code, addresses);
                 }

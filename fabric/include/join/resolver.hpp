@@ -816,18 +816,10 @@ namespace join
 
             packet.src = _socket.localEndpoint ().ip ();
 
-            std::stringstream data;
-            if (_message.serialize (packet, data) == -1)
+            char buffer[Protocol::maxMsgSize];
+            ssize_t size = _message.serialize (packet, buffer, sizeof (buffer));
+            if (size == -1)
             {
-                lastError = make_error_code (Errc::InvalidParam);
-                notify (onFailure, packet);
-                return -1;
-            }
-
-            std::string buffer = data.str ();
-            if (buffer.size () > Protocol::maxMsgSize)
-            {
-                lastError = make_error_code (Errc::MessageTooLong);
                 notify (onFailure, packet);
                 return -1;
             }
@@ -844,7 +836,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (write (buffer.data (), buffer.size ()) == -1)
+            if (write (buffer, static_cast<size_t> (size)) == -1)
             {
                 // LCOV_EXCL_START
                 _pending.erase (inserted.first);
@@ -886,11 +878,14 @@ namespace join
             ssize_t size = read (_buffer.get (), Protocol::maxMsgSize);
             if (size >= int (_headerSize))
             {
-                std::stringstream data;
-                data.rdbuf ()->pubsetbuf (_buffer.get (), size);
-
                 DnsPacket packet;
-                _message.deserialize (packet, data);
+                std::error_code error;
+
+                if (_message.deserialize (packet, _buffer.get (), static_cast<size_t> (size)) == -1)
+                {
+                    error = lastError;
+                }
+
                 auto local = _socket.localEndpoint ();
                 auto remote = _socket.remoteEndpoint ();
                 packet.src = local.ip ();
@@ -905,7 +900,7 @@ namespace join
                     if (it != _pending.end ())
                     {
                         it->second->packet = packet;
-                        it->second->ec = DnsMessage::decodeError (packet.flags & 0x000F);
+                        it->second->ec = error ? error : DnsMessage::decodeError (packet.flags & 0x000F);
                         if ((packet.flags & 0x0200) && it->second->ec == std::error_code{})
                         {
                             it->second->ec = make_error_code (Errc::MessageTooLong);

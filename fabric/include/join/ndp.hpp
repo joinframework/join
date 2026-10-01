@@ -30,15 +30,14 @@
 #include <join/ndp_protocol.hpp>
 #include <join/ndp_message.hpp>
 #include <join/condition.hpp>
+#include <join/notifier.hpp>
+#include <join/function.hpp>
 #include <join/reactor.hpp>
 #include <join/error.hpp>
 
 // C++.
-#include <unordered_map>
 #include <system_error>
-#include <functional>
 #include <algorithm>
-#include <atomic>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -253,8 +252,10 @@ namespace join
 
             if (size > Protocol::maxMsgSize)
             {
+                // LCOV_EXCL_START
                 lastError = make_error_code (Errc::MessageTooLong);
                 return -1;
+                // LCOV_EXCL_STOP
             }
 
             Endpoint endpoint (IpAddress (destination.addr (), destination.length (), _index));
@@ -339,7 +340,7 @@ namespace join
         using BasicNdp<Protocol>::index;
 
         /// advertisement notification callback.
-        using AdvertisementNotify = std::function<void (const RouterAdvertisement& advert)>;
+        using AdvertisementNotify = Function<void (const RouterAdvertisement& advert)>;
 
         /**
          * @brief create the BasicNdpClient instance.
@@ -370,17 +371,19 @@ namespace join
          * @brief send a router solicitation.
          * @return 0 on success, -1 on failure.
          */
-        int solicit ()
+        int solicit () noexcept
         {
             RouterSolicitation out;
             out.link = hardware ();
 
-            std::stringstream data;
-            this->_message.serialize (out, data);
+            char payload[Protocol::maxMsgSize];
+            ssize_t size = this->_message.serialize (out, payload, sizeof (payload));
+            if (size == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
 
-            const std::string payload = data.str ();
-
-            return this->send (payload.data (), payload.size (), IpAddress::ipv6Routers);
+            return this->send (payload, static_cast<size_t> (size), IpAddress::ipv6Routers);
         }
 
         /**
@@ -389,7 +392,7 @@ namespace join
          * @param timeout maximum wait duration.
          * @return 0 on success, -1 on failure.
          */
-        int solicit (RouterAdvertisement& advert, std::chrono::milliseconds timeout = std::chrono::seconds (1))
+        int solicit (RouterAdvertisement& advert, std::chrono::milliseconds timeout = std::chrono::seconds (1)) noexcept
         {
             if (this->_reactor.isReactorThread ())
             {
@@ -427,38 +430,22 @@ namespace join
         }
 
         /**
-         * @brief register a callback called on every advertisement received, solicited or not.
-         * @param cb callback, called from the reactor thread.
-         * @return listener identifier, -1 on failure.
+         * @brief set the callback called on every router advertisement received, solicited or not.
+         * @param cb callback, called from the reactor thread, must not throw nor destroy the instance.
+         * @return 0 on success, -1 on failure.
          */
-        ssize_t addAdvertisementListener (const AdvertisementNotify& cb)
+        int setAdvertisementListener (AdvertisementNotify cb) noexcept
         {
-            ssize_t id = ++_listenerCounter;
-
-            Reactor::InvokeHandler fn = [this, id, &cb] () {
-                _listeners.emplace (id, cb);
-            };
-
-            if (this->_reactor.invoke (&fn) == -1)
-            {
-                return -1;  // LCOV_EXCL_LINE
-            }
-
-            return id;
+            return _listener.set (std::move (cb));
         }
 
         /**
-         * @brief unregister a callback.
-         * @param id listener identifier.
+         * @brief unset the router advertisement callback, it is no longer called once this returns.
          * @return 0 on success, -1 on failure.
          */
-        int removeAdvertisementListener (ssize_t id)
+        int unsetAdvertisementListener () noexcept
         {
-            Reactor::InvokeHandler fn = [this, id] () {
-                _listeners.erase (id);
-            };
-
-            return this->_reactor.invoke (&fn);
+            return _listener.unset ();
         }
 
     private:
@@ -476,26 +463,15 @@ namespace join
                 return;
             }
 
-            std::stringstream stream;
-            stream.rdbuf ()->pubsetbuf (this->_buffer.get (), size);
-
             RouterAdvertisement advert;
-            if (this->_message.deserialize (advert, stream) == -1)
+            if (this->_message.deserialize (advert, this->_buffer.get (), static_cast<size_t> (size)) == -1)
             {
                 return;
             }
 
             advert.src = from;
 
-            auto listeners = _listeners;
-
-            for (auto& listener : listeners)
-            {
-                if (listener.second)
-                {
-                    listener.second (advert);
-                }
-            }
+            _listener.notify (advert);
 
             ScopedLock<Mutex> lock (_syncMutex);
 
@@ -531,11 +507,8 @@ namespace join
         /// mutex for synchronous operations.
         Mutex _syncMutex;
 
-        /// advertisement listeners, only accessed from the reactor thread.
-        std::unordered_map<ssize_t, AdvertisementNotify> _listeners;
-
-        /// listener id counter.
-        std::atomic<ssize_t> _listenerCounter{0};
+        /// router advertisement listener.
+        Notifier<AdvertisementNotify, Reactor> _listener{this->_reactor};
     };
 
     /**
@@ -550,7 +523,7 @@ namespace join
         using BasicNdp<Protocol>::index;
 
         /// solicitation notification callback definition.
-        using SolicitationNotify = std::function<void (const RouterSolicitation& solicitation)>;
+        using SolicitationNotify = Function<void (const RouterSolicitation& solicitation)>;
 
         /**
          * @brief create the BasicNdpServer instance.
@@ -578,38 +551,22 @@ namespace join
         }
 
         /**
-         * @brief register a callback called on every solicitation received.
-         * @param cb callback, called from the reactor thread.
-         * @return listener identifier, -1 on failure.
+         * @brief set the callback called on every router solicitation received.
+         * @param cb callback, called from the reactor thread, must not throw nor destroy the instance.
+         * @return 0 on success, -1 on failure.
          */
-        ssize_t addSolicitationListener (const SolicitationNotify& cb)
+        int setSolicitationListener (SolicitationNotify cb) noexcept
         {
-            ssize_t id = ++_listenerCounter;
-
-            Reactor::InvokeHandler fn = [this, id, &cb] () {
-                _listeners.emplace (id, cb);
-            };
-
-            if (this->_reactor.invoke (&fn) == -1)
-            {
-                return -1;  // LCOV_EXCL_LINE
-            }
-
-            return id;
+            return _listener.set (std::move (cb));
         }
 
         /**
-         * @brief unregister a callback.
-         * @param id listener identifier.
+         * @brief unset the router solicitation callback, it is no longer called once this returns.
          * @return 0 on success, -1 on failure.
          */
-        int removeSolicitationListener (ssize_t id)
+        int unsetSolicitationListener () noexcept
         {
-            Reactor::InvokeHandler fn = [this, id] () {
-                _listeners.erase (id);
-            };
-
-            return this->_reactor.invoke (&fn);
+            return _listener.unset ();
         }
 
         /**
@@ -618,17 +575,29 @@ namespace join
          * @param destination destination address, the solicitor or all the nodes of the link.
          * @return 0 on success, -1 on failure.
          */
-        int advertise (const RouterAdvertisement& advert, const IpAddress& destination = IpAddress::ipv6AllNodes)
+        int advertise (const RouterAdvertisement& advert,
+                       const IpAddress& destination = IpAddress::ipv6AllNodes) noexcept
         {
-            std::stringstream data;
-            if (this->_message.serialize (advert, data, advert.link.isWildcard () ? hardware () : advert.link) == -1)
+            char payload[Protocol::maxMsgSize];
+            ssize_t size = this->_message.serialize (advert, payload, sizeof (payload),
+                                                     advert.link.isWildcard () ? hardware () : advert.link);
+            if (size == -1)
             {
                 return -1;
             }
 
-            const std::string payload = data.str ();
+            return this->send (payload, static_cast<size_t> (size), destination);
+        }
 
-            return this->send (payload.data (), payload.size (), destination);
+        /**
+         * @brief answer a router solicitation, to the solicitor or to all the nodes of the link if it has no address.
+         * @param advert advertisement to send, the interface hardware address is used if it carries none.
+         * @param solicitation solicitation to answer.
+         * @return 0 on success, -1 on failure.
+         */
+        int advertise (const RouterAdvertisement& advert, const RouterSolicitation& solicitation) noexcept
+        {
+            return advertise (advert, solicitation.src.isWildcard () ? IpAddress::ipv6AllNodes : solicitation.src);
         }
 
     private:
@@ -645,11 +614,8 @@ namespace join
                 return;
             }
 
-            std::stringstream stream;
-            stream.rdbuf ()->pubsetbuf (this->_buffer.get (), size);
-
             RouterSolicitation solicitation;
-            if (this->_message.deserialize (solicitation, stream) == -1)
+            if (this->_message.deserialize (solicitation, this->_buffer.get (), static_cast<size_t> (size)) == -1)
             {
                 return;
             }
@@ -661,22 +627,11 @@ namespace join
 
             solicitation.src = from;
 
-            auto listeners = _listeners;
-
-            for (auto& listener : listeners)
-            {
-                if (listener.second)
-                {
-                    listener.second (solicitation);
-                }
-            }
+            _listener.notify (solicitation);
         }
 
-        /// solicitation listeners, only accessed from the reactor thread.
-        std::unordered_map<ssize_t, SolicitationNotify> _listeners;
-
-        /// listener id counter.
-        std::atomic<ssize_t> _listenerCounter{0};
+        /// router solicitation listener.
+        Notifier<SolicitationNotify, Reactor> _listener{this->_reactor};
     };
 }
 
