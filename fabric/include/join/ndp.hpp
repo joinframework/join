@@ -198,14 +198,16 @@ namespace join
             out.target = target;
             out.link = _hardware;
 
-            char payload[Protocol::maxMsgSize];
+            char payload[NdpMessage::maxNeighborSolicitationSize];
             ssize_t size = _message.serialize (out, payload, sizeof (payload));
             if (size == -1)
             {
                 return -1;
             }
 
-            const IpAddress group = IpAddress::ipv6SolicitedNodes | (target & ~IpAddress (104, AF_INET6));
+            struct in6_addr group;
+            ::memcpy (&group, IpAddress::ipv6SolicitedNodes.addr (), sizeof (group));
+            ::memcpy (&group.s6_addr[13], static_cast<const uint8_t*> (target.addr ()) + 13, 3);
 
             ScopedLock<Mutex> lock (_neighborMutex);
 
@@ -214,7 +216,7 @@ namespace join
             pending.advert = &advert;
             _neighborPending.push_back (&pending);
 
-            if (send (payload, static_cast<size_t> (size), group) == -1)
+            if (send (payload, static_cast<size_t> (size), IpAddress (&group, sizeof (group))) == -1)
             {
                 // LCOV_EXCL_START
                 _neighborPending.erase (std::find (_neighborPending.begin (), _neighborPending.end (), &pending));
@@ -246,7 +248,7 @@ namespace join
         int neighborAdvertise (const NeighborAdvertisement& advert,
                                const IpAddress& destination = IpAddress::ipv6AllNodes) noexcept
         {
-            char payload[Protocol::maxMsgSize];
+            char payload[NdpMessage::maxNeighborAdvertisementSize];
             ssize_t size = _message.serialize (advert, payload, sizeof (payload),
                                                advert.link.isWildcard () ? _hardware : advert.link);
             if (size == -1)
@@ -255,6 +257,40 @@ namespace join
             }
 
             return send (payload, static_cast<size_t> (size), destination);
+        }
+
+        /**
+         * @brief answer a neighbor solicitation, to the solicitor or to all the nodes of the link if it has no address.
+         * @param advert advertisement to send, the interface hardware address is used if it carries none.
+         * @param solicitation solicitation to answer.
+         * @return 0 on success, -1 on failure.
+         */
+        int neighborAdvertise (const NeighborAdvertisement& advert, const NeighborSolicitation& solicitation) noexcept
+        {
+            char payload[NdpMessage::maxNeighborAdvertisementSize];
+            ssize_t size = _message.serialize (advert, payload, sizeof (payload),
+                                               advert.link.isWildcard () ? _hardware : advert.link);
+            if (size == -1)
+            {
+                return -1;
+            }
+
+            struct nd_neighbor_advert na;
+            ::memcpy (&na, payload, sizeof (na));
+
+            if (solicitation.src.isWildcard ())
+            {
+                na.nd_na_flags_reserved &= ~ND_NA_FLAG_SOLICITED;
+            }
+            else
+            {
+                na.nd_na_flags_reserved |= ND_NA_FLAG_SOLICITED;
+            }
+
+            ::memcpy (payload, &na, sizeof (na));
+
+            return send (payload, static_cast<size_t> (size),
+                         solicitation.src.isWildcard () ? IpAddress::ipv6AllNodes : solicitation.src);
         }
 
         /**
@@ -454,7 +490,7 @@ namespace join
 
                 for (NeighborRequest* pending : _neighborPending)
                 {
-                    if (!pending->done && (pending->target == advert.target))
+                    if (!pending->done && !advert.link.isWildcard () && (pending->target == advert.target))
                     {
                         *pending->advert = advert;
                         pending->done = true;
@@ -591,7 +627,7 @@ namespace join
             RouterSolicitation out;
             out.link = hardware ();
 
-            char payload[Protocol::maxMsgSize];
+            char payload[NdpMessage::maxRouterSolicitationSize];
             ssize_t size = this->_message.serialize (out, payload, sizeof (payload));
             if (size == -1)
             {

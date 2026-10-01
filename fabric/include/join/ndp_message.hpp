@@ -546,7 +546,7 @@ namespace join
             }
 
             packet.target = IpAddress (&ns.nd_ns_target, sizeof (ns.nd_ns_target));
-            if (packet.target.isMulticast ())
+            if (packet.target.isWildcard () || packet.target.isMulticast ())
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
@@ -587,7 +587,7 @@ namespace join
             }
 
             packet.target = IpAddress (&na.nd_na_target, sizeof (na.nd_na_target));
-            if (packet.target.isMulticast ())
+            if (packet.target.isWildcard () || packet.target.isMulticast ())
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return -1;
@@ -688,6 +688,19 @@ namespace join
 
         /// most recursive DNS servers a single option can carry.
         static constexpr size_t _maxDnsServers = 127;
+
+    public:
+        /// biggest router solicitation the codec writes, link layer address option included.
+        static constexpr size_t maxRouterSolicitationSize =
+            sizeof (struct nd_router_solicit) + _optionHeaderSize + ETH_ALEN;
+
+        /// biggest neighbor solicitation the codec writes, link layer address option included.
+        static constexpr size_t maxNeighborSolicitationSize =
+            sizeof (struct nd_neighbor_solicit) + _optionHeaderSize + ETH_ALEN;
+
+        /// biggest neighbor advertisement the codec writes, link layer address option included.
+        static constexpr size_t maxNeighborAdvertisementSize =
+            sizeof (struct nd_neighbor_advert) + _optionHeaderSize + ETH_ALEN;
     };
 }
 

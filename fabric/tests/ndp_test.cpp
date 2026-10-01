@@ -840,6 +840,29 @@ protected:
     }
 
     /**
+     * @brief frame a neighbor advertisement sent from the unspecified address to all the nodes.
+     * @param link carry the link layer address of the target.
+     * @return the frame.
+     */
+    static std::string neighborAdvertisementOf (bool link)
+    {
+        const MacAddress mac = MacAddress::address (_sender);
+        const IpAddress target = "2001:db8:26::5";
+
+        std::string icmp (sizeof (struct nd_neighbor_advert), '\0');
+        icmp[0] = static_cast<char> (ND_NEIGHBOR_ADVERT);
+        ::memcpy (&icmp[offsetof (struct nd_neighbor_advert, nd_na_target)], target.addr (), sizeof (struct in6_addr));
+
+        if (link)
+        {
+            icmp += std::string ("\x02\x01", 2);
+            icmp += std::string (reinterpret_cast<const char*> (mac.addr ()), ETH_ALEN);
+        }
+
+        return frameOf (icmp, IpAddress::ipv6AllNodes, MacAddress ("33:33:00:00:00:01"));
+    }
+
+    /**
      * @brief put a frame on the wire, bypassing the IPv6 stack.
      * @param frame frame to write.
      */
@@ -916,6 +939,36 @@ TEST_F (NdpLinkTest, neighborSolicit)
     ASSERT_EQ (ReactorThread::reactor ().invoke (&fn), 0) << lastError.message ();
     ASSERT_EQ (status, -1);
     ASSERT_EQ (code, std::errc::resource_deadlock_would_occur) << code.message ();
+
+    Ndp::Client receiver (_receiver);
+    std::atomic<int> result{1};
+
+    std::thread blind ([&receiver, &advert, &result] () {
+        result = receiver.neighborSolicit ("2001:db8:26::5", advert, std::chrono::milliseconds (500));
+    });
+
+    while (result == 1)
+    {
+        inject (neighborAdvertisementOf (false));
+        std::this_thread::sleep_for (std::chrono::milliseconds (10));
+    }
+    blind.join ();
+    ASSERT_EQ (result, -1);
+
+    result = 1;
+
+    std::thread seeing ([&receiver, &advert, &result] () {
+        result = receiver.neighborSolicit ("2001:db8:26::5", advert, std::chrono::seconds (5));
+    });
+
+    while (result == 1)
+    {
+        inject (neighborAdvertisementOf (true));
+        std::this_thread::sleep_for (std::chrono::milliseconds (10));
+    }
+    seeing.join ();
+    ASSERT_EQ (result, 0);
+    ASSERT_EQ (advert.link, MacAddress::address (_sender));
 }
 
 /**
@@ -1033,6 +1086,40 @@ TEST_F (NdpLinkTest, unsetNeighborAdvertisementListener)
     NeighborAdvertisement advert;
     ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
     ASSERT_FALSE (adverts.awaits (1, std::chrono::milliseconds (200)));
+}
+
+/**
+ * @brief test the neighborAdvertise method answering a solicitation.
+ */
+TEST_F (NdpLinkTest, neighborAdvertiseReply)
+{
+    Inbox<NeighborAdvertisement> adverts;
+    Ndp::Client client (_sender);
+
+    int status = _server.setNeighborSolicitationListener ([this] (const NeighborSolicitation& solicitation) {
+        NeighborAdvertisement answer;
+        answer.target = solicitation.target;
+        answer.flags = ND_NA_FLAG_OVERRIDE;
+        _server.neighborAdvertise (answer, solicitation);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    status = client.setNeighborAdvertisementListener ([&adverts] (const NeighborAdvertisement& advert) {
+        adverts.push (advert);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    NeighborAdvertisement advert;
+    ASSERT_EQ (client.neighborSolicit ("2001:db8:25::2", advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_EQ (advert.link, MacAddress::address (_receiver));
+    ASSERT_EQ (advert.flags, ND_NA_FLAG_SOLICITED | ND_NA_FLAG_OVERRIDE);
+
+    inject (neighborSolicitationOf (false));
+    ASSERT_TRUE (adverts.awaits (2));
+    ASSERT_EQ (adverts.messages ()[1].target, IpAddress ("2001:db8:25::2"));
+    ASSERT_EQ (adverts.messages ()[1].flags, ND_NA_FLAG_OVERRIDE);
+
+    ASSERT_EQ (_server.unsetNeighborSolicitationListener (), 0) << lastError.message ();
 }
 
 /**

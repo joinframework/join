@@ -85,7 +85,7 @@ static RouterAdvertisement sample ()
 TEST (NdpMessage, serializeRouterSolicitation)
 {
     NdpMessage message;
-    char data[64];
+    char data[NdpMessage::maxRouterSolicitationSize];
 
     RouterSolicitation packet;
     ssize_t size = message.serialize (packet, data, sizeof (data));
@@ -332,7 +332,7 @@ TEST (NdpMessage, deserializeRouterAdvertisement)
 TEST (NdpMessage, serializeNeighborSolicitation)
 {
     NdpMessage message;
-    char data[64];
+    char data[NdpMessage::maxNeighborSolicitationSize];
 
     NeighborSolicitation packet;
     ASSERT_EQ (message.serialize (packet, data, sizeof (data)), -1);
@@ -375,7 +375,7 @@ TEST (NdpMessage, serializeNeighborSolicitation)
 TEST (NdpMessage, serializeNeighborAdvertisement)
 {
     NdpMessage message;
-    char data[64];
+    char data[NdpMessage::maxNeighborAdvertisementSize];
 
     NeighborAdvertisement packet;
     ASSERT_EQ (message.serialize (packet, data, sizeof (data)), -1);
@@ -452,6 +452,13 @@ TEST (NdpMessage, deserializeNeighborSolicitation)
 
     data = std::string (
         "\x87\x00\x00\x00\x00\x00\x00\x00"
+        "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    data = std::string (
+        "\x87\x00\x00\x00\x00\x00\x00\x00"
         "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
         "\x01\x00\x4e\xed\xed\xee\x59\xdb",
         32);
@@ -506,6 +513,13 @@ TEST (NdpMessage, deserializeNeighborAdvertisement)
     data = std::string (
         "\x88\x00\x00\x00\x00\x00\x00\x00"
         "\xff\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    data = std::string (
+        "\x88\x00\x00\x00\x00\x00\x00\x00"
+        "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
         24);
     ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
