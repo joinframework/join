@@ -38,21 +38,21 @@ namespace join
     /**
      * @brief asynchronous stream socket class.
      */
-    template <class Protocol, class Proactor, size_t OpCount>
-    class BasicAsyncStreamSocket : public BasicAsyncRawSocket<Protocol, Proactor, OpCount>
+    template <class Protocol, class ProactorType, size_t OpCount>
+    class BasicAsyncStreamSocket : public BasicAsyncRawSocket<Protocol, ProactorType, OpCount>
     {
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
-        using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
+        using AsyncWrite = BasicAsyncWrite<Protocol, ProactorType>;
         using ConnectHandler = typename AsyncWrite::Connect;
 
         /**
          * @brief create the socket instance.
          * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncStreamSocket (Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, Proactor, OpCount> (proactor)
+        explicit BasicAsyncStreamSocket (ProactorType& proactor = ProactorThread::proactor ())
+        : BasicAsyncRawSocket<Protocol, ProactorType, OpCount> (proactor)
         {
         }
 
@@ -61,8 +61,8 @@ namespace join
          * @param sock socket to adopt.
          * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncStreamSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, Proactor, OpCount> (std::move (sock), proactor)
+        explicit BasicAsyncStreamSocket (Socket&& sock, ProactorType& proactor = ProactorThread::proactor ())
+        : BasicAsyncRawSocket<Protocol, ProactorType, OpCount> (std::move (sock), proactor)
         {
         }
 

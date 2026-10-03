@@ -49,13 +49,13 @@ namespace join
     /**
      * @brief basic asynchronous socket class.
      */
-    template <class Protocol, class Proactor, size_t OpCount>
+    template <class Protocol, class ProactorType, size_t OpCount>
     class BasicAsyncSocket : public CompletionHandler
     {
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
-        using AsyncWait = BasicAsyncWait<Protocol, Proactor>;
+        using AsyncWait = BasicAsyncWait<Protocol, ProactorType>;
         using WaitHandler = typename AsyncWait::Wait;
 
         /// number of operations in flight.
@@ -64,7 +64,7 @@ namespace join
         static_assert (OpCount > 0, "a socket needs at least one operation slot");
 
         /// size of an operation slot.
-        static constexpr size_t _opSize = nextPow2 (AsyncOp<Protocol, Proactor>::maxSize);
+        static constexpr size_t _opSize = nextPow2 (AsyncOp<Protocol, ProactorType>::maxSize);
 
         using OpArena = LocalMem::Allocator<_opCount, _opSize>;
 
@@ -73,7 +73,7 @@ namespace join
          * @brief create the socket instance.
          * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncSocket (Proactor& proactor = ProactorThread::proactor ())
+        explicit BasicAsyncSocket (ProactorType& proactor = ProactorThread::proactor ())
         : _proactor (&proactor)
         {
         }
@@ -83,7 +83,7 @@ namespace join
          * @param sock socket to adopt.
          * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
+        explicit BasicAsyncSocket (Socket&& sock, ProactorType& proactor = ProactorThread::proactor ())
         : _proactor (&proactor)
         , _socket (std::move (sock))
         {
@@ -664,7 +664,7 @@ namespace join
         std::atomic<Completion> _completion{Completion::Idle};
 
         /// proactor driving the operations.
-        Proactor* _proactor;
+        ProactorType* _proactor;
 
         /// underlying synchronous socket.
         Socket _socket;

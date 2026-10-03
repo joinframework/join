@@ -43,7 +43,7 @@ namespace join
     /**
      * @brief asynchronous wait operation.
      */
-    template <class Protocol, class Proactor>
+    template <class Protocol, class ProactorType>
     struct BasicAsyncWait
     {
         /// handler invoked on completion.
@@ -59,7 +59,7 @@ namespace join
     /**
      * @brief asynchronous accept operation.
      */
-    template <class Protocol, class Proactor>
+    template <class Protocol, class ProactorType>
     struct BasicAsyncAccept
     {
         using Endpoint = typename Protocol::Endpoint;
@@ -84,7 +84,7 @@ namespace join
     /**
      * @brief asynchronous read operation.
      */
-    template <class Protocol, class Proactor>
+    template <class Protocol, class ProactorType>
     struct BasicAsyncRead
     {
         using Endpoint = typename Protocol::Endpoint;
@@ -116,7 +116,7 @@ namespace join
     /**
      * @brief asynchronous write operation.
      */
-    template <class Protocol, class Proactor>
+    template <class Protocol, class ProactorType>
     struct BasicAsyncWrite
     {
         /// handler invoked on connection completion.
@@ -156,9 +156,9 @@ namespace join
     /**
      * @brief asynchronous socket operation traits.
      */
-    template <class Protocol, class Proactor>
-    using AsyncOp = BasicAsyncOpTraits<BasicAsyncWait<Protocol, Proactor>, BasicAsyncRead<Protocol, Proactor>,
-                                       BasicAsyncWrite<Protocol, Proactor>>;
+    template <class Protocol, class ProactorType>
+    using AsyncOp = BasicAsyncOpTraits<BasicAsyncWait<Protocol, ProactorType>, BasicAsyncRead<Protocol, ProactorType>,
+                                       BasicAsyncWrite<Protocol, ProactorType>>;
 }
 
 #endif

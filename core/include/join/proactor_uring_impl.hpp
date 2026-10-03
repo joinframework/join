@@ -26,20 +26,20 @@
 //   CLASS     : BasicProactor
 //   METHOD    : BasicProactor
 // =========================================================================
-template <typename Policy>
-join::BasicProactor<Policy>::BasicProactor ()
+template <typename IoPolicy>
+join::BasicProactor<IoPolicy>::BasicProactor ()
 : _commands (_queueSize)
-, _wakeup (initWakeup (is_default<Policy>{}))
+, _wakeup (initWakeup (is_default<IoPolicy>{}))
 {
-    static_assert (has_spin<Policy>::value || !has_sqpoll<Policy>::value, "spin required for sq poll policy");
+    static_assert (has_spin<IoPolicy>::value || !has_sqpoll<IoPolicy>::value, "spin required for sq poll policy");
 
     io_uring_params params{};
-    params.flags = Policy::flags;
-    initCqEntries (params, has_cq_entries<Policy>{});
-    initSqThreadIdle (params, has_sq_thread_idle<Policy>{});
-    initSqThreadCpu (params, has_sq_thread_cpu<Policy>{});
+    params.flags = IoPolicy::flags;
+    initCqEntries (params, has_cq_entries<IoPolicy>{});
+    initSqThreadIdle (params, has_sq_thread_idle<IoPolicy>{});
+    initSqThreadCpu (params, has_sq_thread_cpu<IoPolicy>{});
 
-    if (io_uring_queue_init_params (Policy::sqEntries, &_ring, &params) < 0)
+    if (io_uring_queue_init_params (IoPolicy::sqEntries, &_ring, &params) < 0)
     {
         // LCOV_EXCL_START
         ::close (_wakeup);
@@ -47,16 +47,16 @@ join::BasicProactor<Policy>::BasicProactor ()
         // LCOV_EXCL_STOP
     }
 
-    initWakeupOp (is_default<Policy>{});
-    _pendingOps.reserve (Policy::sqEntries);
+    initWakeupOp (is_default<IoPolicy>{});
+    _pendingOps.reserve (IoPolicy::sqEntries);
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
 //   METHOD    : ~BasicProactor
 // =========================================================================
-template <typename Policy>
-join::BasicProactor<Policy>::~BasicProactor () noexcept
+template <typename IoPolicy>
+join::BasicProactor<IoPolicy>::~BasicProactor () noexcept
 {
     stop (true);
 
@@ -72,8 +72,8 @@ join::BasicProactor<Policy>::~BasicProactor () noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : flush
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::flush (bool sync) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::flush (bool sync) noexcept
 {
     if (isProactorThread ())
     {
@@ -123,8 +123,8 @@ int join::BasicProactor<Policy>::flush (bool sync) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : run
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::run ()
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::run ()
 {
     _threadId.store (pthread_self (), std::memory_order_release);
 
@@ -138,8 +138,8 @@ void join::BasicProactor<Policy>::run ()
 //   CLASS     : BasicProactor
 //   METHOD    : stop
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::stop (bool sync) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::stop (bool sync) noexcept
 {
     if (isProactorThread ())
     {
@@ -165,8 +165,8 @@ void join::BasicProactor<Policy>::stop (bool sync) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : waitStopped
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::waitStopped () const noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::waitStopped () const noexcept
 {
     Backoff backoff;
 
@@ -180,9 +180,9 @@ void join::BasicProactor<Policy>::waitStopped () const noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : registerFixedBuffers
 // =========================================================================
-template <typename Policy>
+template <typename IoPolicy>
 template <size_t Count, size_t... Sizes>
-int join::BasicProactor<Policy>::registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena) noexcept
+int join::BasicProactor<IoPolicy>::registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena) noexcept
 {
     return registerFixedBuffers (arena, std::make_index_sequence<sizeof...(Sizes)>{});
 }
@@ -191,8 +191,8 @@ int join::BasicProactor<Policy>::registerFixedBuffers (LocalMem::Allocator<Count
 //   CLASS     : BasicProactor
 //   METHOD    : unregisterFixedBuffers
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::unregisterFixedBuffers () noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::unregisterFixedBuffers () noexcept
 {
     int ret = io_uring_unregister_buffers (&_ring);
     if (JOIN_UNLIKELY (ret < 0))
@@ -208,9 +208,9 @@ int join::BasicProactor<Policy>::unregisterFixedBuffers () noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : registerBufferRing
 // =========================================================================
-template <typename Policy>
+template <typename IoPolicy>
 template <size_t Count, size_t Size>
-int join::BasicProactor<Policy>::registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
+int join::BasicProactor<IoPolicy>::registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
 {
     int result = 0;
     std::error_code errc;
@@ -258,9 +258,9 @@ int join::BasicProactor<Policy>::registerBufferRing (uint16_t group, LocalMem::A
 //   CLASS     : BasicProactor
 //   METHOD    : registerBufferRing
 // =========================================================================
-template <typename Policy>
+template <typename IoPolicy>
 template <size_t Count, size_t Size>
-int join::BasicProactor<Policy>::registerBufferRing (LocalMem::Allocator<Count, Size>& arena)
+int join::BasicProactor<IoPolicy>::registerBufferRing (LocalMem::Allocator<Count, Size>& arena)
 {
     int result = 0;
     std::error_code errc;
@@ -318,8 +318,8 @@ int join::BasicProactor<Policy>::registerBufferRing (LocalMem::Allocator<Count, 
 //   CLASS     : BasicProactor
 //   METHOD    : unregisterBufferRing
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::unregisterBufferRing (uint16_t group)
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::unregisterBufferRing (uint16_t group)
 {
     int result = 0;
     std::error_code errc;
@@ -379,8 +379,8 @@ int join::BasicProactor<Policy>::unregisterBufferRing (uint16_t group)
 //   CLASS     : BasicProactor
 //   METHOD    : mbind
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::mbind (int numa) const noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::mbind (int numa) const noexcept
 {
     return _commands.mbind (numa);
 }
@@ -390,8 +390,8 @@ int join::BasicProactor<Policy>::mbind (int numa) const noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : mlock
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::mlock () const noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::mlock () const noexcept
 {
     return _commands.mlock ();
 }
@@ -400,8 +400,8 @@ int join::BasicProactor<Policy>::mlock () const noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : isRunning
 // =========================================================================
-template <typename Policy>
-bool join::BasicProactor<Policy>::isRunning () const noexcept
+template <typename IoPolicy>
+bool join::BasicProactor<IoPolicy>::isRunning () const noexcept
 {
     return _threadId.load (std::memory_order_acquire) != _invalidThreadId;
 }
@@ -410,8 +410,8 @@ bool join::BasicProactor<Policy>::isRunning () const noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : isProactorThread
 // =========================================================================
-template <typename Policy>
-bool join::BasicProactor<Policy>::isProactorThread () const noexcept
+template <typename IoPolicy>
+bool join::BasicProactor<IoPolicy>::isProactorThread () const noexcept
 {
     return _threadId.load (std::memory_order_acquire) == pthread_self ();
 }
@@ -420,8 +420,8 @@ bool join::BasicProactor<Policy>::isProactorThread () const noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : initWakeup
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::initWakeup (std::true_type) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::initWakeup (std::true_type) noexcept
 {
     return eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC);
 }
@@ -430,8 +430,8 @@ int join::BasicProactor<Policy>::initWakeup (std::true_type) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : initWakeup
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::initWakeup (std::false_type) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::initWakeup (std::false_type) noexcept
 {
     return -1;
 }
@@ -440,8 +440,8 @@ int join::BasicProactor<Policy>::initWakeup (std::false_type) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : initWakeupOp
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::initWakeupOp (std::true_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::initWakeupOp (std::true_type) noexcept
 {
     _wakeupOp = IoOperation::makeRead (_wakeup, &_wakeupBuf, sizeof (_wakeupBuf), nullptr);
 }
@@ -450,8 +450,8 @@ void join::BasicProactor<Policy>::initWakeupOp (std::true_type) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : initWakeupOp
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::initWakeupOp (std::false_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::initWakeupOp (std::false_type) noexcept
 {
     // no-op.
 }
@@ -460,8 +460,8 @@ void join::BasicProactor<Policy>::initWakeupOp (std::false_type) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : initCqEntries
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::initCqEntries (io_uring_params&, std::false_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::initCqEntries (io_uring_params&, std::false_type) noexcept
 {
     // no-op.
 }
@@ -470,19 +470,19 @@ void join::BasicProactor<Policy>::initCqEntries (io_uring_params&, std::false_ty
 //   CLASS     : BasicProactor
 //   METHOD    : initCqEntries
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::initCqEntries (io_uring_params& params, std::true_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::initCqEntries (io_uring_params& params, std::true_type) noexcept
 {
     params.flags |= IORING_SETUP_CQSIZE;
-    params.cq_entries = Policy::cqEntries;
+    params.cq_entries = IoPolicy::cqEntries;
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
 //   METHOD    : initSqThreadIdle
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::initSqThreadIdle (io_uring_params&, std::false_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::initSqThreadIdle (io_uring_params&, std::false_type) noexcept
 {
     // no-op.
 }
@@ -491,18 +491,18 @@ void join::BasicProactor<Policy>::initSqThreadIdle (io_uring_params&, std::false
 //   CLASS     : BasicProactor
 //   METHOD    : initSqThreadIdle
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::initSqThreadIdle (io_uring_params& params, std::true_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::initSqThreadIdle (io_uring_params& params, std::true_type) noexcept
 {
-    params.sq_thread_idle = Policy::sqThreadIdle;
+    params.sq_thread_idle = IoPolicy::sqThreadIdle;
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
 //   METHOD    : initSqThreadCpu
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::initSqThreadCpu (io_uring_params&, std::false_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::initSqThreadCpu (io_uring_params&, std::false_type) noexcept
 {
     // no-op.
 }
@@ -511,29 +511,29 @@ void join::BasicProactor<Policy>::initSqThreadCpu (io_uring_params&, std::false_
 //   CLASS     : BasicProactor
 //   METHOD    : initSqThreadCpu
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::initSqThreadCpu (io_uring_params& params, std::true_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::initSqThreadCpu (io_uring_params& params, std::true_type) noexcept
 {
     params.flags |= IORING_SETUP_SQ_AFF;
-    params.sq_thread_cpu = Policy::sqThreadCpu;
+    params.sq_thread_cpu = IoPolicy::sqThreadCpu;
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
 //   METHOD    : writeCommand
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::writeCommand (const Command& cmd) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::writeCommand (const Command& cmd) noexcept
 {
-    return writeCommand (cmd, is_default<Policy>{});
+    return writeCommand (cmd, is_default<IoPolicy>{});
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
 //   METHOD    : writeCommand
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::writeCommand (const Command& cmd, std::true_type) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::writeCommand (const Command& cmd, std::true_type) noexcept
 {
     if (JOIN_UNLIKELY (_commands.push (cmd) == -1))
     {
@@ -566,8 +566,8 @@ int join::BasicProactor<Policy>::writeCommand (const Command& cmd, std::true_typ
 //   CLASS     : BasicProactor
 //   METHOD    : writeCommand
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::writeCommand (const Command& cmd, std::false_type) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::writeCommand (const Command& cmd, std::false_type) noexcept
 {
     return _commands.push (cmd);
 }
@@ -576,8 +576,8 @@ int join::BasicProactor<Policy>::writeCommand (const Command& cmd, std::false_ty
 //   CLASS     : BasicProactor
 //   METHOD    : readCommands
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::readCommands () noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::readCommands () noexcept
 {
     Command cmd;
     while (_commands.tryPop (cmd) == 0)
@@ -590,8 +590,8 @@ void join::BasicProactor<Policy>::readCommands () noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : processCommand
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::processCommand (const Command& cmd) noexcept
 {
     int err = 0;
 
@@ -651,8 +651,8 @@ void join::BasicProactor<Policy>::processCommand (const Command& cmd) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : submitOperation
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::submitOperation (IoOperation& op, bool flush) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::submitOperation (IoOperation& op, bool flush) noexcept
 {
     Backoff backoff;
     while (JOIN_UNLIKELY (op.state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
@@ -729,8 +729,8 @@ int join::BasicProactor<Policy>::submitOperation (IoOperation& op, bool flush) n
 //   CLASS     : BasicProactor
 //   METHOD    : cancelOperation
 // =========================================================================
-template <typename Policy>
-int join::BasicProactor<Policy>::cancelOperation (IoOperation& op, bool flush) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::cancelOperation (IoOperation& op, bool flush) noexcept
 {
     if (JOIN_UNLIKELY (op.fd () < 0))
     {
@@ -774,8 +774,8 @@ int join::BasicProactor<Policy>::cancelOperation (IoOperation& op, bool flush) n
 //   CLASS     : BasicProactor
 //   METHOD    : cancelAllOperations
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::cancelAllOperations () noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::cancelAllOperations () noexcept
 {
     for (IoOperation* op : _pendingOps)
     {
@@ -792,8 +792,8 @@ void join::BasicProactor<Policy>::cancelAllOperations () noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : endOperation
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::endOperation (IoOperation& op, int result, bool cancelled) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::endOperation (IoOperation& op, int result, bool cancelled) noexcept
 {
     if (JOIN_LIKELY (op.index < _pendingOps.size () && _pendingOps[op.index] == &op))
     {
@@ -810,10 +810,10 @@ void join::BasicProactor<Policy>::endOperation (IoOperation& op, int result, boo
 //   CLASS     : BasicProactor
 //   METHOD    : registerFixedBuffers
 // =========================================================================
-template <typename Policy>
+template <typename IoPolicy>
 template <size_t Count, size_t... Sizes, size_t... Is>
-int join::BasicProactor<Policy>::registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena,
-                                                       std::index_sequence<Is...>) noexcept
+int join::BasicProactor<IoPolicy>::registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena,
+                                                         std::index_sequence<Is...>) noexcept
 {
     iovec iovecs[] = {iovec{arena.template getPtr<Is> (0), Count * Sizes}...};
 
@@ -831,8 +831,8 @@ int join::BasicProactor<Policy>::registerFixedBuffers (LocalMem::Allocator<Count
 //   CLASS     : BasicProactor
 //   METHOD    : getSqe
 // =========================================================================
-template <typename Policy>
-io_uring_sqe* join::BasicProactor<Policy>::getSqe () noexcept
+template <typename IoPolicy>
+io_uring_sqe* join::BasicProactor<IoPolicy>::getSqe () noexcept
 {
     io_uring_sqe* sqe = io_uring_get_sqe (&_ring);
     if (JOIN_UNLIKELY (sqe == nullptr))
@@ -848,8 +848,8 @@ io_uring_sqe* join::BasicProactor<Policy>::getSqe () noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : prepareSqe
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation& op) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& op) noexcept
 {
     switch (static_cast<IoOperation::Opcode> (op.code))
     {
@@ -951,18 +951,18 @@ void join::BasicProactor<Policy>::prepareSqe (io_uring_sqe* sqe, IoOperation& op
 //   CLASS     : BasicProactor
 //   METHOD    : dispatchCqe
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe) noexcept
 {
-    dispatchCqe (cqe, is_default<Policy>{});
+    dispatchCqe (cqe, is_default<IoPolicy>{});
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
 //   METHOD    : dispatchCqe
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::true_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe, std::true_type) noexcept
 {
     IoOperation* op = static_cast<IoOperation*> (io_uring_cqe_get_data (cqe));
 
@@ -983,8 +983,8 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::true_type
 //   CLASS     : BasicProactor
 //   METHOD    : dispatchCqe
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe, std::false_type) noexcept
 {
     IoOperation* op = static_cast<IoOperation*> (io_uring_cqe_get_data (cqe));
     if (JOIN_UNLIKELY (op == nullptr))
@@ -1073,18 +1073,18 @@ void join::BasicProactor<Policy>::dispatchCqe (io_uring_cqe* cqe, std::false_typ
 //   CLASS     : BasicProactor
 //   METHOD    : eventLoop
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::eventLoop () noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::eventLoop () noexcept
 {
-    eventLoop (has_spin<Policy>{}, has_sqpoll<Policy>{});
+    eventLoop (has_spin<IoPolicy>{}, has_sqpoll<IoPolicy>{});
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
 //   METHOD    : eventLoop
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::eventLoop (std::false_type, std::false_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::eventLoop (std::false_type, std::false_type) noexcept
 {
     if (JOIN_LIKELY (_running.load (std::memory_order_acquire)))
     {
@@ -1141,10 +1141,10 @@ void join::BasicProactor<Policy>::eventLoop (std::false_type, std::false_type) n
 //   CLASS     : BasicProactor
 //   METHOD    : eventLoop
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::eventLoop (std::true_type, std::false_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::eventLoop (std::true_type, std::false_type) noexcept
 {
-    Backoff backoff (Policy::spin);
+    Backoff backoff (IoPolicy::spin);
     bool running;
 
     while ((running = _running.load (std::memory_order_acquire)) || !_pendingOps.empty ())
@@ -1180,10 +1180,10 @@ void join::BasicProactor<Policy>::eventLoop (std::true_type, std::false_type) no
 //   CLASS     : BasicProactor
 //   METHOD    : eventLoop
 // =========================================================================
-template <typename Policy>
-void join::BasicProactor<Policy>::eventLoop (std::true_type, std::true_type) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::eventLoop (std::true_type, std::true_type) noexcept
 {
-    Backoff backoff (Policy::spin);
+    Backoff backoff (IoPolicy::spin);
     bool running;
 
     while ((running = _running.load (std::memory_order_acquire)) || !_pendingOps.empty ())

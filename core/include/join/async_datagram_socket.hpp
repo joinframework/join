@@ -38,14 +38,14 @@ namespace join
     /**
      * @brief asynchronous datagram socket class.
      */
-    template <class Protocol, class Proactor, size_t OpCount>
-    class BasicAsyncDatagramSocket : public BasicAsyncRawSocket<Protocol, Proactor, OpCount>
+    template <class Protocol, class ProactorType, size_t OpCount>
+    class BasicAsyncDatagramSocket : public BasicAsyncRawSocket<Protocol, ProactorType, OpCount>
     {
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
-        using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
-        using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
+        using AsyncRead = BasicAsyncRead<Protocol, ProactorType>;
+        using AsyncWrite = BasicAsyncWrite<Protocol, ProactorType>;
         using ReadFromHandler = typename AsyncRead::ReadFrom;
         using WriteHandler = typename AsyncWrite::Write;
 
@@ -53,8 +53,8 @@ namespace join
          * @brief create the socket instance.
          * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncDatagramSocket (Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, Proactor, OpCount> (proactor)
+        explicit BasicAsyncDatagramSocket (ProactorType& proactor = ProactorThread::proactor ())
+        : BasicAsyncRawSocket<Protocol, ProactorType, OpCount> (proactor)
         {
         }
 
@@ -63,8 +63,8 @@ namespace join
          * @param ttl packet time to live.
          * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncDatagramSocket (int ttl, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, Proactor, OpCount> (Socket (ttl), proactor)
+        explicit BasicAsyncDatagramSocket (int ttl, ProactorType& proactor = ProactorThread::proactor ())
+        : BasicAsyncRawSocket<Protocol, ProactorType, OpCount> (Socket (ttl), proactor)
         {
         }
 
@@ -73,8 +73,8 @@ namespace join
          * @param sock socket to adopt.
          * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncDatagramSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, Proactor, OpCount> (std::move (sock), proactor)
+        explicit BasicAsyncDatagramSocket (Socket&& sock, ProactorType& proactor = ProactorThread::proactor ())
+        : BasicAsyncRawSocket<Protocol, ProactorType, OpCount> (std::move (sock), proactor)
         {
         }
 

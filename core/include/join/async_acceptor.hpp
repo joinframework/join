@@ -41,21 +41,21 @@ namespace join
     /**
      * @brief asynchronous stream acceptor class.
      */
-    template <class Protocol, class Proactor>
+    template <class Protocol, class ProactorType>
     class BasicAsyncStreamAcceptor : public CompletionHandler
     {
     public:
         using Acceptor = BasicStreamAcceptor<Protocol>;
         using Endpoint = typename Protocol::Endpoint;
         using Socket = typename Protocol::Socket;
-        using AsyncAccept = BasicAsyncAccept<Protocol, Proactor>;
+        using AsyncAccept = BasicAsyncAccept<Protocol, ProactorType>;
         using AcceptHandler = typename AsyncAccept::Accept;
 
         /**
          * @brief create the acceptor instance.
          * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncStreamAcceptor (Proactor& proactor = ProactorThread::proactor ())
+        explicit BasicAsyncStreamAcceptor (ProactorType& proactor = ProactorThread::proactor ())
         : _proactor (&proactor)
         {
         }
@@ -396,7 +396,7 @@ namespace join
 
     private:
         /// proactor driving the operations.
-        Proactor* _proactor;
+        ProactorType* _proactor;
 
         /// underlying synchronous acceptor.
         Acceptor _acceptor;

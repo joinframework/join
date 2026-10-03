@@ -35,16 +35,31 @@
 namespace join
 {
     template <class ClockPolicy>
+    class BasicStats;
+
+#ifdef JOIN_HAS_IO_URING
+    struct IoDefaultPolicy;
+
+    template <typename IoPolicy>
+    class BasicProactor;
+
+    template <class ClockPolicy, class ProactorType = BasicProactor<IoDefaultPolicy>>
     class BasicTimer;
 
-    template <class ClockPolicy>
-    class BasicStats;
+    template <class ClockPolicy, class ProactorType = BasicProactor<IoDefaultPolicy>>
+    class WaitPolicy;
+#else
+    class BasicProactor;
+
+    template <class ClockPolicy, class ProactorType = BasicProactor>
+    class BasicTimer;
+
+    template <class ClockPolicy, class ProactorType = BasicProactor>
+    class WaitPolicy;
+#endif
 
     template <class ClockPolicy>
     class SpinPolicy;
-
-    template <class ClockPolicy>
-    class WaitPolicy;
 
     template <class ClockPolicy, class RunPolicy, size_t Capacity, uint64_t TickNs>
     class BasicWheel;
@@ -93,8 +108,8 @@ namespace join
     public:
         using Duration = std::chrono::nanoseconds;
         using TimePoint = std::chrono::time_point<NanoClock>;
-        using Timer = BasicTimer<Monotonic>;
         using Stats = BasicStats<Monotonic>;
+        using Timer = BasicTimer<Monotonic>;
 
         template <size_t Capacity, uint64_t TickNs = 1'000>
         using Wheel = BasicWheel<Monotonic, SpinPolicy<Monotonic>, Capacity, TickNs>;
