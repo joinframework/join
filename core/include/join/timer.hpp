@@ -47,12 +47,12 @@ namespace join
     /**
      * @brief base timer class.
      */
-    template <class ClockPolicy>
+    template <class ClockPolicy, class ProactorType>
     class BasicTimer : protected CompletionHandler
     {
     public:
         template <size_t Capacity, uint64_t TickNs = 1'000'000>
-        using Wheel = BasicWheel<ClockPolicy, WaitPolicy<ClockPolicy>, Capacity, TickNs>;
+        using Wheel = BasicWheel<ClockPolicy, WaitPolicy<ClockPolicy, ProactorType>, Capacity, TickNs>;
 
         /**
          * @brief timer state.
@@ -69,7 +69,7 @@ namespace join
          * @brief create instance.
          * @param proactor completion dispatcher.
          */
-        explicit BasicTimer (Proactor& proactor = ProactorThread::proactor ())
+        explicit BasicTimer (ProactorType& proactor = ProactorThread::proactor ())
         : _handle (timerfd_create (ClockPolicy::type (), TFD_NONBLOCK | TFD_CLOEXEC))
         , _proactor (proactor)
         {
@@ -427,7 +427,7 @@ namespace join
         int _handle = -1;
 
         /// completion dispatcher.
-        Proactor& _proactor;
+        ProactorType& _proactor;
     };
 }
 

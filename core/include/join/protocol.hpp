@@ -58,39 +58,39 @@ namespace join
 #ifdef JOIN_HAS_IO_URING
     struct IoDefaultPolicy;
 
-    template <typename Policy>
+    template <typename IoPolicy>
     class BasicProactor;
 
-    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
     class BasicAsyncSocket;
 
-    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
     class BasicAsyncRawSocket;
 
-    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
     class BasicAsyncDatagramSocket;
 
-    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
     class BasicAsyncStreamSocket;
 
-    template <class Protocol, class Proactor = BasicProactor<IoDefaultPolicy>>
+    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>>
     class BasicAsyncStreamAcceptor;
 #else
     class BasicProactor;
 
-    template <class Protocol, class Proactor = BasicProactor, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor, size_t OpCount = 16>
     class BasicAsyncSocket;
 
-    template <class Protocol, class Proactor = BasicProactor, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor, size_t OpCount = 16>
     class BasicAsyncRawSocket;
 
-    template <class Protocol, class Proactor = BasicProactor, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor, size_t OpCount = 16>
     class BasicAsyncDatagramSocket;
 
-    template <class Protocol, class Proactor = BasicProactor, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor, size_t OpCount = 16>
     class BasicAsyncStreamSocket;
 
-    template <class Protocol, class Proactor = BasicProactor>
+    template <class Protocol, class ProactorType = BasicProactor>
     class BasicAsyncStreamAcceptor;
 #endif
 
