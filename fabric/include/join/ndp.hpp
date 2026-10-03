@@ -72,12 +72,12 @@ namespace join
         /**
          * @brief create the instance bound to the given interface.
          * @param interface interface name.
-         * @param accept message type the instance accepts.
+         * @param filter message type the instance accepts.
          * @param group multicast group the instance joins, wildcard to join none.
          * @param reactor reactor instance.
          * @throw std::system_error if the interface is unknown or the socket could not be set up.
          */
-        BasicNdp (const std::string& interface, uint8_t accept, const IpAddress& group, Reactor& reactor)
+        BasicNdp (const std::string& interface, uint8_t filter, const IpAddress& group, Reactor& reactor)
         : _socket (Protocol::hopLimit)
         , _buffer (std::make_unique<char[]> (Protocol::maxMsgSize))
         , _interface (interface)
@@ -118,17 +118,11 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            struct icmp6_filter filter;
-            ICMP6_FILTER_SETBLOCKALL (&filter);
-            ICMP6_FILTER_SETPASS (accept, &filter);
-            ICMP6_FILTER_SETPASS (NdpMessage::NeighborAdvert, &filter);
-            ICMP6_FILTER_SETPASS (NdpMessage::NeighborSolicit, &filter);
+            ICMP6_FILTER_SETBLOCKALL (&_filter);
 
-            if (::setsockopt (_socket.handle (), IPPROTO_ICMPV6, ICMP6_FILTER, &filter, sizeof (filter)) == -1)
+            if (applyFilter (filter, true) == -1)
             {
-                // LCOV_EXCL_START
-                throw std::system_error (errno, std::generic_category (), "ndp icmp6 filter setup failed");
-                // LCOV_EXCL_STOP
+                throw std::system_error (lastError, "ndp icmp6 filter setup failed");  // LCOV_EXCL_LINE
             }
 
             if (!group.isWildcard ())
@@ -208,28 +202,43 @@ namespace join
             ::memcpy (&group, IpAddress::ipv6SolicitedNodes.addr (), sizeof (group));
             ::memcpy (&group.s6_addr[13], static_cast<const uint8_t*> (target.addr ()) + 13, 3);
 
-            ScopedLock<Mutex> lock (_neighborMutex);
-
             NeighborRequest pending;
             pending.target = IpAddress (target.addr (), target.length ());
             pending.advert = &advert;
-            _neighborPending.push_back (&pending);
+
+            Reactor::InvokeHandler addFilter = [this, &pending] () {
+                _neighborPending.push_back (&pending);
+                applyFilter (NdpMessage::NeighborAdvert, true);
+            };
+
+            Reactor::InvokeHandler delFilter = [this, &pending] () {
+                _neighborPending.erase (std::find (_neighborPending.begin (), _neighborPending.end (), &pending));
+                applyFilter (NdpMessage::NeighborAdvert, _neighborAdvertisementListener || !_neighborPending.empty ());
+            };
+
+            if (_reactor.invoke (&addFilter) == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
 
             if (send (payload, static_cast<size_t> (size), IpAddress (&group, sizeof (group))) == -1)
             {
                 // LCOV_EXCL_START
-                _neighborPending.erase (std::find (_neighborPending.begin (), _neighborPending.end (), &pending));
+                _reactor.invoke (&delFilter);
                 return -1;
                 // LCOV_EXCL_STOP
             }
 
-            bool answered = pending.cond.timedWait (lock, timeout, [&pending] {
-                return pending.done;
-            });
+            {
+                ScopedLock<Mutex> lock (_neighborMutex);
+                pending.cond.timedWait (lock, timeout, [&pending] {
+                    return pending.done;
+                });
+            }
 
-            _neighborPending.erase (std::find (_neighborPending.begin (), _neighborPending.end (), &pending));
+            _reactor.invoke (&delFilter);
 
-            if (!answered)
+            if (!pending.done)
             {
                 lastError = make_error_code (Errc::TimedOut);
                 return -1;
@@ -306,6 +315,7 @@ namespace join
                 if (!busy)
                 {
                     _neighborSolicitationListener = std::move (cb);
+                    applyFilter (NdpMessage::NeighborSolicit, true);
                 }
             };
 
@@ -332,6 +342,7 @@ namespace join
             Reactor::InvokeHandler fn = [this] () {
                 _neighborSolicitationListener = nullptr;
                 _neighborSolicitationCalling = false;
+                applyFilter (NdpMessage::NeighborSolicit, false);
             };
 
             return _reactor.invoke (&fn);
@@ -351,6 +362,7 @@ namespace join
                 if (!busy)
                 {
                     _neighborAdvertisementListener = std::move (cb);
+                    applyFilter (NdpMessage::NeighborAdvert, true);
                 }
             };
 
@@ -377,6 +389,7 @@ namespace join
             Reactor::InvokeHandler fn = [this] () {
                 _neighborAdvertisementListener = nullptr;
                 _neighborAdvertisementCalling = false;
+                applyFilter (NdpMessage::NeighborAdvert, !_neighborPending.empty ());
             };
 
             return _reactor.invoke (&fn);
@@ -428,6 +441,43 @@ namespace join
         void detach () noexcept
         {
             _reactor.delHandler (_socket.handle ());
+        }
+
+        /**
+         * @brief pass or block a message type in the ICMPv6 filter.
+         * @param type message type.
+         * @param pass true to pass the message type, false to block it.
+         * @return 0 on success, -1 on failure.
+         */
+        int applyFilter (uint8_t type, bool pass) noexcept
+        {
+            if (ICMP6_FILTER_WILLPASS (type, &_filter) == pass)
+            {
+                return 0;
+            }
+
+            struct icmp6_filter filter = _filter;
+
+            if (pass)
+            {
+                ICMP6_FILTER_SETPASS (type, &filter);
+            }
+            else
+            {
+                ICMP6_FILTER_SETBLOCK (type, &filter);
+            }
+
+            if (::setsockopt (_socket.handle (), IPPROTO_ICMPV6, ICMP6_FILTER, &filter, sizeof (filter)) == -1)
+            {
+                // LCOV_EXCL_START
+                lastError = std::error_code (errno, std::generic_category ());
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            _filter = filter;
+
+            return 0;
         }
 
         /**
@@ -514,23 +564,26 @@ namespace join
 
             if (type == NdpMessage::NeighborSolicit)
             {
+                if (!_neighborSolicitationListener)
+                {
+                    return true;  // LCOV_EXCL_LINE
+                }
+
                 NeighborSolicitation solicitation;
                 if ((_message.deserialize (solicitation, _buffer.get (), size) == 0) &&
                     (!from.isWildcard () || solicitation.link.isWildcard ()))
                 {
                     solicitation.src = from;
-                    if (_neighborSolicitationListener)
+
+                    NeighborSolicitationNotify listener = std::move (_neighborSolicitationListener);
+
+                    _neighborSolicitationCalling = true;
+                    listener (solicitation);
+
+                    if (_neighborSolicitationCalling)
                     {
-                        NeighborSolicitationNotify listener = std::move (_neighborSolicitationListener);
-
-                        _neighborSolicitationCalling = true;
-                        listener (solicitation);
-
-                        if (_neighborSolicitationCalling)
-                        {
-                            _neighborSolicitationListener = std::move (listener);
-                            _neighborSolicitationCalling = false;
-                        }
+                        _neighborSolicitationListener = std::move (listener);
+                        _neighborSolicitationCalling = false;
                     }
                 }
 
@@ -540,6 +593,11 @@ namespace join
             if (type != NdpMessage::NeighborAdvert)
             {
                 return false;
+            }
+
+            if (!_neighborAdvertisementListener && _neighborPending.empty ())
+            {
+                return true;  // LCOV_EXCL_LINE
             }
 
             NeighborAdvertisement advert;
@@ -561,15 +619,18 @@ namespace join
                     }
                 }
 
-                ScopedLock<Mutex> lock (_neighborMutex);
-
-                for (NeighborRequest* pending : _neighborPending)
+                if (!_neighborPending.empty ())
                 {
-                    if (!pending->done && !advert.link.isWildcard () && (pending->target == advert.target))
+                    ScopedLock<Mutex> lock (_neighborMutex);
+
+                    for (NeighborRequest* pending : _neighborPending)
                     {
-                        *pending->advert = advert;
-                        pending->done = true;
-                        pending->cond.signal ();
+                        if (!pending->done && !advert.link.isWildcard () && (pending->target == advert.target))
+                        {
+                            *pending->advert = advert;
+                            pending->done = true;
+                            pending->cond.signal ();
+                        }
                     }
                 }
             }
@@ -615,6 +676,9 @@ namespace join
         /// event loop reactor.
         Reactor& _reactor;
 
+        /// ICMPv6 filter applied to the socket, only accessed from the reactor thread once constructed.
+        struct icmp6_filter _filter;
+
         /**
          * @brief neighbor solicitation waiting for the advertisement of its target.
          */
@@ -633,7 +697,7 @@ namespace join
             bool done = false;
         };
 
-        /// neighbor solicitations waiting for an advertisement.
+        /// neighbor solicitations waiting for an advertisement, only accessed from the reactor thread.
         std::vector<NeighborRequest*> _neighborPending;
 
         /// neighbor solicitations protection mutex.
@@ -735,27 +799,40 @@ namespace join
                 return -1;
             }
 
-            ScopedLock<Mutex> lock (_routerMutex);
-
             RouterRequest pending;
             pending.advert = &advert;
-            _pending.push_back (&pending);
+
+            Reactor::InvokeHandler addRequest = [this, &pending] () {
+                _pending.push_back (&pending);
+            };
+
+            Reactor::InvokeHandler delRequest = [this, &pending] () {
+                _pending.erase (std::find (_pending.begin (), _pending.end (), &pending));
+            };
+
+            if (this->_reactor.invoke (&addRequest) == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
 
             if (routerSolicit () == -1)
             {
                 // LCOV_EXCL_START
-                _pending.erase (std::find (_pending.begin (), _pending.end (), &pending));
+                this->_reactor.invoke (&delRequest);
                 return -1;
                 // LCOV_EXCL_STOP
             }
 
-            bool answered = pending.cond.timedWait (lock, timeout, [&pending] {
-                return pending.done;
-            });
+            {
+                ScopedLock<Mutex> lock (_routerMutex);
+                pending.cond.timedWait (lock, timeout, [&pending] {
+                    return pending.done;
+                });
+            }
 
-            _pending.erase (std::find (_pending.begin (), _pending.end (), &pending));
+            this->_reactor.invoke (&delRequest);
 
-            if (!answered)
+            if (!pending.done)
             {
                 lastError = make_error_code (Errc::TimedOut);
                 return -1;
@@ -855,15 +932,18 @@ namespace join
                 }
             }
 
-            ScopedLock<Mutex> lock (_routerMutex);
-
-            for (RouterRequest* pending : _pending)
+            if (!_pending.empty ())
             {
-                if (!pending->done)
+                ScopedLock<Mutex> lock (_routerMutex);
+
+                for (RouterRequest* pending : _pending)
                 {
-                    *pending->advert = advert;
-                    pending->done = true;
-                    pending->cond.signal ();
+                    if (!pending->done)
+                    {
+                        *pending->advert = advert;
+                        pending->done = true;
+                        pending->cond.signal ();
+                    }
                 }
             }
         }
@@ -883,7 +963,7 @@ namespace join
             bool done = false;
         };
 
-        /// solicitations waiting for an advertisement.
+        /// solicitations waiting for an advertisement, only accessed from the reactor thread.
         std::vector<RouterRequest*> _pending;
 
         /// router solicitations protection mutex.
