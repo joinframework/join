@@ -28,15 +28,14 @@
 
 // C++.
 #include <iostream>
-#include <atomic>
-#include <thread>
 
 // C.
 #include <unistd.h>
 
 using join::lastError;
 using join::Errc;
-using join::RouterAdvertisement;
+using join::IpAddress;
+using join::NeighborAdvertisement;
 using join::Ndp;
 
 // =========================================================================
@@ -45,7 +44,7 @@ using join::Ndp;
 // =========================================================================
 void version ()
 {
-    std::cout << "rdisc6 version " << JOIN_VERSION << "\n";
+    std::cout << "ndisc6 version " << JOIN_VERSION << "\n";
 }
 
 // =========================================================================
@@ -54,48 +53,27 @@ void version ()
 // =========================================================================
 void usage ()
 {
-    std::cout << "usage: rdisc6 [options] device\n";
+    std::cout << "usage: ndisc6 [options] address device\n";
     std::cout << "\n";
     std::cout << "  -h          display this help and exit\n";
-    std::cout << "  -m          wait for every router instead of the first one\n";
     std::cout << "  -r attempts number of solicitations to send (default: 3)\n";
     std::cout << "  -v          display version information and exit\n";
     std::cout << "  -w wait     time to wait for an advertisement in ms (default: 1000)\n";
     std::cout << "\n";
-    std::cout << "soliciting routers requires the CAP_NET_RAW capability:\n";
-    std::cout << "  sudo setcap cap_net_raw+ep ./rdisc6\n";
+    std::cout << "soliciting neighbors requires the CAP_NET_RAW capability:\n";
+    std::cout << "  sudo setcap cap_net_raw+ep ./ndisc6\n";
 }
 
 // =========================================================================
 //   CLASS     :
 //   METHOD    : print
 // =========================================================================
-void print (const RouterAdvertisement& advert)
+void print (const NeighborAdvertisement& advert)
 {
-    std::cout << "router " << advert.src << " [" << advert.link << "] lifetime " << advert.lifetime << "s";
-    std::cout << ((advert.flags & ND_RA_FLAG_MANAGED) ? " managed" : "");
-    std::cout << ((advert.flags & ND_RA_FLAG_OTHER) ? " other" : "") << "\n";
-
-    if (advert.mtu)
-    {
-        std::cout << "  mtu " << advert.mtu << "\n";
-    }
-
-    for (auto const& prefix : advert.prefixes)
-    {
-        std::cout << "  prefix " << prefix.prefix << "/" << static_cast<int> (prefix.length);
-        std::cout << " valid " << prefix.valid << "s preferred " << prefix.preferred << "s\n";
-    }
-
-    for (auto const& rdnss : advert.rdnss)
-    {
-        for (auto const& server : rdnss.servers)
-        {
-            std::cout << "  dns " << server << " lifetime " << rdnss.lifetime << "s\n";
-        }
-    }
-
-    std::cout << std::flush;
+    std::cout << "neighbor " << advert.target << " [" << advert.link << "] from " << advert.src;
+    std::cout << ((advert.flags & ND_NA_FLAG_ROUTER) ? " router" : "");
+    std::cout << ((advert.flags & ND_NA_FLAG_SOLICITED) ? " solicited" : "");
+    std::cout << ((advert.flags & ND_NA_FLAG_OVERRIDE) ? " override" : "") << std::endl;
 }
 
 // =========================================================================
@@ -104,20 +82,14 @@ void print (const RouterAdvertisement& advert)
 // =========================================================================
 int main (int argc, char* argv[])
 {
-    std::atomic<int> received{0};
-    bool multiple = false;
-
     try
     {
         int attempts = 3, wait = 1000, opt = 0;
 
-        while ((opt = getopt (argc, argv, "hmr:vw:")) != -1)
+        while ((opt = getopt (argc, argv, "hr:vw:")) != -1)
         {
             switch (opt)
             {
-                case 'm':
-                    multiple = true;
-                    break;
                 case 'r':
                     attempts = std::stoi (optarg);
                     break;
@@ -136,62 +108,37 @@ int main (int argc, char* argv[])
             }
         }
 
-        if (optind >= argc)
+        if ((optind + 2) > argc)
         {
             usage ();
             return 1;
         }
 
-        Ndp::Client client (argv[optind]);
+        IpAddress target (argv[optind]);
+        Ndp::Client client (argv[optind + 1]);
 
-        if (multiple)
+        for (int i = 0; i < attempts; ++i)
         {
-            client.setRouterAdvertisementListener ([&received] (const RouterAdvertisement& advert) {
-                print (advert);
-                ++received;
-            });
-        }
+            NeighborAdvertisement advert;
 
-        for (int i = 0; (i < attempts) && !received; ++i)
-        {
-            RouterAdvertisement advert;
-
-            if (multiple)
-            {
-                if (client.routerSolicit () == -1)
-                {
-                    throw std::system_error (lastError);
-                }
-
-                std::this_thread::sleep_for (std::chrono::milliseconds (wait));
-            }
-            else if (client.routerSolicit (advert, std::chrono::milliseconds (wait)) == 0)
+            if (client.neighborSolicit (target, advert, std::chrono::milliseconds (wait)) == 0)
             {
                 print (advert);
-                ++received;
+                return 0;
             }
-            else if (lastError != Errc::TimedOut)
+
+            if (lastError != Errc::TimedOut)
             {
                 throw std::system_error (lastError);
             }
         }
-
-        if (multiple)
-        {
-            client.unsetRouterAdvertisementListener ();
-        }
     }
     catch (const std::exception& e)
     {
-        std::cout << "rdisc6: " << e.what () << std::endl;
+        std::cout << "ndisc6: " << e.what () << std::endl;
         return 1;
     }
 
-    if (!received)
-    {
-        std::cout << "rdisc6: no response" << std::endl;
-        return 2;
-    }
-
-    return 0;
+    std::cout << "ndisc6: no response" << std::endl;
+    return 2;
 }

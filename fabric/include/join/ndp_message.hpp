@@ -124,6 +124,39 @@ namespace join
     };
 
     /**
+     * @brief neighbor solicitation, RFC 4861 section 4.3.
+     */
+    struct NeighborSolicitation
+    {
+        /// address the solicitation came from, set by the transport.
+        IpAddress src{AF_INET6};
+
+        /// address of the solicited neighbor.
+        IpAddress target{AF_INET6};
+
+        /// link layer address of the sender, wildcard if not carried.
+        MacAddress link;
+    };
+
+    /**
+     * @brief neighbor advertisement, RFC 4861 section 4.4.
+     */
+    struct NeighborAdvertisement
+    {
+        /// address the advertisement came from, set by the transport.
+        IpAddress src{AF_INET6};
+
+        /// advertisement flags, in network byte order as ND_NA_FLAG_* are defined.
+        uint32_t flags = 0;
+
+        /// address the advertisement is about.
+        IpAddress target{AF_INET6};
+
+        /// link layer address of the target, wildcard if not carried.
+        MacAddress link;
+    };
+
+    /**
      * @brief NDP message codec.
      */
     class NdpMessage
@@ -134,8 +167,10 @@ namespace join
          */
         enum MessageType : uint8_t
         {
-            RouterSolicit = ND_ROUTER_SOLICIT, /**< a host looking for routers. */
-            RouterAdvert = ND_ROUTER_ADVERT,   /**< a router advertising its presence. */
+            RouterSolicit = ND_ROUTER_SOLICIT,     /**< a host looking for routers. */
+            RouterAdvert = ND_ROUTER_ADVERT,       /**< a router advertising its presence. */
+            NeighborSolicit = ND_NEIGHBOR_SOLICIT, /**< a node resolving a neighbor or checking its reachability. */
+            NeighborAdvert = ND_NEIGHBOR_ADVERT,   /**< a node answering a solicitation or announcing a change. */
         };
 
         /**
@@ -144,6 +179,7 @@ namespace join
         enum OptionType : uint8_t
         {
             SourceLinkAddress = ND_OPT_SOURCE_LINKADDR,    /**< link layer address of the sender. */
+            TargetLinkAddress = ND_OPT_TARGET_LINKADDR,    /**< link layer address of the target. */
             PrefixInformation = ND_OPT_PREFIX_INFORMATION, /**< on-link and autoconfiguration prefix. */
             Mtu = ND_OPT_MTU,                              /**< link MTU. */
             RecursiveDnsServer = 25,                       /**< recursive DNS servers, RFC 8106. */
@@ -282,6 +318,77 @@ namespace join
         }
 
         /**
+         * @brief serialize a neighbor solicitation into a buffer.
+         * @param packet neighbor solicitation to serialize.
+         * @param data buffer to serialize the message into.
+         * @param maxSize buffer size.
+         * @return the message size, -1 on failure.
+         */
+        ssize_t serialize (const NeighborSolicitation& packet, char* data, size_t maxSize) const
+        {
+            if ((packet.target.family () != AF_INET6) || packet.target.isWildcard () || packet.target.isMulticast ())
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            char* cur = data;
+            const char* end = data + maxSize;
+            bool ok = true;
+
+            struct nd_neighbor_solicit ns = {};
+            ns.nd_ns_type = NeighborSolicit;
+            ::memcpy (&ns.nd_ns_target, packet.target.addr (), sizeof (ns.nd_ns_target));
+            ok &= writeBytes (cur, end, &ns, sizeof (ns));
+            ok &= writeLinkAddress (cur, end, packet.link);
+
+            return ok ? cur - data : -1;
+        }
+
+        /**
+         * @brief serialize a neighbor advertisement into a buffer.
+         * @param packet neighbor advertisement to serialize.
+         * @param data buffer to serialize the message into.
+         * @param maxSize buffer size.
+         * @return the message size, -1 on failure.
+         */
+        ssize_t serialize (const NeighborAdvertisement& packet, char* data, size_t maxSize) const
+        {
+            return serialize (packet, data, maxSize, packet.link);
+        }
+
+        /**
+         * @brief serialize a neighbor advertisement into a buffer with the given link layer address.
+         * @param packet neighbor advertisement to serialize.
+         * @param data buffer to serialize the message into.
+         * @param maxSize buffer size.
+         * @param link link layer address to carry instead of the one of the advertisement.
+         * @return the message size, -1 on failure.
+         */
+        ssize_t serialize (const NeighborAdvertisement& packet, char* data, size_t maxSize,
+                           const MacAddress& link) const
+        {
+            if ((packet.target.family () != AF_INET6) || packet.target.isWildcard () || packet.target.isMulticast ())
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            char* cur = data;
+            const char* end = data + maxSize;
+            bool ok = true;
+
+            struct nd_neighbor_advert na = {};
+            na.nd_na_type = NeighborAdvert;
+            na.nd_na_flags_reserved = packet.flags;
+            ::memcpy (&na.nd_na_target, packet.target.addr (), sizeof (na.nd_na_target));
+            ok &= writeBytes (cur, end, &na, sizeof (na));
+            ok &= writeLinkAddress (cur, end, link, TargetLinkAddress);
+
+            return ok ? cur - data : -1;
+        }
+
+        /**
          * @brief deserialize a router solicitation from a buffer.
          * @param packet router solicitation to deserialize into.
          * @param data buffer holding the message to deserialize.
@@ -414,6 +521,89 @@ namespace join
             });
         }
 
+        /**
+         * @brief deserialize a neighbor solicitation from a buffer.
+         * @param packet neighbor solicitation to deserialize into.
+         * @param data buffer holding the message to deserialize.
+         * @param size message size.
+         * @return 0 on success, -1 on failure.
+         */
+        int deserialize (NeighborSolicitation& packet, const char* data, size_t size) const
+        {
+            const char* cur = data;
+            const char* end = data + size;
+
+            struct nd_neighbor_solicit ns = {};
+            if (!readBytes (cur, end, &ns, sizeof (ns)))
+            {
+                return -1;
+            }
+
+            if ((ns.nd_ns_type != NeighborSolicit) || (ns.nd_ns_code != 0))
+            {
+                lastError = make_error_code (Errc::MessageUnknown);
+                return -1;
+            }
+
+            packet.target = IpAddress (&ns.nd_ns_target, sizeof (ns.nd_ns_target));
+            if (packet.target.isWildcard () || packet.target.isMulticast ())
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            packet.link = MacAddress ();
+
+            return readOptions (cur, end, [&packet] (const uint8_t* option, size_t size) {
+                if ((option[0] == SourceLinkAddress) && (size >= _optionHeaderSize + ETH_ALEN))
+                {
+                    packet.link = MacAddress (option + _optionHeaderSize, ETH_ALEN);
+                }
+            });
+        }
+
+        /**
+         * @brief deserialize a neighbor advertisement from a buffer.
+         * @param packet neighbor advertisement to deserialize into.
+         * @param data buffer holding the message to deserialize.
+         * @param size message size.
+         * @return 0 on success, -1 on failure.
+         */
+        int deserialize (NeighborAdvertisement& packet, const char* data, size_t size) const
+        {
+            const char* cur = data;
+            const char* end = data + size;
+
+            struct nd_neighbor_advert na = {};
+            if (!readBytes (cur, end, &na, sizeof (na)))
+            {
+                return -1;
+            }
+
+            if ((na.nd_na_type != NeighborAdvert) || (na.nd_na_code != 0))
+            {
+                lastError = make_error_code (Errc::MessageUnknown);
+                return -1;
+            }
+
+            packet.target = IpAddress (&na.nd_na_target, sizeof (na.nd_na_target));
+            if (packet.target.isWildcard () || packet.target.isMulticast ())
+            {
+                lastError = make_error_code (Errc::InvalidParam);
+                return -1;
+            }
+
+            packet.flags = na.nd_na_flags_reserved;
+            packet.link = MacAddress ();
+
+            return readOptions (cur, end, [&packet] (const uint8_t* option, size_t size) {
+                if ((option[0] == TargetLinkAddress) && (size >= _optionHeaderSize + ETH_ALEN))
+                {
+                    packet.link = MacAddress (option + _optionHeaderSize, ETH_ALEN);
+                }
+            });
+        }
+
     protected:
         /**
          * @brief recursive DNS server option header, RFC 8106 section 5.1.
@@ -438,16 +628,18 @@ namespace join
          * @param cur current position in the buffer, advanced on success.
          * @param end end of the buffer.
          * @param link link layer address, nothing is written if wildcard.
+         * @param type option type, source or target link layer address.
          * @return true on success, false if the buffer is too small.
          */
-        static bool writeLinkAddress (char*& cur, const char* end, const MacAddress& link)
+        static bool writeLinkAddress (char*& cur, const char* end, const MacAddress& link,
+                                      OptionType type = SourceLinkAddress)
         {
             if (link.isWildcard ())
             {
                 return true;
             }
 
-            uint8_t option[_optionHeaderSize + ETH_ALEN] = {SourceLinkAddress, 1};
+            uint8_t option[_optionHeaderSize + ETH_ALEN] = {type, 1};
             ::memcpy (option + _optionHeaderSize, link.addr (), ETH_ALEN);
 
             return writeBytes (cur, end, option, sizeof (option));
@@ -496,6 +688,19 @@ namespace join
 
         /// most recursive DNS servers a single option can carry.
         static constexpr size_t _maxDnsServers = 127;
+
+    public:
+        /// biggest router solicitation the codec writes, link layer address option included.
+        static constexpr size_t maxRouterSolicitationSize =
+            sizeof (struct nd_router_solicit) + _optionHeaderSize + ETH_ALEN;
+
+        /// biggest neighbor solicitation the codec writes, link layer address option included.
+        static constexpr size_t maxNeighborSolicitationSize =
+            sizeof (struct nd_neighbor_solicit) + _optionHeaderSize + ETH_ALEN;
+
+        /// biggest neighbor advertisement the codec writes, link layer address option included.
+        static constexpr size_t maxNeighborAdvertisementSize =
+            sizeof (struct nd_neighbor_advert) + _optionHeaderSize + ETH_ALEN;
     };
 }
 

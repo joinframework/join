@@ -38,6 +38,8 @@ using join::NdpRdnss;
 using join::NdpMessage;
 using join::RouterSolicitation;
 using join::RouterAdvertisement;
+using join::NeighborSolicitation;
+using join::NeighborAdvertisement;
 
 /**
  * @brief build an advertisement exercising every option.
@@ -80,10 +82,10 @@ static RouterAdvertisement sample ()
 /**
  * @brief Test serialize method with a router solicitation.
  */
-TEST (NdpMessage, serializeSolicitation)
+TEST (NdpMessage, serializeRouterSolicitation)
 {
     NdpMessage message;
-    char data[64];
+    char data[NdpMessage::maxRouterSolicitationSize];
 
     RouterSolicitation packet;
     ssize_t size = message.serialize (packet, data, sizeof (data));
@@ -107,7 +109,7 @@ TEST (NdpMessage, serializeSolicitation)
 /**
  * @brief Test serialize method with a router advertisement.
  */
-TEST (NdpMessage, serializeAdvertisement)
+TEST (NdpMessage, serializeRouterAdvertisement)
 {
     NdpMessage message;
     char data[1024];
@@ -182,7 +184,7 @@ TEST (NdpMessage, serializeAdvertisement)
 /**
  * @brief Test deserialize method with a router solicitation.
  */
-TEST (NdpMessage, deserializeSolicitation)
+TEST (NdpMessage, deserializeRouterSolicitation)
 {
     NdpMessage message;
     RouterSolicitation packet;
@@ -233,7 +235,7 @@ TEST (NdpMessage, deserializeSolicitation)
 /**
  * @brief Test deserialize method with a router advertisement.
  */
-TEST (NdpMessage, deserializeAdvertisement)
+TEST (NdpMessage, deserializeRouterAdvertisement)
 {
     NdpMessage message;
     RouterAdvertisement packet;
@@ -322,6 +324,232 @@ TEST (NdpMessage, deserializeAdvertisement)
                       24));
     ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+}
+
+/**
+ * @brief Test serialize method with a neighbor solicitation.
+ */
+TEST (NdpMessage, serializeNeighborSolicitation)
+{
+    NdpMessage message;
+    char data[NdpMessage::maxNeighborSolicitationSize];
+
+    NeighborSolicitation packet;
+    ASSERT_EQ (message.serialize (packet, data, sizeof (data)), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    packet.target = "192.168.24.1";
+    ASSERT_EQ (message.serialize (packet, data, sizeof (data)), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    packet.target = "ff02::1";
+    ASSERT_EQ (message.serialize (packet, data, sizeof (data)), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    packet.target = "2001:db8::1";
+    ssize_t size = message.serialize (packet, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
+    ASSERT_EQ (std::string (data, size),
+               std::string ("\x87\x00\x00\x00\x00\x00\x00\x00"
+                            "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+                            24));
+
+    packet.link = "4e:ed:ed:ee:59:db";
+    size = message.serialize (packet, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
+    ASSERT_EQ (std::string (data, size), std::string ("\x87\x00\x00\x00\x00\x00\x00\x00"
+                                                      "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+                                                      "\x01\x01\x4e\xed\xed\xee\x59\xdb",
+                                                      32));
+
+    for (size_t length = 0; length < 32; ++length)
+    {
+        ASSERT_EQ (message.serialize (packet, data, length), -1) << "length " << length;
+        ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
+    }
+}
+
+/**
+ * @brief Test serialize method with a neighbor advertisement.
+ */
+TEST (NdpMessage, serializeNeighborAdvertisement)
+{
+    NdpMessage message;
+    char data[NdpMessage::maxNeighborAdvertisementSize];
+
+    NeighborAdvertisement packet;
+    ASSERT_EQ (message.serialize (packet, data, sizeof (data)), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    packet.target = "192.168.24.1";
+    ASSERT_EQ (message.serialize (packet, data, sizeof (data)), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    packet.target = "ff02::1";
+    ASSERT_EQ (message.serialize (packet, data, sizeof (data)), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    packet.target = "2001:db8::1";
+    packet.flags = ND_NA_FLAG_SOLICITED | ND_NA_FLAG_OVERRIDE;
+    ssize_t size = message.serialize (packet, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
+    ASSERT_EQ (std::string (data, size),
+               std::string ("\x88\x00\x00\x00\x60\x00\x00\x00"
+                            "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+                            24));
+
+    packet.link = "4e:ed:ed:ee:59:db";
+    size = message.serialize (packet, data, sizeof (data));
+    ASSERT_NE (size, -1) << lastError.message ();
+    ASSERT_EQ (std::string (data, size), std::string ("\x88\x00\x00\x00\x60\x00\x00\x00"
+                                                      "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+                                                      "\x02\x01\x4e\xed\xed\xee\x59\xdb",
+                                                      32));
+
+    size = message.serialize (packet, data, sizeof (data), "4e:ed:ed:ee:59:dc");
+    ASSERT_NE (size, -1) << lastError.message ();
+    ASSERT_EQ (std::string (data + 24, size - 24), std::string ("\x02\x01\x4e\xed\xed\xee\x59\xdc", 8));
+
+    for (size_t length = 0; length < 32; ++length)
+    {
+        ASSERT_EQ (message.serialize (packet, data, length), -1) << "length " << length;
+        ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
+    }
+}
+
+/**
+ * @brief Test deserialize method with a neighbor solicitation.
+ */
+TEST (NdpMessage, deserializeNeighborSolicitation)
+{
+    NdpMessage message;
+    NeighborSolicitation packet;
+
+    std::string data = std::string ("\x87\x00\x00\x00\x00\x00\x00\x00", 8);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
+
+    data = std::string (
+        "\x88\x00\x00\x00\x00\x00\x00\x00"
+        "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::MessageUnknown) << lastError.message ();
+
+    data = std::string (
+        "\x87\x01\x00\x00\x00\x00\x00\x00"
+        "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::MessageUnknown) << lastError.message ();
+
+    data = std::string (
+        "\x87\x00\x00\x00\x00\x00\x00\x00"
+        "\xff\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    data = std::string (
+        "\x87\x00\x00\x00\x00\x00\x00\x00"
+        "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    data = std::string (
+        "\x87\x00\x00\x00\x00\x00\x00\x00"
+        "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+        "\x01\x00\x4e\xed\xed\xee\x59\xdb",
+        32);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    data = std::string (
+        "\x87\x00\x00\x00\x00\x00\x00\x00"
+        "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), 0) << lastError.message ();
+    ASSERT_EQ (packet.target, IpAddress ("2001:db8::1"));
+    ASSERT_TRUE (packet.link.isWildcard ());
+
+    data = std::string (
+        "\x87\x00\x00\x00\x00\x00\x00\x00"
+        "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+        "\x02\x01\x00\x00\x00\x00\x00\x00"
+        "\x01\x01\x4e\xed\xed\xee\x59\xdb",
+        40);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), 0) << lastError.message ();
+    ASSERT_EQ (packet.target, IpAddress ("2001:db8::1"));
+    ASSERT_EQ (packet.link, MacAddress ("4e:ed:ed:ee:59:db"));
+}
+
+/**
+ * @brief Test deserialize method with a neighbor advertisement.
+ */
+TEST (NdpMessage, deserializeNeighborAdvertisement)
+{
+    NdpMessage message;
+    NeighborAdvertisement packet;
+
+    std::string data = std::string ("\x88\x00\x00\x00\x00\x00\x00\x00", 8);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
+
+    data = std::string (
+        "\x87\x00\x00\x00\x00\x00\x00\x00"
+        "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::MessageUnknown) << lastError.message ();
+
+    data = std::string (
+        "\x88\x01\x00\x00\x00\x00\x00\x00"
+        "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::MessageUnknown) << lastError.message ();
+
+    data = std::string (
+        "\x88\x00\x00\x00\x00\x00\x00\x00"
+        "\xff\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    data = std::string (
+        "\x88\x00\x00\x00\x00\x00\x00\x00"
+        "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    data = std::string (
+        "\x88\x00\x00\x00\x00\x00\x00\x00"
+        "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+        "\x02\x00\x4e\xed\xed\xee\x59\xdb",
+        32);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    data = std::string (
+        "\x88\x00\x00\x00\xe0\x00\x00\x00"
+        "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+        24);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), 0) << lastError.message ();
+    ASSERT_EQ (packet.flags, ND_NA_FLAG_ROUTER | ND_NA_FLAG_SOLICITED | ND_NA_FLAG_OVERRIDE);
+    ASSERT_EQ (packet.target, IpAddress ("2001:db8::1"));
+    ASSERT_TRUE (packet.link.isWildcard ());
+
+    data = std::string (
+        "\x88\x00\x00\x00\x40\x00\x00\x00"
+        "\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+        "\x01\x01\x00\x00\x00\x00\x00\x00"
+        "\x02\x01\x4e\xed\xed\xee\x59\xdb",
+        40);
+    ASSERT_EQ (message.deserialize (packet, data.data (), data.size ()), 0) << lastError.message ();
+    ASSERT_EQ (packet.flags, ND_NA_FLAG_SOLICITED);
+    ASSERT_EQ (packet.link, MacAddress ("4e:ed:ed:ee:59:db"));
 }
 
 /**

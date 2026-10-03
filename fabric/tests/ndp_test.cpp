@@ -32,10 +32,13 @@
 
 // C++.
 #include <system_error>
+#include <atomic>
+#include <thread>
 
 // C.
 #include <netinet/ip6.h>
 #include <net/ethernet.h>
+#include <cstddef>
 
 using join::lastError;
 using join::Errc;
@@ -51,6 +54,10 @@ using join::NdpRdnss;
 using join::NdpMessage;
 using join::RouterSolicitation;
 using join::RouterAdvertisement;
+using join::NeighborSolicitation;
+using join::NeighborAdvertisement;
+using join::Reactor;
+using join::ReactorThread;
 using join::Ndp;
 
 /**
@@ -144,9 +151,9 @@ public:
      */
     void SetUp () override
     {
-        _server.setSolicitationListener ([this] (const RouterSolicitation& solicitation) {
+        _server.setRouterSolicitationListener ([this] (const RouterSolicitation& solicitation) {
             _solicitations.push (solicitation);
-            _server.advertise (settings (), solicitation);
+            _server.routerAdvertise (settings (), solicitation);
         });
     }
 
@@ -155,7 +162,7 @@ public:
      */
     void TearDown () override
     {
-        _server.unsetSolicitationListener ();
+        _server.unsetRouterSolicitationListener ();
     }
 
 protected:
@@ -301,18 +308,18 @@ TEST_F (NdpTest, create)
 }
 
 /**
- * @brief test the solicit method.
+ * @brief test the routerSolicit method.
  */
-TEST_F (NdpTest, solicit)
+TEST_F (NdpTest, routerSolicit)
 {
     Inbox<RouterAdvertisement> adverts;
     Ndp::Client client (_device);
 
-    client.setAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
+    client.setRouterAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
         adverts.push (advert);
     });
 
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (1));
     checkSettings (adverts.messages ()[0]);
 
@@ -322,36 +329,36 @@ TEST_F (NdpTest, solicit)
 }
 
 /**
- * @brief test the solicit method waiting for the answer.
+ * @brief test the routerSolicit method waiting for the answer.
  */
-TEST_F (NdpTest, solicitSync)
+TEST_F (NdpTest, routerSolicitSync)
 {
     Inbox<RouterAdvertisement> adverts;
     Ndp::Client client (_device);
 
-    client.setAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
+    client.setRouterAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
         adverts.push (advert);
     });
 
     RouterAdvertisement advert;
-    ASSERT_EQ (client.solicit (advert, timeout), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (advert, timeout), 0) << lastError.message ();
     checkSettings (advert);
     ASSERT_EQ (adverts.messages ().size (), 1u);
     checkSettings (adverts.messages ()[0]);
 
-    _server.unsetSolicitationListener ();
+    _server.unsetRouterSolicitationListener ();
 
     RouterAdvertisement none;
-    ASSERT_EQ (client.solicit (none, std::chrono::milliseconds (200)), -1);
+    ASSERT_EQ (client.routerSolicit (none, std::chrono::milliseconds (200)), -1);
     ASSERT_EQ (lastError, Errc::TimedOut) << lastError.message ();
     ASSERT_TRUE (none.prefixes.empty ());
     ASSERT_EQ (adverts.messages ().size (), 1u);
 }
 
 /**
- * @brief test the solicit method called from a listener.
+ * @brief test the routerSolicit method called from a listener.
  */
-TEST_F (NdpTest, solicitFromListener)
+TEST_F (NdpTest, routerSolicitFromListener)
 {
     Inbox<RouterAdvertisement> adverts;
     Ndp::Client client (_device);
@@ -363,18 +370,18 @@ TEST_F (NdpTest, solicitFromListener)
         std::error_code code;
     } result;
 
-    client.setAdvertisementListener ([&adverts, &client, &result] (const RouterAdvertisement& advert) {
+    client.setRouterAdvertisementListener ([&adverts, &client, &result] (const RouterAdvertisement& advert) {
         if (adverts.messages ().empty ())
         {
             RouterAdvertisement unused;
-            result.sync = client.solicit (unused);
+            result.sync = client.routerSolicit (unused);
             result.code = lastError;
-            result.async = client.solicit ();
+            result.async = client.routerSolicit ();
         }
         adverts.push (advert);
     });
 
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (2));
     ASSERT_EQ (result.sync, -1);
     ASSERT_EQ (result.code, std::errc::resource_deadlock_would_occur) << result.code.message ();
@@ -382,101 +389,17 @@ TEST_F (NdpTest, solicitFromListener)
 }
 
 /**
- * @brief test the setAdvertisementListener method.
+ * @brief test the setRouterAdvertisementListener method.
  */
-TEST_F (NdpTest, setAdvertisementListener)
+TEST_F (NdpTest, setRouterAdvertisementListener)
 {
     Inbox<RouterAdvertisement> first, second;
     Ndp::Client client (_device);
 
-    int status = _server.setSolicitationListener ([] (const RouterSolicitation&) {
+    int status = _server.setRouterSolicitationListener ([] (const RouterSolicitation&) {
     });
     ASSERT_EQ (status, -1);
     ASSERT_EQ (lastError, Errc::InUse) << lastError.message ();
-
-    struct
-    {
-        int refused = 0;
-        std::error_code code;
-        int swapped = -1;
-    } result;
-
-    status = client.setAdvertisementListener ([&client, &first, &second, &result] (const RouterAdvertisement& advert) {
-        result.refused = client.setAdvertisementListener ([] (const RouterAdvertisement&) {
-        });
-        result.code = lastError;
-        client.unsetAdvertisementListener ();
-        result.swapped = client.setAdvertisementListener ([&second] (const RouterAdvertisement& advert) {
-            second.push (advert);
-        });
-        first.push (advert);
-    });
-    ASSERT_EQ (status, 0) << lastError.message ();
-
-    status = client.setAdvertisementListener ([] (const RouterAdvertisement&) {
-    });
-    ASSERT_EQ (status, -1);
-    ASSERT_EQ (lastError, Errc::InUse) << lastError.message ();
-
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
-    ASSERT_TRUE (first.awaits (1));
-    ASSERT_EQ (result.refused, -1);
-    ASSERT_EQ (result.code, Errc::InUse) << result.code.message ();
-    ASSERT_EQ (result.swapped, 0);
-
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
-    ASSERT_TRUE (second.awaits (1));
-    ASSERT_FALSE (first.awaits (2, std::chrono::milliseconds (200)));
-}
-
-/**
- * @brief test the unsetAdvertisementListener method.
- */
-TEST_F (NdpTest, unsetAdvertisementListener)
-{
-    Inbox<RouterAdvertisement> adverts;
-    Ndp::Client client (_device);
-
-    ASSERT_EQ (client.unsetAdvertisementListener (), 0) << lastError.message ();
-
-    int status = client.setAdvertisementListener ([&client, &adverts] (const RouterAdvertisement& advert) {
-        client.unsetAdvertisementListener ();
-        adverts.push (advert);
-    });
-    ASSERT_EQ (status, 0) << lastError.message ();
-
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
-    ASSERT_TRUE (adverts.awaits (1));
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
-    ASSERT_FALSE (adverts.awaits (2, std::chrono::milliseconds (200)));
-
-    status = client.setAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
-        adverts.push (advert);
-    });
-    ASSERT_EQ (status, 0) << lastError.message ();
-
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
-    ASSERT_TRUE (adverts.awaits (2));
-
-    ASSERT_EQ (client.unsetAdvertisementListener (), 0) << lastError.message ();
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
-    ASSERT_FALSE (adverts.awaits (3, std::chrono::milliseconds (200)));
-}
-
-/**
- * @brief test the setSolicitationListener method.
- */
-TEST_F (NdpTest, setSolicitationListener)
-{
-    Inbox<RouterSolicitation> first, second;
-    Ndp::Client client (_device);
-
-    int status = _server.setSolicitationListener ([] (const RouterSolicitation&) {
-    });
-    ASSERT_EQ (status, -1);
-    ASSERT_EQ (lastError, Errc::InUse) << lastError.message ();
-
-    ASSERT_EQ (_server.unsetSolicitationListener (), 0) << lastError.message ();
 
     struct
     {
@@ -486,94 +409,180 @@ TEST_F (NdpTest, setSolicitationListener)
     } result;
 
     status =
-        _server.setSolicitationListener ([this, &first, &second, &result] (const RouterSolicitation& solicitation) {
-            result.refused = _server.setSolicitationListener ([] (const RouterSolicitation&) {
+        client.setRouterAdvertisementListener ([&client, &first, &second, &result] (const RouterAdvertisement& advert) {
+            result.refused = client.setRouterAdvertisementListener ([] (const RouterAdvertisement&) {
             });
             result.code = lastError;
-            _server.unsetSolicitationListener ();
-            result.swapped = _server.setSolicitationListener ([&second] (const RouterSolicitation& solicitation) {
+            client.unsetRouterAdvertisementListener ();
+            result.swapped = client.setRouterAdvertisementListener ([&second] (const RouterAdvertisement& advert) {
+                second.push (advert);
+            });
+            first.push (advert);
+        });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    status = client.setRouterAdvertisementListener ([] (const RouterAdvertisement&) {
+    });
+    ASSERT_EQ (status, -1);
+    ASSERT_EQ (lastError, Errc::InUse) << lastError.message ();
+
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
+    ASSERT_TRUE (first.awaits (1));
+    ASSERT_EQ (result.refused, -1);
+    ASSERT_EQ (result.code, Errc::InUse) << result.code.message ();
+    ASSERT_EQ (result.swapped, 0);
+
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
+    ASSERT_TRUE (second.awaits (1));
+    ASSERT_FALSE (first.awaits (2, std::chrono::milliseconds (200)));
+}
+
+/**
+ * @brief test the unsetRouterAdvertisementListener method.
+ */
+TEST_F (NdpTest, unsetRouterAdvertisementListener)
+{
+    Inbox<RouterAdvertisement> adverts;
+    Ndp::Client client (_device);
+
+    ASSERT_EQ (client.unsetRouterAdvertisementListener (), 0) << lastError.message ();
+
+    int status = client.setRouterAdvertisementListener ([&client, &adverts] (const RouterAdvertisement& advert) {
+        client.unsetRouterAdvertisementListener ();
+        adverts.push (advert);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
+    ASSERT_TRUE (adverts.awaits (1));
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
+    ASSERT_FALSE (adverts.awaits (2, std::chrono::milliseconds (200)));
+
+    status = client.setRouterAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
+        adverts.push (advert);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
+    ASSERT_TRUE (adverts.awaits (2));
+
+    ASSERT_EQ (client.unsetRouterAdvertisementListener (), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
+    ASSERT_FALSE (adverts.awaits (3, std::chrono::milliseconds (200)));
+}
+
+/**
+ * @brief test the setRouterSolicitationListener method.
+ */
+TEST_F (NdpTest, setRouterSolicitationListener)
+{
+    Inbox<RouterSolicitation> first, second;
+    Ndp::Client client (_device);
+
+    int status = _server.setRouterSolicitationListener ([] (const RouterSolicitation&) {
+    });
+    ASSERT_EQ (status, -1);
+    ASSERT_EQ (lastError, Errc::InUse) << lastError.message ();
+
+    ASSERT_EQ (_server.unsetRouterSolicitationListener (), 0) << lastError.message ();
+
+    struct
+    {
+        int refused = 0;
+        std::error_code code;
+        int swapped = -1;
+    } result;
+
+    status = _server.setRouterSolicitationListener (
+        [this, &first, &second, &result] (const RouterSolicitation& solicitation) {
+            result.refused = _server.setRouterSolicitationListener ([] (const RouterSolicitation&) {
+            });
+            result.code = lastError;
+            _server.unsetRouterSolicitationListener ();
+            result.swapped = _server.setRouterSolicitationListener ([&second] (const RouterSolicitation& solicitation) {
                 second.push (solicitation);
             });
             first.push (solicitation);
         });
     ASSERT_EQ (status, 0) << lastError.message ();
 
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_TRUE (first.awaits (1));
     ASSERT_EQ (result.refused, -1);
     ASSERT_EQ (result.code, Errc::InUse) << result.code.message ();
     ASSERT_EQ (result.swapped, 0);
 
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_TRUE (second.awaits (1));
     ASSERT_FALSE (first.awaits (2, std::chrono::milliseconds (200)));
 }
 
 /**
- * @brief test the unsetSolicitationListener method.
+ * @brief test the unsetRouterSolicitationListener method.
  */
-TEST_F (NdpTest, unsetSolicitationListener)
+TEST_F (NdpTest, unsetRouterSolicitationListener)
 {
     Inbox<RouterSolicitation> solicitations;
     Ndp::Client client (_device);
 
-    ASSERT_EQ (_server.unsetSolicitationListener (), 0) << lastError.message ();
-    ASSERT_EQ (_server.unsetSolicitationListener (), 0) << lastError.message ();
+    ASSERT_EQ (_server.unsetRouterSolicitationListener (), 0) << lastError.message ();
+    ASSERT_EQ (_server.unsetRouterSolicitationListener (), 0) << lastError.message ();
 
-    int status = _server.setSolicitationListener ([this, &solicitations] (const RouterSolicitation& solicitation) {
-        _server.unsetSolicitationListener ();
-        solicitations.push (solicitation);
-    });
+    int status =
+        _server.setRouterSolicitationListener ([this, &solicitations] (const RouterSolicitation& solicitation) {
+            _server.unsetRouterSolicitationListener ();
+            solicitations.push (solicitation);
+        });
     ASSERT_EQ (status, 0) << lastError.message ();
 
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_TRUE (solicitations.awaits (1));
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_FALSE (solicitations.awaits (2, std::chrono::milliseconds (200)));
 }
 
 /**
- * @brief test the advertise method.
+ * @brief test the routerAdvertise method.
  */
-TEST_F (NdpTest, advertise)
+TEST_F (NdpTest, routerAdvertise)
 {
     Inbox<RouterAdvertisement> adverts;
     Ndp::Client client (_device);
 
-    client.setAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
+    client.setRouterAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
         adverts.push (advert);
     });
 
     RouterAdvertisement bad = settings ();
     bad.prefixes[0].prefix = "192.168.24.0";
-    ASSERT_EQ (_server.advertise (bad), -1);
+    ASSERT_EQ (_server.routerAdvertise (bad), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
     bad.link = "4e:ed:ed:ee:59:dd";
-    ASSERT_EQ (_server.advertise (bad), -1);
+    ASSERT_EQ (_server.routerAdvertise (bad), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
-    ASSERT_EQ (_server.advertise (settings (), "192.168.24.255"), -1);
+    ASSERT_EQ (_server.routerAdvertise (settings (), "192.168.24.255"), -1);
     ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
 
-    ASSERT_EQ (_server.advertise (settings ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings ()), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (1));
     checkSettings (adverts.messages ()[0]);
 
     RouterAdvertisement other = settings ();
     other.link = "4e:ed:ed:ee:59:dd";
-    ASSERT_EQ (_server.advertise (other), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (other), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (2));
     ASSERT_EQ (adverts.messages ()[1].link, MacAddress ("4e:ed:ed:ee:59:dd"));
 
-    ASSERT_EQ (client.solicit (), 0) << lastError.message ();
+    ASSERT_EQ (client.routerSolicit (), 0) << lastError.message ();
     ASSERT_TRUE (_solicitations.awaits (1));
     ASSERT_TRUE (adverts.awaits (3));
 
-    ASSERT_EQ (_server.advertise (settings (), _solicitations.messages ()[0]), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings (), _solicitations.messages ()[0]), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (4));
 
-    ASSERT_EQ (_server.advertise (settings (), RouterSolicitation ()), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (settings (), RouterSolicitation ()), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (5));
 }
 
@@ -585,27 +594,27 @@ TEST_F (NdpTest, jumbo)
     Inbox<RouterAdvertisement> adverts;
     Ndp::Client client (_device);
 
-    client.setAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
+    client.setRouterAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
         adverts.push (advert);
     });
 
     RouterAdvertisement big = settings ();
     big.prefixes.assign (250, big.prefixes[0]);
     ASSERT_GT (wireOf (big).size (), size_t (_mtu / 2));
-    ASSERT_EQ (_server.advertise (big), 0) << lastError.message ();
+    ASSERT_EQ (_server.routerAdvertise (big), 0) << lastError.message ();
     ASSERT_TRUE (adverts.awaits (1));
     ASSERT_EQ (adverts.messages ()[0].prefixes.size (), 250u);
 
     RouterAdvertisement huge = settings ();
     huge.prefixes.assign (300, huge.prefixes[0]);
     ASSERT_GT (wireOf (huge).size (), size_t (_mtu));
-    ASSERT_EQ (_server.advertise (huge), -1);
+    ASSERT_EQ (_server.routerAdvertise (huge), -1);
     ASSERT_EQ (lastError, std::errc::message_size) << lastError.message ();
 
     RouterAdvertisement oversized = settings ();
     oversized.prefixes.assign (2100, oversized.prefixes[0]);
     ASSERT_GT (wireOf (oversized).size (), size_t (Ndp::maxMsgSize));
-    ASSERT_EQ (_server.advertise (oversized), -1);
+    ASSERT_EQ (_server.routerAdvertise (oversized), -1);
     ASSERT_EQ (lastError, Errc::MessageTooLong) << lastError.message ();
 }
 
@@ -617,7 +626,7 @@ TEST_F (NdpTest, drop)
     Inbox<RouterAdvertisement> adverts;
     Ndp::Client client (_device);
 
-    client.setAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
+    client.setRouterAdvertisementListener ([&adverts] (const RouterAdvertisement& advert) {
         adverts.push (advert);
     });
 
@@ -645,6 +654,42 @@ TEST_F (NdpTest, drop)
 }
 
 /**
+ * @brief test the neighborAdvertise method.
+ */
+TEST_F (NdpTest, neighborAdvertise)
+{
+    Ndp::Client client (_device);
+
+    NeighborAdvertisement announce;
+    ASSERT_EQ (_server.neighborAdvertise (announce), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    announce.target = "2001:db8::77";
+    announce.flags = ND_NA_FLAG_OVERRIDE;
+
+    NeighborAdvertisement advert;
+    std::atomic<int> status{1};
+
+    std::thread waiter ([&client, &advert, &status] () {
+        status = client.neighborSolicit ("2001:db8::77", advert, timeout);
+    });
+
+    int sent = 0;
+    while (status == 1)
+    {
+        sent += (_server.neighborAdvertise (announce) == 0);
+        std::this_thread::sleep_for (std::chrono::milliseconds (10));
+    }
+    waiter.join ();
+
+    ASSERT_GT (sent, 0);
+    ASSERT_EQ (status, 0);
+    ASSERT_EQ (advert.target, IpAddress ("2001:db8::77"));
+    ASSERT_EQ (advert.link, MacAddress (_mac));
+    ASSERT_EQ (advert.flags, ND_NA_FLAG_OVERRIDE);
+}
+
+/**
  * @brief Class used to test the messages only a link peer can forge.
  */
 class NdpLinkTest : public ::testing::Test
@@ -665,6 +710,8 @@ public:
             result = std::system (("sysctl -qw net.ipv6.conf." + device + ".accept_ra=0").c_str ());
             result = std::system (("ip link set " + device + " up").c_str ());
         }
+
+        result = std::system (("ip -6 addr add " + _target + "/64 dev " + _receiver + " nodad").c_str ());
     }
 
     /**
@@ -682,7 +729,7 @@ public:
      */
     void SetUp () override
     {
-        _server.setSolicitationListener ([this] (const RouterSolicitation& solicitation) {
+        _server.setRouterSolicitationListener ([this] (const RouterSolicitation& solicitation) {
             _solicitations.push (solicitation);
         });
     }
@@ -692,7 +739,7 @@ public:
      */
     void TearDown () override
     {
-        _server.unsetSolicitationListener ();
+        _server.unsetRouterSolicitationListener ();
     }
 
 protected:
@@ -707,6 +754,46 @@ protected:
         uint8_t zero[3];
         uint8_t next;
     };
+
+    /**
+     * @brief frame an ICMPv6 message sent from the unspecified address.
+     * @param icmp message, its checksum is computed here.
+     * @param destination destination address.
+     * @param mac destination hardware address.
+     * @return the frame.
+     */
+    static std::string frameOf (std::string icmp, const IpAddress& destination, const MacAddress& mac)
+    {
+        const MacAddress source = MacAddress::address (_sender);
+
+        Pseudo pseudo = {};
+        ::memcpy (&pseudo.destination, destination.addr (), sizeof (pseudo.destination));
+        pseudo.length = htonl (static_cast<uint32_t> (icmp.size ()));
+        pseudo.next = IPPROTO_ICMPV6;
+
+        std::string sum (reinterpret_cast<const char*> (&pseudo), sizeof (pseudo));
+        sum += icmp;
+        uint16_t check = join::checksum (reinterpret_cast<const uint16_t*> (sum.data ()), sum.size ());
+        ::memcpy (&icmp[2], &check, sizeof (check));
+
+        struct ip6_hdr ip = {};
+        ip.ip6_flow = htonl (6 << 28);
+        ip.ip6_plen = htons (static_cast<uint16_t> (icmp.size ()));
+        ip.ip6_nxt = IPPROTO_ICMPV6;
+        ip.ip6_hlim = Ndp::hopLimit;
+        ::memcpy (&ip.ip6_dst, destination.addr (), sizeof (ip.ip6_dst));
+
+        struct ether_header eth = {};
+        ::memcpy (eth.ether_dhost, mac.addr (), ETH_ALEN);
+        ::memcpy (eth.ether_shost, source.addr (), ETH_ALEN);
+        eth.ether_type = htons (ETHERTYPE_IPV6);
+
+        std::string frame (reinterpret_cast<const char*> (&eth), sizeof (eth));
+        frame += std::string (reinterpret_cast<const char*> (&ip), sizeof (ip));
+        frame += icmp;
+
+        return frame;
+    }
 
     /**
      * @brief frame a router solicitation sent from the unspecified address.
@@ -726,34 +813,53 @@ protected:
             icmp += std::string (reinterpret_cast<const char*> (mac.addr ()), ETH_ALEN);
         }
 
-        Pseudo pseudo = {};
-        ::memcpy (&pseudo.destination, IpAddress::ipv6Routers.addr (), sizeof (pseudo.destination));
-        pseudo.length = htonl (static_cast<uint32_t> (icmp.size ()));
-        pseudo.next = IPPROTO_ICMPV6;
+        return frameOf (icmp, IpAddress::ipv6Routers, MacAddress ("33:33:00:00:00:02"));
+    }
 
-        std::string sum (reinterpret_cast<const char*> (&pseudo), sizeof (pseudo));
-        sum += icmp;
-        uint16_t check = join::checksum (reinterpret_cast<const uint16_t*> (sum.data ()), sum.size ());
-        ::memcpy (&icmp[2], &check, sizeof (check));
+    /**
+     * @brief frame a neighbor solicitation sent from the unspecified address.
+     * @param link carry the link layer address of the sender.
+     * @return the frame.
+     */
+    static std::string neighborSolicitationOf (bool link)
+    {
+        const MacAddress mac = MacAddress::address (_sender);
+        const IpAddress target = "2001:db8:25::2";
 
-        struct ip6_hdr ip = {};
-        ip.ip6_flow = htonl (6 << 28);
-        ip.ip6_plen = htons (static_cast<uint16_t> (icmp.size ()));
-        ip.ip6_nxt = IPPROTO_ICMPV6;
-        ip.ip6_hlim = Ndp::hopLimit;
-        ::memcpy (&ip.ip6_dst, IpAddress::ipv6Routers.addr (), sizeof (ip.ip6_dst));
+        std::string icmp (sizeof (struct nd_neighbor_solicit), '\0');
+        icmp[0] = static_cast<char> (ND_NEIGHBOR_SOLICIT);
+        ::memcpy (&icmp[offsetof (struct nd_neighbor_solicit, nd_ns_target)], target.addr (), sizeof (struct in6_addr));
 
-        struct ether_header eth = {};
-        const uint8_t routers[ETH_ALEN] = {0x33, 0x33, 0x00, 0x00, 0x00, 0x02};
-        ::memcpy (eth.ether_dhost, routers, ETH_ALEN);
-        ::memcpy (eth.ether_shost, mac.addr (), ETH_ALEN);
-        eth.ether_type = htons (ETHERTYPE_IPV6);
+        if (link)
+        {
+            icmp += std::string ("\x01\x01", 2);
+            icmp += std::string (reinterpret_cast<const char*> (mac.addr ()), ETH_ALEN);
+        }
 
-        std::string frame (reinterpret_cast<const char*> (&eth), sizeof (eth));
-        frame += std::string (reinterpret_cast<const char*> (&ip), sizeof (ip));
-        frame += icmp;
+        return frameOf (icmp, IpAddress ("ff02::1:ff00:2"), MacAddress ("33:33:ff:00:00:02"));
+    }
 
-        return frame;
+    /**
+     * @brief frame a neighbor advertisement sent from the unspecified address to all the nodes.
+     * @param link carry the link layer address of the target.
+     * @return the frame.
+     */
+    static std::string neighborAdvertisementOf (bool link)
+    {
+        const MacAddress mac = MacAddress::address (_sender);
+        const IpAddress target = "2001:db8:26::5";
+
+        std::string icmp (sizeof (struct nd_neighbor_advert), '\0');
+        icmp[0] = static_cast<char> (ND_NEIGHBOR_ADVERT);
+        ::memcpy (&icmp[offsetof (struct nd_neighbor_advert, nd_na_target)], target.addr (), sizeof (struct in6_addr));
+
+        if (link)
+        {
+            icmp += std::string ("\x02\x01", 2);
+            icmp += std::string (reinterpret_cast<const char*> (mac.addr ()), ETH_ALEN);
+        }
+
+        return frameOf (icmp, IpAddress::ipv6AllNodes, MacAddress ("33:33:00:00:00:01"));
     }
 
     /**
@@ -774,6 +880,9 @@ protected:
     /// interface the router listens on.
     static const std::string _receiver;
 
+    /// address the receiving interface owns.
+    static const std::string _target;
+
     /// solicitations received by the router.
     Inbox<RouterSolicitation> _solicitations;
 
@@ -783,6 +892,7 @@ protected:
 
 const std::string NdpLinkTest::_sender = "ndpa";
 const std::string NdpLinkTest::_receiver = "ndpb";
+const std::string NdpLinkTest::_target = "2001:db8:24::2";
 
 /**
  * @brief test the solicitations sent from the unspecified address.
@@ -797,6 +907,292 @@ TEST_F (NdpLinkTest, unspecifiedSource)
 
     ASSERT_TRUE (_solicitations.messages ()[0].src.isWildcard ());
     ASSERT_TRUE (_solicitations.messages ()[0].link.isWildcard ());
+}
+
+/**
+ * @brief test the neighborSolicit method.
+ */
+TEST_F (NdpLinkTest, neighborSolicit)
+{
+    Ndp::Client client (_sender);
+    NeighborAdvertisement advert;
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_EQ (advert.target, IpAddress (_target));
+    ASSERT_EQ (advert.link, MacAddress::address (_receiver));
+    ASSERT_TRUE (advert.flags & ND_NA_FLAG_SOLICITED);
+
+    ASSERT_EQ (client.neighborSolicit ("2001:db8:24::99", advert, std::chrono::milliseconds (200)), -1);
+    ASSERT_EQ (lastError, Errc::TimedOut) << lastError.message ();
+
+    ASSERT_EQ (client.neighborSolicit ("ff02::1", advert), -1);
+    ASSERT_EQ (lastError, Errc::InvalidParam) << lastError.message ();
+
+    int status = 0;
+    std::error_code code;
+
+    Reactor::InvokeHandler fn = [&client, &advert, &status, &code] () {
+        status = client.neighborSolicit (_target, advert);
+        code = lastError;
+    };
+
+    ASSERT_EQ (ReactorThread::reactor ().invoke (&fn), 0) << lastError.message ();
+    ASSERT_EQ (status, -1);
+    ASSERT_EQ (code, std::errc::resource_deadlock_would_occur) << code.message ();
+
+    Ndp::Client receiver (_receiver);
+    std::atomic<int> result{1};
+
+    std::thread blind ([&receiver, &advert, &result] () {
+        result = receiver.neighborSolicit ("2001:db8:26::5", advert, std::chrono::milliseconds (500));
+    });
+
+    while (result == 1)
+    {
+        inject (neighborAdvertisementOf (false));
+        std::this_thread::sleep_for (std::chrono::milliseconds (10));
+    }
+    blind.join ();
+    ASSERT_EQ (result, -1);
+
+    result = 1;
+
+    std::thread seeing ([&receiver, &advert, &result] () {
+        result = receiver.neighborSolicit ("2001:db8:26::5", advert, std::chrono::seconds (5));
+    });
+
+    while (result == 1)
+    {
+        inject (neighborAdvertisementOf (true));
+        std::this_thread::sleep_for (std::chrono::milliseconds (10));
+    }
+    seeing.join ();
+    ASSERT_EQ (result, 0);
+    ASSERT_EQ (advert.link, MacAddress::address (_sender));
+}
+
+/**
+ * @brief test the neighbor solicitations sent from the unspecified address.
+ */
+TEST_F (NdpLinkTest, unspecifiedNeighborSource)
+{
+    Inbox<NeighborSolicitation> solicitations;
+
+    int status = _server.setNeighborSolicitationListener ([&solicitations] (const NeighborSolicitation& solicitation) {
+        solicitations.push (solicitation);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    inject (neighborSolicitationOf (true));
+    inject (neighborSolicitationOf (false));
+
+    ASSERT_TRUE (solicitations.awaits (1));
+    ASSERT_FALSE (solicitations.awaits (2, std::chrono::milliseconds (200)));
+    ASSERT_TRUE (solicitations.messages ()[0].src.isWildcard ());
+    ASSERT_TRUE (solicitations.messages ()[0].link.isWildcard ());
+
+    ASSERT_EQ (_server.unsetNeighborSolicitationListener (), 0) << lastError.message ();
+}
+
+/**
+ * @brief test the setNeighborSolicitationListener method.
+ */
+TEST_F (NdpLinkTest, setNeighborSolicitationListener)
+{
+    Inbox<NeighborSolicitation> first, second;
+    Ndp::Client client (_sender);
+
+    struct
+    {
+        int refused = 0;
+        std::error_code code;
+        int swapped = -1;
+    } result;
+
+    int status = _server.setNeighborSolicitationListener ([this, &first, &second,
+                                                           &result] (const NeighborSolicitation& solicitation) {
+        result.refused = _server.setNeighborSolicitationListener ([] (const NeighborSolicitation&) {
+        });
+        result.code = lastError;
+        _server.unsetNeighborSolicitationListener ();
+        result.swapped = _server.setNeighborSolicitationListener ([&second] (const NeighborSolicitation& solicitation) {
+            second.push (solicitation);
+        });
+        first.push (solicitation);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    status = _server.setNeighborSolicitationListener ([] (const NeighborSolicitation&) {
+    });
+    ASSERT_EQ (status, -1);
+    ASSERT_EQ (lastError, Errc::InUse) << lastError.message ();
+
+    NeighborAdvertisement advert;
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (first.awaits (1));
+    ASSERT_EQ (first.messages ()[0].target, IpAddress (_target));
+    ASSERT_EQ (first.messages ()[0].link, MacAddress::address (_sender));
+    ASSERT_EQ (result.refused, -1);
+    ASSERT_EQ (result.code, Errc::InUse) << result.code.message ();
+    ASSERT_EQ (result.swapped, 0);
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (second.awaits (1));
+    ASSERT_FALSE (first.awaits (2, std::chrono::milliseconds (200)));
+
+    ASSERT_EQ (_server.unsetNeighborSolicitationListener (), 0) << lastError.message ();
+}
+
+/**
+ * @brief test the unsetNeighborSolicitationListener method.
+ */
+TEST_F (NdpLinkTest, unsetNeighborSolicitationListener)
+{
+    Inbox<NeighborSolicitation> solicitations;
+    Ndp::Client client (_sender);
+    NeighborAdvertisement advert;
+
+    ASSERT_EQ (_server.unsetNeighborSolicitationListener (), 0) << lastError.message ();
+
+    int status =
+        _server.setNeighborSolicitationListener ([this, &solicitations] (const NeighborSolicitation& solicitation) {
+            _server.unsetNeighborSolicitationListener ();
+            solicitations.push (solicitation);
+        });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (solicitations.awaits (1));
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_FALSE (solicitations.awaits (2, std::chrono::milliseconds (200)));
+
+    status = _server.setNeighborSolicitationListener ([&solicitations] (const NeighborSolicitation& solicitation) {
+        solicitations.push (solicitation);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (solicitations.awaits (2));
+
+    ASSERT_EQ (_server.unsetNeighborSolicitationListener (), 0) << lastError.message ();
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_FALSE (solicitations.awaits (3, std::chrono::milliseconds (200)));
+}
+
+/**
+ * @brief test the setNeighborAdvertisementListener method.
+ */
+TEST_F (NdpLinkTest, setNeighborAdvertisementListener)
+{
+    Inbox<NeighborAdvertisement> first, second;
+    Ndp::Client client (_sender);
+
+    struct
+    {
+        int refused = 0;
+        std::error_code code;
+        int swapped = -1;
+    } result;
+
+    int status = client.setNeighborAdvertisementListener (
+        [&client, &first, &second, &result] (const NeighborAdvertisement& advert) {
+            result.refused = client.setNeighborAdvertisementListener ([] (const NeighborAdvertisement&) {
+            });
+            result.code = lastError;
+            client.unsetNeighborAdvertisementListener ();
+            result.swapped = client.setNeighborAdvertisementListener ([&second] (const NeighborAdvertisement& advert) {
+                second.push (advert);
+            });
+            first.push (advert);
+        });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    status = client.setNeighborAdvertisementListener ([] (const NeighborAdvertisement&) {
+    });
+    ASSERT_EQ (status, -1);
+    ASSERT_EQ (lastError, Errc::InUse) << lastError.message ();
+
+    NeighborAdvertisement advert;
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (first.awaits (1));
+    ASSERT_EQ (first.messages ()[0].target, IpAddress (_target));
+    ASSERT_EQ (first.messages ()[0].link, MacAddress::address (_receiver));
+    ASSERT_EQ (result.refused, -1);
+    ASSERT_EQ (result.code, Errc::InUse) << result.code.message ();
+    ASSERT_EQ (result.swapped, 0);
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (second.awaits (1));
+    ASSERT_FALSE (first.awaits (2, std::chrono::milliseconds (200)));
+}
+
+/**
+ * @brief test the unsetNeighborAdvertisementListener method.
+ */
+TEST_F (NdpLinkTest, unsetNeighborAdvertisementListener)
+{
+    Inbox<NeighborAdvertisement> adverts;
+    Ndp::Client client (_sender);
+    NeighborAdvertisement advert;
+
+    ASSERT_EQ (client.unsetNeighborAdvertisementListener (), 0) << lastError.message ();
+
+    int status = client.setNeighborAdvertisementListener ([&client, &adverts] (const NeighborAdvertisement& advert) {
+        client.unsetNeighborAdvertisementListener ();
+        adverts.push (advert);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (adverts.awaits (1));
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_FALSE (adverts.awaits (2, std::chrono::milliseconds (200)));
+
+    status = client.setNeighborAdvertisementListener ([&adverts] (const NeighborAdvertisement& advert) {
+        adverts.push (advert);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (adverts.awaits (2));
+
+    ASSERT_EQ (client.unsetNeighborAdvertisementListener (), 0) << lastError.message ();
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_FALSE (adverts.awaits (3, std::chrono::milliseconds (200)));
+}
+
+/**
+ * @brief test the neighborAdvertise method answering a solicitation.
+ */
+TEST_F (NdpLinkTest, neighborAdvertiseReply)
+{
+    Inbox<NeighborAdvertisement> adverts;
+    Ndp::Client client (_sender);
+
+    int status = _server.setNeighborSolicitationListener ([this] (const NeighborSolicitation& solicitation) {
+        NeighborAdvertisement answer;
+        answer.target = solicitation.target;
+        answer.flags = ND_NA_FLAG_OVERRIDE;
+        _server.neighborAdvertise (answer, solicitation);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    status = client.setNeighborAdvertisementListener ([&adverts] (const NeighborAdvertisement& advert) {
+        adverts.push (advert);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    NeighborAdvertisement advert;
+    ASSERT_EQ (client.neighborSolicit ("2001:db8:25::2", advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_EQ (advert.link, MacAddress::address (_receiver));
+    ASSERT_EQ (advert.flags, ND_NA_FLAG_SOLICITED | ND_NA_FLAG_OVERRIDE);
+
+    inject (neighborSolicitationOf (false));
+    ASSERT_TRUE (adverts.awaits (2));
+    ASSERT_EQ (adverts.messages ()[1].target, IpAddress ("2001:db8:25::2"));
+    ASSERT_EQ (adverts.messages ()[1].flags, ND_NA_FLAG_OVERRIDE);
+
+    ASSERT_EQ (_server.unsetNeighborSolicitationListener (), 0) << lastError.message ();
 }
 
 /**
