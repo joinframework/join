@@ -30,7 +30,6 @@
 #include <join/ndp_protocol.hpp>
 #include <join/ndp_message.hpp>
 #include <join/condition.hpp>
-#include <join/notifier.hpp>
 #include <join/function.hpp>
 #include <join/reactor.hpp>
 #include <join/error.hpp>
@@ -300,7 +299,28 @@ namespace join
          */
         int setNeighborSolicitationListener (NeighborSolicitationNotify cb) noexcept
         {
-            return _neighborSolicitationListener.set (std::move (cb));
+            bool busy = false;
+
+            Reactor::InvokeHandler fn = [this, &cb, &busy] () {
+                busy = _neighborSolicitationCalling || _neighborSolicitationListener;
+                if (!busy)
+                {
+                    _neighborSolicitationListener = std::move (cb);
+                }
+            };
+
+            if (_reactor.invoke (&fn) == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
+
+            if (busy)
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            return 0;
         }
 
         /**
@@ -309,7 +329,12 @@ namespace join
          */
         int unsetNeighborSolicitationListener () noexcept
         {
-            return _neighborSolicitationListener.unset ();
+            Reactor::InvokeHandler fn = [this] () {
+                _neighborSolicitationListener = nullptr;
+                _neighborSolicitationCalling = false;
+            };
+
+            return _reactor.invoke (&fn);
         }
 
         /**
@@ -319,7 +344,28 @@ namespace join
          */
         int setNeighborAdvertisementListener (NeighborAdvertisementNotify cb) noexcept
         {
-            return _neighborAdvertisementListener.set (std::move (cb));
+            bool busy = false;
+
+            Reactor::InvokeHandler fn = [this, &cb, &busy] () {
+                busy = _neighborAdvertisementCalling || _neighborAdvertisementListener;
+                if (!busy)
+                {
+                    _neighborAdvertisementListener = std::move (cb);
+                }
+            };
+
+            if (_reactor.invoke (&fn) == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
+
+            if (busy)
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            return 0;
         }
 
         /**
@@ -328,7 +374,12 @@ namespace join
          */
         int unsetNeighborAdvertisementListener () noexcept
         {
-            return _neighborAdvertisementListener.unset ();
+            Reactor::InvokeHandler fn = [this] () {
+                _neighborAdvertisementListener = nullptr;
+                _neighborAdvertisementCalling = false;
+            };
+
+            return _reactor.invoke (&fn);
         }
 
         /**
@@ -468,7 +519,19 @@ namespace join
                     (!from.isWildcard () || solicitation.link.isWildcard ()))
                 {
                     solicitation.src = from;
-                    _neighborSolicitationListener.notify (solicitation);
+                    if (_neighborSolicitationListener)
+                    {
+                        NeighborSolicitationNotify listener = std::move (_neighborSolicitationListener);
+
+                        _neighborSolicitationCalling = true;
+                        listener (solicitation);
+
+                        if (_neighborSolicitationCalling)
+                        {
+                            _neighborSolicitationListener = std::move (listener);
+                            _neighborSolicitationCalling = false;
+                        }
+                    }
                 }
 
                 return true;
@@ -484,7 +547,19 @@ namespace join
             {
                 advert.src = from;
 
-                _neighborAdvertisementListener.notify (advert);
+                if (_neighborAdvertisementListener)
+                {
+                    NeighborAdvertisementNotify listener = std::move (_neighborAdvertisementListener);
+
+                    _neighborAdvertisementCalling = true;
+                    listener (advert);
+
+                    if (_neighborAdvertisementCalling)
+                    {
+                        _neighborAdvertisementListener = std::move (listener);
+                        _neighborAdvertisementCalling = false;
+                    }
+                }
 
                 ScopedLock<Mutex> lock (_neighborMutex);
 
@@ -564,11 +639,19 @@ namespace join
         /// neighbor solicitations protection mutex.
         Mutex _neighborMutex;
 
-        /// neighbor solicitation listener.
-        Notifier<NeighborSolicitationNotify, Reactor> _neighborSolicitationListener{_reactor};
+        /// neighbor solicitation listener, only accessed from the reactor thread.
+        NeighborSolicitationNotify _neighborSolicitationListener;
 
-        /// neighbor advertisement listener.
-        Notifier<NeighborAdvertisementNotify, Reactor> _neighborAdvertisementListener{_reactor};
+        /// set while the neighbor solicitation listener is being called and still set, only accessed from the reactor
+        /// thread.
+        bool _neighborSolicitationCalling = false;
+
+        /// neighbor advertisement listener, only accessed from the reactor thread.
+        NeighborAdvertisementNotify _neighborAdvertisementListener;
+
+        /// set while the neighbor advertisement listener is being called and still set, only accessed from the reactor
+        /// thread.
+        bool _neighborAdvertisementCalling = false;
     };
 
     /**
@@ -688,7 +771,28 @@ namespace join
          */
         int setRouterAdvertisementListener (RouterAdvertisementNotify cb) noexcept
         {
-            return _routerAdvertisementListener.set (std::move (cb));
+            bool busy = false;
+
+            Reactor::InvokeHandler fn = [this, &cb, &busy] () {
+                busy = _routerAdvertisementCalling || _routerAdvertisementListener;
+                if (!busy)
+                {
+                    _routerAdvertisementListener = std::move (cb);
+                }
+            };
+
+            if (this->_reactor.invoke (&fn) == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
+
+            if (busy)
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            return 0;
         }
 
         /**
@@ -697,7 +801,12 @@ namespace join
          */
         int unsetRouterAdvertisementListener () noexcept
         {
-            return _routerAdvertisementListener.unset ();
+            Reactor::InvokeHandler fn = [this] () {
+                _routerAdvertisementListener = nullptr;
+                _routerAdvertisementCalling = false;
+            };
+
+            return this->_reactor.invoke (&fn);
         }
 
     private:
@@ -732,7 +841,19 @@ namespace join
 
             advert.src = from;
 
-            _routerAdvertisementListener.notify (advert);
+            if (_routerAdvertisementListener)
+            {
+                RouterAdvertisementNotify listener = std::move (_routerAdvertisementListener);
+
+                _routerAdvertisementCalling = true;
+                listener (advert);
+
+                if (_routerAdvertisementCalling)
+                {
+                    _routerAdvertisementListener = std::move (listener);
+                    _routerAdvertisementCalling = false;
+                }
+            }
 
             ScopedLock<Mutex> lock (_routerMutex);
 
@@ -768,8 +889,12 @@ namespace join
         /// router solicitations protection mutex.
         Mutex _routerMutex;
 
-        /// router advertisement listener.
-        Notifier<RouterAdvertisementNotify, Reactor> _routerAdvertisementListener{this->_reactor};
+        /// router advertisement listener, only accessed from the reactor thread.
+        RouterAdvertisementNotify _routerAdvertisementListener;
+
+        /// set while the router advertisement listener is being called and still set, only accessed from the reactor
+        /// thread.
+        bool _routerAdvertisementCalling = false;
     };
 
     /**
@@ -826,7 +951,28 @@ namespace join
          */
         int setRouterSolicitationListener (RouterSolicitationNotify cb) noexcept
         {
-            return _routerSolicitationListener.set (std::move (cb));
+            bool busy = false;
+
+            Reactor::InvokeHandler fn = [this, &cb, &busy] () {
+                busy = _routerSolicitationCalling || _routerSolicitationListener;
+                if (!busy)
+                {
+                    _routerSolicitationListener = std::move (cb);
+                }
+            };
+
+            if (this->_reactor.invoke (&fn) == -1)
+            {
+                return -1;  // LCOV_EXCL_LINE
+            }
+
+            if (busy)
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            return 0;
         }
 
         /**
@@ -835,7 +981,12 @@ namespace join
          */
         int unsetRouterSolicitationListener () noexcept
         {
-            return _routerSolicitationListener.unset ();
+            Reactor::InvokeHandler fn = [this] () {
+                _routerSolicitationListener = nullptr;
+                _routerSolicitationCalling = false;
+            };
+
+            return this->_reactor.invoke (&fn);
         }
 
         /**
@@ -902,11 +1053,27 @@ namespace join
 
             solicitation.src = from;
 
-            _routerSolicitationListener.notify (solicitation);
+            if (_routerSolicitationListener)
+            {
+                RouterSolicitationNotify listener = std::move (_routerSolicitationListener);
+
+                _routerSolicitationCalling = true;
+                listener (solicitation);
+
+                if (_routerSolicitationCalling)
+                {
+                    _routerSolicitationListener = std::move (listener);
+                    _routerSolicitationCalling = false;
+                }
+            }
         }
 
-        /// router solicitation listener.
-        Notifier<RouterSolicitationNotify, Reactor> _routerSolicitationListener{this->_reactor};
+        /// router solicitation listener, only accessed from the reactor thread.
+        RouterSolicitationNotify _routerSolicitationListener;
+
+        /// set while the router solicitation listener is being called and still set, only accessed from the reactor
+        /// thread.
+        bool _routerSolicitationCalling = false;
     };
 }
 

@@ -999,11 +999,26 @@ TEST_F (NdpLinkTest, unspecifiedNeighborSource)
  */
 TEST_F (NdpLinkTest, setNeighborSolicitationListener)
 {
-    Inbox<NeighborSolicitation> solicitations;
+    Inbox<NeighborSolicitation> first, second;
     Ndp::Client client (_sender);
 
-    int status = _server.setNeighborSolicitationListener ([&solicitations] (const NeighborSolicitation& solicitation) {
-        solicitations.push (solicitation);
+    struct
+    {
+        int refused = 0;
+        std::error_code code;
+        int swapped = -1;
+    } result;
+
+    int status = _server.setNeighborSolicitationListener ([this, &first, &second,
+                                                           &result] (const NeighborSolicitation& solicitation) {
+        result.refused = _server.setNeighborSolicitationListener ([] (const NeighborSolicitation&) {
+        });
+        result.code = lastError;
+        _server.unsetNeighborSolicitationListener ();
+        result.swapped = _server.setNeighborSolicitationListener ([&second] (const NeighborSolicitation& solicitation) {
+            second.push (solicitation);
+        });
+        first.push (solicitation);
     });
     ASSERT_EQ (status, 0) << lastError.message ();
 
@@ -1014,9 +1029,16 @@ TEST_F (NdpLinkTest, setNeighborSolicitationListener)
 
     NeighborAdvertisement advert;
     ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
-    ASSERT_TRUE (solicitations.awaits (1));
-    ASSERT_EQ (solicitations.messages ()[0].target, IpAddress (_target));
-    ASSERT_EQ (solicitations.messages ()[0].link, MacAddress::address (_sender));
+    ASSERT_TRUE (first.awaits (1));
+    ASSERT_EQ (first.messages ()[0].target, IpAddress (_target));
+    ASSERT_EQ (first.messages ()[0].link, MacAddress::address (_sender));
+    ASSERT_EQ (result.refused, -1);
+    ASSERT_EQ (result.code, Errc::InUse) << result.code.message ();
+    ASSERT_EQ (result.swapped, 0);
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (second.awaits (1));
+    ASSERT_FALSE (first.awaits (2, std::chrono::milliseconds (200)));
 
     ASSERT_EQ (_server.unsetNeighborSolicitationListener (), 0) << lastError.message ();
 }
@@ -1028,18 +1050,33 @@ TEST_F (NdpLinkTest, unsetNeighborSolicitationListener)
 {
     Inbox<NeighborSolicitation> solicitations;
     Ndp::Client client (_sender);
+    NeighborAdvertisement advert;
 
     ASSERT_EQ (_server.unsetNeighborSolicitationListener (), 0) << lastError.message ();
 
-    int status = _server.setNeighborSolicitationListener ([&solicitations] (const NeighborSolicitation& solicitation) {
+    int status =
+        _server.setNeighborSolicitationListener ([this, &solicitations] (const NeighborSolicitation& solicitation) {
+            _server.unsetNeighborSolicitationListener ();
+            solicitations.push (solicitation);
+        });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (solicitations.awaits (1));
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_FALSE (solicitations.awaits (2, std::chrono::milliseconds (200)));
+
+    status = _server.setNeighborSolicitationListener ([&solicitations] (const NeighborSolicitation& solicitation) {
         solicitations.push (solicitation);
     });
     ASSERT_EQ (status, 0) << lastError.message ();
-    ASSERT_EQ (_server.unsetNeighborSolicitationListener (), 0) << lastError.message ();
 
-    NeighborAdvertisement advert;
     ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
-    ASSERT_FALSE (solicitations.awaits (1, std::chrono::milliseconds (200)));
+    ASSERT_TRUE (solicitations.awaits (2));
+
+    ASSERT_EQ (_server.unsetNeighborSolicitationListener (), 0) << lastError.message ();
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_FALSE (solicitations.awaits (3, std::chrono::milliseconds (200)));
 }
 
 /**
@@ -1047,12 +1084,27 @@ TEST_F (NdpLinkTest, unsetNeighborSolicitationListener)
  */
 TEST_F (NdpLinkTest, setNeighborAdvertisementListener)
 {
-    Inbox<NeighborAdvertisement> adverts;
+    Inbox<NeighborAdvertisement> first, second;
     Ndp::Client client (_sender);
 
-    int status = client.setNeighborAdvertisementListener ([&adverts] (const NeighborAdvertisement& advert) {
-        adverts.push (advert);
-    });
+    struct
+    {
+        int refused = 0;
+        std::error_code code;
+        int swapped = -1;
+    } result;
+
+    int status = client.setNeighborAdvertisementListener (
+        [&client, &first, &second, &result] (const NeighborAdvertisement& advert) {
+            result.refused = client.setNeighborAdvertisementListener ([] (const NeighborAdvertisement&) {
+            });
+            result.code = lastError;
+            client.unsetNeighborAdvertisementListener ();
+            result.swapped = client.setNeighborAdvertisementListener ([&second] (const NeighborAdvertisement& advert) {
+                second.push (advert);
+            });
+            first.push (advert);
+        });
     ASSERT_EQ (status, 0) << lastError.message ();
 
     status = client.setNeighborAdvertisementListener ([] (const NeighborAdvertisement&) {
@@ -1062,9 +1114,16 @@ TEST_F (NdpLinkTest, setNeighborAdvertisementListener)
 
     NeighborAdvertisement advert;
     ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
-    ASSERT_TRUE (adverts.awaits (1));
-    ASSERT_EQ (adverts.messages ()[0].target, IpAddress (_target));
-    ASSERT_EQ (adverts.messages ()[0].link, MacAddress::address (_receiver));
+    ASSERT_TRUE (first.awaits (1));
+    ASSERT_EQ (first.messages ()[0].target, IpAddress (_target));
+    ASSERT_EQ (first.messages ()[0].link, MacAddress::address (_receiver));
+    ASSERT_EQ (result.refused, -1);
+    ASSERT_EQ (result.code, Errc::InUse) << result.code.message ();
+    ASSERT_EQ (result.swapped, 0);
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (second.awaits (1));
+    ASSERT_FALSE (first.awaits (2, std::chrono::milliseconds (200)));
 }
 
 /**
@@ -1074,18 +1133,32 @@ TEST_F (NdpLinkTest, unsetNeighborAdvertisementListener)
 {
     Inbox<NeighborAdvertisement> adverts;
     Ndp::Client client (_sender);
+    NeighborAdvertisement advert;
 
     ASSERT_EQ (client.unsetNeighborAdvertisementListener (), 0) << lastError.message ();
 
-    int status = client.setNeighborAdvertisementListener ([&adverts] (const NeighborAdvertisement& advert) {
+    int status = client.setNeighborAdvertisementListener ([&client, &adverts] (const NeighborAdvertisement& advert) {
+        client.unsetNeighborAdvertisementListener ();
         adverts.push (advert);
     });
     ASSERT_EQ (status, 0) << lastError.message ();
-    ASSERT_EQ (client.unsetNeighborAdvertisementListener (), 0) << lastError.message ();
 
-    NeighborAdvertisement advert;
     ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
-    ASSERT_FALSE (adverts.awaits (1, std::chrono::milliseconds (200)));
+    ASSERT_TRUE (adverts.awaits (1));
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_FALSE (adverts.awaits (2, std::chrono::milliseconds (200)));
+
+    status = client.setNeighborAdvertisementListener ([&adverts] (const NeighborAdvertisement& advert) {
+        adverts.push (advert);
+    });
+    ASSERT_EQ (status, 0) << lastError.message ();
+
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_TRUE (adverts.awaits (2));
+
+    ASSERT_EQ (client.unsetNeighborAdvertisementListener (), 0) << lastError.message ();
+    ASSERT_EQ (client.neighborSolicit (_target, advert, std::chrono::seconds (5)), 0) << lastError.message ();
+    ASSERT_FALSE (adverts.awaits (3, std::chrono::milliseconds (200)));
 }
 
 /**
