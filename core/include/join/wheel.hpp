@@ -997,7 +997,7 @@ namespace join
     /**
      * @brief wheel run policy waking the wheel from a periodic timer dispatched by a proactor.
      */
-    template <class ClockPolicy>
+    template <class ClockPolicy, class ProactorType>
     class WaitPolicy
     {
     public:
@@ -1006,7 +1006,7 @@ namespace join
          * @param proactor completion dispatcher.
          * @throw std::system_error if the timer cannot be created or submitted.
          */
-        explicit WaitPolicy (Proactor& proactor = ProactorThread::proactor ())
+        explicit WaitPolicy (ProactorType& proactor = ProactorThread::proactor ())
         : _timer (proactor)
         , _proactor (proactor)
         {
@@ -1088,7 +1088,7 @@ namespace join
         template <class Wheel>
         int flush (Wheel& wheel) noexcept
         {
-            typename Proactor::InvokeHandler fn = [&wheel] () {
+            typename ProactorType::InvokeHandler fn = [&wheel] () {
                 wheel.advance ();
             };
 
@@ -1097,10 +1097,10 @@ namespace join
 
     private:
         /// periodic timer waking the wheel.
-        BasicTimer<ClockPolicy> _timer;
+        BasicTimer<ClockPolicy, ProactorType> _timer;
 
         /// completion dispatcher.
-        Proactor& _proactor;
+        ProactorType& _proactor;
     };
 }
 

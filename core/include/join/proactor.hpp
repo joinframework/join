@@ -52,9 +52,9 @@ namespace join
 {
     class CompletionHandler;
 #ifdef JOIN_HAS_IO_URING
-    template <typename Policy>
+    template <typename IoPolicy>
     class BasicProactor;
-    template <typename Policy>
+    template <typename IoPolicy>
     class BasicProactorThread;
 
     using Proactor = BasicProactor<IoDefaultPolicy>;
@@ -79,7 +79,7 @@ class join::CompletionHandler
 {
     /// friendship with proactor.
 #ifdef JOIN_HAS_IO_URING
-    template <typename Policy>
+    template <typename IoPolicy>
     friend class join::BasicProactor;
 #else
     friend class join::BasicProactor;
@@ -148,7 +148,7 @@ protected:
  * @brief basic proactor class.
  */
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy = join::IoDefaultPolicy>
+template <typename IoPolicy = join::IoDefaultPolicy>
 class join::BasicProactor
 #else
 class join::BasicProactor : public join::EventHandler
@@ -689,8 +689,8 @@ private:
 //   METHOD    : submit
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-int join::BasicProactor<Policy>::submit (IoOperation& op, bool flush, bool sync) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::submit (IoOperation& op, bool flush, bool sync) noexcept
 #else
 inline int join::BasicProactor::submit (IoOperation& op, bool flush, bool sync) noexcept
 #endif
@@ -737,8 +737,8 @@ inline int join::BasicProactor::submit (IoOperation& op, bool flush, bool sync) 
 //   METHOD    : cancel
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-int join::BasicProactor<Policy>::cancel (IoOperation& op, bool flush, bool sync) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::cancel (IoOperation& op, bool flush, bool sync) noexcept
 #else
 inline int join::BasicProactor::cancel (IoOperation& op, bool flush, bool sync) noexcept
 #endif
@@ -785,8 +785,8 @@ inline int join::BasicProactor::cancel (IoOperation& op, bool flush, bool sync) 
 //   METHOD    : invoke
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-int join::BasicProactor<Policy>::invoke (InvokeHandler* fn, bool sync) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::invoke (InvokeHandler* fn, bool sync) noexcept
 #else
 inline int join::BasicProactor::invoke (InvokeHandler* fn, bool sync) noexcept
 #endif
@@ -833,8 +833,8 @@ inline int join::BasicProactor::invoke (InvokeHandler* fn, bool sync) noexcept
 //   METHOD    : suspend
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::suspend (IoOperation& op) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::suspend (IoOperation& op) noexcept
 #else
 inline void join::BasicProactor::suspend (IoOperation& op) noexcept
 #endif
@@ -866,8 +866,8 @@ inline void join::BasicProactor::suspend (IoOperation& op) noexcept
 //   METHOD    : resume
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::resume (IoOperation& op, CompletionHandler& handler) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::resume (IoOperation& op, CompletionHandler& handler) noexcept
 #else
 inline void join::BasicProactor::resume (IoOperation& op, CompletionHandler& handler) noexcept
 #endif
@@ -882,8 +882,8 @@ inline void join::BasicProactor::resume (IoOperation& op, CompletionHandler& han
 //   METHOD    : invokeFunction
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-int join::BasicProactor<Policy>::invokeFunction (InvokeHandler* fn) noexcept
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::invokeFunction (InvokeHandler* fn) noexcept
 #else
 inline int join::BasicProactor::invokeFunction (InvokeHandler* fn) noexcept
 #endif
@@ -904,8 +904,8 @@ inline int join::BasicProactor::invokeFunction (InvokeHandler* fn) noexcept
 //   METHOD    : notifyOperation
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::notifyOperation (IoOperation& op, int result, bool cancelled) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::notifyOperation (IoOperation& op, int result, bool cancelled) noexcept
 #else
 inline void join::BasicProactor::notifyOperation (IoOperation& op, int result, bool cancelled) noexcept
 #endif
@@ -928,8 +928,8 @@ inline void join::BasicProactor::notifyOperation (IoOperation& op, int result, b
 //   METHOD    : dispatchOperation
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::dispatchOperation (IoOperation& op, int result, bool cancelled) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::dispatchOperation (IoOperation& op, int result, bool cancelled) noexcept
 #else
 inline void join::BasicProactor::dispatchOperation (IoOperation& op, int result, bool cancelled) noexcept
 #endif
@@ -965,8 +965,8 @@ inline void join::BasicProactor::dispatchOperation (IoOperation& op, int result,
 //   METHOD    : resetOperation
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy>
-void join::BasicProactor<Policy>::resetOperation (IoOperation& op) noexcept
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::resetOperation (IoOperation& op) noexcept
 #else
 inline void join::BasicProactor::resetOperation (IoOperation& op) noexcept
 #endif
@@ -990,7 +990,7 @@ inline void join::BasicProactor::resetOperation (IoOperation& op) noexcept
  * @brief Convenience class that owns a Proactor running on a dedicated background thread.
  */
 #ifdef JOIN_HAS_IO_URING
-template <typename Policy = join::IoDefaultPolicy>
+template <typename IoPolicy = join::IoDefaultPolicy>
 class join::BasicProactorThread
 #else
 class join::BasicProactorThread
@@ -1002,7 +1002,7 @@ public:
      * @return reference to the Proactor.
      */
 #ifdef JOIN_HAS_IO_URING
-    static BasicProactor<Policy>& proactor ()
+    static BasicProactor<IoPolicy>& proactor ()
 #else
     static BasicProactor& proactor ()
 #endif
@@ -1142,7 +1142,7 @@ private:
 
 #ifdef JOIN_HAS_IO_URING
     /// owned Proactor instance.
-    BasicProactor<Policy> _proactor;
+    BasicProactor<IoPolicy> _proactor;
 #else
     /// owned Proactor instance.
     BasicProactor _proactor;

@@ -46,15 +46,15 @@ namespace join
     /**
      * @brief asynchronous raw socket class.
      */
-    template <class Protocol, class Proactor, size_t OpCount>
-    class BasicAsyncRawSocket : public BasicAsyncSocket<Protocol, Proactor, OpCount>
+    template <class Protocol, class ProactorType, size_t OpCount>
+    class BasicAsyncRawSocket : public BasicAsyncSocket<Protocol, ProactorType, OpCount>
     {
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
         using Option = typename Socket::Option;
-        using AsyncRead = BasicAsyncRead<Protocol, Proactor>;
-        using AsyncWrite = BasicAsyncWrite<Protocol, Proactor>;
+        using AsyncRead = BasicAsyncRead<Protocol, ProactorType>;
+        using AsyncWrite = BasicAsyncWrite<Protocol, ProactorType>;
         using ReadHandler = typename AsyncRead::Read;
         using ReadFromHandler = typename AsyncRead::ReadFrom;
         using ConnectHandler = typename AsyncWrite::Connect;
@@ -64,8 +64,8 @@ namespace join
          * @brief create the socket instance.
          * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncRawSocket (Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Proactor, OpCount> (proactor)
+        explicit BasicAsyncRawSocket (ProactorType& proactor = ProactorThread::proactor ())
+        : BasicAsyncSocket<Protocol, ProactorType, OpCount> (proactor)
         {
         }
 
@@ -74,8 +74,8 @@ namespace join
          * @param sock socket to adopt.
          * @param proactor proactor driving the operations.
          */
-        explicit BasicAsyncRawSocket (Socket&& sock, Proactor& proactor = ProactorThread::proactor ())
-        : BasicAsyncSocket<Protocol, Proactor, OpCount> (std::move (sock), proactor)
+        explicit BasicAsyncRawSocket (Socket&& sock, ProactorType& proactor = ProactorThread::proactor ())
+        : BasicAsyncSocket<Protocol, ProactorType, OpCount> (std::move (sock), proactor)
         {
         }
 
@@ -97,7 +97,7 @@ namespace join
          * @param other other object to move.
          */
         BasicAsyncRawSocket (BasicAsyncRawSocket&& other) noexcept
-        : BasicAsyncSocket<Protocol, Proactor, OpCount> (std::move (other))
+        : BasicAsyncSocket<Protocol, ProactorType, OpCount> (std::move (other))
         {
             this->resumeAll ();
         }
@@ -109,7 +109,7 @@ namespace join
          */
         BasicAsyncRawSocket& operator= (BasicAsyncRawSocket&& other) noexcept
         {
-            BasicAsyncSocket<Protocol, Proactor, OpCount>::operator= (std::move (other));
+            BasicAsyncSocket<Protocol, ProactorType, OpCount>::operator= (std::move (other));
 
             this->resumeAll ();
 
@@ -440,7 +440,7 @@ namespace join
             }
             else
             {
-                BasicAsyncSocket<Protocol, Proactor, OpCount>::dispatch (op, code, size);
+                BasicAsyncSocket<Protocol, ProactorType, OpCount>::dispatch (op, code, size);
             }
         }
 
