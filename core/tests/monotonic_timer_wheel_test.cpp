@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/wheel.hpp>
+#include <join/timer.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
