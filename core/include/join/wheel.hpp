@@ -37,6 +37,7 @@
 #include <join/utils.hpp>
 
 // C++.
+#include <functional>
 #include <utility>
 #include <chrono>
 #include <atomic>
@@ -131,11 +132,12 @@ namespace join
         /**
          * @brief arm a one-shot timer.
          * @param duration timeout duration before the timer expires, rounded up to the next tick.
-         * @param callback function to call when the timer expires, captures limited to 48 bytes.
+         * @param callback function to call when the timer expires.
+         * @param args callback arguments.
          * @return timer handle on success, -1 on failure.
          */
-        template <class Rep, class Period, typename Func>
-        ssize_t setOneShot (std::chrono::duration<Rep, Period> duration, Func&& callback) noexcept
+        template <class Rep, class Period, typename Func, typename... Args>
+        ssize_t setOneShot (std::chrono::duration<Rep, Period> duration, Func&& callback, Args&&... args) noexcept
         {
             void* ptr = _arena.tryAllocate (sizeof (Node));
 
@@ -146,7 +148,7 @@ namespace join
             }
 
             Node* node = static_cast<Node*> (ptr);
-            node->callback = std::forward<Func> (callback);
+            node->callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
             node->interval.store (0, std::memory_order_relaxed);
             node->state = State::Idle;
             node->deadline.store (_tick.load (std::memory_order_acquire) + ticksFor (duration),
@@ -175,11 +177,12 @@ namespace join
         /**
          * @brief arm a periodic timer.
          * @param duration interval duration between expirations, rounded up to the next tick.
-         * @param callback function to call on each expiration, captures limited to 48 bytes.
+         * @param callback function to call on each expiration.
+         * @param args callback arguments.
          * @return timer handle on success, -1 on failure.
          */
-        template <class Rep, class Period, typename Func>
-        ssize_t setInterval (std::chrono::duration<Rep, Period> duration, Func&& callback) noexcept
+        template <class Rep, class Period, typename Func, typename... Args>
+        ssize_t setInterval (std::chrono::duration<Rep, Period> duration, Func&& callback, Args&&... args) noexcept
         {
             void* ptr = _arena.tryAllocate (sizeof (Node));
 
@@ -192,7 +195,7 @@ namespace join
             const uint64_t ticks = ticksFor (duration);
 
             Node* node = static_cast<Node*> (ptr);
-            node->callback = std::forward<Func> (callback);
+            node->callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
             node->interval.store (ticks, std::memory_order_relaxed);
             node->state = State::Idle;
             node->deadline.store (_tick.load (std::memory_order_acquire) + ticks, std::memory_order_relaxed);
