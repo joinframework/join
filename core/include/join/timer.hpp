@@ -33,6 +33,7 @@
 #include <join/wheel.hpp>
 
 // C++.
+#include <functional>
 #include <chrono>
 #include <atomic>
 #include <memory>
@@ -137,15 +138,16 @@ namespace join
         /**
          * @brief arm the timer as a one-shot timer.
          * @param duration timeout duration before timer expires.
-         * @param callback function to call when timer expires, captures limited to 32 bytes.
+         * @param callback function to call when timer expires.
+         * @param args callback arguments.
          */
-        template <class Rep, class Period, typename Func>
-        void setOneShot (std::chrono::duration<Rep, Period> duration, Func&& callback)
+        template <class Rep, class Period, typename Func, typename... Args>
+        void setOneShot (std::chrono::duration<Rep, Period> duration, Func&& callback, Args&&... args)
         {
             cancel ();
 
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
-            _callback = std::forward<Func> (callback);
+            _callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
             _oneShot.store (true, std::memory_order_relaxed);
             _ns.store (std::chrono::nanoseconds::zero (), std::memory_order_relaxed);
             _state.store (State::Armed, std::memory_order_release);
@@ -157,10 +159,11 @@ namespace join
         /**
          * @brief arm the timer as a one-shot timer with absolute time.
          * @param timePoint absolute time when timer should expire.
-         * @param callback function to call when timer expires, captures limited to 32 bytes.
+         * @param callback function to call when timer expires.
+         * @param args callback arguments.
          */
-        template <class Clock, class Duration, typename Func>
-        void setOneShot (std::chrono::time_point<Clock, Duration> timePoint, Func&& callback)
+        template <class Clock, class Duration, typename Func, typename... Args>
+        void setOneShot (std::chrono::time_point<Clock, Duration> timePoint, Func&& callback, Args&&... args)
         {
             static_assert (
                 (std::is_same<ClockPolicy, RealTime>::value && std::is_same<Clock, std::chrono::system_clock>::value) ||
@@ -172,7 +175,7 @@ namespace join
 
             auto elapsed = timePoint.time_since_epoch ();
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (elapsed);
-            _callback = std::forward<Func> (callback);
+            _callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
             _oneShot.store (true, std::memory_order_relaxed);
             _ns.store (std::chrono::nanoseconds::zero (), std::memory_order_relaxed);
             _state.store (State::Armed, std::memory_order_release);
@@ -184,15 +187,16 @@ namespace join
         /**
          * @brief arm the timer as a periodic timer.
          * @param duration interval duration between timer expirations.
-         * @param callback function to call on each timer expiration, captures limited to 32 bytes.
+         * @param callback function to call on each timer expiration.
+         * @param args callback arguments.
          */
-        template <class Rep, class Period, typename Func>
-        void setInterval (std::chrono::duration<Rep, Period> duration, Func&& callback)
+        template <class Rep, class Period, typename Func, typename... Args>
+        void setInterval (std::chrono::duration<Rep, Period> duration, Func&& callback, Args&&... args)
         {
             cancel ();
 
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
-            _callback = std::forward<Func> (callback);
+            _callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
             _oneShot.store (false, std::memory_order_relaxed);
             _ns.store (ns, std::memory_order_relaxed);
             _state.store (State::Armed, std::memory_order_release);
