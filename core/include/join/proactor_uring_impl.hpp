@@ -684,6 +684,12 @@ void join::BasicProactor<IoPolicy>::processCommand (const Command& cmd) noexcept
 template <typename IoPolicy>
 int join::BasicProactor<IoPolicy>::submitOperation (IoOperation& op, bool flush) noexcept
 {
+    if (JOIN_UNLIKELY (!_running.load (std::memory_order_acquire)))
+    {
+        lastError = std::make_error_code (std::errc::operation_canceled);
+        return -1;
+    }
+
     Backoff backoff;
     while (JOIN_UNLIKELY (op.state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
     {

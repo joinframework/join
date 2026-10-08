@@ -481,8 +481,17 @@ TEST_F (HybridProactorTest, submit)
         _result = 0;
     }
 
-    proactor.stop ();
+    std::error_code errc;
+    int result = 0;
+    HybridProactor::InvokeHandler stopThenSubmit = [&proactor, &result, &errc] () {
+        proactor.stop ();
+        result = proactor.submit (_readOp);
+        errc = join::lastError;
+    };
+    ASSERT_EQ (proactor.invoke (&stopThenSubmit, false), 0) << join::lastError.message ();
     th.join ();
+    ASSERT_EQ (result, -1);
+    ASSERT_EQ (errc, std::errc::operation_canceled);
 }
 
 /**
