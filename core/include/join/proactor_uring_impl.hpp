@@ -1127,7 +1127,6 @@ void join::BasicProactor<IoPolicy>::eventLoop (std::false_type, std::false_type)
         submitOperation (_wakeupOp, true);
     }
 
-    __kernel_timespec tick{0, Wheel::resolution ().count ()};
     Backoff backoff;
     bool running;
 
@@ -1168,14 +1167,8 @@ void join::BasicProactor<IoPolicy>::eventLoop (std::false_type, std::false_type)
         {
             if (io_uring_peek_cqe (&_ring, &cqe) != 0)
             {
-                if (WheelPolicy::empty (_wheel))
-                {
-                    io_uring_wait_cqe (&_ring, &cqe);
-                }
-                else
-                {
-                    io_uring_wait_cqe_timeout (&_ring, &cqe, &tick);
-                }
+                __kernel_timespec ts;
+                io_uring_wait_cqe_timeout (&_ring, &cqe, WheelPolicy::timeout (_wheel, ts));
             }
         }
 

@@ -705,6 +705,17 @@ TEST_F (ReactorTest, wheel)
     ASSERT_EQ (reactor.wheel ().cancel (id), -1);
     ASSERT_EQ (join::lastError, Errc::NotFound);
 
+    id = reactor.wheel ().setOneShot (std::chrono::nanoseconds::max (), [&count] () {
+        ++count;
+    });
+    ASSERT_GT (id, 0);
+    std::this_thread::sleep_for (10ms);
+    ASSERT_EQ (reactor.invoke (&fn), 0) << join::lastError.message ();
+    std::this_thread::sleep_for (30ms);
+    EXPECT_EQ (inside, 3);
+    EXPECT_EQ (count, fired);
+    ASSERT_EQ (reactor.wheel ().cancel (id, true), 0) << join::lastError.message ();
+
     reactor.stop ();
     th.join ();
 }

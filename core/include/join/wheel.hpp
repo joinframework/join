@@ -41,6 +41,7 @@
 #include <utility>
 #include <chrono>
 #include <atomic>
+#include <limits>
 #include <new>
 
 // C.
@@ -50,7 +51,7 @@
 namespace join
 {
     /**
-     * @brief base hierarchical timing wheel class.
+     * @brief timing wheel.
      */
     template <class ClockPolicy, class RunPolicy, size_t Capacity, uint64_t TickNs>
     class BasicWheel
@@ -63,9 +64,9 @@ namespace join
 
     public:
         /**
-         * @brief create instance, construct every timer node and start the run policy.
+         * @brief create instance.
          * @param args arguments forwarded to the run policy.
-         * @throw std::system_error if the arena, the command queue or the run policy cannot be created.
+         * @throw std::system_error on failure.
          */
         template <typename... Args>
         explicit BasicWheel (Args&&... args)
@@ -84,7 +85,7 @@ namespace join
 
             _arena.releaseAll ();
 
-            _tick.store (toTick (ClockPolicy::now ()), std::memory_order_release);
+            _tick = toTick (ClockPolicy::now ());
             _runner.start (*this, resolution ());
         }
 
@@ -131,114 +132,35 @@ namespace join
 
         /**
          * @brief arm a one-shot timer.
-         * @param duration timeout duration before the timer expires, rounded up to the next tick.
-         * @param callback function to call when the timer expires.
+         * @param duration delay, rounded up to a tick.
+         * @param callback callback.
          * @param args callback arguments.
          * @return timer handle on success, -1 on failure.
          */
         template <class Rep, class Period, typename Func, typename... Args>
         ssize_t setOneShot (std::chrono::duration<Rep, Period> duration, Func&& callback, Args&&... args) noexcept
         {
-            void* ptr = _arena.tryAllocate (sizeof (Node));
-
-            if (JOIN_UNLIKELY (ptr == nullptr))
-            {
-                lastError = make_error_code (Errc::OutOfMemory);
-                return -1;
-            }
-
-            Node* node = static_cast<Node*> (ptr);
-            node->callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
-            node->interval.store (0, std::memory_order_relaxed);
-            node->state = State::Idle;
-            const uint64_t now = toTick (ClockPolicy::now ());
-            node->deadline.store (now + ticksFor (duration) + 1, std::memory_order_relaxed);
-
-            const uint32_t place = _arena.getIndex (node);
-            const uint32_t occupant = _generations[place].load (std::memory_order_relaxed) & _occupantMask;
-
-            if (JOIN_LIKELY (_runner.isRunnerThread ()))
-            {
-                if (_armed++ == 0)
-                {
-                    _tick.store (now, std::memory_order_release);
-                }
-
-                armTimer (node);
-                return makeId (occupant, place);
-            }
-
-            if (JOIN_UNLIKELY (writeCommand ({CommandType::Arm, place, occupant}) == -1))
-            {
-                // LCOV_EXCL_START
-                releaseTimer (node);
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-
-            _runner.flush (*this);
-
-            return makeId (occupant, place);
+            return createTimer (ticksFor (duration), 0, std::forward<Func> (callback), std::forward<Args> (args)...);
         }
 
         /**
          * @brief arm a periodic timer.
-         * @param duration interval duration between expirations, rounded up to the next tick.
-         * @param callback function to call on each expiration.
+         * @param duration interval, rounded up to a tick.
+         * @param callback callback.
          * @param args callback arguments.
          * @return timer handle on success, -1 on failure.
          */
         template <class Rep, class Period, typename Func, typename... Args>
         ssize_t setInterval (std::chrono::duration<Rep, Period> duration, Func&& callback, Args&&... args) noexcept
         {
-            void* ptr = _arena.tryAllocate (sizeof (Node));
-
-            if (JOIN_UNLIKELY (ptr == nullptr))
-            {
-                lastError = make_error_code (Errc::OutOfMemory);
-                return -1;
-            }
-
             const uint64_t ticks = ticksFor (duration);
-
-            Node* node = static_cast<Node*> (ptr);
-            node->callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
-            node->interval.store (ticks, std::memory_order_relaxed);
-            node->state = State::Idle;
-            const uint64_t now = toTick (ClockPolicy::now ());
-            node->deadline.store (now + ticks + 1, std::memory_order_relaxed);
-
-            const uint32_t place = _arena.getIndex (node);
-            const uint32_t occupant = _generations[place].load (std::memory_order_relaxed) & _occupantMask;
-
-            if (JOIN_LIKELY (_runner.isRunnerThread ()))
-            {
-                if (_armed++ == 0)
-                {
-                    _tick.store (now, std::memory_order_release);
-                }
-
-                armTimer (node);
-                return makeId (occupant, place);
-            }
-
-            if (JOIN_UNLIKELY (writeCommand ({CommandType::Arm, place, occupant}) == -1))
-            {
-                // LCOV_EXCL_START
-                releaseTimer (node);
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-
-            _runner.flush (*this);
-
-            return makeId (occupant, place);
+            return createTimer (ticks, ticks, std::forward<Func> (callback), std::forward<Args> (args)...);
         }
 
         /**
          * @brief cancel a timer.
-         * @param id timer handle, -1 and Errc::NotFound if it designates an expired timer.
-         * @param sync if true, on return the callback is not running and will not be called again.
+         * @param id timer handle.
+         * @param sync wait until the callback can no longer run.
          * @return 0 on success, -1 on failure.
          */
         int cancel (ssize_t id, bool sync = false) noexcept
@@ -262,6 +184,8 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
+            _runner.flush (*this);
+
             if (JOIN_UNLIKELY (sync))
             {
                 Backoff backoff;
@@ -281,7 +205,7 @@ namespace join
         }
 
         /**
-         * @brief check if a timer is armed, snapshot when called from another thread.
+         * @brief check if a timer is armed.
          * @param id timer handle.
          * @return true if the timer is armed.
          */
@@ -291,9 +215,9 @@ namespace join
         }
 
         /**
-         * @brief get the remaining time until expiration, snapshot when called from another thread.
+         * @brief get the time left.
          * @param id timer handle.
-         * @return remaining duration, zero if the timer is not armed.
+         * @return time left, zero if not armed.
          */
         std::chrono::nanoseconds remaining (ssize_t id) const noexcept
         {
@@ -307,13 +231,18 @@ namespace join
             const uint64_t tick = toTick (ClockPolicy::now ());
             const uint64_t deadline = node->deadline.load (std::memory_order_acquire);
 
+            if (JOIN_UNLIKELY (resolve (id) == nullptr))
+            {
+                return std::chrono::nanoseconds::zero ();  // LCOV_EXCL_LINE
+            }
+
             return std::chrono::nanoseconds ((deadline > tick + 1) ? ((deadline - tick - 1) * TickNs) : 0);
         }
 
         /**
-         * @brief get the interval of a periodic timer, snapshot when called from another thread.
+         * @brief get the interval.
          * @param id timer handle.
-         * @return interval duration, zero if one-shot or not armed.
+         * @return interval, zero if one-shot or not armed.
          */
         std::chrono::nanoseconds interval (ssize_t id) const noexcept
         {
@@ -324,19 +253,33 @@ namespace join
                 return std::chrono::nanoseconds::zero ();
             }
 
-            return std::chrono::nanoseconds (node->interval.load (std::memory_order_relaxed) * TickNs);
+            const uint64_t ticks = node->interval.load (std::memory_order_acquire);
+
+            if (JOIN_UNLIKELY (resolve (id) == nullptr))
+            {
+                return std::chrono::nanoseconds::zero ();  // LCOV_EXCL_LINE
+            }
+
+            return std::chrono::nanoseconds (ticks * TickNs);
         }
 
         /**
-         * @brief check if a timer is a one-shot timer, snapshot when called from another thread.
+         * @brief check if a timer is one-shot.
          * @param id timer handle.
-         * @return true if the timer is a one-shot timer.
+         * @return true if one-shot.
          */
         bool oneShot (ssize_t id) const noexcept
         {
             const Node* node = resolve (id);
 
-            return (node != nullptr) && (node->interval.load (std::memory_order_relaxed) == 0);
+            if (JOIN_UNLIKELY (node == nullptr))
+            {
+                return false;
+            }
+
+            const uint64_t ticks = node->interval.load (std::memory_order_acquire);
+
+            return (resolve (id) != nullptr) && (ticks == 0);
         }
 
 #ifdef JOIN_HAS_NUMA
@@ -371,8 +314,8 @@ namespace join
         }
 
         /**
-         * @brief get the policy running the wheel, const so that only its accessors are reachable.
-         * @return const reference to the run policy.
+         * @brief get the run policy.
+         * @return run policy.
          */
         const RunPolicy& runner () const noexcept
         {
@@ -380,7 +323,7 @@ namespace join
         }
 
         /**
-         * @brief get the scheduling granularity.
+         * @brief get the tick duration.
          * @return tick duration.
          */
         static constexpr std::chrono::nanoseconds resolution () noexcept
@@ -389,8 +332,8 @@ namespace join
         }
 
         /**
-         * @brief get the maximum number of concurrently armed timers.
-         * @return timer capacity.
+         * @brief get the capacity.
+         * @return capacity.
          */
         static constexpr size_t capacity () noexcept
         {
@@ -399,130 +342,456 @@ namespace join
 
     private:
         /**
-         * @brief command type for the wheel dispatcher.
+         * @brief command type.
          */
         enum class CommandType : uint8_t
         {
-            Arm,    /**< link a prepared node into the wheel. */
-            Disarm, /**< unlink a node from the wheel and release it. */
+            Arm,    /**< link a node. */
+            Disarm, /**< unlink and release a node. */
         };
 
         /**
-         * @brief node state, states are mutually exclusive.
+         * @brief node state.
          */
         enum class State : uint8_t
         {
-            Idle,      /**< not linked into any slot. */
-            Linked,    /**< linked into the slot designated by level and slot. */
-            Firing,    /**< detached, its callback is being invoked. */
-            Cancelled, /**< cancelled while firing, released once the callback returns. */
+            Idle,      /**< unlinked. */
+            Linked,    /**< linked. */
+            Firing,    /**< firing. */
+            Cancelled, /**< cancelled while firing. */
         };
 
         /**
-         * @brief timer node, one arena chunk.
+         * @brief timer node.
          */
         struct Node
         {
-            /// previous node in the slot list, nullptr when first.
+            /// previous node.
             Node* prev = nullptr;
 
-            /// next node in the slot list, nullptr when last.
+            /// next node.
             Node* next = nullptr;
 
-            /// absolute expiration tick.
+            /// expiration tick.
             std::atomic_uint64_t deadline{0};
 
-            /// interval in ticks, zero for a one-shot timer.
+            /// interval in ticks, zero if one-shot.
             std::atomic_uint64_t interval{0};
 
-            /// slot the node is linked into.
+            /// slot.
             uint16_t slot = 0;
 
-            /// wheel level the node is linked into.
+            /// level.
             uint8_t level = 0;
 
             /// node state.
             State state = State::Idle;
 
-            /// function to call on expiration.
+            /// callback.
             Function<void (), 48> callback;
         };
 
         static_assert (sizeof (Node) == 128, "node must fill exactly two cache lines");
 
         /**
-         * @brief command for the wheel dispatcher.
+         * @brief command.
          */
         struct Command
         {
             CommandType type;  /**< command type. */
-            uint32_t place;    /**< arena index of the target node. */
-            uint32_t occupant; /**< generation the handle was issued with. */
+            uint32_t place;    /**< node index. */
+            uint32_t occupant; /**< node generation. */
         };
 
         /**
-         * @brief convert a time point to its tick number.
-         * @param timePoint time point to convert.
-         * @return tick number.
+         * @brief process commands and due slots.
+         * @return elapsed ticks.
          */
-        static uint64_t toTick (typename ClockPolicy::TimePoint timePoint) noexcept
+        uint64_t advance () noexcept
         {
-            return static_cast<uint64_t> (timePoint.time_since_epoch ().count ()) / TickNs;
-        }
+            readCommands ();
 
-        /**
-         * @brief convert a duration to a tick count, rounded up so that a timer never expires early.
-         * @param duration duration to convert.
-         * @return tick count, at least one.
-         */
-        template <class Rep, class Period>
-        static uint64_t ticksFor (std::chrono::duration<Rep, Period> duration) noexcept
-        {
-            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
-
-            if (ns.count () < 1)
+            if (_armed == 0)
             {
-                return 1;
+                return 0;
             }
 
-            return (static_cast<uint64_t> (ns.count ()) + TickNs - 1) / TickNs;
+            const uint64_t target = toTick (ClockPolicy::now ());
+            const uint64_t start = _tick;
+
+            if (JOIN_UNLIKELY (target < start))
+            {
+                return 0;  // LCOV_EXCL_LINE
+            }
+
+            if (target >= _due)
+            {
+                uint64_t tick = start;
+                uint64_t next;
+
+                while ((next = nextTick (tick)) <= target)
+                {
+                    tick = next;
+                    _tick = tick;
+
+                    if (JOIN_UNLIKELY ((tick & _slotMask) == 0))
+                    {
+                        cascade (tick);
+                    }
+
+                    fire (tick & _slotMask);
+                }
+
+                _due = next;
+            }
+
+            _tick = target;
+
+            return target - start;
         }
 
         /**
-         * @brief pack an arena index and a generation into a timer handle.
-         * @param occupant generation of the arena chunk.
-         * @param place arena index of the chunk.
-         * @return timer handle, always strictly positive.
+         * @brief get the time until the next event.
+         * @return time, nanoseconds::max () if empty.
          */
-        static constexpr ssize_t makeId (uint32_t occupant, uint32_t place) noexcept
+        std::chrono::nanoseconds next () const noexcept
         {
-            return (static_cast<ssize_t> (occupant & _occupantMask) << 32) | (static_cast<ssize_t> (place) + 1);
+            if (_armed == 0)
+            {
+                return std::chrono::nanoseconds::max ();
+            }
+
+            const uint64_t tick = _tick;
+            const uint64_t ticks = (_due > tick) ? (_due - tick) : 0;
+            const uint64_t limit = static_cast<uint64_t> (std::numeric_limits<int64_t>::max () / 2) / TickNs;
+
+            return std::chrono::nanoseconds (((ticks < limit) ? ticks : limit) * TickNs);
         }
 
         /**
-         * @brief extract the arena index from a timer handle.
-         * @param id timer handle.
-         * @return arena index.
+         * @brief create and arm a timer.
+         * @param ticks delay in ticks.
+         * @param interval interval in ticks, zero if one-shot.
+         * @param callback callback.
+         * @param args callback arguments.
+         * @return timer handle on success, -1 on failure.
          */
-        static constexpr uint32_t placeOf (ssize_t id) noexcept
+        template <typename Func, typename... Args>
+        ssize_t createTimer (uint64_t ticks, uint64_t interval, Func&& callback, Args&&... args) noexcept
         {
-            return static_cast<uint32_t> ((id & 0xFFFFFFFF) - 1);
+            void* ptr = _arena.tryAllocate (sizeof (Node));
+
+            if (JOIN_UNLIKELY (ptr == nullptr))
+            {
+                lastError = make_error_code (Errc::OutOfMemory);
+                return -1;
+            }
+
+            Node* node = static_cast<Node*> (ptr);
+            node->callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
+            node->interval.store (interval, std::memory_order_release);
+            node->state = State::Idle;
+            const uint64_t now = toTick (ClockPolicy::now ());
+            node->deadline.store (now + ticks + 1, std::memory_order_release);
+
+            const uint32_t place = _arena.getIndex (node);
+            const uint32_t occupant = _generations[place].load (std::memory_order_relaxed) & _occupantMask;
+
+            if (JOIN_LIKELY (_runner.isRunnerThread ()))
+            {
+                if (_armed++ == 0)
+                {
+                    _tick = now;
+                    _due = std::numeric_limits<uint64_t>::max ();
+                }
+
+                armTimer (node);
+                return makeId (occupant, place);
+            }
+
+            if (JOIN_UNLIKELY (writeCommand ({CommandType::Arm, place, occupant}) == -1))
+            {
+                // LCOV_EXCL_START
+                releaseTimer (node);
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            _runner.flush (*this);
+
+            return makeId (occupant, place);
         }
 
         /**
-         * @brief extract the generation from a timer handle.
-         * @param id timer handle.
-         * @return generation.
+         * @brief link a node.
+         * @param node node to arm.
+         * @param sameTick allow the current slot.
          */
-        static constexpr uint32_t occupantOf (ssize_t id) noexcept
+        void armTimer (Node* node, bool sameTick = false) noexcept
         {
-            return static_cast<uint32_t> (id >> 32) & _occupantMask;
+            const uint64_t tick = _tick;
+            const uint64_t deadline = node->deadline.load (std::memory_order_relaxed);
+            const uint64_t horizon = tick + ((uint64_t (1) << (_levels * _slotBits)) - 1);
+            const uint64_t due = (deadline > tick) ? deadline : (sameTick ? tick : (tick + 1));
+            const uint64_t expires = (due < horizon) ? due : horizon;
+            const uint64_t delta = (expires > tick) ? (expires - tick) : 1;
+
+            size_t level = static_cast<size_t> (63 - __builtin_clzll (delta)) / _slotBits;
+            level = (level < _levels) ? level : (_levels - 1);
+
+            const size_t slot = (expires >> (level * _slotBits)) & _slotMask;
+
+            node->level = static_cast<uint8_t> (level);
+            node->slot = static_cast<uint16_t> (slot);
+            node->state = State::Linked;
+            node->prev = nullptr;
+            node->next = _wheel[level][slot];
+
+            if (node->next != nullptr)
+            {
+                node->next->prev = node;
+            }
+
+            _wheel[level][slot] = node;
+            _occupied[level][slot >> 6] |= uint64_t (1) << (slot & 63);
+
+            const uint64_t event = (expires >> (level * _slotBits)) << (level * _slotBits);
+
+            if (event < _due)
+            {
+                _due = event;
+            }
+        }
+
+        /**
+         * @brief unlink and release a node.
+         * @param node node to disarm.
+         */
+        void disarmTimer (Node* node) noexcept
+        {
+            if (JOIN_UNLIKELY (node->state == State::Firing))
+            {
+                node->state = State::Cancelled;
+                return;
+            }
+
+            if (JOIN_UNLIKELY (node->state == State::Cancelled))
+            {
+                return;
+            }
+
+            if (JOIN_LIKELY (node->state == State::Linked))
+            {
+                unlink (node);
+                --_armed;
+            }
+
+            releaseTimer (node);
+        }
+
+        /**
+         * @brief free a node.
+         * @param node node to release.
+         */
+        void releaseTimer (Node* node) noexcept
+        {
+            const uint32_t place = _arena.getIndex (node);
+
+            node->callback.reset ();
+            _generations[place].fetch_add (1, std::memory_order_release);
+            _arena.deallocate (node);
+        }
+
+        /**
+         * @brief find the next tick to process.
+         * @param tick tick to search from.
+         * @return tick, UINT64_MAX if empty.
+         */
+        uint64_t nextTick (uint64_t tick) const noexcept
+        {
+            uint64_t next = std::numeric_limits<uint64_t>::max ();
+
+            for (size_t level = 0; level < _levels; ++level)
+            {
+                const size_t shift = level * _slotBits;
+                const uint64_t base = (tick >> shift) + 1;
+                const size_t start = base & _slotMask;
+                const size_t word = start >> 6;
+                uint64_t bits = _occupied[level][word] & (~uint64_t (0) << (start & 63));
+
+                for (size_t i = 0; i <= _slots / 64; ++i)
+                {
+                    if (bits != 0)
+                    {
+                        const size_t slot = ((word + i) % (_slots / 64)) * 64 + __builtin_ctzll (bits);
+                        const uint64_t candidate = (base + ((slot - start) & _slotMask)) << shift;
+                        next = (candidate < next) ? candidate : next;
+                        break;
+                    }
+
+                    bits = _occupied[level][(word + i + 1) % (_slots / 64)];
+                }
+
+                if (next < (((tick >> (shift + _slotBits)) + 1) << (shift + _slotBits)))
+                {
+                    break;
+                }
+            }
+
+            return next;
+        }
+
+        /**
+         * @brief cascade upper levels.
+         * @param tick tick.
+         */
+        void cascade (uint64_t tick) noexcept
+        {
+            for (size_t level = 1; level < _levels; ++level)
+            {
+                const size_t slot = (tick >> (level * _slotBits)) & _slotMask;
+                Node* node;
+
+                while ((node = _wheel[level][slot]) != nullptr)
+                {
+                    unlink (node);
+                    armTimer (node, true);
+                }
+
+                if (slot != 0)
+                {
+                    break;
+                }
+            }
+        }
+
+        /**
+         * @brief fire a level zero slot.
+         * @param slot slot to fire.
+         */
+        void fire (size_t slot) noexcept
+        {
+            Node* node = _wheel[0][slot];
+
+            while (node != nullptr)
+            {
+                unlink (node);
+
+                node->state = State::Firing;
+                node->callback ();
+
+                const bool cancelled = (node->state == State::Cancelled);
+                node->state = State::Idle;
+
+                if (JOIN_LIKELY (!cancelled && (node->interval.load (std::memory_order_relaxed) != 0)))
+                {
+                    node->deadline.fetch_add (node->interval.load (std::memory_order_relaxed),
+                                              std::memory_order_release);
+                    armTimer (node);
+                }
+                else
+                {
+                    releaseTimer (node);
+                    --_armed;
+                }
+
+                node = _wheel[0][slot];
+            }
+        }
+
+        /**
+         * @brief unlink a node.
+         * @param node node to unlink.
+         */
+        void unlink (Node* node) noexcept
+        {
+            if (node->prev != nullptr)
+            {
+                node->prev->next = node->next;
+            }
+            else
+            {
+                _wheel[node->level][node->slot] = node->next;
+
+                if (node->next == nullptr)
+                {
+                    _occupied[node->level][node->slot >> 6] &= ~(uint64_t (1) << (node->slot & 63));
+                }
+            }
+
+            if (node->next != nullptr)
+            {
+                node->next->prev = node->prev;
+            }
+
+            node->prev = nullptr;
+            node->next = nullptr;
+            node->state = State::Idle;
+        }
+
+        /**
+         * @brief write a command to the queue.
+         * @param cmd command to write.
+         * @return 0 on success, -1 on failure.
+         */
+        int writeCommand (const Command& cmd) noexcept
+        {
+            if (JOIN_UNLIKELY (_commands.tryPush (cmd) == -1))
+            {
+                // LCOV_EXCL_START
+                lastError = make_error_code (Errc::TemporaryError);
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief process pending commands.
+         */
+        void readCommands () noexcept
+        {
+            Command cmd;
+
+            while (_commands.tryPop (cmd) == 0)
+            {
+                processCommand (cmd);
+            }
+        }
+
+        /**
+         * @brief process a command.
+         * @param cmd command to process.
+         */
+        void processCommand (const Command& cmd) noexcept
+        {
+            if (JOIN_LIKELY ((_generations[cmd.place].load (std::memory_order_acquire) & _occupantMask) ==
+                             cmd.occupant))
+            {
+                Node* node = static_cast<Node*> (_arena.getPtr (cmd.place));
+
+                if (cmd.type == CommandType::Arm)
+                {
+                    if (_armed++ == 0)
+                    {
+                        _tick = toTick (ClockPolicy::now ());
+                        _due = std::numeric_limits<uint64_t>::max ();
+                    }
+
+                    armTimer (node);
+                }
+                else
+                {
+                    disarmTimer (node);
+                }
+            }
         }
 
         /**
          * @brief resolve a timer handle to its node.
          * @param id timer handle.
-         * @return node address, nullptr if the handle is stale or invalid.
+         * @return node, nullptr if invalid.
          */
         Node* resolve (ssize_t id) const noexcept
         {
@@ -548,269 +817,62 @@ namespace join
         }
 
         /**
-         * @brief link a node into the level and slot matching its remaining time.
-         * @param node node to arm.
-         * @param sameTick allow a due node to land in the slot about to fire, only safe before fire().
+         * @brief build a handle.
+         * @param occupant node generation.
+         * @param place node index.
+         * @return handle.
          */
-        void armTimer (Node* node, bool sameTick = false) noexcept
+        static constexpr ssize_t makeId (uint32_t occupant, uint32_t place) noexcept
         {
-            const uint64_t tick = _tick.load (std::memory_order_relaxed);
-            const uint64_t deadline = node->deadline.load (std::memory_order_relaxed);
-            const uint64_t expires = (deadline > tick) ? deadline : (sameTick ? tick : (tick + 1));
-            const uint64_t delta = (expires > tick) ? (expires - tick) : 1;
-
-            size_t level = static_cast<size_t> (63 - __builtin_clzll (delta)) / _slotBits;
-            level = (level < _levels) ? level : (_levels - 1);
-
-            const size_t slot = (expires >> (level * _slotBits)) & _slotMask;
-
-            node->level = static_cast<uint8_t> (level);
-            node->slot = static_cast<uint16_t> (slot);
-            node->state = State::Linked;
-            node->prev = nullptr;
-            node->next = _wheel[level][slot];
-
-            if (node->next != nullptr)
-            {
-                node->next->prev = node;
-            }
-
-            _wheel[level][slot] = node;
+            return (static_cast<ssize_t> (occupant & _occupantMask) << 32) | (static_cast<ssize_t> (place) + 1);
         }
 
         /**
-         * @brief unlink a node if linked and release it, deferred while its callback is running.
-         * @param node node to disarm.
+         * @brief get the node index.
+         * @param id timer handle.
+         * @return arena index.
          */
-        void disarmTimer (Node* node) noexcept
+        static constexpr uint32_t placeOf (ssize_t id) noexcept
         {
-            if (JOIN_UNLIKELY (node->state == State::Firing))
-            {
-                node->state = State::Cancelled;
-                return;
-            }
-
-            if (JOIN_UNLIKELY (node->state == State::Cancelled))
-            {
-                return;
-            }
-
-            if (JOIN_LIKELY (node->state == State::Linked))
-            {
-                if (node->prev != nullptr)
-                {
-                    node->prev->next = node->next;
-                }
-                else
-                {
-                    _wheel[node->level][node->slot] = node->next;
-                }
-
-                if (node->next != nullptr)
-                {
-                    node->next->prev = node->prev;
-                }
-
-                --_armed;
-            }
-
-            releaseTimer (node);
+            return static_cast<uint32_t> ((id & 0xFFFFFFFF) - 1);
         }
 
         /**
-         * @brief invalidate the handles issued for a node and return it to the arena.
-         * @param node node to release.
+         * @brief get the node generation.
+         * @param id timer handle.
+         * @return generation.
          */
-        void releaseTimer (Node* node) noexcept
+        static constexpr uint32_t occupantOf (ssize_t id) noexcept
         {
-            const uint32_t place = _arena.getIndex (node);
-
-            node->callback.reset ();
-            _generations[place].fetch_add (1, std::memory_order_release);
-            _arena.deallocate (node);
+            return static_cast<uint32_t> (id >> 32) & _occupantMask;
         }
 
         /**
-         * @brief write a command to the queue.
-         * @param cmd command to write.
-         * @return 0 on success, -1 on failure.
+         * @brief convert a time point to a tick.
+         * @param timePoint time point to convert.
+         * @return tick.
          */
-        int writeCommand (const Command& cmd) noexcept
+        static uint64_t toTick (typename ClockPolicy::TimePoint timePoint) noexcept
         {
-            if (JOIN_UNLIKELY (_commands.tryPush (cmd) == -1))
-            {
-                // LCOV_EXCL_START
-                lastError = make_error_code (Errc::TemporaryError);
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-
-            return 0;
+            return static_cast<uint64_t> (timePoint.time_since_epoch ().count ()) / TickNs;
         }
 
         /**
-         * @brief read and process all pending commands.
+         * @brief convert a duration to ticks, rounded up.
+         * @param duration duration to convert.
+         * @return ticks, at least one.
          */
-        void readCommands () noexcept
+        template <class Rep, class Period>
+        static uint64_t ticksFor (std::chrono::duration<Rep, Period> duration) noexcept
         {
-            Command cmd;
+            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds> (duration);
 
-            while (_commands.tryPop (cmd) == 0)
+            if (ns.count () < 1)
             {
-                processCommand (cmd);
-            }
-        }
-
-        /**
-         * @brief process a single command, ignored if the handle it carries is stale.
-         * @param cmd command to process.
-         */
-        void processCommand (const Command& cmd) noexcept
-        {
-            if (JOIN_LIKELY ((_generations[cmd.place].load (std::memory_order_acquire) & _occupantMask) ==
-                             cmd.occupant))
-            {
-                Node* node = static_cast<Node*> (_arena.getPtr (cmd.place));
-
-                if (cmd.type == CommandType::Arm)
-                {
-                    if (_armed++ == 0)
-                    {
-                        _tick.store (toTick (ClockPolicy::now ()), std::memory_order_release);
-                    }
-
-                    armTimer (node);
-                }
-                else
-                {
-                    disarmTimer (node);
-                }
-            }
-        }
-
-        /**
-         * @brief re-link every node of an upper level slot at the level matching its remaining time.
-         * @param level wheel level to cascade.
-         * @param slot slot to cascade.
-         */
-        void cascade (size_t level, size_t slot) noexcept
-        {
-            Node* node = _wheel[level][slot];
-
-            while (node != nullptr)
-            {
-                detach (level, slot, node);
-                armTimer (node, true);
-                node = _wheel[level][slot];
-            }
-        }
-
-        /**
-         * @brief invoke the callbacks of a level zero slot, re-arming or releasing each node.
-         * @param slot slot to fire.
-         */
-        void fire (size_t slot) noexcept
-        {
-            Node* node = _wheel[0][slot];
-
-            while (node != nullptr)
-            {
-                detach (0, slot, node);
-
-                node->state = State::Firing;
-                node->callback ();
-
-                const bool cancelled = (node->state == State::Cancelled);
-                node->state = State::Idle;
-
-                if (JOIN_LIKELY (!cancelled && (node->interval.load (std::memory_order_relaxed) != 0)))
-                {
-                    node->deadline.fetch_add (node->interval.load (std::memory_order_relaxed),
-                                              std::memory_order_release);
-                    armTimer (node);
-                }
-                else
-                {
-                    releaseTimer (node);
-                    --_armed;
-                }
-
-                node = _wheel[0][slot];
-            }
-        }
-
-        /**
-         * @brief pop a node off the front of a slot list, leaving the list rooted in its slot.
-         * @param level wheel level the node is linked into.
-         * @param slot slot the node is linked into.
-         * @param node node to detach.
-         */
-        void detach (size_t level, size_t slot, Node* node) noexcept
-        {
-            _wheel[level][slot] = node->next;
-
-            if (node->next != nullptr)
-            {
-                node->next->prev = nullptr;
+                return 1;
             }
 
-            node->prev = nullptr;
-            node->next = nullptr;
-            node->state = State::Idle;
-        }
-
-        /**
-         * @brief drain pending commands, then cascade and fire every tick elapsed since the last call.
-         * @return number of ticks processed.
-         */
-        uint64_t advance () noexcept
-        {
-            readCommands ();
-
-            if (_armed == 0)
-            {
-                return 0;
-            }
-
-            const uint64_t target = toTick (ClockPolicy::now ());
-            uint64_t tick = _tick.load (std::memory_order_relaxed);
-            uint64_t count = 0;
-
-            while (tick < target)
-            {
-                _tick.store (++tick, std::memory_order_release);
-
-                const size_t slot = tick & _slotMask;
-
-                if (JOIN_UNLIKELY (slot == 0))
-                {
-                    for (size_t level = 1; level < _levels; ++level)
-                    {
-                        const size_t i = (tick >> (level * _slotBits)) & _slotMask;
-
-                        cascade (level, i);
-
-                        if (i != 0)
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                fire (slot);
-                ++count;
-            }
-
-            return count;
-        }
-
-        /**
-         * @brief check if no timer is armed, to be called from the thread running the wheel.
-         * @return true if no timer is armed.
-         */
-        bool empty () const noexcept
-        {
-            return _armed == 0;
+            return (static_cast<uint64_t> (ns.count ()) + TickNs - 1) / TickNs;
         }
 
         /// number of slots per wheel level.
@@ -825,37 +887,43 @@ namespace join
         /// number of wheel levels.
         static constexpr size_t _levels = 6;
 
-        /// generation mask, one bit is reserved so that a handle is never negative.
+        /// generation mask.
         static constexpr uint32_t _occupantMask = 0x7FFFFFFF;
 
-        /// command queue size, one Arm and one Disarm may be in flight per timer.
+        /// command queue size.
         static constexpr size_t _queueSize = 2 * Capacity;
 
-        /// arena backing the timer nodes.
+        /// node arena.
         LocalMem::Allocator<Capacity, sizeof (Node)> _arena;
 
         /// command queue.
         LocalMem::Mpsc::Queue<Command> _commands;
 
-        /// mmaped region backing the generation counters.
+        /// generation storage.
         LocalMem _generationsMem;
 
-        /// pointer into _generationsMem, one counter per arena chunk.
+        /// generations.
         std::atomic_uint32_t* const _generations;
 
-        /// number of armed timers, only accessed from the thread running the wheel.
+        /// armed timers.
         size_t _armed = 0;
 
-        /// slot lists, one array of slots per level.
+        /// occupied slots.
+        uint64_t _occupied[_levels][_slots / 64] = {};
+
+        /// next tick to process.
+        uint64_t _due = std::numeric_limits<uint64_t>::max ();
+
+        /// slots.
         alignas (64) Node* _wheel[_levels][_slots] = {};
 
         /// current tick.
-        alignas (64) std::atomic_uint64_t _tick{0};
+        alignas (64) uint64_t _tick = 0;
 
-        /// clock policy, triggers calibration for Rdtsc.
+        /// clock policy, calibrates Rdtsc.
         ClockPolicy _clock;
 
-        /// policy running the wheel, started last and stopped first.
+        /// run policy.
         RunPolicy _runner;
     };
 
@@ -912,7 +980,7 @@ namespace join
         }
 
         /**
-         * @brief start the dedicated thread spinning on the wheel.
+         * @brief start spinning.
          * @param wheel wheel to advance, shall outlive the run policy.
          * @param period ignored, the loop never sleeps.
          * @return 0 on success, -1 on failure.
@@ -934,7 +1002,7 @@ namespace join
         }
 
         /**
-         * @brief stop the dedicated thread and wait for its termination.
+         * @brief stop spinning.
          */
         void stop () noexcept
         {
@@ -953,8 +1021,8 @@ namespace join
         }
 
         /**
-         * @brief check if the calling thread is the thread running the wheel.
-         * @return true if called from the spinning thread.
+         * @brief check if called from the spinning thread.
+         * @return true if so.
          */
         bool isRunnerThread () const noexcept
         {
@@ -962,7 +1030,7 @@ namespace join
         }
 
         /**
-         * @brief no-op, the spinning loop picks commands up within one iteration.
+         * @brief no-op.
          * @param wheel wheel to advance.
          * @return 0.
          */
@@ -1001,7 +1069,7 @@ namespace join
 
     private:
         /**
-         * @brief spin on the wheel until stop() is called.
+         * @brief spin until stopped.
          * @param wheel wheel to advance.
          */
         template <class Wheel>
