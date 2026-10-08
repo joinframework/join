@@ -30,7 +30,6 @@
 #include <join/function.hpp>
 #include <join/backoff.hpp>
 #include <join/clock.hpp>
-#include <join/wheel.hpp>
 
 // C++.
 #include <functional>
@@ -53,9 +52,6 @@ namespace join
     class BasicTimer : protected CompletionHandler
     {
     public:
-        template <size_t Capacity, uint64_t TickNs = 1'000'000>
-        using Wheel = BasicWheel<ClockPolicy, WaitPolicy<ClockPolicy, ProactorType>, Capacity, TickNs>;
-
         /**
          * @brief timer state.
          */
@@ -430,112 +426,6 @@ namespace join
 
         /// timer handle.
         int _handle = -1;
-
-        /// completion dispatcher.
-        ProactorType& _proactor;
-    };
-
-    /**
-     * @brief wheel run policy waking the wheel from a periodic timer dispatched by a proactor.
-     */
-    template <class ClockPolicy, class ProactorType>
-    class WaitPolicy
-    {
-    public:
-        /**
-         * @brief create instance.
-         * @param proactor completion dispatcher.
-         * @throw std::system_error if the timer cannot be created or submitted.
-         */
-        explicit WaitPolicy (ProactorType& proactor = ProactorThread::proactor ())
-        : _timer (proactor)
-        , _proactor (proactor)
-        {
-        }
-
-        /**
-         * @brief copy constructor.
-         * @param other other object to copy.
-         */
-        WaitPolicy (const WaitPolicy& other) = delete;
-
-        /**
-         * @brief copy assignment operator.
-         * @param other other object to copy.
-         * @return current object.
-         */
-        WaitPolicy& operator= (const WaitPolicy& other) = delete;
-
-        /**
-         * @brief move constructor.
-         * @param other other object to move.
-         */
-        WaitPolicy (WaitPolicy&& other) = delete;
-
-        /**
-         * @brief move assignment operator.
-         * @param other other object to move.
-         * @return current object.
-         */
-        WaitPolicy& operator= (WaitPolicy&& other) = delete;
-
-        /**
-         * @brief destroy instance.
-         */
-        ~WaitPolicy () noexcept
-        {
-            stop ();
-        }
-
-        /**
-         * @brief start waking the wheel once per period.
-         * @param wheel wheel to advance, shall outlive the run policy.
-         * @param period tick duration.
-         * @return 0 on success, -1 on failure.
-         * @throw std::system_error if the timer cannot be armed.
-         */
-        template <class Wheel>
-        int start (Wheel& wheel, std::chrono::nanoseconds period)
-        {
-            _timer.setInterval (period, [&wheel] () {
-                wheel.advance ();
-            });
-
-            return 0;
-        }
-
-        /**
-         * @brief stop waking the wheel.
-         */
-        void stop () noexcept
-        {
-            _timer.cancel ();
-        }
-
-        /**
-         * @brief check if the calling thread is the thread running the wheel.
-         * @return true if called from the proactor thread.
-         */
-        bool isRunnerThread () const noexcept
-        {
-            return _proactor.isProactorThread ();
-        }
-
-        /**
-         * @brief no-op, the timer advances the wheel on every tick.
-         * @param wheel wheel to advance.
-         * @return 0.
-         */
-        template <class Wheel>
-        int flush ([[maybe_unused]] Wheel& wheel) noexcept
-        {
-            // do nothing, the timer advances the wheel on every tick.
-            return 0;
-        }
-
-    private:
-        /// periodic timer waking the wheel.
-        BasicTimer<ClockPolicy, ProactorType> _timer;
 
         /// completion dispatcher.
         ProactorType& _proactor;

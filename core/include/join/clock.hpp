@@ -45,17 +45,11 @@ namespace join
 
     template <class ClockPolicy, class ProactorType = BasicProactor<IoDefaultPolicy>>
     class BasicTimer;
-
-    template <class ClockPolicy, class ProactorType = BasicProactor<IoDefaultPolicy>>
-    class WaitPolicy;
 #else
     class BasicProactor;
 
     template <class ClockPolicy, class ProactorType = BasicProactor>
     class BasicTimer;
-
-    template <class ClockPolicy, class ProactorType = BasicProactor>
-    class WaitPolicy;
 #endif
 
     template <class ClockPolicy>
