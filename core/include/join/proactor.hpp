@@ -178,7 +178,7 @@ private:
         /**
          * @brief no-op, the event loop advances the wheel.
          * @param wheel wheel to advance.
-         * @param period ignored, the event loop waits one tick at most while timers are armed.
+         * @param period ignored, the event loop waits until the next event.
          * @return 0.
          */
         template <class Wheel>
@@ -225,7 +225,7 @@ private:
         /**
          * @brief advance the wheel, to be called by the event loop.
          * @param wheel wheel to advance.
-         * @return number of ticks processed.
+         * @return elapsed ticks.
          */
         template <class Wheel>
         static uint64_t advance (Wheel& wheel) noexcept
@@ -234,14 +234,25 @@ private:
         }
 
         /**
-         * @brief check if no timer is armed, to be called by the event loop.
+         * @brief get the io_uring wait timeout, to be called by the event loop.
          * @param wheel wheel to check.
-         * @return true if no timer is armed.
+         * @param ts storage for the timeout.
+         * @return ts filled with the time until the wheel has work, nullptr if no timer is armed.
          */
         template <class Wheel>
-        static bool empty (const Wheel& wheel) noexcept
+        static __kernel_timespec* timeout (const Wheel& wheel, __kernel_timespec& ts) noexcept
         {
-            return wheel.empty ();
+            const std::chrono::nanoseconds next = wheel.next ();
+
+            if (next == std::chrono::nanoseconds::max ())
+            {
+                return nullptr;
+            }
+
+            ts.tv_sec = next.count () / 1'000'000'000;
+            ts.tv_nsec = next.count () % 1'000'000'000;
+
+            return &ts;
         }
 
         /// proactor advancing the wheel.

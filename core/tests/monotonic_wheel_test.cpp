@@ -82,6 +82,21 @@ TEST (MonotonicWheel, setOneShot)
     std::this_thread::sleep_for (200ms);
     EXPECT_EQ (count, 4);
 
+    Monotonic::Wheel<64, 1'000> fine;
+    std::atomic<int> cascaded{0};
+
+    for (std::chrono::microseconds delay : {100us, 1000us, 100000us})
+    {
+        ASSERT_GT (fine.setOneShot (delay,
+                                    [&cascaded] () {
+                                        ++cascaded;
+                                    }),
+                   0);
+    }
+
+    std::this_thread::sleep_for (200ms);
+    EXPECT_EQ (cascaded, 3);
+
     for (size_t i = 0; i < wheel.capacity (); ++i)
     {
         ASSERT_GT (wheel.setOneShot (1h,

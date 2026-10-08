@@ -563,8 +563,7 @@ void Reactor::eventLoop ()
             break;
         }
 
-        int timeout = WheelPolicy::empty (_wheel) ? -1 : _tickMs;
-        int eventCount = epoll_wait (_epoll, events.data (), events.size (), timeout);
+        int eventCount = epoll_wait (_epoll, events.data (), events.size (), WheelPolicy::timeout (_wheel));
 
         for (int i = 0; i < eventCount; ++i)
         {

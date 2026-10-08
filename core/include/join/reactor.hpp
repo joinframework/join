@@ -37,6 +37,7 @@
 #include <unordered_set>
 #include <atomic>
 #include <chrono>
+#include <limits>
 
 // C.
 #include <sys/epoll.h>
@@ -184,7 +185,7 @@ namespace join
             /**
              * @brief no-op, the event loop advances the wheel.
              * @param wheel wheel to advance.
-             * @param period ignored, the event loop waits one tick at most while timers are armed.
+             * @param period ignored, the event loop waits until the next event.
              * @return 0.
              */
             template <class Wheel>
@@ -231,7 +232,7 @@ namespace join
             /**
              * @brief advance the wheel, to be called by the event loop.
              * @param wheel wheel to advance.
-             * @return number of ticks processed.
+             * @return elapsed ticks.
              */
             template <class Wheel>
             static uint64_t advance (Wheel& wheel) noexcept
@@ -240,14 +241,24 @@ namespace join
             }
 
             /**
-             * @brief check if no timer is armed, to be called by the event loop.
+             * @brief get the epoll_wait timeout, to be called by the event loop.
              * @param wheel wheel to check.
-             * @return true if no timer is armed.
+             * @return milliseconds until the wheel has work, rounded up, -1 if no timer is armed.
              */
             template <class Wheel>
-            static bool empty (const Wheel& wheel) noexcept
+            static int timeout (const Wheel& wheel) noexcept
             {
-                return wheel.empty ();
+                const std::chrono::nanoseconds next = wheel.next ();
+
+                if (next == std::chrono::nanoseconds::max ())
+                {
+                    return -1;
+                }
+
+                const int64_t ms = (next.count () + 999'999) / 1'000'000;
+
+                return (ms < std::numeric_limits<int>::max ()) ? static_cast<int> (ms)
+                                                               : std::numeric_limits<int>::max ();
             }
 
             /// reactor advancing the wheel.
@@ -381,9 +392,6 @@ namespace join
         }
 
     private:
-        /// wheel resolution in milliseconds, rounded up for epoll_wait.
-        static constexpr int _tickMs = static_cast<int> ((Wheel::resolution ().count () + 999'999) / 1'000'000);
-
         /**
          * @brief Command type for reactor dispatcher.
          */

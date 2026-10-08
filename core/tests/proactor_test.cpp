@@ -1021,6 +1021,17 @@ TEST_F (ProactorTest, wheel)
     ASSERT_EQ (proactor.wheel ().cancel (id), -1);
     ASSERT_EQ (join::lastError, Errc::NotFound);
 
+    id = proactor.wheel ().setOneShot (std::chrono::nanoseconds::max (), [&count] () {
+        ++count;
+    });
+    ASSERT_GT (id, 0);
+    std::this_thread::sleep_for (10ms);
+    ASSERT_EQ (proactor.invoke (&fn), 0) << join::lastError.message ();
+    std::this_thread::sleep_for (30ms);
+    EXPECT_EQ (inside, 3);
+    EXPECT_EQ (count, fired);
+    ASSERT_EQ (proactor.wheel ().cancel (id, true), 0) << join::lastError.message ();
+
     proactor.stop ();
     th.join ();
 }
