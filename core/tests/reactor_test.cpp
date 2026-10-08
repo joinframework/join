@@ -582,7 +582,10 @@ TEST_F (ReactorTest, onError)
     ASSERT_EQ (ReactorThread::reactor ().addHandler (handle (), this, true, false), 0) << join::lastError.message ();
 
     // reset connection.
-    struct linger sl{.l_onoff = 1, .l_linger = 0};
+    struct linger sl
+    {
+        .l_onoff = 1, .l_linger = 0
+    };
 
     ASSERT_EQ (setsockopt (_client.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
     _client.close ();
