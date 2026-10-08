@@ -151,7 +151,8 @@ namespace join
             node->callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
             node->interval.store (0, std::memory_order_relaxed);
             node->state = State::Idle;
-            node->deadline.store (toTick (ClockPolicy::now ()) + ticksFor (duration) + 1, std::memory_order_relaxed);
+            const uint64_t now = toTick (ClockPolicy::now ());
+            node->deadline.store (now + ticksFor (duration) + 1, std::memory_order_relaxed);
 
             const uint32_t place = _arena.getIndex (node);
             const uint32_t occupant = _generations[place].load (std::memory_order_relaxed) & _occupantMask;
@@ -160,7 +161,7 @@ namespace join
             {
                 if (_armed++ == 0)
                 {
-                    _tick.store (toTick (ClockPolicy::now ()), std::memory_order_release);
+                    _tick.store (now, std::memory_order_release);
                 }
 
                 armTimer (node);
@@ -204,7 +205,8 @@ namespace join
             node->callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
             node->interval.store (ticks, std::memory_order_relaxed);
             node->state = State::Idle;
-            node->deadline.store (toTick (ClockPolicy::now ()) + ticks + 1, std::memory_order_relaxed);
+            const uint64_t now = toTick (ClockPolicy::now ());
+            node->deadline.store (now + ticks + 1, std::memory_order_relaxed);
 
             const uint32_t place = _arena.getIndex (node);
             const uint32_t occupant = _generations[place].load (std::memory_order_relaxed) & _occupantMask;
@@ -213,7 +215,7 @@ namespace join
             {
                 if (_armed++ == 0)
                 {
-                    _tick.store (toTick (ClockPolicy::now ()), std::memory_order_release);
+                    _tick.store (now, std::memory_order_release);
                 }
 
                 armTimer (node);
@@ -255,12 +257,6 @@ namespace join
                 return 0;
             }
 
-            if (JOIN_UNLIKELY (sync && (_runner.flush (*this) == -1)))
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             if (JOIN_UNLIKELY (writeCommand ({CommandType::Disarm, placeOf (id), occupantOf (id)}) == -1))
             {
                 return -1;  // LCOV_EXCL_LINE
@@ -273,10 +269,8 @@ namespace join
                 {
                     if (JOIN_UNLIKELY (_runner.flush (*this) == -1))
                     {
-                        // LCOV_EXCL_START
                         lastError = make_error_code (Errc::OperationFailed);
                         return -1;
-                        // LCOV_EXCL_STOP
                     }
 
                     backoff ();

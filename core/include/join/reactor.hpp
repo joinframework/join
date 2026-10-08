@@ -166,10 +166,6 @@ namespace join
         /// max events
         static constexpr size_t _maxEvents = 1024;
 
-    public:
-        /// function invoked on the reactor thread.
-        using InvokeHandler = Function<void (), 64>;
-
         /**
          * @brief timer wheel run policy, letting the event loop advance the wheel.
          */
@@ -261,6 +257,10 @@ namespace join
             friend class Reactor;
         };
 
+    public:
+        /// function invoked on the reactor thread.
+        using InvokeHandler = Function<void (), 64>;
+
         /// timer wheel, able to arm a timer for every queued command.
         using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, 1'000'000>;
 
@@ -346,7 +346,7 @@ namespace join
 
 #ifdef JOIN_HAS_NUMA
         /**
-         * @brief bind command queue memory to a NUMA node.
+         * @brief bind command queue and timer wheel memory to a NUMA node.
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
@@ -354,7 +354,7 @@ namespace join
 #endif
 
         /**
-         * @brief lock command queue memory in RAM.
+         * @brief lock command queue and timer wheel memory in RAM.
          * @return 0 on success, -1 on failure.
          */
         int mlock () const noexcept;
@@ -551,7 +551,7 @@ namespace join
 
 #ifdef JOIN_HAS_NUMA
         /**
-         * @brief bind command queue memory to a NUMA node.
+         * @brief bind command queue and timer wheel memory to a NUMA node.
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
@@ -559,7 +559,7 @@ namespace join
 #endif
 
         /**
-         * @brief lock command queue memory in RAM.
+         * @brief lock command queue and timer wheel memory in RAM.
          * @return 0 on success, -1 on failure.
          */
         static int mlock ();
