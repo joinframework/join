@@ -522,18 +522,15 @@ namespace join
         }
 
         /**
-         * @brief advance the wheel from its owner thread without waiting for the next tick.
+         * @brief no-op, the timer advances the wheel on every tick.
          * @param wheel wheel to advance.
-         * @return 0 on success, -1 on failure.
+         * @return 0.
          */
         template <class Wheel>
-        int flush (Wheel& wheel) noexcept
+        int flush ([[maybe_unused]] Wheel& wheel) noexcept
         {
-            typename ProactorType::InvokeHandler fn = [&wheel] () {
-                wheel.advance ();
-            };
-
-            return _proactor.invoke (&fn);
+            // do nothing, the timer advances the wheel on every tick.
+            return 0;
         }
 
     private:

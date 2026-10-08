@@ -29,12 +29,14 @@
 #include <join/function.hpp>
 #include <join/thread.hpp>
 #include <join/queue.hpp>
+#include <join/wheel.hpp>
 #include <join/utils.hpp>
 
 // C++.
 #include <unordered_map>
 #include <unordered_set>
 #include <atomic>
+#include <chrono>
 
 // C.
 #include <sys/epoll.h>
@@ -154,9 +156,113 @@ namespace join
      */
     class Reactor
     {
+    private:
+        /// deleted handlers reserve size.
+        static constexpr size_t _deletedReserve = 64;
+
+        /// queue size.
+        static constexpr size_t _queueSize = 1024;
+
+        /// max events
+        static constexpr size_t _maxEvents = 1024;
+
+        /**
+         * @brief timer wheel run policy, letting the event loop advance the wheel.
+         */
+        class WheelPolicy
+        {
+        public:
+            /**
+             * @brief create instance.
+             * @param reactor reactor advancing the wheel.
+             */
+            explicit WheelPolicy (Reactor& reactor) noexcept
+            : _reactor (reactor)
+            {
+            }
+
+            /**
+             * @brief no-op, the event loop advances the wheel.
+             * @param wheel wheel to advance.
+             * @param period ignored, the event loop waits one tick at most while timers are armed.
+             * @return 0.
+             */
+            template <class Wheel>
+            int start ([[maybe_unused]] Wheel& wheel, [[maybe_unused]] std::chrono::nanoseconds period) noexcept
+            {
+                // do nothing, the event loop advances the wheel.
+                return 0;
+            }
+
+            /**
+             * @brief no-op, the event loop advances the wheel.
+             */
+            void stop () noexcept
+            {
+                // do nothing, the event loop advances the wheel.
+            }
+
+            /**
+             * @brief check if the calling thread is the reactor thread.
+             * @return true if called from the reactor thread.
+             */
+            bool isRunnerThread () const noexcept
+            {
+                return _reactor.isReactorThread ();
+            }
+
+            /**
+             * @brief wake the event loop up without waiting for it, so that it advances the wheel.
+             * @param wheel wheel to advance.
+             * @return 0 on success, -1 if the event loop is not running.
+             */
+            template <class Wheel>
+            int flush ([[maybe_unused]] Wheel& wheel) noexcept
+            {
+                if (JOIN_UNLIKELY (!_reactor.isRunning ()))
+                {
+                    return -1;
+                }
+
+                return _reactor.wakeup ();
+            }
+
+        private:
+            /**
+             * @brief advance the wheel, to be called by the event loop.
+             * @param wheel wheel to advance.
+             * @return number of ticks processed.
+             */
+            template <class Wheel>
+            static uint64_t advance (Wheel& wheel) noexcept
+            {
+                return wheel.advance ();
+            }
+
+            /**
+             * @brief check if no timer is armed, to be called by the event loop.
+             * @param wheel wheel to check.
+             * @return true if no timer is armed.
+             */
+            template <class Wheel>
+            static bool empty (const Wheel& wheel) noexcept
+            {
+                return wheel.empty ();
+            }
+
+            /// reactor advancing the wheel.
+            Reactor& _reactor;
+
+            /// friendship with reactor.
+            friend class Reactor;
+        };
+
     public:
         /// function invoked on the reactor thread.
         using InvokeHandler = Function<void (), 64>;
+
+        /// timer wheel, able to arm a timer for every queued command.
+        using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, 1'000'000>;
 
         /**
          * @brief default constructor.
@@ -240,7 +346,7 @@ namespace join
 
 #ifdef JOIN_HAS_NUMA
         /**
-         * @brief bind command queue memory to a NUMA node.
+         * @brief bind command queue and timer wheel memory to a NUMA node.
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
@@ -248,7 +354,7 @@ namespace join
 #endif
 
         /**
-         * @brief lock command queue memory in RAM.
+         * @brief lock command queue and timer wheel memory in RAM.
          * @return 0 on success, -1 on failure.
          */
         int mlock () const noexcept;
@@ -265,15 +371,18 @@ namespace join
          */
         bool isReactorThread () const noexcept;
 
+        /**
+         * @brief get the timer wheel advanced by the event loop.
+         * @return timer wheel.
+         */
+        Wheel& wheel () noexcept
+        {
+            return _wheel;
+        }
+
     private:
-        /// deleted handlers reserve size.
-        static constexpr size_t _deletedReserve = 64;
-
-        /// queue size.
-        static constexpr size_t _queueSize = 1024;
-
-        /// max events
-        static constexpr size_t _maxEvents = 1024;
+        /// wheel resolution in milliseconds, rounded up for epoll_wait.
+        static constexpr int _tickMs = static_cast<int> ((Wheel::resolution ().count () + 999'999) / 1'000'000);
 
         /**
          * @brief Command type for reactor dispatcher.
@@ -331,6 +440,12 @@ namespace join
         int writeCommand (const Command& cmd) noexcept;
 
         /**
+         * @brief wake the event loop up, coalesced with the pending wake ups.
+         * @return 0 on success, -1 on failure.
+         */
+        int wakeup () noexcept;
+
+        /**
          * @brief process a single command.
          * @param cmd command to process.
          */
@@ -358,6 +473,9 @@ namespace join
          * @return true if handler is active, false otherwise.
          */
         bool isActive (int fd) const noexcept;
+
+        /// timer wheel advanced by the event loop, built first so that nothing leaks if it throws.
+        Wheel _wheel{*this};
 
         /// eventfd descriptor.
         int _wakeup = -1;
@@ -433,7 +551,7 @@ namespace join
 
 #ifdef JOIN_HAS_NUMA
         /**
-         * @brief bind command queue memory to a NUMA node.
+         * @brief bind command queue and timer wheel memory to a NUMA node.
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
@@ -441,7 +559,7 @@ namespace join
 #endif
 
         /**
-         * @brief lock command queue memory in RAM.
+         * @brief lock command queue and timer wheel memory in RAM.
          * @return 0 on success, -1 on failure.
          */
         static int mlock ();

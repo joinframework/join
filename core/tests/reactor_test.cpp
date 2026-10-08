@@ -30,6 +30,13 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <thread>
+#include <chrono>
+#include <atomic>
+
+using namespace std::chrono_literals;
+
 using join::Errc;
 using join::Mutex;
 using join::Condition;
@@ -591,6 +598,115 @@ TEST_F (ReactorTest, onError)
         }));
         _event.clear ();
     }
+}
+
+/**
+ * @brief accumulator used to test timers calling a method.
+ */
+struct Accumulator
+{
+    /**
+     * @brief add a value to the total.
+     * @param value value to add.
+     */
+    void add (int value)
+    {
+        total += value;
+    }
+
+    /// accumulated total.
+    std::atomic<int> total{0};
+};
+
+/**
+ * @brief Test wheel.
+ */
+TEST_F (ReactorTest, wheel)
+{
+    Reactor reactor;
+    Accumulator accumulator;
+    std::atomic<int> before{0}, after{0}, inside{0}, count{0};
+    std::atomic<int64_t> elapsed{0};
+
+    ASSERT_GT (reactor.wheel ().setOneShot (10ms,
+                                            [&before] () {
+                                                ++before;
+                                            }),
+               0);
+
+    ssize_t idle = reactor.wheel ().setOneShot (10ms, [] () {
+    });
+    ASSERT_GT (idle, 0);
+    ASSERT_EQ (reactor.wheel ().cancel (idle, true), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    Thread th ([&reactor] () {
+        reactor.run ();
+    });
+    while (!reactor.isRunning ())
+    {
+    }
+
+    std::this_thread::sleep_for (50ms);
+    EXPECT_EQ (before, 1);
+
+    const auto origin = std::chrono::steady_clock::now ();
+    ASSERT_GT (reactor.wheel ().setOneShot (30ms,
+                                            [&after, &elapsed, origin] () {
+                                                elapsed = std::chrono::duration_cast<std::chrono::microseconds> (
+                                                              std::chrono::steady_clock::now () - origin)
+                                                              .count ();
+                                                ++after;
+                                            }),
+               0);
+
+    Reactor::InvokeHandler fn = [&reactor, &inside] () {
+        reactor.wheel ().setOneShot (10ms, [&inside] () {
+            ++inside;
+        });
+    };
+    ASSERT_EQ (reactor.invoke (&fn), 0) << join::lastError.message ();
+
+    ASSERT_GT (reactor.wheel ().setOneShot (10ms, &Accumulator::add, &accumulator, 2), 0);
+
+    std::this_thread::sleep_for (100ms);
+    EXPECT_EQ (after, 1);
+    EXPECT_GE (elapsed, 30000);
+    EXPECT_EQ (inside, 1);
+    EXPECT_EQ (accumulator.total, 2);
+
+    // armed from the reactor thread with an empty wheel.
+    ASSERT_EQ (reactor.invoke (&fn), 0) << join::lastError.message ();
+    std::this_thread::sleep_for (30ms);
+    EXPECT_EQ (inside, 2);
+
+    ssize_t id = -1;
+    Reactor::InvokeHandler interval = [&reactor, &count, &id] () {
+        id = reactor.wheel ().setInterval (5ms, [&count] () {
+            ++count;
+        });
+    };
+    ASSERT_EQ (reactor.invoke (&interval), 0) << join::lastError.message ();
+    ASSERT_GT (id, 0);
+    std::this_thread::sleep_for (100ms);
+    ASSERT_EQ (reactor.wheel ().cancel (id, true), 0) << join::lastError.message ();
+    const int fired = count;
+    EXPECT_GT (fired, 10);
+    std::this_thread::sleep_for (50ms);
+    EXPECT_EQ (count, fired);
+
+    id = reactor.wheel ().setOneShot (50ms, [&count] () {
+        ++count;
+    });
+    ASSERT_GT (id, 0);
+    ASSERT_EQ (reactor.wheel ().cancel (id, true), 0) << join::lastError.message ();
+    std::this_thread::sleep_for (100ms);
+    EXPECT_EQ (count, fired);
+    ASSERT_EQ (reactor.wheel ().cancel (id), -1);
+    ASSERT_EQ (join::lastError, Errc::NotFound);
+
+    reactor.stop ();
+    th.join ();
 }
 
 /**
