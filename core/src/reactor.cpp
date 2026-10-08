@@ -294,6 +294,11 @@ void Reactor::waitStopped () const noexcept
 // =========================================================================
 int Reactor::mbind (int numa) const noexcept
 {
+    if (_wheel.mbind (numa) == -1)
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
+
     return _commands.mbind (numa);
 }
 #endif
@@ -304,6 +309,11 @@ int Reactor::mbind (int numa) const noexcept
 // =========================================================================
 int Reactor::mlock () const noexcept
 {
+    if (_wheel.mlock () == -1)
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
+
     return _commands.mlock ();
 }
 
@@ -435,6 +445,15 @@ int Reactor::writeCommand (const Command& cmd) noexcept
         return -1;  // LCOV_EXCL_LINE
     }
 
+    return wakeup ();
+}
+
+// =========================================================================
+//   CLASS     : Reactor
+//   METHOD    : wakeup
+// =========================================================================
+int Reactor::wakeup () noexcept
+{
     if (_notified.exchange (true))
     {
         return 0;
@@ -535,13 +554,17 @@ void Reactor::eventLoop ()
 {
     std::array<epoll_event, _maxEvents> events;
 
-    while (_running.load (std::memory_order_acquire))
+    for (;;)
     {
-        int eventCount = epoll_wait (_epoll, events.data (), events.size (), -1);
-        if (JOIN_UNLIKELY ((eventCount < 0) && (errno == EINTR)))
+        WheelPolicy::advance (_wheel);
+
+        if (JOIN_UNLIKELY (!_running.load (std::memory_order_acquire)))
         {
-            continue;
+            break;
         }
+
+        int timeout = WheelPolicy::empty (_wheel) ? -1 : _tickMs;
+        int eventCount = epoll_wait (_epoll, events.data (), events.size (), timeout);
 
         for (int i = 0; i < eventCount; ++i)
         {

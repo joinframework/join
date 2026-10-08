@@ -151,14 +151,18 @@ namespace join
             node->callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
             node->interval.store (0, std::memory_order_relaxed);
             node->state = State::Idle;
-            node->deadline.store (_tick.load (std::memory_order_acquire) + ticksFor (duration),
-                                  std::memory_order_relaxed);
+            node->deadline.store (toTick (ClockPolicy::now ()) + ticksFor (duration) + 1, std::memory_order_relaxed);
 
             const uint32_t place = _arena.getIndex (node);
             const uint32_t occupant = _generations[place].load (std::memory_order_relaxed) & _occupantMask;
 
             if (JOIN_LIKELY (_runner.isRunnerThread ()))
             {
+                if (_armed++ == 0)
+                {
+                    _tick.store (toTick (ClockPolicy::now ()), std::memory_order_release);
+                }
+
                 armTimer (node);
                 return makeId (occupant, place);
             }
@@ -170,6 +174,8 @@ namespace join
                 return -1;
                 // LCOV_EXCL_STOP
             }
+
+            _runner.flush (*this);
 
             return makeId (occupant, place);
         }
@@ -198,13 +204,18 @@ namespace join
             node->callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
             node->interval.store (ticks, std::memory_order_relaxed);
             node->state = State::Idle;
-            node->deadline.store (_tick.load (std::memory_order_acquire) + ticks, std::memory_order_relaxed);
+            node->deadline.store (toTick (ClockPolicy::now ()) + ticks + 1, std::memory_order_relaxed);
 
             const uint32_t place = _arena.getIndex (node);
             const uint32_t occupant = _generations[place].load (std::memory_order_relaxed) & _occupantMask;
 
             if (JOIN_LIKELY (_runner.isRunnerThread ()))
             {
+                if (_armed++ == 0)
+                {
+                    _tick.store (toTick (ClockPolicy::now ()), std::memory_order_release);
+                }
+
                 armTimer (node);
                 return makeId (occupant, place);
             }
@@ -216,6 +227,8 @@ namespace join
                 return -1;
                 // LCOV_EXCL_STOP
             }
+
+            _runner.flush (*this);
 
             return makeId (occupant, place);
         }
@@ -242,6 +255,12 @@ namespace join
                 return 0;
             }
 
+            if (JOIN_UNLIKELY (sync && (_runner.flush (*this) == -1)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
             if (JOIN_UNLIKELY (writeCommand ({CommandType::Disarm, placeOf (id), occupantOf (id)}) == -1))
             {
                 return -1;  // LCOV_EXCL_LINE
@@ -249,14 +268,17 @@ namespace join
 
             if (JOIN_UNLIKELY (sync))
             {
-                if (JOIN_UNLIKELY (_runner.flush (*this) == -1))
-                {
-                    return -1;  // LCOV_EXCL_LINE
-                }
-
                 Backoff backoff;
                 while (resolve (id) != nullptr)
                 {
+                    if (JOIN_UNLIKELY (_runner.flush (*this) == -1))
+                    {
+                        // LCOV_EXCL_START
+                        lastError = make_error_code (Errc::OperationFailed);
+                        return -1;
+                        // LCOV_EXCL_STOP
+                    }
+
                     backoff ();
                 }
             }
@@ -288,10 +310,10 @@ namespace join
                 return std::chrono::nanoseconds::zero ();
             }
 
-            const uint64_t tick = _tick.load (std::memory_order_acquire);
+            const uint64_t tick = toTick (ClockPolicy::now ());
             const uint64_t deadline = node->deadline.load (std::memory_order_acquire);
 
-            return std::chrono::nanoseconds ((deadline > tick) ? ((deadline - tick) * TickNs) : 0);
+            return std::chrono::nanoseconds ((deadline > tick + 1) ? ((deadline - tick - 1) * TickNs) : 0);
         }
 
         /**
@@ -594,6 +616,8 @@ namespace join
                 {
                     node->next->prev = node->prev;
                 }
+
+                --_armed;
             }
 
             releaseTimer (node);
@@ -656,6 +680,11 @@ namespace join
 
                 if (cmd.type == CommandType::Arm)
                 {
+                    if (_armed++ == 0)
+                    {
+                        _tick.store (toTick (ClockPolicy::now ()), std::memory_order_release);
+                    }
+
                     armTimer (node);
                 }
                 else
@@ -709,6 +738,7 @@ namespace join
                 else
                 {
                     releaseTimer (node);
+                    --_armed;
                 }
 
                 node = _wheel[0][slot];
@@ -743,6 +773,11 @@ namespace join
         {
             readCommands ();
 
+            if (_armed == 0)
+            {
+                return 0;
+            }
+
             const uint64_t target = toTick (ClockPolicy::now ());
             uint64_t tick = _tick.load (std::memory_order_relaxed);
             uint64_t count = 0;
@@ -775,6 +810,15 @@ namespace join
             return count;
         }
 
+        /**
+         * @brief check if no timer is armed, to be called from the thread running the wheel.
+         * @return true if no timer is armed.
+         */
+        bool empty () const noexcept
+        {
+            return _armed == 0;
+        }
+
         /// number of slots per wheel level.
         static constexpr size_t _slots = 256;
 
@@ -804,6 +848,9 @@ namespace join
 
         /// pointer into _generationsMem, one counter per arena chunk.
         std::atomic_uint32_t* const _generations;
+
+        /// number of armed timers, only accessed from the thread running the wheel.
+        size_t _armed = 0;
 
         /// slot lists, one array of slots per level.
         alignas (64) Node* _wheel[_levels][_slots] = {};
