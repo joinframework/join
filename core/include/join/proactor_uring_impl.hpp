@@ -382,6 +382,11 @@ int join::BasicProactor<IoPolicy>::unregisterBufferRing (uint16_t group)
 template <typename IoPolicy>
 int join::BasicProactor<IoPolicy>::mbind (int numa) const noexcept
 {
+    if (_wheel.mbind (numa) == -1)
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
+
     return _commands.mbind (numa);
 }
 #endif
@@ -393,6 +398,11 @@ int join::BasicProactor<IoPolicy>::mbind (int numa) const noexcept
 template <typename IoPolicy>
 int join::BasicProactor<IoPolicy>::mlock () const noexcept
 {
+    if (_wheel.mlock () == -1)
+    {
+        return -1;  // LCOV_EXCL_LINE
+    }
+
     return _commands.mlock ();
 }
 
@@ -414,6 +424,16 @@ template <typename IoPolicy>
 bool join::BasicProactor<IoPolicy>::isProactorThread () const noexcept
 {
     return _threadId.load (std::memory_order_acquire) == pthread_self ();
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : wheel
+// =========================================================================
+template <typename IoPolicy>
+typename join::BasicProactor<IoPolicy>::Wheel& join::BasicProactor<IoPolicy>::wheel () noexcept
+{
+    return _wheel;
 }
 
 // =========================================================================
@@ -525,21 +545,31 @@ void join::BasicProactor<IoPolicy>::initSqThreadCpu (io_uring_params& params, st
 template <typename IoPolicy>
 int join::BasicProactor<IoPolicy>::writeCommand (const Command& cmd) noexcept
 {
-    return writeCommand (cmd, is_default<IoPolicy>{});
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : writeCommand
-// =========================================================================
-template <typename IoPolicy>
-int join::BasicProactor<IoPolicy>::writeCommand (const Command& cmd, std::true_type) noexcept
-{
     if (JOIN_UNLIKELY (_commands.push (cmd) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
 
+    return wakeup ();
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : wakeup
+// =========================================================================
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::wakeup () noexcept
+{
+    return wakeup (is_default<IoPolicy>{});
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : wakeup
+// =========================================================================
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::wakeup (std::true_type) noexcept
+{
     // pairs with the fence in the event loop: an acquire load would let the push above be
     // reordered after it, the loop would sleep and the wakeup would be lost.
     std::atomic_thread_fence (std::memory_order_seq_cst);
@@ -564,12 +594,12 @@ int join::BasicProactor<IoPolicy>::writeCommand (const Command& cmd, std::true_t
 
 // =========================================================================
 //   CLASS     : BasicProactor
-//   METHOD    : writeCommand
+//   METHOD    : wakeup
 // =========================================================================
 template <typename IoPolicy>
-int join::BasicProactor<IoPolicy>::writeCommand (const Command& cmd, std::false_type) noexcept
+int join::BasicProactor<IoPolicy>::wakeup (std::false_type) noexcept
 {
-    return _commands.push (cmd);
+    return 0;
 }
 
 // =========================================================================
@@ -1091,11 +1121,13 @@ void join::BasicProactor<IoPolicy>::eventLoop (std::false_type, std::false_type)
         submitOperation (_wakeupOp, true);
     }
 
+    __kernel_timespec tick{0, Wheel::resolution ().count ()};
     Backoff backoff;
     bool running;
 
     while ((running = _running.load (std::memory_order_acquire)) || !_pendingOps.empty ())
     {
+        WheelPolicy::advance (_wheel);
         readCommands ();
         io_uring_submit (&_ring);
 
@@ -1123,13 +1155,21 @@ void join::BasicProactor<IoPolicy>::eventLoop (std::false_type, std::false_type)
         _wakeupState.store (WakeupState::Sleeping, std::memory_order_relaxed);
         std::atomic_thread_fence (std::memory_order_seq_cst);
         readCommands ();
+        WheelPolicy::advance (_wheel);
 
         io_uring_submit (&_ring);
         if (JOIN_LIKELY (_running.load (std::memory_order_acquire)))
         {
             if (io_uring_peek_cqe (&_ring, &cqe) != 0)
             {
-                io_uring_wait_cqe (&_ring, &cqe);
+                if (WheelPolicy::empty (_wheel))
+                {
+                    io_uring_wait_cqe (&_ring, &cqe);
+                }
+                else
+                {
+                    io_uring_wait_cqe_timeout (&_ring, &cqe, &tick);
+                }
             }
         }
 
@@ -1149,6 +1189,8 @@ void join::BasicProactor<IoPolicy>::eventLoop (std::true_type, std::false_type) 
 
     while ((running = _running.load (std::memory_order_acquire)) || !_pendingOps.empty ())
     {
+        WheelPolicy::advance (_wheel);
+
         if (JOIN_LIKELY (running))
         {
             readCommands ();
@@ -1188,6 +1230,8 @@ void join::BasicProactor<IoPolicy>::eventLoop (std::true_type, std::true_type) n
 
     while ((running = _running.load (std::memory_order_acquire)) || !_pendingOps.empty ())
     {
+        WheelPolicy::advance (_wheel);
+
         if (JOIN_LIKELY (running))
         {
             readCommands ();

@@ -315,6 +315,15 @@ inline bool join::BasicProactor::isProactorThread () const noexcept
 
 // =========================================================================
 //   CLASS     : BasicProactor
+//   METHOD    : wheel
+// =========================================================================
+inline join::BasicProactor::Wheel& join::BasicProactor::wheel () noexcept
+{
+    return _reactor.wheel ();
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
 //   METHOD    : writeCommand
 // =========================================================================
 inline int join::BasicProactor::writeCommand (const Command& cmd) noexcept

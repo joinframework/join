@@ -31,6 +31,13 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <thread>
+#include <chrono>
+#include <atomic>
+
+using namespace std::chrono_literals;
+
 using join::Errc;
 using join::Mutex;
 using join::Condition;
@@ -803,6 +810,93 @@ TEST_F (SqpollProactorTest, waitStopped)
 
     ASSERT_FALSE (proactor.isRunning ());
 
+    th.join ();
+}
+
+/**
+ * @brief Test wheel.
+ */
+TEST_F (SqpollProactorTest, wheel)
+{
+    SqpollProactor proactor;
+    std::atomic<int> before{0}, after{0}, inside{0}, count{0};
+    std::atomic<int64_t> elapsed{0};
+
+    ASSERT_GT (proactor.wheel ().setOneShot (10ms,
+                                             [&before] () {
+                                                 ++before;
+                                             }),
+               0);
+
+    ssize_t idle = proactor.wheel ().setOneShot (10ms, [] () {
+    });
+    ASSERT_GT (idle, 0);
+    ASSERT_EQ (proactor.wheel ().cancel (idle, true), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    Thread th ([&proactor] () {
+        proactor.run ();
+    });
+    while (!proactor.isRunning ())
+    {
+    }
+
+    std::this_thread::sleep_for (50ms);
+    EXPECT_EQ (before, 1);
+
+    const auto origin = std::chrono::steady_clock::now ();
+    ASSERT_GT (proactor.wheel ().setOneShot (30ms,
+                                             [&after, &elapsed, origin] () {
+                                                 elapsed = std::chrono::duration_cast<std::chrono::microseconds> (
+                                                               std::chrono::steady_clock::now () - origin)
+                                                               .count ();
+                                                 ++after;
+                                             }),
+               0);
+
+    SqpollProactor::InvokeHandler fn = [&proactor, &inside] () {
+        proactor.wheel ().setOneShot (10ms, [&inside] () {
+            ++inside;
+        });
+    };
+    ASSERT_EQ (proactor.invoke (&fn), 0) << join::lastError.message ();
+
+    std::this_thread::sleep_for (100ms);
+    EXPECT_EQ (after, 1);
+    EXPECT_GE (elapsed, 30000);
+    EXPECT_EQ (inside, 1);
+
+    // armed from the proactor thread with an empty wheel.
+    ASSERT_EQ (proactor.invoke (&fn), 0) << join::lastError.message ();
+    std::this_thread::sleep_for (30ms);
+    EXPECT_EQ (inside, 2);
+
+    ssize_t id = -1;
+    SqpollProactor::InvokeHandler interval = [&proactor, &count, &id] () {
+        id = proactor.wheel ().setInterval (5ms, [&count] () {
+            ++count;
+        });
+    };
+    ASSERT_EQ (proactor.invoke (&interval), 0) << join::lastError.message ();
+    ASSERT_GT (id, 0);
+    std::this_thread::sleep_for (100ms);
+    ASSERT_EQ (proactor.wheel ().cancel (id, true), 0) << join::lastError.message ();
+    const int fired = count;
+    EXPECT_GT (fired, 10);
+    std::this_thread::sleep_for (50ms);
+    EXPECT_EQ (count, fired);
+
+    id = proactor.wheel ().setOneShot (50ms, [&count] () {
+        ++count;
+    });
+    ASSERT_GT (id, 0);
+    ASSERT_EQ (proactor.wheel ().cancel (id, true), 0) << join::lastError.message ();
+    std::this_thread::sleep_for (100ms);
+    EXPECT_EQ (count, fired);
+    ASSERT_EQ (proactor.wheel ().cancel (id), -1);
+    ASSERT_EQ (join::lastError, Errc::NotFound);
+
+    proactor.stop ();
     th.join ();
 }
 

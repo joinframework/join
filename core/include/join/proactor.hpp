@@ -31,6 +31,7 @@
 #include <join/function.hpp>
 #ifdef JOIN_HAS_IO_URING
 #include <join/io_policy.hpp>
+#include <join/wheel.hpp>
 #else
 #include <join/reactor.hpp>
 #endif
@@ -154,9 +155,114 @@ class join::BasicProactor
 class join::BasicProactor : public join::EventHandler
 #endif
 {
+private:
+    /// command queue size.
+    static constexpr size_t _queueSize = 1024;
+
+#ifdef JOIN_HAS_IO_URING
+    /**
+     * @brief timer wheel run policy, letting the event loop advance the wheel.
+     */
+    class WheelPolicy
+    {
+    public:
+        /**
+         * @brief create instance.
+         * @param proactor proactor advancing the wheel.
+         */
+        explicit WheelPolicy (BasicProactor& proactor) noexcept
+        : _proactor (proactor)
+        {
+        }
+
+        /**
+         * @brief no-op, the event loop advances the wheel.
+         * @param wheel wheel to advance.
+         * @param period ignored, the event loop waits one tick at most while timers are armed.
+         * @return 0.
+         */
+        template <class Wheel>
+        int start ([[maybe_unused]] Wheel& wheel, [[maybe_unused]] std::chrono::nanoseconds period) noexcept
+        {
+            // do nothing, the event loop advances the wheel.
+            return 0;
+        }
+
+        /**
+         * @brief no-op, the event loop advances the wheel.
+         */
+        void stop () noexcept
+        {
+            // do nothing, the event loop advances the wheel.
+        }
+
+        /**
+         * @brief check if the calling thread is the proactor thread.
+         * @return true if called from the proactor thread.
+         */
+        bool isRunnerThread () const noexcept
+        {
+            return _proactor.isProactorThread ();
+        }
+
+        /**
+         * @brief wake the event loop up without waiting for it, so that it advances the wheel.
+         * @param wheel wheel to advance.
+         * @return 0 on success, -1 if the event loop is not running.
+         */
+        template <class Wheel>
+        int flush ([[maybe_unused]] Wheel& wheel) noexcept
+        {
+            if (JOIN_UNLIKELY (!_proactor.isRunning ()))
+            {
+                return -1;
+            }
+
+            return _proactor.wakeup ();
+        }
+
+    private:
+        /**
+         * @brief advance the wheel, to be called by the event loop.
+         * @param wheel wheel to advance.
+         * @return number of ticks processed.
+         */
+        template <class Wheel>
+        static uint64_t advance (Wheel& wheel) noexcept
+        {
+            return wheel.advance ();
+        }
+
+        /**
+         * @brief check if no timer is armed, to be called by the event loop.
+         * @param wheel wheel to check.
+         * @return true if no timer is armed.
+         */
+        template <class Wheel>
+        static bool empty (const Wheel& wheel) noexcept
+        {
+            return wheel.empty ();
+        }
+
+        /// proactor advancing the wheel.
+        BasicProactor& _proactor;
+
+        /// friendship with proactor.
+        friend class BasicProactor;
+    };
+#endif
+
 public:
     /// function invoked on the proactor thread.
     using InvokeHandler = Function<void (), 64>;
+
+#ifdef JOIN_HAS_IO_URING
+    /// timer wheel, able to arm a timer for every queued command.
+    using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, 1'000'000>;
+#else
+    /// timer wheel of the underlying reactor.
+    using Wheel = Reactor::Wheel;
+#endif
 
     /**
      * @brief initialize the proactor and its I/O backend.
@@ -302,7 +408,7 @@ public:
 
 #ifdef JOIN_HAS_NUMA
     /**
-     * @brief bind proactor command queue memory to a NUMA node.
+     * @brief bind proactor command queue and timer wheel memory to a NUMA node.
      * @param numa NUMA node ID.
      * @return 0 on success, -1 on failure.
      */
@@ -310,7 +416,7 @@ public:
 #endif
 
     /**
-     * @brief lock proactor command queue memory in RAM.
+     * @brief lock proactor command queue and timer wheel memory in RAM.
      * @return 0 on success, -1 on failure.
      */
     int mlock () const noexcept;
@@ -326,6 +432,12 @@ public:
      * @return true if called from the proactor thread.
      */
     bool isProactorThread () const noexcept;
+
+    /**
+     * @brief get the timer wheel advanced by the event loop.
+     * @return timer wheel.
+     */
+    Wheel& wheel () noexcept;
 
 private:
 #ifdef JOIN_HAS_IO_URING
@@ -434,18 +546,22 @@ private:
 
 #ifdef JOIN_HAS_IO_URING
     /**
-     * @brief push command to queue and write to the wakeup eventfd to wake the dispatcher.
-     * @param cmd command to write.
+     * @brief wake the event loop up if it is asleep.
      * @return 0 on success, -1 on failure.
      */
-    int writeCommand (const Command& cmd, std::true_type) noexcept;
+    int wakeup () noexcept;
 
     /**
-     * @brief push command to queue; the polling event loop drains it without a wakeup signal.
-     * @param cmd command to write.
+     * @brief write to the wakeup eventfd if the event loop is asleep.
      * @return 0 on success, -1 on failure.
      */
-    int writeCommand (const Command& cmd, std::false_type) noexcept;
+    int wakeup (std::true_type) noexcept;
+
+    /**
+     * @brief no-op, the polling event loop needs no wakeup signal.
+     * @return 0.
+     */
+    int wakeup (std::false_type) noexcept;
 #endif
 
     /**
@@ -632,8 +748,10 @@ private:
     static bool isWriteOperation (const IoOperation& op) noexcept;
 #endif
 
-    /// command queue size.
-    static constexpr size_t _queueSize = 1024;
+#ifdef JOIN_HAS_IO_URING
+    /// timer wheel advanced by the event loop, built first so that nothing leaks if it throws.
+    Wheel _wheel{*this};
+#endif
 
     /// command queue.
     LocalMem::Mpsc::Queue<Command> _commands;
@@ -1059,7 +1177,7 @@ public:
 
 #ifdef JOIN_HAS_NUMA
     /**
-     * @brief bind proactor command queue memory to a NUMA node.
+     * @brief bind proactor command queue and timer wheel memory to a NUMA node.
      * @param numa NUMA node ID.
      * @return 0 on success, -1 on failure.
      */
@@ -1070,7 +1188,7 @@ public:
 #endif
 
     /**
-     * @brief lock proactor command queue memory in RAM.
+     * @brief lock proactor command queue and timer wheel memory in RAM.
      * @return 0 on success, -1 on failure.
      */
     static int mlock () noexcept
