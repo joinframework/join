@@ -1183,9 +1183,9 @@ void join::BasicProactor<IoPolicy>::eventLoop (std::false_type, std::false_type)
 template <typename IoPolicy>
 void join::BasicProactor<IoPolicy>::eventLoop (std::true_type, std::false_type) noexcept
 {
-    Backoff backoff (std::chrono::nanoseconds (spin_ns<IoPolicy>::value),
-                     std::chrono::nanoseconds (yield_ns<IoPolicy>::value),
-                     std::chrono::nanoseconds (sleep_ns<IoPolicy>::value));
+    Backoff backoff{std::chrono::nanoseconds (spin_ns<IoPolicy>::value),
+                    std::chrono::nanoseconds (yield_ns<IoPolicy>::value),
+                    std::chrono::nanoseconds (sleep_ns<IoPolicy>::value)};
     bool running;
 
     while ((running = _running.load (std::memory_order_acquire)) || !_pendingOps.empty ())
@@ -1226,9 +1226,9 @@ void join::BasicProactor<IoPolicy>::eventLoop (std::true_type, std::false_type) 
 template <typename IoPolicy>
 void join::BasicProactor<IoPolicy>::eventLoop (std::true_type, std::true_type) noexcept
 {
-    Backoff backoff (std::chrono::nanoseconds (spin_ns<IoPolicy>::value),
-                     std::chrono::nanoseconds (yield_ns<IoPolicy>::value),
-                     std::chrono::nanoseconds (sleep_ns<IoPolicy>::value));
+    Backoff backoff{std::chrono::nanoseconds (spin_ns<IoPolicy>::value),
+                    std::chrono::nanoseconds (yield_ns<IoPolicy>::value),
+                    std::chrono::nanoseconds (sleep_ns<IoPolicy>::value)};
     bool running;
 
     while ((running = _running.load (std::memory_order_acquire)) || !_pendingOps.empty ())
