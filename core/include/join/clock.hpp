@@ -174,7 +174,7 @@ namespace join
     };
 
     /**
-     * @brief rdtsc clock policy (requires invariant TSC and CPU pinning, does not follow NTP slewing).
+     * @brief rdtsc clock policy (invariant TSC, CPU pinning, no NTP slewing).
      */
     class Rdtsc
     {
@@ -195,8 +195,33 @@ namespace join
         }
 
         /**
-         * @brief read the current time, an Rdtsc instance shall have been constructed beforehand.
-         * @return current time point, zero if no instance has calibrated the multiplier yet.
+         * @brief calibrate against CLOCK_MONOTONIC.
+         */
+        static void calibrate () noexcept
+        {
+            static std::once_flag flag;
+
+            std::call_once (flag, [] {
+                timespec t0{}, t1{};
+                ::clock_gettime (CLOCK_MONOTONIC, &t0);
+                const uint64_t c0 = readCycles ();
+
+                const timespec delay{0, 100'000'000};
+                ::nanosleep (&delay, nullptr);
+
+                ::clock_gettime (CLOCK_MONOTONIC, &t1);
+                const uint64_t c1 = readCycles ();
+
+                const int64_t ns = (t1.tv_sec - t0.tv_sec) * 1'000'000'000LL + (t1.tv_nsec - t0.tv_nsec);
+                const uint64_t cycles = c1 - c0;
+
+                cycleToNs () = (static_cast<uint64_t> (ns) << 32) / cycles;
+            });
+        }
+
+        /**
+         * @brief read the current time, requires calibrate ().
+         * @return current time, zero if uncalibrated.
          */
         static TimePoint now () noexcept
         {
@@ -232,31 +257,6 @@ namespace join
         {
             static uint64_t value = 0;
             return value;
-        }
-
-        /**
-         * @brief calibrate the cycle-to-nanosecond multiplier against CLOCK_MONOTONIC.
-         */
-        static void calibrate () noexcept
-        {
-            static std::once_flag flag;
-
-            std::call_once (flag, [] {
-                timespec t0{}, t1{};
-                ::clock_gettime (CLOCK_MONOTONIC, &t0);
-                const uint64_t c0 = readCycles ();
-
-                const timespec delay{0, 100'000'000};
-                ::nanosleep (&delay, nullptr);
-
-                ::clock_gettime (CLOCK_MONOTONIC, &t1);
-                const uint64_t c1 = readCycles ();
-
-                const int64_t ns = (t1.tv_sec - t0.tv_sec) * 1'000'000'000LL + (t1.tv_nsec - t0.tv_nsec);
-                const uint64_t cycles = c1 - c0;
-
-                cycleToNs () = (static_cast<uint64_t> (ns) << 32) / cycles;
-            });
         }
     };
 }

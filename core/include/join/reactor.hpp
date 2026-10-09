@@ -241,10 +241,10 @@ namespace join
             }
 
             /**
-             * @brief get the epoll_pwait2 timeout, to be called by the event loop.
+             * @brief get the epoll_pwait2 timeout.
              * @param wheel wheel to check.
-             * @param ts storage for the timeout.
-             * @return ts filled with the time until the wheel has work, nullptr if no timer is armed.
+             * @param ts timeout storage.
+             * @return ts, nullptr if no timer is armed.
              */
             template <class Wheel>
             static timespec* timeout (const Wheel& wheel, timespec& ts) noexcept

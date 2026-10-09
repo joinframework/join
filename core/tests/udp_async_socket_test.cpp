@@ -1461,6 +1461,7 @@ TEST_F (UdpAsyncSocket, handle)
  */
 int main (int argc, char** argv)
 {
+    join::Rdtsc::calibrate ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }
