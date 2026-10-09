@@ -105,7 +105,7 @@ namespace join
         using Stats = BasicStats<Monotonic>;
         using Timer = BasicTimer<Monotonic>;
 
-        template <size_t Capacity, uint64_t TickNs = 1'000>
+        template <size_t Capacity, uint64_t TickNs = 100>
         using Wheel = BasicWheel<Monotonic, SpinPolicy<Monotonic>, Capacity, TickNs>;
 
         /**
@@ -144,7 +144,7 @@ namespace join
         using TimePoint = std::chrono::time_point<NanoClock>;
         using Stats = BasicStats<MonotonicRaw>;
 
-        template <size_t Capacity, uint64_t TickNs = 1'000>
+        template <size_t Capacity, uint64_t TickNs = 100>
         using Wheel = BasicWheel<MonotonicRaw, SpinPolicy<MonotonicRaw>, Capacity, TickNs>;
 
         /**
@@ -174,7 +174,7 @@ namespace join
     };
 
     /**
-     * @brief rdtsc clock policy (requires invariant TSC and CPU pinning).
+     * @brief rdtsc clock policy (requires invariant TSC and CPU pinning, does not follow NTP slewing).
      */
     class Rdtsc
     {
@@ -183,7 +183,7 @@ namespace join
         using TimePoint = std::chrono::time_point<NanoClock>;
         using Stats = BasicStats<Rdtsc>;
 
-        template <size_t Capacity, uint64_t TickNs = 1'000>
+        template <size_t Capacity, uint64_t TickNs = 100>
         using Wheel = BasicWheel<Rdtsc, SpinPolicy<Rdtsc>, Capacity, TickNs>;
 
         /**

@@ -241,24 +241,24 @@ namespace join
             }
 
             /**
-             * @brief get the epoll_wait timeout, to be called by the event loop.
+             * @brief get the epoll_pwait2 timeout, to be called by the event loop.
              * @param wheel wheel to check.
-             * @return milliseconds until the wheel has work, rounded up, -1 if no timer is armed.
+             * @param ts storage for the timeout.
+             * @return ts filled with the time until the wheel has work, nullptr if no timer is armed.
              */
             template <class Wheel>
-            static int timeout (const Wheel& wheel) noexcept
+            static timespec* timeout (const Wheel& wheel, timespec& ts) noexcept
             {
                 const std::chrono::nanoseconds next = wheel.next ();
 
                 if (next == std::chrono::nanoseconds::max ())
                 {
-                    return -1;
+                    return nullptr;
                 }
 
-                const int64_t ms = (next.count () + 999'999) / 1'000'000;
+                ts = toTimespec (next);
 
-                return (ms < std::numeric_limits<int>::max ()) ? static_cast<int> (ms)
-                                                               : std::numeric_limits<int>::max ();
+                return &ts;
             }
 
             /// reactor advancing the wheel.
@@ -273,7 +273,7 @@ namespace join
         using InvokeHandler = Function<void (), 64>;
 
         /// timer wheel, able to arm a timer for every queued command.
-        using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, 1'000'000>;
+        using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, 1'000>;
 
         /**
          * @brief default constructor.

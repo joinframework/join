@@ -269,7 +269,7 @@ public:
 
 #ifdef JOIN_HAS_IO_URING
     /// timer wheel, able to arm a timer for every queued command.
-    using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, 1'000'000>;
+    using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, 1'000>;
 #else
     /// timer wheel of the underlying reactor.
     using Wheel = Reactor::Wheel;

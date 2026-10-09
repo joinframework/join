@@ -309,10 +309,10 @@ TEST (MonotonicWheel, interval)
     ASSERT_GT (once, 0);
     EXPECT_EQ (wheel.interval (once), 0ms);
 
-    ssize_t rounded = wheel.setInterval (1500ns, [] () {
+    ssize_t rounded = wheel.setInterval (150ns, [] () {
     });
     ASSERT_GT (rounded, 0);
-    EXPECT_EQ (wheel.interval (rounded), 2us);
+    EXPECT_EQ (wheel.interval (rounded), 200ns);
     ASSERT_EQ (wheel.cancel (rounded, true), 0);
 
     ASSERT_EQ (wheel.cancel (periodic, true), 0);
@@ -400,8 +400,8 @@ TEST (MonotonicWheel, mbind)
  */
 TEST (MonotonicWheel, resolution)
 {
-    ASSERT_EQ (Wheel::resolution (), 1us);
-    ASSERT_EQ ((Monotonic::Wheel<64, 100>::resolution ()), 100ns);
+    ASSERT_EQ (Wheel::resolution (), 100ns);
+    ASSERT_EQ ((Monotonic::Wheel<64, 1'000>::resolution ()), 1us);
 }
 
 /**
