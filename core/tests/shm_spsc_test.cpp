@@ -405,7 +405,7 @@ TEST_F (ShmSpsc, pushBenchmark)
             EXPECT_EQ (prod.push (data), 0) << join::lastError.message ();
         }
         std::cout << join::statsHeader << "\n";
-        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
+        std::cout << join::kops << join::nsec << std::fixed << std::setprecision (0) << stats << "\n";
     }
 
     int status;
@@ -451,7 +451,7 @@ TEST_F (ShmSpsc, popBenchmark)
             EXPECT_EQ (cons.pop (data), 0) << join::lastError.message ();
         }
         std::cout << join::statsHeader << "\n";
-        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
+        std::cout << join::kops << join::nsec << std::fixed << std::setprecision (0) << stats << "\n";
     }
 
     int status;

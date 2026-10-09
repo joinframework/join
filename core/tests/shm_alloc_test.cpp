@@ -329,8 +329,8 @@ TEST_F (PosixAlloc, benchmark)
     }
 
     std::cout << join::statsHeader << "\n";
-    std::cout << join::mops << join::usec << std::fixed << std::setprecision (3) << aStats << "\n";
-    std::cout << join::mops << join::usec << std::fixed << std::setprecision (3) << dStats << "\n";
+    std::cout << join::kops << join::nsec << std::fixed << std::setprecision (0) << aStats << "\n";
+    std::cout << join::kops << join::nsec << std::fixed << std::setprecision (0) << dStats << "\n";
 }
 
 /**
