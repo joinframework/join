@@ -62,7 +62,7 @@ namespace join
 #if defined(__x86_64__) || defined(__i386__)
                 _mm_pause ();
 #elif defined(__aarch64__) || defined(__arm__)
-                __asm__ __volatile__ ("yield" ::: "memory");
+                __asm__ __volatile__ ("isb" ::: "memory");
 #endif
                 ++_count;
             }
