@@ -25,8 +25,12 @@
 #ifndef JOIN_CORE_BACKOFF_HPP
 #define JOIN_CORE_BACKOFF_HPP
 
+// libjoin.
+#include <join/clock.hpp>
+
 // C++.
 #include <thread>
+#include <chrono>
 
 // C.
 #if defined(__x86_64__) || defined(__i386__)
@@ -37,18 +41,23 @@
 namespace join
 {
     /**
-     * @brief adaptive backoff strategy for busy-wait loops.
+     * @brief adaptive backoff for busy-wait loops, requires Rdtsc::calibrate ().
      */
     class Backoff
     {
     public:
         /**
          * @brief construct a backoff strategy.
-         * @param spin number of active spin iterations before yielding (default: 200).
+         * @param spin spin duration.
+         * @param yield yield duration.
+         * @param sleep sleep per iteration, zero to never sleep.
          */
-        Backoff (size_t spin = 200)
+        explicit Backoff (std::chrono::nanoseconds spin = std::chrono::microseconds (10),
+                          std::chrono::nanoseconds yield = std::chrono::microseconds (100),
+                          std::chrono::nanoseconds sleep = std::chrono::microseconds (50)) noexcept
         : _spin (spin)
-        , _count (0)
+        , _yield (yield)
+        , _sleep (sleep)
         {
         }
 
@@ -57,18 +66,35 @@ namespace join
          */
         void operator() () noexcept
         {
-            if (_count < _spin)
+            if (_start == Rdtsc::TimePoint ())
             {
+                _start = Rdtsc::now ();
+            }
+
+            if (_spinning)
+            {
+                if (Rdtsc::now () - _start < _spin)
+                {
 #if defined(__x86_64__) || defined(__i386__)
-                _mm_pause ();
+                    _mm_pause ();
 #elif defined(__aarch64__) || defined(__arm__)
-                __asm__ __volatile__ ("yield" ::: "memory");
+                    __asm__ __volatile__ ("isb" ::: "memory");
 #endif
-                ++_count;
+                    return;
+                }
+
+                _spinning = false;
+            }
+
+            const auto elapsed = Rdtsc::now () - _start;
+
+            if ((_sleep == std::chrono::nanoseconds::zero ()) || (elapsed - _spin < _yield))
+            {
+                std::this_thread::yield ();
             }
             else
             {
-                std::this_thread::yield ();
+                std::this_thread::sleep_for (_sleep);
             }
         }
 
@@ -77,7 +103,8 @@ namespace join
          */
         void reset () noexcept
         {
-            _count = 0;
+            _start = Rdtsc::TimePoint ();
+            _spinning = true;
         }
 
         /**
@@ -86,15 +113,24 @@ namespace join
          */
         bool spinExhausted () const noexcept
         {
-            return _count >= _spin;
+            return (_start != Rdtsc::TimePoint ()) && (Rdtsc::now () - _start >= _spin);
         }
 
     private:
-        /// number of spin iterations before yielding.
-        size_t _spin;
+        /// spin duration.
+        std::chrono::nanoseconds _spin;
 
-        /// current iteration count.
-        size_t _count;
+        /// yield duration.
+        std::chrono::nanoseconds _yield;
+
+        /// sleep duration.
+        std::chrono::nanoseconds _sleep;
+
+        /// wait start.
+        Rdtsc::TimePoint _start = Rdtsc::TimePoint ();
+
+        /// spinning flag.
+        bool _spinning = true;
     };
 }
 

@@ -268,8 +268,11 @@ public:
     using InvokeHandler = Function<void (), 64>;
 
 #ifdef JOIN_HAS_IO_URING
+    static_assert (sleep_ns<IoPolicy>::value == 0 || tick_ns<IoPolicy>::value >= sleep_ns<IoPolicy>::value,
+                   "tick must not be finer than the backoff sleep");
+
     /// timer wheel, able to arm a timer for every queued command.
-    using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, 1'000'000>;
+    using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, tick_ns<IoPolicy>::value>;
 #else
     /// timer wheel of the underlying reactor.
     using Wheel = Reactor::Wheel;

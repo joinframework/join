@@ -31,6 +31,7 @@
 
 // C.
 #include <sys/eventfd.h>
+#include <sys/prctl.h>
 #include <unistd.h>
 #include <cassert>
 
@@ -242,6 +243,7 @@ void Reactor::run ()
 {
     _threadId.store (pthread_self (), std::memory_order_release);
 
+    prctl (PR_SET_TIMERSLACK, 1UL, 0, 0, 0);
     _running.store (true, std::memory_order_release);
     eventLoop ();
 
@@ -563,7 +565,9 @@ void Reactor::eventLoop ()
             break;
         }
 
-        int eventCount = epoll_wait (_epoll, events.data (), events.size (), WheelPolicy::timeout (_wheel));
+        timespec ts;
+        int eventCount =
+            epoll_pwait2 (_epoll, events.data (), events.size (), WheelPolicy::timeout (_wheel, ts), nullptr);
 
         for (int i = 0; i < eventCount; ++i)
         {

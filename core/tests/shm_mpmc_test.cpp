@@ -375,7 +375,7 @@ TEST_F (ShmMpmc, pushBenchmark)
             producer.join ();
         }
         std::cout << join::statsHeader << "\n";
-        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
+        std::cout << join::kops << join::nsec << std::fixed << std::setprecision (0) << stats << "\n";
     }
 
     int status;
@@ -464,7 +464,7 @@ TEST_F (ShmMpmc, popBenchmark)
             }
         }
         std::cout << join::statsHeader << "\n";
-        std::cout << join::mops << join::usec << std::fixed << std::setprecision (2) << stats << "\n";
+        std::cout << join::kops << join::nsec << std::fixed << std::setprecision (0) << stats << "\n";
     }
 
     int status;
@@ -550,6 +550,7 @@ TEST_F (ShmMpmc, mbind)
  */
 int main (int argc, char** argv)
 {
+    Rdtsc::calibrate ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }

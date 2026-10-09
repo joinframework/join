@@ -31,12 +31,19 @@
 using join::IoDefaultPolicy;
 using join::IoHybridPolicy;
 using join::IoSqpollPolicy;
-using join::has_spin;
 using join::has_sqpoll;
-using join::is_default;
 using join::has_cq_entries;
 using join::has_sq_thread_idle;
 using join::has_sq_thread_cpu;
+using join::has_spin;
+using join::is_default;
+using join::spin_ns;
+using join::has_yield_ns;
+using join::yield_ns;
+using join::has_sleep_ns;
+using join::sleep_ns;
+using join::has_tick_ns;
+using join::tick_ns;
 
 /**
  * @brief policy pinning the submission queue thread.
@@ -47,16 +54,6 @@ struct PinnedPolicy : IoSqpollPolicy
 };
 
 /**
- * @brief Test has_spin trait.
- */
-TEST (IoPolicy, has_spin)
-{
-    ASSERT_FALSE (has_spin<IoDefaultPolicy>::value);
-    ASSERT_TRUE (has_spin<IoHybridPolicy>::value);
-    ASSERT_TRUE (has_spin<IoSqpollPolicy>::value);
-}
-
-/**
  * @brief Test has_sqpoll trait.
  */
 TEST (IoPolicy, has_sqpoll)
@@ -64,16 +61,6 @@ TEST (IoPolicy, has_sqpoll)
     ASSERT_FALSE (has_sqpoll<IoDefaultPolicy>::value);
     ASSERT_FALSE (has_sqpoll<IoHybridPolicy>::value);
     ASSERT_TRUE (has_sqpoll<IoSqpollPolicy>::value);
-}
-
-/**
- * @brief Test is_default trait.
- */
-TEST (IoPolicy, is_default)
-{
-    ASSERT_TRUE (is_default<IoDefaultPolicy>::value);
-    ASSERT_FALSE (is_default<IoHybridPolicy>::value);
-    ASSERT_FALSE (is_default<IoSqpollPolicy>::value);
 }
 
 /**
@@ -105,6 +92,96 @@ TEST (IoPolicy, has_sq_thread_cpu)
     ASSERT_FALSE (has_sq_thread_cpu<IoHybridPolicy>::value);
     ASSERT_FALSE (has_sq_thread_cpu<IoSqpollPolicy>::value);
     ASSERT_TRUE (has_sq_thread_cpu<PinnedPolicy>::value);
+}
+
+/**
+ * @brief Test has_spin trait.
+ */
+TEST (IoPolicy, has_spin)
+{
+    ASSERT_FALSE (has_spin<IoDefaultPolicy>::value);
+    ASSERT_TRUE (has_spin<IoHybridPolicy>::value);
+    ASSERT_TRUE (has_spin<IoSqpollPolicy>::value);
+}
+
+/**
+ * @brief Test is_default trait.
+ */
+TEST (IoPolicy, is_default)
+{
+    ASSERT_TRUE (is_default<IoDefaultPolicy>::value);
+    ASSERT_FALSE (is_default<IoHybridPolicy>::value);
+    ASSERT_FALSE (is_default<IoSqpollPolicy>::value);
+}
+
+/**
+ * @brief Test spin_ns trait.
+ */
+TEST (IoPolicy, spin_ns)
+{
+    ASSERT_EQ (spin_ns<IoDefaultPolicy>::value, 10'000u);
+    ASSERT_EQ (spin_ns<IoHybridPolicy>::value, 10'000u);
+    ASSERT_EQ (spin_ns<IoSqpollPolicy>::value, 10'000u);
+}
+
+/**
+ * @brief Test has_yield_ns trait.
+ */
+TEST (IoPolicy, has_yield_ns)
+{
+    ASSERT_FALSE (has_yield_ns<IoDefaultPolicy>::value);
+    ASSERT_TRUE (has_yield_ns<IoHybridPolicy>::value);
+    ASSERT_TRUE (has_yield_ns<IoSqpollPolicy>::value);
+}
+
+/**
+ * @brief Test yield_ns trait.
+ */
+TEST (IoPolicy, yield_ns)
+{
+    ASSERT_EQ (yield_ns<IoDefaultPolicy>::value, 100'000u);
+    ASSERT_EQ (yield_ns<IoHybridPolicy>::value, 100'000u);
+    ASSERT_EQ (yield_ns<IoSqpollPolicy>::value, 100'000u);
+}
+
+/**
+ * @brief Test has_sleep_ns trait.
+ */
+TEST (IoPolicy, has_sleep_ns)
+{
+    ASSERT_FALSE (has_sleep_ns<IoDefaultPolicy>::value);
+    ASSERT_TRUE (has_sleep_ns<IoHybridPolicy>::value);
+    ASSERT_TRUE (has_sleep_ns<IoSqpollPolicy>::value);
+}
+
+/**
+ * @brief Test sleep_ns trait.
+ */
+TEST (IoPolicy, sleep_ns)
+{
+    ASSERT_EQ (sleep_ns<IoDefaultPolicy>::value, 0u);
+    ASSERT_EQ (sleep_ns<IoHybridPolicy>::value, 0u);
+    ASSERT_EQ (sleep_ns<IoSqpollPolicy>::value, 0u);
+}
+
+/**
+ * @brief Test has_tick_ns trait.
+ */
+TEST (IoPolicy, has_tick_ns)
+{
+    ASSERT_FALSE (has_tick_ns<IoDefaultPolicy>::value);
+    ASSERT_TRUE (has_tick_ns<IoHybridPolicy>::value);
+    ASSERT_TRUE (has_tick_ns<IoSqpollPolicy>::value);
+}
+
+/**
+ * @brief Test tick_ns trait.
+ */
+TEST (IoPolicy, tick_ns)
+{
+    ASSERT_EQ (tick_ns<IoDefaultPolicy>::value, 1'000u);
+    ASSERT_EQ (tick_ns<IoHybridPolicy>::value, 100u);
+    ASSERT_EQ (tick_ns<IoSqpollPolicy>::value, 100u);
 }
 
 /**

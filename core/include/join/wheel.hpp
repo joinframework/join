@@ -461,11 +461,13 @@ namespace join
                 return std::chrono::nanoseconds::max ();
             }
 
-            const uint64_t tick = _tick;
+            const uint64_t now = static_cast<uint64_t> (ClockPolicy::now ().time_since_epoch ().count ());
+            const uint64_t tick = now / TickNs;
             const uint64_t ticks = (_due > tick) ? (_due - tick) : 0;
             const uint64_t limit = static_cast<uint64_t> (std::numeric_limits<int64_t>::max () / 2) / TickNs;
+            const uint64_t elapsed = (ticks != 0) ? (now % TickNs) : 0;
 
-            return std::chrono::nanoseconds (((ticks < limit) ? ticks : limit) * TickNs);
+            return std::chrono::nanoseconds (((ticks < limit) ? ticks : limit) * TickNs - elapsed);
         }
 
         /**
@@ -1080,6 +1082,15 @@ namespace join
             while (JOIN_LIKELY (_running.load (std::memory_order_relaxed)))
             {
                 wheel->advance ();
+
+                if (wheel->_armed == 0)
+                {
+#if defined(__x86_64__) || defined(__i386__)
+                    _mm_pause ();
+#elif defined(__aarch64__) || defined(__arm__)
+                    __asm__ __volatile__ ("isb" ::: "memory");
+#endif
+                }
             }
 
             _threadId.store (_invalidThreadId, std::memory_order_release);

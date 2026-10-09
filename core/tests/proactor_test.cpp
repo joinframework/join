@@ -1974,6 +1974,7 @@ TEST_F (ProactorTest, resubmit)
  */
 int main (int argc, char** argv)
 {
+    join::Rdtsc::calibrate ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }

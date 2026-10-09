@@ -30,27 +30,75 @@
 
 using join::Backoff;
 
+using namespace std::chrono_literals;
+
 /**
- * @brief test spinExhausted.
+ * @brief test operator ().
  */
-TEST (Backoff, spinExhausted)
+TEST (Backoff, call)
 {
-    Backoff backoff (4);
-    ASSERT_FALSE (backoff.spinExhausted ());
+    Backoff spinning (1h);
+    spinning ();
+    ASSERT_FALSE (spinning.spinExhausted ());
 
-    for (size_t i = 0; i < 4; ++i)
-    {
-        backoff ();
-    }
-    ASSERT_TRUE (backoff.spinExhausted ());
+    Backoff yielding (0ns, 1h, 1ms);
+    yielding ();
+    yielding ();
+    ASSERT_TRUE (yielding.spinExhausted ());
 
+    Backoff sleeping (0ns, 0ns, 2ms);
+    sleeping ();
+    auto beg = std::chrono::steady_clock::now ();
+    sleeping ();
+    ASSERT_GE (std::chrono::steady_clock::now () - beg, 2ms);
+
+    Backoff never (0ns, 0ns, 0ns);
+    never ();
+    never ();
+    ASSERT_TRUE (never.spinExhausted ());
+}
+
+/**
+ * @brief test reset.
+ */
+TEST (Backoff, reset)
+{
+    Backoff backoff (0ns);
+    backoff ();
     backoff ();
     ASSERT_TRUE (backoff.spinExhausted ());
 
     backoff.reset ();
     ASSERT_FALSE (backoff.spinExhausted ());
 
-    Backoff immediate (0);
+    Backoff spinning (1h);
+    spinning ();
+    spinning.reset ();
+    spinning ();
+    ASSERT_FALSE (spinning.spinExhausted ());
+}
+
+/**
+ * @brief test spinExhausted.
+ */
+TEST (Backoff, spinExhausted)
+{
+    Backoff backoff (5ms);
+    ASSERT_FALSE (backoff.spinExhausted ());
+
+    backoff ();
+    ASSERT_FALSE (backoff.spinExhausted ());
+
+    std::this_thread::sleep_for (10ms);
+    ASSERT_TRUE (backoff.spinExhausted ());
+
+    backoff ();
+    ASSERT_TRUE (backoff.spinExhausted ());
+
+    Backoff immediate (0ns);
+    ASSERT_FALSE (immediate.spinExhausted ());
+
+    immediate ();
     ASSERT_TRUE (immediate.spinExhausted ());
 }
 
@@ -59,6 +107,7 @@ TEST (Backoff, spinExhausted)
  */
 int main (int argc, char** argv)
 {
+    join::Rdtsc::calibrate ();
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();
 }
