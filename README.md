@@ -136,7 +136,7 @@ cmake --build build
 | `JOIN_ENABLE_TESTS` | `OFF` | Build the test suite. |
 | `JOIN_ENABLE_COVERAGE` | `OFF` | Enable code coverage instrumentation (requires Debug build). |
 | `JOIN_ENABLE_TSAN` | `OFF` | Enable ThreadSanitizer (incompatible with coverage). |
-| `JOIN_ENABLE_ASAN` | `OFF` | Enable AddressSanitizer and UndefinedBehaviorSanitizer (incompatible with coverage and TSan). |
+| `JOIN_ENABLE_ASAN` | `OFF` | Enable AddressSanitizer and UndefinedBehaviorSanitizer (incompatible with TSan). |
 
 ### Run Tests
 ```bash
