@@ -9,7 +9,7 @@ include(GNUInstallDirs)
 
 file(STRINGS "${PROJECT_SOURCE_DIR}/VERSION" JOIN_VERSION)
 string(REGEX REPLACE "([0-9]+)\\.[0-9]+\\.[0-9]+.*" "\\1" JOIN_VERSION_MAJOR ${JOIN_VERSION})
-string(REGEX REPLACE "[0-9]+\\.([0-9])+\\.[0-9]+.*" "\\1" JOIN_VERSION_MINOR ${JOIN_VERSION})
+string(REGEX REPLACE "[0-9]+\\.([0-9]+)\\.[0-9]+.*" "\\1" JOIN_VERSION_MINOR ${JOIN_VERSION})
 string(REGEX REPLACE "[0-9]+\\.[0-9]+\\.([0-9]+).*" "\\1" JOIN_VERSION_PATCH ${JOIN_VERSION})
 
 message(STATUS "${PROJECT_NAME} version: ${JOIN_VERSION}")
@@ -136,6 +136,7 @@ include(CMakePackageConfigHelpers)
 install(EXPORT joinTargets
     NAMESPACE join::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+    COMPONENT dev
 )
 
 configure_package_config_file(
@@ -154,4 +155,7 @@ install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/joinConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/joinConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+    COMPONENT dev
 )
+
+include(${PROJECT_SOURCE_DIR}/cmake/packaging.cmake)

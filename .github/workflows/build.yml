@@ -24,6 +24,9 @@ on:
       doc:
         type: boolean
         default: false
+      pack:
+        type: boolean
+        default: false
 
   workflow_dispatch:
     inputs:
@@ -54,6 +57,9 @@ on:
         type: boolean
         default: false
       doc:
+        type: boolean
+        default: false
+      pack:
         type: boolean
         default: false
 
@@ -138,13 +144,25 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: Configure (release)
-        run: cmake --preset ${{ matrix.compiler }}-release
+        run: cmake --preset ${{ matrix.compiler }}-release -DCMAKE_INSTALL_PREFIX=/usr
 
       - name: Build (release)
         run: cmake --build --preset ${{ matrix.compiler }}-release
 
       - name: Run tests (release)
         run: ctest --preset ${{ matrix.compiler }}-release
+
+      - name: Package
+        if: inputs.pack && matrix.compiler == 'gcc'
+        working-directory: build/gcc/release
+        run: cpack
+
+      - name: Upload package to GitHub
+        if: inputs.pack && matrix.compiler == 'gcc'
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: ${{ matrix.arch }}-package
+          path: build/gcc/release/*.deb
 
       - name: Configure (debug)
         run: cmake --preset ${{ matrix.compiler }}-debug
