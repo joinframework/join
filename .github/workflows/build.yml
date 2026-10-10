@@ -152,19 +152,18 @@ jobs:
       - name: Generate coverage report
         if: inputs.coverage && matrix.arch == 'amd64'
         run: |
-          if [ "${{ matrix.compiler }}" = "clang" ]; then
-            GCOV="--gcov-tool llvm-cov --gcov-tool gcov"
-            RC="--rc derive_function_end_line=0"
-          fi
-          lcov --directory build/${{ matrix.compiler }}/debug --capture $GCOV $RC --exclude "*/usr/include/*" --exclude '*/tests/*' --output-file lcov.info
-          genhtml lcov.info $RC --prefix $GITHUB_WORKSPACE --output-directory coverage
+          mkdir -p coverage
+          gcovr --root . --gcov-executable "${{ matrix.compiler == 'clang' && 'llvm-cov gcov' || 'gcov' }}" \
+            --exclude-pattern-prefix LCOV --exclude '.*/tests/.*' --exclude '.*/samples/.*' \
+            --cobertura coverage.xml --html-details coverage/index.html --print-summary \
+            build/${{ matrix.compiler }}/debug
 
       - name: Upload coverage data to GitHub
         if: inputs.coverage && matrix.arch == 'amd64'
         uses: actions/upload-artifact@v7.0.0
         with:
           name: ${{ matrix.compiler }}-${{ matrix.arch }}-coverage-data
-          path: lcov.info
+          path: coverage.xml
 
       - name: Upload coverage report to GitHub
         if: inputs.coverage && matrix.arch == 'amd64'
@@ -253,7 +252,7 @@ jobs:
         uses: coverallsapp/github-action@v2.3.6
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
-          files: lcov.info
+          files: coverage.xml
           fail-on-error: true
 
       - name: Deploy coverage report to codecov
@@ -261,7 +260,7 @@ jobs:
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           flags: unittests
-          files: lcov.info
+          files: coverage.xml
           fail_ci_if_error: true
 
       - name: Deploy coverage report to codacy
@@ -269,7 +268,7 @@ jobs:
         uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:
           project-token: ${{secrets.CODACY_PROJECT_TOKEN}}
-          coverage-reports: lcov.info
+          coverage-reports: coverage.xml
 
   deploy-pages:
     if: inputs.doc
