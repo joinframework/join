@@ -84,7 +84,8 @@ sudo apt install pkg-config libssl-dev zlib1g-dev libgtest-dev libgmock-dev
 ```
 
 > **Compilers:** Both GCC and Clang are supported. Clang requires `libclang-rt-dev` for coverage instrumentation (`--coverage`).  
-> **OpenSSL** provides the core TLS runtime.
+> **OpenSSL** provides the core TLS runtime.  
+> **Platform:** Linux 5.11+ and glibc 2.35+ (`epoll_pwait2`), on x86_64 or aarch64.
 
 ### Optional Dependencies
 

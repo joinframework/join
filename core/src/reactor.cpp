@@ -243,9 +243,11 @@ void Reactor::run ()
 {
     _threadId.store (pthread_self (), std::memory_order_release);
 
+    const int slack = prctl (PR_GET_TIMERSLACK, 0, 0, 0, 0);
     prctl (PR_SET_TIMERSLACK, 1UL, 0, 0, 0);
     _running.store (true, std::memory_order_release);
     eventLoop ();
+    prctl (PR_SET_TIMERSLACK, static_cast<unsigned long> (slack), 0, 0, 0);
 
     _threadId.store (_invalidThreadId, std::memory_order_release);
 }

@@ -181,9 +181,6 @@ namespace join
         /// socket receive buffer size.
         static constexpr int _rcvBufferSize = 1 << 20;
 
-        /// internal buffer size.
-        static constexpr size_t _bufferSize = 16384;
-
         /// internal read buffer.
         std::unique_ptr<char[]> _buffer;
 
