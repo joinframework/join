@@ -27,3 +27,4 @@ jobs:
       coverage: true
       scan: true
       tsan: true
+      asan: true

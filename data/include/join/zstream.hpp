@@ -102,6 +102,11 @@ namespace join
          */
         virtual int_type sync () override;
 
+        /**
+         * @brief flush pending output and release the zlib contexts.
+         */
+        void release ();
+
         /// internal buffer size.
         static const std::streamsize _bufsize = 16384;
 

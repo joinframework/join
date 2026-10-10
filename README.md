@@ -135,6 +135,8 @@ cmake --build build
 | `JOIN_ENABLE_SAMPLES` | `OFF` | Build sample programs. |
 | `JOIN_ENABLE_TESTS` | `OFF` | Build the test suite. |
 | `JOIN_ENABLE_COVERAGE` | `OFF` | Enable code coverage instrumentation (requires Debug build). |
+| `JOIN_ENABLE_TSAN` | `OFF` | Enable ThreadSanitizer (incompatible with coverage). |
+| `JOIN_ENABLE_ASAN` | `OFF` | Enable AddressSanitizer and UndefinedBehaviorSanitizer (incompatible with coverage and TSan). |
 
 ### Run Tests
 ```bash
@@ -165,6 +167,7 @@ target_link_libraries(your_app PRIVATE
 
 Every commit is validated against an extensive test suite to ensure stability in concurrent environments:
 * **1000+ Unit Tests** covering networking, concurrency, and data parsing.
+* **Sanitizers:** The test suite runs under ThreadSanitizer, AddressSanitizer and UndefinedBehaviorSanitizer on both GCC and Clang.
 * **Security:** Continuous scanning via Codacy and GitHub Security workflows.
 
 ---

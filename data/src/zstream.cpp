@@ -64,6 +64,7 @@ Zstreambuf::Zstreambuf (Zstreambuf&& other)
 // =========================================================================
 Zstreambuf& Zstreambuf::operator= (Zstreambuf&& other)
 {
+    release ();
     StreambufDecorator::operator= (std::move (other));
     _inflate = std::move (other._inflate);
     _deflate = std::move (other._deflate);
@@ -76,6 +77,15 @@ Zstreambuf& Zstreambuf::operator= (Zstreambuf&& other)
 //   METHOD    : ~Zstreambuf
 // =========================================================================
 Zstreambuf::~Zstreambuf ()
+{
+    release ();
+}
+
+// =========================================================================
+//   CLASS     : Zstreambuf
+//   METHOD    : release
+// =========================================================================
+void Zstreambuf::release ()
 {
     if (_inflate)
     {

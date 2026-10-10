@@ -163,7 +163,7 @@ namespace join
         /**
          * @brief algorithm.
          */
-        enum Algorithm
+        enum Algorithm : int
         {
             MD5 = 1, /**< message digest 5 */
             SHA1,    /**< secure hash algorithm v1 */
