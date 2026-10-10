@@ -217,7 +217,7 @@ TEST_F (NetlinkSocket, waitReadyRead)
 TEST_F (NetlinkSocket, read)
 {
     Netlink::Socket netlinkSocket;
-    char data[4096];
+    char data[Netlink::maxMsgSize];
 
     ASSERT_EQ (netlinkSocket.read (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
@@ -237,7 +237,7 @@ TEST_F (NetlinkSocket, readFrom)
 {
     Netlink::Socket netlinkSocket (Netlink::Socket::Blocking);
     Netlink::Endpoint from;
-    char data[4096];
+    char data[Netlink::maxMsgSize];
 
     ASSERT_EQ (netlinkSocket.readFrom (data, sizeof (data)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);

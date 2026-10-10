@@ -189,7 +189,7 @@ void NeighborManager::removeNeighborListener (uint64_t id)
 int NeighborManager::addNeighbor (uint32_t index, const IpAddress& ipAddress, const MacAddress& macAddress,
                                   uint16_t state, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -231,7 +231,7 @@ int NeighborManager::addNeighbor (const std::string& interfaceName, const IpAddr
 // =========================================================================
 int NeighborManager::removeNeighbor (uint32_t index, const IpAddress& ipAddress, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -296,7 +296,7 @@ int NeighborManager::flushNeighbors (const std::string& interfaceName, bool sync
 int NeighborManager::setNeighbor (uint32_t index, const IpAddress& ipAddress, const MacAddress& macAddress,
                                   uint16_t state, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -328,7 +328,7 @@ int NeighborManager::setNeighbor (uint32_t index, const IpAddress& ipAddress, co
 // =========================================================================
 int NeighborManager::dumpNeighbors (bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);

@@ -231,7 +231,7 @@ TEST (RdtscStats, mbind)
     Rdtsc::Stats stats;
 
     ASSERT_EQ (stats.mbind (0), 0) << join::lastError.message ();
-    ASSERT_EQ (join::mbind (nullptr, 4096, 0), -1);
+    ASSERT_EQ (join::mbind (nullptr, join::pageSize (), 0), -1);
 }
 #endif
 

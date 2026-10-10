@@ -36,7 +36,7 @@ using join::NetlinkManager;
 //   METHOD    : NetlinkManager
 // =========================================================================
 NetlinkManager::NetlinkManager (uint32_t groups, Reactor& reactor)
-: _buffer (std::make_unique<char[]> (_bufferSize))
+: _buffer (std::make_unique<char[]> (Netlink::maxMsgSize))
 , _seq (0)
 , _reactor (reactor)
 {
@@ -168,7 +168,7 @@ int NetlinkManager::sendRequest (struct nlmsghdr* nlh, bool sync, std::chrono::m
 // =========================================================================
 void NetlinkManager::onReadable ([[maybe_unused]] int fd)
 {
-    ssize_t len = _socket.read (_buffer.get (), _bufferSize);
+    ssize_t len = _socket.read (_buffer.get (), Netlink::maxMsgSize);
     if (len == -1)
     {
         // LCOV_EXCL_START

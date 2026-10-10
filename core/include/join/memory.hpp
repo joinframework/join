@@ -116,7 +116,7 @@ namespace join
         }
 
         unsigned long mask = (1UL << numa);
-        if (::mbind (ptr, size, MPOL_BIND, &mask, sizeof (mask) * 8, MPOL_MF_STRICT) == -1)
+        if (::mbind (ptr, size, MPOL_BIND, &mask, sizeof (mask) * 8, MPOL_MF_STRICT | MPOL_MF_MOVE) == -1)
         {
             lastError = std::error_code (errno, std::generic_category ());
             return -1;

@@ -186,7 +186,7 @@ void InterfaceManager::removeAddressListener (uint64_t id)
 // =========================================================================
 int InterfaceManager::createDummyInterface (const std::string& interfaceName, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -222,7 +222,7 @@ int InterfaceManager::createDummyInterface (const std::string& interfaceName, bo
 // =========================================================================
 int InterfaceManager::createBridgeInterface (const std::string& interfaceName, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -265,7 +265,7 @@ int InterfaceManager::createVlanInterface (const std::string& interfaceName, uin
         return -1;
     }
 
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -328,7 +328,7 @@ int InterfaceManager::createVlanInterface (const std::string& interfaceName, con
 int InterfaceManager::createVethInterface (const std::string& hostName, const std::string& peerName, pid_t* pid,
                                            bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -387,7 +387,7 @@ int InterfaceManager::createGreInterface (const std::string& tunnelName, uint32_
         return -1;
     }
 
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -490,7 +490,7 @@ int InterfaceManager::createGreInterface (const std::string& tunnelName, const s
 // =========================================================================
 int InterfaceManager::removeInterface (uint32_t interfaceIndex, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -545,7 +545,7 @@ void InterfaceManager::addPeerInfoData (struct nlmsghdr* nlh, const std::string&
 // =========================================================================
 int InterfaceManager::mtu (uint32_t interfaceIndex, uint32_t mtuBytes, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -572,7 +572,7 @@ int InterfaceManager::mtu (uint32_t interfaceIndex, uint32_t mtuBytes, bool sync
 // =========================================================================
 int InterfaceManager::mac (uint32_t interfaceIndex, const MacAddress& macAddress, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -599,7 +599,7 @@ int InterfaceManager::mac (uint32_t interfaceIndex, const MacAddress& macAddress
 // =========================================================================
 int InterfaceManager::addToBridge (uint32_t interfaceIndex, const uint32_t masterIndex, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -634,7 +634,7 @@ int InterfaceManager::removeFromBridge (uint32_t interfaceIndex, bool sync)
 // =========================================================================
 int InterfaceManager::enable (uint32_t interfaceIndex, bool enabled, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -661,7 +661,7 @@ int InterfaceManager::enable (uint32_t interfaceIndex, bool enabled, bool sync)
 int InterfaceManager::addAddress (uint32_t interfaceIndex, const IpAddress& ipAddress, uint32_t prefix,
                                   const IpAddress& broadcast, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -699,7 +699,7 @@ int InterfaceManager::addAddress (uint32_t interfaceIndex, const IpAddress& ipAd
 int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& ipAddress, uint32_t prefix,
                                      const IpAddress& broadcast, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -736,7 +736,7 @@ int InterfaceManager::removeAddress (uint32_t interfaceIndex, const IpAddress& i
 // =========================================================================
 int InterfaceManager::dumpLink (bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -759,7 +759,7 @@ int InterfaceManager::dumpLink (bool sync)
 // =========================================================================
 int InterfaceManager::dumpAddress (bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);

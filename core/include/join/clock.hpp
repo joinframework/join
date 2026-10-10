@@ -225,7 +225,21 @@ namespace join
          */
         static TimePoint now () noexcept
         {
+#if defined(__SIZEOF_INT128__)
             const uint64_t ns = static_cast<uint64_t> ((static_cast<__uint128_t> (readCycles ()) * cycleToNs ()) >> 32);
+#else
+            const uint64_t M32 = 0xFFFFFFFFU;
+
+            const uint64_t cycles = readCycles ();
+            const uint64_t multiplier = cycleToNs ();
+
+            const uint64_t ch = cycles >> 32;
+            const uint64_t cl = cycles & M32;
+            const uint64_t mh = multiplier >> 32;
+            const uint64_t ml = multiplier & M32;
+
+            const uint64_t ns = ((ch * mh) << 32) + ch * ml + cl * mh + ((cl * ml) >> 32);
+#endif
             return TimePoint (Duration (static_cast<int64_t> (ns)));
         }
 
@@ -236,13 +250,17 @@ namespace join
          */
         static uint64_t readCycles () noexcept
         {
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(__i386__)
             uint32_t lo, hi;
             __asm__ volatile ("rdtsc" : "=a"(lo), "=d"(hi) : : "memory");
             return (static_cast<uint64_t> (hi) << 32) | lo;
 #elif defined(__aarch64__)
             uint64_t val;
             __asm__ volatile ("mrs %0, cntvct_el0" : "=r"(val) : : "memory");
+            return val;
+#elif defined(__arm__)
+            uint64_t val;
+            __asm__ volatile ("mrrc p15, 1, %Q0, %R0, c14" : "=r"(val) : : "memory");
             return val;
 #else
 #error "Rdtsc: unsupported architecture"

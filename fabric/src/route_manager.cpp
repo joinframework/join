@@ -188,7 +188,7 @@ void RouteManager::removeRouteListener (uint64_t id)
 int RouteManager::addRoute (uint32_t index, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway,
                             uint32_t metric, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -250,7 +250,7 @@ int RouteManager::removeRoute (uint32_t index, const IpAddress& dest, uint32_t p
         return -1;
     }
 
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -334,7 +334,7 @@ int RouteManager::flushRoutes (const std::string& interfaceName, bool sync)
 int RouteManager::setRoute (uint32_t index, const IpAddress& dest, uint32_t prefix, const IpAddress& gateway,
                             uint32_t metric, bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);
@@ -379,7 +379,7 @@ int RouteManager::setRoute (uint32_t index, const IpAddress& dest, uint32_t pref
 // =========================================================================
 int RouteManager::dumpRoutes (bool sync)
 {
-    char buffer[_bufferSize] = {};
+    char buffer[Netlink::maxMsgSize] = {};
 
     // netlink header.
     struct nlmsghdr* nlh = reinterpret_cast<struct nlmsghdr*> (buffer);

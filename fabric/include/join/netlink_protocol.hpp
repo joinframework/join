@@ -96,6 +96,9 @@ namespace join
             return _proto;
         }
 
+        /// maximum netlink message size.
+        static constexpr size_t maxMsgSize = 16384;
+
     private:
         /// protocol.
         int _proto;
