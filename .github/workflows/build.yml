@@ -154,9 +154,9 @@ jobs:
         run: |
           mkdir -p coverage
           gcovr --root . --gcov-executable "${{ matrix.compiler == 'clang' && 'llvm-cov gcov' || 'gcov' }}" \
-            --exclude-pattern-prefix LCOV --exclude '.*/tests/.*' --exclude '.*/samples/.*' \
-            --exclude-branches-by-pattern '.*' \
             --cobertura coverage.xml --html-details coverage/index.html --print-summary \
+            --exclude-pattern-prefix LCOV --exclude-branches-by-pattern '.*' \
+            --exclude '.*/tests/.*' --exclude '.*/samples/.*' \
             build/${{ matrix.compiler }}/debug
 
       - name: Upload coverage data to GitHub
