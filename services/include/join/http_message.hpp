@@ -107,7 +107,7 @@ namespace join
     /**
      * @brief enumeration of HTTP methods.
      */
-    enum HttpMethod
+    enum HttpMethod : int
     {
         Head = 1L << 0,   /**< retrieve informations identified by the Request-URI without message-body. */
         Get = 1L << 1,    /**< retrieve informations identified by the Request-URI. */

@@ -30,6 +30,7 @@
 #include <openssl/rand.h>
 
 // C++.
+#include <cstdlib>
 #include <mutex>
 
 const std::string join::defaultCipher =
@@ -57,10 +58,15 @@ void join::initializeOpenSSL ()
         OPENSSL_init_ssl (0, nullptr);
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-        OSSL_PROVIDER_load (nullptr, "default");
+        static OSSL_PROVIDER* defaultProvider = OSSL_PROVIDER_load (nullptr, "default");
 
         // required for MD5, SHA1, SM3 on many systems
-        OSSL_PROVIDER_load (nullptr, "legacy");
+        static OSSL_PROVIDER* legacyProvider = OSSL_PROVIDER_load (nullptr, "legacy");
+
+        std::atexit ([] () {
+            OSSL_PROVIDER_unload (legacyProvider);
+            OSSL_PROVIDER_unload (defaultProvider);
+        });
 #endif
     });
 }

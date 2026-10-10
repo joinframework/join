@@ -67,6 +67,18 @@
       }
     },
     {
+      "name": "gcc-asan",
+      "inherits": "gcc-base",
+      "displayName": "GCC ASan",
+      "binaryDir": "${sourceDir}/build/gcc/asan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "JOIN_ENABLE_COVERAGE": "OFF",
+        "JOIN_ENABLE_IO_URING": "ON",
+        "JOIN_ENABLE_ASAN": "ON"
+      }
+    },
+    {
       "name": "clang-debug",
       "inherits": "clang-base",
       "displayName": "Clang Debug",
@@ -99,6 +111,18 @@
         "JOIN_ENABLE_IO_URING": "OFF",
         "JOIN_ENABLE_TSAN": "ON"
       }
+    },
+    {
+      "name": "clang-asan",
+      "inherits": "clang-base",
+      "displayName": "Clang ASan",
+      "binaryDir": "${sourceDir}/build/clang/asan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "JOIN_ENABLE_COVERAGE": "OFF",
+        "JOIN_ENABLE_IO_URING": "OFF",
+        "JOIN_ENABLE_ASAN": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -115,6 +139,10 @@
       "configurePreset": "gcc-tsan"
     },
     {
+      "name": "gcc-asan",
+      "configurePreset": "gcc-asan"
+    },
+    {
       "name": "clang-debug",
       "configurePreset": "clang-debug"
     },
@@ -125,6 +153,10 @@
     {
       "name": "clang-tsan",
       "configurePreset": "clang-tsan"
+    },
+    {
+      "name": "clang-asan",
+      "configurePreset": "clang-asan"
     }
   ],
   "testPresets": [
@@ -145,6 +177,20 @@
     {
       "name": "gcc-tsan",
       "configurePreset": "gcc-tsan",
+      "environment": {
+        "TSAN_OPTIONS": "halt_on_error=0:exitcode=66:history_size=7"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "gcc-asan",
+      "configurePreset": "gcc-asan",
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_string_checks=1",
+        "UBSAN_OPTIONS": "print_stacktrace=1"
+      },
       "output": {
         "outputOnFailure": true
       }
@@ -166,6 +212,20 @@
     {
       "name": "clang-tsan",
       "configurePreset": "clang-tsan",
+      "environment": {
+        "TSAN_OPTIONS": "halt_on_error=0:exitcode=66:history_size=7"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "clang-asan",
+      "configurePreset": "clang-asan",
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_string_checks=1",
+        "UBSAN_OPTIONS": "print_stacktrace=1"
+      },
       "output": {
         "outputOnFailure": true
       }

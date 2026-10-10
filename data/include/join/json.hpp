@@ -1624,7 +1624,7 @@ namespace join
 
             if (!isDouble)
             {
-                return negative ? setInt64 (-static_cast<int64_t> (u)) : setUint64 (u);
+                return negative ? setInt64 (static_cast<int64_t> (-u)) : setUint64 (u);
             }
 
             if (JOIN_LIKELY (digits <= 19))
