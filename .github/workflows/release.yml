@@ -1,0 +1,61 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Check version
+        run: test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
+
+  build:
+    needs: [version]
+
+    uses: ./.github/workflows/build.yml
+
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      pages: write
+      id-token: write
+
+    secrets: inherit
+
+    with:
+      scan: true
+      tsan: true
+      asan: true
+      pack: true
+
+  release:
+    needs: [build]
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packages from GitHub
+        uses: actions/download-artifact@v7.0.0
+        with:
+          pattern: '*-package'
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2.4.1
+        with:
+          files: '*.deb'
+          generate_release_notes: true
