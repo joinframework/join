@@ -142,7 +142,7 @@ namespace join
         /**
          * @brief destroy the Value instance.
          */
-        virtual ~Value () = default;
+        ~Value () = default;
 
         /**
          * @brief check if the variable held by value is a null value.
