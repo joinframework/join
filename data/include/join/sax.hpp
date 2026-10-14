@@ -33,13 +33,16 @@
 
 // C++.
 #include <system_error>
+#include <iterator>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 #include <stack>
 
 // C.
+#include <cstring>
 #include <cstddef>
 
 namespace join
@@ -288,7 +291,21 @@ namespace join
          */
         virtual int serialize (const Value& value)
         {
-            return setValue (value);
+            _capacity = sizeof (_buffer);
+            int result;
+            try
+            {
+                result = setValue (value);
+            }
+            catch (...)
+            {
+                flush ();
+                _capacity = 0;
+                throw;
+            }
+            flush ();
+            _capacity = 0;
+            return result;
         }
 
     protected:
@@ -342,7 +359,7 @@ namespace join
         {
             if (startArray (array.size ()) == -1)
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             for (auto const& element : array)
@@ -365,7 +382,7 @@ namespace join
         {
             if (startObject (object.size ()) == -1)
             {
-                return -1;
+                return -1;  // LCOV_EXCL_LINE
             }
 
             for (auto const& member : object)
@@ -390,68 +407,62 @@ namespace join
          */
         inline void append (char data) noexcept
         {
-            _out->sputc (data);
+            if (JOIN_UNLIKELY (_size == _capacity))
+            {
+                flush ();
+                if (_capacity == 0)
+                {
+                    _out->sputc (data);
+                    return;
+                }
+            }
+            _buffer[_size++] = data;
         }
 
         /**
-         * @brief append 2-character literal to output stream in batch.
-         * @param data data to append to output stream.
-         */
-        inline void append2 (const char* data) noexcept
-        {
-            _out->sputc (data[0]);
-            _out->sputc (data[1]);
-        }
-
-        /**
-         * @brief append 3-character literal to output stream in batch.
-         * @param data data to append to output stream.
-         */
-        inline void append3 (const char* data) noexcept
-        {
-            _out->sputc (data[0]);
-            _out->sputc (data[1]);
-            _out->sputc (data[2]);
-        }
-
-        /**
-         * @brief append 4-character literal to output stream in batch.
-         * @param data data to append to output stream.
-         */
-        inline void append4 (const char* data) noexcept
-        {
-            _out->sputc (data[0]);
-            _out->sputc (data[1]);
-            _out->sputc (data[2]);
-            _out->sputc (data[3]);
-        }
-
-        /**
-         * @brief append 5-character literal to output stream in batch.
-         * @param data data to append to output stream.
-         */
-        inline void append5 (const char* data) noexcept
-        {
-            _out->sputc (data[0]);
-            _out->sputc (data[1]);
-            _out->sputc (data[2]);
-            _out->sputc (data[3]);
-            _out->sputc (data[4]);
-        }
-
-        /**
-         * @brief append characters to output stream in batch.
+         * @brief append data to output stream in batch.
          * @param data data to append to output stream.
          * @param size data size.
          */
         inline void append (const char* data, uint32_t size) noexcept
         {
-            _out->sputn (data, size);
+            if (JOIN_UNLIKELY (size > _capacity - _size))
+            {
+                flush ();
+                if (size >= _capacity)
+                {
+                    _out->sputn (data, size);
+                    return;
+                }
+            }
+            std::memcpy (_buffer + _size, data, size);
+            _size += size;
+        }
+
+        /**
+         * @brief flush buffered data to output stream.
+         */
+        inline void flush () noexcept
+        {
+            if (_size)
+            {
+                _out->sputn (_buffer, _size);
+                _size = 0;
+            }
         }
 
     protected:
         /// underlying output stream.
         std::streambuf* _out;
+
+        /// output buffer.
+        char _buffer[1024];
+
+        /// output buffer size.
+        size_t _size = 0;
+
+        /// output buffer capacity, 0 outside of serialize.
+        size_t _capacity = 0;
     };
 
     /**
@@ -466,6 +477,7 @@ namespace join
          */
         StreamReader (Value& root)
         : SaxHandler ()
+        , _stack (stack ())
         , _root (root)
         {
         }
@@ -573,7 +585,7 @@ namespace join
          */
         virtual int setNull () override
         {
-            return setValue (Value (in_place_index_t<Value::Null>{}, nullptr));
+            return emplaceValue<Value::Null> (nullptr);
         }
 
         /**
@@ -583,7 +595,7 @@ namespace join
          */
         virtual int setBool (bool value) override
         {
-            return setValue (Value (in_place_index_t<Value::Boolean>{}, value));
+            return emplaceValue<Value::Boolean> (value);
         }
 
         /**
@@ -593,7 +605,7 @@ namespace join
          */
         virtual int setInt (int32_t value) override
         {
-            return setValue (Value (in_place_index_t<Value::Integer>{}, value));
+            return emplaceValue<Value::Integer> (value);
         }
 
         /**
@@ -603,7 +615,7 @@ namespace join
          */
         virtual int setUint (uint32_t value) override
         {
-            return setValue (Value (in_place_index_t<Value::Unsigned>{}, value));
+            return emplaceValue<Value::Unsigned> (value);
         }
 
         /**
@@ -613,7 +625,7 @@ namespace join
          */
         virtual int setInt64 (int64_t value) override
         {
-            return setValue (Value (in_place_index_t<Value::Integer64>{}, value));
+            return emplaceValue<Value::Integer64> (value);
         }
 
         /**
@@ -623,7 +635,7 @@ namespace join
          */
         virtual int setUint64 (uint64_t value) override
         {
-            return setValue (Value (in_place_index_t<Value::Unsigned64>{}, value));
+            return emplaceValue<Value::Unsigned64> (value);
         }
 
         /**
@@ -633,7 +645,7 @@ namespace join
          */
         virtual int setDouble (double value) override
         {
-            return setValue (Value (in_place_index_t<Value::Real>{}, value));
+            return emplaceValue<Value::Real> (value);
         }
 
         /**
@@ -643,42 +655,27 @@ namespace join
          */
         virtual int setString (const std::string& value) override
         {
-            return setValue (Value (in_place_index_t<Value::String>{}, value));
+            return emplaceValue<Value::String> (value);
         }
 
         /**
          * @brief start array.
-         * @param size array size.
+         * @param size array size (ignored).
          * @return 0 on success, -1 otherwise.
          */
-        virtual int startArray (uint32_t size = 0) override
+        virtual int startArray ([[maybe_unused]] uint32_t size = 0) override
         {
-            Array array;
-            array.reserve (size ? size : 8);
-
-            if (JOIN_UNLIKELY (_stack.empty ()))
+            if (JOIN_UNLIKELY (_depth == 0))
             {
-                _root = std::move (array);
-                _stack.push (&_root);
-                return 0;
+                _stack.clear ();
             }
-
-            if (JOIN_UNLIKELY (_stack.size () >= _maxdepth))
+            else if (JOIN_UNLIKELY (_depth >= _maxdepth))
             {
                 join::lastError = make_error_code (SaxErrc::StackOverflow);
                 return -1;
             }
 
-            Value::Ptr parent = _stack.top ();
-
-            if (parent->index () == Value::ObjectValue)
-            {
-                _stack.push (&parent->insert ({std::move (_curkey), std::move (array)}));
-            }
-            else
-            {
-                _stack.push (&parent->pushBack (std::move (array)));
-            }
+            _starts[_depth++] = _stack.size ();
 
             return 0;
         }
@@ -689,47 +686,44 @@ namespace join
          */
         virtual int stopArray () override
         {
-            if (JOIN_LIKELY (_stack.size ()))
+            if (JOIN_UNLIKELY (_depth == 0))
             {
-                _stack.pop ();
+                return 0;  // LCOV_EXCL_LINE
             }
+
+            auto first = _stack.begin () + _starts[--_depth];
+            Array array (std::make_move_iterator (first), std::make_move_iterator (_stack.end ()));
+            _stack.erase (first, _stack.end ());
+
+            if (_depth == 0)
+            {
+                _root = std::move (array);
+                return 0;
+            }
+
+            _stack.emplace_back (in_place_index_t<Value::ArrayValue>{}, std::move (array));
 
             return 0;
         }
 
         /**
          * @brief start object.
-         * @param size object size.
+         * @param size object size (ignored).
          * @return 0 on success, -1 otherwise.
          */
-        virtual int startObject (uint32_t size = 0) override
+        virtual int startObject ([[maybe_unused]] uint32_t size = 0) override
         {
-            Object object;
-            object.reserve (size ? size : 8);
-
-            if (JOIN_UNLIKELY (_stack.empty ()))
+            if (JOIN_UNLIKELY (_depth == 0))
             {
-                _root = std::move (object);
-                _stack.push (&_root);
-                return 0;
+                _stack.clear ();
             }
-
-            if (JOIN_UNLIKELY (_stack.size () >= _maxdepth))
+            else if (JOIN_UNLIKELY (_depth >= _maxdepth))
             {
                 join::lastError = make_error_code (SaxErrc::StackOverflow);
                 return -1;
             }
 
-            Value::Ptr parent = _stack.top ();
-
-            if (parent->index () == Value::ObjectValue)
-            {
-                _stack.push (&parent->insert ({std::move (_curkey), std::move (object)}));
-            }
-            else
-            {
-                _stack.push (&parent->pushBack (std::move (object)));
-            }
+            _starts[_depth++] = _stack.size ();
 
             return 0;
         }
@@ -741,7 +735,7 @@ namespace join
          */
         virtual int setKey (const Value& key) override
         {
-            _curkey = key;
+            _stack.emplace_back (key);
             return 0;
         }
 
@@ -751,49 +745,71 @@ namespace join
          */
         virtual int stopObject () override
         {
-            if (JOIN_LIKELY (_stack.size ()))
+            if (JOIN_UNLIKELY (_depth == 0))
             {
-                _stack.pop ();
+                return 0;  // LCOV_EXCL_LINE
             }
+
+            auto first = _stack.begin () + _starts[--_depth];
+            Object object;
+            object.reserve ((_stack.end () - first) / 2);
+            for (auto it = first; it != _stack.end (); it += 2)
+            {
+                object.emplace_back (std::move (it[0]), std::move (it[1]));
+            }
+            _stack.erase (first, _stack.end ());
+
+            if (_depth == 0)
+            {
+                _root = std::move (object);
+                return 0;
+            }
+
+            _stack.emplace_back (in_place_index_t<Value::ObjectValue>{}, std::move (object));
 
             return 0;
         }
 
         /**
-         * @brief set value.
-         * @param value value to set.
+         * @brief construct a value in place in the current container.
+         * @param args arguments forwarded to the value constructor.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setValue (Value&& value)
+        template <size_t I, typename... Args>
+        int emplaceValue (Args&&... args)
         {
-            if (JOIN_UNLIKELY (_stack.empty ()))
+            if (JOIN_UNLIKELY (_depth == 0))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidParent);
                 return -1;
             }
 
-            Value::Ptr parent = _stack.top ();
-
-            if (parent->index () == Value::ObjectValue)
-            {
-                parent->insert ({std::move (_curkey), std::move (value)});
-            }
-            else
-            {
-                parent->pushBack (std::move (value));
-            }
+            _stack.emplace_back (in_place_index_t<I>{}, std::forward<Args> (args)...);
 
             return 0;
+        }
+
+        /**
+         * @brief get the value stack of the calling thread.
+         * @return value stack.
+         */
+        static std::vector<Value>& stack () noexcept
+        {
+            thread_local std::vector<Value> values;
+            return values;
         }
 
         /// max stack depth.
         static constexpr size_t _maxdepth = 19;
 
-        /// stack.
-        std::stack<Value*> _stack;
+        /// start of each open container in _stack.
+        size_t _starts[_maxdepth];
 
-        /// current key.
-        Value _curkey;
+        /// number of open containers.
+        size_t _depth = 0;
+
+        /// stack of the values of the open containers.
+        std::vector<Value>& _stack;
 
         /// root.
         Value& _root;

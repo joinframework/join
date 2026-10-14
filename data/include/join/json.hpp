@@ -202,7 +202,7 @@ namespace join
         virtual int setNull () override
         {
             array ();
-            append4 ("null");
+            append ("null", 4);
             _first = false;
             return 0;
         }
@@ -217,11 +217,11 @@ namespace join
             array ();
             if (value)
             {
-                append4 ("true");
+                append ("true", 4);
             }
             else
             {
-                append5 ("false");
+                append ("false", 5);
             }
             _first = false;
             return 0;
@@ -300,22 +300,22 @@ namespace join
             {
                 if (neg)
                 {
-                    append4 ("-NaN");
+                    append ("-NaN", 4);
                 }
                 else
                 {
-                    append3 ("NaN");
+                    append ("NaN", 3);
                 }
             }
             else
             {
                 if (neg)
                 {
-                    append4 ("-Inf");
+                    append ("-Inf", 4);
                 }
                 else
                 {
-                    append3 ("Inf");
+                    append ("Inf", 3);
                 }
             }
             _first = false;
@@ -576,7 +576,7 @@ namespace join
                 else
                 {
                     char escapeSeq[2] = {'\\', static_cast<char> (esc)};
-                    append2 (escapeSeq);
+                    append (escapeSeq, 2);
                 }
 
                 ++cur;
@@ -729,7 +729,7 @@ namespace join
             }
             else
             {
-                append4 ("null");
+                append ("null", 4);
             }
             _first = false;
             return 0;
@@ -1115,6 +1115,8 @@ namespace join
         template <JsonReadMode ReadMode, typename ViewType>
         int read (ViewType& document)
         {
+            _depth = 0;
+
             if (skipWhitespaces<ReadMode> (document) != 0)
             {
                 return -1;
@@ -1455,8 +1457,7 @@ namespace join
             }
             else if (JOIN_LIKELY (isDigit (view.peek ())))
             {
-                u = view.get () - '0';
-                ++digits;
+                digits = view.readDigits (u, 18);
 
                 while (JOIN_LIKELY (isDigit (view.peek ())))
                 {
@@ -1488,11 +1489,7 @@ namespace join
 
             if (isDouble)
             {
-                while (JOIN_LIKELY (isDigit (view.peek ())))
-                {
-                    u = (u * 10) + (view.get () - '0');
-                    ++digits;
-                }
+                digits += view.readDigits (u);
             }
 
             int64_t frac = 0;
@@ -1500,15 +1497,17 @@ namespace join
             {
                 isDouble = true;
 
-                while (JOIN_LIKELY (isDigit (view.peek ())))
+                if (JOIN_UNLIKELY (digits == 0))
                 {
-                    u = (u * 10) + (view.get () - '0');
-                    if (JOIN_LIKELY (u || digits))
+                    while (view.getIf ('0'))
                     {
-                        ++digits;
+                        --frac;
                     }
-                    --frac;
                 }
+
+                size_t count = view.readDigits (u);
+                digits += count;
+                frac -= static_cast<int64_t> (count);
             }
 
             int64_t exponent = 0;
@@ -1767,7 +1766,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode, typename ViewType>
-        int readArray (ViewType& document)
+        JOIN_ALWAYS_INLINE int readArray (ViewType& document)
         {
             if (JOIN_UNLIKELY (startArray () == -1))
             {
@@ -1829,7 +1828,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonReadMode ReadMode, typename ViewType>
-        int readObject (ViewType& document)
+        JOIN_ALWAYS_INLINE int readObject (ViewType& document)
         {
             if (JOIN_UNLIKELY (startObject () == -1))
             {

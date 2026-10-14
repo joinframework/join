@@ -32,6 +32,7 @@
 #include <istream>
 #include <string>
 #include <vector>
+#include <limits>
 
 // C.
 #include <cstring>
@@ -211,6 +212,40 @@ namespace join
         }
 
         /**
+         * @brief read consecutive digits.
+         * @param value value the digits are appended to.
+         * @param max maximum number of digits to read.
+         * @return number of digits read.
+         */
+        inline size_t readDigits (uint64_t& value, size_t max = std::numeric_limits<size_t>::max ()) noexcept
+        {
+            const char* cur = _cur;
+            const char* end = (static_cast<size_t> (_end - _cur) > max) ? _cur + max : _end;
+            uint64_t word;
+
+            while ((end - cur >= 8) &&
+                   (std::memcpy (&word, cur, 8),
+                    ((word & 0xF0F0F0F0F0F0F0F0ULL) |
+                     (((word + 0x0606060606060606ULL) & 0xF0F0F0F0F0F0F0F0ULL) >> 4)) == 0x3333333333333333ULL))
+            {
+                word = ((word & 0x0F0F0F0F0F0F0F0FULL) * 2561) >> 8;
+                word = ((word & 0x00FF00FF00FF00FFULL) * 6553601) >> 16;
+                word = ((word & 0x0000FFFF0000FFFFULL) * 42949672960001ULL) >> 32;
+                value = (value * 100000000) + word;
+                cur += 8;
+            }
+
+            while ((cur < end) && (static_cast<unsigned char> (*cur - '0') < 10))
+            {
+                value = (value * 10) + (*cur++ - '0');
+            }
+
+            size_t count = cur - _cur;
+            _cur = cur;
+            return count;
+        }
+
+        /**
          * @brief read characters.
          * @param buf output buffer.
          * @param count number of characters to read.
@@ -235,6 +270,24 @@ namespace join
             const char* cur = _cur;
             const char* end = _end;
 
+            while (end - cur >= 8)
+            {
+                uint64_t word, quote, backslash;
+                std::memcpy (&word, cur, 8);
+                quote = word ^ 0x2222222222222222ULL;
+                backslash = word ^ 0x5C5C5C5C5C5C5C5CULL;
+                uint64_t mask =
+                    (((quote - 0x0101010101010101ULL) & ~quote) | ((backslash - 0x0101010101010101ULL) & ~backslash) |
+                     ((word - 0x2020202020202020ULL) & ~word)) &
+                    0x8080808080808080ULL;
+                if (mask)
+                {
+                    cur += __builtin_ctzll (mask) >> 3;
+                    break;
+                }
+                cur += 8;
+            }
+
             while (cur < end && !details::escapedLookup.data[static_cast<unsigned char> (*cur)])
             {
                 ++cur;
@@ -256,6 +309,12 @@ namespace join
             while (cur < end && details::whitespaceLookup.data[static_cast<unsigned char> (*cur)])
             {
                 ++cur;
+
+                uint64_t word;
+                while ((end - cur >= 8) && (std::memcpy (&word, cur, 8), word == 0x2020202020202020ULL))
+                {
+                    cur += 8;
+                }
             }
 
             _cur = cur;
@@ -464,6 +523,23 @@ namespace join
                 }
             }
             return false;
+        }
+
+        /**
+         * @brief read consecutive digits.
+         * @param value value the digits are appended to.
+         * @param max maximum number of digits to read.
+         * @return number of digits read.
+         */
+        inline size_t readDigits (uint64_t& value, size_t max = std::numeric_limits<size_t>::max ()) noexcept
+        {
+            size_t count = 0;
+            while ((count < max) && (static_cast<unsigned> (peek () - '0') < 10))
+            {
+                value = (value * 10) + (get () - '0');
+                ++count;
+            }
+            return count;
         }
 
         /**
@@ -701,6 +777,17 @@ namespace join
         }
 
         /**
+         * @brief read consecutive digits.
+         * @param value value the digits are appended to.
+         * @param max maximum number of digits to read.
+         * @return number of digits read.
+         */
+        inline size_t readDigits (uint64_t& value, size_t max = std::numeric_limits<size_t>::max ()) noexcept
+        {
+            return _view.readDigits (value, max);
+        }
+
+        /**
          * @brief get snapshot.
          * @param out destination.
          */
@@ -806,6 +893,23 @@ namespace join
                 }
             }
             return false;
+        }
+
+        /**
+         * @brief read consecutive digits.
+         * @param value value the digits are appended to.
+         * @param max maximum number of digits to read.
+         * @return number of digits read.
+         */
+        inline size_t readDigits (uint64_t& value, size_t max = std::numeric_limits<size_t>::max ()) noexcept
+        {
+            size_t count = 0;
+            while ((count < max) && (static_cast<unsigned> (peek () - '0') < 10))
+            {
+                value = (value * 10) + (get () - '0');
+                ++count;
+            }
+            return count;
         }
 
         /**

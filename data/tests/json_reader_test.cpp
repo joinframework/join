@@ -75,6 +75,16 @@ TEST (JsonReader, deserialize)
 
     ASSERT_EQ (value.deserialize<JsonReader> (&data[0], &data[sizeof (data)]), -1);
     ASSERT_EQ (join::lastError, SaxErrc::ExtraData);
+
+    JsonReader reader (value);
+    ASSERT_EQ (reader.deserialize (std::string ("[1, [2, ")), -1);
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value.empty ());
+
+    ASSERT_EQ (reader.deserialize (std::string ("[3]")), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_EQ (value.size (), 1);
+    ASSERT_EQ (value[0], 3);
 }
 
 /**

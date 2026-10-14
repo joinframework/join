@@ -195,6 +195,28 @@ TEST (JsonCanonicalizer, invalid)
     out.str ("");
     ASSERT_EQ (writer.serialize (value), -1);
     ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+
+    value = Array{"\xFF"};
+    out.str ("");
+    ASSERT_EQ (writer.serialize (value), -1);
+    ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+}
+
+/**
+ * @brief Test serialize method.
+ */
+TEST (JsonCanonicalizer, serialize)
+{
+    Value value = Object{{Value (1), "One"}, {"a", "Ascii"}};
+
+    std::stringstream out;
+    JsonCanonicalizer writer (out);
+    EXPECT_THROW (writer.serialize (value), std::bad_cast);
+    EXPECT_EQ (out.str (), "{");
+
+    out.str ("");
+    EXPECT_EQ (writer.setNull (), 0);
+    EXPECT_EQ (out.str (), "null");
 }
 
 /**
