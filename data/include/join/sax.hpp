@@ -39,7 +39,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <stack>
 
 // C.
 #include <cstring>

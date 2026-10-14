@@ -220,6 +220,14 @@ TEST (JsonWriter, startArray)
     EXPECT_EQ (jsonWriter.setInt (2), 0);
     EXPECT_EQ (jsonWriter.stopArray (), 0);
     EXPECT_EQ (stream.str (), "[\n  1,\n  2\n]");
+
+    stream.str ("");
+    for (int i = 0; i < 256; ++i)
+    {
+        ASSERT_EQ (jsonWriter.startArray (), 0);
+    }
+    EXPECT_EQ (jsonWriter.startArray (), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::StackOverflow);
 }
 
 /**
@@ -243,6 +251,15 @@ TEST (JsonWriter, startObject)
     EXPECT_EQ (jsonWriter.setString ("bazz"), 0);
     EXPECT_EQ (jsonWriter.stopObject (), 0);
     EXPECT_EQ (stream.str (), "{\n  \"foo\": \"bar\",\n  \"fuzz\": \"bazz\"\n}");
+
+    stream.str ("");
+    for (int i = 0; i < 256; ++i)
+    {
+        ASSERT_EQ (jsonWriter.startObject (), 0);
+        ASSERT_EQ (jsonWriter.setKey ("foo"), 0);
+    }
+    EXPECT_EQ (jsonWriter.startObject (), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::StackOverflow);
 }
 
 /**

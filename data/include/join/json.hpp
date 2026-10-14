@@ -347,11 +347,16 @@ namespace join
          */
         virtual int startArray ([[maybe_unused]] uint32_t size = 0) override
         {
+            if (JOIN_UNLIKELY (_depth == sizeof (_arrays) * 8))
+            {
+                join::lastError = make_error_code (SaxErrc::StackOverflow);
+                return -1;
+            }
             array ();
             append ('[');
-            _tab.append (_indentation, ' ');
+            _arrays[_depth >> 6] |= 1ULL << (_depth & 63);
+            ++_depth;
             _first = true;
-            _stack.push (true);
             return 0;
         }
 
@@ -361,7 +366,7 @@ namespace join
          */
         virtual int stopArray () override
         {
-            _tab.erase (_tab.size () - _indentation);
+            --_depth;
             if (!_first)
             {
                 endLine ();
@@ -369,7 +374,6 @@ namespace join
             }
             append (']');
             _first = false;
-            _stack.pop ();
             return 0;
         }
 
@@ -380,11 +384,16 @@ namespace join
          */
         virtual int startObject ([[maybe_unused]] uint32_t size = 0) override
         {
+            if (JOIN_UNLIKELY (_depth == sizeof (_arrays) * 8))
+            {
+                join::lastError = make_error_code (SaxErrc::StackOverflow);
+                return -1;
+            }
             array ();
             append ('{');
-            _tab.append (_indentation, ' ');
+            _arrays[_depth >> 6] &= ~(1ULL << (_depth & 63));
+            ++_depth;
             _first = true;
-            _stack.push (false);
             return 0;
         }
 
@@ -421,7 +430,7 @@ namespace join
          */
         virtual int stopObject () override
         {
-            _tab.erase (_tab.size () - _indentation);
+            --_depth;
             if (!_first)
             {
                 endLine ();
@@ -429,7 +438,6 @@ namespace join
             }
             append ('}');
             _first = false;
-            _stack.pop ();
             return 0;
         }
 
@@ -632,7 +640,7 @@ namespace join
          */
         inline void comma () noexcept
         {
-            if (!_stack.empty () && !_first)
+            if (_depth && !_first)
             {
                 append (',');
             }
@@ -645,7 +653,14 @@ namespace join
         {
             if (_indentation)
             {
-                append (_tab.c_str (), _tab.size ());
+                static constexpr char spaces[] = "                                                                ";
+                size_t count = _depth * _indentation;
+                while (count)
+                {
+                    size_t n = (count < sizeof (spaces) - 1) ? count : sizeof (spaces) - 1;
+                    append (spaces, n);
+                    count -= n;
+                }
             }
         }
 
@@ -677,21 +692,21 @@ namespace join
         inline void array () noexcept
         {
             comma ();
-            if (!_stack.empty () && _stack.top ())
+            if (_depth && ((_arrays[(_depth - 1) >> 6] >> ((_depth - 1) & 63)) & 1))
             {
                 endLine ();
                 indent ();
             }
         }
 
-        /// array stack.
-        std::stack<bool> _stack;
+        /// array flags of the open containers, one bit per depth.
+        uint64_t _arrays[4] = {};
+
+        /// number of open containers.
+        size_t _depth = 0;
 
         /// indentation.
         size_t _indentation;
-
-        /// tabulation.
-        std::string _tab;
 
         /// is first element.
         bool _first = true;
