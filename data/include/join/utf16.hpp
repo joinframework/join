@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_CORE_UTF16_HPP
-#define JOIN_CORE_UTF16_HPP
+#ifndef JOIN_DATA_UTF16_HPP
+#define JOIN_DATA_UTF16_HPP
 
 // libjoin.
 #include <join/utils.hpp>

@@ -27,16 +27,6 @@ target_link_libraries(variant.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME variant.gtest COMMAND variant.gtest)
 install(TARGETS variant.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
-add_executable(utf8.gtest utf8_test.cpp)
-target_link_libraries(utf8.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME utf8.gtest COMMAND utf8.gtest)
-install(TARGETS utf8.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(utf16.gtest utf16_test.cpp)
-target_link_libraries(utf16.gtest ${JOIN_CORE} GTest::gtest_main)
-add_test(NAME utf16.gtest COMMAND utf16.gtest)
-install(TARGETS utf16.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
 add_executable(backoff.gtest backoff_test.cpp)
 target_link_libraries(backoff.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME backoff.gtest COMMAND backoff.gtest)
