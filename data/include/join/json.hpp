@@ -29,9 +29,10 @@
 #include <join/atodpow.hpp>
 #include <join/dtoa.hpp>
 #include <join/sax.hpp>
+#include <join/utf8.hpp>
+#include <join/utf16.hpp>
 
 // C++.
-#include <codecvt>
 #include <memory>
 #include <locale>
 
@@ -73,6 +74,8 @@ namespace join
         };
 
         constexpr UnescapedTable unescapedLookup{};
+
+        constexpr char hexDigits[17] = "0123456789abcdef";
     }
 
     struct LocaleDelete
@@ -535,78 +538,6 @@ namespace join
         }
 
         /**
-         * @brief get UTF8 codepoint.
-         * @param cur current character.
-         * @param end end of string.
-         * @param codepoint calculated UTF8 codepoint.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int utf8Codepoint (std::string::const_iterator& cur, std::string::const_iterator& end,
-                                   uint32_t& codepoint)
-        {
-            uint8_t u0 = static_cast<uint8_t> (*cur);
-            if (u0 < 0x80)
-            {
-                codepoint = u0;
-                return 0;
-            }
-
-            if (++cur == end)
-            {
-                return -1;
-            }
-
-            uint8_t u1 = static_cast<uint8_t> (*cur);
-            if (u0 < 0xE0)
-            {
-                codepoint = ((u0 & 0x1F) << 6) | (u1 & 0x3F);
-                if (codepoint < 0x80)
-                {
-                    return -1;
-                }
-                return 0;
-            }
-
-            if (++cur == end)
-            {
-                return -1;
-            }
-
-            uint8_t u2 = static_cast<uint8_t> (*cur);
-            if (u0 < 0xF0)
-            {
-                codepoint = ((u0 & 0x0F) << 12) | ((u1 & 0x3F) << 6) | (u2 & 0x3F);
-                if ((codepoint > 0xD7FF) && (codepoint < 0xE000))
-                {
-                    return -1;
-                }
-                if (codepoint < 0x800)
-                {
-                    return -1;
-                }
-                return 0;
-            }
-
-            if (++cur == end)
-            {
-                return -1;
-            }
-
-            uint8_t u3 = static_cast<uint8_t> (*cur);
-            if (u0 < 0xF8)
-            {
-                codepoint = ((u0 & 0x07) << 18) | ((u1 & 0x3F) << 12) | ((u2 & 0x3F) << 6) | (u3 & 0x3F);
-                if (codepoint < 0x10000)
-                {
-                    return -1;
-                }
-                return 0;
-            }
-
-            return -1;
-        }
-
-        /**
          * @brief escape string value.
          * @param value string value to escape.
          * @return 0 on success, -1 otherwise.
@@ -639,31 +570,8 @@ namespace join
                 uint8_t esc = details::unescapedLookup.data[ch];
                 if (esc == 'u')
                 {
-                    uint32_t codepoint = 0;
-                    char hex[5];
-
-                    if (utf8Codepoint (cur, end, codepoint) == -1)
-                    {
-                        join::lastError = make_error_code (JsonErrc::InvalidEncoding);
-                        return -1;
-                    }
-
-                    if (codepoint <= 0xFFFF)
-                    {
-                        append2 ("\\u");
-                        snprintf (hex, sizeof (hex), "%04x", uint16_t (codepoint));
-                        append4 (hex);
-                    }
-                    else
-                    {
-                        codepoint -= 0x10000;
-                        append2 ("\\u");
-                        snprintf (hex, sizeof (hex), "%04x", uint16_t (0xD800 + ((codepoint >> 10) & 0x3FF)));
-                        append4 (hex);
-                        append2 ("\\u");
-                        snprintf (hex, sizeof (hex), "%04x", uint16_t (0xDC00 + (codepoint & 0x3FF)));
-                        append4 (hex);
-                    }
+                    char seq[6] = {'\\', 'u', '0', '0', details::hexDigits[ch >> 4], details::hexDigits[ch & 0xF]};
+                    append (seq, 6);
                 }
                 else
                 {
@@ -841,21 +749,39 @@ namespace join
                 return &member;
             });
             std::sort (members.begin (), members.end (), [] (const Member* a, const Member* b) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-                std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cvt_utf8_utf16;
-#pragma GCC diagnostic pop
-                std::u16string wa = cvt_utf8_utf16.from_bytes (a->first.getString ().data ());
-                std::u16string wb = cvt_utf8_utf16.from_bytes (b->first.getString ().data ());
-                return wa < wb;
+                const std::string& sa = a->first.getString ();
+                const std::string& sb = b->first.getString ();
+                return utf8::compareUtf16Order (sa.data (), sa.data () + sa.size (), sb.data (),
+                                                sb.data () + sb.size ()) < 0;
             });
             for (auto const& member : members)
             {
-                setKey (member->first);
-                setValue (member->second);
+                if (setKey (member->first) == -1)
+                {
+                    return -1;
+                }
+
+                if (setValue (member->second) == -1)
+                {
+                    return -1;
+                }
             }
-            stopObject ();
-            return 0;
+            return stopObject ();
+        }
+
+        /**
+         * @brief escape string value.
+         * @param value string value to escape.
+         * @return 0 on success, -1 otherwise.
+         */
+        virtual int writeEscaped (const std::string& value) override
+        {
+            if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
+            {
+                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
+                return -1;
+            }
+            return JsonWriter::writeEscaped (value);
         }
 
         /**
@@ -884,7 +810,7 @@ namespace join
     {
         None = 0,                    /**< no read mode set. */
         ParseComments = 1L << 0,     /**< parse comments. */
-        ValidateEncoding = 1L << 1,  /**< validate encoding. */
+        ValidateEncoding = 1L << 1,  /**< validate UTF-8 encoding of strings. */
         StopParsingOnDone = 1L << 2, /**< stop parsing on done. */
     };
 
@@ -1237,7 +1163,7 @@ namespace join
                     return readObject<ReadMode> (document);
                 case '"':
                     document.get ();
-                    return readString (document);
+                    return readString<ReadMode> (document);
                 case 'n':
                     document.get ();
                     return readNull (document);
@@ -1687,43 +1613,6 @@ namespace join
         }
 
         /**
-         * @brief encode a Unicode codepoint to UTF-8.
-         * @param codepoint unicode codepoint to encode.
-         * @param output parse output string.
-         */
-        inline void encodeUtf8 (uint32_t codepoint, std::string& output)
-        {
-            if (codepoint < 0x80)
-            {
-                output.push_back (static_cast<char> (codepoint));
-            }
-            else if (codepoint < 0x800)
-            {
-                char buf[2];
-                buf[0] = static_cast<char> (0xC0 | (codepoint >> 6));
-                buf[1] = static_cast<char> (0x80 | (codepoint & 0x3F));
-                output.append (buf, 2);
-            }
-            else if (codepoint < 0x10000)
-            {
-                char buf[3];
-                buf[0] = static_cast<char> (0xE0 | (codepoint >> 12));
-                buf[1] = static_cast<char> (0x80 | ((codepoint >> 6) & 0x3F));
-                buf[2] = static_cast<char> (0x80 | (codepoint & 0x3F));
-                output.append (buf, 3);
-            }
-            else
-            {
-                char buf[4];
-                buf[0] = static_cast<char> (0xF0 | (codepoint >> 18));
-                buf[1] = static_cast<char> (0x80 | ((codepoint >> 12) & 0x3F));
-                buf[2] = static_cast<char> (0x80 | ((codepoint >> 6) & 0x3F));
-                buf[3] = static_cast<char> (0x80 | (codepoint & 0x3F));
-                output.append (buf, 4);
-            }
-        }
-
-        /**
          * @brief parse unicode.
          * @param document document to parse.
          * @param output parse output string.
@@ -1739,13 +1628,11 @@ namespace join
                 return -1;
             }
 
-            if (u >= 0xDC00 && u <= 0xDFFF)
-            {
-                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
-                return -1;
-            }
+            char16_t units[2] = {static_cast<char16_t> (u), 0};
+            const char16_t* cur = units;
+            const char16_t* end = units + 1;
 
-            if (u >= 0xD800 && u <= 0xDBFF)
+            if (utf16::isHighSurrogate (u))
             {
                 if ((document.get () != '\\') || (document.get () != 'u'))
                 {
@@ -1761,22 +1648,18 @@ namespace join
                     return -1;
                 }
 
-                if (v < 0xDC00 || v > 0xDFFF)
-                {
-                    join::lastError = make_error_code (JsonErrc::InvalidEncoding);
-                    return -1;
-                }
-
-                u = 0x10000 + (((u - 0xD800) << 10) | (v - 0xDC00));
+                units[1] = static_cast<char16_t> (v);
+                ++end;
             }
 
-            if (u > 0x10FFFF)
+            if (utf16::decode (cur, end, u) == -1)
             {
                 join::lastError = make_error_code (JsonErrc::InvalidEncoding);
                 return -1;
             }
 
-            encodeUtf8 (u, output);
+            char buf[4];
+            output.append (buf, utf8::encode (u, buf));
 
             return 0;
         }
@@ -1828,62 +1711,12 @@ namespace join
         }
 
         /**
-         * @brief parse UTF8.
-         * @param document document to parse.
-         * @param output parse output string.
-         * @return 0 on success, -1 otherwise.
-         */
-        /*template <typename ViewType>
-        inline int readUtf8 (ViewType& document, std::string& output) noexcept
-        {
-            size_t count = 0;
-
-            if (static_cast <uint8_t> (document.peek ()) < 0x80)
-            {
-                output.push_back (document.get ());
-            }
-            else if (static_cast <uint8_t> (document.peek ()) < 0xE0)
-            {
-                output.push_back (document.get ());
-                count = 1;
-            }
-            else if (static_cast <uint8_t> (document.peek ()) < 0xF0)
-            {
-                output.push_back (document.get ());
-                count = 2;
-            }
-            else if (static_cast <uint8_t> (document.peek ()) < 0xF8)
-            {
-                output.push_back (document.get ());
-                count = 3;
-            }
-            else
-            {
-                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
-                return -1;
-            }
-
-            for (size_t i = 0; i < count; ++i)
-            {
-                if (static_cast <uint8_t> (document.peek ()) < 0x80 || static_cast <uint8_t> (document.peek ()) > 0xBF)
-                {
-                    join::lastError = make_error_code (JsonErrc::InvalidEncoding);
-                    return -1;
-                }
-
-                output.push_back (document.get ());
-            }
-
-            return 0;
-        }*/
-
-        /**
          * @brief parse a string value.
          * @param document document to parse.
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
+        template <JsonReadMode ReadMode, typename ViewType>
         int readString (ViewType& document, bool isKey = false)
         {
             thread_local Value output (in_place_index_t<Value::String>{});
@@ -1892,7 +1725,14 @@ namespace join
 
             for (;;)
             {
+                size_t pos = output.getString ().size ();
                 document.readUntilEscaped (output.getString ());
+
+                if (JOIN_UNLIKELY (validateChunk<ReadMode> (output.getString (), pos) == -1))
+                {
+                    return -1;
+                }
+
                 int ch = document.peek ();
 
                 if (ch == '"')
@@ -1910,15 +1750,6 @@ namespace join
                     }
                     continue;
                 }
-
-                /*if (static_cast <uint8_t> (ch) > 0x7F)
-                {
-                    if (readUtf8 (document, output) == -1)
-                    {
-                        return -1;
-                    }
-                    continue;
-                }*/
 
                 if (ch < 0x20)
                 {
@@ -2023,7 +1854,7 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (readString (document, true) == -1))
+                if (JOIN_UNLIKELY (readString<ReadMode> (document, true) == -1))
                 {
                     return -1;
                 }
@@ -2106,6 +1937,37 @@ namespace join
             ViewType& document)
         {
             return document.skipWhitespacesAndComments ();
+        }
+
+        /**
+         * @brief validate the encoding of the last chunk read (validation disabled).
+         * @param output parse output string.
+         * @param pos position of the chunk in the output string.
+         * @return 0.
+         */
+        template <JsonReadMode ReadMode>
+        inline typename std::enable_if<!(ReadMode & JsonReadMode::ValidateEncoding), int>::type validateChunk (
+            [[maybe_unused]] const std::string& output, [[maybe_unused]] size_t pos) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief validate the encoding of the last chunk read.
+         * @param output parse output string.
+         * @param pos position of the chunk in the output string.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonReadMode ReadMode>
+        inline typename std::enable_if<((ReadMode & JsonReadMode::ValidateEncoding) != 0), int>::type validateChunk (
+            const std::string& output, size_t pos) noexcept
+        {
+            if (JOIN_UNLIKELY (utf8::validate (output.data () + pos, output.data () + output.size ()) == -1))
+            {
+                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
+                return -1;
+            }
+            return 0;
         }
 
         /**

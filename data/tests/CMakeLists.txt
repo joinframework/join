@@ -2,9 +2,19 @@ cmake_minimum_required(VERSION 3.22.1)
 
 find_package(GTest REQUIRED)
 
+add_executable(utf8.gtest utf8_test.cpp)
+target_link_libraries(utf8.gtest ${JOIN_DATA} GTest::gtest_main)
+add_test(NAME utf8.gtest COMMAND utf8.gtest)
+install(TARGETS utf8.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(utf16.gtest utf16_test.cpp)
+target_link_libraries(utf16.gtest ${JOIN_DATA} GTest::gtest_main)
+add_test(NAME utf16.gtest COMMAND utf16.gtest)
+install(TARGETS utf16.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(dtoa.gtest dtoa_test.cpp)
 target_link_libraries(dtoa.gtest ${JOIN_DATA} GTest::gtest_main)
-add_test(NAME base64.gtest COMMAND base64.gtest)
+add_test(NAME dtoa.gtest COMMAND dtoa.gtest)
 install(TARGETS dtoa.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(string_view.gtest string_view_test.cpp)
