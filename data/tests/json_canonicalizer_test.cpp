@@ -32,6 +32,7 @@ using join::Value;
 using join::Array;
 using join::Object;
 using join::JsonCanonicalizer;
+using join::JsonErrc;
 
 /**
  * @brief Test nan.
@@ -174,6 +175,26 @@ TEST (JsonCanonicalizer, weird)
                "{\"\\n\":\"Newline\",\"\\r\":\"Carriage Return\",\"1\":\"One\",\"</script>\":\"Browser "
                "Challenge\",\"\":\"Control\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro "
                "Sign\",\"😂\":\"Smiley\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\"}");
+}
+
+/**
+ * @brief Test invalid.
+ */
+TEST (JsonCanonicalizer, invalid)
+{
+    Value value;
+    value["\xFF"] = "Invalid";
+    value["a"] = "Ascii";
+
+    std::stringstream out;
+    JsonCanonicalizer writer (out);
+    ASSERT_EQ (writer.serialize (value), -1);
+    ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+
+    value = Object{{"a", "\xF0"}};
+    out.str ("");
+    ASSERT_EQ (writer.serialize (value), -1);
+    ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
 }
 
 /**
