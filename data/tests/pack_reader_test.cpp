@@ -73,6 +73,16 @@ TEST (PackReader, deserialize)
 
     ASSERT_EQ (value.deserialize<PackReader> (&data[0], &data[sizeof (data)]), -1);
     ASSERT_EQ (join::lastError, SaxErrc::ExtraData);
+
+    PackReader reader (value);
+    ASSERT_EQ (reader.deserialize (std::string ({'\x92', '\x01'})), -1);
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value.empty ());
+
+    ASSERT_EQ (reader.deserialize (std::string ({'\x91', '\x03'})), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_EQ (value.size (), 1);
+    ASSERT_EQ (value[0], 3);
 }
 
 /**
@@ -626,6 +636,14 @@ TEST (PackReader, fail)
 
     stream.clear ();
     stream.str (std::string ({'\xd7'}));
+    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+
+    stream.clear ();
+    stream.str (std::string ({'\x92', '\x01'}));
+    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+
+    stream.clear ();
+    stream.str (std::string ({'\x81'}));
     ASSERT_NE (value.deserialize<PackReader> (stream), 0);
 }
 

@@ -43,6 +43,8 @@
 #include <cstddef>
 #include <cstring>
 
+#define JOIN_ALWAYS_INLINE inline __attribute__ ((always_inline))
+
 #define JOIN_LIKELY(x) __builtin_expect (!!(x), 1)
 #define JOIN_UNLIKELY(x) __builtin_expect (!!(x), 0)
 

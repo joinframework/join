@@ -551,6 +551,8 @@ namespace join
         template <typename ViewType>
         int read (ViewType& document)
         {
+            _depth = 0;
+
             if (JOIN_LIKELY (readValue (document) == 0))
             {
                 if (JOIN_LIKELY (document.peek () == std::char_traits<char>::eof ()))
@@ -572,7 +574,14 @@ namespace join
         template <typename ViewType>
         int readValue (ViewType& document)
         {
-            uint8_t head = static_cast<uint8_t> (document.peek ());
+            int ch = document.peek ();
+            if (JOIN_UNLIKELY (ch == std::char_traits<char>::eof ()))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            uint8_t head = static_cast<uint8_t> (ch);
 
             try
             {
@@ -755,7 +764,14 @@ namespace join
         template <typename ViewType>
         int readKey (ViewType& document)
         {
-            uint8_t head = static_cast<uint8_t> (document.peek ());
+            int ch = document.peek ();
+            if (JOIN_UNLIKELY (ch == std::char_traits<char>::eof ()))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+            }
+
+            uint8_t head = static_cast<uint8_t> (ch);
 
             try
             {

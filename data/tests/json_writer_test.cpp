@@ -33,6 +33,9 @@
 
 using join::JsonWriter;
 using join::Value;
+using join::Array;
+using join::Object;
+using join::SaxErrc;
 
 /**
  * @brief Test setNull method.
@@ -280,6 +283,30 @@ TEST (JsonWriter, serialize)
     stream.str ("");
     EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), "[null,true,1,2,3,4,1.23456789e-13,\"test\"]");
+
+    value = Array{};
+    std::string expected = "[";
+    for (int i = 0; i < 1000; ++i)
+    {
+        value.pushBack (int32_t (1));
+        expected += "1,";
+    }
+    value.pushBack (std::string (2000, 'a'));
+    expected += "\"" + std::string (2000, 'a') + "\"]";
+
+    stream.str ("");
+    EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();
+    EXPECT_EQ (stream.str (), expected);
+
+    value = Object{{Value (1), "One"}};
+    stream.str ("");
+    EXPECT_EQ (jsonWriter.serialize (value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
+
+    value = Object{{"a", Object{{Value (1), "One"}}}};
+    stream.str ("");
+    EXPECT_EQ (jsonWriter.serialize (value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
 }
 
 /**
