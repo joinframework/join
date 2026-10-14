@@ -347,11 +347,16 @@ namespace join
          */
         virtual int startArray ([[maybe_unused]] uint32_t size = 0) override
         {
+            if (JOIN_UNLIKELY (_depth == sizeof (_arrays) * 8))
+            {
+                join::lastError = make_error_code (SaxErrc::StackOverflow);
+                return -1;
+            }
             array ();
             append ('[');
-            _tab.append (_indentation, ' ');
+            _arrays[_depth >> 6] |= 1ULL << (_depth & 63);
+            ++_depth;
             _first = true;
-            _stack.push (true);
             return 0;
         }
 
@@ -361,7 +366,7 @@ namespace join
          */
         virtual int stopArray () override
         {
-            _tab.erase (_tab.size () - _indentation);
+            --_depth;
             if (!_first)
             {
                 endLine ();
@@ -369,7 +374,6 @@ namespace join
             }
             append (']');
             _first = false;
-            _stack.pop ();
             return 0;
         }
 
@@ -380,11 +384,16 @@ namespace join
          */
         virtual int startObject ([[maybe_unused]] uint32_t size = 0) override
         {
+            if (JOIN_UNLIKELY (_depth == sizeof (_arrays) * 8))
+            {
+                join::lastError = make_error_code (SaxErrc::StackOverflow);
+                return -1;
+            }
             array ();
             append ('{');
-            _tab.append (_indentation, ' ');
+            _arrays[_depth >> 6] &= ~(1ULL << (_depth & 63));
+            ++_depth;
             _first = true;
-            _stack.push (false);
             return 0;
         }
 
@@ -421,7 +430,7 @@ namespace join
          */
         virtual int stopObject () override
         {
-            _tab.erase (_tab.size () - _indentation);
+            --_depth;
             if (!_first)
             {
                 endLine ();
@@ -429,7 +438,6 @@ namespace join
             }
             append ('}');
             _first = false;
-            _stack.pop ();
             return 0;
         }
 
@@ -495,35 +503,59 @@ namespace join
          */
         virtual void writeUint64 (uint64_t value)
         {
-            if (value == 0)
+            static constexpr uint64_t pow10[20] = {1ULL,
+                                                   10ULL,
+                                                   100ULL,
+                                                   1000ULL,
+                                                   10000ULL,
+                                                   100000ULL,
+                                                   1000000ULL,
+                                                   10000000ULL,
+                                                   100000000ULL,
+                                                   1000000000ULL,
+                                                   10000000000ULL,
+                                                   100000000000ULL,
+                                                   1000000000000ULL,
+                                                   10000000000000ULL,
+                                                   100000000000000ULL,
+                                                   1000000000000000ULL,
+                                                   10000000000000000ULL,
+                                                   100000000000000000ULL,
+                                                   1000000000000000000ULL,
+                                                   10000000000000000000ULL};
+
+            uint64_t high = value / 100000000;
+            uint64_t top = high / 100000000;
+            uint32_t mid = static_cast<uint32_t> (high - top * 100000000);
+            uint32_t low = static_cast<uint32_t> (value - high * 100000000);
+
+            char buffer[40];
+            std::memcpy (buffer, &details::digitPairs[(top / 100) * 2], 2);
+            std::memcpy (buffer + 2, &details::digitPairs[(top % 100) * 2], 2);
+            std::memcpy (buffer + 4, &details::digitPairs[(mid / 1000000) * 2], 2);
+            std::memcpy (buffer + 6, &details::digitPairs[(mid / 10000 % 100) * 2], 2);
+            std::memcpy (buffer + 8, &details::digitPairs[(mid / 100 % 100) * 2], 2);
+            std::memcpy (buffer + 10, &details::digitPairs[(mid % 100) * 2], 2);
+            std::memcpy (buffer + 12, &details::digitPairs[(low / 1000000) * 2], 2);
+            std::memcpy (buffer + 14, &details::digitPairs[(low / 10000 % 100) * 2], 2);
+            std::memcpy (buffer + 16, &details::digitPairs[(low / 100 % 100) * 2], 2);
+            std::memcpy (buffer + 18, &details::digitPairs[(low % 100) * 2], 2);
+
+            size_t length = ((64 - __builtin_clzll (value | 1)) * 1233) >> 12;
+            length += (value >= pow10[length]) + (value == 0);
+
+            if (JOIN_UNLIKELY (_capacity - _size < 20))
             {
-                append ('0');
-                return;
+                flush ();
+                if (_capacity == 0)
+                {
+                    _out->sputn (buffer + 20 - length, length);
+                    return;
+                }
             }
 
-            char buffer[20];
-            char* ptr = buffer + 20;
-
-            while (value >= 100)
-            {
-                uint64_t r = value % 100;
-                value /= 100;
-                ptr -= 2;
-                std::memcpy (ptr, &details::digitPairs[r * 2], 2);
-            }
-
-            if (value >= 10)
-            {
-                ptr -= 2;
-                std::memcpy (ptr, &details::digitPairs[value * 2], 2);
-            }
-            else
-            {
-                *--ptr = '0' + static_cast<char> (value);
-            }
-
-            size_t length = (buffer + 20) - ptr;
-            append (ptr, length);
+            std::memcpy (_buffer + _size, buffer + 20 - length, 20);
+            _size += length;
         }
 
         /**
@@ -544,12 +576,30 @@ namespace join
          */
         virtual int writeEscaped (const std::string& value)
         {
-            auto cur = value.cbegin ();
-            auto end = value.cend ();
+            const char* cur = value.data ();
+            const char* end = cur + value.size ();
 
             while (cur != end)
             {
-                auto beg = cur;
+                const char* beg = cur;
+
+                while (end - cur >= 8)
+                {
+                    uint64_t word, quote, backslash;
+                    std::memcpy (&word, cur, 8);
+                    quote = word ^ 0x2222222222222222ULL;
+                    backslash = word ^ 0x5C5C5C5C5C5C5C5CULL;
+                    uint64_t mask = (((quote - 0x0101010101010101ULL) & ~quote) |
+                                     ((backslash - 0x0101010101010101ULL) & ~backslash) |
+                                     ((word - 0x2020202020202020ULL) & ~word)) &
+                                    0x8080808080808080ULL;
+                    if (mask)
+                    {
+                        cur += __builtin_ctzll (mask) >> 3;
+                        break;
+                    }
+                    cur += 8;
+                }
 
                 while (cur != end && details::unescapedLookup.data[static_cast<uint8_t> (*cur)] == 0)
                 {
@@ -558,7 +608,7 @@ namespace join
 
                 if (cur != beg)
                 {
-                    append (&(*beg), cur - beg);
+                    append (beg, cur - beg);
                 }
 
                 if (cur == end)
@@ -590,7 +640,7 @@ namespace join
          */
         inline void comma () noexcept
         {
-            if (!_stack.empty () && !_first)
+            if (_depth && !_first)
             {
                 append (',');
             }
@@ -603,7 +653,14 @@ namespace join
         {
             if (_indentation)
             {
-                append (_tab.c_str (), _tab.size ());
+                static constexpr char spaces[] = "                                                                ";
+                size_t count = _depth * _indentation;
+                while (count)
+                {
+                    size_t n = (count < sizeof (spaces) - 1) ? count : sizeof (spaces) - 1;
+                    append (spaces, n);
+                    count -= n;
+                }
             }
         }
 
@@ -635,21 +692,21 @@ namespace join
         inline void array () noexcept
         {
             comma ();
-            if (!_stack.empty () && _stack.top ())
+            if (_depth && ((_arrays[(_depth - 1) >> 6] >> ((_depth - 1) & 63)) & 1))
             {
                 endLine ();
                 indent ();
             }
         }
 
-        /// array stack.
-        std::stack<bool> _stack;
+        /// array flags of the open containers, one bit per depth.
+        uint64_t _arrays[4] = {};
+
+        /// number of open containers.
+        size_t _depth = 0;
 
         /// indentation.
         size_t _indentation;
-
-        /// tabulation.
-        std::string _tab;
 
         /// is first element.
         bool _first = true;
@@ -1570,8 +1627,8 @@ namespace join
                 return setDouble (d);
             }
 
-            join::lastError = make_error_code (SaxErrc::InvalidValue);
-            return -1;
+            join::lastError = make_error_code (SaxErrc::InvalidValue);  // LCOV_EXCL_LINE
+            return -1;                                                  // LCOV_EXCL_LINE
         }
 
         /**
