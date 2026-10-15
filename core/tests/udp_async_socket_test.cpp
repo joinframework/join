@@ -821,7 +821,7 @@ TEST_F (UdpAsyncSocket, asyncReadFromMulti)
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
 
-    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (client.registerBufferRing (0, arena), 0) << join::lastError.message ();
 
     ssize_t index = client.asyncReadFromMulti (onReportMulti, 0);
@@ -911,7 +911,7 @@ TEST_F (UdpAsyncSocket, control)
         ASSERT_EQ (_code, Errc::MessageTooLong);
     }
 
-    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (receiver.registerBufferRing (1, arena), 0) << join::lastError.message ();
 
     ssize_t index = receiver.asyncReadFromMulti (onReportControl, 1, CMSG_SPACE (sizeof (int)));
@@ -990,15 +990,15 @@ TEST_F (UdpAsyncSocket, asyncWrite)
 TEST_F (UdpAsyncSocket, asyncWriteFixed)
 {
     Udp::AsyncSocket client;
-    LocalMem::Allocator<1, 1024> arena;
+    LocalMem::SlabAllocator<1, 1024> allocator;
 
-    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    char* buf = static_cast<char*> (allocator.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
     ASSERT_EQ (client.asyncWriteFixed (nullptr, buf, 5, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (client.registerFixedBuffers (allocator), 0) << join::lastError.message ();
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
 
@@ -1068,15 +1068,15 @@ TEST_F (UdpAsyncSocket, asyncRead)
 TEST_F (UdpAsyncSocket, asyncReadFixed)
 {
     Udp::AsyncSocket client;
-    LocalMem::Allocator<1, 1024> arena;
+    LocalMem::SlabAllocator<1, 1024> allocator;
 
-    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    char* buf = static_cast<char*> (allocator.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
     ASSERT_EQ (client.asyncReadFixed (nullptr, buf, sizeof (_buf), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (client.registerFixedBuffers (allocator), 0) << join::lastError.message ();
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
 

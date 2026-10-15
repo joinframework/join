@@ -182,7 +182,7 @@ void join::BasicProactor<IoPolicy>::waitStopped () const noexcept
 // =========================================================================
 template <typename IoPolicy>
 template <size_t Count, size_t... Sizes>
-int join::BasicProactor<IoPolicy>::registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena) noexcept
+int join::BasicProactor<IoPolicy>::registerFixedBuffers (LocalMem::SlabAllocator<Count, Sizes...>& arena) noexcept
 {
     return registerFixedBuffers (arena, std::make_index_sequence<sizeof...(Sizes)>{});
 }
@@ -210,7 +210,7 @@ int join::BasicProactor<IoPolicy>::unregisterFixedBuffers () noexcept
 // =========================================================================
 template <typename IoPolicy>
 template <size_t Count, size_t Size>
-int join::BasicProactor<IoPolicy>::registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
+int join::BasicProactor<IoPolicy>::registerBufferRing (uint16_t group, LocalMem::SlabAllocator<Count, Size>& arena)
 {
     int result = 0;
     std::error_code errc;
@@ -260,7 +260,7 @@ int join::BasicProactor<IoPolicy>::registerBufferRing (uint16_t group, LocalMem:
 // =========================================================================
 template <typename IoPolicy>
 template <size_t Count, size_t Size>
-int join::BasicProactor<IoPolicy>::registerBufferRing (LocalMem::Allocator<Count, Size>& arena)
+int join::BasicProactor<IoPolicy>::registerBufferRing (LocalMem::SlabAllocator<Count, Size>& arena)
 {
     int result = 0;
     std::error_code errc;
@@ -848,7 +848,7 @@ void join::BasicProactor<IoPolicy>::endOperation (IoOperation& op, int result, b
 // =========================================================================
 template <typename IoPolicy>
 template <size_t Count, size_t... Sizes, size_t... Is>
-int join::BasicProactor<IoPolicy>::registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena,
+int join::BasicProactor<IoPolicy>::registerFixedBuffers (LocalMem::SlabAllocator<Count, Sizes...>& arena,
                                                          std::index_sequence<Is...>) noexcept
 {
     iovec iovecs[] = {iovec{arena.template getPtr<Is> (0), Count * Sizes}...};

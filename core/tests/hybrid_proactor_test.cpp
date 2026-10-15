@@ -917,7 +917,7 @@ TEST_F (HybridProactorTest, registerFixedBuffers)
 {
     HybridProactor proactor;
 
-    LocalMem::Allocator<1, 1024, 4096> arena;
+    LocalMem::SlabAllocator<1, 1024, 4096> arena;
 
     ASSERT_EQ (proactor.registerFixedBuffers (arena), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.registerFixedBuffers (arena), -1);
@@ -935,9 +935,9 @@ TEST_F (HybridProactorTest, registerBufferRing)
 {
     HybridProactor proactor;
 
-    LocalMem::Allocator<4, 256> arena;
+    LocalMem::SlabAllocator<4, 256> allocator;
 
-    ASSERT_EQ (proactor.registerBufferRing (0, arena), -1);
+    ASSERT_EQ (proactor.registerBufferRing (0, allocator), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (proactor.unregisterBufferRing (0), -1);
@@ -953,15 +953,15 @@ TEST_F (HybridProactorTest, registerBufferRing)
     ASSERT_EQ (proactor.unregisterBufferRing (0), -1);
     ASSERT_EQ (join::lastError, Errc::NotFound);
 
-    ASSERT_EQ (proactor.registerBufferRing (0, arena), 0) << join::lastError.message ();
-    ASSERT_EQ (proactor.registerBufferRing (0, arena), -1);
+    ASSERT_EQ (proactor.registerBufferRing (0, allocator), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.registerBufferRing (0, allocator), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
-    ASSERT_EQ (arena.tryAllocate (256), nullptr);
+    ASSERT_EQ (allocator.tryAllocate (256), nullptr);
 
     ASSERT_EQ (proactor.unregisterBufferRing (0), 0) << join::lastError.message ();
-    ASSERT_NE (arena.tryAllocate (256), nullptr);
+    ASSERT_NE (allocator.tryAllocate (256), nullptr);
 
-    ASSERT_EQ (proactor.registerBufferRing (1, arena), -1);
+    ASSERT_EQ (proactor.registerBufferRing (1, allocator), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
     proactor.stop ();
@@ -1256,12 +1256,12 @@ TEST_F (HybridProactorTest, asyncWriteFixed)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     const char* msg = "asyncWriteFixed";
-    LocalMem::Allocator<4, sizeof (_buf)> arena;
-    arena.tryAllocate (sizeof (_buf));
-    void* regbuf = arena.tryAllocate (sizeof (_buf));
+    LocalMem::SlabAllocator<4, sizeof (_buf)> allocator;
+    allocator.tryAllocate (sizeof (_buf));
+    void* regbuf = allocator.tryAllocate (sizeof (_buf));
     ::memcpy (regbuf, msg, strlen (msg));
 
-    ASSERT_EQ (HybridProactorThread::proactor ().registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (HybridProactorThread::proactor ().registerFixedBuffers (allocator), 0) << join::lastError.message ();
 
     _writeOp = IoOperation::makeWriteFixed (_server.handle (), regbuf, strlen (msg), 0, this);
     ASSERT_EQ (HybridProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
@@ -1295,11 +1295,11 @@ TEST_F (HybridProactorTest, asyncReadFixed)
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    LocalMem::Allocator<4, 64, sizeof (_buf)> arena;
-    arena.tryAllocate (sizeof (_buf));
-    void* regbuf = arena.tryAllocate (sizeof (_buf));
+    LocalMem::SlabAllocator<4, 64, sizeof (_buf)> allocator;
+    allocator.tryAllocate (sizeof (_buf));
+    void* regbuf = allocator.tryAllocate (sizeof (_buf));
 
-    ASSERT_EQ (HybridProactorThread::proactor ().registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (HybridProactorThread::proactor ().registerFixedBuffers (allocator), 0) << join::lastError.message ();
 
     _readOp = IoOperation::makeReadFixed (_server.handle (), regbuf, sizeof (_buf), 1, this);
     ASSERT_EQ (HybridProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
@@ -1430,7 +1430,7 @@ TEST_F (HybridProactorTest, asyncRecvmsgMulti)
 
     ASSERT_EQ (HybridProactorThread::proactor ().submit (_readOp, true, true), -1);
 
-    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (HybridProactorThread::proactor ().registerBufferRing (0, arena), 0) << join::lastError.message ();
 
     _completions = 0;
@@ -1502,7 +1502,7 @@ TEST_F (HybridProactorTest, asyncRecvmsgMulti)
 
     ASSERT_EQ (HybridProactorThread::proactor ().unregisterBufferRing (0), 0) << join::lastError.message ();
 
-    LocalMem::Allocator<4, 64> small;
+    LocalMem::SlabAllocator<4, 64> small;
     ASSERT_EQ (HybridProactorThread::proactor ().registerBufferRing (1, small), 0) << join::lastError.message ();
 
     _completions = 0;
@@ -1602,7 +1602,7 @@ TEST_F (HybridProactorTest, asyncRecvMulti)
 
     ASSERT_EQ (HybridProactorThread::proactor ().submit (_readOp, true, true), -1);
 
-    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (HybridProactorThread::proactor ().registerBufferRing (0, arena), 0) << join::lastError.message ();
 
     _completions = 0;

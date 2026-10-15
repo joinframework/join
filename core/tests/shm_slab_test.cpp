@@ -23,41 +23,61 @@
  */
 
 // libjoin.
+#include <join/slab_allocator.hpp>
 #include <join/statistics.hpp>
-#include <join/allocator.hpp>
-#include <join/thread.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
 using join::ScopedStats;
 using join::Rdtsc;
-using join::LocalMem;
-using join::Thread;
+using join::ShmMem;
+
+/**
+ * @brief class used to test the posix shared memory provider.
+ */
+class ShmSlab : public ::testing::Test
+{
+protected:
+    /**
+     * @brief set up the test fixture.
+     */
+    void SetUp () override
+    {
+        ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
+    }
+
+    /**
+     * @brief tear down the test fixture.
+     */
+    void TearDown () override
+    {
+        ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
+    }
+
+    /// shared memory name.
+    static const std::string _name;
+};
+
+const std::string ShmSlab::_name = "/test_slab_shm";
 
 /**
  * @brief test move.
  */
-TEST (LocalAlloc, move)
+TEST_F (ShmSlab, move)
 {
-    LocalMem::Allocator<1, 64> allocator1;
-    LocalMem::Allocator<1, 64> allocator2;
+    ShmMem::SlabAllocator<1, 64> allocator1 (_name);
+    ShmMem::SlabAllocator<1, 64> allocator2 (_name);
 
     void* p1 = allocator1.allocate (64);
     ASSERT_NE (p1, nullptr);
 
     allocator2 = std::move (allocator1);
 
-    ASSERT_FALSE (allocator1.hasBackend ());
-    ASSERT_EQ (allocator1.allocate (64), nullptr);
-
     void* p2 = allocator2.allocate (64);
     ASSERT_EQ (p2, nullptr);
 
-    LocalMem::Allocator<1, 64> allocator3 (std::move (allocator2));
-
-    ASSERT_FALSE (allocator2.hasBackend ());
-    ASSERT_TRUE (allocator3.hasBackend ());
+    ShmMem::SlabAllocator<1, 64> allocator3 (std::move (allocator2));
 
     void* p3 = allocator3.allocate (64);
     ASSERT_EQ (p3, nullptr);
@@ -66,9 +86,9 @@ TEST (LocalAlloc, move)
 /**
  * @brief test allocate.
  */
-TEST (LocalAlloc, allocate)
+TEST_F (ShmSlab, allocate)
 {
-    LocalMem::Allocator<1, 64, 128> allocator;
+    ShmMem::SlabAllocator<1, 64, 128> allocator (_name);
 
     void* p1 = allocator.allocate (64);
     ASSERT_NE (p1, nullptr);
@@ -98,9 +118,9 @@ TEST (LocalAlloc, allocate)
 /**
  * @brief test tryAllocate.
  */
-TEST (LocalAlloc, tryAllocate)
+TEST_F (ShmSlab, tryAllocate)
 {
-    LocalMem::Allocator<1, 64, 128> allocator;
+    ShmMem::SlabAllocator<1, 64, 128> allocator (_name);
 
     void* p1 = allocator.tryAllocate (64);
     ASSERT_NE (p1, nullptr);
@@ -108,7 +128,7 @@ TEST (LocalAlloc, tryAllocate)
     void* p2 = allocator.tryAllocate (64);
     ASSERT_EQ (p2, nullptr);
 
-    void* p3 = allocator.tryAllocate (128);
+    void* p3 = allocator.allocate (128);
     ASSERT_NE (p3, nullptr);
     ASSERT_NE (p1, p3);
 
@@ -130,9 +150,9 @@ TEST (LocalAlloc, tryAllocate)
 /**
  * @brief test deallocate.
  */
-TEST (LocalAlloc, deallocate)
+TEST_F (ShmSlab, deallocate)
 {
-    LocalMem::Allocator<1, 64, 128> allocator;
+    ShmMem::SlabAllocator<1, 64, 128> allocator (_name);
 
     void* p1 = allocator.allocate (64);
     ASSERT_NE (p1, nullptr);
@@ -152,9 +172,9 @@ TEST (LocalAlloc, deallocate)
 /**
  * @brief test getIndex.
  */
-TEST (LocalAlloc, getIndex)
+TEST_F (ShmSlab, getIndex)
 {
-    LocalMem::Allocator<4, 64, 128> allocator;
+    ShmMem::SlabAllocator<4, 64, 128> allocator (_name);
 
     void* p1 = allocator.allocate (64);
     ASSERT_NE (p1, nullptr);
@@ -172,9 +192,9 @@ TEST (LocalAlloc, getIndex)
 /**
  * @brief test getPtr.
  */
-TEST (LocalAlloc, getPtr)
+TEST_F (ShmSlab, getPtr)
 {
-    LocalMem::Allocator<4, 64, 128> allocator;
+    ShmMem::SlabAllocator<4, 64, 128> allocator (_name);
 
     void* p1 = allocator.allocate (64);
     ASSERT_NE (p1, nullptr);
@@ -190,9 +210,9 @@ TEST (LocalAlloc, getPtr)
 /**
  * @brief test reserveAll.
  */
-TEST (LocalAlloc, reserveAll)
+TEST_F (ShmSlab, reserveAll)
 {
-    LocalMem::Allocator<4, 64, 128> allocator;
+    ShmMem::SlabAllocator<4, 64, 128> allocator (_name);
 
     ASSERT_TRUE (allocator.reserveAll ());
     ASSERT_EQ (allocator.tryAllocate (64), nullptr);
@@ -213,9 +233,9 @@ TEST (LocalAlloc, reserveAll)
 /**
  * @brief test releaseAll.
  */
-TEST (LocalAlloc, releaseAll)
+TEST_F (ShmSlab, releaseAll)
 {
-    LocalMem::Allocator<4, 64, 128> allocator;
+    ShmMem::SlabAllocator<4, 64, 128> allocator (_name);
 
     ASSERT_TRUE (allocator.reserveAll ());
     ASSERT_EQ (allocator.tryAllocate (64), nullptr);
@@ -234,9 +254,9 @@ TEST (LocalAlloc, releaseAll)
 /**
  * @brief test mbind.
  */
-TEST (LocalAlloc, mbind)
+TEST_F (ShmSlab, mbind)
 {
-    LocalMem::Allocator<1, 64> allocator;
+    ShmMem::SlabAllocator<1, 64> allocator (_name);
     ASSERT_EQ (allocator.mbind (0), 0) << join::lastError.message ();
 }
 #endif
@@ -244,27 +264,31 @@ TEST (LocalAlloc, mbind)
 /**
  * @brief test mlock.
  */
-TEST (LocalAlloc, mlock)
+TEST_F (ShmSlab, mlock)
 {
-    LocalMem::Allocator<1, 64> allocator;
+    ShmMem::SlabAllocator<1, 64> allocator (_name);
     ASSERT_EQ (allocator.mlock (), 0) << join::lastError.message ();
 }
 
 /**
  * @brief test concurrent access.
  */
-TEST (LocalAlloc, benchmark)
+TEST_F (ShmSlab, benchmark)
 {
     const int iterations = 100000;
-    const int numThreads = 4;
+    const int numProcesses = 4;
 
-    join::LocalMem::Allocator<iterations, 64> allocator;
+    ShmMem::SlabAllocator<iterations, 64> allocator (_name);
     allocator.mlock ();
 
-    std::vector<Thread> threads;
-    for (int i = 0; i < numThreads - 1; ++i)
+    std::vector<pid_t> pids;
+    for (int i = 0; i < numProcesses - 1; ++i)
     {
-        threads.emplace_back ([&] () {
+        pid_t pid = fork ();
+        ASSERT_GE (pid, 0);
+
+        if (pid == 0)
+        {
             for (int j = 0; j < iterations; ++j)
             {
                 void* p = allocator.allocate (64);
@@ -273,7 +297,10 @@ TEST (LocalAlloc, benchmark)
                     allocator.deallocate (p);
                 }
             }
-        });
+            exit (0);
+        }
+
+        pids.push_back (pid);
     }
 
     Rdtsc::Stats aStats ("allocate");
@@ -294,9 +321,11 @@ TEST (LocalAlloc, benchmark)
         }
     }
 
-    for (auto& t : threads)
+    for (pid_t pid : pids)
     {
-        t.join ();
+        int status;
+        waitpid (pid, &status, 0);
+        EXPECT_TRUE (WIFEXITED (status) && WEXITSTATUS (status) == 0);
     }
 
     std::cout << join::statsHeader << "\n";

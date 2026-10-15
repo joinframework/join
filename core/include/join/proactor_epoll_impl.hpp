@@ -104,7 +104,7 @@ inline void join::BasicProactor::waitStopped () const noexcept
 //   METHOD    : registerBufferRing
 // =========================================================================
 template <size_t Count, size_t Size>
-int join::BasicProactor::registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
+int join::BasicProactor::registerBufferRing (uint16_t group, LocalMem::SlabAllocator<Count, Size>& arena)
 {
     int result = 0;
     std::error_code errc;
@@ -152,7 +152,7 @@ int join::BasicProactor::registerBufferRing (uint16_t group, LocalMem::Allocator
 //   METHOD    : registerBufferRing
 // =========================================================================
 template <size_t Count, size_t Size>
-int join::BasicProactor::registerBufferRing (LocalMem::Allocator<Count, Size>& arena)
+int join::BasicProactor::registerBufferRing (LocalMem::SlabAllocator<Count, Size>& arena)
 {
     int result = 0;
     std::error_code errc;

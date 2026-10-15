@@ -66,7 +66,7 @@ namespace join
         /// size of an operation slot.
         static constexpr size_t _opSize = nextPow2 (AsyncOp<Protocol, ProactorType>::maxSize);
 
-        using OpArena = LocalMem::Allocator<_opCount, _opSize>;
+        using OpAllocator = LocalMem::SlabAllocator<_opCount, _opSize>;
 
     protected:
         /**
@@ -104,7 +104,7 @@ namespace join
         {
             other.suspendAll ();
 
-            _arena = std::move (other._arena);
+            _allocator = std::move (other._allocator);
 
             for (size_t i = 0; i < other._ops.size (); ++i)
             {
@@ -135,7 +135,7 @@ namespace join
 
             other.suspendAll ();
 
-            _arena = std::move (other._arena);
+            _allocator = std::move (other._allocator);
 
             for (size_t i = 0; i < other._ops.size (); ++i)
             {
@@ -191,7 +191,7 @@ namespace join
          * @throw std::system_error if the descriptor ring cannot be mapped.
          */
         template <size_t Count, size_t Size>
-        int registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
+        int registerBufferRing (uint16_t group, LocalMem::SlabAllocator<Count, Size>& arena)
         {
             return _proactor->registerBufferRing (group, arena);
         }
@@ -239,7 +239,7 @@ namespace join
             wait->op = IoOperation::makePoll (_socket.handle (), wantRead ? POLLIN : POLLOUT, this);
             wait->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = _arena.getIndex (wait);
+            size_t index = _allocator.getIndex (wait);
 
             if (_proactor->submit (wait->op, flush, false) == -1)
             {
@@ -285,7 +285,7 @@ namespace join
             wait->op = IoOperation::makePollMulti (_socket.handle (), wantRead ? POLLIN : POLLOUT, this);
             wait->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = _arena.getIndex (wait);
+            size_t index = _allocator.getIndex (wait);
 
             if (_proactor->submit (wait->op, flush, false) == -1)
             {
@@ -332,7 +332,7 @@ namespace join
          * @return 0 on success, -1 on failure.
          */
         template <size_t Count, size_t... Sizes>
-        int registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena) noexcept
+        int registerFixedBuffers (LocalMem::SlabAllocator<Count, Sizes...>& arena) noexcept
         {
             return _proactor->registerFixedBuffers (arena);
         }
@@ -512,37 +512,37 @@ namespace join
         }
 
         /**
-         * @brief allocate an operation in the arena.
-         * @return allocated operation, or nullptr if the arena is exhausted.
+         * @brief allocate an operation in the allocator.
+         * @return allocated operation, or nullptr if the allocator is exhausted.
          */
         template <class Op>
         Op* allocateOperation () noexcept
         {
-            static_assert (sizeof (Op) <= _opSize, "operation larger than an arena slot");
+            static_assert (sizeof (Op) <= _opSize, "operation larger than an allocator slot");
 
-            void* chunk = _arena.allocate (sizeof (Op));
+            void* chunk = _allocator.allocate (sizeof (Op));
             if (JOIN_UNLIKELY (chunk == nullptr))
             {
                 return nullptr;
             }
 
             Op* operation = new (chunk) Op;
-            _ops[_arena.getIndex (chunk)].store (&operation->op, std::memory_order_release);
+            _ops[_allocator.getIndex (chunk)].store (&operation->op, std::memory_order_release);
 
             return operation;
         }
 
         /**
-         * @brief return an operation to the arena.
+         * @brief return an operation to the allocator.
          * @param operation operation to release.
          */
         template <class Op>
         void releaseOperation (Op* operation) noexcept
         {
-            const uint32_t index = _arena.getIndex (operation);
+            const uint32_t index = _allocator.getIndex (operation);
 
             operation->~Op ();
-            _arena.deallocate (operation);
+            _allocator.deallocate (operation);
             _ops[index].store (nullptr, std::memory_order_release);
         }
 
@@ -669,8 +669,8 @@ namespace join
         /// underlying synchronous socket.
         Socket _socket;
 
-        /// operations arena.
-        OpArena _arena;
+        /// operations allocator.
+        OpAllocator _allocator;
 
         /// operations in flight.
         std::array<std::atomic<IoOperation*>, _opCount> _ops{};

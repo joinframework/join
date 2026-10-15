@@ -500,7 +500,7 @@ TEST_F (RawAsyncSocket, asyncReadMulti)
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
 
-    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (rawSocket.registerBufferRing (0, arena), 0) << join::lastError.message ();
 
     ssize_t index = rawSocket.asyncReadMulti (onReportMulti, 0);
@@ -545,7 +545,7 @@ TEST_F (RawAsyncSocket, registerFixedBuffers)
     Proactor proactor;
     Raw::AsyncSocket rawSocket (proactor);
 
-    LocalMem::Allocator<1, 1024, 4096> arena;
+    LocalMem::SlabAllocator<1, 1024, 4096> arena;
 
     ASSERT_EQ (rawSocket.registerFixedBuffers (arena), 0) << join::lastError.message ();
     ASSERT_EQ (rawSocket.registerFixedBuffers (arena), -1);
@@ -582,15 +582,15 @@ TEST_F (RawAsyncSocket, asyncWrite)
 TEST_F (RawAsyncSocket, asyncWriteFixed)
 {
     Raw::AsyncSocket rawSocket;
-    LocalMem::Allocator<1, 2048> arena;
+    LocalMem::SlabAllocator<1, 2048> allocator;
 
-    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    char* buf = static_cast<char*> (allocator.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
     ASSERT_EQ (rawSocket.asyncWriteFixed (nullptr, buf, sizeof (_packet), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (rawSocket.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.registerFixedBuffers (allocator), 0) << join::lastError.message ();
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
 
@@ -654,15 +654,15 @@ TEST_F (RawAsyncSocket, asyncRead)
 TEST_F (RawAsyncSocket, asyncReadFixed)
 {
     Raw::AsyncSocket rawSocket;
-    LocalMem::Allocator<1, 2048> arena;
+    LocalMem::SlabAllocator<1, 2048> allocator;
 
-    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    char* buf = static_cast<char*> (allocator.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
     ASSERT_EQ (rawSocket.asyncReadFixed (nullptr, buf, sizeof (_buf), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (rawSocket.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.registerFixedBuffers (allocator), 0) << join::lastError.message ();
 
     ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
 

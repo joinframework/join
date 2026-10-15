@@ -597,7 +597,7 @@ TEST_F (IcmpAsyncSocket, asyncReadFromMulti)
 
     ASSERT_EQ (server.bind (_host), 0) << join::lastError.message ();
 
-    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (server.registerBufferRing (0, arena), 0) << join::lastError.message ();
 
     ssize_t index = server.asyncReadFromMulti (onReportMulti, 0);
@@ -689,15 +689,15 @@ TEST_F (IcmpAsyncSocket, asyncWrite)
 TEST_F (IcmpAsyncSocket, asyncWriteFixed)
 {
     Icmp::AsyncSocket client;
-    LocalMem::Allocator<1, 1024> arena;
+    LocalMem::SlabAllocator<1, 1024> allocator;
 
-    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    char* buf = static_cast<char*> (allocator.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
     ASSERT_EQ (client.asyncWriteFixed (nullptr, buf, sizeof (_data), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (client.registerFixedBuffers (allocator), 0) << join::lastError.message ();
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
 
@@ -765,15 +765,15 @@ TEST_F (IcmpAsyncSocket, asyncRead)
 TEST_F (IcmpAsyncSocket, asyncReadFixed)
 {
     Icmp::AsyncSocket client;
-    LocalMem::Allocator<1, 1024> arena;
+    LocalMem::SlabAllocator<1, 1024> allocator;
 
-    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    char* buf = static_cast<char*> (allocator.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
     ASSERT_EQ (client.asyncReadFixed (nullptr, buf, sizeof (_buf), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (client.registerFixedBuffers (allocator), 0) << join::lastError.message ();
 
     ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
 

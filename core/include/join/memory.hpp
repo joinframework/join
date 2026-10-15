@@ -50,7 +50,7 @@ namespace join
 {
     /// allocator forward declarations.
     template <typename Backend, size_t Count, size_t... Sizes>
-    class BasicArena;
+    class BasicSlabAllocator;
 
     /// queue forward declarations.
     template <typename Backend, template <typename, typename> class SyncPolicy>
@@ -156,7 +156,7 @@ namespace join
     {
     public:
         template <size_t Count, size_t... Sizes>
-        using Allocator = BasicArena<LocalMem, Count, Sizes...>;
+        using SlabAllocator = BasicSlabAllocator<LocalMem, Count, Sizes...>;
 
         using Spsc = SyncBinding<LocalMem, ::join::Spsc>;
         using Mpsc = SyncBinding<LocalMem, ::join::Mpsc>;
@@ -367,7 +367,7 @@ namespace join
     {
     public:
         template <size_t Count, size_t... Sizes>
-        using Allocator = BasicArena<ShmMem, Count, Sizes...>;
+        using SlabAllocator = BasicSlabAllocator<ShmMem, Count, Sizes...>;
 
         using Spsc = SyncBinding<ShmMem, ::join::Spsc>;
         using Mpsc = SyncBinding<ShmMem, ::join::Mpsc>;

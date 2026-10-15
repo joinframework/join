@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_CORE_ALLOCATOR_HPP
-#define JOIN_CORE_ALLOCATOR_HPP
+#ifndef JOIN_CORE_SLAB_ALLOCATOR_HPP
+#define JOIN_CORE_SLAB_ALLOCATOR_HPP
 
 // libjoin.
 #include <join/backoff.hpp>
@@ -386,12 +386,12 @@ namespace join
     };
 
     /**
-     * @brief memory arena owning backend and managing one or more pools.
+     * @brief slab allocator owning a backend and managing one or more pools.
      */
     template <typename Backend, size_t Count, size_t... Sizes>
-    class BasicArena
+    class BasicSlabAllocator
     {
-        static_assert (sizeof...(Sizes) > 0, "arena must have at least one pool size");
+        static_assert (sizeof...(Sizes) > 0, "slab allocator must have at least one pool size");
         static_assert (Sorted<Sizes...>::value, "pool sizes must be provided in ascending order");
 
     public:
@@ -403,7 +403,7 @@ namespace join
          * @param args arguments forwarded to the backend.
          */
         template <typename... Args>
-        BasicArena (Args&&... args)
+        BasicSlabAllocator (Args&&... args)
         : _backend (_total, std::forward<Args> (args)...)
         , _pools (makePools (std::make_index_sequence<sizeof...(Sizes)>{}))
         {
@@ -413,19 +413,19 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicArena (const BasicArena& other) = delete;
+        BasicSlabAllocator (const BasicSlabAllocator& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to copy.
          */
-        BasicArena& operator= (const BasicArena& other) = delete;
+        BasicSlabAllocator& operator= (const BasicSlabAllocator& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicArena (BasicArena&& other) noexcept
+        BasicSlabAllocator (BasicSlabAllocator&& other) noexcept
         : _backend (std::move (other._backend))
         , _pools (std::move (other._pools))
         {
@@ -436,7 +436,7 @@ namespace join
          * @param other other object to move.
          * @return this.
          */
-        BasicArena& operator= (BasicArena&& other) noexcept
+        BasicSlabAllocator& operator= (BasicSlabAllocator&& other) noexcept
         {
             _backend = std::move (other._backend);
             _pools = std::move (other._pools);
@@ -446,7 +446,7 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        ~BasicArena () = default;
+        ~BasicSlabAllocator () = default;
 
         /**
          * @brief allocate memory from the first pool that fits (promotes if exhausted).
@@ -482,8 +482,8 @@ namespace join
         }
 
         /**
-         * @brief check if the arena still owns a memory region.
-         * @return true if the arena owns a memory region, false if it has been moved from.
+         * @brief check if the slab allocator still owns a memory region.
+         * @return true if the slab allocator owns a memory region, false if it has been moved from.
          */
         bool hasBackend () const noexcept
         {

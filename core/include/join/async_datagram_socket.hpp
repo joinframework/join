@@ -165,7 +165,7 @@ namespace join
             read->op = IoOperation::makeRecvmsg (this->_socket.handle (), &read->msg, 0, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_arena.getIndex (read);
+            size_t index = this->_allocator.getIndex (read);
 
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
@@ -213,7 +213,7 @@ namespace join
             read->op = IoOperation::makeRecvmsgMulti (this->_socket.handle (), group, &read->msg, 0, this);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_arena.getIndex (read);
+            size_t index = this->_allocator.getIndex (read);
 
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
@@ -242,7 +242,7 @@ namespace join
                               const char* control = nullptr, size_t controlSize = 0, bool flush = true,
                               bool link = false) noexcept
         {
-            if (JOIN_UNLIKELY (!this->_arena.hasBackend ()))
+            if (JOIN_UNLIKELY (!this->_allocator.hasBackend ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;
@@ -273,7 +273,7 @@ namespace join
             write->op = IoOperation::makeSendmsg (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_arena.getIndex (write);
+            size_t index = this->_allocator.getIndex (write);
 
             if (this->_proactor->submit (write->op, flush, false) == -1)
             {
