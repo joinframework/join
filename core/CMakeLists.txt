@@ -24,7 +24,7 @@ set(PUBLIC_HEADERS
     include/join/io_ring_buffer.hpp
     include/join/proactor.hpp
     include/join/memory.hpp
-    include/join/allocator.hpp
+    include/join/slab_allocator.hpp
     include/join/queue.hpp
     include/join/backoff.hpp
     include/join/mutex.hpp

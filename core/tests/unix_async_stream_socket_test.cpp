@@ -768,7 +768,7 @@ TEST_F (UnixAsyncStreamSocket, asyncReadMulti)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    LocalMem::Allocator<4, sizeof (_buf)> arena;
+    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (client.registerBufferRing (0, arena), 0) << join::lastError.message ();
 
     ssize_t index = client.asyncReadMulti (onReportMulti, 0);
@@ -823,7 +823,7 @@ TEST_F (UnixAsyncStreamSocket, registerFixedBuffers)
     Proactor proactor;
     UnixStream::AsyncSocket client (proactor);
 
-    LocalMem::Allocator<1, 1024, 4096> arena;
+    LocalMem::SlabAllocator<1, 1024, 4096> arena;
 
     ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
     ASSERT_EQ (client.registerFixedBuffers (arena), -1);
@@ -839,15 +839,15 @@ TEST_F (UnixAsyncStreamSocket, registerFixedBuffers)
 TEST_F (UnixAsyncStreamSocket, asyncWriteFixed)
 {
     UnixStream::AsyncSocket client;
-    LocalMem::Allocator<1, 1024> arena;
+    LocalMem::SlabAllocator<1, 1024> allocator;
 
-    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    char* buf = static_cast<char*> (allocator.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
     ASSERT_EQ (client.asyncWriteFixed (nullptr, buf, 5, 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (client.registerFixedBuffers (allocator), 0) << join::lastError.message ();
 
     ASSERT_EQ (client.asyncConnect (onConnect, _serverpath), 0) << join::lastError.message ();
 
@@ -966,15 +966,15 @@ TEST_F (UnixAsyncStreamSocket, asyncRead)
 TEST_F (UnixAsyncStreamSocket, asyncReadFixed)
 {
     UnixStream::AsyncSocket client;
-    LocalMem::Allocator<1, 1024> arena;
+    LocalMem::SlabAllocator<1, 1024> allocator;
 
-    char* buf = static_cast<char*> (arena.allocate (sizeof (_buf)));
+    char* buf = static_cast<char*> (allocator.allocate (sizeof (_buf)));
     ASSERT_NE (buf, nullptr);
 
     ASSERT_EQ (client.asyncReadFixed (nullptr, buf, sizeof (_buf), 0), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
-    ASSERT_EQ (client.registerFixedBuffers (arena), 0) << join::lastError.message ();
+    ASSERT_EQ (client.registerFixedBuffers (allocator), 0) << join::lastError.message ();
 
     ASSERT_EQ (client.asyncConnect (onConnect, _serverpath), 0) << join::lastError.message ();
 

@@ -27,7 +27,7 @@
 //   METHOD    : registerBuffer
 // =========================================================================
 template <size_t Count, size_t Size>
-int join::IoRingBuffer::registerBuffer (uint16_t group, LocalMem::Allocator<Count, Size>& arena)
+int join::IoRingBuffer::registerBuffer (uint16_t group, LocalMem::SlabAllocator<Count, Size>& arena)
 {
     static_assert (isPow2 (Count), "buffer count must be a power of two");
 

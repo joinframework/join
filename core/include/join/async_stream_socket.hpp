@@ -100,7 +100,7 @@ namespace join
          */
         int asyncConnect (ConnectHandler handler, const Endpoint& endpoint) noexcept
         {
-            if (JOIN_UNLIKELY (!this->_arena.hasBackend ()))
+            if (JOIN_UNLIKELY (!this->_allocator.hasBackend ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
                 return -1;

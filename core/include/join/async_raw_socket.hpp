@@ -191,7 +191,7 @@ namespace join
             read->op = IoOperation::makeRecvmsg (this->_socket.handle (), &read->msg, 0, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_arena.getIndex (read);
+            size_t index = this->_allocator.getIndex (read);
 
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
@@ -235,7 +235,7 @@ namespace join
             read->op = IoOperation::makeReadFixed (this->_socket.handle (), data, maxSize, index, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t slot = this->_arena.getIndex (read);
+            size_t slot = this->_allocator.getIndex (read);
 
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
@@ -275,7 +275,7 @@ namespace join
             read->op = IoOperation::makeRecvMulti (this->_socket.handle (), group, 0, this);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_arena.getIndex (read);
+            size_t index = this->_allocator.getIndex (read);
 
             if (this->_proactor->submit (read->op, flush, false) == -1)
             {
@@ -326,7 +326,7 @@ namespace join
             write->op = IoOperation::makeSendmsg (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_arena.getIndex (write);
+            size_t index = this->_allocator.getIndex (write);
 
             if (this->_proactor->submit (write->op, flush, false) == -1)
             {
@@ -370,7 +370,7 @@ namespace join
             write->op = IoOperation::makeWriteFixed (this->_socket.handle (), data, size, index, this, link);
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t slot = this->_arena.getIndex (write);
+            size_t slot = this->_allocator.getIndex (write);
 
             if (this->_proactor->submit (write->op, flush, false) == -1)
             {
@@ -573,8 +573,8 @@ namespace join
         }
 
         /**
-         * @brief allocate a read operation in the arena.
-         * @return allocated read operation, or nullptr if the arena is exhausted.
+         * @brief allocate a read operation in the allocator.
+         * @return allocated read operation, or nullptr if the allocator is exhausted.
          */
         AsyncRead* allocateRead () noexcept
         {
@@ -582,8 +582,8 @@ namespace join
         }
 
         /**
-         * @brief allocate a write operation in the arena.
-         * @return allocated write operation, or nullptr if the arena is exhausted.
+         * @brief allocate a write operation in the allocator.
+         * @return allocated write operation, or nullptr if the allocator is exhausted.
          */
         AsyncWrite* allocateWrite () noexcept
         {

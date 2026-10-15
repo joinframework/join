@@ -26,8 +26,8 @@
 #define JOIN_CORE_PROACTOR_HPP
 
 // libjoin.
+#include <join/slab_allocator.hpp>
 #include <join/io_operation.hpp>
-#include <join/allocator.hpp>
 #include <join/function.hpp>
 #ifdef JOIN_HAS_IO_URING
 #include <join/io_policy.hpp>
@@ -385,7 +385,7 @@ public:
      * @return 0 on success, -1 on failure.
      */
     template <size_t Count, size_t... Sizes>
-    int registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena) noexcept;
+    int registerFixedBuffers (LocalMem::SlabAllocator<Count, Sizes...>& arena) noexcept;
 
     /**
      * @brief unregister previously registered fixed buffers.
@@ -402,7 +402,7 @@ public:
      * @throw std::system_error if the descriptor ring cannot be mapped.
      */
     template <size_t Count, size_t Size>
-    int registerBufferRing (uint16_t group, LocalMem::Allocator<Count, Size>& arena);
+    int registerBufferRing (uint16_t group, LocalMem::SlabAllocator<Count, Size>& arena);
 
     /**
      * @brief register a provided buffer ring under the lowest free group id.
@@ -411,7 +411,7 @@ public:
      * @throw std::system_error if the descriptor ring cannot be mapped.
      */
     template <size_t Count, size_t Size>
-    int registerBufferRing (LocalMem::Allocator<Count, Size>& arena);
+    int registerBufferRing (LocalMem::SlabAllocator<Count, Size>& arena);
 
     /**
      * @brief unregister a provided buffer ring.
@@ -655,7 +655,7 @@ private:
      * @return 0 on success, -1 on failure.
      */
     template <size_t Count, size_t... Sizes, size_t... Is>
-    int registerFixedBuffers (LocalMem::Allocator<Count, Sizes...>& arena, std::index_sequence<Is...>) noexcept;
+    int registerFixedBuffers (LocalMem::SlabAllocator<Count, Sizes...>& arena, std::index_sequence<Is...>) noexcept;
 
     /**
      * @brief get a free submission queue entry, submitting pending entries if the ring is full.

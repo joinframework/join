@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_CORE_ALLOCATOR_HPP
-#define JOIN_CORE_ALLOCATOR_HPP
+#ifndef JOIN_CORE_SLAB_ALLOCATOR_HPP
+#define JOIN_CORE_SLAB_ALLOCATOR_HPP
 
 // libjoin.
 #include <join/backoff.hpp>
@@ -46,7 +46,7 @@ namespace join
     /**
      * @brief tagged index.
      */
-    union alignas (uint64_t) TaggedIndex
+    union alignas (uint64_t) SlabTaggedIndex
     {
         struct
         {
@@ -65,7 +65,7 @@ namespace join
      * @brief basic chunk.
      */
     template <size_t Size>
-    union alignas (64) BasicChunk
+    union alignas (64) BasicSlabChunk
     {
         static_assert (isPow2 (Size), "size must be a power of 2");
         static_assert (Size % alignof (std::max_align_t) == 0, "size must respects maximum alignment requirement");
@@ -82,9 +82,9 @@ namespace join
      * @brief segment header.
      */
     template <size_t Size>
-    struct BasicSegment
+    struct BasicSlabSegment
     {
-        using Chunk = BasicChunk<Size>;
+        using Chunk = BasicSlabChunk<Size>;
 
         /// magic number for initialization detection.
         static constexpr uint64_t MAGIC = 0x9F7E3B2A8D5C4E1B;
@@ -106,13 +106,13 @@ namespace join
      * @brief free-list pool operating over a pre-existing memory region.
      */
     template <size_t Count, size_t Size>
-    struct BasicPool
+    struct BasicSlabPool
     {
         static_assert (Count > 0, "count must be at least 1");
         static_assert (Count <= UINT32_MAX, "count exceeds tagged index capacity (~256 GB)");
 
-        using Chunk = BasicChunk<Size>;
-        using Segment = BasicSegment<Size>;
+        using Chunk = BasicSlabChunk<Size>;
+        using Segment = BasicSlabSegment<Size>;
 
         /// total number of chunks per pool.
         static constexpr size_t _count = Count;
@@ -130,7 +130,7 @@ namespace join
          * @brief initialize the pool over an existing memory region.
          * @param ptr pointer to the start of the region.
          */
-        explicit BasicPool (void* ptr) noexcept
+        explicit BasicSlabPool (void* ptr) noexcept
         : _segment (static_cast<Segment*> (ptr))
         {
             uint64_t expected = 0;
@@ -155,19 +155,19 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicPool (const BasicPool& other) = delete;
+        BasicSlabPool (const BasicSlabPool& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to copy.
          */
-        BasicPool& operator= (const BasicPool& other) = delete;
+        BasicSlabPool& operator= (const BasicSlabPool& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicPool (BasicPool&& other) noexcept
+        BasicSlabPool (BasicSlabPool&& other) noexcept
         : _segment (other._segment)
         {
             other._segment = nullptr;
@@ -178,7 +178,7 @@ namespace join
          * @param other other object to move.
          * @return this.
          */
-        BasicPool& operator= (BasicPool&& other) noexcept
+        BasicSlabPool& operator= (BasicSlabPool&& other) noexcept
         {
             _segment = other._segment;
             other._segment = nullptr;
@@ -188,7 +188,7 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        ~BasicPool () = default;
+        ~BasicSlabPool () = default;
 
         /**
          * @brief pop a chunk from the pool.
@@ -201,7 +201,7 @@ namespace join
                 return nullptr;
             }
 
-            TaggedIndex cur, next;
+            SlabTaggedIndex cur, next;
             cur.raw = _segment->_head.load (std::memory_order_acquire);
 
             for (;;)
@@ -228,7 +228,7 @@ namespace join
          */
         void push (void* p) noexcept
         {
-            TaggedIndex cur, next;
+            SlabTaggedIndex cur, next;
             next.idx = static_cast<uint32_t> (reinterpret_cast<Chunk*> (p) - _segment->_chunks);
             cur.raw = _segment->_head.load (std::memory_order_relaxed);
 
@@ -251,7 +251,7 @@ namespace join
          */
         bool reserveAll () noexcept
         {
-            TaggedIndex cur, next;
+            SlabTaggedIndex cur, next;
             cur.raw = _segment->_head.load (std::memory_order_acquire);
 
             uint32_t n = 0;
@@ -285,7 +285,7 @@ namespace join
             }
             _segment->_chunks[_count - 1]._next.store (Segment::NULL_IDX, std::memory_order_relaxed);
 
-            TaggedIndex cur, next;
+            SlabTaggedIndex cur, next;
             cur.raw = _segment->_head.load (std::memory_order_relaxed);
             next.idx = 0;
             next.gen = cur.gen + 1;
@@ -334,38 +334,38 @@ namespace join
      * @brief total size computation.
      */
     template <size_t Count, size_t... Sizes>
-    struct TotalSize;
+    struct SlabTotalSize;
 
     /**
      * @brief total size computation (recursive case).
      */
     template <size_t Count, size_t First, size_t... Rest>
-    struct TotalSize<Count, First, Rest...>
+    struct SlabTotalSize<Count, First, Rest...>
     {
-        static constexpr size_t value = BasicPool<Count, First>::_total + TotalSize<Count, Rest...>::value;
+        static constexpr size_t value = BasicSlabPool<Count, First>::_total + SlabTotalSize<Count, Rest...>::value;
     };
 
     /**
      * @brief total size computation (base case).
      */
     template <size_t Count, size_t Last>
-    struct TotalSize<Count, Last>
+    struct SlabTotalSize<Count, Last>
     {
-        static constexpr size_t value = BasicPool<Count, Last>::_total;
+        static constexpr size_t value = BasicSlabPool<Count, Last>::_total;
     };
 
     /**
      * @brief is sequence sorted.
      */
     template <size_t... Sizes>
-    struct Sorted;
+    struct SlabSorted;
 
     /**
      * @brief is sequence sorted (recursive case).
      */
     template <size_t First, size_t Second, size_t... Rest>
-    struct Sorted<First, Second, Rest...>
-    : std::integral_constant<bool, (First <= Second) && Sorted<Second, Rest...>::value>
+    struct SlabSorted<First, Second, Rest...>
+    : std::integral_constant<bool, (First <= Second) && SlabSorted<Second, Rest...>::value>
     {
     };
 
@@ -373,7 +373,7 @@ namespace join
      * @brief is sequence sorted (base case).
      */
     template <size_t Last>
-    struct Sorted<Last> : std::true_type
+    struct SlabSorted<Last> : std::true_type
     {
     };
 
@@ -381,29 +381,29 @@ namespace join
      * @brief is sequence sorted (empty case).
      */
     template <>
-    struct Sorted<> : std::true_type
+    struct SlabSorted<> : std::true_type
     {
     };
 
     /**
-     * @brief memory arena owning backend and managing one or more pools.
+     * @brief slab allocator owning a backend and managing one or more pools.
      */
     template <typename Backend, size_t Count, size_t... Sizes>
-    class BasicArena
+    class BasicSlabAllocator
     {
-        static_assert (sizeof...(Sizes) > 0, "arena must have at least one pool size");
-        static_assert (Sorted<Sizes...>::value, "pool sizes must be provided in ascending order");
+        static_assert (sizeof...(Sizes) > 0, "slab allocator must have at least one pool size");
+        static_assert (SlabSorted<Sizes...>::value, "pool sizes must be provided in ascending order");
 
     public:
         /// total bytes required in the mapped region.
-        static constexpr size_t _total = TotalSize<Count, Sizes...>::value;
+        static constexpr size_t _total = SlabTotalSize<Count, Sizes...>::value;
 
         /**
          * @brief create instance.
          * @param args arguments forwarded to the backend.
          */
         template <typename... Args>
-        BasicArena (Args&&... args)
+        BasicSlabAllocator (Args&&... args)
         : _backend (_total, std::forward<Args> (args)...)
         , _pools (makePools (std::make_index_sequence<sizeof...(Sizes)>{}))
         {
@@ -413,19 +413,19 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        BasicArena (const BasicArena& other) = delete;
+        BasicSlabAllocator (const BasicSlabAllocator& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to copy.
          */
-        BasicArena& operator= (const BasicArena& other) = delete;
+        BasicSlabAllocator& operator= (const BasicSlabAllocator& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicArena (BasicArena&& other) noexcept
+        BasicSlabAllocator (BasicSlabAllocator&& other) noexcept
         : _backend (std::move (other._backend))
         , _pools (std::move (other._pools))
         {
@@ -436,7 +436,7 @@ namespace join
          * @param other other object to move.
          * @return this.
          */
-        BasicArena& operator= (BasicArena&& other) noexcept
+        BasicSlabAllocator& operator= (BasicSlabAllocator&& other) noexcept
         {
             _backend = std::move (other._backend);
             _pools = std::move (other._pools);
@@ -446,7 +446,7 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        ~BasicArena () = default;
+        ~BasicSlabAllocator () = default;
 
         /**
          * @brief allocate memory from the first pool that fits (promotes if exhausted).
@@ -482,8 +482,8 @@ namespace join
         }
 
         /**
-         * @brief check if the arena still owns a memory region.
-         * @return true if the arena owns a memory region, false if it has been moved from.
+         * @brief check if the slab allocator still owns a memory region.
+         * @return true if the slab allocator owns a memory region, false if it has been moved from.
          */
         bool hasBackend () const noexcept
         {
@@ -563,7 +563,7 @@ namespace join
          */
         static std::array<size_t, sizeof...(Sizes)> makeOffsets ()
         {
-            size_t totals[] = {BasicPool<Count, Sizes>::_total...};
+            size_t totals[] = {BasicSlabPool<Count, Sizes>::_total...};
             std::array<size_t, sizeof...(Sizes)> offsets{};
             for (size_t i = 1; i < sizeof...(Sizes); ++i)
             {
@@ -578,11 +578,11 @@ namespace join
          * @return tuple of initialized pools.
          */
         template <size_t... Is>
-        std::tuple<BasicPool<Count, Sizes>...> makePools (std::index_sequence<Is...>) noexcept
+        std::tuple<BasicSlabPool<Count, Sizes>...> makePools (std::index_sequence<Is...>) noexcept
         {
             auto offsets = makeOffsets ();
-            return std::tuple<BasicPool<Count, Sizes>...>{
-                BasicPool<Count, Sizes> (static_cast<char*> (_backend.get ()) + offsets[Is])...};
+            return std::tuple<BasicSlabPool<Count, Sizes>...>{
+                BasicSlabPool<Count, Sizes> (static_cast<char*> (_backend.get ()) + offsets[Is])...};
         }
 
         /**
@@ -662,7 +662,7 @@ namespace join
         Backend _backend;
 
         /// tuple of pools over the backend region.
-        std::tuple<BasicPool<Count, Sizes>...> _pools;
+        std::tuple<BasicSlabPool<Count, Sizes>...> _pools;
     };
 }
 

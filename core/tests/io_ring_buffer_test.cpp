@@ -56,8 +56,8 @@ protected:
     }
 #endif
 
-    /// arena owning the buffers.
-    LocalMem::Allocator<4, 256> _arena;
+    /// allocator owning the buffers.
+    LocalMem::SlabAllocator<4, 256> _allocator;
 
 #ifdef JOIN_HAS_IO_URING
     /// io_uring instance.
@@ -76,24 +76,24 @@ protected:
  */
 TEST_F (IoRingBufferTest, registerBuffer)
 {
-    ASSERT_NE (_arena.tryAllocate (256), nullptr);
-    ASSERT_EQ (_ring.registerBuffer (3, _arena), -1);
+    ASSERT_NE (_allocator.tryAllocate (256), nullptr);
+    ASSERT_EQ (_ring.registerBuffer (3, _allocator), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
-    _arena.releaseAll ();
+    _allocator.releaseAll ();
 
-    ASSERT_EQ (_ring.registerBuffer (3, _arena), 0) << join::lastError.message ();
-    ASSERT_EQ (_arena.tryAllocate (256), nullptr);
+    ASSERT_EQ (_ring.registerBuffer (3, _allocator), 0) << join::lastError.message ();
+    ASSERT_EQ (_allocator.tryAllocate (256), nullptr);
 
-    ASSERT_EQ (_ring.registerBuffer (3, _arena), -1);
+    ASSERT_EQ (_ring.registerBuffer (3, _allocator), -1);
     ASSERT_EQ (join::lastError, Errc::InUse);
 
 #ifdef JOIN_HAS_IO_URING
-    LocalMem::Allocator<4, 256> arena;
+    LocalMem::SlabAllocator<4, 256> allocator;
     IoRingBuffer ring (&_uring);
 
-    ASSERT_EQ (ring.registerBuffer (3, arena), -1);
-    ASSERT_NE (arena.tryAllocate (256), nullptr);
+    ASSERT_EQ (ring.registerBuffer (3, allocator), -1);
+    ASSERT_NE (allocator.tryAllocate (256), nullptr);
 #endif
 }
 
@@ -104,9 +104,9 @@ TEST_F (IoRingBufferTest, unregisterBuffer)
 {
     ASSERT_EQ (_ring.unregisterBuffer (), 0);
 
-    ASSERT_EQ (_ring.registerBuffer (3, _arena), 0) << join::lastError.message ();
+    ASSERT_EQ (_ring.registerBuffer (3, _allocator), 0) << join::lastError.message ();
     ASSERT_EQ (_ring.unregisterBuffer (), 0) << join::lastError.message ();
-    ASSERT_NE (_arena.tryAllocate (256), nullptr);
+    ASSERT_NE (_allocator.tryAllocate (256), nullptr);
 }
 
 #ifndef JOIN_HAS_IO_URING
@@ -115,7 +115,7 @@ TEST_F (IoRingBufferTest, unregisterBuffer)
  */
 TEST_F (IoRingBufferTest, select)
 {
-    ASSERT_EQ (_ring.registerBuffer (0, _arena), 0) << join::lastError.message ();
+    ASSERT_EQ (_ring.registerBuffer (0, _allocator), 0) << join::lastError.message ();
 
     for (uint16_t bid = 0; bid < _ring.count (); ++bid)
     {
@@ -130,7 +130,7 @@ TEST_F (IoRingBufferTest, select)
  */
 TEST_F (IoRingBufferTest, recycle)
 {
-    ASSERT_EQ (_ring.registerBuffer (0, _arena), 0) << join::lastError.message ();
+    ASSERT_EQ (_ring.registerBuffer (0, _allocator), 0) << join::lastError.message ();
 
     for (uint16_t bid = 0; bid < _ring.count (); ++bid)
     {
@@ -193,11 +193,11 @@ TEST_F (IoRingBufferTest, armed)
  */
 TEST_F (IoRingBufferTest, get)
 {
-    ASSERT_EQ (_ring.registerBuffer (0, _arena), 0) << join::lastError.message ();
+    ASSERT_EQ (_ring.registerBuffer (0, _allocator), 0) << join::lastError.message ();
 
     for (uint16_t bid = 0; bid < _ring.count (); ++bid)
     {
-        ASSERT_EQ (_ring.get (bid), _arena.getPtr (bid)) << bid;
+        ASSERT_EQ (_ring.get (bid), _allocator.getPtr (bid)) << bid;
     }
 }
 
@@ -208,7 +208,7 @@ TEST_F (IoRingBufferTest, group)
 {
     ASSERT_EQ (_ring.group (), 0);
 
-    ASSERT_EQ (_ring.registerBuffer (3, _arena), 0) << join::lastError.message ();
+    ASSERT_EQ (_ring.registerBuffer (3, _allocator), 0) << join::lastError.message ();
     ASSERT_EQ (_ring.group (), 3);
 
     ASSERT_EQ (_ring.unregisterBuffer (), 0) << join::lastError.message ();
@@ -222,7 +222,7 @@ TEST_F (IoRingBufferTest, size)
 {
     ASSERT_EQ (_ring.size (), 0);
 
-    ASSERT_EQ (_ring.registerBuffer (0, _arena), 0) << join::lastError.message ();
+    ASSERT_EQ (_ring.registerBuffer (0, _allocator), 0) << join::lastError.message ();
     ASSERT_EQ (_ring.size (), 256);
 
     ASSERT_EQ (_ring.unregisterBuffer (), 0) << join::lastError.message ();
@@ -236,7 +236,7 @@ TEST_F (IoRingBufferTest, count)
 {
     ASSERT_EQ (_ring.count (), 0);
 
-    ASSERT_EQ (_ring.registerBuffer (0, _arena), 0) << join::lastError.message ();
+    ASSERT_EQ (_ring.registerBuffer (0, _allocator), 0) << join::lastError.message ();
     ASSERT_EQ (_ring.count (), 4);
 
     ASSERT_EQ (_ring.unregisterBuffer (), 0) << join::lastError.message ();

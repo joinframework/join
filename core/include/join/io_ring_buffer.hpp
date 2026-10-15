@@ -26,11 +26,11 @@
 #define JOIN_CORE_IO_RING_BUFFER_HPP
 
 // libjoin.
-#include <join/allocator.hpp>
-#include <join/error.hpp>
+#include <join/slab_allocator.hpp>
 #include <join/function.hpp>
 #include <join/memory.hpp>
 #include <join/utils.hpp>
+#include <join/error.hpp>
 
 // C++.
 #include <atomic>
@@ -93,7 +93,7 @@ namespace join
          * @throw std::system_error if the descriptor ring cannot be mapped.
          */
         template <size_t Count, size_t Size>
-        int registerBuffer (uint16_t group, LocalMem::Allocator<Count, Size>& arena);
+        int registerBuffer (uint16_t group, LocalMem::SlabAllocator<Count, Size>& arena);
 
         /**
          * @brief withdraw the buffers and give them back to the arena.

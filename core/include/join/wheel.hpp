@@ -26,7 +26,7 @@
 #define JOIN_CORE_WHEEL_HPP
 
 // libjoin.
-#include <join/allocator.hpp>
+#include <join/slab_allocator.hpp>
 #include <join/function.hpp>
 #include <join/backoff.hpp>
 #include <join/memory.hpp>
@@ -75,15 +75,15 @@ namespace join
         , _generations (static_cast<std::atomic_uint32_t*> (_generationsMem.get ()))
         , _runner (std::forward<Args> (args)...)
         {
-            _arena.reserveAll ();
+            _allocator.reserveAll ();
 
             for (uint32_t index = 0; index < Capacity; ++index)
             {
                 new (&_generations[index]) std::atomic_uint32_t (0);
-                new (_arena.getPtr (index)) Node ();
+                new (_allocator.getPtr (index)) Node ();
             }
 
-            _arena.releaseAll ();
+            _allocator.releaseAll ();
 
             _tick = toTick (ClockPolicy::now ());
             _runner.start (*this, resolution ());
@@ -125,7 +125,7 @@ namespace join
 
             for (uint32_t index = 0; index < Capacity; ++index)
             {
-                static_cast<Node*> (_arena.getPtr (index))->~Node ();
+                static_cast<Node*> (_allocator.getPtr (index))->~Node ();
                 _generations[index].~atomic ();
             }
         }
@@ -290,7 +290,7 @@ namespace join
          */
         int mbind (int numa) const noexcept
         {
-            if ((_arena.mbind (numa) == -1) || (_commands.mbind (numa) == -1))
+            if ((_allocator.mbind (numa) == -1) || (_commands.mbind (numa) == -1))
             {
                 return -1;
             }
@@ -305,7 +305,7 @@ namespace join
          */
         int mlock () const noexcept
         {
-            if ((_arena.mlock () == -1) || (_commands.mlock () == -1))
+            if ((_allocator.mlock () == -1) || (_commands.mlock () == -1))
             {
                 return -1;  // LCOV_EXCL_LINE
             }
@@ -481,7 +481,7 @@ namespace join
         template <typename Func, typename... Args>
         ssize_t createTimer (uint64_t ticks, uint64_t interval, Func&& callback, Args&&... args) noexcept
         {
-            void* ptr = _arena.tryAllocate (sizeof (Node));
+            void* ptr = _allocator.tryAllocate (sizeof (Node));
 
             if (JOIN_UNLIKELY (ptr == nullptr))
             {
@@ -496,7 +496,7 @@ namespace join
             const uint64_t now = toTick (ClockPolicy::now ());
             node->deadline.store (now + ticks + 1, std::memory_order_release);
 
-            const uint32_t place = _arena.getIndex (node);
+            const uint32_t place = _allocator.getIndex (node);
             const uint32_t occupant = _generations[place].load (std::memory_order_relaxed) & _occupantMask;
 
             if (JOIN_LIKELY (_runner.isRunnerThread ()))
@@ -597,11 +597,11 @@ namespace join
          */
         void releaseTimer (Node* node) noexcept
         {
-            const uint32_t place = _arena.getIndex (node);
+            const uint32_t place = _allocator.getIndex (node);
 
             node->callback.reset ();
             _generations[place].fetch_add (1, std::memory_order_release);
-            _arena.deallocate (node);
+            _allocator.deallocate (node);
         }
 
         /**
@@ -771,7 +771,7 @@ namespace join
             if (JOIN_LIKELY ((_generations[cmd.place].load (std::memory_order_acquire) & _occupantMask) ==
                              cmd.occupant))
             {
-                Node* node = static_cast<Node*> (_arena.getPtr (cmd.place));
+                Node* node = static_cast<Node*> (_allocator.getPtr (cmd.place));
 
                 if (cmd.type == CommandType::Arm)
                 {
@@ -815,7 +815,7 @@ namespace join
                 return nullptr;
             }
 
-            return static_cast<Node*> (_arena.getPtr (place));
+            return static_cast<Node*> (_allocator.getPtr (place));
         }
 
         /**
@@ -832,7 +832,7 @@ namespace join
         /**
          * @brief get the node index.
          * @param id timer handle.
-         * @return arena index.
+         * @return allocator index.
          */
         static constexpr uint32_t placeOf (ssize_t id) noexcept
         {
@@ -895,8 +895,8 @@ namespace join
         /// command queue size.
         static constexpr size_t _queueSize = 2 * Capacity;
 
-        /// node arena.
-        LocalMem::Allocator<Capacity, sizeof (Node)> _arena;
+        /// node allocator.
+        LocalMem::SlabAllocator<Capacity, sizeof (Node)> _allocator;
 
         /// command queue.
         LocalMem::Mpsc::Queue<Command> _commands;
