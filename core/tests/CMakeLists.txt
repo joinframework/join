@@ -116,6 +116,11 @@ target_link_libraries(local_mem.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME local_mem.gtest COMMAND local_mem.gtest)
 install(TARGETS local_mem.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(local_bump.gtest local_bump_test.cpp)
+target_link_libraries(local_bump.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME local_bump.gtest COMMAND local_bump.gtest)
+install(TARGETS local_bump.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(local_slab.gtest local_slab_test.cpp)
 target_link_libraries(local_slab.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME local_slab.gtest COMMAND local_slab.gtest)

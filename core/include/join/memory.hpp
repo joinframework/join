@@ -49,6 +49,11 @@
 namespace join
 {
     /// allocator forward declarations.
+    class BumpAtomic;
+
+    template <typename Backend, size_t Capacity, typename SyncPolicy>
+    class BasicBumpAllocator;
+
     template <typename Backend, size_t Count, size_t... Sizes>
     class BasicSlabAllocator;
 
@@ -155,6 +160,9 @@ namespace join
     class LocalMem
     {
     public:
+        template <size_t Capacity, typename SyncPolicy = BumpAtomic>
+        using BumpAllocator = BasicBumpAllocator<LocalMem, Capacity, SyncPolicy>;
+
         template <size_t Count, size_t... Sizes>
         using SlabAllocator = BasicSlabAllocator<LocalMem, Count, Sizes...>;
 
