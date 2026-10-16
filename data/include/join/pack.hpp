@@ -898,8 +898,8 @@ namespace join
             }
             else
             {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
-                return -1;
+                join::lastError = make_error_code (SaxErrc::InvalidValue);  // LCOV_EXCL_LINE
+                return -1;                                                  // LCOV_EXCL_LINE
             }
         }
 
