@@ -47,6 +47,22 @@ TEST (Variant, is_first_default_constructible)
 }
 
 /**
+ * @brief test triviality.
+ */
+TEST (Variant, trivial)
+{
+    EXPECT_TRUE ((std::is_trivially_copyable<Variant<int, double, bool>>::value));
+    EXPECT_TRUE ((std::is_trivially_destructible<Variant<int, double, bool>>::value));
+    EXPECT_FALSE ((std::is_trivially_copyable<Variant<int, std::string>>::value));
+    EXPECT_FALSE ((std::is_trivially_destructible<Variant<int, std::string>>::value));
+
+    Variant<int, double, bool> a (2.5), b (true);
+    a.swap (b);
+    EXPECT_TRUE (a.is<bool> ());
+    EXPECT_EQ (b.get<double> (), 2.5);
+}
+
+/**
  * @brief Test default construction.
  */
 TEST (Variant, defaultConstruction)
