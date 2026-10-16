@@ -224,7 +224,7 @@ namespace join
          * @brief helper class representing a variant storage in order to be able to disable default/copy/move
          * constructors/operators.
          */
-        template <typename... Ts>
+        template <bool Trivial, typename... Ts>
         struct VariantStorage
         {
             /**
@@ -337,6 +337,96 @@ namespace join
             /// index of the alternative that is currently held by the variant.
             std::size_t _which = 0;
         };
+
+        /**
+         * @brief variant storage of trivially copyable alternatives, trivially copyable itself.
+         */
+        template <typename... Ts>
+        struct VariantStorage<true, Ts...>
+        {
+            /**
+             * @brief default constructor.
+             */
+            constexpr VariantStorage ()
+            : VariantStorage (in_place_index_t<0>{})
+            {
+            }
+
+            /**
+             * @brief constructs a variant storage with the alternative T specified by the index I.
+             * @param args arguments to initialize the contained value with.
+             */
+            template <std::size_t I, typename... Args>
+            constexpr explicit VariantStorage (in_place_index_t<I>, Args&&... args)
+            : _which (I)
+            {
+                new (storage ()) find_element_t<I, Ts...> (std::forward<Args> (args)...);
+            }
+
+            /**
+             * @brief copy constructor.
+             * @param other object to copy.
+             */
+            constexpr VariantStorage (const VariantStorage& other) = default;
+
+            /**
+             * @brief move constructor.
+             * @param other object to move.
+             */
+            constexpr VariantStorage (VariantStorage&& other) = default;
+
+            /**
+             * @brief destroy the VariantStorage instance.
+             */
+            ~VariantStorage () = default;
+
+            /**
+             * @brief copy assignment.
+             * @param other object to copy.
+             * @return a reference of the current object.
+             */
+            constexpr VariantStorage& operator= (const VariantStorage& other) = default;
+
+            /**
+             * @brief move assignment.
+             * @param other object to move.
+             * @return a reference of the current object.
+             */
+            constexpr VariantStorage& operator= (VariantStorage&& other) = default;
+
+            /**
+             * @brief get storage address.
+             * @return storage address.
+             */
+            constexpr void* storage ()
+            {
+                return static_cast<void*> (std::addressof (_data));
+            }
+
+            /**
+             * @brief get storage address.
+             * @return storage address.
+             */
+            constexpr const void* storage () const
+            {
+                return static_cast<const void*> (std::addressof (_data));
+            }
+
+            /**
+             * @brief swap this storage with other.
+             * @param other storage to swap with.
+             */
+            void swap (VariantStorage& other) noexcept
+            {
+                std::swap (*this, other);
+            }
+
+            /// aligned storage.
+            alignas (Ts...) unsigned char _data[std::max ({sizeof (Ts)...})];
+
+            /// index of the alternative that is currently held by the variant.
+            std::size_t _which = 0;
+        };
     }
 
     /**
@@ -344,7 +434,7 @@ namespace join
      */
     template <typename... Ts>
     class Variant
-    : private details::VariantStorage<Ts...>,
+    : private details::VariantStorage<are_trivially_copyable<Ts...>::value, Ts...>,
       private EnableDefault<details::is_first_default_constructible<Ts...>::value, Variant<Ts...>>,
       private std::_Enable_copy_move<are_copy_constructible<Ts...>::value, are_copy_assignable<Ts...>::value,
                                      are_move_constructible<Ts...>::value, are_move_assignable<Ts...>::value,
@@ -356,7 +446,7 @@ namespace join
         static_assert (all<!std::is_array<Ts>::value...>::value, "Variant must have no array alternative.");
         static_assert (all<!std::is_reference<Ts>::value...>::value, "Variant must have no reference alternative");
 
-        using Base = details::VariantStorage<Ts...>;
+        using Base = details::VariantStorage<are_trivially_copyable<Ts...>::value, Ts...>;
         using DefaultEnabler = EnableDefault<details::is_first_default_constructible<Ts...>::value, Variant<Ts...>>;
 
         /**

@@ -277,6 +277,14 @@ namespace join
     };
 
     /**
+     * @brief check if types in a parameter pack are trivially copyable.
+     */
+    template <typename... Ts>
+    struct are_trivially_copyable : std::integral_constant<bool, all<std::is_trivially_copyable<Ts>::value...>::value>
+    {
+    };
+
+    /**
      * @brief allow construction when default constructor is disabled.
      */
     struct EnableDefaultTag
