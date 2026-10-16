@@ -663,7 +663,7 @@ namespace join
          * @param value real value to write.
          */
         template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::Canonical>::type writeDouble (double value) noexcept
+        typename std::enable_if<Mode == JsonWriteMode::Canonical>::type writeDouble (double value)
         {
             char beg[25];
             char* end = join::dtoa (beg, value);
@@ -763,7 +763,7 @@ namespace join
         /**
          * @brief write comma.
          */
-        inline void comma () noexcept
+        inline void comma ()
         {
             if (_depth && !_first)
             {
@@ -774,7 +774,7 @@ namespace join
         /**
          * @brief write indentation.
          */
-        inline void indent () noexcept
+        inline void indent ()
         {
             if (_indentation)
             {
@@ -792,7 +792,7 @@ namespace join
         /**
          * @brief write space.
          */
-        inline void space () noexcept
+        inline void space ()
         {
             if (_indentation)
             {
@@ -803,7 +803,7 @@ namespace join
         /**
          * @brief write end of line.
          */
-        inline void endLine () noexcept
+        inline void endLine ()
         {
             if (_indentation)
             {
@@ -823,7 +823,7 @@ namespace join
         /**
          * @brief add comma, go to line and indent if in array.
          */
-        inline void array () noexcept
+        inline void array ()
         {
             comma ();
             if (_depth && ((_arrays[(_depth - 1) >> 6] >> ((_depth - 1) & 63)) & 1))

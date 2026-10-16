@@ -400,7 +400,7 @@ namespace join
          * @brief append character to output stream in batch.
          * @param data data to append to output stream.
          */
-        inline void append (char data) noexcept
+        inline void append (char data)
         {
             if (JOIN_UNLIKELY (_size == _capacity))
             {
@@ -419,7 +419,7 @@ namespace join
          * @param data data to append to output stream.
          * @param size data size.
          */
-        inline void append (const char* data, uint32_t size) noexcept
+        inline void append (const char* data, uint32_t size)
         {
             if (JOIN_UNLIKELY (size > _capacity - _size))
             {
@@ -437,7 +437,7 @@ namespace join
         /**
          * @brief flush buffered data to output stream.
          */
-        inline void flush () noexcept
+        inline void flush ()
         {
             if (_size)
             {

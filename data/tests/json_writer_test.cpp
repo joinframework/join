@@ -29,14 +29,33 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <stdexcept>
 #include <sstream>
 
+using join::SaxWriter;
 using join::JsonWriter;
 using join::Value;
 using join::Array;
 using join::Object;
 using join::SaxErrc;
-using join::SaxWriter;
+
+/**
+ * @brief stream buffer failing on its first write.
+ */
+struct FailingBuffer : public std::streambuf
+{
+    std::streamsize xsputn ([[maybe_unused]] const char* data, std::streamsize size) override
+    {
+        if (!failed)
+        {
+            failed = true;
+            throw std::runtime_error ("write failed");
+        }
+        return size;
+    }
+
+    bool failed = false;
+};
 
 /**
  * @brief Test setNull method.
@@ -353,6 +372,13 @@ TEST (JsonWriter, serialize)
     stream.str ("");
     EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), "[1,2]");
+
+    FailingBuffer buffer;
+    std::ostream failing (&buffer);
+    SaxWriter<JsonWriter> failingWriter (failing);
+    value = Array{std::string (2000, 'a')};
+    EXPECT_THROW (failingWriter.serialize (value), std::runtime_error);
+    EXPECT_EQ (failingWriter.serialize (value), 0) << join::lastError.message ();
 }
 
 /**
