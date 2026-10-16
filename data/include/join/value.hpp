@@ -46,6 +46,12 @@ namespace join
     /// forward declaration.
     class Value;
 
+    template <typename Handler>
+    class SaxReader;
+
+    template <typename Handler>
+    class SaxWriter;
+
     /// array.
     using Array = std::vector<Value>;
 
@@ -1353,7 +1359,7 @@ namespace join
         template <typename Reader>
         int deserialize (const char* document, size_t length)
         {
-            Reader reader (*this);
+            SaxReader<Reader> reader (*this);
             return reader.deserialize (document, length);
         }
 
@@ -1366,7 +1372,7 @@ namespace join
         template <typename Reader>
         int deserialize (const char* first, const char* last)
         {
-            Reader reader (*this);
+            SaxReader<Reader> reader (*this);
             return reader.deserialize (first, last);
         }
 
@@ -1378,7 +1384,7 @@ namespace join
         template <typename Reader>
         int deserialize (const std::string& document)
         {
-            Reader reader (*this);
+            SaxReader<Reader> reader (*this);
             return reader.deserialize (document);
         }
 
@@ -1390,7 +1396,7 @@ namespace join
         template <typename Reader>
         int deserialize (std::stringstream& document)
         {
-            Reader reader (*this);
+            SaxReader<Reader> reader (*this);
             return reader.deserialize (document);
         }
 
@@ -1402,7 +1408,7 @@ namespace join
         template <typename Reader>
         int deserialize (std::istringstream& document)
         {
-            Reader reader (*this);
+            SaxReader<Reader> reader (*this);
             return reader.deserialize (document);
         }
 
@@ -1414,7 +1420,7 @@ namespace join
         template <typename Reader>
         int deserialize (std::fstream& document)
         {
-            Reader reader (*this);
+            SaxReader<Reader> reader (*this);
             return reader.deserialize (document);
         }
 
@@ -1426,7 +1432,7 @@ namespace join
         template <typename Reader>
         int deserialize (std::ifstream& document)
         {
-            Reader reader (*this);
+            SaxReader<Reader> reader (*this);
             return reader.deserialize (document);
         }
 
@@ -1438,7 +1444,7 @@ namespace join
         template <typename Reader>
         int deserialize (std::iostream& document)
         {
-            Reader reader (*this);
+            SaxReader<Reader> reader (*this);
             return reader.deserialize (document);
         }
 
@@ -1450,7 +1456,7 @@ namespace join
         template <typename Reader>
         int deserialize (std::istream& document)
         {
-            Reader reader (*this);
+            SaxReader<Reader> reader (*this);
             return reader.deserialize (document);
         }
 
@@ -1462,7 +1468,7 @@ namespace join
         template <typename Writer>
         int serialize (std::ostream& document) const
         {
-            Writer writer (document);
+            SaxWriter<Writer> writer (document);
             return writer.serialize (*this);
         }
 

@@ -34,6 +34,7 @@
 
 using join::PackWriter;
 using join::Value;
+using join::SaxWriter;
 
 /**
  * @brief Test setNull method.
@@ -41,7 +42,7 @@ using join::Value;
 TEST (PackWriter, setNull)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.setNull (), 0);
@@ -54,7 +55,7 @@ TEST (PackWriter, setNull)
 TEST (PackWriter, setBool)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.setBool (true), 0);
@@ -71,7 +72,7 @@ TEST (PackWriter, setBool)
 TEST (PackWriter, setInt)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.setInt (-1234567890), 0);
@@ -140,7 +141,7 @@ TEST (PackWriter, setInt)
 TEST (PackWriter, setUint)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.setUint (3), 0);
@@ -185,7 +186,7 @@ TEST (PackWriter, setUint)
 TEST (PackWriter, setInt64)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.setInt64 (-2147483649), 0);
@@ -270,7 +271,7 @@ TEST (PackWriter, setInt64)
 TEST (PackWriter, setUint64)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.setUint64 (3), 0);
@@ -323,7 +324,7 @@ TEST (PackWriter, setUint64)
 TEST (PackWriter, setDouble)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.setDouble (98.6), 0);
@@ -348,7 +349,7 @@ TEST (PackWriter, setDouble)
 TEST (PackWriter, setString)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.setString (std::string (31, 'x')), 0);
@@ -381,7 +382,7 @@ TEST (PackWriter, setString)
 TEST (PackWriter, setArray)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.startArray (15), 0);
@@ -410,7 +411,7 @@ TEST (PackWriter, setArray)
 TEST (PackWriter, setObject)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.startObject (15), 0);
@@ -439,7 +440,7 @@ TEST (PackWriter, setObject)
 TEST (PackWriter, setKey)
 {
     std::stringstream stream;
-    PackWriter packWriter (stream);
+    SaxWriter<PackWriter> packWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (packWriter.setKey (nullptr), 0);
@@ -520,7 +521,7 @@ TEST (PackWriter, serialize)
     value.pushBack ("test");
 
     std::stringstream stream;
-    PackWriter jsonWriter (stream);
+    SaxWriter<PackWriter> jsonWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();

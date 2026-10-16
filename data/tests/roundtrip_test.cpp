@@ -37,6 +37,8 @@ using join::SaxErrc;
 using join::JsonErrc;
 using join::JsonWriter;
 using join::JsonReader;
+using join::SaxReader;
+using join::SaxWriter;
 
 /**
  * @brief Test JSON round trip.
@@ -44,10 +46,10 @@ using join::JsonReader;
 TEST (JsonReader, roundtrip)
 {
     Value value;
-    JsonReader reader (value);
+    SaxReader<JsonReader> reader (value);
 
     std::stringstream stream;
-    JsonWriter writer (stream);
+    SaxWriter<JsonWriter> writer (stream);
 
     stream.clear ();
     stream.str ("[null]");

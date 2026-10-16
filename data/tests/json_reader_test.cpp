@@ -43,6 +43,8 @@ using join::SaxErrc;
 using join::JsonErrc;
 using join::JsonReadMode;
 using join::JsonReader;
+using join::BasicJsonReader;
+using join::SaxReader;
 
 /**
  * @brief Test deserialize method.
@@ -76,7 +78,7 @@ TEST (JsonReader, deserialize)
     ASSERT_EQ (value.deserialize<JsonReader> (&data[0], &data[sizeof (data)]), -1);
     ASSERT_EQ (join::lastError, SaxErrc::ExtraData);
 
-    JsonReader reader (value);
+    SaxReader<JsonReader> reader (value);
     ASSERT_EQ (reader.deserialize (std::string ("[1, [2, ")), -1);
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
@@ -512,7 +514,7 @@ TEST (JsonReader, pass)
 
     stream.clear ();
     stream.str ("{}   extra");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::StopParsingOnDone> (stream), 0)
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::StopParsingOnDone>> (value).deserialize (stream), 0)
         << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.empty ());
@@ -1347,47 +1349,48 @@ TEST (JsonReader, comments)
 
     stream.clear ();
     stream.str ("    / this is an invalid comment\n");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), -1);
 
     stream.clear ();
     stream.str ("[    / this is an invalid comment\n    1,2\n]");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), -1);
 
     stream.clear ();
     stream.str ("[    1,    / this is an invalid comment\n2\n]");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), -1);
 
     stream.clear ();
     stream.str ("[    1,2\n    / this is an invalid comment\n]");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), -1);
 
     stream.clear ();
     stream.str ("{    / this is an invalid comment\n    \"a\":1,\"b\":2\n}");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), -1);
 
     stream.clear ();
     stream.str ("{    \"a\"    / this is an invalid comment\n:1,\"b\":2\n}");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), -1);
 
     stream.clear ();
     stream.str ("{    \"a\":    / this is an invalid comment\n1,\"b\":2\n}");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), -1);
 
     stream.clear ();
     stream.str ("{    \"a\":1    / this is an invalid comment,\"b\":2\n}");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), -1);
 
     stream.clear ();
     stream.str ("{    \"a\":1,    / this is an invalid comment\"b\":2\n}");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), -1);
 
     stream.clear ();
     stream.str ("{}   / invalid extra comment");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), -1);
 
     stream.clear ();
     stream.str ("{\n    // this is a comment\n    \"comment\":true\n}");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), 0)
+        << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["comment"].isBool ());
@@ -1395,7 +1398,8 @@ TEST (JsonReader, comments)
 
     stream.clear ();
     stream.str ("{\n    /*this is another comment*/\n    \"comment\":false\n}");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ParseComments> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ParseComments>> (value).deserialize (stream), 0)
+        << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["comment"].isBool ());
@@ -1411,14 +1415,14 @@ TEST (JsonReader, encoding)
     Value value;
 
     stream.str ("[\"caf\xC3\xA9 \xE2\x82\xAC \xF0\x9F\x98\x82\"]");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ValidateEncoding> (stream), 0)
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ValidateEncoding>> (value).deserialize (stream), 0)
         << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     EXPECT_STREQ (value[0].getString ().c_str (), "caf\xC3\xA9 \xE2\x82\xAC \xF0\x9F\x98\x82");
 
     stream.clear ();
     stream.str ("{\"\xC3\xB6\\u00e9\xC3\xB6\":\"\xE2\x82\xAC\\n\xE2\x82\xAC\"}");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ValidateEncoding> (stream), 0)
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ValidateEncoding>> (value).deserialize (stream), 0)
         << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     EXPECT_STREQ (value["\xC3\xB6\xC3\xA9\xC3\xB6"].getString ().c_str (), "\xE2\x82\xAC\n\xE2\x82\xAC");
@@ -1428,12 +1432,12 @@ TEST (JsonReader, encoding)
     {
         stream.clear ();
         stream.str (doc);
-        ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ValidateEncoding> (stream), -1);
+        ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ValidateEncoding>> (value).deserialize (stream), -1);
         EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
 
         stream.clear ();
         stream.str (doc);
-        ASSERT_EQ (JsonReader (value).deserialize (stream), 0) << join::lastError.message ();
+        ASSERT_EQ (SaxReader<JsonReader> (value).deserialize (stream), 0) << join::lastError.message ();
     }
 
     for (auto const& doc :
@@ -1441,14 +1445,15 @@ TEST (JsonReader, encoding)
     {
         stream.clear ();
         stream.str (doc);
-        ASSERT_EQ (JsonReader (value).deserialize (stream), -1);
+        ASSERT_EQ (SaxReader<JsonReader> (value).deserialize (stream), -1);
         EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
     }
 
     std::string str ("[\"caf\xC3\xA9\", \"\xE2\x82\"]");
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ValidateEncoding> (str), -1);
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ValidateEncoding>> (value).deserialize (str), -1);
     EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
-    ASSERT_EQ (JsonReader (value).deserialize<JsonReadMode::ValidateEncoding> (str.substr (0, 8) + "]"), 0)
+    ASSERT_EQ (SaxReader<BasicJsonReader<JsonReadMode::ValidateEncoding>> (value).deserialize (str.substr (0, 8) + "]"),
+               0)
         << join::lastError.message ();
 }
 

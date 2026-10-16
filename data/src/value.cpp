@@ -28,6 +28,8 @@
 
 using join::Value;
 
+using join::SaxWriter;
+
 using join::JsonReader;
 using join::JsonWriter;
 using join::JsonCanonicalizer;
@@ -122,7 +124,7 @@ int Value::jsonRead (std::istream& document)
 // =========================================================================
 int Value::jsonWrite (std::ostream& document, size_t indentation) const
 {
-    JsonWriter writer (document, indentation);
+    SaxWriter<JsonWriter> writer (document, indentation);
     return writer.serialize (*this);
 }
 

@@ -37,15 +37,15 @@ namespace join
     /**
      * @brief message pack writer class.
      */
-    class PackWriter : public StreamWriter
+    class PackWriter
     {
     public:
         /**
          * @brief create instance.
-         * @param document MessagePack document to create.
+         * @param writer SAX writer owning the output.
          */
-        PackWriter (std::ostream& document)
-        : StreamWriter (document)
+        PackWriter (SaxWriter<PackWriter>& writer)
+        : _writer (writer)
         {
         }
 
@@ -78,15 +78,15 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~PackWriter () = default;
+        ~PackWriter () = default;
 
         /**
          * @brief set null value.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setNull () override
+        int setNull ()
         {
-            append (0xc0);
+            _writer.append (0xc0);
             return 0;
         }
 
@@ -95,15 +95,15 @@ namespace join
          * @param value boolean value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setBool (bool value) override
+        int setBool (bool value)
         {
             if (value)
             {
-                append (0xc3);
+                _writer.append (0xc3);
             }
             else
             {
-                append (0xc2);
+                _writer.append (0xc2);
             }
             return 0;
         }
@@ -113,40 +113,40 @@ namespace join
          * @param value integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setInt (int32_t value) override
+        int setInt (int32_t value)
         {
             if (value < -(1 << 15))
             {
-                append (0xd2);
+                _writer.append (0xd2);
                 pack (static_cast<uint32_t> (value));
             }
             else if (value < -(1 << 7))
             {
-                append (0xd1);
+                _writer.append (0xd1);
                 pack (static_cast<uint16_t> (value));
             }
             else if (value < -(1 << 5))
             {
-                append (0xd0);
+                _writer.append (0xd0);
                 pack (static_cast<uint8_t> (value));
             }
             else if (value < (1 << 7))
             {
-                append (static_cast<uint8_t> (value));
+                _writer.append (static_cast<uint8_t> (value));
             }
             else if (value < (1 << 8))
             {
-                append (0xcc);
+                _writer.append (0xcc);
                 pack (static_cast<uint8_t> (value));
             }
             else if (value < (1 << 16))
             {
-                append (0xcd);
+                _writer.append (0xcd);
                 pack (static_cast<uint16_t> (value));
             }
             else
             {
-                append (0xce);
+                _writer.append (0xce);
                 pack (static_cast<uint32_t> (value));
             }
             return 0;
@@ -157,25 +157,25 @@ namespace join
          * @param value unsigned integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setUint (uint32_t value) override
+        int setUint (uint32_t value)
         {
             if (value < (1 << 7))
             {
-                append (static_cast<uint8_t> (value));
+                _writer.append (static_cast<uint8_t> (value));
             }
             else if (value < (1 << 8))
             {
-                append (0xcc);
+                _writer.append (0xcc);
                 pack (static_cast<uint8_t> (value));
             }
             else if (value < (1 << 16))
             {
-                append (0xcd);
+                _writer.append (0xcd);
                 pack (static_cast<uint16_t> (value));
             }
             else
             {
-                append (0xce);
+                _writer.append (0xce);
                 pack (value);
             }
             return 0;
@@ -186,50 +186,50 @@ namespace join
          * @param value 64 bits integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setInt64 (int64_t value) override
+        int setInt64 (int64_t value)
         {
             if (value < -(1LL << 31))
             {
-                append (0xd3);
+                _writer.append (0xd3);
                 pack (static_cast<uint64_t> (value));
             }
             else if (value < -(1LL << 15))
             {
-                append (0xd2);
+                _writer.append (0xd2);
                 pack (static_cast<uint32_t> (value));
             }
             else if (value < -(1LL << 7))
             {
-                append (0xd1);
+                _writer.append (0xd1);
                 pack (static_cast<uint16_t> (value));
             }
             else if (value < -(1LL << 5))
             {
-                append (0xd0);
+                _writer.append (0xd0);
                 pack (static_cast<uint8_t> (value));
             }
             else if (value < (1LL << 7))
             {
-                append (static_cast<uint8_t> (value));
+                _writer.append (static_cast<uint8_t> (value));
             }
             else if (value < (1LL << 8))
             {
-                append (0xcc);
+                _writer.append (0xcc);
                 pack (static_cast<uint8_t> (value));
             }
             else if (value < (1LL << 16))
             {
-                append (0xcd);
+                _writer.append (0xcd);
                 pack (static_cast<uint16_t> (value));
             }
             else if (value < (1LL << 32))
             {
-                append (0xce);
+                _writer.append (0xce);
                 pack (static_cast<uint32_t> (value));
             }
             else
             {
-                append (0xcf);
+                _writer.append (0xcf);
                 pack (static_cast<uint64_t> (value));
             }
             return 0;
@@ -240,30 +240,30 @@ namespace join
          * @param value unsigned 64 bits integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setUint64 (uint64_t value) override
+        int setUint64 (uint64_t value)
         {
             if (value < (1ULL << 7))
             {
-                append (static_cast<uint8_t> (value));
+                _writer.append (static_cast<uint8_t> (value));
             }
             else if (value < (1ULL << 8))
             {
-                append (0xcc);
+                _writer.append (0xcc);
                 pack (static_cast<uint8_t> (value));
             }
             else if (value < (1ULL << 16))
             {
-                append (0xcd);
+                _writer.append (0xcd);
                 pack (static_cast<uint16_t> (value));
             }
             else if (value < (1ULL << 32))
             {
-                append (0xce);
+                _writer.append (0xce);
                 pack (static_cast<uint32_t> (value));
             }
             else
             {
-                append (0xcf);
+                _writer.append (0xcf);
                 pack (value);
             }
             return 0;
@@ -274,17 +274,17 @@ namespace join
          * @param value real value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setDouble (double value) override
+        int setDouble (double value)
         {
             float f = static_cast<float> (value);
             if (std::isfinite (value) && static_cast<double> (f) == value)
             {
-                append (0xca);
+                _writer.append (0xca);
                 pack (f);
             }
             else
             {
-                append (0xcb);
+                _writer.append (0xcb);
                 pack (value);
             }
             return 0;
@@ -295,28 +295,28 @@ namespace join
          * @param value string value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setString (const std::string& value) override
+        int setString (const std::string& value)
         {
             if (value.size () < 32)
             {
-                append (static_cast<char> (0xa0 | value.size ()));
+                _writer.append (static_cast<char> (0xa0 | value.size ()));
             }
             else if (value.size () < 256)
             {
-                append (0xd9);
+                _writer.append (0xd9);
                 pack (static_cast<uint8_t> (value.size ()));
             }
             else if (value.size () < 65536)
             {
-                append (0xda);
+                _writer.append (0xda);
                 pack (static_cast<uint16_t> (value.size ()));
             }
             else
             {
-                append (0xdb);
+                _writer.append (0xdb);
                 pack (static_cast<uint32_t> (value.size ()));
             }
-            append (value.c_str (), static_cast<uint32_t> (value.size ()));
+            _writer.append (value.c_str (), static_cast<uint32_t> (value.size ()));
             return 0;
         }
 
@@ -325,22 +325,31 @@ namespace join
          * @param size array size.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int startArray (uint32_t size = 0) override
+        int startArray (uint32_t size)
         {
             if (size < 16)
             {
-                append (static_cast<char> (0x90 | size));
+                _writer.append (static_cast<char> (0x90 | size));
             }
             else if (size < 65536)
             {
-                append (0xdc);
+                _writer.append (0xdc);
                 pack (static_cast<uint16_t> (size));
             }
             else
             {
-                append (0xdd);
+                _writer.append (0xdd);
                 pack (size);
             }
+            return 0;
+        }
+
+        /**
+         * @brief stop array.
+         * @return 0 on success, -1 otherwise.
+         */
+        int stopArray ()
+        {
             return 0;
         }
 
@@ -349,22 +358,41 @@ namespace join
          * @param size object size.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int startObject (uint32_t size = 0) override
+        int startObject (uint32_t size)
         {
             if (size < 16)
             {
-                append (static_cast<char> (0x80 | size));
+                _writer.append (static_cast<char> (0x80 | size));
             }
             else if (size < 65536)
             {
-                append (0xde);
+                _writer.append (0xde);
                 pack (static_cast<uint16_t> (size));
             }
             else
             {
-                append (0xdf);
+                _writer.append (0xdf);
                 pack (size);
             }
+            return 0;
+        }
+
+        /**
+         * @brief get object members in writing order.
+         * @param object object to write.
+         * @return object members.
+         */
+        const Object& members (const Object& object) const noexcept
+        {
+            return object;
+        }
+
+        /**
+         * @brief stop object.
+         * @return 0 on success, -1 otherwise.
+         */
+        int stopObject ()
+        {
             return 0;
         }
 
@@ -373,14 +401,14 @@ namespace join
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setKey (const Value& key) override
+        int setKey (const Value& key)
         {
             if (JOIN_UNLIKELY (key.isArray () || key.isObject ()))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidKey);
                 return -1;
             }
-            return setValue (key);
+            return _writer.setValue (key);
         }
 
     protected:
@@ -391,22 +419,25 @@ namespace join
         template <typename Type>
         void pack (Type value)
         {
-            append (reinterpret_cast<const char*> (&swap (value)), sizeof (value));
+            _writer.append (reinterpret_cast<const char*> (&swap (value)), sizeof (value));
         }
+
+        /// SAX writer owning the output.
+        SaxWriter<PackWriter>& _writer;
     };
 
     /**
      * @brief message pack reader class.
      */
-    class PackReader : public StreamReader
+    class PackReader
     {
     public:
         /**
-         * @brief default constructor.
-         * @param root Value to write.
+         * @brief create instance.
+         * @param reader SAX reader building the document.
          */
-        PackReader (Value& root)
-        : StreamReader (root)
+        PackReader (SaxReader<PackReader>& reader)
+        : _reader (reader)
         {
         }
 
@@ -439,110 +470,8 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~PackReader () = default;
+        ~PackReader () = default;
 
-        /**
-         * @brief deserialize a document.
-         * @param document document to parse.
-         * @param length The length of the document to parse.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (const char* document, size_t length) override
-        {
-            StringView in (document, length);
-            return read (in);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param first The first character of the document to parse.
-         * @param last The last character of the document to parse.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (const char* first, const char* last) override
-        {
-            StringView in (first, last);
-            return read (in);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to parse.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (const std::string& document) override
-        {
-            StringView in (document.c_str (), document.size ());
-            return read (in);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (std::stringstream& document) override
-        {
-            StringStreamView in (document);
-            return read (in);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (std::istringstream& document) override
-        {
-            StringStreamView in (document);
-            return read (in);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (std::fstream& document) override
-        {
-            FileStreamView in (document);
-            return read (in);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (std::ifstream& document) override
-        {
-            FileStreamView in (document);
-            return read (in);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (std::iostream& document) override
-        {
-            StreamView in (document);
-            return read (in);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (std::istream& document) override
-        {
-            StreamView in (document);
-            return read (in);
-        }
-
-    protected:
         /**
          * @brief parse a document.
          * @param document document to parse.
@@ -551,8 +480,6 @@ namespace join
         template <typename ViewType>
         int read (ViewType& document)
         {
-            _depth = 0;
-
             if (JOIN_LIKELY (readValue (document) == 0))
             {
                 if (JOIN_LIKELY (document.peek () == std::char_traits<char>::eof ()))
@@ -566,6 +493,7 @@ namespace join
             return -1;
         }
 
+    protected:
         /**
          * @brief parse value.
          * @param document document to parse.
@@ -640,7 +568,7 @@ namespace join
         int readNull (ViewType& document, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? setKey (Value (in_place_index_t<Value::Null>{}, nullptr)) : setNull ();
+            return (isKey) ? _reader.setKey (Value (in_place_index_t<Value::Null>{}, nullptr)) : _reader.setNull ();
         }
 
         /**
@@ -653,7 +581,8 @@ namespace join
         int readFalse (ViewType& document, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? setKey (Value (in_place_index_t<Value::Boolean>{}, false)) : setBool (false);
+            return (isKey) ? _reader.setKey (Value (in_place_index_t<Value::Boolean>{}, false))
+                           : _reader.setBool (false);
         }
 
         /**
@@ -666,7 +595,7 @@ namespace join
         int readTrue (ViewType& document, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? setKey (Value (in_place_index_t<Value::Boolean>{}, true)) : setBool (true);
+            return (isKey) ? _reader.setKey (Value (in_place_index_t<Value::Boolean>{}, true)) : _reader.setBool (true);
         }
 
         /**
@@ -692,7 +621,7 @@ namespace join
                 len = unpack<uint8_t> (document) & ~0x90;
             }
 
-            if (JOIN_UNLIKELY (startArray (len) == -1))
+            if (JOIN_UNLIKELY (_reader.startArray (len) == -1))
             {
                 return -1;
             }
@@ -707,7 +636,7 @@ namespace join
                 --len;
             }
 
-            return stopArray ();
+            return _reader.stopArray ();
         }
 
         /**
@@ -733,7 +662,7 @@ namespace join
                 len = unpack<uint8_t> (document) & ~0x80;
             }
 
-            if (JOIN_UNLIKELY (startObject (len) == -1))
+            if (JOIN_UNLIKELY (_reader.startObject (len) == -1))
             {
                 return -1;
             }
@@ -753,7 +682,7 @@ namespace join
                 --len;
             }
 
-            return stopObject ();
+            return _reader.stopObject ();
         }
 
         /**
@@ -845,7 +774,8 @@ namespace join
                 return -1;
             }
 
-            return isKey ? setKey (Value (in_place_index_t<Value::String>{}, output)) : setString (output);
+            return isKey ? _reader.setKey (Value (in_place_index_t<Value::String>{}, std::move (output)))
+                         : _reader.setString (std::move (output));
         }
 
         /**
@@ -880,7 +810,7 @@ namespace join
                 return -1;
             }
 
-            return setString (output);
+            return _reader.setString (std::move (output));
         }
 
         /**
@@ -897,62 +827,74 @@ namespace join
             if (head <= 0x7f)
             {
                 auto number = uint32_t (head);
-                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
+                             : _reader.setUint (number);
             }
             else if (head >= 0xe0)
             {
                 auto number = int32_t (static_cast<int8_t> (head));
-                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Integer>{}, number))
+                             : _reader.setInt (number);
             }
             else if (head == 0xd3)
             {
                 auto number = unpack<int64_t> (document);
-                return isKey ? setKey (Value (in_place_index_t<Value::Integer64>{}, number)) : setInt64 (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Integer64>{}, number))
+                             : _reader.setInt64 (number);
             }
             else if (head == 0xcf)
             {
                 auto number = unpack<uint64_t> (document);
-                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned64>{}, number)) : setUint64 (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Unsigned64>{}, number))
+                             : _reader.setUint64 (number);
             }
             else if (head == 0xcb)
             {
                 auto number = unpack<double> (document);
-                return isKey ? setKey (Value (in_place_index_t<Value::Real>{}, number)) : setDouble (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Real>{}, number))
+                             : _reader.setDouble (number);
             }
             else if (head == 0xd2)
             {
                 auto number = unpack<int32_t> (document);
-                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Integer>{}, number))
+                             : _reader.setInt (number);
             }
             else if (head == 0xce)
             {
                 auto number = unpack<uint32_t> (document);
-                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
+                             : _reader.setUint (number);
             }
             else if (head == 0xca)
             {
                 auto number = double (unpack<float> (document));
-                return isKey ? setKey (Value (in_place_index_t<Value::Real>{}, number)) : setDouble (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Real>{}, number))
+                             : _reader.setDouble (number);
             }
             else if (head == 0xd1)
             {
                 auto number = int32_t (unpack<int16_t> (document));
-                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Integer>{}, number))
+                             : _reader.setInt (number);
             }
             else if (head == 0xcd)
             {
                 auto number = uint32_t (unpack<uint16_t> (document));
-                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
+                             : _reader.setUint (number);
             }
             else if (head == 0xd0)
             {
                 auto number = int32_t (unpack<int8_t> (document));
-                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Integer>{}, number))
+                             : _reader.setInt (number);
             }
             else if (head == 0xcc)
             {
                 auto number = uint32_t (unpack<uint8_t> (document));
-                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+                return isKey ? _reader.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
+                             : _reader.setUint (number);
             }
             else
             {
@@ -1106,6 +1048,9 @@ namespace join
         {
             return ((c >= 0x80) && (c <= 0x8f)) || (c == 0xde) || (c == 0xdf);
         }
+
+        /// SAX reader building the document.
+        SaxReader<PackReader>& _reader;
     };
 }
 

@@ -41,6 +41,7 @@ using join::Value;
 
 using join::SaxErrc;
 using join::PackReader;
+using join::SaxReader;
 
 /**
  * @brief Test deserialize method.
@@ -74,7 +75,7 @@ TEST (PackReader, deserialize)
     ASSERT_EQ (value.deserialize<PackReader> (&data[0], &data[sizeof (data)]), -1);
     ASSERT_EQ (join::lastError, SaxErrc::ExtraData);
 
-    PackReader reader (value);
+    SaxReader<PackReader> reader (value);
     ASSERT_EQ (reader.deserialize (std::string ({'\x92', '\x01'})), -1);
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());

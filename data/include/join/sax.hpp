@@ -102,155 +102,24 @@ namespace join
     std::error_condition make_error_condition (SaxErrc code) noexcept;
 
     /**
-     * @brief SAX API interface class.
+     * @brief stream serializer class.
      */
-    class SaxHandler
+    template <typename Handler>
+    class SaxWriter
     {
-    public:
-        /**
-         * @brief default constructor.
-         */
-        SaxHandler () = default;
+        /// handler allowed to use the traversal.
+        friend Handler;
 
-        /**
-         * @brief copy constructor.
-         * @param other object to copy.
-         */
-        SaxHandler (const SaxHandler& other) = default;
-
-        /**
-         * @brief copy assignment.
-         * @param other object to copy.
-         * @return a reference of the current object.
-         */
-        SaxHandler& operator= (const SaxHandler& other) = default;
-
-        /**
-         * @brief move constructor.
-         * @param other object to move.
-         */
-        SaxHandler (SaxHandler&& other) = default;
-
-        /**
-         * @brief move assignment.
-         * @param other object to move.
-         * @return a reference of the current object.
-         */
-        SaxHandler& operator= (SaxHandler&& other) = default;
-
-        /**
-         * @brief destroy instance.
-         */
-        virtual ~SaxHandler () = default;
-
-        /**
-         * @brief set null value.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setNull () = 0;
-
-        /**
-         * @brief set boolean value.
-         * @param value boolean value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setBool (bool value) = 0;
-
-        /**
-         * @brief set integer value.
-         * @param value integer value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setInt (int32_t value) = 0;
-
-        /**
-         * @brief set unsigned integer value.
-         * @param value unsigned integer value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setUint (uint32_t value) = 0;
-
-        /**
-         * @brief set 64 bits integer value.
-         * @param value 64 bits integer value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setInt64 (int64_t value) = 0;
-
-        /**
-         * @brief set unsigned 64 bits integer value.
-         * @param value unsigned 64 bits integer value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setUint64 (uint64_t value) = 0;
-
-        /**
-         * @brief set real value.
-         * @param value real value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setDouble (double value) = 0;
-
-        /**
-         * @brief set string value.
-         * @param value string value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setString (const std::string& value) = 0;
-
-        /**
-         * @brief start array.
-         * @param size array size.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int startArray (uint32_t size = 0) = 0;
-
-        /**
-         * @brief stop array.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int stopArray ()
-        {
-            return 0;
-        }
-
-        /**
-         * @brief start object.
-         * @param size object size.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int startObject (uint32_t size = 0) = 0;
-
-        /**
-         * @brief set key.
-         * @param key object key.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setKey (const Value& key) = 0;
-
-        /**
-         * @brief stop object.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int stopObject ()
-        {
-            return 0;
-        }
-    };
-
-    /**
-     * @brief stream serializer abstract class.
-     */
-    class StreamWriter : public SaxHandler
-    {
     public:
         /**
          * @brief create instance.
          * @param document document to create.
+         * @param args arguments forwarded to the handler.
          */
-        StreamWriter (std::ostream& document)
-        : SaxHandler ()
-        , _out (document.rdbuf ())
+        template <typename... Args>
+        explicit SaxWriter (std::ostream& document, Args&&... args)
+        : _out (document.rdbuf ())
+        , _handler (*this, std::forward<Args> (args)...)
         {
         }
 
@@ -258,37 +127,37 @@ namespace join
          * @brief Create the Writer instance by copy.
          * @param other Other object to copy.
          */
-        StreamWriter (const StreamWriter& other) = delete;
+        SaxWriter (const SaxWriter& other) = delete;
 
         /**
          * @brief Assign the Writer instance by copy.
          * @param other Other object to copy.
          */
-        StreamWriter& operator= (const StreamWriter& other) = delete;
+        SaxWriter& operator= (const SaxWriter& other) = delete;
 
         /**
          * @brief Create the Writer instance by move.
          * @param other Other object to move.
          */
-        StreamWriter (StreamWriter&& other) = delete;
+        SaxWriter (SaxWriter&& other) = delete;
 
         /**
          * @brief Assign the Writer instance by move.
          * @param other Other object to move.
          */
-        StreamWriter& operator= (StreamWriter&& other) = delete;
+        SaxWriter& operator= (SaxWriter&& other) = delete;
 
         /**
          * @brief Destroy the Writer instance.
          */
-        virtual ~StreamWriter () = default;
+        ~SaxWriter () = default;
 
         /**
          * @brief Serialize data.
          * @param value Value to serialize.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int serialize (const Value& value)
+        int serialize (const Value& value)
         {
             _capacity = sizeof (_buffer);
             int result;
@@ -305,6 +174,133 @@ namespace join
             flush ();
             _capacity = 0;
             return result;
+        }
+
+        /**
+         * @brief set null value.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setNull ()
+        {
+            return _handler.setNull ();
+        }
+
+        /**
+         * @brief set boolean value.
+         * @param value boolean value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setBool (bool value)
+        {
+            return _handler.setBool (value);
+        }
+
+        /**
+         * @brief set integer value.
+         * @param value integer value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setInt (int32_t value)
+        {
+            return _handler.setInt (value);
+        }
+
+        /**
+         * @brief set unsigned integer value.
+         * @param value unsigned integer value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setUint (uint32_t value)
+        {
+            return _handler.setUint (value);
+        }
+
+        /**
+         * @brief set 64 bits integer value.
+         * @param value 64 bits integer value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setInt64 (int64_t value)
+        {
+            return _handler.setInt64 (value);
+        }
+
+        /**
+         * @brief set unsigned 64 bits integer value.
+         * @param value unsigned 64 bits integer value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setUint64 (uint64_t value)
+        {
+            return _handler.setUint64 (value);
+        }
+
+        /**
+         * @brief set real value.
+         * @param value real value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setDouble (double value)
+        {
+            return _handler.setDouble (value);
+        }
+
+        /**
+         * @brief set string value.
+         * @param value string value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setString (const std::string& value)
+        {
+            return _handler.setString (value);
+        }
+
+        /**
+         * @brief start array.
+         * @param size array size.
+         * @return 0 on success, -1 otherwise.
+         */
+        int startArray (uint32_t size = 0)
+        {
+            return _handler.startArray (size);
+        }
+
+        /**
+         * @brief stop array.
+         * @return 0 on success, -1 otherwise.
+         */
+        int stopArray ()
+        {
+            return _handler.stopArray ();
+        }
+
+        /**
+         * @brief start object.
+         * @param size object size.
+         * @return 0 on success, -1 otherwise.
+         */
+        int startObject (uint32_t size = 0)
+        {
+            return _handler.startObject (size);
+        }
+
+        /**
+         * @brief set key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (const Value& key)
+        {
+            return _handler.setKey (key);
+        }
+
+        /**
+         * @brief stop object.
+         * @return 0 on success, -1 otherwise.
+         */
+        int stopObject ()
+        {
+            return _handler.stopObject ();
         }
 
     protected:
@@ -354,11 +350,11 @@ namespace join
          * @param value array value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setArray (const Array& array)
+        int setArray (const Array& array)
         {
             if (startArray (array.size ()) == -1)
             {
-                return -1;  // LCOV_EXCL_LINE
+                return -1;
             }
 
             for (auto const& element : array)
@@ -377,14 +373,14 @@ namespace join
          * @param value object value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setObject (const Object& object)
+        int setObject (const Object& object)
         {
             if (startObject (object.size ()) == -1)
             {
-                return -1;  // LCOV_EXCL_LINE
+                return -1;
             }
 
-            for (auto const& member : object)
+            for (const Member& member : _handler.members (object))
             {
                 if (setKey (member.first) == -1)
                 {
@@ -454,6 +450,9 @@ namespace join
         /// underlying output stream.
         std::streambuf* _out;
 
+        /// handler.
+        Handler _handler;
+
         /// output buffer.
         char _buffer[1024];
 
@@ -465,17 +464,21 @@ namespace join
     };
 
     /**
-     * @brief stream deserializer abstract class.
+     * @brief stream deserializer class.
      */
-    class StreamReader : protected SaxHandler
+    template <typename Handler>
+    class SaxReader
     {
+        /// handler allowed to build the document.
+        friend Handler;
+
     public:
         /**
          * @brief default constructor.
          * @param root Value to write.
          */
-        StreamReader (Value& root)
-        : SaxHandler ()
+        explicit SaxReader (Value& root)
+        : _handler (*this)
         , _stack (stack ())
         , _root (root)
         {
@@ -485,32 +488,32 @@ namespace join
          * @brief copy constructor.
          * @param other object to copy.
          */
-        StreamReader (const StreamReader& other) = delete;
+        SaxReader (const SaxReader& other) = delete;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        StreamReader& operator= (const StreamReader& other) = delete;
+        SaxReader& operator= (const SaxReader& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        StreamReader (StreamReader&& other) = delete;
+        SaxReader (SaxReader&& other) = delete;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        StreamReader& operator= (StreamReader&& other) = delete;
+        SaxReader& operator= (SaxReader&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        virtual ~StreamReader () = default;
+        ~SaxReader () = default;
 
         /**
          * @brief deserialize a document.
@@ -518,7 +521,11 @@ namespace join
          * @param length The length of the document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int deserialize (const char* document, size_t length) = 0;
+        int deserialize (const char* document, size_t length)
+        {
+            StringView in (document, length);
+            return read (in);
+        }
 
         /**
          * @brief deserialize a document.
@@ -526,63 +533,107 @@ namespace join
          * @param last The last character of the document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int deserialize (const char* first, const char* last) = 0;
+        int deserialize (const char* first, const char* last)
+        {
+            StringView in (first, last);
+            return read (in);
+        }
 
         /**
          * @brief deserialize a document.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int deserialize (const std::string& document) = 0;
+        int deserialize (const std::string& document)
+        {
+            StringView in (document.c_str (), document.size ());
+            return read (in);
+        }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int deserialize (std::stringstream& document) = 0;
+        int deserialize (std::stringstream& document)
+        {
+            StringStreamView in (document);
+            return read (in);
+        }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int deserialize (std::istringstream& document) = 0;
+        int deserialize (std::istringstream& document)
+        {
+            StringStreamView in (document);
+            return read (in);
+        }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int deserialize (std::fstream& document) = 0;
+        int deserialize (std::fstream& document)
+        {
+            FileStreamView in (document);
+            return read (in);
+        }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int deserialize (std::ifstream& document) = 0;
+        int deserialize (std::ifstream& document)
+        {
+            FileStreamView in (document);
+            return read (in);
+        }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int deserialize (std::iostream& document) = 0;
+        int deserialize (std::iostream& document)
+        {
+            StreamView in (document);
+            return read (in);
+        }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int deserialize (std::istream& document) = 0;
+        int deserialize (std::istream& document)
+        {
+            StreamView in (document);
+            return read (in);
+        }
 
     protected:
+        /**
+         * @brief parse a document.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        int read (ViewType& document)
+        {
+            _depth = 0;
+            return _handler.read (document);
+        }
+
         /**
          * @brief set null value.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setNull () override
+        int setNull ()
         {
             return emplaceValue<Value::Null> (nullptr);
         }
@@ -592,7 +643,7 @@ namespace join
          * @param value boolean value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setBool (bool value) override
+        int setBool (bool value)
         {
             return emplaceValue<Value::Boolean> (value);
         }
@@ -602,7 +653,7 @@ namespace join
          * @param value integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setInt (int32_t value) override
+        int setInt (int32_t value)
         {
             return emplaceValue<Value::Integer> (value);
         }
@@ -612,7 +663,7 @@ namespace join
          * @param value unsigned integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setUint (uint32_t value) override
+        int setUint (uint32_t value)
         {
             return emplaceValue<Value::Unsigned> (value);
         }
@@ -622,7 +673,7 @@ namespace join
          * @param value 64 bits integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setInt64 (int64_t value) override
+        int setInt64 (int64_t value)
         {
             return emplaceValue<Value::Integer64> (value);
         }
@@ -632,7 +683,7 @@ namespace join
          * @param value unsigned 64 bits integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setUint64 (uint64_t value) override
+        int setUint64 (uint64_t value)
         {
             return emplaceValue<Value::Unsigned64> (value);
         }
@@ -642,19 +693,19 @@ namespace join
          * @param value real value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setDouble (double value) override
+        int setDouble (double value)
         {
             return emplaceValue<Value::Real> (value);
         }
 
         /**
          * @brief set string value.
-         * @param value string value to set.
+         * @param value string value to move.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setString (const std::string& value) override
+        int setString (std::string&& value)
         {
-            return emplaceValue<Value::String> (value);
+            return emplaceValue<Value::String> (std::move (value));
         }
 
         /**
@@ -662,7 +713,7 @@ namespace join
          * @param size array size (ignored).
          * @return 0 on success, -1 otherwise.
          */
-        virtual int startArray ([[maybe_unused]] uint32_t size = 0) override
+        int startArray ([[maybe_unused]] uint32_t size = 0)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -683,7 +734,7 @@ namespace join
          * @brief stop array.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int stopArray () override
+        int stopArray ()
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -710,7 +761,7 @@ namespace join
          * @param size object size (ignored).
          * @return 0 on success, -1 otherwise.
          */
-        virtual int startObject ([[maybe_unused]] uint32_t size = 0) override
+        int startObject ([[maybe_unused]] uint32_t size = 0)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -729,12 +780,12 @@ namespace join
 
         /**
          * @brief set key.
-         * @param key object key.
+         * @param key object key to move.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setKey (const Value& key) override
+        int setKey (Value&& key)
         {
-            _stack.emplace_back (key);
+            _stack.emplace_back (std::move (key));
             return 0;
         }
 
@@ -742,7 +793,7 @@ namespace join
          * @brief stop object.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int stopObject () override
+        int stopObject ()
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -797,6 +848,9 @@ namespace join
             thread_local std::vector<Value> values;
             return values;
         }
+
+        /// handler.
+        Handler _handler;
 
         /// max stack depth.
         static constexpr size_t _maxdepth = 19;
