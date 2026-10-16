@@ -856,7 +856,7 @@ namespace join
         static constexpr size_t _maxdepth = 19;
 
         /// start of each open container in _stack.
-        size_t _starts[_maxdepth];
+        size_t _starts[_maxdepth] = {};
 
         /// number of open containers.
         size_t _depth = 0;

@@ -678,46 +678,13 @@ namespace join
         }
 
         /**
-         * @brief validate the encoding of a string (validation disabled).
-         * @param value string to validate.
-         * @return 0.
-         */
-        template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::None, int>::type validate (
-            [[maybe_unused]] const std::string& value) noexcept
-        {
-            return 0;
-        }
-
-        /**
-         * @brief validate the encoding of a string.
-         * @param value string to validate.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::Canonical, int>::type validate (
-            const std::string& value) noexcept
-        {
-            if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
-            {
-                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
-                return -1;
-            }
-            return 0;
-        }
-
-        /**
          * @brief escape string value.
          * @param value string value to escape.
          * @return 0 on success, -1 otherwise.
          */
-        int writeEscaped (const std::string& value)
+        template <JsonWriteMode Mode = WriteMode>
+        typename std::enable_if<Mode == JsonWriteMode::None, int>::type writeEscaped (const std::string& value)
         {
-            if (JOIN_UNLIKELY (validate (value) == -1))
-            {
-                return -1;
-            }
-
             const char* cur = value.data ();
             const char* end = cur + value.size ();
 
@@ -775,6 +742,22 @@ namespace join
             }
 
             return 0;
+        }
+
+        /**
+         * @brief validate and escape string value.
+         * @param value string value to escape.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonWriteMode Mode = WriteMode>
+        typename std::enable_if<Mode == JsonWriteMode::Canonical, int>::type writeEscaped (const std::string& value)
+        {
+            if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
+            {
+                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
+                return -1;
+            }
+            return writeEscaped<JsonWriteMode::None> (value);
         }
 
         /**
