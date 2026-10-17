@@ -26,28 +26,21 @@
 #define JOIN_DATA_SAX_HPP
 
 // libjoin.
-#include <join/error.hpp>
 #include <join/value.hpp>
-#include <join/utils.hpp>
-#include <join/view.hpp>
+#include <join/error.hpp>
 
 // C++.
 #include <system_error>
-#include <iterator>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <string>
-#include <vector>
 
 // C.
-#include <cstring>
+#include <cstdint>
 #include <cstddef>
 
 namespace join
 {
-    /// forward declaration.
-    class Value;
+    /// max number of nested containers.
+    constexpr size_t saxMaxDepth = 256;
 
     /**
      * @brief SAX API generic error codes.
@@ -58,7 +51,8 @@ namespace join
         InvalidParent,     /**< Parent not an array nor an object. */
         InvalidKey,        /**< Key is invalid. */
         InvalidValue,      /**< Value is invalid. */
-        ExtraData          /**< Extra data detected. */
+        ExtraData,         /**< Extra data detected. */
+        Truncated          /**< Data is truncated. */
     };
 
     /**
@@ -102,716 +96,154 @@ namespace join
     std::error_condition make_error_condition (SaxErrc code) noexcept;
 
     /**
-     * @brief SAX API interface class.
+     * @brief SAX handler ignoring every event, to derive from and use through the derived type.
      */
-    class SaxHandler
+    struct SaxHandler
     {
-    public:
-        /**
-         * @brief default constructor.
-         */
-        SaxHandler () = default;
-
-        /**
-         * @brief copy constructor.
-         * @param other object to copy.
-         */
-        SaxHandler (const SaxHandler& other) = default;
-
-        /**
-         * @brief copy assignment.
-         * @param other object to copy.
-         * @return a reference of the current object.
-         */
-        SaxHandler& operator= (const SaxHandler& other) = default;
-
-        /**
-         * @brief move constructor.
-         * @param other object to move.
-         */
-        SaxHandler (SaxHandler&& other) = default;
-
-        /**
-         * @brief move assignment.
-         * @param other object to move.
-         * @return a reference of the current object.
-         */
-        SaxHandler& operator= (SaxHandler&& other) = default;
-
-        /**
-         * @brief destroy instance.
-         */
-        virtual ~SaxHandler () = default;
-
         /**
          * @brief set null value.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int setNull () = 0;
+        int setNull () noexcept
+        {
+            return 0;
+        }
 
         /**
          * @brief set boolean value.
          * @param value boolean value to set.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int setBool (bool value) = 0;
+        int setBool ([[maybe_unused]] bool value) noexcept
+        {
+            return 0;
+        }
 
         /**
          * @brief set integer value.
          * @param value integer value to set.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int setInt (int32_t value) = 0;
+        int setInt ([[maybe_unused]] int32_t value) noexcept
+        {
+            return 0;
+        }
 
         /**
          * @brief set unsigned integer value.
          * @param value unsigned integer value to set.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int setUint (uint32_t value) = 0;
+        int setUint ([[maybe_unused]] uint32_t value) noexcept
+        {
+            return 0;
+        }
 
         /**
          * @brief set 64 bits integer value.
          * @param value 64 bits integer value to set.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int setInt64 (int64_t value) = 0;
+        int setInt64 ([[maybe_unused]] int64_t value) noexcept
+        {
+            return 0;
+        }
 
         /**
          * @brief set unsigned 64 bits integer value.
          * @param value unsigned 64 bits integer value to set.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int setUint64 (uint64_t value) = 0;
+        int setUint64 ([[maybe_unused]] uint64_t value) noexcept
+        {
+            return 0;
+        }
 
         /**
          * @brief set real value.
          * @param value real value to set.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int setDouble (double value) = 0;
+        int setDouble ([[maybe_unused]] double value) noexcept
+        {
+            return 0;
+        }
 
         /**
          * @brief set string value.
          * @param value string value to set.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int setString (const std::string& value) = 0;
+        int setString ([[maybe_unused]] const std::string& value) noexcept
+        {
+            return 0;
+        }
 
         /**
          * @brief start array.
-         * @param size array size.
-         * @return 0 on success, -1 otherwise.
+         * @param size array size, absent when called by the JSON reader.
+         * @return 0.
          */
-        virtual int startArray (uint32_t size = 0) = 0;
+        int startArray ([[maybe_unused]] uint32_t size = 0) noexcept
+        {
+            return 0;
+        }
 
         /**
          * @brief stop array.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int stopArray ()
+        int stopArray () noexcept
         {
             return 0;
         }
 
         /**
          * @brief start object.
-         * @param size object size.
-         * @return 0 on success, -1 otherwise.
+         * @param size object size, absent when called by the JSON reader.
+         * @return 0.
          */
-        virtual int startObject (uint32_t size = 0) = 0;
-
-        /**
-         * @brief set key.
-         * @param key object key.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setKey (const Value& key) = 0;
-
-        /**
-         * @brief stop object.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int stopObject ()
+        int startObject ([[maybe_unused]] uint32_t size = 0) noexcept
         {
             return 0;
         }
-    };
 
-    /**
-     * @brief stream serializer abstract class.
-     */
-    class StreamWriter : public SaxHandler
-    {
-    public:
         /**
-         * @brief create instance.
-         * @param document document to create.
+         * @brief get object members in writing order.
+         * @param object object to write.
+         * @return object members in insertion order.
          */
-        StreamWriter (std::ostream& document)
-        : SaxHandler ()
-        , _out (document.rdbuf ())
+        const Object& members (const Object& object) const noexcept
         {
-        }
-
-        /**
-         * @brief Create the Writer instance by copy.
-         * @param other Other object to copy.
-         */
-        StreamWriter (const StreamWriter& other) = delete;
-
-        /**
-         * @brief Assign the Writer instance by copy.
-         * @param other Other object to copy.
-         */
-        StreamWriter& operator= (const StreamWriter& other) = delete;
-
-        /**
-         * @brief Create the Writer instance by move.
-         * @param other Other object to move.
-         */
-        StreamWriter (StreamWriter&& other) = delete;
-
-        /**
-         * @brief Assign the Writer instance by move.
-         * @param other Other object to move.
-         */
-        StreamWriter& operator= (StreamWriter&& other) = delete;
-
-        /**
-         * @brief Destroy the Writer instance.
-         */
-        virtual ~StreamWriter () = default;
-
-        /**
-         * @brief Serialize data.
-         * @param value Value to serialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int serialize (const Value& value)
-        {
-            _capacity = sizeof (_buffer);
-            int result;
-            try
-            {
-                result = setValue (value);
-            }
-            catch (...)
-            {
-                flush ();
-                _capacity = 0;
-                throw;
-            }
-            flush ();
-            _capacity = 0;
-            return result;
-        }
-
-    protected:
-        /**
-         * @brief set value.
-         * @param value Value to write.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setValue (const Value& value)
-        {
-            switch (value.index ())
-            {
-                case Value::Boolean:
-                    return setBool (value.get<Value::Boolean> ());
-
-                case Value::Integer:
-                    return setInt (value.get<Value::Integer> ());
-
-                case Value::Unsigned:
-                    return setUint (value.get<Value::Unsigned> ());
-
-                case Value::Integer64:
-                    return setInt64 (value.get<Value::Integer64> ());
-
-                case Value::Unsigned64:
-                    return setUint64 (value.get<Value::Unsigned64> ());
-
-                case Value::Real:
-                    return setDouble (value.get<Value::Real> ());
-
-                case Value::String:
-                    return setString (value.get<Value::String> ());
-
-                case Value::ArrayValue:
-                    return setArray (value.get<Value::ArrayValue> ());
-
-                case Value::ObjectValue:
-                    return setObject (value.get<Value::ObjectValue> ());
-
-                default:
-                    return setNull ();
-            }
-        }
-
-        /**
-         * @brief set array value.
-         * @param value array value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setArray (const Array& array)
-        {
-            if (startArray (array.size ()) == -1)
-            {
-                return -1;  // LCOV_EXCL_LINE
-            }
-
-            for (auto const& element : array)
-            {
-                if (setValue (element) == -1)
-                {
-                    return -1;
-                }
-            }
-
-            return stopArray ();
-        }
-
-        /**
-         * @brief set object value.
-         * @param value object value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setObject (const Object& object)
-        {
-            if (startObject (object.size ()) == -1)
-            {
-                return -1;  // LCOV_EXCL_LINE
-            }
-
-            for (auto const& member : object)
-            {
-                if (setKey (member.first) == -1)
-                {
-                    return -1;
-                }
-
-                if (setValue (member.second) == -1)
-                {
-                    return -1;
-                }
-            }
-
-            return stopObject ();
-        }
-
-        /**
-         * @brief append character to output stream in batch.
-         * @param data data to append to output stream.
-         */
-        inline void append (char data) noexcept
-        {
-            if (JOIN_UNLIKELY (_size == _capacity))
-            {
-                flush ();
-                if (_capacity == 0)
-                {
-                    _out->sputc (data);
-                    return;
-                }
-            }
-            _buffer[_size++] = data;
-        }
-
-        /**
-         * @brief append data to output stream in batch.
-         * @param data data to append to output stream.
-         * @param size data size.
-         */
-        inline void append (const char* data, uint32_t size) noexcept
-        {
-            if (JOIN_UNLIKELY (size > _capacity - _size))
-            {
-                flush ();
-                if (size >= _capacity)
-                {
-                    _out->sputn (data, size);
-                    return;
-                }
-            }
-            std::memcpy (_buffer + _size, data, size);
-            _size += size;
-        }
-
-        /**
-         * @brief flush buffered data to output stream.
-         */
-        inline void flush () noexcept
-        {
-            if (_size)
-            {
-                _out->sputn (_buffer, _size);
-                _size = 0;
-            }
-        }
-
-    protected:
-        /// underlying output stream.
-        std::streambuf* _out;
-
-        /// output buffer.
-        char _buffer[1024];
-
-        /// output buffer size.
-        size_t _size = 0;
-
-        /// output buffer capacity, 0 outside of serialize.
-        size_t _capacity = 0;
-    };
-
-    /**
-     * @brief stream deserializer abstract class.
-     */
-    class StreamReader : protected SaxHandler
-    {
-    public:
-        /**
-         * @brief default constructor.
-         * @param root Value to write.
-         */
-        StreamReader (Value& root)
-        : SaxHandler ()
-        , _stack (stack ())
-        , _root (root)
-        {
-        }
-
-        /**
-         * @brief copy constructor.
-         * @param other object to copy.
-         */
-        StreamReader (const StreamReader& other) = delete;
-
-        /**
-         * @brief copy assignment.
-         * @param other object to copy.
-         * @return a reference of the current object.
-         */
-        StreamReader& operator= (const StreamReader& other) = delete;
-
-        /**
-         * @brief move constructor.
-         * @param other object to move.
-         */
-        StreamReader (StreamReader&& other) = delete;
-
-        /**
-         * @brief move assignment.
-         * @param other object to move.
-         * @return a reference of the current object.
-         */
-        StreamReader& operator= (StreamReader&& other) = delete;
-
-        /**
-         * @brief destroy instance.
-         */
-        virtual ~StreamReader () = default;
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param length The length of the document to parse.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int deserialize (const char* document, size_t length) = 0;
-
-        /**
-         * @brief deserialize a document.
-         * @param first The first character of the document to parse.
-         * @param last The last character of the document to parse.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int deserialize (const char* first, const char* last) = 0;
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to parse.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int deserialize (const std::string& document) = 0;
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int deserialize (std::stringstream& document) = 0;
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int deserialize (std::istringstream& document) = 0;
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int deserialize (std::fstream& document) = 0;
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int deserialize (std::ifstream& document) = 0;
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int deserialize (std::iostream& document) = 0;
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int deserialize (std::istream& document) = 0;
-
-    protected:
-        /**
-         * @brief set null value.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setNull () override
-        {
-            return emplaceValue<Value::Null> (nullptr);
-        }
-
-        /**
-         * @brief set boolean value.
-         * @param value boolean value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setBool (bool value) override
-        {
-            return emplaceValue<Value::Boolean> (value);
-        }
-
-        /**
-         * @brief set integer value.
-         * @param value integer value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setInt (int32_t value) override
-        {
-            return emplaceValue<Value::Integer> (value);
-        }
-
-        /**
-         * @brief set unsigned integer value.
-         * @param value unsigned integer value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setUint (uint32_t value) override
-        {
-            return emplaceValue<Value::Unsigned> (value);
-        }
-
-        /**
-         * @brief set 64 bits integer value.
-         * @param value 64 bits integer value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setInt64 (int64_t value) override
-        {
-            return emplaceValue<Value::Integer64> (value);
-        }
-
-        /**
-         * @brief set unsigned 64 bits integer value.
-         * @param value unsigned 64 bits integer value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setUint64 (uint64_t value) override
-        {
-            return emplaceValue<Value::Unsigned64> (value);
-        }
-
-        /**
-         * @brief set real value.
-         * @param value real value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setDouble (double value) override
-        {
-            return emplaceValue<Value::Real> (value);
-        }
-
-        /**
-         * @brief set string value.
-         * @param value string value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setString (const std::string& value) override
-        {
-            return emplaceValue<Value::String> (value);
-        }
-
-        /**
-         * @brief start array.
-         * @param size array size (ignored).
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int startArray ([[maybe_unused]] uint32_t size = 0) override
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                _stack.clear ();
-            }
-            else if (JOIN_UNLIKELY (_depth >= _maxdepth))
-            {
-                join::lastError = make_error_code (SaxErrc::StackOverflow);
-                return -1;
-            }
-
-            _starts[_depth++] = _stack.size ();
-
-            return 0;
-        }
-
-        /**
-         * @brief stop array.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int stopArray () override
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                return 0;  // LCOV_EXCL_LINE
-            }
-
-            auto first = _stack.begin () + _starts[--_depth];
-            Array array (std::make_move_iterator (first), std::make_move_iterator (_stack.end ()));
-            _stack.erase (first, _stack.end ());
-
-            if (_depth == 0)
-            {
-                _root = std::move (array);
-                return 0;
-            }
-
-            _stack.emplace_back (in_place_index_t<Value::ArrayValue>{}, std::move (array));
-
-            return 0;
-        }
-
-        /**
-         * @brief start object.
-         * @param size object size (ignored).
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int startObject ([[maybe_unused]] uint32_t size = 0) override
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                _stack.clear ();
-            }
-            else if (JOIN_UNLIKELY (_depth >= _maxdepth))
-            {
-                join::lastError = make_error_code (SaxErrc::StackOverflow);
-                return -1;
-            }
-
-            _starts[_depth++] = _stack.size ();
-
-            return 0;
+            return object;
         }
 
         /**
          * @brief set key.
          * @param key object key.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int setKey (const Value& key) override
+        int setKey ([[maybe_unused]] const Value& key) noexcept
         {
-            _stack.emplace_back (key);
             return 0;
         }
 
         /**
          * @brief stop object.
-         * @return 0 on success, -1 otherwise.
+         * @return 0.
          */
-        virtual int stopObject () override
+        int stopObject () noexcept
         {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                return 0;  // LCOV_EXCL_LINE
-            }
-
-            auto first = _stack.begin () + _starts[--_depth];
-            Object object;
-            object.reserve ((_stack.end () - first) / 2);
-            for (auto it = first; it != _stack.end (); it += 2)
-            {
-                object.emplace_back (std::move (it[0]), std::move (it[1]));
-            }
-            _stack.erase (first, _stack.end ());
-
-            if (_depth == 0)
-            {
-                _root = std::move (object);
-                return 0;
-            }
-
-            _stack.emplace_back (in_place_index_t<Value::ObjectValue>{}, std::move (object));
-
             return 0;
         }
 
         /**
-         * @brief construct a value in place in the current container.
-         * @param args arguments forwarded to the value constructor.
-         * @return 0 on success, -1 otherwise.
+         * @brief reset the handler state after a failure.
          */
-        template <size_t I, typename... Args>
-        int emplaceValue (Args&&... args)
+        void reset () noexcept
         {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                return -1;
-            }
-
-            _stack.emplace_back (in_place_index_t<I>{}, std::forward<Args> (args)...);
-
-            return 0;
+            // do nothing.
         }
-
-        /**
-         * @brief get the value stack of the calling thread.
-         * @return value stack.
-         */
-        static std::vector<Value>& stack () noexcept
-        {
-            thread_local std::vector<Value> values;
-            return values;
-        }
-
-        /// max stack depth.
-        static constexpr size_t _maxdepth = 19;
-
-        /// start of each open container in _stack.
-        size_t _starts[_maxdepth];
-
-        /// number of open containers.
-        size_t _depth = 0;
-
-        /// stack of the values of the open containers.
-        std::vector<Value>& _stack;
-
-        /// root.
-        Value& _root;
     };
 }
 

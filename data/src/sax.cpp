@@ -55,6 +55,8 @@ std::string SaxCategory::message (int code) const
             return "value is invalid";
         case SaxErrc::ExtraData:
             return "extra data detected";
+        case SaxErrc::Truncated:
+            return "data is truncated";
         default:
             return "success";
     }
