@@ -51,6 +51,7 @@ TEST (SaxCategory, message)
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::InvalidKey)).c_str (), "key is invalid");
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::InvalidValue)).c_str (), "value is invalid");
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::ExtraData)).c_str (), "extra data detected");
+    EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::Truncated)).c_str (), "data is truncated");
 }
 
 /**

@@ -32,10 +32,20 @@ target_link_libraries(value.gtest ${JOIN_DATA} GTest::gtest_main)
 add_test(NAME value.gtest COMMAND value.gtest)
 install(TARGETS value.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(document.gtest document_test.cpp)
+target_link_libraries(document.gtest ${JOIN_DATA} GTest::gtest_main)
+add_test(NAME document.gtest COMMAND document.gtest)
+install(TARGETS document.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(sax_error.gtest sax_error_test.cpp)
 target_link_libraries(sax_error.gtest ${JOIN_DATA} GTest::gtest_main)
 add_test(NAME sax_error.gtest COMMAND sax_error.gtest)
 install(TARGETS sax_error.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(sax_handler.gtest sax_handler_test.cpp)
+target_link_libraries(sax_handler.gtest ${JOIN_DATA} GTest::gtest_main)
+add_test(NAME sax_handler.gtest COMMAND sax_handler.gtest)
+install(TARGETS sax_handler.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(pack_reader.gtest pack_reader_test.cpp)
 target_link_libraries(pack_reader.gtest ${JOIN_DATA} GTest::gtest_main)

@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/document.hpp>
 #include <join/json.hpp>
 
 // libraries.
@@ -32,7 +33,7 @@
 #include <stdexcept>
 #include <sstream>
 
-using join::SaxWriter;
+using join::Document;
 using join::JsonWriter;
 using join::Value;
 using join::Array;
@@ -44,17 +45,19 @@ using join::SaxErrc;
  */
 struct FailingBuffer : public std::streambuf
 {
-    std::streamsize xsputn ([[maybe_unused]] const char* data, std::streamsize size) override
+    std::streamsize xsputn (const char* data, std::streamsize size) override
     {
         if (!failed)
         {
             failed = true;
             throw std::runtime_error ("write failed");
         }
+        written.append (data, size);
         return size;
     }
 
     bool failed = false;
+    std::string written;
 };
 
 /**
@@ -63,7 +66,7 @@ struct FailingBuffer : public std::streambuf
 TEST (JsonWriter, setNull)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream);
+    JsonWriter jsonWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setNull (), 0);
@@ -76,7 +79,7 @@ TEST (JsonWriter, setNull)
 TEST (JsonWriter, setBool)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream);
+    JsonWriter jsonWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setBool (true), 0);
@@ -93,7 +96,7 @@ TEST (JsonWriter, setBool)
 TEST (JsonWriter, setInt)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream);
+    JsonWriter jsonWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setInt (std::numeric_limits<int32_t>::min ()), 0);
@@ -114,7 +117,7 @@ TEST (JsonWriter, setInt)
 TEST (JsonWriter, setUint)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream);
+    JsonWriter jsonWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setUint (0), 0);
@@ -131,7 +134,7 @@ TEST (JsonWriter, setUint)
 TEST (JsonWriter, setInt64)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream);
+    JsonWriter jsonWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setInt64 (std::numeric_limits<int64_t>::min ()), 0);
@@ -152,7 +155,7 @@ TEST (JsonWriter, setInt64)
 TEST (JsonWriter, setUint64)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream);
+    JsonWriter jsonWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setUint64 (0), 0);
@@ -169,7 +172,7 @@ TEST (JsonWriter, setUint64)
 TEST (JsonWriter, setDouble)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream);
+    JsonWriter jsonWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setDouble (98.6), 0);
@@ -210,7 +213,7 @@ TEST (JsonWriter, setDouble)
 TEST (JsonWriter, setString)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream);
+    JsonWriter jsonWriter (stream);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.setString ("foo"), 0);
@@ -227,7 +230,7 @@ TEST (JsonWriter, setString)
 TEST (JsonWriter, startArray)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream, 2);
+    JsonWriter jsonWriter (stream, 2);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.startArray (), 0);
@@ -251,12 +254,29 @@ TEST (JsonWriter, startArray)
 }
 
 /**
+ * @brief Test stopArray method.
+ */
+TEST (JsonWriter, stopArray)
+{
+    std::stringstream stream;
+    JsonWriter jsonWriter (stream);
+
+    EXPECT_EQ (jsonWriter.stopArray (), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+
+    EXPECT_EQ (jsonWriter.startArray (), 0);
+    EXPECT_EQ (jsonWriter.setNull (), 0);
+    EXPECT_EQ (jsonWriter.stopArray (), 0);
+    EXPECT_EQ (stream.str (), "[null]");
+}
+
+/**
  * @brief Test startObject method.
  */
 TEST (JsonWriter, startObject)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream, 2);
+    JsonWriter jsonWriter (stream, 2);
 
     stream.str ("");
     EXPECT_EQ (jsonWriter.startObject (), 0);
@@ -283,28 +303,100 @@ TEST (JsonWriter, startObject)
 }
 
 /**
+ * @brief Test members method.
+ */
+TEST (JsonWriter, members)
+{
+    std::stringstream stream;
+    JsonWriter jsonWriter (stream);
+    Object object{{"b", 1}, {"a", 2}};
+    EXPECT_EQ (&jsonWriter.members (object), &object);
+}
+
+/**
  * @brief Test setKey method.
  */
 TEST (JsonWriter, setKey)
 {
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream);
+    JsonWriter jsonWriter (stream);
 
-    stream.str ("");
+    EXPECT_EQ (jsonWriter.setKey ("foo"), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+
+    EXPECT_EQ (jsonWriter.startObject (), 0);
     EXPECT_EQ (jsonWriter.setKey ("foo"), 0);
-    EXPECT_EQ (stream.str (), "\"foo\":");
+    jsonWriter.flush ();
+    EXPECT_EQ (stream.str (), "{\"foo\":");
 
+    jsonWriter.reset ();
     stream.str ("");
+    EXPECT_EQ (jsonWriter.startObject (), 0);
     EXPECT_EQ (jsonWriter.setKey ("\"\\\b\f\n\r\t\x19"), 0);
-    EXPECT_EQ (stream.str (), "\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\":");
+    jsonWriter.flush ();
+    EXPECT_EQ (stream.str (), "{\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\":");
 }
 
 /**
- * @brief Test serialize method.
+ * @brief Test stopObject method.
  */
-TEST (JsonWriter, serialize)
+TEST (JsonWriter, stopObject)
 {
-    Value value;
+    std::stringstream stream;
+    JsonWriter jsonWriter (stream);
+
+    EXPECT_EQ (jsonWriter.stopObject (), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+
+    EXPECT_EQ (jsonWriter.startObject (), 0);
+    EXPECT_EQ (jsonWriter.setKey ("a"), 0);
+    EXPECT_EQ (jsonWriter.setNull (), 0);
+    EXPECT_EQ (jsonWriter.stopObject (), 0);
+    EXPECT_EQ (stream.str (), "{\"a\":null}");
+}
+
+/**
+ * @brief Test flush method.
+ */
+TEST (JsonWriter, flush)
+{
+    std::stringstream stream;
+    JsonWriter jsonWriter (stream);
+
+    EXPECT_EQ (jsonWriter.startArray (), 0);
+    EXPECT_EQ (jsonWriter.setInt (1), 0);
+    EXPECT_EQ (stream.str (), "");
+    jsonWriter.flush ();
+    EXPECT_EQ (stream.str (), "[1");
+    jsonWriter.flush ();
+    EXPECT_EQ (stream.str (), "[1");
+    EXPECT_EQ (jsonWriter.stopArray (), 0);
+    EXPECT_EQ (stream.str (), "[1]");
+}
+
+/**
+ * @brief Test reset method.
+ */
+TEST (JsonWriter, reset)
+{
+    std::stringstream stream;
+    JsonWriter jsonWriter (stream);
+
+    EXPECT_EQ (jsonWriter.startArray (), 0);
+    EXPECT_EQ (jsonWriter.setInt (1), 0);
+    jsonWriter.reset ();
+    EXPECT_EQ (stream.str (), "");
+    EXPECT_EQ (jsonWriter.setInt (2), 0);
+    EXPECT_EQ (stream.str (), "2");
+}
+
+/**
+ * @brief Test writing a whole document.
+ */
+TEST (JsonWriter, document)
+{
+    Document document;
+    Value& value = document.root ();
     value.pushBack (nullptr);
     value.pushBack (true);
     value.pushBack (int32_t (1));
@@ -315,10 +407,10 @@ TEST (JsonWriter, serialize)
     value.pushBack ("test");
 
     std::stringstream stream;
-    SaxWriter<JsonWriter> jsonWriter (stream);
+    JsonWriter jsonWriter (stream);
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();
+    EXPECT_EQ (document.serialize (jsonWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), "[null,true,1,2,3,4,1.23456789e-13,\"test\"]");
 
     value = Array{};
@@ -332,22 +424,23 @@ TEST (JsonWriter, serialize)
     expected += "\"" + std::string (2000, 'a') + "\"]";
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();
+    EXPECT_EQ (document.serialize (jsonWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), expected);
 
     value = Object{{Value (1), "One"}};
     stream.str ("");
-    EXPECT_EQ (jsonWriter.serialize (value), -1);
+    EXPECT_EQ (document.serialize (jsonWriter), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
+    EXPECT_EQ (stream.str (), "");
 
     value = Object{{"a", Object{{Value (1), "One"}}}};
     stream.str ("");
-    EXPECT_EQ (jsonWriter.serialize (value), -1);
+    EXPECT_EQ (document.serialize (jsonWriter), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
 
     value = Array{1, 2};
     stream.str ("");
-    EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();
+    EXPECT_EQ (document.serialize (jsonWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), "[1,2]");
 
     value = Array{};
@@ -356,7 +449,7 @@ TEST (JsonWriter, serialize)
         value = Array{value};
     }
     stream.str ("");
-    EXPECT_EQ (jsonWriter.serialize (value), -1);
+    EXPECT_EQ (document.serialize (jsonWriter), -1);
     EXPECT_EQ (join::lastError, SaxErrc::StackOverflow);
 
     value = Object{};
@@ -365,20 +458,22 @@ TEST (JsonWriter, serialize)
         value = Object{{"a", value}};
     }
     stream.str ("");
-    EXPECT_EQ (jsonWriter.serialize (value), -1);
+    EXPECT_EQ (document.serialize (jsonWriter), -1);
     EXPECT_EQ (join::lastError, SaxErrc::StackOverflow);
 
     value = Array{1, 2};
     stream.str ("");
-    EXPECT_EQ (jsonWriter.serialize (value), 0) << join::lastError.message ();
+    EXPECT_EQ (document.serialize (jsonWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), "[1,2]");
 
     FailingBuffer buffer;
     std::ostream failing (&buffer);
-    SaxWriter<JsonWriter> failingWriter (failing);
+    JsonWriter failingWriter (failing);
     value = Array{std::string (2000, 'a')};
-    EXPECT_THROW (failingWriter.serialize (value), std::runtime_error);
-    EXPECT_EQ (failingWriter.serialize (value), 0) << join::lastError.message ();
+    EXPECT_THROW (document.serialize (failingWriter), std::runtime_error);
+    value = Array{1, 2};
+    EXPECT_EQ (document.serialize (failingWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (buffer.written, "[1,2]");
 }
 
 /**
