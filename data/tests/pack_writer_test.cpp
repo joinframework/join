@@ -547,13 +547,13 @@ TEST (PackWriter, setKey)
     EXPECT_EQ (key (std::string (65536, 'x')), 0);
     EXPECT_EQ (stream.str ().compare (1, 6, std::string ({'\xDB', '\x00', '\x01', '\x00', '\x00', '\x78'})), 0);
 
-    EXPECT_EQ (key (Value (join::in_place_index_t<Value::ArrayValue>{})), -1);
+    EXPECT_EQ (key (Value (Array{})), -1);
 
-    EXPECT_EQ (key (Value (join::in_place_index_t<Value::ObjectValue>{})), -1);
+    EXPECT_EQ (key (Value (Object{})), -1);
 
     stream.str ("");
     EXPECT_EQ (packWriter.startObject (1), 0);
-    EXPECT_EQ (packWriter.setKey (Value (join::in_place_index_t<Value::ArrayValue>{})), -1);
+    EXPECT_EQ (packWriter.setKey (Value (Array{})), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
     EXPECT_EQ (packWriter.setNull (), 0);
     EXPECT_EQ (stream.str (), std::string ({'\xC0'}));

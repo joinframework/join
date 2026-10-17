@@ -240,7 +240,7 @@ TEST (Document, setInt)
 {
     Document document;
     ASSERT_EQ (document.setInt (-1), 0);
-    ASSERT_TRUE (document.root ().is<Value::Integer> ());
+    ASSERT_EQ (document.root ().index (), Value::Integer);
     ASSERT_EQ (document.root (), -1);
     ASSERT_EQ (JsonReader ().deserialize (std::string ("42"), document), 0) << join::lastError.message ();
     ASSERT_EQ (document.root (), 42);
@@ -248,7 +248,7 @@ TEST (Document, setInt)
     ASSERT_EQ (document.startArray (), 0);
     ASSERT_EQ (document.setInt (-1), 0);
     ASSERT_EQ (document.stopArray (), 0);
-    ASSERT_TRUE (document.root ()[0].is<Value::Integer> ());
+    ASSERT_EQ (document.root ()[0].index (), Value::Integer);
     ASSERT_EQ (document.root ()[0], -1);
 }
 
@@ -259,12 +259,12 @@ TEST (Document, setUint)
 {
     Document document;
     ASSERT_EQ (document.setUint (1), 0);
-    ASSERT_TRUE (document.root ().is<Value::Unsigned> ());
+    ASSERT_EQ (document.root ().index (), Value::Unsigned);
 
     ASSERT_EQ (document.startArray (), 0);
     ASSERT_EQ (document.setUint (1), 0);
     ASSERT_EQ (document.stopArray (), 0);
-    ASSERT_TRUE (document.root ()[0].is<Value::Unsigned> ());
+    ASSERT_EQ (document.root ()[0].index (), Value::Unsigned);
     ASSERT_EQ (document.root ()[0], 1U);
 }
 
@@ -275,12 +275,12 @@ TEST (Document, setInt64)
 {
     Document document;
     ASSERT_EQ (document.setInt64 (-1), 0);
-    ASSERT_TRUE (document.root ().is<Value::Integer64> ());
+    ASSERT_EQ (document.root ().index (), Value::Integer64);
 
     ASSERT_EQ (document.startArray (), 0);
     ASSERT_EQ (document.setInt64 (-1), 0);
     ASSERT_EQ (document.stopArray (), 0);
-    ASSERT_TRUE (document.root ()[0].is<Value::Integer64> ());
+    ASSERT_EQ (document.root ()[0].index (), Value::Integer64);
     ASSERT_EQ (document.root ()[0], int64_t (-1));
 }
 
@@ -291,12 +291,12 @@ TEST (Document, setUint64)
 {
     Document document;
     ASSERT_EQ (document.setUint64 (1), 0);
-    ASSERT_TRUE (document.root ().is<Value::Unsigned64> ());
+    ASSERT_EQ (document.root ().index (), Value::Unsigned64);
 
     ASSERT_EQ (document.startArray (), 0);
     ASSERT_EQ (document.setUint64 (1), 0);
     ASSERT_EQ (document.stopArray (), 0);
-    ASSERT_TRUE (document.root ()[0].is<Value::Unsigned64> ());
+    ASSERT_EQ (document.root ()[0].index (), Value::Unsigned64);
     ASSERT_EQ (document.root ()[0], uint64_t (1));
 }
 

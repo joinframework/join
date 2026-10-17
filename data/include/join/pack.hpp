@@ -434,25 +434,25 @@ namespace join
             switch (key.index ())
             {
                 case Value::Boolean:
-                    return setBool (key.get<Value::Boolean> ());
+                    return setBool (key.getBool ());
 
                 case Value::Integer:
-                    return setInt (key.get<Value::Integer> ());
+                    return setInt (key.getInt ());
 
                 case Value::Unsigned:
-                    return setUint (key.get<Value::Unsigned> ());
+                    return setUint (key.getUint ());
 
                 case Value::Integer64:
-                    return setInt64 (key.get<Value::Integer64> ());
+                    return setInt64 (key.getInt64 ());
 
                 case Value::Unsigned64:
-                    return setUint64 (key.get<Value::Unsigned64> ());
+                    return setUint64 (key.getUint64 ());
 
                 case Value::Real:
-                    return setDouble (key.get<Value::Real> ());
+                    return setDouble (key.getDouble ());
 
                 case Value::String:
-                    return setString (key.get<Value::String> ());
+                    return setString (key.getString ());
 
                 default:
                     return setNull ();
@@ -826,7 +826,7 @@ namespace join
         int readNull (ViewType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? handler.setKey (Value (in_place_index_t<Value::Null>{}, nullptr)) : handler.setNull ();
+            return (isKey) ? handler.setKey (Value (nullptr)) : handler.setNull ();
         }
 
         /**
@@ -840,8 +840,7 @@ namespace join
         int readFalse (ViewType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? handler.setKey (Value (in_place_index_t<Value::Boolean>{}, false))
-                           : handler.setBool (false);
+            return (isKey) ? handler.setKey (Value (false)) : handler.setBool (false);
         }
 
         /**
@@ -855,7 +854,7 @@ namespace join
         int readTrue (ViewType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? handler.setKey (Value (in_place_index_t<Value::Boolean>{}, true)) : handler.setBool (true);
+            return (isKey) ? handler.setKey (Value (true)) : handler.setBool (true);
         }
 
         /**
@@ -1062,8 +1061,7 @@ namespace join
                 return -1;
             }
 
-            return isKey ? handler.setKey (Value (in_place_index_t<Value::String>{}, std::move (output)))
-                         : handler.setString (std::move (output));
+            return isKey ? handler.setKey (Value (std::move (output))) : handler.setString (std::move (output));
         }
 
         /**
@@ -1123,14 +1121,12 @@ namespace join
             if (head <= 0x7f)
             {
                 auto number = uint32_t (head);
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
-                             : handler.setUint (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setUint (number);
             }
             else if (head >= 0xe0)
             {
                 auto number = int32_t (static_cast<int8_t> (head));
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Integer>{}, number))
-                             : handler.setInt (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setInt (number);
             }
             else if (head == 0xd3)
             {
@@ -1139,8 +1135,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Integer64>{}, number))
-                             : handler.setInt64 (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setInt64 (number);
             }
             else if (head == 0xcf)
             {
@@ -1149,8 +1144,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Unsigned64>{}, number))
-                             : handler.setUint64 (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setUint64 (number);
             }
             else if (head == 0xcb)
             {
@@ -1159,8 +1153,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Real>{}, number))
-                             : handler.setDouble (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setDouble (number);
             }
             else if (head == 0xd2)
             {
@@ -1169,8 +1162,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Integer>{}, number))
-                             : handler.setInt (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setInt (number);
             }
             else if (head == 0xce)
             {
@@ -1179,8 +1171,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
-                             : handler.setUint (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setUint (number);
             }
             else if (head == 0xca)
             {
@@ -1189,8 +1180,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Real>{}, number))
-                             : handler.setDouble (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setDouble (number);
             }
             else if (head == 0xd1)
             {
@@ -1199,8 +1189,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Integer>{}, number))
-                             : handler.setInt (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setInt (number);
             }
             else if (head == 0xcd)
             {
@@ -1209,8 +1198,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
-                             : handler.setUint (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setUint (number);
             }
             else if (head == 0xd0)
             {
@@ -1219,8 +1207,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Integer>{}, number))
-                             : handler.setInt (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setInt (number);
             }
             else if (head == 0xcc)
             {
@@ -1229,8 +1216,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
-                             : handler.setUint (number);
+                return isKey ? handler.setKey (Value (number)) : handler.setUint (number);
             }
             else
             {

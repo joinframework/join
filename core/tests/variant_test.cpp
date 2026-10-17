@@ -828,6 +828,13 @@ TEST (Variant, get)
     EXPECT_THROW (var.get<2> (), std::bad_cast);
     EXPECT_THROW (var.get<3> (), std::bad_cast);
     EXPECT_NO_THROW (var.get<4> ());
+
+    var.set<double> (0.5);
+    const Variant<int, double, std::string, bool, std::nullptr_t>& constVar = var;
+    EXPECT_NO_THROW (constVar.get<double> ());
+    EXPECT_THROW (constVar.get<int> (), std::bad_cast);
+    EXPECT_NO_THROW (constVar.get<1> ());
+    EXPECT_THROW (constVar.get<0> (), std::bad_cast);
 }
 
 /**
