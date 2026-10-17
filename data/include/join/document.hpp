@@ -131,7 +131,7 @@ namespace join
          */
         int setNull ()
         {
-            return emplaceValue (in_place_index_t<Value::Null>{}, nullptr);
+            return emplaceValue (nullptr);
         }
 
         /**
@@ -141,7 +141,7 @@ namespace join
          */
         int setBool (bool value)
         {
-            return emplaceValue (in_place_index_t<Value::Boolean>{}, value);
+            return emplaceValue (value);
         }
 
         /**
@@ -151,7 +151,7 @@ namespace join
          */
         int setInt (int32_t value)
         {
-            return emplaceValue (in_place_index_t<Value::Integer>{}, value);
+            return emplaceValue (value);
         }
 
         /**
@@ -161,7 +161,7 @@ namespace join
          */
         int setUint (uint32_t value)
         {
-            return emplaceValue (in_place_index_t<Value::Unsigned>{}, value);
+            return emplaceValue (value);
         }
 
         /**
@@ -171,7 +171,7 @@ namespace join
          */
         int setInt64 (int64_t value)
         {
-            return emplaceValue (in_place_index_t<Value::Integer64>{}, value);
+            return emplaceValue (value);
         }
 
         /**
@@ -181,7 +181,7 @@ namespace join
          */
         int setUint64 (uint64_t value)
         {
-            return emplaceValue (in_place_index_t<Value::Unsigned64>{}, value);
+            return emplaceValue (value);
         }
 
         /**
@@ -191,7 +191,7 @@ namespace join
          */
         int setDouble (double value)
         {
-            return emplaceValue (in_place_index_t<Value::Real>{}, value);
+            return emplaceValue (value);
         }
 
         /**
@@ -201,7 +201,7 @@ namespace join
          */
         int setString (const std::string& value)
         {
-            return emplaceValue (in_place_index_t<Value::String>{}, value);
+            return emplaceValue (value);
         }
 
         /**
@@ -211,7 +211,7 @@ namespace join
          */
         int setString (std::string&& value)
         {
-            return emplaceValue (in_place_index_t<Value::String>{}, std::move (value));
+            return emplaceValue (std::move (value));
         }
 
         /**
@@ -258,7 +258,7 @@ namespace join
                 return 0;
             }
 
-            _stack.emplace_back (in_place_index_t<Value::ArrayValue>{}, std::move (array));
+            _stack.emplace_back (std::move (array));
 
             return 0;
         }
@@ -362,7 +362,7 @@ namespace join
                 return 0;
             }
 
-            _stack.emplace_back (in_place_index_t<Value::ObjectValue>{}, std::move (object));
+            _stack.emplace_back (std::move (object));
 
             return 0;
         }
@@ -389,31 +389,31 @@ namespace join
             switch (value.index ())
             {
                 case Value::Boolean:
-                    return handler.setBool (value.get<Value::Boolean> ());
+                    return handler.setBool (value.getBool ());
 
                 case Value::Integer:
-                    return handler.setInt (value.get<Value::Integer> ());
+                    return handler.setInt (value.getInt ());
 
                 case Value::Unsigned:
-                    return handler.setUint (value.get<Value::Unsigned> ());
+                    return handler.setUint (value.getUint ());
 
                 case Value::Integer64:
-                    return handler.setInt64 (value.get<Value::Integer64> ());
+                    return handler.setInt64 (value.getInt64 ());
 
                 case Value::Unsigned64:
-                    return handler.setUint64 (value.get<Value::Unsigned64> ());
+                    return handler.setUint64 (value.getUint64 ());
 
                 case Value::Real:
-                    return handler.setDouble (value.get<Value::Real> ());
+                    return handler.setDouble (value.getDouble ());
 
                 case Value::String:
-                    return handler.setString (value.get<Value::String> ());
+                    return handler.setString (value.getString ());
 
                 case Value::ArrayValue:
-                    return setArray (value.get<Value::ArrayValue> (), handler);
+                    return setArray (value.getArray (), handler);
 
                 case Value::ObjectValue:
-                    return setObject (value.get<Value::ObjectValue> (), handler);
+                    return setObject (value.getObject (), handler);
 
                 default:
                     return handler.setNull ();
@@ -477,20 +477,19 @@ namespace join
 
         /**
          * @brief construct a value in place in the current container, or as root.
-         * @param index index of the alternative to construct.
-         * @param args arguments forwarded to the value constructor.
+         * @param value value of the alternative to construct.
          * @return 0 on success, -1 otherwise.
          */
-        template <size_t I, typename... Args>
-        int emplaceValue (in_place_index_t<I> index, Args&&... args)
+        template <typename T>
+        int emplaceValue (T&& value)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
-                _root = Value (index, std::forward<Args> (args)...);
+                _root = Value (std::forward<T> (value));
                 return 0;
             }
 
-            _stack.emplace_back (index, std::forward<Args> (args)...);
+            _stack.emplace_back (std::forward<T> (value));
 
             return 0;
         }

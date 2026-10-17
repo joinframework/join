@@ -1810,7 +1810,7 @@ namespace join
         template <typename ViewType, typename Handler>
         int readString (ViewType& document, Handler& handler, bool isKey = false)
         {
-            thread_local Value output (in_place_index_t<Value::String>{});
+            thread_local Value output{std::string ()};
             output.clear ();
             output.reserve (64);
 
