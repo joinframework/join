@@ -364,14 +364,28 @@ namespace join
          */
         constexpr int8_t getInt8 () const
         {
-            if (_data.index () == Integer &&
-                _data.get<Integer> () >= static_cast<int32_t> (std::numeric_limits<int8_t>::min ()) &&
-                _data.get<Integer> () <= static_cast<int32_t> (std::numeric_limits<int8_t>::max ()))
+            if (isInt8 ())
             {
-                return static_cast<int8_t> (_data.get<Integer> ());
+                switch (_data.index ())
+                {
+                    case Integer:
+                        return static_cast<int8_t> (_data.get<Integer> ());
+
+                    case Unsigned:
+                        return static_cast<int8_t> (_data.get<Unsigned> ());
+
+                    case Integer64:
+                        return static_cast<int8_t> (_data.get<Integer64> ());
+
+                    case Unsigned64:
+                        return static_cast<int8_t> (_data.get<Unsigned64> ());
+
+                    default:
+                        return static_cast<int8_t> (_data.get<Real> ());
+                }
             }
 
-            return convertInt8 ();
+            throw std::bad_cast ();
         }
 
         /**
@@ -424,13 +438,28 @@ namespace join
          */
         constexpr uint8_t getUint8 () const
         {
-            if (_data.index () == Integer && _data.get<Integer> () >= 0 &&
-                _data.get<Integer> () <= static_cast<int32_t> (std::numeric_limits<uint8_t>::max ()))
+            if (isUint8 ())
             {
-                return static_cast<uint8_t> (_data.get<Integer> ());
+                switch (_data.index ())
+                {
+                    case Integer:
+                        return static_cast<uint8_t> (_data.get<Integer> ());
+
+                    case Unsigned:
+                        return static_cast<uint8_t> (_data.get<Unsigned> ());
+
+                    case Integer64:
+                        return static_cast<uint8_t> (_data.get<Integer64> ());
+
+                    case Unsigned64:
+                        return static_cast<uint8_t> (_data.get<Unsigned64> ());
+
+                    default:
+                        return static_cast<uint8_t> (_data.get<Real> ());
+                }
             }
 
-            return convertUint8 ();
+            throw std::bad_cast ();
         }
 
         /**
@@ -484,14 +513,28 @@ namespace join
          */
         constexpr int16_t getInt16 () const
         {
-            if (_data.index () == Integer &&
-                _data.get<Integer> () >= static_cast<int32_t> (std::numeric_limits<int16_t>::min ()) &&
-                _data.get<Integer> () <= static_cast<int32_t> (std::numeric_limits<int16_t>::max ()))
+            if (isInt16 ())
             {
-                return static_cast<int16_t> (_data.get<Integer> ());
+                switch (_data.index ())
+                {
+                    case Integer:
+                        return static_cast<int16_t> (_data.get<Integer> ());
+
+                    case Unsigned:
+                        return static_cast<int16_t> (_data.get<Unsigned> ());
+
+                    case Integer64:
+                        return static_cast<int16_t> (_data.get<Integer64> ());
+
+                    case Unsigned64:
+                        return static_cast<int16_t> (_data.get<Unsigned64> ());
+
+                    default:
+                        return static_cast<int16_t> (_data.get<Real> ());
+                }
             }
 
-            return convertInt16 ();
+            throw std::bad_cast ();
         }
 
         /**
@@ -544,13 +587,28 @@ namespace join
          */
         constexpr uint16_t getUint16 () const
         {
-            if (_data.index () == Integer && _data.get<Integer> () >= 0 &&
-                _data.get<Integer> () <= static_cast<int32_t> (std::numeric_limits<uint16_t>::max ()))
+            if (isUint16 ())
             {
-                return static_cast<uint16_t> (_data.get<Integer> ());
+                switch (_data.index ())
+                {
+                    case Integer:
+                        return static_cast<uint16_t> (_data.get<Integer> ());
+
+                    case Unsigned:
+                        return static_cast<uint16_t> (_data.get<Unsigned> ());
+
+                    case Integer64:
+                        return static_cast<uint16_t> (_data.get<Integer64> ());
+
+                    case Unsigned64:
+                        return static_cast<uint16_t> (_data.get<Unsigned64> ());
+
+                    default:
+                        return static_cast<uint16_t> (_data.get<Real> ());
+                }
             }
 
-            return convertUint16 ();
+            throw std::bad_cast ();
         }
 
         /**
@@ -1184,9 +1242,9 @@ namespace join
         }
 
         /**
-         * @brief appends element at the end of the nested container.
-         * @param value the element to append.
-         * @return a reference to the pushed object.
+         * @brief constructs an element in place at the end of the nested container.
+         * @param args arguments forwarded to the element constructor.
+         * @return a reference to the constructed object.
          * @throw std::bad_cast.
          */
         template <typename... Args>
@@ -1196,7 +1254,8 @@ namespace join
             {
                 _data.set<ArrayValue> ();
             }
-            return _data.get<ArrayValue> ().emplace_back (std::forward<Args> (args)...);
+            _data.get<ArrayValue> ().emplace_back (std::forward<Args> (args)...);
+            return _data.get<ArrayValue> ().back ();
         }
 
         /**
@@ -1281,114 +1340,6 @@ namespace join
         friend constexpr bool operator< (const Value& lhs, const Value& rhs);
 
     private:
-        /**
-         * @brief convert the value held by the variant to int8_t.
-         * @return converted value.
-         */
-        int8_t convertInt8 () const
-        {
-            if (isInt8 ())
-            {
-                switch (_data.index ())
-                {
-                    case Unsigned:
-                        return static_cast<int8_t> (_data.get<Unsigned> ());
-
-                    case Integer64:
-                        return static_cast<int8_t> (_data.get<Integer64> ());
-
-                    case Unsigned64:
-                        return static_cast<int8_t> (_data.get<Unsigned64> ());
-
-                    default:
-                        return static_cast<int8_t> (_data.get<Real> ());
-                }
-            }
-
-            throw std::bad_cast ();
-        }
-
-        /**
-         * @brief convert the value held by the variant to uint8_t.
-         * @return converted value.
-         */
-        uint8_t convertUint8 () const
-        {
-            if (isUint8 ())
-            {
-                switch (_data.index ())
-                {
-                    case Unsigned:
-                        return static_cast<uint8_t> (_data.get<Unsigned> ());
-
-                    case Integer64:
-                        return static_cast<uint8_t> (_data.get<Integer64> ());
-
-                    case Unsigned64:
-                        return static_cast<uint8_t> (_data.get<Unsigned64> ());
-
-                    default:
-                        return static_cast<uint8_t> (_data.get<Real> ());
-                }
-            }
-
-            throw std::bad_cast ();
-        }
-
-        /**
-         * @brief convert the value held by the variant to int16_t.
-         * @return converted value.
-         */
-        int16_t convertInt16 () const
-        {
-            if (isInt16 ())
-            {
-                switch (_data.index ())
-                {
-                    case Unsigned:
-                        return static_cast<int16_t> (_data.get<Unsigned> ());
-
-                    case Integer64:
-                        return static_cast<int16_t> (_data.get<Integer64> ());
-
-                    case Unsigned64:
-                        return static_cast<int16_t> (_data.get<Unsigned64> ());
-
-                    default:
-                        return static_cast<int16_t> (_data.get<Real> ());
-                }
-            }
-
-            throw std::bad_cast ();
-        }
-
-        /**
-         * @brief convert the value held by the variant to uint16_t.
-         * @return converted value.
-         */
-        uint16_t convertUint16 () const
-        {
-            if (isUint16 ())
-            {
-                switch (_data.index ())
-                {
-                    case Unsigned:
-                        return static_cast<uint16_t> (_data.get<Unsigned> ());
-
-                    case Integer64:
-                        return static_cast<uint16_t> (_data.get<Integer64> ());
-
-                    case Unsigned64:
-                        return static_cast<uint16_t> (_data.get<Unsigned64> ());
-
-                    default:
-                        return static_cast<uint16_t> (_data.get<Real> ());
-                }
-            }
-
-            throw std::bad_cast ();
-        }
-
         /**
          * @brief convert the value held by the variant to float.
          * @return converted value.

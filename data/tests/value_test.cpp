@@ -4692,6 +4692,21 @@ TEST (Value, erase)
 }
 
 /**
+ * @brief Test emplaceBack method.
+ */
+TEST (Value, emplaceBack)
+{
+    Value value;
+    ASSERT_EQ (value.emplaceBack (1), 1);
+    ASSERT_EQ (value.emplaceBack ("foo"), "foo");
+    ASSERT_EQ (value.size (), 2U);
+    ASSERT_EQ (value[1], "foo");
+
+    value = true;
+    ASSERT_THROW (value.emplaceBack (1), std::bad_cast);
+}
+
+/**
  * @brief Test pushBack method.
  */
 TEST (Value, pushBack)
