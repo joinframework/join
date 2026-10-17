@@ -23,12 +23,15 @@
  */
 
 // libjoin.
+#include <join/document.hpp>
 #include <join/pack.hpp>
+#include <join/json.hpp>
 
 // libraries.
 #include <gtest/gtest.h>
 
 // C++.
+#include <stdexcept>
 #include <sstream>
 
 // C.
@@ -41,6 +44,40 @@ using join::Value;
 
 using join::SaxErrc;
 using join::PackReader;
+using join::PackWriter;
+using join::JsonWriter;
+using join::Document;
+
+/**
+ * @brief handler throwing on strings.
+ */
+struct Throwing : public join::SaxHandler
+{
+    int setString (const std::string&)
+    {
+        throw std::range_error ("user");
+    }
+};
+
+/**
+ * @brief stream buffer failing on its first write.
+ */
+struct FailingBuffer : public std::streambuf
+{
+    std::streamsize xsputn (const char* data, std::streamsize size) override
+    {
+        if (!failed)
+        {
+            failed = true;
+            throw std::runtime_error ("write failed");
+        }
+        written.append (data, size);
+        return size;
+    }
+
+    bool failed = false;
+    std::string written;
+};
 
 /**
  * @brief Test deserialize method.
@@ -48,38 +85,92 @@ using join::PackReader;
 TEST (PackReader, deserialize)
 {
     std::stringstream stream;
-    Value value;
+    Document document;
+    Value& value = document.root ();
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x00'}));
     std::string str ({'\xdd', '\x00', '\x00', '\x00', '\x00'});
     char data[] = {'\xdd', '\x00', '\x00', '\x00', '\x00', '\x00'};
 
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
-    ASSERT_EQ (value.deserialize<PackReader> (str), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (str, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
-    ASSERT_EQ (value.deserialize<PackReader> (data, sizeof (data) - 1), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (data, sizeof (data) - 1, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
-    ASSERT_EQ (value.deserialize<PackReader> (&data[0], &data[sizeof (data) - 1]), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (&data[0], &data[sizeof (data) - 1], document), 0)
+        << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
-    ASSERT_EQ (value.deserialize<PackReader> (&data[0], &data[sizeof (data)]), -1);
+    ASSERT_EQ (PackReader ().deserialize (&data[0], &data[sizeof (data)], document), -1);
     ASSERT_EQ (join::lastError, SaxErrc::ExtraData);
 
-    PackReader reader (value);
-    ASSERT_EQ (reader.deserialize (std::string ({'\x92', '\x01'})), -1);
+    std::stringstream out;
+    PackWriter writer (out);
+    std::string nested = std::string (256, '\x91') + '\xC0';
+    ASSERT_EQ (PackReader ().deserialize (nested, writer), 0) << join::lastError.message ();
+    ASSERT_EQ (out.str (), nested);
+
+    out.str ("");
+    nested.insert (0, 1, '\x91');
+    ASSERT_EQ (PackReader ().deserialize (nested, writer), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::StackOverflow);
+    ASSERT_EQ (out.str (), "");
+
+    nested.clear ();
+    for (int i = 0; i < 257; ++i)
+    {
+        nested += std::string ({'\x81', '\xA1', 'a'});
+    }
+    nested += '\xC0';
+    ASSERT_EQ (PackReader ().deserialize (nested, writer), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::StackOverflow);
+
+    out.str ("");
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x92', '\x01'}), writer), -1);
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\x02'}), writer), 0) << join::lastError.message ();
+    ASSERT_EQ (out.str (), std::string ({'\x91', '\x02'}));
+
+    FailingBuffer buffer;
+    std::ostream failing (&buffer);
+    JsonWriter failingWriter (failing);
+    std::string big = std::string ({'\x91', '\xDA', '\x07', '\xD0'}) + std::string (2000, 'a');
+    ASSERT_THROW (PackReader ().deserialize (big, failingWriter), std::runtime_error);
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\x02'}), failingWriter), 0)
+        << join::lastError.message ();
+    ASSERT_EQ (buffer.written, "[2]");
+
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\xDB', '\xFF', '\xFF', '\xFF', '\xFF'}), document), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\xC6', '\xFF', '\xFF', '\xFF', '\xFF'}), document), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\xDA', '\x00'}), document), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+
+    for (char head : {'\xDD', '\xDC', '\xDF', '\xDE', '\xDB', '\xDA', '\xD9', '\xC6', '\xC5', '\xC4',
+                      '\xD3', '\xCF', '\xCB', '\xD2', '\xCE', '\xCA', '\xD1', '\xCD', '\xD0', '\xCC'})
+    {
+        ASSERT_EQ (PackReader ().deserialize (std::string (1, head), document), -1) << int (head & 0xFF);
+        ASSERT_EQ (join::lastError, SaxErrc::Truncated) << int (head & 0xFF);
+    }
+
+    Throwing throwing;
+    ASSERT_THROW (PackReader ().deserialize (std::string ({'\x91', '\xA1', 'a'}), throwing), std::range_error);
+
+    PackReader reader;
+    ASSERT_EQ (reader.deserialize (std::string ({'\x92', '\x01'}), document), -1);
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
-    ASSERT_EQ (reader.deserialize (std::string ({'\x91', '\x03'})), 0) << join::lastError.message ();
+    ASSERT_EQ (reader.deserialize (std::string ({'\x91', '\x03'}), document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_EQ (value.size (), 1);
     ASSERT_EQ (value[0], 3);
@@ -91,38 +182,39 @@ TEST (PackReader, deserialize)
 TEST (PackReader, pass)
 {
     std::stringstream stream;
-    Value value;
+    Document document;
+    Value& value = document.root ();
 
     stream.clear ();
     stream.str (std::string ({'\x90'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value.empty ());
 
     stream.clear ();
     stream.str (std::string ({'\xdc', '\x00', '\x01', '\xcc', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isUint8 ());
     ASSERT_EQ (value[0], 1);
 
     stream.clear ();
     stream.str (std::string ({'\xdc', '\x00', '\x01', '\xd0', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt8 ());
     ASSERT_EQ (value[0], 1);
 
     stream.clear ();
     stream.str (std::string ({'\xdc', '\x00', '\x01', '\xd1', '\x00', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isUint16 ());
     ASSERT_EQ (value[0], 1);
 
     stream.clear ();
     stream.str (std::string ({'\xdc', '\x00', '\x01', '\xd2', '\x00', '\x00', '\x00', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt ());
     ASSERT_EQ (value[0], 1);
@@ -130,7 +222,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (
         std::string ({'\xdc', '\x00', '\x01', '\xcf', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isUint64 ());
     ASSERT_EQ (value[0], 1);
@@ -138,14 +230,14 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (
         std::string ({'\xdc', '\x00', '\x01', '\xd3', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (value[0].isInt64 ());
     ASSERT_EQ (value[0], 1);
 
     stream.clear ();
     stream.str (std::string ({'\xdc', '\x00', '\x01', '\xce', '\x49', '\x96', '\x02', '\xd2'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isInt ());
@@ -153,7 +245,7 @@ TEST (PackReader, pass)
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xca', '\xc0', '\xc3', '\x4a', '\x45'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isFloat ());
@@ -162,7 +254,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xc0', '\xc3', '\x4a', '\x45', '\x87',
                               '\xe7', '\xc0', '\x6e'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -170,7 +262,7 @@ TEST (PackReader, pass)
 
     stream.clear ();
     stream.str (std::string ({'\x91', '\xcb', '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -179,7 +271,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (
         std::string ({'\xdc', '\x00', '\x01', '\xcb', '\x47', '\x03', '\x05', '\x82', '\xff', '\xd7', '\x14', '\x75'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -187,7 +279,7 @@ TEST (PackReader, pass)
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc3'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isBool ());
@@ -195,7 +287,7 @@ TEST (PackReader, pass)
 
     stream.clear ();
     stream.str (std::string ({'\x91', '\xc2'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isBool ());
@@ -203,7 +295,7 @@ TEST (PackReader, pass)
 
     stream.clear ();
     stream.str (std::string ({'\xdc', '\x00', '\x01', '\xc0'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isNull ());
@@ -218,7 +310,7 @@ TEST (PackReader, pass)
          '\x99', '\x99', '\x99', '\x99', '\x99', '\x9a', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00', '\x00', '\x00',
          '\x00', '\xcb', '\x40', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\xcb', '\x40', '\x00', '\x00',
          '\x00', '\x00', '\x00', '\x00', '\x00', '\xa7', '\x72', '\x6f', '\x73', '\x65', '\x62', '\x75', '\x64'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_EQ (value.size (), 11);
@@ -255,18 +347,18 @@ TEST (PackReader, pass)
          '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00',
          '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xac', '\x4e', '\x6f',
          '\x74', '\x20', '\x74', '\x6f', '\x6f', '\x20', '\x64', '\x65', '\x65', '\x70'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
 
     stream.clear ();
     stream.str (std::string ({'\x80'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.empty ());
 
     stream.clear ();
     stream.str (std::string ({'\xde', '\x00', '\x01', '\xa7', '\x69', '\x6e', '\x74', '\x65', '\x67', '\x65', '\x72',
                               '\xce', '\x49', '\x96', '\x02', '\xd2'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["integer"].isInt ());
@@ -275,7 +367,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa4', '\x72', '\x65', '\x61', '\x6c', '\xcb',
                               '\xc0', '\xc3', '\x4a', '\x45', '\x87', '\xe7', '\xc0', '\x6e'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["real"].isDouble ());
@@ -284,7 +376,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (
         std::string ({'\x81', '\xa1', '\x65', '\xcb', '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["e"].isDouble ());
@@ -293,7 +385,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\xde', '\x00', '\x01', '\xa1', '\x45', '\xcb', '\x47', '\x03', '\x05', '\x82', '\xff',
                               '\xd7', '\x14', '\x75'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["E"].isDouble ());
@@ -302,7 +394,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa0', '\xcb', '\x4f', '\xc9', '\xee', '\x09',
                               '\x3a', '\x64', '\xb8', '\x54'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[""].isDouble ());
@@ -310,7 +402,7 @@ TEST (PackReader, pass)
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xa4', '\x7a', '\x65', '\x72', '\x6f', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["zero"].isInt ());
@@ -318,7 +410,7 @@ TEST (PackReader, pass)
 
     stream.clear ();
     stream.str (std::string ({'\xde', '\x00', '\x01', '\xa3', '\x6f', '\x6e', '\x65', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["one"].isInt ());
@@ -327,7 +419,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string (
         {'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x73', '\x70', '\x61', '\x63', '\x65', '\xa1', '\x20'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["space"].isString ());
@@ -335,7 +427,7 @@ TEST (PackReader, pass)
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xa5', '\x71', '\x75', '\x6f', '\x74', '\x65', '\xa1', '\x22'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["quote"].isString ());
@@ -344,7 +436,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\xde', '\x00', '\x01', '\xa9', '\x62', '\x61', '\x63', '\x6b', '\x73', '\x6c', '\x61',
                               '\x73', '\x68', '\xa1', '\x5c'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["backslash"].isString ());
@@ -353,7 +445,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa8', '\x63', '\x6f', '\x6e', '\x74',
                               '\x72', '\x6f', '\x6c', '\x73', '\xa5', '\x08', '\x0c', '\x0a', '\x0d', '\x09'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["controls"].isString ());
@@ -362,7 +454,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\x81', '\xa5', '\x73', '\x6c', '\x61', '\x73', '\x68', '\xa6', '\x2f', '\x20', '\x26',
                               '\x20', '\x5c', '\x2f'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["slash"].isString ());
@@ -373,7 +465,7 @@ TEST (PackReader, pass)
         std::string ({'\xde', '\x00', '\x01', '\xa5', '\x61', '\x6c', '\x70', '\x68', '\x61', '\xb9', '\x61', '\x62',
                       '\x63', '\x64', '\x65', '\x66', '\x67', '\x68', '\x69', '\x6a', '\x6b', '\x6c', '\x6d', '\x6e',
                       '\x6f', '\x70', '\x71', '\x72', '\x73', '\x74', '\x75', '\x76', '\x77', '\x79', '\x7a'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["alpha"].isString ());
@@ -384,7 +476,7 @@ TEST (PackReader, pass)
                               '\x41', '\xb9', '\x41', '\x42', '\x43', '\x44', '\x45', '\x46', '\x47', '\x48',
                               '\x49', '\x4a', '\x4b', '\x4c', '\x4d', '\x4e', '\x4f', '\x50', '\x51', '\x52',
                               '\x53', '\x54', '\x55', '\x56', '\x57', '\x59', '\x5a'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["ALPHA"].isString ());
@@ -393,7 +485,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x64', '\x69', '\x67', '\x69', '\x74',
                               '\xaa', '\x30', '\x31', '\x32', '\x33', '\x34', '\x35', '\x36', '\x37', '\x38', '\x39'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["digit"].isString ());
@@ -402,7 +494,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xaa', '\x30', '\x31', '\x32', '\x33', '\x34',
                               '\x35', '\x36', '\x37', '\x38', '\x39', '\xa5', '\x64', '\x69', '\x67', '\x69', '\x74'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["0123456789"].isString ());
@@ -414,7 +506,7 @@ TEST (PackReader, pass)
                       '\x6c', '\xbf', '\x60', '\x31', '\x7e', '\x21', '\x40', '\x23', '\x24', '\x25', '\x5e', '\x26',
                       '\x2a', '\x28', '\x29', '\x5f', '\x2b', '\x2d', '\x3d', '\x7b', '\x27', '\x3a', '\x5b', '\x2c',
                       '\x5d', '\x7d', '\x7c', '\x3b', '\x2e', '\x3c', '\x2f', '\x3e', '\x3f'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["special"].isString ());
@@ -424,7 +516,7 @@ TEST (PackReader, pass)
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa3', '\x68', '\x65', '\x78',
                               '\xb1', '\xc4', '\xa3', '\xe4', '\x95', '\xa7', '\xe8', '\xa6', '\xab',
                               '\xec', '\xb7', '\xaf', '\xea', '\xaf', '\x8d', '\xee', '\xbd', '\x8a'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["hex"].isString ());
@@ -434,7 +526,7 @@ TEST (PackReader, pass)
 
     stream.clear ();
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa4', '\x74', '\x72', '\x75', '\x65', '\xc3'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["true"].isBool ());
@@ -443,7 +535,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (
         std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x66', '\x61', '\x6c', '\x73', '\x65', '\xc2'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["false"].isBool ());
@@ -451,7 +543,7 @@ TEST (PackReader, pass)
 
     stream.clear ();
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa4', '\x6e', '\x75', '\x6c', '\x6c', '\xc0'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["null"].isNull ());
@@ -460,7 +552,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa5', '\x61', '\x72', '\x72', '\x61', '\x79',
                               '\xdd', '\x00', '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["array"].isArray ());
@@ -469,7 +561,7 @@ TEST (PackReader, pass)
     stream.clear ();
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa6', '\x6f', '\x62', '\x6a', '\x65', '\x63',
                               '\x74', '\xdf', '\x00', '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["object"].isObject ());
@@ -479,7 +571,7 @@ TEST (PackReader, pass)
     stream.str (std::string ({'\xdf', '\x00', '\x00', '\x00', '\x01', '\xa7', '\x61', '\x64', '\x64', '\x72', '\x65',
                               '\x73', '\x73', '\xb3', '\x35', '\x30', '\x20', '\x53', '\x74', '\x2e', '\x20', '\x4a',
                               '\x61', '\x6d', '\x65', '\x73', '\x20', '\x53', '\x74', '\x72', '\x65', '\x65', '\x74'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["address"].isString ());
@@ -490,7 +582,7 @@ TEST (PackReader, pass)
                               '\x68', '\x74', '\x74', '\x70', '\x73', '\x3a', '\x2f', '\x2f', '\x77', '\x77',
                               '\x77', '\x2e', '\x6a', '\x6f', '\x69', '\x6e', '\x66', '\x72', '\x61', '\x6d',
                               '\x65', '\x77', '\x6f', '\x72', '\x6b', '\x2e', '\x6e', '\x65', '\x74', '\x2f'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["url"].isString ());
@@ -501,7 +593,7 @@ TEST (PackReader, pass)
                               '\x6e', '\x74', '\xad', '\x2f', '\x2f', '\x20', '\x2f', '\x2a', '\x20', '\x3c', '\x21',
                               '\x2d', '\x2d', '\x20', '\x2d', '\x2d', '\xab', '\x23', '\x20', '\x2d', '\x2d', '\x20',
                               '\x2d', '\x2d', '\x3e', '\x20', '\x2a', '\x2f', '\xa1', '\x20'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["comment"].isString ());
@@ -515,7 +607,7 @@ TEST (PackReader, pass)
                               '\x00', '\x07', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\xa7', '\x63',
                               '\x6f', '\x6d', '\x70', '\x61', '\x63', '\x74', '\xdd', '\x00', '\x00', '\x00', '\x07',
                               '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[" s p a c e d "].isArray ());
@@ -541,7 +633,7 @@ TEST (PackReader, pass)
                               '\x6d', '\x62', '\x65', '\x72', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xb4', '\x61',
                               '\x72', '\x72', '\x61', '\x79', '\x20', '\x77', '\x69', '\x74', '\x68', '\x20', '\x31',
                               '\x20', '\x65', '\x6c', '\x65', '\x6d', '\x65', '\x6e', '\x74'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["object with 1 member"].isArray ());
@@ -552,7 +644,7 @@ TEST (PackReader, pass)
                               '\x65', '\x73', '\xbb', '\x26', '\x23', '\x33', '\x34', '\x3b', '\x20', '\x22',
                               '\x20', '\x25', '\x32', '\x32', '\x20', '\x30', '\x78', '\x32', '\x32', '\x20',
                               '\x30', '\x33', '\x34', '\x20', '\x26', '\x23', '\x78', '\x32', '\x32', '\x3b'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["quotes"].isString ());
@@ -565,7 +657,7 @@ TEST (PackReader, pass)
          '\x2d', '\x3d', '\x5b', '\x5d', '\x7b', '\x7d', '\x7c', '\x3b', '\x3a', '\x27', '\x2c', '\x2e', '\x2f', '\x3c',
          '\x3e', '\x3f', '\xb7', '\x41', '\x20', '\x6b', '\x65', '\x79', '\x20', '\x63', '\x61', '\x6e', '\x20', '\x62',
          '\x65', '\x20', '\x61', '\x6e', '\x79', '\x20', '\x73', '\x74', '\x72', '\x69', '\x6e', '\x67'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value["\"\b\f\n\r\t`1~!@#$%^&*()_+-=[]{}|;:',./<>?"].isString ());
@@ -578,7 +670,7 @@ TEST (PackReader, pass)
 TEST (PackReader, fail)
 {
     std::stringstream stream;
-    Value value;
+    Document document;
 
     stream.clear ();
     stream.str (std::string ({'\xd9', '\x32', '\x70', '\x61', '\x79', '\x6c', '\x6f', '\x61', '\x64', '\x20', '\x73',
@@ -586,7 +678,8 @@ TEST (PackReader, fail)
                               '\x20', '\x6f', '\x62', '\x6a', '\x65', '\x63', '\x74', '\x20', '\x6f', '\x72', '\x20',
                               '\x61', '\x72', '\x72', '\x61', '\x79', '\x2c', '\x20', '\x6e', '\x6f', '\x74', '\x20',
                               '\x61', '\x20', '\x73', '\x74', '\x72', '\x69', '\x6e', '\x67'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
+    ASSERT_EQ (document.root (), "payload should be an object or array, not a string");
 
     stream.clear ();
     stream.str (std::string (
@@ -598,7 +691,12 @@ TEST (PackReader, fail)
          '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00',
          '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00',
          '\x00', '\x01', '\xa8', '\x54', '\x6f', '\x6f', '\x20', '\x64', '\x65', '\x65', '\x70'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
+
+    stream.clear ();
+    stream.str (std::string (join::saxMaxDepth + 1, '\x91') + '\xc0');
+    ASSERT_EQ (PackReader ().deserialize (stream, document), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::StackOverflow);
 
     stream.clear ();
     stream.str (std::string (
@@ -610,41 +708,41 @@ TEST (PackReader, fail)
          '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00',
          '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdd', '\x00', '\x00', '\x00', '\x01', '\xdf', '\x00', '\x00',
          '\x00', '\x01', '\xA8', '\x54', '\x6F', '\x6F', '\x20', '\x64', '\x65', '\x65', '\x70', '\x00'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
 
     stream.clear ();
     stream.str (std::string ({'\xdc', '\x00', '\x01', '\xce', '\x49', '\x96', '\x02'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
 
     stream.clear ();
     stream.str (
         std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xda', '\x00', '\x05', '\x48', '\x65', '\x6c', '\x6c'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
 
     stream.clear ();
     stream.str (
         std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc5', '\x00', '\x05', '\x48', '\x65', '\x6c', '\x6c'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xa1'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xa1', '\x31', '\xcc'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
 
     stream.clear ();
     stream.str (std::string ({'\xd7'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
 
     stream.clear ();
     stream.str (std::string ({'\x92', '\x01'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
 
     stream.clear ();
     stream.str (std::string ({'\x81'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
 }
 
 /**
@@ -653,12 +751,13 @@ TEST (PackReader, fail)
 TEST (PackReader, dbl)
 {
     std::stringstream stream;
-    Value value;
+    Document document;
+    Value& value = document.root ();
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x00', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -667,7 +766,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x80', '\x00', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -676,7 +775,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -685,7 +784,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xbf', '\xf0', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -694,7 +793,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xf8', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -703,7 +802,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xbf', '\xf8', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -712,7 +811,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x40', '\x09', '\x21', '\xff', '\x2e',
                               '\x48', '\xe8', '\xa7'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -721,7 +820,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x42', '\x02', '\xa0', '\x5f', '\x20',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -730,7 +829,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3d', '\xdb', '\x7C', '\xdf', '\xd9',
                               '\xd7', '\xbd', '\xbb'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -739,7 +838,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xc2', '\x02', '\xa0', '\x5f', '\x20',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -748,7 +847,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xbd', '\xdb', '\x7c', '\xdf', '\xd9',
                               '\xd7', '\xbd', '\xbb'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -757,7 +856,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x42', '\x06', '\xfc', '\x2b', '\xa8',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -766,7 +865,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3d', '\xe0', '\xf5', '\xc0', '\x63',
                               '\x56', '\x43', '\xa8'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -775,7 +874,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x7f', '\xef', '\xff', '\xfc', '\x57',
                               '\xca', '\x82', '\xae'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -784,7 +883,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x0f', '\xff', '\xfe', '\x2e',
                               '\x81', '\x59', '\xd0'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -793,7 +892,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\xff', '\xef', '\xff', '\xfc', '\x57',
                               '\xca', '\x82', '\xae'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -802,7 +901,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x80', '\x0f', '\xff', '\xfe', '\x2e',
                               '\x81', '\x59', '\xd0'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -811,7 +910,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x80', '\x00', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -820,7 +919,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x0f', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -829,7 +928,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x10', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -838,7 +937,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x7f', '\xef', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -847,7 +946,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x00', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -856,7 +955,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xef', '\x93', '\xe0', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -865,7 +964,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x47', '\x6d', '\x9c', '\x75', '\xd3',
                               '\xac', '\x07', '\x2b'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -874,7 +973,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x44', '\x03', '\xe9', '\x61', '\xfa',
                               '\x3b', '\xa6', '\xa0'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -883,7 +982,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x0f', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -892,7 +991,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x00', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -901,7 +1000,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x00', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -910,7 +1009,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x7f', '\xef', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -919,7 +1018,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x10', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -928,7 +1027,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -937,7 +1036,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xef', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -946,7 +1045,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -955,7 +1054,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -964,7 +1063,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -973,7 +1072,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -982,7 +1081,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x43', '\x6f', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -991,7 +1090,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x43', '\x70', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1000,7 +1099,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x43', '\x70', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1009,7 +1108,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x43', '\x6f', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1018,7 +1117,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x43', '\x70', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1027,7 +1126,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x43', '\xdf', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1036,7 +1135,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x43', '\xe0', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1045,7 +1144,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x43', '\xe0', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1054,7 +1153,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x43', '\xdf', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1063,7 +1162,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x43', '\xe0', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1072,7 +1171,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x46', '\x5f', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1081,7 +1180,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x46', '\x60', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1090,7 +1189,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x49', '\x6f', '\xff', '\xff', '\xff',
                               '\xff', '\xff', '\xff'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1099,7 +1198,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x49', '\x70', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1108,7 +1207,7 @@ TEST (PackReader, dbl)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xcb', '\x00', '\x10', '\x00', '\x00', '\x00',
                               '\x00', '\x00', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
@@ -1121,11 +1220,12 @@ TEST (PackReader, dbl)
 TEST (PackReader, str)
 {
     std::stringstream stream;
-    Value value;
+    Document document;
+    Value& value = document.root ();
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xa0'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1134,7 +1234,7 @@ TEST (PackReader, str)
     stream.clear ();
     stream.str (std::string (
         {'\xdd', '\x00', '\x00', '\x00', '\x01', '\xda', '\x00', '\x05', '\x48', '\x65', '\x6c', '\x6c', '\x6f'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1143,7 +1243,7 @@ TEST (PackReader, str)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xdb', '\x00', '\x00', '\x00', '\x0b', '\x48',
                               '\x65', '\x6c', '\x6c', '\x6f', '\x0a', '\x57', '\x6f', '\x72', '\x6c', '\x64'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1152,7 +1252,7 @@ TEST (PackReader, str)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xab', '\x48', '\x65', '\x6c', '\x6c', '\x6f',
                               '\x00', '\x57', '\x6f', '\x72', '\x6c', '\x64'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1161,7 +1261,7 @@ TEST (PackReader, str)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xda', '\x00', '\x08', '\x22', '\x5c', '\x2f',
                               '\x08', '\x0c', '\x0a', '\x0d', '\x09'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1169,7 +1269,7 @@ TEST (PackReader, str)
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xdb', '\x00', '\x00', '\x00', '\x01', '\x24'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1177,7 +1277,7 @@ TEST (PackReader, str)
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xa2', '\xc2', '\xa2'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1185,7 +1285,7 @@ TEST (PackReader, str)
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xda', '\x00', '\x03', '\xe2', '\x82', '\xac'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1194,7 +1294,7 @@ TEST (PackReader, str)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xdb', '\x00', '\x00', '\x00', '\x04', '\xf0',
                               '\x9d', '\x84', '\x9e'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1207,11 +1307,12 @@ TEST (PackReader, str)
 TEST (PackReader, bin)
 {
     std::stringstream stream;
-    Value value;
+    Document document;
+    Value& value = document.root ();
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc4', '\x00'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1220,7 +1321,7 @@ TEST (PackReader, bin)
     stream.clear ();
     stream.str (std::string (
         {'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc5', '\x00', '\x05', '\x48', '\x65', '\x6c', '\x6c', '\x6f'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1229,7 +1330,7 @@ TEST (PackReader, bin)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc6', '\x00', '\x00', '\x00', '\x0b', '\x48',
                               '\x65', '\x6c', '\x6c', '\x6f', '\x0a', '\x57', '\x6f', '\x72', '\x6c', '\x64'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1238,7 +1339,7 @@ TEST (PackReader, bin)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc4', '\x0b', '\x48', '\x65', '\x6c', '\x6c',
                               '\x6f', '\x00', '\x57', '\x6f', '\x72', '\x6c', '\x64'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1247,7 +1348,7 @@ TEST (PackReader, bin)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc5', '\x00', '\x08', '\x22', '\x5c', '\x2f',
                               '\x08', '\x0c', '\x0a', '\x0d', '\x09'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1255,7 +1356,7 @@ TEST (PackReader, bin)
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc6', '\x00', '\x00', '\x00', '\x01', '\x24'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1263,7 +1364,7 @@ TEST (PackReader, bin)
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc4', '\x02', '\xc2', '\xa2'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1271,7 +1372,7 @@ TEST (PackReader, bin)
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc5', '\x00', '\x03', '\xe2', '\x82', '\xac'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1280,7 +1381,7 @@ TEST (PackReader, bin)
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc6', '\x00', '\x00', '\x00', '\x04', '\xf0',
                               '\x9d', '\x84', '\x9e'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
@@ -1293,86 +1394,87 @@ TEST (PackReader, bin)
 TEST (PackReader, key)
 {
     std::stringstream stream;
-    Value value;
+    Document document;
+    Value& value = document.root ();
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xc0', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (nullptr));
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xc2', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (false));
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xc3', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (true));
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xa3', '\x6b', '\x65', '\x79', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains ("key"));
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\x2a', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (42));
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xcc', '\xff', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (255));
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xd3', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x01', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (int64_t (1)));
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xcf', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x01', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (uint64_t (1)));
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xca', '\x3f', '\x80', '\x00', '\x00', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (1.0));
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xcb', '\x3f', '\xf0', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (1.0));
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\x91', '\x01', '\x01'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
     ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\x81', '\xa1', '\x61', '\x01', '\x01'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
     ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xcc'}));
-    ASSERT_NE (value.deserialize<PackReader> (stream), 0);
-    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
+    ASSERT_NE (PackReader ().deserialize (stream, document), 0);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xf6', '\x01'}));
-    ASSERT_EQ (value.deserialize<PackReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (Value (-10)));
 }

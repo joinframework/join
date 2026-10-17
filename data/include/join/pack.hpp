@@ -26,26 +26,33 @@
 #define JOIN_DATA_PACK_HPP
 
 // libjoin.
+#include <join/value.hpp>
 #include <join/utils.hpp>
+#include <join/view.hpp>
 #include <join/sax.hpp>
 
 // C++.
-#include <stdexcept>
+#include <algorithm>
+#include <sstream>
+#include <fstream>
+
+// C.
+#include <cstring>
 
 namespace join
 {
     /**
      * @brief message pack writer class.
      */
-    class PackWriter : public StreamWriter
+    class PackWriter
     {
     public:
         /**
          * @brief create instance.
          * @param document MessagePack document to create.
          */
-        PackWriter (std::ostream& document)
-        : StreamWriter (document)
+        explicit PackWriter (std::ostream& document)
+        : _out (document.rdbuf ())
         {
         }
 
@@ -78,15 +85,16 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~PackWriter () = default;
+        ~PackWriter () = default;
 
         /**
          * @brief set null value.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setNull () override
+        int setNull ()
         {
             append (0xc0);
+            endValue ();
             return 0;
         }
 
@@ -95,7 +103,7 @@ namespace join
          * @param value boolean value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setBool (bool value) override
+        int setBool (bool value)
         {
             if (value)
             {
@@ -105,6 +113,7 @@ namespace join
             {
                 append (0xc2);
             }
+            endValue ();
             return 0;
         }
 
@@ -113,7 +122,7 @@ namespace join
          * @param value integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setInt (int32_t value) override
+        int setInt (int32_t value)
         {
             if (value < -(1 << 15))
             {
@@ -149,6 +158,7 @@ namespace join
                 append (0xce);
                 pack (static_cast<uint32_t> (value));
             }
+            endValue ();
             return 0;
         }
 
@@ -157,7 +167,7 @@ namespace join
          * @param value unsigned integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setUint (uint32_t value) override
+        int setUint (uint32_t value)
         {
             if (value < (1 << 7))
             {
@@ -178,6 +188,7 @@ namespace join
                 append (0xce);
                 pack (value);
             }
+            endValue ();
             return 0;
         }
 
@@ -186,7 +197,7 @@ namespace join
          * @param value 64 bits integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setInt64 (int64_t value) override
+        int setInt64 (int64_t value)
         {
             if (value < -(1LL << 31))
             {
@@ -232,6 +243,7 @@ namespace join
                 append (0xcf);
                 pack (static_cast<uint64_t> (value));
             }
+            endValue ();
             return 0;
         }
 
@@ -240,7 +252,7 @@ namespace join
          * @param value unsigned 64 bits integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setUint64 (uint64_t value) override
+        int setUint64 (uint64_t value)
         {
             if (value < (1ULL << 7))
             {
@@ -266,6 +278,7 @@ namespace join
                 append (0xcf);
                 pack (value);
             }
+            endValue ();
             return 0;
         }
 
@@ -274,7 +287,7 @@ namespace join
          * @param value real value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setDouble (double value) override
+        int setDouble (double value)
         {
             float f = static_cast<float> (value);
             if (std::isfinite (value) && static_cast<double> (f) == value)
@@ -287,6 +300,7 @@ namespace join
                 append (0xcb);
                 pack (value);
             }
+            endValue ();
             return 0;
         }
 
@@ -295,7 +309,7 @@ namespace join
          * @param value string value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setString (const std::string& value) override
+        int setString (const std::string& value)
         {
             if (value.size () < 32)
             {
@@ -317,6 +331,7 @@ namespace join
                 pack (static_cast<uint32_t> (value.size ()));
             }
             append (value.c_str (), static_cast<uint32_t> (value.size ()));
+            endValue ();
             return 0;
         }
 
@@ -325,7 +340,7 @@ namespace join
          * @param size array size.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int startArray (uint32_t size = 0) override
+        int startArray (uint32_t size)
         {
             if (size < 16)
             {
@@ -341,6 +356,24 @@ namespace join
                 append (0xdd);
                 pack (size);
             }
+            ++_depth;
+            return 0;
+        }
+
+        /**
+         * @brief stop array.
+         * @return 0 on success, -1 otherwise.
+         */
+        int stopArray ()
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
+            --_depth;
+            endValue ();
             return 0;
         }
 
@@ -349,7 +382,7 @@ namespace join
          * @param size object size.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int startObject (uint32_t size = 0) override
+        int startObject (uint32_t size)
         {
             if (size < 16)
             {
@@ -365,7 +398,18 @@ namespace join
                 append (0xdf);
                 pack (size);
             }
+            ++_depth;
             return 0;
+        }
+
+        /**
+         * @brief get object members in writing order.
+         * @param object object to write.
+         * @return object members in insertion order.
+         */
+        const Object& members (const Object& object) const noexcept
+        {
+            return object;
         }
 
         /**
@@ -373,17 +417,120 @@ namespace join
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setKey (const Value& key) override
+        int setKey (const Value& key)
         {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
             if (JOIN_UNLIKELY (key.isArray () || key.isObject ()))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidKey);
+                reset ();
                 return -1;
             }
-            return setValue (key);
+            switch (key.index ())
+            {
+                case Value::Boolean:
+                    return setBool (key.get<Value::Boolean> ());
+
+                case Value::Integer:
+                    return setInt (key.get<Value::Integer> ());
+
+                case Value::Unsigned:
+                    return setUint (key.get<Value::Unsigned> ());
+
+                case Value::Integer64:
+                    return setInt64 (key.get<Value::Integer64> ());
+
+                case Value::Unsigned64:
+                    return setUint64 (key.get<Value::Unsigned64> ());
+
+                case Value::Real:
+                    return setDouble (key.get<Value::Real> ());
+
+                case Value::String:
+                    return setString (key.get<Value::String> ());
+
+                default:
+                    return setNull ();
+            }
+        }
+
+        /**
+         * @brief stop object.
+         * @return 0 on success, -1 otherwise.
+         */
+        int stopObject ()
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
+            --_depth;
+            endValue ();
+            return 0;
+        }
+
+        /**
+         * @brief flush buffered data to output stream.
+         */
+        void flush ()
+        {
+            if (_size)
+            {
+                _out->sputn (_buffer, _size);
+                _size = 0;
+            }
+        }
+
+        /**
+         * @brief reset the writer state, discarding buffered data.
+         */
+        void reset () noexcept
+        {
+            _size = 0;
+            _depth = 0;
         }
 
     protected:
+        /**
+         * @brief append character to output stream in batch.
+         * @param data character to append to output stream.
+         */
+        inline void append (char data)
+        {
+            if (JOIN_UNLIKELY (_size == sizeof (_buffer)))
+            {
+                flush ();
+            }
+            _buffer[_size++] = data;
+        }
+
+        /**
+         * @brief append data to output stream in batch.
+         * @param data data to append to output stream.
+         * @param size data size.
+         */
+        inline void append (const char* data, uint32_t size)
+        {
+            if (JOIN_UNLIKELY (size > sizeof (_buffer) - _size))
+            {
+                flush ();
+                if (size >= sizeof (_buffer))
+                {
+                    _out->sputn (data, size);
+                    return;
+                }
+            }
+            std::memcpy (_buffer + _size, data, size);
+            _size += size;
+        }
+
         /**
          * @brief pack value into stream.
          * @param value value to pack.
@@ -393,22 +540,41 @@ namespace join
         {
             append (reinterpret_cast<const char*> (&swap (value)), sizeof (value));
         }
+
+        /**
+         * @brief mark the end of a value, flushing the document once complete.
+         */
+        inline void endValue ()
+        {
+            if (_depth == 0)
+            {
+                flush ();
+            }
+        }
+
+        /// underlying output stream.
+        std::streambuf* _out;
+
+        /// output buffer.
+        char _buffer[1024] = {};
+
+        /// output buffer size.
+        size_t _size = 0;
+
+        /// number of open containers.
+        size_t _depth = 0;
     };
 
     /**
      * @brief message pack reader class.
      */
-    class PackReader : public StreamReader
+    class PackReader
     {
     public:
         /**
          * @brief default constructor.
-         * @param root Value to write.
          */
-        PackReader (Value& root)
-        : StreamReader (root)
-        {
-        }
+        PackReader () = default;
 
         /**
          * @brief copy constructor.
@@ -439,191 +605,210 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        virtual ~PackReader () = default;
+        ~PackReader () = default;
 
         /**
          * @brief deserialize a document.
          * @param document document to parse.
          * @param length The length of the document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (const char* document, size_t length) override
+        template <typename Handler>
+        int deserialize (const char* document, size_t length, Handler& handler)
         {
             StringView in (document, length);
-            return read (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param first The first character of the document to parse.
          * @param last The last character of the document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (const char* first, const char* last) override
+        template <typename Handler>
+        int deserialize (const char* first, const char* last, Handler& handler)
         {
             StringView in (first, last);
-            return read (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (const std::string& document) override
+        template <typename Handler>
+        int deserialize (const std::string& document, Handler& handler)
         {
             StringView in (document.c_str (), document.size ());
-            return read (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::stringstream& document) override
+        template <typename Handler>
+        int deserialize (std::stringstream& document, Handler& handler)
         {
             StringStreamView in (document);
-            return read (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::istringstream& document) override
+        template <typename Handler>
+        int deserialize (std::istringstream& document, Handler& handler)
         {
             StringStreamView in (document);
-            return read (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::fstream& document) override
+        template <typename Handler>
+        int deserialize (std::fstream& document, Handler& handler)
         {
             FileStreamView in (document);
-            return read (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::ifstream& document) override
+        template <typename Handler>
+        int deserialize (std::ifstream& document, Handler& handler)
         {
             FileStreamView in (document);
-            return read (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::iostream& document) override
+        template <typename Handler>
+        int deserialize (std::iostream& document, Handler& handler)
         {
             StreamView in (document);
-            return read (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::istream& document) override
+        template <typename Handler>
+        int deserialize (std::istream& document, Handler& handler)
         {
             StreamView in (document);
-            return read (in);
+            return read (in, handler);
         }
 
     protected:
         /**
-         * @brief parse a document.
+         * @brief parse a document, resetting the handler on failure.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int read (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int read (ViewType& document, Handler& handler)
         {
-            _depth = 0;
-
-            if (JOIN_LIKELY (readValue (document) == 0))
+            try
             {
-                if (JOIN_LIKELY (document.peek () == std::char_traits<char>::eof ()))
+                if (JOIN_LIKELY (readValue (document, handler, 0) == 0))
                 {
-                    return 0;
+                    if (JOIN_LIKELY (document.peek () == std::char_traits<char>::eof ()))
+                    {
+                        return 0;
+                    }
+
+                    join::lastError = make_error_code (SaxErrc::ExtraData);
                 }
-
-                join::lastError = make_error_code (SaxErrc::ExtraData);
             }
-
+            catch (...)
+            {
+                handler.reset ();
+                throw;
+            }
+            handler.reset ();
             return -1;
         }
 
         /**
          * @brief parse value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
+         * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readValue (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int readValue (ViewType& document, Handler& handler, size_t depth)
         {
             int ch = document.peek ();
             if (JOIN_UNLIKELY (ch == std::char_traits<char>::eof ()))
             {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                join::lastError = make_error_code (SaxErrc::Truncated);
                 return -1;
             }
 
             uint8_t head = static_cast<uint8_t> (ch);
 
-            try
+            if (isArray (head))
             {
-                if (isArray (head))
-                {
-                    return readArray (document);
-                }
-                else if (isObject (head))
-                {
-                    return readObject (document);
-                }
-                else if (isNull (head))
-                {
-                    return readNull (document);
-                }
-                else if (isFalse (head))
-                {
-                    return readFalse (document);
-                }
-                else if (isTrue (head))
-                {
-                    return readTrue (document);
-                }
-                else if (isString (head))
-                {
-                    return readString (document);
-                }
-                else if (isBin (head))
-                {
-                    return readBin (document);
-                }
-                else if (isNumber (head))
-                {
-                    return readNumber (document);
-                }
-                else
-                {
-                    join::lastError = make_error_code (SaxErrc::InvalidValue);
-                    return -1;
-                }
+                return readArray (document, handler, depth);
             }
-            catch (...)
+            else if (isObject (head))
+            {
+                return readObject (document, handler, depth);
+            }
+            else if (isNull (head))
+            {
+                return readNull (document, handler);
+            }
+            else if (isFalse (head))
+            {
+                return readFalse (document, handler);
+            }
+            else if (isTrue (head))
+            {
+                return readTrue (document, handler);
+            }
+            else if (isString (head))
+            {
+                return readString (document, handler);
+            }
+            else if (isBin (head))
+            {
+                return readBin (document, handler);
+            }
+            else if (isNumber (head))
+            {
+                return readNumber (document, handler);
+            }
+            else
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -633,73 +818,91 @@ namespace join
         /**
          * @brief parse a null value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readNull (ViewType& document, bool isKey = false)
+        template <typename ViewType, typename Handler>
+        int readNull (ViewType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? setKey (Value (in_place_index_t<Value::Null>{}, nullptr)) : setNull ();
+            return (isKey) ? handler.setKey (Value (in_place_index_t<Value::Null>{}, nullptr)) : handler.setNull ();
         }
 
         /**
          * @brief parse a false value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readFalse (ViewType& document, bool isKey = false)
+        template <typename ViewType, typename Handler>
+        int readFalse (ViewType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? setKey (Value (in_place_index_t<Value::Boolean>{}, false)) : setBool (false);
+            return (isKey) ? handler.setKey (Value (in_place_index_t<Value::Boolean>{}, false))
+                           : handler.setBool (false);
         }
 
         /**
          * @brief parse a true value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readTrue (ViewType& document, bool isKey = false)
+        template <typename ViewType, typename Handler>
+        int readTrue (ViewType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? setKey (Value (in_place_index_t<Value::Boolean>{}, true)) : setBool (true);
+            return (isKey) ? handler.setKey (Value (in_place_index_t<Value::Boolean>{}, true)) : handler.setBool (true);
         }
 
         /**
          * @brief parse an array value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
+         * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readArray (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int readArray (ViewType& document, Handler& handler, size_t depth)
         {
+            if (JOIN_UNLIKELY (depth == saxMaxDepth))
+            {
+                join::lastError = make_error_code (SaxErrc::StackOverflow);
+                return -1;
+            }
+
             uint32_t len = 0;
 
             if (document.getIf (0xdd))
             {
-                len = unpack<uint32_t> (document);
+                if (JOIN_UNLIKELY (unpack<uint32_t> (document, len) == -1))
+                {
+                    return -1;
+                }
             }
             else if (document.getIf (0xdc))
             {
-                len = unpack<uint16_t> (document);
+                if (JOIN_UNLIKELY (unpack<uint16_t> (document, len) == -1))
+                {
+                    return -1;
+                }
             }
             else
             {
-                len = unpack<uint8_t> (document) & ~0x90;
+                len = static_cast<uint8_t> (document.get ()) & ~0x90u;
             }
 
-            if (JOIN_UNLIKELY (startArray (len) == -1))
+            if (JOIN_UNLIKELY (handler.startArray (len) == -1))
             {
                 return -1;
             }
 
             while (len)
             {
-                if (JOIN_UNLIKELY (readValue (document) == -1))
+                if (JOIN_UNLIKELY (readValue (document, handler, depth + 1) == -1))
                 {
                     return -1;
                 }
@@ -707,45 +910,59 @@ namespace join
                 --len;
             }
 
-            return stopArray ();
+            return handler.stopArray ();
         }
 
         /**
          * @brief parse an object value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
+         * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readObject (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int readObject (ViewType& document, Handler& handler, size_t depth)
         {
+            if (JOIN_UNLIKELY (depth == saxMaxDepth))
+            {
+                join::lastError = make_error_code (SaxErrc::StackOverflow);
+                return -1;
+            }
+
             uint32_t len = 0;
 
             if (document.getIf (0xdf))
             {
-                len = unpack<uint32_t> (document);
+                if (JOIN_UNLIKELY (unpack<uint32_t> (document, len) == -1))
+                {
+                    return -1;
+                }
             }
             else if (document.getIf (0xde))
             {
-                len = unpack<uint16_t> (document);
+                if (JOIN_UNLIKELY (unpack<uint16_t> (document, len) == -1))
+                {
+                    return -1;
+                }
             }
             else
             {
-                len = unpack<uint8_t> (document) & ~0x80;
+                len = static_cast<uint8_t> (document.get ()) & ~0x80u;
             }
 
-            if (JOIN_UNLIKELY (startObject (len) == -1))
+            if (JOIN_UNLIKELY (handler.startObject (len) == -1))
             {
                 return -1;
             }
 
             while (len)
             {
-                if (JOIN_UNLIKELY (readKey (document) == -1))
+                if (JOIN_UNLIKELY (readKey (document, handler) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (readValue (document) == -1))
+                if (JOIN_UNLIKELY (readValue (document, handler, depth + 1) == -1))
                 {
                     return -1;
                 }
@@ -753,55 +970,48 @@ namespace join
                 --len;
             }
 
-            return stopObject ();
+            return handler.stopObject ();
         }
 
         /**
          * @brief parse a key of any type.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readKey (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int readKey (ViewType& document, Handler& handler)
         {
             int ch = document.peek ();
             if (JOIN_UNLIKELY (ch == std::char_traits<char>::eof ()))
             {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                join::lastError = make_error_code (SaxErrc::Truncated);
                 return -1;
             }
 
             uint8_t head = static_cast<uint8_t> (ch);
 
-            try
+            if (isNull (head))
             {
-                if (isNull (head))
-                {
-                    return readNull (document, true);
-                }
-                else if (isFalse (head))
-                {
-                    return readFalse (document, true);
-                }
-                else if (isTrue (head))
-                {
-                    return readTrue (document, true);
-                }
-                else if (isString (head))
-                {
-                    return readString (document, true);
-                }
-                else if (isNumber (head))
-                {
-                    return readNumber (document, true);
-                }
-                else
-                {
-                    join::lastError = make_error_code (SaxErrc::InvalidValue);
-                    return -1;
-                }
+                return readNull (document, handler, true);
             }
-            catch (...)
+            else if (isFalse (head))
+            {
+                return readFalse (document, handler, true);
+            }
+            else if (isTrue (head))
+            {
+                return readTrue (document, handler, true);
+            }
+            else if (isString (head))
+            {
+                return readString (document, handler, true);
+            }
+            else if (isNumber (head))
+            {
+                return readNumber (document, handler, true);
+            }
+            else
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
@@ -811,170 +1021,266 @@ namespace join
         /**
          * @brief parse a string value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readString (ViewType& document, bool isKey = false)
+        template <typename ViewType, typename Handler>
+        int readString (ViewType& document, Handler& handler, bool isKey = false)
         {
             uint32_t len = 0;
 
             if (document.getIf (0xdb))
             {
-                len = unpack<uint32_t> (document);
+                if (JOIN_UNLIKELY (unpack<uint32_t> (document, len) == -1))
+                {
+                    return -1;
+                }
             }
             else if (document.getIf (0xda))
             {
-                len = unpack<uint16_t> (document);
+                if (JOIN_UNLIKELY (unpack<uint16_t> (document, len) == -1))
+                {
+                    return -1;
+                }
             }
             else if (document.getIf (0xd9))
             {
-                len = unpack<uint8_t> (document);
+                if (JOIN_UNLIKELY (unpack<uint8_t> (document, len) == -1))
+                {
+                    return -1;
+                }
             }
             else
             {
-                len = unpack<uint8_t> (document) & ~0xa0;
+                len = static_cast<uint8_t> (document.get ()) & ~0xa0u;
             }
 
             std::string output;
-            output.resize (len);
-
-            if (JOIN_UNLIKELY (document.read (&output[0], len) != len))
+            if (JOIN_UNLIKELY (readBytes (document, len, output) == -1))
             {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
             }
 
-            return isKey ? setKey (Value (in_place_index_t<Value::String>{}, output)) : setString (output);
+            return isKey ? handler.setKey (Value (in_place_index_t<Value::String>{}, std::move (output)))
+                         : handler.setString (std::move (output));
         }
 
         /**
          * @brief parse binary data.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readBin (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int readBin (ViewType& document, Handler& handler)
         {
             uint32_t len = 0;
 
             if (document.getIf (0xc6))
             {
-                len = unpack<uint32_t> (document);
+                if (JOIN_UNLIKELY (unpack<uint32_t> (document, len) == -1))
+                {
+                    return -1;
+                }
             }
             else if (document.getIf (0xc5))
             {
-                len = unpack<uint16_t> (document);
+                if (JOIN_UNLIKELY (unpack<uint16_t> (document, len) == -1))
+                {
+                    return -1;
+                }
             }
             else if (document.getIf (0xc4))
             {
-                len = unpack<uint8_t> (document);
+                if (JOIN_UNLIKELY (unpack<uint8_t> (document, len) == -1))
+                {
+                    return -1;
+                }
             }
 
             std::string output;
-            output.resize (len);
-
-            if (JOIN_UNLIKELY (document.read (&output[0], len) != len))
+            if (JOIN_UNLIKELY (readBytes (document, len, output) == -1))
             {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
             }
 
-            return setString (output);
+            return handler.setString (std::move (output));
         }
 
         /**
          * @brief parse a number value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readNumber (ViewType& document, bool isKey = false)
+        template <typename ViewType, typename Handler>
+        int readNumber (ViewType& document, Handler& handler, bool isKey = false)
         {
             uint8_t head = document.get ();
 
             if (head <= 0x7f)
             {
                 auto number = uint32_t (head);
-                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
+                             : handler.setUint (number);
             }
             else if (head >= 0xe0)
             {
                 auto number = int32_t (static_cast<int8_t> (head));
-                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Integer>{}, number))
+                             : handler.setInt (number);
             }
             else if (head == 0xd3)
             {
-                auto number = unpack<int64_t> (document);
-                return isKey ? setKey (Value (in_place_index_t<Value::Integer64>{}, number)) : setInt64 (number);
+                int64_t number;
+                if (JOIN_UNLIKELY (unpack<int64_t> (document, number) == -1))
+                {
+                    return -1;
+                }
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Integer64>{}, number))
+                             : handler.setInt64 (number);
             }
             else if (head == 0xcf)
             {
-                auto number = unpack<uint64_t> (document);
-                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned64>{}, number)) : setUint64 (number);
+                uint64_t number;
+                if (JOIN_UNLIKELY (unpack<uint64_t> (document, number) == -1))
+                {
+                    return -1;
+                }
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Unsigned64>{}, number))
+                             : handler.setUint64 (number);
             }
             else if (head == 0xcb)
             {
-                auto number = unpack<double> (document);
-                return isKey ? setKey (Value (in_place_index_t<Value::Real>{}, number)) : setDouble (number);
+                double number;
+                if (JOIN_UNLIKELY (unpack<double> (document, number) == -1))
+                {
+                    return -1;
+                }
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Real>{}, number))
+                             : handler.setDouble (number);
             }
             else if (head == 0xd2)
             {
-                auto number = unpack<int32_t> (document);
-                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+                int32_t number;
+                if (JOIN_UNLIKELY (unpack<int32_t> (document, number) == -1))
+                {
+                    return -1;
+                }
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Integer>{}, number))
+                             : handler.setInt (number);
             }
             else if (head == 0xce)
             {
-                auto number = unpack<uint32_t> (document);
-                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+                uint32_t number;
+                if (JOIN_UNLIKELY (unpack<uint32_t> (document, number) == -1))
+                {
+                    return -1;
+                }
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
+                             : handler.setUint (number);
             }
             else if (head == 0xca)
             {
-                auto number = double (unpack<float> (document));
-                return isKey ? setKey (Value (in_place_index_t<Value::Real>{}, number)) : setDouble (number);
+                double number;
+                if (JOIN_UNLIKELY (unpack<float> (document, number) == -1))
+                {
+                    return -1;
+                }
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Real>{}, number))
+                             : handler.setDouble (number);
             }
             else if (head == 0xd1)
             {
-                auto number = int32_t (unpack<int16_t> (document));
-                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+                int32_t number;
+                if (JOIN_UNLIKELY (unpack<int16_t> (document, number) == -1))
+                {
+                    return -1;
+                }
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Integer>{}, number))
+                             : handler.setInt (number);
             }
             else if (head == 0xcd)
             {
-                auto number = uint32_t (unpack<uint16_t> (document));
-                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+                uint32_t number;
+                if (JOIN_UNLIKELY (unpack<uint16_t> (document, number) == -1))
+                {
+                    return -1;
+                }
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
+                             : handler.setUint (number);
             }
             else if (head == 0xd0)
             {
-                auto number = int32_t (unpack<int8_t> (document));
-                return isKey ? setKey (Value (in_place_index_t<Value::Integer>{}, number)) : setInt (number);
+                int32_t number;
+                if (JOIN_UNLIKELY (unpack<int8_t> (document, number) == -1))
+                {
+                    return -1;
+                }
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Integer>{}, number))
+                             : handler.setInt (number);
             }
             else if (head == 0xcc)
             {
-                auto number = uint32_t (unpack<uint8_t> (document));
-                return isKey ? setKey (Value (in_place_index_t<Value::Unsigned>{}, number)) : setUint (number);
+                uint32_t number;
+                if (JOIN_UNLIKELY (unpack<uint8_t> (document, number) == -1))
+                {
+                    return -1;
+                }
+                return isKey ? handler.setKey (Value (in_place_index_t<Value::Unsigned>{}, number))
+                             : handler.setUint (number);
             }
             else
             {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
-                return -1;
+                join::lastError = make_error_code (SaxErrc::InvalidValue);  // LCOV_EXCL_LINE
+                return -1;                                                  // LCOV_EXCL_LINE
             }
+        }
+
+        /**
+         * @brief read bytes by chunks.
+         * @param document document to parse.
+         * @param len number of bytes to read.
+         * @param output string receiving the bytes.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType>
+        static int readBytes (ViewType& document, uint32_t len, std::string& output)
+        {
+            while (len)
+            {
+                size_t pos = output.size ();
+                size_t chunk = std::min<size_t> (len, 65536);
+                output.resize (pos + chunk);
+                if (JOIN_UNLIKELY (document.read (&output[pos], chunk) != chunk))
+                {
+                    join::lastError = make_error_code (SaxErrc::Truncated);
+                    return -1;
+                }
+                len -= chunk;
+            }
+            return 0;
         }
 
         /**
          * @brief unpack value from stream.
          * @param document document to parse.
-         * @return unpacked value.
+         * @param output unpacked value.
+         * @return 0 on success, -1 otherwise.
          */
-        template <typename Type, typename ViewType>
-        std::enable_if_t<std::is_arithmetic<Type>::value, Type> static unpack (ViewType& document)
+        template <typename Type, typename ViewType, typename Output>
+        static std::enable_if_t<std::is_arithmetic<Type>::value, int> unpack (ViewType& document, Output& output)
         {
             Type value;
             if (JOIN_UNLIKELY (document.read (reinterpret_cast<char*> (&value), sizeof (value)) != sizeof (value)))
             {
-                throw std::range_error ("not enough data to unpack");
+                join::lastError = make_error_code (SaxErrc::Truncated);
+                return -1;
             }
-            return swap (value);
+            output = static_cast<Output> (swap (value));
+            return 0;
         }
 
         /**

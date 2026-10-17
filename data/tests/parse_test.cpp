@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/document.hpp>
 #include <join/json.hpp>
 
 // libraries.
@@ -32,6 +33,8 @@
 #include <fstream>
 
 using join::Value;
+using join::Document;
+using join::JsonReader;
 
 /**
  * @brief test canada parsing.
@@ -41,8 +44,8 @@ TEST (Parse, canada)
     std::ifstream fs ("data/canada.json");
     ASSERT_TRUE (fs.is_open ());
 
-    Value value;
-    ASSERT_EQ (value.jsonRead (fs), 0) << join::lastError.message ();
+    Document document;
+    ASSERT_EQ (JsonReader ().deserialize (fs, document), 0) << join::lastError.message ();
 }
 
 /**
@@ -57,8 +60,8 @@ TEST (Parse, citm_catalog)
     buffer << fs.rdbuf ();
     std::string json = buffer.str ();
 
-    Value value;
-    ASSERT_EQ (value.jsonRead (json), 0) << join::lastError.message ();
+    Document document;
+    ASSERT_EQ (JsonReader ().deserialize (json, document), 0) << join::lastError.message ();
 }
 
 /**
@@ -69,14 +72,14 @@ TEST (Parse, twitter)
     std::ifstream fs ("data/twitter.json");
     ASSERT_TRUE (fs.is_open ());
 
-    Value value;
-    ASSERT_EQ (value.jsonRead (fs), 0) << join::lastError.message ();
+    Document document;
+    ASSERT_EQ (JsonReader ().deserialize (fs, document), 0) << join::lastError.message ();
 }
 
 /**
  * @brief main function.
  */
-int main (int argc, char **argv)
+int main (int argc, char** argv)
 {
     testing::InitGoogleTest (&argc, argv);
     return RUN_ALL_TESTS ();

@@ -27,13 +27,21 @@
 
 // libjoin.
 #include <join/atodpow.hpp>
-#include <join/dtoa.hpp>
-#include <join/sax.hpp>
-#include <join/utf8.hpp>
+#include <join/value.hpp>
 #include <join/utf16.hpp>
+#include <join/utf8.hpp>
+#include <join/dtoa.hpp>
+#include <join/view.hpp>
+#include <join/sax.hpp>
 
 // C++.
+#include <type_traits>
+#include <functional>
+#include <algorithm>
+#include <sstream>
+#include <fstream>
 #include <memory>
+#include <vector>
 #include <locale>
 
 namespace join
@@ -148,9 +156,19 @@ namespace join
     std::error_condition make_error_condition (JsonErrc code) noexcept;
 
     /**
+     * @brief JSON serialization mode.
+     */
+    enum class JsonWriteMode
+    {
+        None,      /**< no write mode set. */
+        Canonical, /**< canonical form. */
+    };
+
+    /**
      * @brief JSON writer class.
      */
-    class JsonWriter : public StreamWriter
+    template <JsonWriteMode WriteMode = JsonWriteMode::None>
+    class BasicJsonWriter
     {
     public:
         /**
@@ -158,9 +176,9 @@ namespace join
          * @param document JSON document to create.
          * @param indentation number of characters used to indent JSON.
          */
-        JsonWriter (std::ostream& document, size_t indentation = 0)
-        : StreamWriter (document)
-        , _indentation (indentation)
+        explicit BasicJsonWriter (std::ostream& document, size_t indentation = 0)
+        : _out (document.rdbuf ())
+        , _indentation ((WriteMode == JsonWriteMode::Canonical) ? 0 : indentation)
         {
         }
 
@@ -168,42 +186,42 @@ namespace join
          * @brief copy constructor.
          * @param other object to copy.
          */
-        JsonWriter (const JsonWriter& other) = delete;
+        BasicJsonWriter (const BasicJsonWriter& other) = delete;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        JsonWriter& operator= (const JsonWriter& other) = delete;
+        BasicJsonWriter& operator= (const BasicJsonWriter& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        JsonWriter (JsonWriter&& other) = delete;
+        BasicJsonWriter (BasicJsonWriter&& other) = delete;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        JsonWriter& operator= (JsonWriter&& other) = delete;
+        BasicJsonWriter& operator= (BasicJsonWriter&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        virtual ~JsonWriter () = default;
+        ~BasicJsonWriter () = default;
 
         /**
          * @brief set null value.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setNull () override
+        int setNull ()
         {
             array ();
             append ("null", 4);
-            _first = false;
+            endValue ();
             return 0;
         }
 
@@ -212,7 +230,7 @@ namespace join
          * @param value boolean value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setBool (bool value) override
+        int setBool (bool value)
         {
             array ();
             if (value)
@@ -223,7 +241,7 @@ namespace join
             {
                 append ("false", 5);
             }
-            _first = false;
+            endValue ();
             return 0;
         }
 
@@ -232,11 +250,11 @@ namespace join
          * @param value integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setInt (int32_t value) override
+        int setInt (int32_t value)
         {
             array ();
             writeInt (value);
-            _first = false;
+            endValue ();
             return 0;
         }
 
@@ -245,11 +263,11 @@ namespace join
          * @param value unsigned integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setUint (uint32_t value) override
+        int setUint (uint32_t value)
         {
             array ();
             writeUint (value);
-            _first = false;
+            endValue ();
             return 0;
         }
 
@@ -258,11 +276,11 @@ namespace join
          * @param value 64 bits integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setInt64 (int64_t value) override
+        int setInt64 (int64_t value)
         {
             array ();
             writeInt64 (value);
-            _first = false;
+            endValue ();
             return 0;
         }
 
@@ -271,11 +289,11 @@ namespace join
          * @param value unsigned 64 bits integer value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setUint64 (uint64_t value) override
+        int setUint64 (uint64_t value)
         {
             array ();
             writeUint64 (value);
-            _first = false;
+            endValue ();
             return 0;
         }
 
@@ -284,7 +302,8 @@ namespace join
          * @param value real value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setDouble (double value) override
+        template <JsonWriteMode Mode = WriteMode>
+        typename std::enable_if<Mode == JsonWriteMode::None, int>::type setDouble (double value)
         {
             array ();
             uint64_t bits;
@@ -318,7 +337,42 @@ namespace join
                     append ("Inf", 3);
                 }
             }
-            _first = false;
+            endValue ();
+            return 0;
+        }
+
+        /**
+         * @brief set real value in canonical form.
+         * @param value real value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonWriteMode Mode = WriteMode>
+        typename std::enable_if<Mode == JsonWriteMode::Canonical, int>::type setDouble (double value)
+        {
+            array ();
+            if (std::isfinite (value))
+            {
+                if ((std::trunc (value) == value) && (value >= 0) &&
+                    (value < static_cast<double> (std::numeric_limits<uint64_t>::max ())))
+                {
+                    writeUint64 (static_cast<uint64_t> (value));
+                }
+                else if ((std::trunc (value) == value) &&
+                         (value >= static_cast<double> (std::numeric_limits<int64_t>::min ())) &&
+                         (value < static_cast<double> (std::numeric_limits<int64_t>::max ())))
+                {
+                    writeInt64 (static_cast<int64_t> (value));
+                }
+                else
+                {
+                    writeDouble (value);
+                }
+            }
+            else
+            {
+                append ("null", 4);
+            }
+            endValue ();
             return 0;
         }
 
@@ -327,16 +381,17 @@ namespace join
          * @param value string value to set.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setString (const std::string& value) override
+        int setString (const std::string& value)
         {
             array ();
             append ('"');
             if (writeEscaped (value) == -1)
             {
+                reset ();
                 return -1;
             }
             append ('"');
-            _first = false;
+            endValue ();
             return 0;
         }
 
@@ -345,11 +400,12 @@ namespace join
          * @param size array size (ignored).
          * @return 0 on success, -1 otherwise.
          */
-        virtual int startArray ([[maybe_unused]] uint32_t size = 0) override
+        int startArray ([[maybe_unused]] uint32_t size = 0)
         {
-            if (JOIN_UNLIKELY (_depth == sizeof (_arrays) * 8))
+            if (JOIN_UNLIKELY (_depth == saxMaxDepth))
             {
                 join::lastError = make_error_code (SaxErrc::StackOverflow);
+                reset ();
                 return -1;
             }
             array ();
@@ -364,8 +420,14 @@ namespace join
          * @brief stop array.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int stopArray () override
+        int stopArray ()
         {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
             --_depth;
             if (!_first)
             {
@@ -373,20 +435,21 @@ namespace join
                 indent ();
             }
             append (']');
-            _first = false;
+            endValue ();
             return 0;
         }
 
         /**
          * @brief start object.
-         * @param size array size (ignored).
+         * @param size object size (ignored).
          * @return 0 on success, -1 otherwise.
          */
-        virtual int startObject ([[maybe_unused]] uint32_t size = 0) override
+        int startObject ([[maybe_unused]] uint32_t size = 0)
         {
-            if (JOIN_UNLIKELY (_depth == sizeof (_arrays) * 8))
+            if (JOIN_UNLIKELY (_depth == saxMaxDepth))
             {
                 join::lastError = make_error_code (SaxErrc::StackOverflow);
+                reset ();
                 return -1;
             }
             array ();
@@ -398,15 +461,58 @@ namespace join
         }
 
         /**
+         * @brief get object members in writing order.
+         * @param object object to write.
+         * @return object members in insertion order.
+         */
+        template <JsonWriteMode Mode = WriteMode>
+        typename std::enable_if<Mode == JsonWriteMode::None, const Object&>::type members (
+            const Object& object) const noexcept
+        {
+            return object;
+        }
+
+        /**
+         * @brief get object members sorted by key in UTF-16 order.
+         * @param object object to write.
+         * @return sorted object members.
+         */
+        template <JsonWriteMode Mode = WriteMode>
+        typename std::enable_if<Mode == JsonWriteMode::Canonical,
+                                std::vector<std::reference_wrapper<const Member>>>::type
+        members (const Object& object) const
+        {
+            std::vector<std::reference_wrapper<const Member>> sorted (object.begin (), object.end ());
+            std::sort (sorted.begin (), sorted.end (), [] (const Member& a, const Member& b) {
+                if (!a.first.isString () || !b.first.isString ())
+                {
+                    return !a.first.isString () && b.first.isString ();
+                }
+                const std::string& sa = a.first.getString ();
+                const std::string& sb = b.first.getString ();
+                return utf8::compareUtf16Order (sa.data (), sa.data () + sa.size (), sb.data (),
+                                                sb.data () + sb.size ()) < 0;
+            });
+            return sorted;
+        }
+
+        /**
          * @brief set key.
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int setKey (const Value& key) override
+        int setKey (const Value& key)
         {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
             if (JOIN_UNLIKELY (!key.isString ()))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidKey);
+                reset ();
                 return -1;
             }
             comma ();
@@ -415,6 +521,7 @@ namespace join
             append ('"');
             if (writeEscaped (key.getString ()) == -1)
             {
+                reset ();
                 return -1;
             }
             append ('"');
@@ -428,8 +535,14 @@ namespace join
          * @brief stop object.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int stopObject () override
+        int stopObject ()
         {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
             --_depth;
             if (!_first)
             {
@@ -437,8 +550,30 @@ namespace join
                 indent ();
             }
             append ('}');
-            _first = false;
+            endValue ();
             return 0;
+        }
+
+        /**
+         * @brief flush buffered data to output stream.
+         */
+        void flush ()
+        {
+            if (_size)
+            {
+                _out->sputn (_buffer, _size);
+                _size = 0;
+            }
+        }
+
+        /**
+         * @brief reset the writer state, discarding buffered data.
+         */
+        void reset () noexcept
+        {
+            _size = 0;
+            _depth = 0;
+            _first = true;
         }
 
     protected:
@@ -446,7 +581,7 @@ namespace join
          * @brief write integer value.
          * @param value integer value to write.
          */
-        virtual void writeInt (int32_t value)
+        void writeInt (int32_t value)
         {
             if (value == std::numeric_limits<int32_t>::min ())
             {
@@ -469,7 +604,7 @@ namespace join
          * @brief write unsigned integer value.
          * @param value unsigned integer value to write.
          */
-        virtual void writeUint (uint32_t value)
+        void writeUint (uint32_t value)
         {
             writeUint64 (static_cast<uint64_t> (value));
         }
@@ -478,7 +613,7 @@ namespace join
          * @brief write 64 bits integer value.
          * @param value 64 bits integer value to write.
          */
-        virtual void writeInt64 (int64_t value)
+        void writeInt64 (int64_t value)
         {
             if (value == std::numeric_limits<int64_t>::min ())
             {
@@ -501,7 +636,7 @@ namespace join
          * @brief write 64 bits unsigned integer value.
          * @param value 64 bits unsigned integer value to write.
          */
-        virtual void writeUint64 (uint64_t value)
+        void writeUint64 (uint64_t value)
         {
             static constexpr uint64_t pow10[20] = {1ULL,
                                                    10ULL,
@@ -544,25 +679,15 @@ namespace join
             size_t length = ((64 - __builtin_clzll (value | 1)) * 1233) >> 12;
             length += (value >= pow10[length]) + (value == 0);
 
-            if (JOIN_UNLIKELY (_capacity - _size < 20))
-            {
-                flush ();
-                if (_capacity == 0)
-                {
-                    _out->sputn (buffer + 20 - length, length);
-                    return;
-                }
-            }
-
-            std::memcpy (_buffer + _size, buffer + 20 - length, 20);
-            _size += length;
+            appendDigits (buffer + 20 - length, length);
         }
 
         /**
          * @brief write real value.
          * @param value real value to write.
          */
-        virtual void writeDouble (double value)
+        template <JsonWriteMode Mode = WriteMode>
+        typename std::enable_if<Mode == JsonWriteMode::None>::type writeDouble (double value)
         {
             char buf[25];
             char* end = join::dtoa (buf, value);
@@ -570,11 +695,31 @@ namespace join
         }
 
         /**
+         * @brief write real value in canonical form.
+         * @param value real value to write.
+         */
+        template <JsonWriteMode Mode = WriteMode>
+        typename std::enable_if<Mode == JsonWriteMode::Canonical>::type writeDouble (double value)
+        {
+            char beg[25];
+            char* end = join::dtoa (beg, value);
+            for (char* pos = beg; pos < end; ++pos)
+            {
+                append (*pos);
+                if ((*pos == 'e') && (*(pos + 1) != '-'))
+                {
+                    append ('+');
+                }
+            }
+        }
+
+        /**
          * @brief escape string value.
          * @param value string value to escape.
          * @return 0 on success, -1 otherwise.
          */
-        virtual int writeEscaped (const std::string& value)
+        template <JsonWriteMode Mode = WriteMode>
+        typename std::enable_if<Mode == JsonWriteMode::None, int>::type writeEscaped (const std::string& value)
         {
             const char* cur = value.data ();
             const char* end = cur + value.size ();
@@ -636,9 +781,73 @@ namespace join
         }
 
         /**
+         * @brief validate and escape string value.
+         * @param value string value to escape.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <JsonWriteMode Mode = WriteMode>
+        typename std::enable_if<Mode == JsonWriteMode::Canonical, int>::type writeEscaped (const std::string& value)
+        {
+            if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
+            {
+                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
+                return -1;
+            }
+            return writeEscaped<JsonWriteMode::None> (value);
+        }
+
+        /**
+         * @brief append character to output stream in batch.
+         * @param data character to append to output stream.
+         */
+        inline void append (char data)
+        {
+            if (JOIN_UNLIKELY (_size == sizeof (_buffer)))
+            {
+                flush ();
+            }
+            _buffer[_size++] = data;
+        }
+
+        /**
+         * @brief append data to output stream in batch.
+         * @param data data to append to output stream.
+         * @param size data size.
+         */
+        inline void append (const char* data, uint32_t size)
+        {
+            if (JOIN_UNLIKELY (size > sizeof (_buffer) - _size))
+            {
+                flush ();
+                if (size >= sizeof (_buffer))
+                {
+                    _out->sputn (data, size);
+                    return;
+                }
+            }
+            std::memcpy (_buffer + _size, data, size);
+            _size += size;
+        }
+
+        /**
+         * @brief append the digits of a number, read 20 bytes at a time.
+         * @param digits digits followed by enough readable bytes to read 20.
+         * @param length number of digits.
+         */
+        inline void appendDigits (const char* digits, size_t length)
+        {
+            if (JOIN_UNLIKELY (sizeof (_buffer) - _size < 20))
+            {
+                flush ();
+            }
+            std::memcpy (_buffer + _size, digits, 20);
+            _size += length;
+        }
+
+        /**
          * @brief write comma.
          */
-        inline void comma () noexcept
+        inline void comma ()
         {
             if (_depth && !_first)
             {
@@ -647,9 +856,20 @@ namespace join
         }
 
         /**
+         * @brief write end of line.
+         */
+        inline void endLine ()
+        {
+            if (_indentation)
+            {
+                append ('\n');
+            }
+        }
+
+        /**
          * @brief write indentation.
          */
-        inline void indent () noexcept
+        inline void indent ()
         {
             if (_indentation)
             {
@@ -667,7 +887,7 @@ namespace join
         /**
          * @brief write space.
          */
-        inline void space () noexcept
+        inline void space ()
         {
             if (_indentation)
             {
@@ -676,20 +896,9 @@ namespace join
         }
 
         /**
-         * @brief write end of line.
-         */
-        inline void endLine () noexcept
-        {
-            if (_indentation)
-            {
-                append ('\n');
-            }
-        }
-
-        /**
          * @brief add comma, go to line and indent if in array.
          */
-        inline void array () noexcept
+        inline void array ()
         {
             comma ();
             if (_depth && ((_arrays[(_depth - 1) >> 6] >> ((_depth - 1) & 63)) & 1))
@@ -699,8 +908,29 @@ namespace join
             }
         }
 
+        /**
+         * @brief mark the end of a value, flushing the document once complete.
+         */
+        inline void endValue ()
+        {
+            _first = false;
+            if (_depth == 0)
+            {
+                flush ();
+            }
+        }
+
+        /// underlying output stream.
+        std::streambuf* _out;
+
+        /// output buffer.
+        char _buffer[1024] = {};
+
+        /// output buffer size.
+        size_t _size = 0;
+
         /// array flags of the open containers, one bit per depth.
-        uint64_t _arrays[4] = {};
+        uint64_t _arrays[saxMaxDepth / 64] = {};
 
         /// number of open containers.
         size_t _depth = 0;
@@ -712,153 +942,11 @@ namespace join
         bool _first = true;
     };
 
-    /**
-     * @brief JSON canonicalizer class.
-     */
-    class JsonCanonicalizer : public JsonWriter
-    {
-    public:
-        /**
-         * @brief create instance.
-         * @param document JSON document to create.
-         */
-        JsonCanonicalizer (std::ostream& document)
-        : JsonWriter (document, 0)
-        {
-        }
+    /// JSON default writer.
+    using JsonWriter = BasicJsonWriter<JsonWriteMode::None>;
 
-        /**
-         * @brief copy constructor.
-         * @param other object to copy.
-         */
-        JsonCanonicalizer (const JsonCanonicalizer& other) = delete;
-
-        /**
-         * @brief copy assignment.
-         * @param other object to copy.
-         * @return a reference of the current object.
-         */
-        JsonCanonicalizer& operator= (const JsonCanonicalizer& other) = delete;
-
-        /**
-         * @brief move constructor.
-         * @param other object to move.
-         */
-        JsonCanonicalizer (JsonCanonicalizer&& other) = delete;
-
-        /**
-         * @brief move assignment.
-         * @param other object to move.
-         * @return a reference of the current object.
-         */
-        JsonCanonicalizer& operator= (JsonCanonicalizer&& other) = delete;
-
-        /**
-         * @brief destroy instance.
-         */
-        virtual ~JsonCanonicalizer () = default;
-
-        /**
-         * @brief set real value.
-         * @param value real value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setDouble (double value) override
-        {
-            array ();
-            if (std::isfinite (value))
-            {
-                if ((std::trunc (value) == value) && (value >= 0) &&
-                    (value < static_cast<double> (std::numeric_limits<uint64_t>::max ())))
-                {
-                    writeUint64 (static_cast<uint64_t> (value));
-                }
-                else if ((std::trunc (value) == value) &&
-                         (value >= static_cast<double> (std::numeric_limits<int64_t>::min ())) &&
-                         (value < static_cast<double> (std::numeric_limits<int64_t>::max ())))
-                {
-                    writeInt64 (static_cast<int64_t> (value));
-                }
-                else
-                {
-                    writeDouble (value);
-                }
-            }
-            else
-            {
-                append ("null", 4);
-            }
-            _first = false;
-            return 0;
-        }
-
-    protected:
-        /**
-         * @brief set object value.
-         * @param value array value to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int setObject (const Object& object) override
-        {
-            startObject (object.size ());
-            std::vector<const Member*> members;
-            std::transform (object.begin (), object.end (), std::back_inserter (members), [] (const Member& member) {
-                return &member;
-            });
-            std::sort (members.begin (), members.end (), [] (const Member* a, const Member* b) {
-                const std::string& sa = a->first.getString ();
-                const std::string& sb = b->first.getString ();
-                return utf8::compareUtf16Order (sa.data (), sa.data () + sa.size (), sb.data (),
-                                                sb.data () + sb.size ()) < 0;
-            });
-            for (auto const& member : members)
-            {
-                if (setKey (member->first) == -1)
-                {
-                    return -1;
-                }
-
-                if (setValue (member->second) == -1)
-                {
-                    return -1;
-                }
-            }
-            return stopObject ();
-        }
-
-        /**
-         * @brief escape string value.
-         * @param value string value to escape.
-         * @return 0 on success, -1 otherwise.
-         */
-        virtual int writeEscaped (const std::string& value) override
-        {
-            if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
-            {
-                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
-                return -1;
-            }
-            return JsonWriter::writeEscaped (value);
-        }
-
-        /**
-         * @brief write real value.
-         * @param value real value to write.
-         */
-        virtual void writeDouble (double value) noexcept override
-        {
-            char beg[25];
-            char* end = join::dtoa (beg, value);
-            for (char* pos = beg; pos < end; ++pos)
-            {
-                append (*pos);
-                if ((*pos == 'e') && (*(pos + 1) != '-'))
-                {
-                    append ('+');
-                }
-            }
-        }
-    };
+    /// JSON canonicalizer, sorting object members when used with Document::serialize.
+    using JsonCanonicalizer = BasicJsonWriter<JsonWriteMode::Canonical>;
 
     /**
      * @brief JSON deserialization mode.
@@ -918,268 +1006,206 @@ namespace join
     /**
      * @brief JSON reader class.
      */
-    class JsonReader : public StreamReader
+    template <JsonReadMode ReadMode = JsonReadMode::None>
+    class BasicJsonReader
     {
     public:
         /**
          * @brief default constructor.
-         * @param root Value to write.
          */
-        JsonReader (Value& root)
-        : StreamReader (root)
-        {
-        }
+        BasicJsonReader () = default;
 
         /**
          * @brief copy constructor.
          * @param other object to copy.
          */
-        JsonReader (const JsonReader& other) = delete;
+        BasicJsonReader (const BasicJsonReader& other) = delete;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        JsonReader& operator= (const JsonReader& other) = delete;
+        BasicJsonReader& operator= (const BasicJsonReader& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        JsonReader (JsonReader&& other) = delete;
+        BasicJsonReader (BasicJsonReader&& other) = delete;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        JsonReader& operator= (JsonReader&& other) = delete;
+        BasicJsonReader& operator= (BasicJsonReader&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        virtual ~JsonReader () = default;
+        ~BasicJsonReader () = default;
 
         /**
          * @brief deserialize a document.
          * @param document document to parse.
          * @param length The length of the document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <JsonReadMode ReadMode = JsonReadMode::None>
-        int deserialize (const char* document, size_t length)
+        template <typename Handler>
+        int deserialize (const char* document, size_t length, Handler& handler)
         {
             StringView in (document, length);
-            return read<ReadMode> (in);
+            return read (in, handler);
+        }
+
+        /**
+         * @brief deserialize a document.
+         * @param first The first character of the document to parse.
+         * @param last The last character of the document to parse.
+         * @param handler handler receiving the document.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+        int deserialize (const char* first, const char* last, Handler& handler)
+        {
+            StringView in (first, last);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to parse.
-         * @param length The length of the document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (const char* document, size_t length) override
-        {
-            return deserialize<> (document, length);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param first The first character of the document to parse.
-         * @param last The last character of the document to parse.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonReadMode ReadMode = JsonReadMode::None>
-        int deserialize (const char* first, const char* last)
-        {
-            StringView in (first, last);
-            return read<ReadMode> (in);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param first The first character of the document to parse.
-         * @param last The last character of the document to parse.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (const char* first, const char* last) override
-        {
-            return deserialize<> (first, last);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonReadMode ReadMode = JsonReadMode::None>
-        int deserialize (const std::string& document)
+        template <typename Handler>
+        int deserialize (const std::string& document, Handler& handler)
         {
             StringView in (document.c_str (), document.size ());
-            return read<ReadMode> (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (const std::string& document) override
-        {
-            return deserialize<> (document);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonReadMode ReadMode = JsonReadMode::None>
-        int deserialize (std::stringstream& document)
+        template <typename Handler>
+        int deserialize (std::stringstream& document, Handler& handler)
         {
             StringStreamView in (document);
-            return read<ReadMode> (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::stringstream& document) override
-        {
-            return deserialize<> (document);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonReadMode ReadMode = JsonReadMode::None>
-        int deserialize (std::istringstream& document)
+        template <typename Handler>
+        int deserialize (std::istringstream& document, Handler& handler)
         {
             StringStreamView in (document);
-            return read<ReadMode> (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::istringstream& document) override
-        {
-            return deserialize<> (document);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonReadMode ReadMode = JsonReadMode::None>
-        int deserialize (std::fstream& document)
+        template <typename Handler>
+        int deserialize (std::fstream& document, Handler& handler)
         {
             FileStreamView in (document);
-            return read<ReadMode> (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::fstream& document) override
-        {
-            return deserialize<> (document);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonReadMode ReadMode = JsonReadMode::None>
-        int deserialize (std::ifstream& document)
+        template <typename Handler>
+        int deserialize (std::ifstream& document, Handler& handler)
         {
             FileStreamView in (document);
-            return read<ReadMode> (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::ifstream& document) override
-        {
-            return deserialize<> (document);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonReadMode ReadMode = JsonReadMode::None>
-        int deserialize (std::iostream& document)
+        template <typename Handler>
+        int deserialize (std::iostream& document, Handler& handler)
         {
             StreamView in (document);
-            return read<ReadMode> (in);
+            return read (in, handler);
         }
 
         /**
          * @brief deserialize a document.
          * @param document document to deserialize.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        int deserialize (std::iostream& document) override
-        {
-            return deserialize<> (document);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonReadMode ReadMode = JsonReadMode::None>
-        int deserialize (std::istream& document)
+        template <typename Handler>
+        int deserialize (std::istream& document, Handler& handler)
         {
             StreamView in (document);
-            return read<ReadMode> (in);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @return 0 on success, -1 otherwise.
-         */
-        int deserialize (std::istream& document) override
-        {
-            return deserialize<> (document);
+            return read (in, handler);
         }
 
     protected:
         /**
-         * @brief parse a document.
+         * @brief parse a document, resetting the handler on failure.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <JsonReadMode ReadMode, typename ViewType>
-        int read (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int read (ViewType& document, Handler& handler)
         {
-            _depth = 0;
+            try
+            {
+                if (JOIN_LIKELY (readDocument (document, handler) == 0))
+                {
+                    return 0;
+                }
+            }
+            catch (...)
+            {
+                handler.reset ();
+                throw;
+            }
+            handler.reset ();
+            return -1;
+        }
 
-            if (skipWhitespaces<ReadMode> (document) != 0)
+        /**
+         * @brief parse a document.
+         * @param document document to parse.
+         * @param handler handler receiving the document.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ViewType, typename Handler>
+        int readDocument (ViewType& document, Handler& handler)
+        {
+            if (skipWhitespaces (document) != 0)
             {
                 return -1;
             }
 
-            if (readValue<ReadMode> (document) != 0)
+            if (readValue (document, handler, 0) != 0)
             {
                 return -1;
             }
@@ -1189,7 +1215,7 @@ namespace join
                 return 0;
             }
 
-            if (skipWhitespaces<ReadMode> (document) != 0)
+            if (skipWhitespaces (document) != 0)
             {
                 return -1;
             }
@@ -1206,44 +1232,47 @@ namespace join
         /**
          * @brief parse a JSON value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
+         * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <JsonReadMode ReadMode, typename ViewType>
-        int readValue (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int readValue (ViewType& document, Handler& handler, size_t depth)
         {
             int ch = document.peek ();
             switch (ch)
             {
                 case '[':
                     document.get ();
-                    return readArray<ReadMode> (document);
+                    return readArray (document, handler, depth);
                 case '{':
                     document.get ();
-                    return readObject<ReadMode> (document);
+                    return readObject (document, handler, depth);
                 case '"':
                     document.get ();
-                    return readString<ReadMode> (document);
+                    return readString (document, handler);
                 case 'n':
                     document.get ();
-                    return readNull (document);
+                    return readNull (document, handler);
                 case 't':
                     document.get ();
-                    return readTrue (document);
+                    return readTrue (document, handler);
                 case 'f':
                     document.get ();
-                    return readFalse (document);
+                    return readFalse (document, handler);
                 default:
-                    return readNumber (document);
+                    return readNumber (document, handler);
             }
         }
 
         /**
          * @brief parse a null value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readNull (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int readNull (ViewType& document, Handler& handler)
         {
             if (JOIN_UNLIKELY ((document.get () != 'u') || (document.get () != 'l') || (document.get () != 'l')))
             {
@@ -1251,16 +1280,17 @@ namespace join
                 return -1;
             }
 
-            return setNull ();
+            return handler.setNull ();
         }
 
         /**
          * @brief parse a true value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readTrue (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int readTrue (ViewType& document, Handler& handler)
         {
             if (JOIN_UNLIKELY ((document.get () != 'r') || (document.get () != 'u') || (document.get () != 'e')))
             {
@@ -1268,16 +1298,17 @@ namespace join
                 return -1;
             }
 
-            return setBool (true);
+            return handler.setBool (true);
         }
 
         /**
          * @brief parse a false value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readFalse (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int readFalse (ViewType& document, Handler& handler)
         {
             if (JOIN_UNLIKELY ((document.get () != 'a') || (document.get () != 'l') || (document.get () != 's') ||
                                (document.get () != 'e')))
@@ -1286,16 +1317,17 @@ namespace join
                 return -1;
             }
 
-            return setBool (false);
+            return handler.setBool (false);
         }
 
         /**
          * @brief parse an infinity value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readInf (ViewType& document, bool negative)
+        template <typename ViewType, typename Handler>
+        int readInf (ViewType& document, Handler& handler, bool negative)
         {
             if (JOIN_UNLIKELY (!(document.getIfNoCase ('n') && document.getIfNoCase ('f'))))
             {
@@ -1311,17 +1343,18 @@ namespace join
                 return -1;
             }
 
-            return setDouble (negative ? -std::numeric_limits<double>::infinity ()
-                                       : std::numeric_limits<double>::infinity ());
+            return handler.setDouble (negative ? -std::numeric_limits<double>::infinity ()
+                                               : std::numeric_limits<double>::infinity ());
         }
 
         /**
          * @brief parse a nan value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readNan (ViewType& document, bool negative)
+        template <typename ViewType, typename Handler>
+        int readNan (ViewType& document, Handler& handler, bool negative)
         {
             if (JOIN_UNLIKELY (!(document.getIfNoCase ('a') && document.getIfNoCase ('n'))))
             {
@@ -1329,8 +1362,8 @@ namespace join
                 return -1;
             }
 
-            return setDouble (negative ? -std::numeric_limits<double>::quiet_NaN ()
-                                       : std::numeric_limits<double>::quiet_NaN ());
+            return handler.setDouble (negative ? -std::numeric_limits<double>::quiet_NaN ()
+                                               : std::numeric_limits<double>::quiet_NaN ());
         }
 
         /**
@@ -1485,10 +1518,11 @@ namespace join
         /**
          * @brief parse a number value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        int readNumber (ViewType& document)
+        template <typename ViewType, typename Handler>
+        int readNumber (ViewType& document, Handler& handler)
         {
             BufferingView<ViewType> view (document);
 
@@ -1532,11 +1566,11 @@ namespace join
             }
             else if (JOIN_LIKELY (document.getIfNoCase ('i')))
             {
-                return readInf (document, negative);
+                return readInf (document, handler, negative);
             }
             else if (JOIN_LIKELY (document.getIfNoCase ('n')))
             {
-                return readNan (document, negative);
+                return readNan (document, handler, negative);
             }
             else
             {
@@ -1606,7 +1640,7 @@ namespace join
 
             if (!isDouble)
             {
-                return negative ? setInt64 (static_cast<int64_t> (-u)) : setUint64 (u);
+                return negative ? handler.setInt64 (static_cast<int64_t> (-u)) : handler.setUint64 (u);
             }
 
             if (JOIN_LIKELY (digits <= 19))
@@ -1614,7 +1648,7 @@ namespace join
                 double d = 0.0;
                 if (strtodFast (u, exponent + frac, d))
                 {
-                    return setDouble (negative ? -d : d);
+                    return handler.setDouble (negative ? -d : d);
                 }
             }
 
@@ -1624,7 +1658,7 @@ namespace join
             double d = 0.0;
             if (strtodSlow (number, d))
             {
-                return setDouble (d);
+                return handler.setDouble (d);
             }
 
             join::lastError = make_error_code (SaxErrc::InvalidValue);  // LCOV_EXCL_LINE
@@ -1769,11 +1803,12 @@ namespace join
         /**
          * @brief parse a string value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <JsonReadMode ReadMode, typename ViewType>
-        int readString (ViewType& document, bool isKey = false)
+        template <typename ViewType, typename Handler>
+        int readString (ViewType& document, Handler& handler, bool isKey = false)
         {
             thread_local Value output (in_place_index_t<Value::String>{});
             output.clear ();
@@ -1784,7 +1819,7 @@ namespace join
                 size_t pos = output.getString ().size ();
                 document.readUntilEscaped (output.getString ());
 
-                if (JOIN_UNLIKELY (validateChunk<ReadMode> (output.getString (), pos) == -1))
+                if (JOIN_UNLIKELY (validateChunk (output.getString (), pos) == -1))
                 {
                     return -1;
                 }
@@ -1814,35 +1849,43 @@ namespace join
                 }
             }
 
-            return isKey ? setKey (output) : setString (output.getString ());
+            return isKey ? handler.setKey (Value (output)) : handler.setString (std::string (output.getString ()));
         }
 
         /**
          * @brief parse an array value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
+         * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <JsonReadMode ReadMode, typename ViewType>
-        JOIN_ALWAYS_INLINE int readArray (ViewType& document)
+        template <typename ViewType, typename Handler>
+        JOIN_ALWAYS_INLINE int readArray (ViewType& document, Handler& handler, size_t depth)
         {
-            if (JOIN_UNLIKELY (startArray () == -1))
+            if (JOIN_UNLIKELY (depth == saxMaxDepth))
+            {
+                join::lastError = make_error_code (SaxErrc::StackOverflow);
+                return -1;
+            }
+
+            if (JOIN_UNLIKELY (handler.startArray () == -1))
             {
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
+            if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
             {
                 return -1;
             }
 
             if (document.getIf (']'))
             {
-                return stopArray ();
+                return handler.stopArray ();
             }
 
             for (;;)
             {
-                if (JOIN_UNLIKELY (readValue<ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (readValue (document, handler, depth + 1) == -1))
                 {
                     return -1;
                 }
@@ -1851,7 +1894,7 @@ namespace join
 
                 if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
                 {
-                    if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
                     {
                         return -1;
                     }
@@ -1860,7 +1903,7 @@ namespace join
 
                 if (JOIN_LIKELY (ch == ','))
                 {
-                    if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
                     {
                         return -1;
                     }
@@ -1876,30 +1919,38 @@ namespace join
                 return -1;
             }
 
-            return stopArray ();
+            return handler.stopArray ();
         }
 
         /**
          * @brief parse an object value.
          * @param document document to parse.
+         * @param handler handler receiving the document.
+         * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <JsonReadMode ReadMode, typename ViewType>
-        JOIN_ALWAYS_INLINE int readObject (ViewType& document)
+        template <typename ViewType, typename Handler>
+        JOIN_ALWAYS_INLINE int readObject (ViewType& document, Handler& handler, size_t depth)
         {
-            if (JOIN_UNLIKELY (startObject () == -1))
+            if (JOIN_UNLIKELY (depth == saxMaxDepth))
+            {
+                join::lastError = make_error_code (SaxErrc::StackOverflow);
+                return -1;
+            }
+
+            if (JOIN_UNLIKELY (handler.startObject () == -1))
             {
                 return -1;
             }
 
-            if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
+            if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
             {
                 return -1;
             }
 
             if (document.getIf ('}'))
             {
-                return stopObject ();
+                return handler.stopObject ();
             }
 
             for (;;)
@@ -1910,14 +1961,14 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (readString<ReadMode> (document, true) == -1))
+                if (JOIN_UNLIKELY (readString (document, handler, true) == -1))
                 {
                     return -1;
                 }
 
                 if (document.peek () != ':')
                 {
-                    if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
                     {
                         return -1;
                     }
@@ -1929,12 +1980,12 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
                 {
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (readValue<ReadMode> (document) == -1))
+                if (JOIN_UNLIKELY (readValue (document, handler, depth + 1) == -1))
                 {
                     return -1;
                 }
@@ -1943,7 +1994,7 @@ namespace join
 
                 if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
                 {
-                    if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
                     {
                         return -1;
                     }
@@ -1952,7 +2003,7 @@ namespace join
 
                 if (JOIN_LIKELY (ch == ','))
                 {
-                    if (JOIN_UNLIKELY (skipWhitespaces<ReadMode> (document) == -1))
+                    if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
                     {
                         return -1;
                     }
@@ -1968,7 +2019,7 @@ namespace join
                 return -1;
             }
 
-            return stopObject ();
+            return handler.stopObject ();
         }
 
         /**
@@ -1976,8 +2027,8 @@ namespace join
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        template <JsonReadMode ReadMode, typename ViewType>
-        inline typename std::enable_if<!(ReadMode & JsonReadMode::ParseComments), int>::type skipWhitespaces (
+        template <typename ViewType, JsonReadMode Mode = ReadMode>
+        inline typename std::enable_if<!(Mode & JsonReadMode::ParseComments), int>::type skipWhitespaces (
             ViewType& document)
         {
             return document.skipWhitespaces ();
@@ -1988,8 +2039,8 @@ namespace join
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        template <JsonReadMode ReadMode, typename ViewType>
-        inline typename std::enable_if<(ReadMode & JsonReadMode::ParseComments), int>::type skipWhitespaces (
+        template <typename ViewType, JsonReadMode Mode = ReadMode>
+        inline typename std::enable_if<(Mode & JsonReadMode::ParseComments), int>::type skipWhitespaces (
             ViewType& document)
         {
             return document.skipWhitespacesAndComments ();
@@ -2001,8 +2052,8 @@ namespace join
          * @param pos position of the chunk in the output string.
          * @return 0.
          */
-        template <JsonReadMode ReadMode>
-        inline typename std::enable_if<!(ReadMode & JsonReadMode::ValidateEncoding), int>::type validateChunk (
+        template <JsonReadMode Mode = ReadMode>
+        inline typename std::enable_if<!(Mode & JsonReadMode::ValidateEncoding), int>::type validateChunk (
             [[maybe_unused]] const std::string& output, [[maybe_unused]] size_t pos) noexcept
         {
             return 0;
@@ -2014,8 +2065,8 @@ namespace join
          * @param pos position of the chunk in the output string.
          * @return 0 on success, -1 otherwise.
          */
-        template <JsonReadMode ReadMode>
-        inline typename std::enable_if<((ReadMode & JsonReadMode::ValidateEncoding) != 0), int>::type validateChunk (
+        template <JsonReadMode Mode = ReadMode>
+        inline typename std::enable_if<((Mode & JsonReadMode::ValidateEncoding) != 0), int>::type validateChunk (
             const std::string& output, size_t pos) noexcept
         {
             if (JOIN_UNLIKELY (utf8::validate (output.data () + pos, output.data () + output.size ()) == -1))
@@ -2066,6 +2117,9 @@ namespace join
             return ((c ^ '+') & (c ^ '-')) == 0;
         }
     };
+
+    /// JSON default reader.
+    using JsonReader = BasicJsonReader<JsonReadMode::None>;
 }
 
 namespace std

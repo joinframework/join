@@ -11,6 +11,7 @@ set(PUBLIC_HEADERS
     include/join/utf16.hpp
     include/join/view.hpp
     include/join/value.hpp
+    include/join/document.hpp
     include/join/sax.hpp
     include/join/pack.hpp
     include/join/json.hpp
@@ -19,7 +20,6 @@ set(PUBLIC_HEADERS
 )
 
 set(SOURCES
-    src/value.cpp
     src/sax.cpp
     src/json.cpp
     src/zstream.cpp
