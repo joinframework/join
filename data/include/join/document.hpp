@@ -131,7 +131,7 @@ namespace join
          */
         int setNull ()
         {
-            return emplaceValue<Value::Null> (nullptr);
+            return emplaceValue (in_place_index_t<Value::Null>{}, nullptr);
         }
 
         /**
@@ -141,7 +141,7 @@ namespace join
          */
         int setBool (bool value)
         {
-            return emplaceValue<Value::Boolean> (value);
+            return emplaceValue (in_place_index_t<Value::Boolean>{}, value);
         }
 
         /**
@@ -151,7 +151,7 @@ namespace join
          */
         int setInt (int32_t value)
         {
-            return emplaceValue<Value::Integer> (value);
+            return emplaceValue (in_place_index_t<Value::Integer>{}, value);
         }
 
         /**
@@ -161,7 +161,7 @@ namespace join
          */
         int setUint (uint32_t value)
         {
-            return emplaceValue<Value::Unsigned> (value);
+            return emplaceValue (in_place_index_t<Value::Unsigned>{}, value);
         }
 
         /**
@@ -171,7 +171,7 @@ namespace join
          */
         int setInt64 (int64_t value)
         {
-            return emplaceValue<Value::Integer64> (value);
+            return emplaceValue (in_place_index_t<Value::Integer64>{}, value);
         }
 
         /**
@@ -181,7 +181,7 @@ namespace join
          */
         int setUint64 (uint64_t value)
         {
-            return emplaceValue<Value::Unsigned64> (value);
+            return emplaceValue (in_place_index_t<Value::Unsigned64>{}, value);
         }
 
         /**
@@ -191,7 +191,7 @@ namespace join
          */
         int setDouble (double value)
         {
-            return emplaceValue<Value::Real> (value);
+            return emplaceValue (in_place_index_t<Value::Real>{}, value);
         }
 
         /**
@@ -201,7 +201,7 @@ namespace join
          */
         int setString (const std::string& value)
         {
-            return emplaceValue<Value::String> (value);
+            return emplaceValue (in_place_index_t<Value::String>{}, value);
         }
 
         /**
@@ -211,7 +211,7 @@ namespace join
          */
         int setString (std::string&& value)
         {
-            return emplaceValue<Value::String> (std::move (value));
+            return emplaceValue (in_place_index_t<Value::String>{}, std::move (value));
         }
 
         /**
@@ -477,19 +477,20 @@ namespace join
 
         /**
          * @brief construct a value in place in the current container, or as root.
+         * @param index index of the alternative to construct.
          * @param args arguments forwarded to the value constructor.
          * @return 0 on success, -1 otherwise.
          */
         template <size_t I, typename... Args>
-        int emplaceValue (Args&&... args)
+        int emplaceValue (in_place_index_t<I> index, Args&&... args)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
-                _root = Value (in_place_index_t<I>{}, std::forward<Args> (args)...);
+                _root = Value (index, std::forward<Args> (args)...);
                 return 0;
             }
 
-            _stack.emplace_back (in_place_index_t<I>{}, std::forward<Args> (args)...);
+            _stack.emplace_back (index, std::forward<Args> (args)...);
 
             return 0;
         }

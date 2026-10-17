@@ -924,7 +924,7 @@ namespace join
         std::streambuf* _out;
 
         /// output buffer.
-        char _buffer[1024];
+        char _buffer[1024] = {};
 
         /// output buffer size.
         size_t _size = 0;
