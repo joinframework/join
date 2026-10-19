@@ -186,7 +186,8 @@ namespace join
     template <class Protocol>
     bool operator== (const BasicLinkLayerEndpoint<Protocol>& a, const BasicLinkLayerEndpoint<Protocol>& b) noexcept
     {
-        return a.device () == b.device ();
+        return reinterpret_cast<const struct sockaddr_ll*> (a.addr ())->sll_ifindex ==
+               reinterpret_cast<const struct sockaddr_ll*> (b.addr ())->sll_ifindex;
     }
 
     /**
@@ -199,7 +200,8 @@ namespace join
     std::strong_ordering operator<=> (const BasicLinkLayerEndpoint<Protocol>& a,
                                       const BasicLinkLayerEndpoint<Protocol>& b) noexcept
     {
-        return a.device () <=> b.device ();
+        return reinterpret_cast<const struct sockaddr_ll*> (a.addr ())->sll_ifindex <=>
+               reinterpret_cast<const struct sockaddr_ll*> (b.addr ())->sll_ifindex;
     }
 
     /**
@@ -333,7 +335,9 @@ namespace join
     template <class Protocol>
     bool operator== (const BasicXdpEndpoint<Protocol>& a, const BasicXdpEndpoint<Protocol>& b) noexcept
     {
-        return a.device () == b.device () && a.queue () == b.queue ();
+        return reinterpret_cast<const struct sockaddr_xdp*> (a.addr ())->sxdp_ifindex ==
+                   reinterpret_cast<const struct sockaddr_xdp*> (b.addr ())->sxdp_ifindex &&
+               a.queue () == b.queue ();
     }
 
     /**
@@ -345,7 +349,13 @@ namespace join
     template <class Protocol>
     std::strong_ordering operator<=> (const BasicXdpEndpoint<Protocol>& a, const BasicXdpEndpoint<Protocol>& b) noexcept
     {
-        return std::make_tuple (a.device (), a.queue ()) <=> std::make_tuple (b.device (), b.queue ());
+        if (auto cmp = reinterpret_cast<const struct sockaddr_xdp*> (a.addr ())->sxdp_ifindex <=>
+                       reinterpret_cast<const struct sockaddr_xdp*> (b.addr ())->sxdp_ifindex;
+            cmp != 0)
+        {
+            return cmp;
+        }
+        return a.queue () <=> b.queue ();
     }
 
     /**
@@ -454,7 +464,9 @@ namespace join
     template <class Protocol>
     bool operator== (const BasicUnixEndpoint<Protocol>& a, const BasicUnixEndpoint<Protocol>& b) noexcept
     {
-        return a.device () == b.device ();
+        return std::strncmp (reinterpret_cast<const struct sockaddr_un*> (a.addr ())->sun_path,
+                             reinterpret_cast<const struct sockaddr_un*> (b.addr ())->sun_path,
+                             sizeof (sockaddr_un::sun_path)) == 0;
     }
 
     /**
@@ -467,7 +479,9 @@ namespace join
     std::strong_ordering operator<=> (const BasicUnixEndpoint<Protocol>& a,
                                       const BasicUnixEndpoint<Protocol>& b) noexcept
     {
-        return a.device () <=> b.device ();
+        return std::strncmp (reinterpret_cast<const struct sockaddr_un*> (a.addr ())->sun_path,
+                             reinterpret_cast<const struct sockaddr_un*> (b.addr ())->sun_path,
+                             sizeof (sockaddr_un::sun_path)) <=> 0;
     }
 
     /**
@@ -736,7 +750,11 @@ namespace join
     std::strong_ordering operator<=> (const BasicInternetEndpoint<Protocol>& a,
                                       const BasicInternetEndpoint<Protocol>& b) noexcept
     {
-        return std::tie (a.ip (), a.port ()) <=> std::tie (b.ip (), b.port ());
+        if (auto cmp = a.ip () <=> b.ip (); cmp != 0)
+        {
+            return cmp;
+        }
+        return a.port () <=> b.port ();
     }
 
     /**

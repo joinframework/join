@@ -252,6 +252,9 @@ TEST (Endpoint, protocol)
  */
 TEST (Endpoint, equal)
 {
+    ASSERT_EQ (Raw::Endpoint ("lo"), Raw::Endpoint ("lo"));
+    ASSERT_NE (Raw::Endpoint ("lo"), Raw::Endpoint ());
+
 #ifdef JOIN_HAS_XDP
     ASSERT_EQ (Xdp::Endpoint ("lo", 0), Xdp::Endpoint ("lo", 0));
     ASSERT_NE (Xdp::Endpoint ("lo", 0), Xdp::Endpoint ("lo", 1));
@@ -281,6 +284,33 @@ TEST (Endpoint, equal)
     ASSERT_NE (Tcp::Endpoint ("127.0.0.1", 80), Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
     ASSERT_EQ (Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443));
     ASSERT_NE (Tcp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 443), Tcp::Endpoint ("127.0.0.1", 80));
+}
+
+/**
+ * @brief Test three-way comparison.
+ */
+TEST (Endpoint, compare)
+{
+    ASSERT_LT (Raw::Endpoint (), Raw::Endpoint ("lo"));
+    ASSERT_GT (Raw::Endpoint ("lo"), Raw::Endpoint ());
+    ASSERT_LE (Raw::Endpoint ("lo"), Raw::Endpoint ("lo"));
+    ASSERT_GE (Raw::Endpoint ("lo"), Raw::Endpoint ("lo"));
+
+#ifdef JOIN_HAS_XDP
+    ASSERT_LT (Xdp::Endpoint ("lo", 0), Xdp::Endpoint ("lo", 1));
+    ASSERT_LT (Xdp::Endpoint ("", 1), Xdp::Endpoint ("lo", 0));
+    ASSERT_GE (Xdp::Endpoint ("lo", 1), Xdp::Endpoint ("lo", 1));
+#endif
+
+    ASSERT_LT (UnixDgram::Endpoint ("/path/to/file"), UnixDgram::Endpoint ("/path/to/other"));
+    ASSERT_GT (UnixStream::Endpoint ("/path/to/other"), UnixStream::Endpoint ("/path/to/file"));
+    ASSERT_LE (UnixStream::Endpoint ("/path/to/file"), UnixStream::Endpoint ("/path/to/file"));
+
+    ASSERT_LT (Udp::Endpoint ("127.0.0.1", 80), Udp::Endpoint ("127.0.0.1", 443));
+    ASSERT_LT (Udp::Endpoint ("127.0.0.1", 443), Udp::Endpoint ("fe80::57f3:baa4:fc3a:890a", 80));
+    ASSERT_GT (Tcp::Endpoint ("127.0.0.2", 80), Tcp::Endpoint ("127.0.0.1", 443));
+    ASSERT_GE (Tcp::Endpoint ("127.0.0.1", 80), Tcp::Endpoint ("127.0.0.1", 80));
+    ASSERT_LE (Icmp::Endpoint ("127.0.0.1"), Icmp::Endpoint ("127.0.0.1"));
 }
 
 /**
