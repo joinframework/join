@@ -58,134 +58,60 @@ namespace join
         static constexpr uint64_t tickNs = 100;
     };
 
-    template <typename...>
-    using void_t = void;
-
-    template <typename T, typename = void>
-    struct has_sqpoll : std::false_type
-    {
-    };
+    template <typename T>
+    inline constexpr bool has_sqpoll_v = (T::flags & IORING_SETUP_SQPOLL) != 0;
 
     template <typename T>
-    struct has_sqpoll<T, void_t<decltype (T::flags)>>
-    : std::integral_constant<bool, bool (T::flags& IORING_SETUP_SQPOLL)>
-    {
-    };
-
-    template <typename T, typename = void>
-    struct has_cq_entries : std::false_type
-    {
-    };
+    inline constexpr bool has_cq_entries_v = requires { T::cqEntries; };
 
     template <typename T>
-    struct has_cq_entries<T, void_t<decltype (T::cqEntries)>> : std::true_type
-    {
-    };
-
-    template <typename T, typename = void>
-    struct has_sq_thread_idle : std::false_type
-    {
-    };
+    inline constexpr bool has_sq_thread_idle_v = requires { T::sqThreadIdle; };
 
     template <typename T>
-    struct has_sq_thread_idle<T, void_t<decltype (T::sqThreadIdle)>> : std::true_type
-    {
-    };
-
-    template <typename T, typename = void>
-    struct has_sq_thread_cpu : std::false_type
-    {
-    };
+    inline constexpr bool has_sq_thread_cpu_v = requires { T::sqThreadCpu; };
 
     template <typename T>
-    struct has_sq_thread_cpu<T, void_t<decltype (T::sqThreadCpu)>> : std::true_type
-    {
-    };
-
-    template <typename T, typename = void>
-    struct has_spin : std::false_type
-    {
-    };
+    inline constexpr bool has_spin_v = requires { T::spinNs; };
 
     template <typename T>
-    struct has_spin<T, void_t<decltype (T::spinNs)>> : std::true_type
-    {
-    };
+    inline constexpr bool is_default_v = !has_spin_v<T> && !has_sqpoll_v<T>;
 
     template <typename T>
-    struct is_default : std::integral_constant<bool, !has_spin<T>::value && !has_sqpoll<T>::value>
-    {
-    };
-
-    template <typename T, bool = has_spin<T>::value>
-    struct spin_ns : std::integral_constant<uint64_t, 10'000>
-    {
-    };
+    inline constexpr uint64_t spin_ns_v = 10'000;
 
     template <typename T>
-    struct spin_ns<T, true> : std::integral_constant<uint64_t, T::spinNs>
-    {
-    };
-
-    template <typename T, typename = void>
-    struct has_yield_ns : std::false_type
-    {
-    };
+        requires has_spin_v<T>
+    inline constexpr uint64_t spin_ns_v<T> = T::spinNs;
 
     template <typename T>
-    struct has_yield_ns<T, void_t<decltype (T::yieldNs)>> : std::true_type
-    {
-    };
-
-    template <typename T, bool = has_yield_ns<T>::value>
-    struct yield_ns : std::integral_constant<uint64_t, 100'000>
-    {
-    };
+    inline constexpr bool has_yield_ns_v = requires { T::yieldNs; };
 
     template <typename T>
-    struct yield_ns<T, true> : std::integral_constant<uint64_t, T::yieldNs>
-    {
-    };
-
-    template <typename T, typename = void>
-    struct has_sleep_ns : std::false_type
-    {
-    };
+    inline constexpr uint64_t yield_ns_v = 100'000;
 
     template <typename T>
-    struct has_sleep_ns<T, void_t<decltype (T::sleepNs)>> : std::true_type
-    {
-    };
-
-    template <typename T, bool = has_sleep_ns<T>::value>
-    struct sleep_ns : std::integral_constant<uint64_t, 0>
-    {
-    };
+        requires has_yield_ns_v<T>
+    inline constexpr uint64_t yield_ns_v<T> = T::yieldNs;
 
     template <typename T>
-    struct sleep_ns<T, true> : std::integral_constant<uint64_t, T::sleepNs>
-    {
-    };
-
-    template <typename T, typename = void>
-    struct has_tick_ns : std::false_type
-    {
-    };
+    inline constexpr bool has_sleep_ns_v = requires { T::sleepNs; };
 
     template <typename T>
-    struct has_tick_ns<T, void_t<decltype (T::tickNs)>> : std::true_type
-    {
-    };
-
-    template <typename T, bool = has_tick_ns<T>::value>
-    struct tick_ns : std::integral_constant<uint64_t, 1'000>
-    {
-    };
+    inline constexpr uint64_t sleep_ns_v = 0;
 
     template <typename T>
-    struct tick_ns<T, true> : std::integral_constant<uint64_t, T::tickNs>
-    {
-    };
+        requires has_sleep_ns_v<T>
+    inline constexpr uint64_t sleep_ns_v<T> = T::sleepNs;
+
+    template <typename T>
+    inline constexpr bool has_tick_ns_v = requires { T::tickNs; };
+
+    template <typename T>
+    inline constexpr uint64_t tick_ns_v = 1'000;
+
+    template <typename T>
+        requires has_tick_ns_v<T>
+    inline constexpr uint64_t tick_ns_v<T> = T::tickNs;
 }
 
 #endif
