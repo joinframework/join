@@ -31,6 +31,7 @@
 #include <join/utils.hpp>
 
 // C++.
+#include <algorithm>
 #include <utility>
 #include <atomic>
 #include <array>
@@ -331,72 +332,17 @@ namespace join
     };
 
     /**
-     * @brief total size computation.
-     */
-    template <size_t Count, size_t... Sizes>
-    struct SlabTotalSize;
-
-    /**
-     * @brief total size computation (recursive case).
-     */
-    template <size_t Count, size_t First, size_t... Rest>
-    struct SlabTotalSize<Count, First, Rest...>
-    {
-        static constexpr size_t value = BasicSlabPool<Count, First>::_total + SlabTotalSize<Count, Rest...>::value;
-    };
-
-    /**
-     * @brief total size computation (base case).
-     */
-    template <size_t Count, size_t Last>
-    struct SlabTotalSize<Count, Last>
-    {
-        static constexpr size_t value = BasicSlabPool<Count, Last>::_total;
-    };
-
-    /**
-     * @brief is sequence sorted.
-     */
-    template <size_t... Sizes>
-    struct SlabSorted;
-
-    /**
-     * @brief is sequence sorted (recursive case).
-     */
-    template <size_t First, size_t Second, size_t... Rest>
-    struct SlabSorted<First, Second, Rest...>
-    : std::integral_constant<bool, (First <= Second) && SlabSorted<Second, Rest...>::value>
-    {
-    };
-
-    /**
-     * @brief is sequence sorted (base case).
-     */
-    template <size_t Last>
-    struct SlabSorted<Last> : std::true_type
-    {
-    };
-
-    /**
-     * @brief is sequence sorted (empty case).
-     */
-    template <>
-    struct SlabSorted<> : std::true_type
-    {
-    };
-
-    /**
      * @brief slab allocator owning a backend and managing one or more pools.
      */
     template <typename Backend, size_t Count, size_t... Sizes>
     class BasicSlabAllocator
     {
         static_assert (sizeof...(Sizes) > 0, "slab allocator must have at least one pool size");
-        static_assert (SlabSorted<Sizes...>::value, "pool sizes must be provided in ascending order");
+        static_assert (std::ranges::is_sorted (std::array{Sizes...}), "pool sizes must be provided in ascending order");
 
     public:
         /// total bytes required in the mapped region.
-        static constexpr size_t _total = SlabTotalSize<Count, Sizes...>::value;
+        static constexpr size_t _total = (BasicSlabPool<Count, Sizes>::_total + ...);
 
         /**
          * @brief create instance.
@@ -589,73 +535,64 @@ namespace join
          * @brief recursive allocate (promotes to I+1 if exhausted).
          */
         template <size_t I>
-        typename std::enable_if<(I < sizeof...(Sizes)), void*>::type allocateImplem (size_t size) noexcept
+        void* allocateImplem (size_t size) noexcept
         {
-            auto& pool = std::get<I> (_pools);
-            if (size <= pool._size)
+            if constexpr (I < sizeof...(Sizes))
             {
-                void* p = pool.pop ();
-                if (p != nullptr)
+                auto& pool = std::get<I> (_pools);
+                if (size <= pool._size)
                 {
-                    return p;
+                    void* p = pool.pop ();
+                    if (p != nullptr)
+                    {
+                        return p;
+                    }
                 }
+                return allocateImplem<I + 1> (size);
             }
-            return allocateImplem<I + 1> (size);
-        }
-
-        /**
-         * @brief base case (no suitable or available pool).
-         */
-        template <size_t I>
-        typename std::enable_if<(I >= sizeof...(Sizes)), void*>::type allocateImplem (size_t) noexcept
-        {
-            return nullptr;
+            else
+            {
+                return nullptr;
+            }
         }
 
         /**
          * @brief recursive tryAllocate (no promotion: fails if exact pool is exhausted).
          */
         template <size_t I>
-        typename std::enable_if<(I < sizeof...(Sizes)), void*>::type tryAllocateImplem (size_t size) noexcept
+        void* tryAllocateImplem (size_t size) noexcept
         {
-            auto& pool = std::get<I> (_pools);
-            if (size <= pool._size)
+            if constexpr (I < sizeof...(Sizes))
             {
-                return pool.pop ();
+                auto& pool = std::get<I> (_pools);
+                if (size <= pool._size)
+                {
+                    return pool.pop ();
+                }
+                return tryAllocateImplem<I + 1> (size);
             }
-            return tryAllocateImplem<I + 1> (size);
-        }
-
-        /**
-         * @brief base case (no pool fits the requested size).
-         */
-        template <size_t I>
-        typename std::enable_if<(I >= sizeof...(Sizes)), void*>::type tryAllocateImplem (size_t) noexcept
-        {
-            return nullptr;
+            else
+            {
+                return nullptr;
+            }
         }
 
         /**
          * @brief recursive deallocate.
          */
         template <size_t I>
-        typename std::enable_if<(I < sizeof...(Sizes))>::type deallocateImplem (void* p) noexcept
+        void deallocateImplem (void* p) noexcept
         {
-            auto& pool = std::get<I> (_pools);
-            if (pool.owns (p))
+            if constexpr (I < sizeof...(Sizes))
             {
-                pool.push (p);
-                return;
+                auto& pool = std::get<I> (_pools);
+                if (pool.owns (p))
+                {
+                    pool.push (p);
+                    return;
+                }
+                deallocateImplem<I + 1> (p);
             }
-            deallocateImplem<I + 1> (p);
-        }
-
-        /**
-         * @brief base case (pointer does not belong to any pool).
-         */
-        template <size_t I>
-        typename std::enable_if<(I >= sizeof...(Sizes))>::type deallocateImplem (void*) noexcept
-        {
         }
 
         /// memory backend.
