@@ -33,8 +33,10 @@
 
 // C++.
 #include <type_traits>
-#include <limits>
+#include <concepts>
 #include <sstream>
+#include <utility>
+#include <limits>
 #include <string>
 #include <vector>
 #include <map>
@@ -458,34 +460,6 @@ namespace join
         }
 
         /**
-         * @brief check that a signed value can be represented by the target type.
-         * @param value value to check.
-         * @return true if the value fits, false otherwise.
-         */
-        template <typename Target, typename Source>
-        static typename std::enable_if<std::is_signed<Source>::value, bool>::type fits (Source value) noexcept
-        {
-            if (value < 0)
-            {
-                return std::is_signed<Target>::value &&
-                       static_cast<int64_t> (value) >= static_cast<int64_t> (std::numeric_limits<Target>::min ());
-            }
-
-            return static_cast<uint64_t> (value) <= static_cast<uint64_t> (std::numeric_limits<Target>::max ());
-        }
-
-        /**
-         * @brief check that an unsigned value can be represented by the target type.
-         * @param value value to check.
-         * @return true if the value fits, false otherwise.
-         */
-        template <typename Target, typename Source>
-        static typename std::enable_if<!std::is_signed<Source>::value, bool>::type fits (Source value) noexcept
-        {
-            return static_cast<uint64_t> (value) <= static_cast<uint64_t> (std::numeric_limits<Target>::max ());
-        }
-
-        /**
          * @brief store an integer value as the given target type.
          * @param info option description.
          * @param value value to store.
@@ -495,7 +469,7 @@ namespace join
         template <typename Target, typename Source>
         static bool store (const Info& info, Source value, DhcpOptionValue& out)
         {
-            if (!fits<Target> (value) || !accepts (info, static_cast<uint32_t> (value)))
+            if (!std::in_range<Target> (value) || !accepts (info, static_cast<uint32_t> (value)))
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return false;
@@ -524,8 +498,8 @@ namespace join
          * @return true on success, false otherwise.
          */
         template <typename T>
-        static typename std::enable_if<std::is_integral<typename std::decay<T>::type>::value, bool>::type convert (
-            uint8_t code, T value, DhcpOptionValue& out)
+        static bool convert (uint8_t code, T value, DhcpOptionValue& out)
+            requires std::integral<T>
         {
             const Info* info = describe (code);
             if (info == nullptr)
