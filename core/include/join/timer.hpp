@@ -162,9 +162,8 @@ namespace join
         void setOneShot (std::chrono::time_point<Clock, Duration> timePoint, Func&& callback, Args&&... args)
         {
             static_assert (
-                (std::is_same<ClockPolicy, RealTime>::value && std::is_same<Clock, std::chrono::system_clock>::value) ||
-                    (std::is_same<ClockPolicy, Monotonic>::value &&
-                     std::is_same<Clock, std::chrono::steady_clock>::value),
+                (std::is_same_v<ClockPolicy, RealTime> && std::is_same_v<Clock, std::chrono::system_clock>) ||
+                    (std::is_same_v<ClockPolicy, Monotonic> && std::is_same_v<Clock, std::chrono::steady_clock>),
                 "Clock type mismatch timer policy");
 
             cancel ();

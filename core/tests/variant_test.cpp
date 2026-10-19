@@ -39,10 +39,10 @@ using join::Variant;
  */
 TEST (Variant, trivial)
 {
-    EXPECT_TRUE ((std::is_trivially_copyable<Variant<int, double, bool>>::value));
-    EXPECT_TRUE ((std::is_trivially_destructible<Variant<int, double, bool>>::value));
-    EXPECT_FALSE ((std::is_trivially_copyable<Variant<int, std::string>>::value));
-    EXPECT_FALSE ((std::is_trivially_destructible<Variant<int, std::string>>::value));
+    EXPECT_TRUE ((std::is_trivially_copyable_v<Variant<int, double, bool>>));
+    EXPECT_TRUE ((std::is_trivially_destructible_v<Variant<int, double, bool>>));
+    EXPECT_FALSE ((std::is_trivially_copyable_v<Variant<int, std::string>>));
+    EXPECT_FALSE ((std::is_trivially_destructible_v<Variant<int, std::string>>));
 
     Variant<int, double, bool> a (2.5), b (true);
     a.swap (b);

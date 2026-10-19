@@ -113,17 +113,13 @@ namespace join
      * @tparam SyncPolicy instantiated sync policy type.
      */
     template <typename SyncPolicy>
-    struct needs_seq : std::true_type
-    {
-    };
+    inline constexpr bool needs_seq_v = true;
 
     /**
      * @brief specialization for SPSC: no sequence number needed.
      */
     template <typename Type, typename Backend>
-    struct needs_seq<Spsc<Type, Backend>> : std::false_type
-    {
-    };
+    inline constexpr bool needs_seq_v<Spsc<Type, Backend>> = false;
 
     /**
      * @brief queue base class.
@@ -136,7 +132,7 @@ namespace join
 
     public:
         using ValueType = Type;
-        using Slot = std::conditional_t<needs_seq<SyncPolicy>::value, QueueSlotFull<Type>, QueueSlotLight<Type>>;
+        using Slot = std::conditional_t<needs_seq_v<SyncPolicy>, QueueSlotFull<Type>, QueueSlotLight<Type>>;
         using Segment = QueueSegment<Type, Slot>;
 
         /**
@@ -439,7 +435,7 @@ namespace join
          */
         void initSlots () noexcept
         {
-            if constexpr (needs_seq<SyncPolicy>::value)
+            if constexpr (needs_seq_v<SyncPolicy>)
             {
                 for (uint64_t i = 0; i < _capacity; ++i)
                 {

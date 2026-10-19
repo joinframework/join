@@ -28,27 +28,10 @@
 // Libraries.
 #include <gtest/gtest.h>
 
-using join::IoDefaultPolicy;
-using join::IoHybridPolicy;
-using join::IoSqpollPolicy;
-using join::has_sqpoll_v;
-using join::has_cq_entries_v;
-using join::has_sq_thread_idle_v;
-using join::has_sq_thread_cpu_v;
-using join::has_spin_v;
-using join::is_default_v;
-using join::spin_ns_v;
-using join::has_yield_ns_v;
-using join::yield_ns_v;
-using join::has_sleep_ns_v;
-using join::sleep_ns_v;
-using join::has_tick_ns_v;
-using join::tick_ns_v;
-
 /**
  * @brief policy pinning the submission queue thread.
  */
-struct PinnedPolicy : IoSqpollPolicy
+struct PinnedPolicy : join::IoSqpollPolicy
 {
     static constexpr uint32_t sqThreadCpu = 0;
 };
@@ -58,9 +41,9 @@ struct PinnedPolicy : IoSqpollPolicy
  */
 TEST (IoPolicy, has_sqpoll_v)
 {
-    ASSERT_FALSE (has_sqpoll_v<IoDefaultPolicy>);
-    ASSERT_FALSE (has_sqpoll_v<IoHybridPolicy>);
-    ASSERT_TRUE (has_sqpoll_v<IoSqpollPolicy>);
+    ASSERT_FALSE (join::has_sqpoll_v<join::IoDefaultPolicy>);
+    ASSERT_FALSE (join::has_sqpoll_v<join::IoHybridPolicy>);
+    ASSERT_TRUE (join::has_sqpoll_v<join::IoSqpollPolicy>);
 }
 
 /**
@@ -68,9 +51,9 @@ TEST (IoPolicy, has_sqpoll_v)
  */
 TEST (IoPolicy, has_cq_entries_v)
 {
-    ASSERT_FALSE (has_cq_entries_v<IoDefaultPolicy>);
-    ASSERT_FALSE (has_cq_entries_v<IoHybridPolicy>);
-    ASSERT_FALSE (has_cq_entries_v<IoSqpollPolicy>);
+    ASSERT_FALSE (join::has_cq_entries_v<join::IoDefaultPolicy>);
+    ASSERT_FALSE (join::has_cq_entries_v<join::IoHybridPolicy>);
+    ASSERT_FALSE (join::has_cq_entries_v<join::IoSqpollPolicy>);
 }
 
 /**
@@ -78,9 +61,9 @@ TEST (IoPolicy, has_cq_entries_v)
  */
 TEST (IoPolicy, has_sq_thread_idle_v)
 {
-    ASSERT_FALSE (has_sq_thread_idle_v<IoDefaultPolicy>);
-    ASSERT_FALSE (has_sq_thread_idle_v<IoHybridPolicy>);
-    ASSERT_TRUE (has_sq_thread_idle_v<IoSqpollPolicy>);
+    ASSERT_FALSE (join::has_sq_thread_idle_v<join::IoDefaultPolicy>);
+    ASSERT_FALSE (join::has_sq_thread_idle_v<join::IoHybridPolicy>);
+    ASSERT_TRUE (join::has_sq_thread_idle_v<join::IoSqpollPolicy>);
 }
 
 /**
@@ -88,10 +71,10 @@ TEST (IoPolicy, has_sq_thread_idle_v)
  */
 TEST (IoPolicy, has_sq_thread_cpu_v)
 {
-    ASSERT_FALSE (has_sq_thread_cpu_v<IoDefaultPolicy>);
-    ASSERT_FALSE (has_sq_thread_cpu_v<IoHybridPolicy>);
-    ASSERT_FALSE (has_sq_thread_cpu_v<IoSqpollPolicy>);
-    ASSERT_TRUE (has_sq_thread_cpu_v<PinnedPolicy>);
+    ASSERT_FALSE (join::has_sq_thread_cpu_v<join::IoDefaultPolicy>);
+    ASSERT_FALSE (join::has_sq_thread_cpu_v<join::IoHybridPolicy>);
+    ASSERT_FALSE (join::has_sq_thread_cpu_v<join::IoSqpollPolicy>);
+    ASSERT_TRUE (join::has_sq_thread_cpu_v<PinnedPolicy>);
 }
 
 /**
@@ -99,9 +82,9 @@ TEST (IoPolicy, has_sq_thread_cpu_v)
  */
 TEST (IoPolicy, has_spin_v)
 {
-    ASSERT_FALSE (has_spin_v<IoDefaultPolicy>);
-    ASSERT_TRUE (has_spin_v<IoHybridPolicy>);
-    ASSERT_TRUE (has_spin_v<IoSqpollPolicy>);
+    ASSERT_FALSE (join::has_spin_v<join::IoDefaultPolicy>);
+    ASSERT_TRUE (join::has_spin_v<join::IoHybridPolicy>);
+    ASSERT_TRUE (join::has_spin_v<join::IoSqpollPolicy>);
 }
 
 /**
@@ -109,9 +92,9 @@ TEST (IoPolicy, has_spin_v)
  */
 TEST (IoPolicy, is_default_v)
 {
-    ASSERT_TRUE (is_default_v<IoDefaultPolicy>);
-    ASSERT_FALSE (is_default_v<IoHybridPolicy>);
-    ASSERT_FALSE (is_default_v<IoSqpollPolicy>);
+    ASSERT_TRUE (join::is_default_v<join::IoDefaultPolicy>);
+    ASSERT_FALSE (join::is_default_v<join::IoHybridPolicy>);
+    ASSERT_FALSE (join::is_default_v<join::IoSqpollPolicy>);
 }
 
 /**
@@ -119,9 +102,9 @@ TEST (IoPolicy, is_default_v)
  */
 TEST (IoPolicy, spin_ns_v)
 {
-    ASSERT_EQ (spin_ns_v<IoDefaultPolicy>, 10'000u);
-    ASSERT_EQ (spin_ns_v<IoHybridPolicy>, 10'000u);
-    ASSERT_EQ (spin_ns_v<IoSqpollPolicy>, 10'000u);
+    ASSERT_EQ (join::spin_ns_v<join::IoDefaultPolicy>, 10'000u);
+    ASSERT_EQ (join::spin_ns_v<join::IoHybridPolicy>, 10'000u);
+    ASSERT_EQ (join::spin_ns_v<join::IoSqpollPolicy>, 10'000u);
 }
 
 /**
@@ -129,9 +112,9 @@ TEST (IoPolicy, spin_ns_v)
  */
 TEST (IoPolicy, has_yield_ns_v)
 {
-    ASSERT_FALSE (has_yield_ns_v<IoDefaultPolicy>);
-    ASSERT_TRUE (has_yield_ns_v<IoHybridPolicy>);
-    ASSERT_TRUE (has_yield_ns_v<IoSqpollPolicy>);
+    ASSERT_FALSE (join::has_yield_ns_v<join::IoDefaultPolicy>);
+    ASSERT_TRUE (join::has_yield_ns_v<join::IoHybridPolicy>);
+    ASSERT_TRUE (join::has_yield_ns_v<join::IoSqpollPolicy>);
 }
 
 /**
@@ -139,9 +122,9 @@ TEST (IoPolicy, has_yield_ns_v)
  */
 TEST (IoPolicy, yield_ns_v)
 {
-    ASSERT_EQ (yield_ns_v<IoDefaultPolicy>, 100'000u);
-    ASSERT_EQ (yield_ns_v<IoHybridPolicy>, 100'000u);
-    ASSERT_EQ (yield_ns_v<IoSqpollPolicy>, 100'000u);
+    ASSERT_EQ (join::yield_ns_v<join::IoDefaultPolicy>, 100'000u);
+    ASSERT_EQ (join::yield_ns_v<join::IoHybridPolicy>, 100'000u);
+    ASSERT_EQ (join::yield_ns_v<join::IoSqpollPolicy>, 100'000u);
 }
 
 /**
@@ -149,9 +132,9 @@ TEST (IoPolicy, yield_ns_v)
  */
 TEST (IoPolicy, has_sleep_ns_v)
 {
-    ASSERT_FALSE (has_sleep_ns_v<IoDefaultPolicy>);
-    ASSERT_TRUE (has_sleep_ns_v<IoHybridPolicy>);
-    ASSERT_TRUE (has_sleep_ns_v<IoSqpollPolicy>);
+    ASSERT_FALSE (join::has_sleep_ns_v<join::IoDefaultPolicy>);
+    ASSERT_TRUE (join::has_sleep_ns_v<join::IoHybridPolicy>);
+    ASSERT_TRUE (join::has_sleep_ns_v<join::IoSqpollPolicy>);
 }
 
 /**
@@ -159,9 +142,9 @@ TEST (IoPolicy, has_sleep_ns_v)
  */
 TEST (IoPolicy, sleep_ns_v)
 {
-    ASSERT_EQ (sleep_ns_v<IoDefaultPolicy>, 0u);
-    ASSERT_EQ (sleep_ns_v<IoHybridPolicy>, 0u);
-    ASSERT_EQ (sleep_ns_v<IoSqpollPolicy>, 0u);
+    ASSERT_EQ (join::sleep_ns_v<join::IoDefaultPolicy>, 0u);
+    ASSERT_EQ (join::sleep_ns_v<join::IoHybridPolicy>, 0u);
+    ASSERT_EQ (join::sleep_ns_v<join::IoSqpollPolicy>, 0u);
 }
 
 /**
@@ -169,9 +152,9 @@ TEST (IoPolicy, sleep_ns_v)
  */
 TEST (IoPolicy, has_tick_ns_v)
 {
-    ASSERT_FALSE (has_tick_ns_v<IoDefaultPolicy>);
-    ASSERT_TRUE (has_tick_ns_v<IoHybridPolicy>);
-    ASSERT_TRUE (has_tick_ns_v<IoSqpollPolicy>);
+    ASSERT_FALSE (join::has_tick_ns_v<join::IoDefaultPolicy>);
+    ASSERT_TRUE (join::has_tick_ns_v<join::IoHybridPolicy>);
+    ASSERT_TRUE (join::has_tick_ns_v<join::IoSqpollPolicy>);
 }
 
 /**
@@ -179,9 +162,9 @@ TEST (IoPolicy, has_tick_ns_v)
  */
 TEST (IoPolicy, tick_ns_v)
 {
-    ASSERT_EQ (tick_ns_v<IoDefaultPolicy>, 1'000u);
-    ASSERT_EQ (tick_ns_v<IoHybridPolicy>, 100u);
-    ASSERT_EQ (tick_ns_v<IoSqpollPolicy>, 100u);
+    ASSERT_EQ (join::tick_ns_v<join::IoDefaultPolicy>, 1'000u);
+    ASSERT_EQ (join::tick_ns_v<join::IoHybridPolicy>, 100u);
+    ASSERT_EQ (join::tick_ns_v<join::IoSqpollPolicy>, 100u);
 }
 
 /**

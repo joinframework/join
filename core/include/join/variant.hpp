@@ -279,8 +279,8 @@ namespace join
          */
         template <typename T, typename Match = match_t<T&&, Ts...>>
         constexpr Variant (T&& t)
-            requires is_unique<Match, Ts...>::value && std::is_constructible_v<Match, T&&>
-        : Variant (std::in_place_index<find_index<Match, Ts...>::value>, std::forward<T> (t))
+            requires is_unique_v<Match, Ts...> && std::is_constructible_v<Match, T&&>
+        : Variant (std::in_place_index<find_index_v<Match, Ts...>>, std::forward<T> (t))
         {
         }
 
@@ -290,8 +290,8 @@ namespace join
          */
         template <typename T, typename... Args>
         constexpr explicit Variant (std::in_place_type_t<T>, Args&&... args)
-            requires is_unique<T, Ts...>::value && std::is_constructible_v<T, Args&&...>
-        : Variant (std::in_place_index<find_index<T, Ts...>::value>, std::forward<Args> (args)...)
+            requires is_unique_v<T, Ts...> && std::is_constructible_v<T, Args&&...>
+        : Variant (std::in_place_index<find_index_v<T, Ts...>>, std::forward<Args> (args)...)
         {
         }
 
@@ -301,8 +301,8 @@ namespace join
          */
         template <typename T, typename Up, typename... Args>
         constexpr explicit Variant (std::in_place_type_t<T>, std::initializer_list<Up> il, Args&&... args)
-            requires is_unique<T, Ts...>::value && std::is_constructible_v<T, std::initializer_list<Up>&, Args&&...>
-        : Variant (std::in_place_index<find_index<T, Ts...>::value>, il, std::forward<Args> (args)...)
+            requires is_unique_v<T, Ts...> && std::is_constructible_v<T, std::initializer_list<Up>&, Args&&...>
+        : Variant (std::in_place_index<find_index_v<T, Ts...>>, il, std::forward<Args> (args)...)
         {
         }
 
@@ -397,9 +397,9 @@ namespace join
          */
         template <typename T, typename Match = match_t<T&&, Ts...>>
         constexpr Variant& operator= (T&& t)
-            requires is_unique<Match, Ts...>::value && std::is_constructible_v<Match, T&&>
+            requires is_unique_v<Match, Ts...> && std::is_constructible_v<Match, T&&>
         {
-            set<find_index<Match, Ts...>::value> (std::forward<T> (t));
+            set<find_index_v<Match, Ts...>> (std::forward<T> (t));
             return *this;
         }
 
@@ -409,9 +409,9 @@ namespace join
          */
         template <typename T>
         constexpr bool is () const
-            requires is_unique<T, Ts...>::value
+            requires is_unique_v<T, Ts...>
         {
-            return (index () == find_index<T, Ts...>::value);
+            return (index () == find_index_v<T, Ts...>);
         }
 
         /**
@@ -431,9 +431,9 @@ namespace join
          */
         template <typename T, typename... Args>
         constexpr T& set (Args&&... args)
-            requires is_unique<T, Ts...>::value && std::is_constructible_v<T, Args&&...>
+            requires is_unique_v<T, Ts...> && std::is_constructible_v<T, Args&&...>
         {
-            return set<find_index<T, Ts...>::value> (std::forward<Args> (args)...);
+            return set<find_index_v<T, Ts...>> (std::forward<Args> (args)...);
         }
 
         /**
@@ -442,9 +442,9 @@ namespace join
          */
         template <typename T, typename Up, typename... Args>
         constexpr T& set (std::initializer_list<Up> il, Args&&... args)
-            requires is_unique<T, Ts...>::value && std::is_constructible_v<T, std::initializer_list<Up>&, Args&&...>
+            requires is_unique_v<T, Ts...> && std::is_constructible_v<T, std::initializer_list<Up>&, Args&&...>
         {
-            return set<find_index<T, Ts...>::value> (il, std::forward<Args> (args)...);
+            return set<find_index_v<T, Ts...>> (il, std::forward<Args> (args)...);
         }
 
         /**
@@ -480,9 +480,9 @@ namespace join
          */
         template <typename T>
         constexpr T& get ()
-            requires is_unique<T, Ts...>::value
+            requires is_unique_v<T, Ts...>
         {
-            if (index () != find_index<T, Ts...>::value)
+            if (index () != find_index_v<T, Ts...>)
             {
                 throw std::bad_cast ();
             }
@@ -495,9 +495,9 @@ namespace join
          */
         template <typename T>
         constexpr const T& get () const
-            requires is_unique<T, Ts...>::value
+            requires is_unique_v<T, Ts...>
         {
-            if (index () != find_index<T, Ts...>::value)
+            if (index () != find_index_v<T, Ts...>)
             {
                 throw std::bad_cast ();
             }
@@ -540,9 +540,9 @@ namespace join
          */
         template <typename T>
         constexpr T* getIf ()
-            requires is_unique<T, Ts...>::value
+            requires is_unique_v<T, Ts...>
         {
-            if (index () != find_index<T, Ts...>::value)
+            if (index () != find_index_v<T, Ts...>)
             {
                 return nullptr;
             }
@@ -555,9 +555,9 @@ namespace join
          */
         template <typename T>
         constexpr const T* getIf () const
-            requires is_unique<T, Ts...>::value
+            requires is_unique_v<T, Ts...>
         {
-            if (index () != find_index<T, Ts...>::value)
+            if (index () != find_index_v<T, Ts...>)
             {
                 return nullptr;
             }

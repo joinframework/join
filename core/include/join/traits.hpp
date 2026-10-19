@@ -78,34 +78,26 @@ namespace join
      * @brief get element position in a parameter pack according its type.
      */
     template <typename T, typename... Ts>
-    struct find_index : std::integral_constant<std::size_t, 0>
-    {
-    };
+    inline constexpr std::size_t find_index_v = 0;
 
     /**
      * @brief get element position in a parameter pack according its type.
      */
     template <typename T, typename First, typename... Ts>
-    struct find_index<T, First, Ts...>
-    : std::integral_constant<std::size_t, std::is_same_v<T, First> ? 0 : find_index<T, Ts...>::value + 1>
-    {
-    };
+    inline constexpr std::size_t find_index_v<T, First, Ts...> =
+        std::is_same_v<T, First> ? 0 : find_index_v<T, Ts...> + 1;
 
     /**
      * @brief count the number of time a type appears in a parameter pack.
      */
     template <typename T, typename... Ts>
-    struct count : std::integral_constant<std::size_t, (std::size_t{0} + ... + std::is_same_v<T, Ts>)>
-    {
-    };
+    inline constexpr std::size_t count_v = (std::size_t{0} + ... + std::is_same_v<T, Ts>);
 
     /**
      * @brief check if a type only appears one time in a parameter pack.
      */
     template <typename T, typename... Ts>
-    struct is_unique : std::bool_constant<count<T, Ts...>::value == 1>
-    {
-    };
+    inline constexpr bool is_unique_v = count_v<T, Ts...> == 1;
 }
 
 #endif
