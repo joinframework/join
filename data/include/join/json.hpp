@@ -303,7 +303,8 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::None, int>::type setDouble (double value)
+        int setDouble (double value)
+            requires (Mode == JsonWriteMode::None)
         {
             array ();
             uint64_t bits;
@@ -347,7 +348,8 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::Canonical, int>::type setDouble (double value)
+        int setDouble (double value)
+            requires (Mode == JsonWriteMode::Canonical)
         {
             array ();
             if (std::isfinite (value))
@@ -466,8 +468,8 @@ namespace join
          * @return object members in insertion order.
          */
         template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::None, const Object&>::type members (
-            const Object& object) const noexcept
+        const Object& members (const Object& object) const noexcept
+            requires (Mode == JsonWriteMode::None)
         {
             return object;
         }
@@ -478,9 +480,8 @@ namespace join
          * @return sorted object members.
          */
         template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::Canonical,
-                                std::vector<std::reference_wrapper<const Member>>>::type
-        members (const Object& object) const
+        std::vector<std::reference_wrapper<const Member>> members (const Object& object) const
+            requires (Mode == JsonWriteMode::Canonical)
         {
             std::vector<std::reference_wrapper<const Member>> sorted (object.begin (), object.end ());
             std::sort (sorted.begin (), sorted.end (), [] (const Member& a, const Member& b) {
@@ -686,30 +687,24 @@ namespace join
          * @brief write real value.
          * @param value real value to write.
          */
-        template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::None>::type writeDouble (double value)
+        void writeDouble (double value)
         {
             char buf[25];
             char* end = join::dtoa (buf, value);
-            append (buf, end - buf);
-        }
-
-        /**
-         * @brief write real value in canonical form.
-         * @param value real value to write.
-         */
-        template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::Canonical>::type writeDouble (double value)
-        {
-            char beg[25];
-            char* end = join::dtoa (beg, value);
-            for (char* pos = beg; pos < end; ++pos)
+            if constexpr (WriteMode == JsonWriteMode::Canonical)
             {
-                append (*pos);
-                if ((*pos == 'e') && (*(pos + 1) != '-'))
+                for (char* pos = buf; pos < end; ++pos)
                 {
-                    append ('+');
+                    append (*pos);
+                    if ((*pos == 'e') && (*(pos + 1) != '-'))
+                    {
+                        append ('+');
+                    }
                 }
+            }
+            else
+            {
+                append (buf, end - buf);
             }
         }
 
@@ -2023,56 +2018,38 @@ namespace join
         }
 
         /**
-         * @brief skip whitespaces.
+         * @brief skip whitespaces, and comments when comment parsing is enabled.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, JsonReadMode Mode = ReadMode>
-        inline typename std::enable_if<!(Mode & JsonReadMode::ParseComments), int>::type skipWhitespaces (
-            ViewType& document)
+        template <typename ViewType>
+        inline int skipWhitespaces (ViewType& document)
         {
-            return document.skipWhitespaces ();
-        }
-
-        /**
-         * @brief skip whitespaces with comment parsing.
-         * @param document document to parse.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename ViewType, JsonReadMode Mode = ReadMode>
-        inline typename std::enable_if<(Mode & JsonReadMode::ParseComments), int>::type skipWhitespaces (
-            ViewType& document)
-        {
-            return document.skipWhitespacesAndComments ();
-        }
-
-        /**
-         * @brief validate the encoding of the last chunk read (validation disabled).
-         * @param output parse output string.
-         * @param pos position of the chunk in the output string.
-         * @return 0.
-         */
-        template <JsonReadMode Mode = ReadMode>
-        inline typename std::enable_if<!(Mode & JsonReadMode::ValidateEncoding), int>::type validateChunk (
-            [[maybe_unused]] const std::string& output, [[maybe_unused]] size_t pos) noexcept
-        {
-            return 0;
-        }
-
-        /**
-         * @brief validate the encoding of the last chunk read.
-         * @param output parse output string.
-         * @param pos position of the chunk in the output string.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonReadMode Mode = ReadMode>
-        inline typename std::enable_if<((Mode & JsonReadMode::ValidateEncoding) != 0), int>::type validateChunk (
-            const std::string& output, size_t pos) noexcept
-        {
-            if (JOIN_UNLIKELY (utf8::validate (output.data () + pos, output.data () + output.size ()) == -1))
+            if constexpr (ReadMode & JsonReadMode::ParseComments)
             {
-                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
-                return -1;
+                return document.skipWhitespacesAndComments ();
+            }
+            else
+            {
+                return document.skipWhitespaces ();
+            }
+        }
+
+        /**
+         * @brief validate the encoding of the last chunk read, when encoding validation is enabled.
+         * @param output parse output string.
+         * @param pos position of the chunk in the output string.
+         * @return 0 on success, -1 otherwise.
+         */
+        inline int validateChunk ([[maybe_unused]] const std::string& output, [[maybe_unused]] size_t pos) noexcept
+        {
+            if constexpr (ReadMode & JsonReadMode::ValidateEncoding)
+            {
+                if (JOIN_UNLIKELY (utf8::validate (output.data () + pos, output.data () + output.size ()) == -1))
+                {
+                    join::lastError = make_error_code (JsonErrc::InvalidEncoding);
+                    return -1;
+                }
             }
             return 0;
         }
