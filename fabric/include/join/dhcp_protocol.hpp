@@ -107,17 +107,6 @@ namespace join
     {
         return a.family () == b.family ();
     }
-
-    /**
-     * @brief check if not equals.
-     * @param a protocol to check.
-     * @param b protocol to check.
-     * @return true if not equals.
-     */
-    constexpr bool operator!= (const Dhcp& a, const Dhcp& b) noexcept
-    {
-        return !(a == b);
-    }
 }
 
 #endif

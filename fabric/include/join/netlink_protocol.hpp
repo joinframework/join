@@ -114,17 +114,6 @@ namespace join
     {
         return a.protocol () == b.protocol ();
     }
-
-    /**
-     * @brief check if not equals.
-     * @param a protocol to check.
-     * @param b protocol to check.
-     * @return true if not equals.
-     */
-    constexpr bool operator!= (const Netlink& a, const Netlink& b) noexcept
-    {
-        return !(a == b);
-    }
 }
 
 #endif

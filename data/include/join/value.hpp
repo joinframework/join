@@ -1567,17 +1567,6 @@ namespace join
     }
 
     /**
-     * @brief compare if not equal.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if not equal.
-     */
-    constexpr bool operator!= (const Value& lhs, const Value& rhs)
-    {
-        return !(lhs == rhs);
-    }
-
-    /**
      * @brief compare if lower than.
      * @param lhs value to compare.
      * @param rhs value to compare to.

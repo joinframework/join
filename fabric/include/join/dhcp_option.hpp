@@ -36,6 +36,7 @@
 #include <concepts>
 #include <sstream>
 #include <utility>
+#include <compare>
 #include <limits>
 #include <string>
 #include <vector>
@@ -622,20 +623,8 @@ namespace join
         /// friendship with equal operator.
         friend bool operator== (const DhcpOption& lhs, const DhcpOption& rhs);
 
-        /// friendship with not equal operator.
-        friend bool operator!= (const DhcpOption& lhs, const DhcpOption& rhs);
-
-        /// friendship with lower operator.
-        friend bool operator< (const DhcpOption& lhs, const DhcpOption& rhs);
-
-        /// friendship with greater operator.
-        friend bool operator> (const DhcpOption& lhs, const DhcpOption& rhs);
-
-        /// friendship with lower or equal operator.
-        friend bool operator<= (const DhcpOption& lhs, const DhcpOption& rhs);
-
-        /// friendship with greater or equal operator.
-        friend bool operator>= (const DhcpOption& lhs, const DhcpOption& rhs);
+        /// friendship with three-way comparison operator.
+        friend std::weak_ordering operator<=> (const DhcpOption& lhs, const DhcpOption& rhs);
     };
 
     /**
@@ -650,58 +639,14 @@ namespace join
     }
 
     /**
-     * @brief compare if not equal.
+     * @brief three-way compare options.
      * @param lhs options to compare.
      * @param rhs options to compare to.
-     * @return true if not equal.
+     * @return ordering of lhs relative to rhs.
      */
-    inline bool operator!= (const DhcpOption& lhs, const DhcpOption& rhs)
+    inline std::weak_ordering operator<=> (const DhcpOption& lhs, const DhcpOption& rhs)
     {
-        return lhs._options != rhs._options;
-    }
-
-    /**
-     * @brief compare if lower.
-     * @param lhs options to compare.
-     * @param rhs options to compare to.
-     * @return true if lower.
-     */
-    inline bool operator< (const DhcpOption& lhs, const DhcpOption& rhs)
-    {
-        return lhs._options < rhs._options;
-    }
-
-    /**
-     * @brief compare if greater.
-     * @param lhs options to compare.
-     * @param rhs options to compare to.
-     * @return true if greater.
-     */
-    inline bool operator> (const DhcpOption& lhs, const DhcpOption& rhs)
-    {
-        return lhs._options > rhs._options;
-    }
-
-    /**
-     * @brief compare if lower or equal.
-     * @param lhs options to compare.
-     * @param rhs options to compare to.
-     * @return true if lower or equal.
-     */
-    inline bool operator<= (const DhcpOption& lhs, const DhcpOption& rhs)
-    {
-        return lhs._options <= rhs._options;
-    }
-
-    /**
-     * @brief compare if greater or equal.
-     * @param lhs options to compare.
-     * @param rhs options to compare to.
-     * @return true if greater or equal.
-     */
-    inline bool operator>= (const DhcpOption& lhs, const DhcpOption& rhs)
-    {
-        return lhs._options >= rhs._options;
+        return lhs._options <=> rhs._options;
     }
 
     /**

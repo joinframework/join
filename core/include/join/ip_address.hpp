@@ -27,6 +27,7 @@
 
 // C++.
 #include <ostream>
+#include <compare>
 #include <string>
 #include <memory>
 #include <vector>
@@ -388,44 +389,12 @@ namespace join
     bool operator== (const IpAddress& a, const IpAddress& b);
 
     /**
-     * @brief compare if two IP address are different.
+     * @brief three-way compare IP addresses.
      * @param a address to compare.
      * @param b address to compare to.
-     * @return true if different.
+     * @return ordering of a relative to b.
      */
-    bool operator!= (const IpAddress& a, const IpAddress& b);
-
-    /**
-     * @brief compare if IP address is inferior.
-     * @param a address to compare.
-     * @param b address to compare to.
-     * @return true if inferior.
-     */
-    bool operator< (const IpAddress& a, const IpAddress& b);
-
-    /**
-     * @brief compare if IP address is inferior or equal.
-     * @param a address to compare.
-     * @param b address to compare to.
-     * @return true if inferior or equal.
-     */
-    bool operator<= (const IpAddress& a, const IpAddress& b);
-
-    /**
-     * @brief compare if IP address is superior.
-     * @param a address to compare.
-     * @param b address to compare to.
-     * @return true if superior.
-     */
-    bool operator> (const IpAddress& a, const IpAddress& b);
-
-    /**
-     * @brief compare if IP address is superior or equal.
-     * @param a address to compare.
-     * @param b address to compare to.
-     * @return true if superior or equal.
-     */
-    bool operator>= (const IpAddress& a, const IpAddress& b);
+    std::strong_ordering operator<=> (const IpAddress& a, const IpAddress& b);
 
     /**
      * @brief perform AND operation on IP address.

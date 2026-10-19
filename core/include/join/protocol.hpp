@@ -356,17 +356,6 @@ namespace join
     }
 
     /**
-     * @brief check if not equals.
-     * @param a protocol to check.
-     * @param b protocol to check.
-     * @return true if not equals.
-     */
-    constexpr bool operator!= (const Udp& a, const Udp& b) noexcept
-    {
-        return !(a == b);
-    }
-
-    /**
      * @brief ICMP protocol class.
      */
     class Icmp
@@ -454,17 +443,6 @@ namespace join
     }
 
     /**
-     * @brief check if not equal.
-     * @param a protocol to compare.
-     * @param b protocol to compare to.
-     * @return true if not equal.
-     */
-    constexpr bool operator!= (const Icmp& a, const Icmp& b) noexcept
-    {
-        return !(a == b);
-    }
-
-    /**
      * @brief TCP protocol class.
      */
     class Tcp
@@ -547,17 +525,6 @@ namespace join
     constexpr bool operator== (const Tcp& a, const Tcp& b) noexcept
     {
         return a.family () == b.family ();
-    }
-
-    /**
-     * @brief check if not equals.
-     * @param a protocol to check.
-     * @param b protocol to check.
-     * @return true if not equals.
-     */
-    constexpr bool operator!= (const Tcp& a, const Tcp& b) noexcept
-    {
-        return !(a == b);
     }
 }
 
