@@ -29,22 +29,10 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <memory>
 #include <mutex>
 
 using join::Variant;
-
-/**
- * @brief Test is_first_default_constructible trait.
- */
-TEST (Variant, is_first_default_constructible)
-{
-    auto can = join::details::is_first_default_constructible<int, double, std::string, bool, std::nullptr_t>::value;
-    EXPECT_TRUE (can);
-
-    can = join::details::is_first_default_constructible<std::lock_guard<std::mutex>, int, double, std::string, bool,
-                                                        std::nullptr_t>::value;
-    EXPECT_FALSE (can);
-}
 
 /**
  * @brief test triviality.
@@ -67,6 +55,9 @@ TEST (Variant, trivial)
  */
 TEST (Variant, defaultConstruction)
 {
+    EXPECT_TRUE ((std::is_default_constructible_v<Variant<int, std::string>>));
+    EXPECT_FALSE ((std::is_default_constructible_v<Variant<std::lock_guard<std::mutex>, int>>));
+
     Variant<int, double, std::string, bool, std::nullptr_t> var;
 
     EXPECT_TRUE (var.is<int> ());
@@ -81,6 +72,10 @@ TEST (Variant, defaultConstruction)
  */
 TEST (Variant, copyConstruction)
 {
+    EXPECT_TRUE ((std::is_copy_constructible_v<Variant<int, std::string>>));
+    EXPECT_FALSE ((std::is_copy_constructible_v<Variant<int, std::unique_ptr<int>>>));
+    EXPECT_FALSE ((std::is_copy_constructible_v<Variant<int, std::lock_guard<std::mutex>>>));
+
     Variant<int, double, std::string, bool, std::nullptr_t> var;
 
     var = 6;
@@ -161,6 +156,10 @@ TEST (Variant, copyConstruction)
  */
 TEST (Variant, moveConstruction)
 {
+    EXPECT_TRUE ((std::is_move_constructible_v<Variant<int, std::string>>));
+    EXPECT_TRUE ((std::is_move_constructible_v<Variant<int, std::unique_ptr<int>>>));
+    EXPECT_FALSE ((std::is_move_constructible_v<Variant<int, std::lock_guard<std::mutex>>>));
+
     Variant<int, double, std::string, bool, std::nullptr_t> var;
 
     var = 6;
@@ -491,6 +490,10 @@ TEST (Variant, indexConstruction)
  */
 TEST (Variant, copyAssign)
 {
+    EXPECT_TRUE ((std::is_copy_assignable_v<Variant<int, std::string>>));
+    EXPECT_FALSE ((std::is_copy_assignable_v<Variant<int, std::unique_ptr<int>>>));
+    EXPECT_FALSE ((std::is_copy_assignable_v<Variant<int, std::lock_guard<std::mutex>>>));
+
     Variant<int, double, std::string, bool, std::nullptr_t> var;
 
     var = 6;
@@ -578,6 +581,10 @@ TEST (Variant, copyAssign)
  */
 TEST (Variant, moveAssign)
 {
+    EXPECT_TRUE ((std::is_move_assignable_v<Variant<int, std::string>>));
+    EXPECT_TRUE ((std::is_move_assignable_v<Variant<int, std::unique_ptr<int>>>));
+    EXPECT_FALSE ((std::is_move_assignable_v<Variant<int, std::lock_guard<std::mutex>>>));
+
     Variant<int, double, std::string, bool, std::nullptr_t> var;
 
     var = 6;

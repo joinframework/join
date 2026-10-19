@@ -31,6 +31,7 @@
 // C++.
 #include <algorithm>
 #include <typeinfo>
+#include <tuple>
 
 // C.
 #include <cstddef>
@@ -39,15 +40,6 @@ namespace join
 {
     namespace details
     {
-        /**
-         * @brief check that first alternative is default constructible.
-         */
-        template <typename... Ts>
-        struct is_first_default_constructible
-        {
-            static constexpr bool value = std::is_default_constructible<find_element_t<0, Ts...>>::value;
-        };
-
         /**
          * @brief helper class for variant operations using jump tables for O(1) dispatch.
          */
@@ -181,33 +173,7 @@ namespace join
             }
 
             /**
-             * @brief less-than comparison for non-null pointer alternatives.
-             * @tparam T type of the alternative to compare.
-             * @param a first storage pointer.
-             * @param b second storage pointer.
-             * @return true if a is lower than b, false otherwise.
-             */
-            template <typename T>
-            static typename std::enable_if<!std::is_null_pointer<T>::value, bool>::type lowerDispatch (const void* a,
-                                                                                                       const void* b)
-            {
-                return *reinterpret_cast<const T*> (a) < *reinterpret_cast<const T*> (b);
-            }
-
-            /**
-             * @brief less-than comparison for nullptr_t alternatives, always returns false.
-             * @tparam T type of the alternative to compare.
-             * @return false.
-             */
-            template <typename T>
-            static typename std::enable_if<std::is_null_pointer<T>::value, bool>::type lowerDispatch (const void*,
-                                                                                                      const void*)
-            {
-                return false;
-            }
-
-            /**
-             * @brief dispatch less-than comparison, handling nullptr_t alternatives.
+             * @brief less-than comparison, always false for nullptr_t.
              * @tparam T type of the alternative to compare.
              * @param a first storage pointer.
              * @param b second storage pointer.
@@ -216,216 +182,15 @@ namespace join
             template <typename T>
             static bool lowerImpl (const void* a, const void* b)
             {
-                return lowerDispatch<T> (a, b);
+                if constexpr (std::is_null_pointer_v<T>)
+                {
+                    return false;
+                }
+                else
+                {
+                    return *reinterpret_cast<const T*> (a) < *reinterpret_cast<const T*> (b);
+                }
             }
-        };
-
-        /**
-         * @brief helper class representing a variant storage in order to be able to disable default/copy/move
-         * constructors/operators.
-         */
-        template <bool Trivial, typename... Ts>
-        struct VariantStorage
-        {
-            /**
-             * @brief default constructor.
-             */
-            constexpr VariantStorage ()
-            : VariantStorage (std::in_place_index<0>)
-            {
-            }
-
-            /**
-             * @brief copy constructor.
-             * @param other object to copy.
-             */
-            constexpr VariantStorage (const VariantStorage& other)
-            : _which (other._which)
-            {
-                VariantHelper<Ts...>::copy (other._which, other.storage (), storage ());
-            }
-
-            /**
-             * @brief move constructor.
-             * @param other object to move.
-             */
-            constexpr VariantStorage (VariantStorage&& other) noexcept
-            : _which (other._which)
-            {
-                VariantHelper<Ts...>::move (other._which, other.storage (), storage ());
-            }
-
-            /**
-             * @brief constructs a variant storage with the alternative T specified by the index I.
-             * @param args arguments to initialize the contained value with.
-             */
-            template <std::size_t I, typename... Args>
-            constexpr explicit VariantStorage (std::in_place_index_t<I>, Args&&... args)
-            : _which (I)
-            {
-                new (storage ()) find_element_t<I, Ts...> (std::forward<Args> (args)...);
-            }
-
-            /**
-             * @brief destroy the VariantStorage instance.
-             */
-            ~VariantStorage ()
-            {
-                VariantHelper<Ts...>::destroy (_which, storage ());
-            }
-
-            /**
-             * @brief copy assignment.
-             * @param other object to copy.
-             * @return a reference of the current object.
-             */
-            constexpr VariantStorage& operator= (const VariantStorage& other)
-            {
-                VariantStorage tmp (other);
-                swap (tmp);
-                return *this;
-            }
-
-            /**
-             * @brief move assignment.
-             * @param other object to move.
-             * @return a reference of the current object.
-             */
-            constexpr VariantStorage& operator= (VariantStorage&& other) noexcept
-            {
-                swap (other);
-                return *this;
-            }
-
-            /**
-             * @brief get storage address.
-             * @return storage address.
-             */
-            constexpr void* storage ()
-            {
-                return static_cast<void*> (std::addressof (_data));
-            }
-
-            /**
-             * @brief get storage address.
-             * @return storage address.
-             */
-            constexpr const void* storage () const
-            {
-                return static_cast<const void*> (std::addressof (_data));
-            }
-
-            /**
-             * @brief swap this storage with other.
-             * @param other storage to swap with.
-             */
-            void swap (VariantStorage& other) noexcept
-            {
-                alignas (Ts...) unsigned char tmp[std::max ({sizeof (Ts)...})];
-                VariantHelper<Ts...>::move (_which, storage (), &tmp);
-                VariantHelper<Ts...>::destroy (_which, storage ());
-                VariantHelper<Ts...>::move (other._which, other.storage (), storage ());
-                VariantHelper<Ts...>::destroy (other._which, other.storage ());
-                VariantHelper<Ts...>::move (_which, &tmp, other.storage ());
-                VariantHelper<Ts...>::destroy (_which, &tmp);
-                std::swap (_which, other._which);
-            }
-
-            /// aligned storage.
-            alignas (Ts...) unsigned char _data[std::max ({sizeof (Ts)...})];
-
-            /// index of the alternative that is currently held by the variant.
-            std::size_t _which = 0;
-        };
-
-        /**
-         * @brief variant storage of trivially copyable alternatives, trivially copyable itself.
-         */
-        template <typename... Ts>
-        struct VariantStorage<true, Ts...>
-        {
-            /**
-             * @brief default constructor.
-             */
-            constexpr VariantStorage ()
-            : VariantStorage (std::in_place_index<0>)
-            {
-            }
-
-            /**
-             * @brief constructs a variant storage with the alternative T specified by the index I.
-             * @param args arguments to initialize the contained value with.
-             */
-            template <std::size_t I, typename... Args>
-            constexpr explicit VariantStorage (std::in_place_index_t<I>, Args&&... args)
-            : _which (I)
-            {
-                new (storage ()) find_element_t<I, Ts...> (std::forward<Args> (args)...);
-            }
-
-            /**
-             * @brief copy constructor.
-             * @param other object to copy.
-             */
-            constexpr VariantStorage (const VariantStorage& other) = default;
-
-            /**
-             * @brief move constructor.
-             * @param other object to move.
-             */
-            constexpr VariantStorage (VariantStorage&& other) = default;
-
-            /**
-             * @brief destroy the VariantStorage instance.
-             */
-            ~VariantStorage () = default;
-
-            /**
-             * @brief copy assignment.
-             * @param other object to copy.
-             * @return a reference of the current object.
-             */
-            constexpr VariantStorage& operator= (const VariantStorage& other) = default;
-
-            /**
-             * @brief move assignment.
-             * @param other object to move.
-             * @return a reference of the current object.
-             */
-            constexpr VariantStorage& operator= (VariantStorage&& other) = default;
-
-            /**
-             * @brief get storage address.
-             * @return storage address.
-             */
-            constexpr void* storage ()
-            {
-                return static_cast<void*> (std::addressof (_data));
-            }
-
-            /**
-             * @brief get storage address.
-             * @return storage address.
-             */
-            constexpr const void* storage () const
-            {
-                return static_cast<const void*> (std::addressof (_data));
-            }
-
-            /**
-             * @brief swap this storage with other.
-             * @param other storage to swap with.
-             */
-            void swap (VariantStorage& other) noexcept
-            {
-                std::swap (*this, other);
-            }
-
-            /// aligned storage.
-            alignas (Ts...) unsigned char _data[std::max ({sizeof (Ts)...})];
-
-            /// index of the alternative that is currently held by the variant.
-            std::size_t _which = 0;
         };
     }
 
@@ -434,46 +199,87 @@ namespace join
      */
     template <typename... Ts>
     class Variant
-    : private details::VariantStorage<are_trivially_copyable<Ts...>::value, Ts...>,
-      private EnableDefault<details::is_first_default_constructible<Ts...>::value, Variant<Ts...>>,
-      private std::_Enable_copy_move<are_copy_constructible<Ts...>::value, are_copy_assignable<Ts...>::value,
-                                     are_move_constructible<Ts...>::value, are_move_assignable<Ts...>::value,
-                                     Variant<Ts...>>
     {
+        /// all alternatives are trivially copyable.
+        static constexpr bool _trivial = (std::is_trivially_copyable_v<Ts> && ...);
+
+        /// first alternative is default constructible.
+        static constexpr bool _defaultConstructible =
+            std::is_default_constructible_v<std::tuple_element_t<0, std::tuple<Ts...>>>;
+
+        /// all alternatives are copy constructible.
+        static constexpr bool _copyConstructible = (std::is_copy_constructible_v<Ts> && ...);
+
+        /// all alternatives are move constructible.
+        static constexpr bool _moveConstructible = (std::is_move_constructible_v<Ts> && ...);
+
+        /// all alternatives are copy assignable.
+        static constexpr bool _copyAssignable =
+            _copyConstructible && _moveConstructible && (std::is_copy_assignable_v<Ts> && ...);
+
+        /// all alternatives are move assignable.
+        static constexpr bool _moveAssignable = _moveConstructible && (std::is_move_assignable_v<Ts> && ...);
+
     public:
         static_assert (0 < sizeof...(Ts), "Variant must have at least one alternative");
-        static_assert (all<!std::is_void<Ts>::value...>::value, "Variant must have no void alternative");
-        static_assert (all<!std::is_array<Ts>::value...>::value, "Variant must have no array alternative.");
-        static_assert (all<!std::is_reference<Ts>::value...>::value, "Variant must have no reference alternative");
-
-        using Base = details::VariantStorage<are_trivially_copyable<Ts...>::value, Ts...>;
-        using DefaultEnabler = EnableDefault<details::is_first_default_constructible<Ts...>::value, Variant<Ts...>>;
+        static_assert ((!std::is_void_v<Ts> && ...), "Variant must have no void alternative");
+        static_assert ((!std::is_array_v<Ts> && ...), "Variant must have no array alternative.");
+        static_assert ((!std::is_reference_v<Ts> && ...), "Variant must have no reference alternative");
 
         /**
          * @brief default constructor.
          */
-        constexpr Variant () = default;
+        constexpr Variant ()
+            requires _defaultConstructible
+        : Variant (std::in_place_index<0>)
+        {
+        }
 
         /**
          * @brief copy constructor.
          * @param other object to copy.
          */
-        constexpr Variant (const Variant&) = default;
+        constexpr Variant (const Variant& other)
+            requires (_trivial && _copyConstructible)
+        = default;
+
+        /**
+         * @brief copy constructor.
+         * @param other object to copy.
+         */
+        constexpr Variant (const Variant& other)
+            requires (!_trivial && _copyConstructible)
+        : _which (other._which)
+        {
+            details::VariantHelper<Ts...>::copy (other._which, other.storage (), storage ());
+        }
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        constexpr Variant (Variant&&) = default;
+        constexpr Variant (Variant&& other)
+            requires (_trivial && _moveConstructible)
+        = default;
+
+        /**
+         * @brief move constructor.
+         * @param other object to move.
+         */
+        constexpr Variant (Variant&& other) noexcept
+            requires (!_trivial && _moveConstructible)
+        : _which (other._which)
+        {
+            details::VariantHelper<Ts...>::move (other._which, other.storage (), storage ());
+        }
 
         /**
          * @brief constructs a Variant holding the alternative selected by overload resolution.
          * @param t Value convertible to one of the variant's alternatives
          */
-        template <
-            typename T, typename Match = match_t<T&&, Ts...>,
-            typename = std::enable_if_t<is_unique<Match, Ts...>::value && std::is_constructible<Match, T&&>::value>>
+        template <typename T, typename Match = match_t<T&&, Ts...>>
         constexpr Variant (T&& t)
+            requires is_unique<Match, Ts...>::value && std::is_constructible_v<Match, T&&>
         : Variant (std::in_place_index<find_index<Match, Ts...>::value>, std::forward<T> (t))
         {
         }
@@ -482,9 +288,9 @@ namespace join
          * @brief constructs a Variant with the specified alternative T.
          * @param args arguments to initialize the contained value with.
          */
-        template <typename T, typename... Args,
-                  typename = std::enable_if_t<is_unique<T, Ts...>::value && std::is_constructible<T, Args&&...>::value>>
+        template <typename T, typename... Args>
         constexpr explicit Variant (std::in_place_type_t<T>, Args&&... args)
+            requires is_unique<T, Ts...>::value && std::is_constructible_v<T, Args&&...>
         : Variant (std::in_place_index<find_index<T, Ts...>::value>, std::forward<Args> (args)...)
         {
         }
@@ -493,10 +299,9 @@ namespace join
          * @brief constructs a Variant with the specified alternative T.
          * @param args arguments to initialize the contained value with.
          */
-        template <typename T, typename Up, typename... Args,
-                  typename = std::enable_if_t<is_unique<T, Ts...>::value &&
-                                              std::is_constructible<T, std::initializer_list<Up>&, Args&&...>::value>>
+        template <typename T, typename Up, typename... Args>
         constexpr explicit Variant (std::in_place_type_t<T>, std::initializer_list<Up> il, Args&&... args)
+            requires is_unique<T, Ts...>::value && std::is_constructible_v<T, std::initializer_list<Up>&, Args&&...>
         : Variant (std::in_place_index<find_index<T, Ts...>::value>, il, std::forward<Args> (args)...)
         {
         }
@@ -505,45 +310,85 @@ namespace join
          * @brief constructs a variant with the alternative T specified by the index I.
          * @param args arguments to initialize the contained value with.
          */
-        template <std::size_t I, typename... Args,
-                  typename = std::enable_if_t<std::is_constructible<find_element_t<I, Ts...>, Args&&...>::value>>
+        template <std::size_t I, typename... Args>
         constexpr explicit Variant (std::in_place_index_t<I>, Args&&... args)
-        : Base (std::in_place_index<I>, std::forward<Args> (args)...)
-        , DefaultEnabler (EnableDefaultTag{})
+            requires std::is_constructible_v<std::tuple_element_t<I, std::tuple<Ts...>>, Args&&...>
+        : _which (I)
         {
+            new (storage ()) std::tuple_element_t<I, std::tuple<Ts...>> (std::forward<Args> (args)...);
         }
 
         /**
          * @brief constructs a variant with the alternative T specified by the index I.
          * @param args arguments to initialize the contained value with.
          */
-        template <std::size_t I, typename Up, typename... Args,
-                  typename = std::enable_if_t<
-                      std::is_constructible<find_element_t<I, Ts...>, std::initializer_list<Up>&, Args&&...>::value>>
+        template <std::size_t I, typename Up, typename... Args>
         constexpr explicit Variant (std::in_place_index_t<I>, std::initializer_list<Up> il, Args&&... args)
-        : Base (std::in_place_index<I>, il, std::forward<Args> (args)...)
-        , DefaultEnabler (EnableDefaultTag{})
+            requires std::is_constructible_v<std::tuple_element_t<I, std::tuple<Ts...>>, std::initializer_list<Up>&,
+                                             Args&&...>
+        : _which (I)
         {
+            new (storage ()) std::tuple_element_t<I, std::tuple<Ts...>> (il, std::forward<Args> (args)...);
         }
 
         /**
          * @brief destroy the Variant instance.
          */
-        ~Variant () = default;
+        ~Variant ()
+            requires _trivial
+        = default;
+
+        /**
+         * @brief destroy the Variant instance.
+         */
+        ~Variant ()
+            requires (!_trivial)
+        {
+            details::VariantHelper<Ts...>::destroy (_which, storage ());
+        }
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        constexpr Variant& operator= (const Variant& other) = default;
+        constexpr Variant& operator= (const Variant& other)
+            requires (_trivial && _copyAssignable)
+        = default;
+
+        /**
+         * @brief copy assignment.
+         * @param other object to copy.
+         * @return a reference of the current object.
+         */
+        constexpr Variant& operator= (const Variant& other)
+            requires (!_trivial && _copyAssignable)
+        {
+            Variant tmp (other);
+            swap (tmp);
+            return *this;
+        }
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        constexpr Variant& operator= (Variant&& other) = default;
+        constexpr Variant& operator= (Variant&& other)
+            requires (_trivial && _moveAssignable)
+        = default;
+
+        /**
+         * @brief move assignment.
+         * @param other object to move.
+         * @return a reference of the current object.
+         */
+        constexpr Variant& operator= (Variant&& other) noexcept
+            requires (!_trivial && _moveAssignable)
+        {
+            swap (other);
+            return *this;
+        }
 
         /**
          * @brief assign a Variant holding the alternative selected by overload resolution.
@@ -551,8 +396,8 @@ namespace join
          * @return a reference of the current object.
          */
         template <typename T, typename Match = match_t<T&&, Ts...>>
-        constexpr std::enable_if_t<is_unique<Match, Ts...>::value && std::is_constructible<Match, T&&>::value, Variant&>
-        operator= (T&& t)
+        constexpr Variant& operator= (T&& t)
+            requires is_unique<Match, Ts...>::value && std::is_constructible_v<Match, T&&>
         {
             set<find_index<Match, Ts...>::value> (std::forward<T> (t));
             return *this;
@@ -563,7 +408,8 @@ namespace join
          * @return true if the type is the same, false otherwise.
          */
         template <typename T>
-        constexpr std::enable_if_t<is_unique<T, Ts...>::value, bool> is () const
+        constexpr bool is () const
+            requires is_unique<T, Ts...>::value
         {
             return (index () == find_index<T, Ts...>::value);
         }
@@ -573,7 +419,8 @@ namespace join
          * @return true if the index is the same, false otherwise.
          */
         template <std::size_t I>
-        constexpr std::enable_if_t<is_index<I, Ts...>::value, bool> is () const
+        constexpr bool is () const
+            requires (I < sizeof...(Ts))
         {
             return (index () == I);
         }
@@ -583,8 +430,8 @@ namespace join
          * @param args argument(s) to set.
          */
         template <typename T, typename... Args>
-        constexpr std::enable_if_t<is_unique<T, Ts...>::value && std::is_constructible<T, Args&&...>::value, T&> set (
-            Args&&... args)
+        constexpr T& set (Args&&... args)
+            requires is_unique<T, Ts...>::value && std::is_constructible_v<T, Args&&...>
         {
             return set<find_index<T, Ts...>::value> (std::forward<Args> (args)...);
         }
@@ -594,9 +441,8 @@ namespace join
          * @param args argument(s) to set.
          */
         template <typename T, typename Up, typename... Args>
-        constexpr std::enable_if_t<
-            is_unique<T, Ts...>::value && std::is_constructible<T, std::initializer_list<Up>&, Args&&...>::value, T&>
-        set (std::initializer_list<Up> il, Args&&... args)
+        constexpr T& set (std::initializer_list<Up> il, Args&&... args)
+            requires is_unique<T, Ts...>::value && std::is_constructible_v<T, std::initializer_list<Up>&, Args&&...>
         {
             return set<find_index<T, Ts...>::value> (il, std::forward<Args> (args)...);
         }
@@ -606,9 +452,8 @@ namespace join
          * @param args argument(s) to set.
          */
         template <std::size_t I, typename... Args>
-        constexpr std::enable_if_t<std::is_constructible<find_element_t<I, Ts...>, Args&&...>::value,
-                                   find_element_t<I, Ts...>&>
-        set (Args&&... args)
+        constexpr std::tuple_element_t<I, std::tuple<Ts...>>& set (Args&&... args)
+            requires std::is_constructible_v<std::tuple_element_t<I, std::tuple<Ts...>>, Args&&...>
         {
             Variant tmp (std::in_place_index<I>, std::forward<Args> (args)...);
             *this = std::move (tmp);
@@ -620,10 +465,9 @@ namespace join
          * @param args argument(s) to set.
          */
         template <std::size_t I, class Up, class... Args>
-        constexpr std::enable_if_t<
-            std::is_constructible<find_element_t<I, Ts...>, std::initializer_list<Up>&, Args&&...>::value,
-            find_element_t<I, Ts...>&>
-        set (std::initializer_list<Up> il, Args&&... args)
+        constexpr std::tuple_element_t<I, std::tuple<Ts...>>& set (std::initializer_list<Up> il, Args&&... args)
+            requires std::is_constructible_v<std::tuple_element_t<I, std::tuple<Ts...>>, std::initializer_list<Up>&,
+                                             Args&&...>
         {
             Variant tmp (std::in_place_index<I>, il, std::forward<Args> (args)...);
             *this = std::move (tmp);
@@ -635,13 +479,14 @@ namespace join
          * @return the object value.
          */
         template <typename T>
-        constexpr std::enable_if_t<is_unique<T, Ts...>::value, T&> get ()
+        constexpr T& get ()
+            requires is_unique<T, Ts...>::value
         {
             if (index () != find_index<T, Ts...>::value)
             {
                 throw std::bad_cast ();
             }
-            return *reinterpret_cast<T*> (this->storage ());
+            return *reinterpret_cast<T*> (storage ());
         }
 
         /**
@@ -649,13 +494,14 @@ namespace join
          * @return the object value.
          */
         template <typename T>
-        constexpr std::enable_if_t<is_unique<T, Ts...>::value, const T&> get () const
+        constexpr const T& get () const
+            requires is_unique<T, Ts...>::value
         {
             if (index () != find_index<T, Ts...>::value)
             {
                 throw std::bad_cast ();
             }
-            return *reinterpret_cast<const T*> (this->storage ());
+            return *reinterpret_cast<const T*> (storage ());
         }
 
         /**
@@ -663,13 +509,14 @@ namespace join
          * @return the object value.
          */
         template <std::size_t I>
-        constexpr std::enable_if_t<is_index<I, Ts...>::value, find_element_t<I, Ts...>&> get ()
+        constexpr std::tuple_element_t<I, std::tuple<Ts...>>& get ()
+            requires (I < sizeof...(Ts))
         {
             if (index () != I)
             {
                 throw std::bad_cast ();
             }
-            return *reinterpret_cast<find_element_t<I, Ts...>*> (this->storage ());
+            return *reinterpret_cast<std::tuple_element_t<I, std::tuple<Ts...>>*> (storage ());
         }
 
         /**
@@ -677,13 +524,14 @@ namespace join
          * @return the object value.
          */
         template <std::size_t I>
-        constexpr std::enable_if_t<is_index<I, Ts...>::value, const find_element_t<I, Ts...>&> get () const
+        constexpr const std::tuple_element_t<I, std::tuple<Ts...>>& get () const
+            requires (I < sizeof...(Ts))
         {
             if (index () != I)
             {
                 throw std::bad_cast ();
             }
-            return *reinterpret_cast<const find_element_t<I, Ts...>*> (this->storage ());
+            return *reinterpret_cast<const std::tuple_element_t<I, std::tuple<Ts...>>*> (storage ());
         }
 
         /**
@@ -691,13 +539,14 @@ namespace join
          * @return the object value address if type is correct, nullptr otherwise.
          */
         template <typename T>
-        constexpr std::enable_if_t<is_unique<T, Ts...>::value, T*> getIf ()
+        constexpr T* getIf ()
+            requires is_unique<T, Ts...>::value
         {
             if (index () != find_index<T, Ts...>::value)
             {
                 return nullptr;
             }
-            return reinterpret_cast<T*> (this->storage ());
+            return reinterpret_cast<T*> (storage ());
         }
 
         /**
@@ -705,13 +554,14 @@ namespace join
          * @return the object value address if type is correct, nullptr otherwise.
          */
         template <typename T>
-        constexpr std::enable_if_t<is_unique<T, Ts...>::value, const T*> getIf () const
+        constexpr const T* getIf () const
+            requires is_unique<T, Ts...>::value
         {
             if (index () != find_index<T, Ts...>::value)
             {
                 return nullptr;
             }
-            return reinterpret_cast<const T*> (this->storage ());
+            return reinterpret_cast<const T*> (storage ());
         }
 
         /**
@@ -719,13 +569,14 @@ namespace join
          * @return the object value address if index is correct, nullptr otherwise.
          */
         template <std::size_t I>
-        constexpr std::enable_if_t<is_index<I, Ts...>::value, find_element_t<I, Ts...>*> getIf ()
+        constexpr std::tuple_element_t<I, std::tuple<Ts...>>* getIf ()
+            requires (I < sizeof...(Ts))
         {
             if (index () != I)
             {
                 return nullptr;
             }
-            return reinterpret_cast<find_element_t<I, Ts...>*> (this->storage ());
+            return reinterpret_cast<std::tuple_element_t<I, std::tuple<Ts...>>*> (storage ());
         }
 
         /**
@@ -733,13 +584,14 @@ namespace join
          * @return the object value address if index is correct, nullptr otherwise.
          */
         template <std::size_t I>
-        constexpr std::enable_if_t<is_index<I, Ts...>::value, const find_element_t<I, Ts...>*> getIf () const
+        constexpr const std::tuple_element_t<I, std::tuple<Ts...>>* getIf () const
+            requires (I < sizeof...(Ts))
         {
             if (index () != I)
             {
                 return nullptr;
             }
-            return reinterpret_cast<const find_element_t<I, Ts...>*> (this->storage ());
+            return reinterpret_cast<const std::tuple_element_t<I, std::tuple<Ts...>>*> (storage ());
         }
 
         /**
@@ -748,7 +600,7 @@ namespace join
          */
         constexpr std::size_t index () const noexcept
         {
-            return this->_which;
+            return _which;
         }
 
         /**
@@ -757,7 +609,22 @@ namespace join
          */
         void swap (Variant& other) noexcept
         {
-            Base::swap (other);
+            if constexpr (_trivial)
+            {
+                std::swap (_data, other._data);
+                std::swap (_which, other._which);
+            }
+            else
+            {
+                alignas (Ts...) unsigned char tmp[std::max ({sizeof (Ts)...})];
+                details::VariantHelper<Ts...>::move (_which, storage (), &tmp);
+                details::VariantHelper<Ts...>::destroy (_which, storage ());
+                details::VariantHelper<Ts...>::move (other._which, other.storage (), storage ());
+                details::VariantHelper<Ts...>::destroy (other._which, other.storage ());
+                details::VariantHelper<Ts...>::move (_which, &tmp, other.storage ());
+                details::VariantHelper<Ts...>::destroy (_which, &tmp);
+                std::swap (_which, other._which);
+            }
         }
 
     protected:
@@ -772,7 +639,7 @@ namespace join
             {
                 return false;
             }
-            return details::VariantHelper<Ts...>::equal (index (), this->storage (), rhs.storage ());
+            return details::VariantHelper<Ts...>::equal (index (), storage (), rhs.storage ());
         }
 
         /**
@@ -790,7 +657,7 @@ namespace join
             {
                 return false;
             }
-            return details::VariantHelper<Ts...>::lower (index (), this->storage (), rhs.storage ());
+            return details::VariantHelper<Ts...>::lower (index (), storage (), rhs.storage ());
         }
 
         // friendship with equal operator.
@@ -800,6 +667,31 @@ namespace join
         // friendship with lower operator.
         template <typename... _Ts>
         friend constexpr bool operator< (const Variant<_Ts...>& lhs, const Variant<_Ts...>& rhs);
+
+    private:
+        /**
+         * @brief get storage address.
+         * @return storage address.
+         */
+        constexpr void* storage ()
+        {
+            return static_cast<void*> (std::addressof (_data));
+        }
+
+        /**
+         * @brief get storage address.
+         * @return storage address.
+         */
+        constexpr const void* storage () const
+        {
+            return static_cast<const void*> (std::addressof (_data));
+        }
+
+        /// aligned storage.
+        alignas (Ts...) unsigned char _data[std::max ({sizeof (Ts)...})];
+
+        /// index of the alternative that is currently held by the variant.
+        std::size_t _which = 0;
     };
 
     /**
@@ -812,18 +704,6 @@ namespace join
     constexpr bool operator== (const Variant<Ts...>& lhs, const Variant<Ts...>& rhs)
     {
         return lhs.equal (rhs);
-    }
-
-    /**
-     * @brief compare if not equal.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if not equal.
-     */
-    template <typename... Ts>
-    constexpr bool operator!= (const Variant<Ts...>& lhs, const Variant<Ts...>& rhs)
-    {
-        return !(lhs == rhs);
     }
 
     /**
