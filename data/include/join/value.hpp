@@ -89,7 +89,7 @@ namespace join
          * @param value null value.
          */
         constexpr Value (std::nullptr_t value)
-        : _data (in_place_index_t<Null>{}, value)
+        : _data (std::in_place_index<Null>, value)
         {
         }
 
@@ -98,7 +98,7 @@ namespace join
          * @param value boolean value.
          */
         constexpr Value (bool value)
-        : _data (in_place_index_t<Boolean>{}, value)
+        : _data (std::in_place_index<Boolean>, value)
         {
         }
 
@@ -107,7 +107,7 @@ namespace join
          * @param value integer value.
          */
         constexpr Value (int32_t value)
-        : _data (in_place_index_t<Integer>{}, value)
+        : _data (std::in_place_index<Integer>, value)
         {
         }
 
@@ -116,7 +116,7 @@ namespace join
          * @param value unsigned integer value.
          */
         constexpr Value (uint32_t value)
-        : _data (in_place_index_t<Unsigned>{}, value)
+        : _data (std::in_place_index<Unsigned>, value)
         {
         }
 
@@ -125,7 +125,7 @@ namespace join
          * @param value 64 bits integer value.
          */
         constexpr Value (int64_t value)
-        : _data (in_place_index_t<Integer64>{}, value)
+        : _data (std::in_place_index<Integer64>, value)
         {
         }
 
@@ -134,7 +134,7 @@ namespace join
          * @param value 64 bits unsigned integer value.
          */
         constexpr Value (uint64_t value)
-        : _data (in_place_index_t<Unsigned64>{}, value)
+        : _data (std::in_place_index<Unsigned64>, value)
         {
         }
 
@@ -143,7 +143,7 @@ namespace join
          * @param value real value.
          */
         constexpr Value (double value)
-        : _data (in_place_index_t<Real>{}, value)
+        : _data (std::in_place_index<Real>, value)
         {
         }
 
@@ -152,7 +152,7 @@ namespace join
          * @param value string value.
          */
         Value (const char* value)
-        : _data (in_place_index_t<String>{}, value)
+        : _data (std::in_place_index<String>, value)
         {
         }
 
@@ -161,7 +161,7 @@ namespace join
          * @param value string value.
          */
         Value (const std::string& value)
-        : _data (in_place_index_t<String>{}, value)
+        : _data (std::in_place_index<String>, value)
         {
         }
 
@@ -170,7 +170,7 @@ namespace join
          * @param value string value.
          */
         Value (std::string&& value)
-        : _data (in_place_index_t<String>{}, std::move (value))
+        : _data (std::in_place_index<String>, std::move (value))
         {
         }
 
@@ -179,7 +179,7 @@ namespace join
          * @param value array value.
          */
         Value (const Array& value)
-        : _data (in_place_index_t<ArrayValue>{}, value)
+        : _data (std::in_place_index<ArrayValue>, value)
         {
         }
 
@@ -188,7 +188,7 @@ namespace join
          * @param value array value.
          */
         Value (Array&& value)
-        : _data (in_place_index_t<ArrayValue>{}, std::move (value))
+        : _data (std::in_place_index<ArrayValue>, std::move (value))
         {
         }
 
@@ -197,7 +197,7 @@ namespace join
          * @param value object value.
          */
         Value (const Object& value)
-        : _data (in_place_index_t<ObjectValue>{}, value)
+        : _data (std::in_place_index<ObjectValue>, value)
         {
         }
 
@@ -206,7 +206,7 @@ namespace join
          * @param value object value.
          */
         Value (Object&& value)
-        : _data (in_place_index_t<ObjectValue>{}, std::move (value))
+        : _data (std::in_place_index<ObjectValue>, std::move (value))
         {
         }
 
@@ -947,7 +947,7 @@ namespace join
          * @return converted string value.
          * @throw std::bad_cast.
          */
-        explicit operator const char* () const
+        explicit operator const char*() const
         {
             return getString ().c_str ();
         }

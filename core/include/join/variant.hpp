@@ -231,7 +231,7 @@ namespace join
              * @brief default constructor.
              */
             constexpr VariantStorage ()
-            : VariantStorage (in_place_index_t<0>{})
+            : VariantStorage (std::in_place_index<0>)
             {
             }
 
@@ -260,7 +260,7 @@ namespace join
              * @param args arguments to initialize the contained value with.
              */
             template <std::size_t I, typename... Args>
-            constexpr explicit VariantStorage (in_place_index_t<I>, Args&&... args)
+            constexpr explicit VariantStorage (std::in_place_index_t<I>, Args&&... args)
             : _which (I)
             {
                 new (storage ()) find_element_t<I, Ts...> (std::forward<Args> (args)...);
@@ -348,7 +348,7 @@ namespace join
              * @brief default constructor.
              */
             constexpr VariantStorage ()
-            : VariantStorage (in_place_index_t<0>{})
+            : VariantStorage (std::in_place_index<0>)
             {
             }
 
@@ -357,7 +357,7 @@ namespace join
              * @param args arguments to initialize the contained value with.
              */
             template <std::size_t I, typename... Args>
-            constexpr explicit VariantStorage (in_place_index_t<I>, Args&&... args)
+            constexpr explicit VariantStorage (std::in_place_index_t<I>, Args&&... args)
             : _which (I)
             {
                 new (storage ()) find_element_t<I, Ts...> (std::forward<Args> (args)...);
@@ -474,7 +474,7 @@ namespace join
             typename T, typename Match = match_t<T&&, Ts...>,
             typename = std::enable_if_t<is_unique<Match, Ts...>::value && std::is_constructible<Match, T&&>::value>>
         constexpr Variant (T&& t)
-        : Variant (in_place_index_t<find_index<Match, Ts...>::value>{}, std::forward<T> (t))
+        : Variant (std::in_place_index<find_index<Match, Ts...>::value>, std::forward<T> (t))
         {
         }
 
@@ -484,8 +484,8 @@ namespace join
          */
         template <typename T, typename... Args,
                   typename = std::enable_if_t<is_unique<T, Ts...>::value && std::is_constructible<T, Args&&...>::value>>
-        constexpr explicit Variant (in_place_type_t<T>, Args&&... args)
-        : Variant (in_place_index_t<find_index<T, Ts...>::value>{}, std::forward<Args> (args)...)
+        constexpr explicit Variant (std::in_place_type_t<T>, Args&&... args)
+        : Variant (std::in_place_index<find_index<T, Ts...>::value>, std::forward<Args> (args)...)
         {
         }
 
@@ -496,8 +496,8 @@ namespace join
         template <typename T, typename Up, typename... Args,
                   typename = std::enable_if_t<is_unique<T, Ts...>::value &&
                                               std::is_constructible<T, std::initializer_list<Up>&, Args&&...>::value>>
-        constexpr explicit Variant (in_place_type_t<T>, std::initializer_list<Up> il, Args&&... args)
-        : Variant (in_place_index_t<find_index<T, Ts...>::value>{}, il, std::forward<Args> (args)...)
+        constexpr explicit Variant (std::in_place_type_t<T>, std::initializer_list<Up> il, Args&&... args)
+        : Variant (std::in_place_index<find_index<T, Ts...>::value>, il, std::forward<Args> (args)...)
         {
         }
 
@@ -507,8 +507,8 @@ namespace join
          */
         template <std::size_t I, typename... Args,
                   typename = std::enable_if_t<std::is_constructible<find_element_t<I, Ts...>, Args&&...>::value>>
-        constexpr explicit Variant (in_place_index_t<I>, Args&&... args)
-        : Base (in_place_index_t<I>{}, std::forward<Args> (args)...)
+        constexpr explicit Variant (std::in_place_index_t<I>, Args&&... args)
+        : Base (std::in_place_index<I>, std::forward<Args> (args)...)
         , DefaultEnabler (EnableDefaultTag{})
         {
         }
@@ -520,8 +520,8 @@ namespace join
         template <std::size_t I, typename Up, typename... Args,
                   typename = std::enable_if_t<
                       std::is_constructible<find_element_t<I, Ts...>, std::initializer_list<Up>&, Args&&...>::value>>
-        constexpr explicit Variant (in_place_index_t<I>, std::initializer_list<Up> il, Args&&... args)
-        : Base (in_place_index_t<I>{}, il, std::forward<Args> (args)...)
+        constexpr explicit Variant (std::in_place_index_t<I>, std::initializer_list<Up> il, Args&&... args)
+        : Base (std::in_place_index<I>, il, std::forward<Args> (args)...)
         , DefaultEnabler (EnableDefaultTag{})
         {
         }
@@ -610,7 +610,7 @@ namespace join
                                    find_element_t<I, Ts...>&>
         set (Args&&... args)
         {
-            Variant tmp (in_place_index_t<I>{}, std::forward<Args> (args)...);
+            Variant tmp (std::in_place_index<I>, std::forward<Args> (args)...);
             *this = std::move (tmp);
             return get<I> ();
         }
@@ -625,7 +625,7 @@ namespace join
             find_element_t<I, Ts...>&>
         set (std::initializer_list<Up> il, Args&&... args)
         {
-            Variant tmp (in_place_index_t<I>{}, il, std::forward<Args> (args)...);
+            Variant tmp (std::in_place_index<I>, il, std::forward<Args> (args)...);
             *this = std::move (tmp);
             return get<I> ();
         }

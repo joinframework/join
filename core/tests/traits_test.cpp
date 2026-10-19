@@ -32,18 +32,6 @@
 #include <mutex>
 
 /**
- * @brief test identity trait.
- */
-TEST (Traits, identity)
-{
-    auto same = std::is_same<int, join::identity_t<int>>::value;
-    EXPECT_TRUE (same);
-
-    same = std::is_same<int, join::identity_t<double>>::value;
-    EXPECT_FALSE (same);
-}
-
-/**
  * @brief test match trait.
  */
 TEST (Traits, match)
@@ -320,6 +308,18 @@ TEST (Traits, are_move_assignable)
     EXPECT_TRUE (can);
 
     can = join::are_move_assignable<std::mutex, int, double, std::string, bool, std::nullptr_t>::value;
+    EXPECT_FALSE (can);
+}
+
+/**
+ * @brief test are_trivially_copyable trait.
+ */
+TEST (Traits, are_trivially_copyable)
+{
+    auto can = join::are_trivially_copyable<int, double, bool, std::nullptr_t>::value;
+    EXPECT_TRUE (can);
+
+    can = join::are_trivially_copyable<int, double, std::string, bool, std::nullptr_t>::value;
     EXPECT_FALSE (can);
 }
 
