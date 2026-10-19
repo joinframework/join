@@ -232,9 +232,7 @@ int Thread::priority (int prio)
 // =========================================================================
 int Thread::priority (pthread_t handle, int prio)
 {
-    struct sched_param param
-    {
-    };
+    struct sched_param param{};
 
     param.sched_priority = prio;
 

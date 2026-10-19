@@ -2362,7 +2362,7 @@ TEST (IpAddress, xor)
 /**
  * @brief not operators.
  */
-TEST (IpAddress, not )
+TEST (IpAddress, not)
 {
     IpAddress ip, result;
 
