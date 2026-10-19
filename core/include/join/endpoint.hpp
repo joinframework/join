@@ -175,6 +175,15 @@ namespace join
             }
             return {};
         }
+
+        /**
+         * @brief get endpoint interface index.
+         * @return interface index, 0 if none.
+         */
+        int index () const noexcept
+        {
+            return reinterpret_cast<const struct sockaddr_ll*> (&this->_addr)->sll_ifindex;
+        }
     };
 
     /**
@@ -186,8 +195,7 @@ namespace join
     template <class Protocol>
     bool operator== (const BasicLinkLayerEndpoint<Protocol>& a, const BasicLinkLayerEndpoint<Protocol>& b) noexcept
     {
-        return reinterpret_cast<const struct sockaddr_ll*> (a.addr ())->sll_ifindex ==
-               reinterpret_cast<const struct sockaddr_ll*> (b.addr ())->sll_ifindex;
+        return a.index () == b.index ();
     }
 
     /**
@@ -200,8 +208,7 @@ namespace join
     std::strong_ordering operator<=> (const BasicLinkLayerEndpoint<Protocol>& a,
                                       const BasicLinkLayerEndpoint<Protocol>& b) noexcept
     {
-        return reinterpret_cast<const struct sockaddr_ll*> (a.addr ())->sll_ifindex <=>
-               reinterpret_cast<const struct sockaddr_ll*> (b.addr ())->sll_ifindex;
+        return a.index () <=> b.index ();
     }
 
     /**
@@ -308,6 +315,15 @@ namespace join
         }
 
         /**
+         * @brief get endpoint interface index.
+         * @return interface index, 0 if none.
+         */
+        uint32_t index () const noexcept
+        {
+            return reinterpret_cast<const struct sockaddr_xdp*> (&this->_addr)->sxdp_ifindex;
+        }
+
+        /**
          * @brief set endpoint queue.
          * @param queue queue number to set.
          */
@@ -335,9 +351,7 @@ namespace join
     template <class Protocol>
     bool operator== (const BasicXdpEndpoint<Protocol>& a, const BasicXdpEndpoint<Protocol>& b) noexcept
     {
-        return reinterpret_cast<const struct sockaddr_xdp*> (a.addr ())->sxdp_ifindex ==
-                   reinterpret_cast<const struct sockaddr_xdp*> (b.addr ())->sxdp_ifindex &&
-               a.queue () == b.queue ();
+        return a.index () == b.index () && a.queue () == b.queue ();
     }
 
     /**
@@ -349,9 +363,7 @@ namespace join
     template <class Protocol>
     std::strong_ordering operator<=> (const BasicXdpEndpoint<Protocol>& a, const BasicXdpEndpoint<Protocol>& b) noexcept
     {
-        if (auto cmp = reinterpret_cast<const struct sockaddr_xdp*> (a.addr ())->sxdp_ifindex <=>
-                       reinterpret_cast<const struct sockaddr_xdp*> (b.addr ())->sxdp_ifindex;
-            cmp != 0)
+        if (auto cmp = a.index () <=> b.index (); cmp != 0)
         {
             return cmp;
         }

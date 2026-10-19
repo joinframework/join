@@ -28,6 +28,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C.
+#include <net/if.h>
+
 using join::Raw;
 #ifdef JOIN_HAS_XDP
 using join::Xdp;
@@ -149,6 +152,24 @@ TEST (Endpoint, device)
 }
 
 #ifdef JOIN_HAS_XDP
+/**
+ * @brief test the index method.
+ */
+TEST (Endpoint, index)
+{
+    Raw::Endpoint rawEndpoint;
+    ASSERT_EQ (rawEndpoint.index (), 0);
+    rawEndpoint.device ("lo");
+    ASSERT_EQ (rawEndpoint.index (), static_cast<int> (if_nametoindex ("lo")));
+
+#ifdef JOIN_HAS_XDP
+    Xdp::Endpoint xdpEndpoint;
+    ASSERT_EQ (xdpEndpoint.index (), 0U);
+    xdpEndpoint.device ("lo");
+    ASSERT_EQ (xdpEndpoint.index (), if_nametoindex ("lo"));
+#endif
+}
+
 /**
  * @brief test the queue method.
  */
