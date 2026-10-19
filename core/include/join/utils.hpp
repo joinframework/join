@@ -485,7 +485,7 @@ namespace join
     Type randomize ()
     {
         static_assert (std::is_integral_v<Type>, "randomize requires an integral type");
-        std::random_device rnd;
+        thread_local std::random_device rnd;
         std::uniform_int_distribution<Type> dist{};
         return dist (rnd);
     }
