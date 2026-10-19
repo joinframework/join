@@ -98,6 +98,8 @@ target_include_directories(${JOIN_CORE}
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
+target_compile_features(${JOIN_CORE} PUBLIC cxx_std_20)
+
 target_link_libraries(${JOIN_CORE}
     PUBLIC
         Threads::Threads
