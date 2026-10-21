@@ -523,6 +523,23 @@ TEST_F (NetlinkSocket, mtu)
 }
 
 /**
+ * @brief Test is equal method.
+ */
+TEST_F (NetlinkSocket, equal)
+{
+    Netlink::Socket netlinkSocket1, netlinkSocket2;
+
+    ASSERT_TRUE (netlinkSocket1 == netlinkSocket2);
+    ASSERT_EQ (netlinkSocket1.open (Netlink::rt ()), 0) << join::lastError.message ();
+    ASSERT_TRUE (netlinkSocket1 == netlinkSocket1);
+    ASSERT_FALSE (netlinkSocket1 == netlinkSocket2);
+    ASSERT_EQ (netlinkSocket2.open (Netlink::rt ()), 0) << join::lastError.message ();
+    ASSERT_TRUE (netlinkSocket1 != netlinkSocket2);
+    netlinkSocket1.close ();
+    netlinkSocket2.close ();
+}
+
+/**
  * @brief Test is lower method.
  */
 TEST_F (NetlinkSocket, lower)

@@ -830,9 +830,13 @@ TEST_F (InterfaceTest, compare)
     ASSERT_TRUE (lo == lo);
     ASSERT_FALSE (lo == nil);
     ASSERT_FALSE (nil == lo);
+    ASSERT_FALSE (nil < nil);
     ASSERT_FALSE (lo < lo);
     ASSERT_FALSE (lo < nil);
     ASSERT_TRUE (nil < lo);
+    ASSERT_TRUE (lo > nil);
+    ASSERT_TRUE (lo >= lo);
+    ASSERT_TRUE (nil <= lo);
 }
 
 /**

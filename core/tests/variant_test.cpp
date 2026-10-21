@@ -29,7 +29,9 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <compare>
 #include <memory>
+#include <limits>
 #include <mutex>
 
 using join::Variant;
@@ -1472,6 +1474,37 @@ TEST (Variant, greater_or_equal)
 
     EXPECT_FALSE (var1 >= var2);
     EXPECT_TRUE (var1 >= var3);
+}
+
+/**
+ * @brief Test three-way comparison operator.
+ */
+TEST (Variant, compare)
+{
+    Variant<int, double, std::string, bool, std::nullptr_t> var1, var2;
+
+    EXPECT_TRUE ((std::is_same_v<decltype (var1 <=> var2), std::partial_ordering>));
+    EXPECT_TRUE ((std::is_same_v<decltype (Variant<int, std::string> () <=> Variant<int, std::string> ()),
+                                 std::strong_ordering>));
+
+    var1.set<int> (3);
+    var2.set<int> (4);
+    EXPECT_EQ (var1 <=> var2, std::partial_ordering::less);
+    EXPECT_EQ (var2 <=> var1, std::partial_ordering::greater);
+    EXPECT_EQ (var1 <=> var1, std::partial_ordering::equivalent);
+
+    var1.set<std::nullptr_t> (nullptr);
+    var2.set<std::nullptr_t> (nullptr);
+    EXPECT_EQ (var1 <=> var2, std::partial_ordering::equivalent);
+
+    var1.set<double> (std::numeric_limits<double>::quiet_NaN ());
+    var2.set<double> (0.5);
+    EXPECT_EQ (var1 <=> var2, std::partial_ordering::unordered);
+
+    var1.set<int> (3);
+    var2.set<std::string> ("foo");
+    EXPECT_EQ (var1 <=> var2, std::partial_ordering::less);
+    EXPECT_EQ (var2 <=> var1, std::partial_ordering::greater);
 }
 
 /**

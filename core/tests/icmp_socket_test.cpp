@@ -552,6 +552,23 @@ TEST_F (IcmpSocket, ttl)
 }
 
 /**
+ * @brief Test is equal method.
+ */
+TEST_F (IcmpSocket, equal)
+{
+    Icmp::Socket icmpSocket1, icmpSocket2;
+
+    ASSERT_TRUE (icmpSocket1 == icmpSocket2);
+    ASSERT_EQ (icmpSocket1.open (Icmp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_TRUE (icmpSocket1 == icmpSocket1);
+    ASSERT_FALSE (icmpSocket1 == icmpSocket2);
+    ASSERT_EQ (icmpSocket2.open (Icmp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_TRUE (icmpSocket1 != icmpSocket2);
+    icmpSocket1.close ();
+    icmpSocket2.close ();
+}
+
+/**
  * @brief Test is lower method.
  */
 TEST_F (IcmpSocket, lower)

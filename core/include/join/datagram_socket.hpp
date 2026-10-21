@@ -407,18 +407,6 @@ namespace join
         /// packet time to live.
         int _ttl = 60;
     };
-
-    /**
-     * @brief compare if socket handle is inferior.
-     * @param a socket handle to compare.
-     * @param b socket handle to compare to.
-     * @return true if inferior.
-     */
-    template <class Protocol>
-    inline bool operator< (const BasicDatagramSocket<Protocol>& a, const BasicDatagramSocket<Protocol>& b) noexcept
-    {
-        return a.handle () < b.handle ();
-    }
 }
 
 #endif

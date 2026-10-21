@@ -502,6 +502,23 @@ TEST_F (UnixDgramSocket, mtu)
 }
 
 /**
+ * @brief Test is equal method.
+ */
+TEST_F (UnixDgramSocket, equal)
+{
+    UnixDgram::Socket unixSocket1, unixSocket2;
+
+    ASSERT_TRUE (unixSocket1 == unixSocket2);
+    ASSERT_EQ (unixSocket1.open (), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket1 == unixSocket1);
+    ASSERT_FALSE (unixSocket1 == unixSocket2);
+    ASSERT_EQ (unixSocket2.open (), 0) << join::lastError.message ();
+    ASSERT_TRUE (unixSocket1 != unixSocket2);
+    unixSocket1.close ();
+    unixSocket2.close ();
+}
+
+/**
  * @brief Test is lower method.
  */
 TEST_F (UnixDgramSocket, lower)

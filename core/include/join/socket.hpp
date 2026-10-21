@@ -33,6 +33,7 @@
 
 // C++.
 #include <algorithm>
+#include <compare>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -477,15 +478,27 @@ namespace join
     };
 
     /**
-     * @brief compare if handle is inferior.
+     * @brief compare if socket handles are equal.
      * @param a socket handle to compare.
      * @param b socket handle to compare to.
-     * @return true if inferior.
+     * @return true if equal.
      */
     template <class Protocol>
-    inline bool operator< (const BasicSocket<Protocol>& a, const BasicSocket<Protocol>& b) noexcept
+    inline bool operator== (const BasicSocket<Protocol>& a, const BasicSocket<Protocol>& b) noexcept
     {
-        return a.handle () < b.handle ();
+        return a.handle () == b.handle ();
+    }
+
+    /**
+     * @brief three-way compare socket handles.
+     * @param a socket handle to compare.
+     * @param b socket handle to compare to.
+     * @return ordering of a relative to b.
+     */
+    template <class Protocol>
+    inline std::strong_ordering operator<=> (const BasicSocket<Protocol>& a, const BasicSocket<Protocol>& b) noexcept
+    {
+        return a.handle () <=> b.handle ();
     }
 }
 

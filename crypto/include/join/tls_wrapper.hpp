@@ -144,18 +144,6 @@ namespace join
             return this->_socket.canRead ();
         }
     };
-
-    /**
-     * @brief compare two TLS decorators based on their underlying socket handle.
-     * @param a first TLS decorator.
-     * @param b second TLS decorator.
-     * @return true if the handle of a is less than the handle of b, false otherwise.
-     */
-    template <class Protocol>
-    inline bool operator< (const BasicTlsWrapper<Protocol>& a, const BasicTlsWrapper<Protocol>& b) noexcept
-    {
-        return a.handle () < b.handle ();
-    }
 }
 
 #endif

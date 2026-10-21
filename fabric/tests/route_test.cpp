@@ -31,6 +31,7 @@
 
 using join::lastError;
 using join::Route;
+using join::RouteKey;
 using join::RouteManager;
 using join::IpAddress;
 
@@ -278,9 +279,45 @@ TEST_F (RouteTest, compare)
     ASSERT_TRUE (r == r);
     ASSERT_FALSE (r == nil);
     ASSERT_FALSE (nil == r);
+    ASSERT_FALSE (nil < nil);
     ASSERT_FALSE (r < r);
     ASSERT_FALSE (r < nil);
     ASSERT_TRUE (nil < r);
+    ASSERT_TRUE (r > nil);
+    ASSERT_TRUE (r >= r);
+    ASSERT_TRUE (nil <= r);
+}
+
+/**
+ * @brief Test key equal operator.
+ */
+TEST (RouteKey, equal)
+{
+    RouteKey k1 = {1, IpAddress ("10.0.0.0"), 8}, k2 = {1, IpAddress ("10.0.0.0"), 16},
+             k3 = {1, IpAddress ("10.1.0.0"), 8}, k4 = {2, IpAddress ("10.0.0.0"), 8};
+
+    ASSERT_TRUE (k1 == k1);
+    ASSERT_FALSE (k1 == k2);
+    ASSERT_FALSE (k1 == k3);
+    ASSERT_FALSE (k1 == k4);
+    ASSERT_TRUE (k1 != k2);
+}
+
+/**
+ * @brief Test key compare operator.
+ */
+TEST (RouteKey, compare)
+{
+    RouteKey k1 = {1, IpAddress ("10.0.0.0"), 8}, k2 = {1, IpAddress ("10.0.0.0"), 16},
+             k3 = {1, IpAddress ("10.1.0.0"), 8}, k4 = {2, IpAddress ("10.0.0.0"), 8};
+
+    ASSERT_FALSE (k1 < k1);
+    ASSERT_TRUE (k1 < k2);
+    ASSERT_TRUE (k2 < k3);
+    ASSERT_TRUE (k3 < k4);
+    ASSERT_TRUE (k4 > k1);
+    ASSERT_TRUE (k1 <= k1);
+    ASSERT_TRUE (k1 >= k1);
 }
 
 /**

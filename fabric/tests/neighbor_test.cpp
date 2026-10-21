@@ -29,6 +29,7 @@
 #include <gtest/gtest.h>
 
 using join::Neighbor;
+using join::NeighborKey;
 using join::NeighborManager;
 using join::MacAddress;
 using join::IpAddress;
@@ -280,9 +281,43 @@ TEST_F (NeighborTest, compare)
     ASSERT_TRUE (ve == ve);
     ASSERT_FALSE (ve == nil);
     ASSERT_FALSE (nil == ve);
+    ASSERT_FALSE (nil < nil);
     ASSERT_FALSE (ve < ve);
     ASSERT_FALSE (ve < nil);
     ASSERT_TRUE (nil < ve);
+    ASSERT_TRUE (ve > nil);
+    ASSERT_TRUE (ve >= ve);
+    ASSERT_TRUE (nil <= ve);
+}
+
+/**
+ * @brief Test key equal operator.
+ */
+TEST (NeighborKey, equal)
+{
+    NeighborKey k1 = {1, IpAddress ("192.168.100.1")}, k2 = {1, IpAddress ("192.168.100.2")},
+                k3 = {2, IpAddress ("192.168.100.1")};
+
+    ASSERT_TRUE (k1 == k1);
+    ASSERT_FALSE (k1 == k2);
+    ASSERT_FALSE (k1 == k3);
+    ASSERT_TRUE (k1 != k2);
+}
+
+/**
+ * @brief Test key compare operator.
+ */
+TEST (NeighborKey, compare)
+{
+    NeighborKey k1 = {1, IpAddress ("192.168.100.1")}, k2 = {1, IpAddress ("192.168.100.2")},
+                k3 = {2, IpAddress ("192.168.100.1")};
+
+    ASSERT_FALSE (k1 < k1);
+    ASSERT_TRUE (k1 < k2);
+    ASSERT_TRUE (k2 < k3);
+    ASSERT_TRUE (k3 > k1);
+    ASSERT_TRUE (k1 <= k1);
+    ASSERT_TRUE (k1 >= k1);
 }
 
 /**

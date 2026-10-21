@@ -1115,6 +1115,24 @@ TEST_F (TlsSocket, verify)
 }
 
 /**
+ * @brief Test is equal method.
+ */
+TEST_F (TlsSocket, isEqual)
+{
+    TlsContext ctx (TlsContext::TlsClient);
+    Tls::Socket tls1 (ctx), tls2 (ctx);
+
+    ASSERT_TRUE (tls1 == tls2);
+    ASSERT_EQ (tls1.open (Tls (IpAddress (_hostv4).family ())), 0) << join::lastError.message ();
+    ASSERT_TRUE (tls1 == tls1);
+    ASSERT_FALSE (tls1 == tls2);
+    ASSERT_EQ (tls2.open (Tls (IpAddress (_hostv4).family ())), 0) << join::lastError.message ();
+    ASSERT_TRUE (tls1 != tls2);
+    tls1.close ();
+    tls2.close ();
+}
+
+/**
  * @brief Test is lower method.
  */
 TEST_F (TlsSocket, isLower)

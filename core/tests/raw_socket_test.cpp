@@ -413,6 +413,23 @@ TEST_F (RawSocket, handle)
 }
 
 /**
+ * @brief Test equal method.
+ */
+TEST_F (RawSocket, equal)
+{
+    Raw::Socket rawSocket1, rawSocket2;
+
+    ASSERT_TRUE (rawSocket1 == rawSocket2);
+    ASSERT_EQ (rawSocket1.open (), 0) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket1 == rawSocket1);
+    ASSERT_FALSE (rawSocket1 == rawSocket2);
+    ASSERT_EQ (rawSocket2.open (), 0) << join::lastError.message ();
+    ASSERT_TRUE (rawSocket1 != rawSocket2);
+    rawSocket1.close ();
+    rawSocket2.close ();
+}
+
+/**
  * @brief Test lower method.
  */
 TEST_F (RawSocket, lower)

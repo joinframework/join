@@ -6815,6 +6815,10 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE ("foo" <= value);
     ASSERT_TRUE (Array{1} <= value);
     ASSERT_TRUE (Object ({{"i", 1}}) <= value);
+
+    value = std::numeric_limits<double>::quiet_NaN ();
+    ASSERT_FALSE (value <= value);
+    ASSERT_FALSE (value <= 1);
 }
 
 /**

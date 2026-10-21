@@ -809,6 +809,23 @@ TEST_F (TcpSocket, mtu)
 }
 
 /**
+ * @brief Test equal method.
+ */
+TEST_F (TcpSocket, equal)
+{
+    Tcp::Socket tcpSocket1, tcpSocket2;
+
+    ASSERT_TRUE (tcpSocket1 == tcpSocket2);
+    ASSERT_EQ (tcpSocket1.open (Tcp{IpAddress (_hostv4).family ()}), 0) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket1 == tcpSocket1);
+    ASSERT_FALSE (tcpSocket1 == tcpSocket2);
+    ASSERT_EQ (tcpSocket2.open (Tcp{IpAddress (_hostv4).family ()}), 0) << join::lastError.message ();
+    ASSERT_TRUE (tcpSocket1 != tcpSocket2);
+    tcpSocket1.close ();
+    tcpSocket2.close ();
+}
+
+/**
  * @brief Test lower method.
  */
 TEST_F (TcpSocket, lower)

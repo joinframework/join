@@ -30,6 +30,7 @@
 #include <join/error.hpp>
 
 // C++.
+#include <compare>
 #include <string>
 #include <vector>
 #include <limits>
@@ -1336,8 +1337,8 @@ namespace join
         // friendship with equal operator.
         friend constexpr bool operator== (const Value& lhs, const Value& rhs);
 
-        // friendship with lower operator.
-        friend constexpr bool operator< (const Value& lhs, const Value& rhs);
+        // friendship with three-way comparison operator.
+        friend constexpr std::partial_ordering operator<=> (const Value& lhs, const Value& rhs);
 
     private:
         /**
@@ -1567,63 +1568,38 @@ namespace join
     }
 
     /**
-     * @brief compare if lower than.
+     * @brief three-way compare values.
      * @param lhs value to compare.
      * @param rhs value to compare to.
-     * @return true if lower than.
+     * @return ordering of lhs relative to rhs.
      */
-    constexpr bool operator< (const Value& lhs, const Value& rhs)
+    constexpr std::partial_ordering operator<=> (const Value& lhs, const Value& rhs)
     {
         if (lhs.isNumber () && rhs.isNumber () && (lhs.index () != rhs.index ()))
         {
             if (lhs.isInt64 () && rhs.isUint64 ())
             {
-                return lhs.getInt64 () < 0 || uint64_t (lhs.getInt64 ()) < rhs.getUint64 ();
+                if (lhs.getInt64 () < 0)
+                {
+                    return std::partial_ordering::less;
+                }
+                return uint64_t (lhs.getInt64 ()) <=> rhs.getUint64 ();
             }
             else if (lhs.isUint64 () && rhs.isInt64 ())
             {
-                return rhs.getInt64 () >= 0 && lhs.getUint64 () < uint64_t (rhs.getInt64 ());
+                if (rhs.getInt64 () < 0)
+                {
+                    return std::partial_ordering::greater;
+                }
+                return lhs.getUint64 () <=> uint64_t (rhs.getInt64 ());
             }
             else
             {
-                return lhs.getDouble () < rhs.getDouble ();
+                return lhs.getDouble () <=> rhs.getDouble ();
             }
         }
 
-        return lhs._data < rhs._data;
-    }
-
-    /**
-     * @brief compare if greater than.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if greater than.
-     */
-    constexpr bool operator> (const Value& lhs, const Value& rhs)
-    {
-        return rhs < lhs;
-    }
-
-    /**
-     * @brief compare if lower or equal than.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if lower or equal than.
-     */
-    constexpr bool operator<= (const Value& lhs, const Value& rhs)
-    {
-        return !(rhs < lhs);
-    }
-
-    /**
-     * @brief compare if greater or equal than.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if greater or equal than.
-     */
-    constexpr bool operator>= (const Value& lhs, const Value& rhs)
-    {
-        return !(lhs < rhs);
+        return lhs._data <=> rhs._data;
     }
 }
 

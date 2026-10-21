@@ -36,6 +36,7 @@
 // C++.
 #include <algorithm>
 #include <iostream>
+#include <compare>
 #include <utility>
 #include <chrono>
 #include <string>
@@ -1206,15 +1207,27 @@ namespace join
     };
 
     /**
-     * @brief compare two TLS decorators based on their underlying socket handle.
+     * @brief compare if two TLS decorators have the same underlying socket handle.
      * @param a first TLS decorator.
      * @param b second TLS decorator.
-     * @return true if the handle of a is less than the handle of b, false otherwise.
+     * @return true if equal.
      */
     template <class Protocol>
-    inline bool operator< (const BasicTls<Protocol>& a, const BasicTls<Protocol>& b) noexcept
+    inline bool operator== (const BasicTls<Protocol>& a, const BasicTls<Protocol>& b) noexcept
     {
-        return a.handle () < b.handle ();
+        return a.handle () == b.handle ();
+    }
+
+    /**
+     * @brief three-way compare two TLS decorators based on their underlying socket handle.
+     * @param a first TLS decorator.
+     * @param b second TLS decorator.
+     * @return ordering of the handle of a relative to the handle of b.
+     */
+    template <class Protocol>
+    inline std::strong_ordering operator<=> (const BasicTls<Protocol>& a, const BasicTls<Protocol>& b) noexcept
+    {
+        return a.handle () <=> b.handle ();
     }
 }
 

@@ -31,6 +31,7 @@
 // C++.
 #include <algorithm>
 #include <typeinfo>
+#include <compare>
 #include <tuple>
 
 // C.
@@ -40,6 +41,29 @@ namespace join
 {
     namespace details
     {
+        /**
+         * @brief comparison category of an alternative.
+         */
+        template <typename T>
+        struct OrderingOf : std::compare_three_way_result<T>
+        {
+        };
+
+        /**
+         * @brief comparison category of nullptr_t.
+         */
+        template <>
+        struct OrderingOf<std::nullptr_t>
+        {
+            using type = std::strong_ordering;
+        };
+
+        /**
+         * @brief comparison category of a variant.
+         */
+        template <typename... Ts>
+        using VariantOrdering = std::common_comparison_category_t<typename OrderingOf<Ts>::type...>;
+
         /**
          * @brief helper class for variant operations using jump tables for O(1) dispatch.
          */
@@ -96,15 +120,17 @@ namespace join
             }
 
             /**
-             * @brief compare if one object is lower than another of the same alternative.
+             * @brief three-way compare two objects of the same alternative.
+             * @tparam Ordering comparison category of the variant.
              * @param which internal storage index of the active alternative.
              * @param a first storage pointer.
              * @param b second storage pointer.
-             * @return true if a is lower than b, false otherwise.
+             * @return ordering of a relative to b.
              */
-            static bool lower (std::size_t which, const void* a, const void* b)
+            template <typename Ordering>
+            static Ordering compare (std::size_t which, const void* a, const void* b)
             {
-                static const LowerFunc table[] = {&lowerImpl<Ts>...};
+                static const CompareFunc<Ordering> table[] = {&compareImpl<Ordering, Ts>...};
                 return table[which](a, b);
             }
 
@@ -121,8 +147,9 @@ namespace join
             /// function pointer type for equality comparisons.
             using EqualFunc = bool (*) (const void*, const void*);
 
-            /// function pointer type for less-than comparisons.
-            using LowerFunc = bool (*) (const void*, const void*);
+            /// function pointer type for three-way comparisons.
+            template <typename Ordering>
+            using CompareFunc = Ordering (*) (const void*, const void*);
 
             /**
              * @brief copy construct a T into dst from src.
@@ -173,22 +200,23 @@ namespace join
             }
 
             /**
-             * @brief less-than comparison, always false for nullptr_t.
+             * @brief three-way comparison, always equivalent for nullptr_t.
+             * @tparam Ordering comparison category of the variant.
              * @tparam T type of the alternative to compare.
              * @param a first storage pointer.
              * @param b second storage pointer.
-             * @return true if a is lower than b, false otherwise.
+             * @return ordering of a relative to b.
              */
-            template <typename T>
-            static bool lowerImpl (const void* a, const void* b)
+            template <typename Ordering, typename T>
+            static Ordering compareImpl (const void* a, const void* b)
             {
                 if constexpr (std::is_null_pointer_v<T>)
                 {
-                    return false;
+                    return std::strong_ordering::equivalent;
                 }
                 else
                 {
-                    return *reinterpret_cast<const T*> (a) < *reinterpret_cast<const T*> (b);
+                    return *reinterpret_cast<const T*> (a) <=> *reinterpret_cast<const T*> (b);
                 }
             }
         };
@@ -643,30 +671,28 @@ namespace join
         }
 
         /**
-         * @brief check if lower than.
+         * @brief three-way compare.
          * @param rhs value to compare to.
-         * @return true if lower than, false otherwise.
+         * @return ordering of this relative to rhs.
          */
-        constexpr bool lower (const Variant& rhs) const
+        constexpr auto compare (const Variant& rhs) const
         {
-            if (index () < rhs.index ())
+            using Ordering = details::VariantOrdering<Ts...>;
+            if (index () != rhs.index ())
             {
-                return true;
+                return Ordering (index () <=> rhs.index ());
             }
-            if (index () > rhs.index ())
-            {
-                return false;
-            }
-            return details::VariantHelper<Ts...>::lower (index (), storage (), rhs.storage ());
+            return details::VariantHelper<Ts...>::template compare<Ordering> (index (), storage (), rhs.storage ());
         }
 
         // friendship with equal operator.
         template <typename... _Ts>
         friend constexpr bool operator== (const Variant<_Ts...>& lhs, const Variant<_Ts...>& rhs);
 
-        // friendship with lower operator.
+        // friendship with three-way comparison operator.
         template <typename... _Ts>
-        friend constexpr bool operator< (const Variant<_Ts...>& lhs, const Variant<_Ts...>& rhs);
+        friend constexpr details::VariantOrdering<_Ts...> operator<=> (const Variant<_Ts...>& lhs,
+                                                                       const Variant<_Ts...>& rhs);
 
     private:
         /**
@@ -707,51 +733,15 @@ namespace join
     }
 
     /**
-     * @brief compare if lower than.
+     * @brief three-way compare variants.
      * @param lhs value to compare.
      * @param rhs value to compare to.
-     * @return true if lower than.
+     * @return ordering of lhs relative to rhs.
      */
     template <typename... Ts>
-    constexpr bool operator< (const Variant<Ts...>& lhs, const Variant<Ts...>& rhs)
+    constexpr details::VariantOrdering<Ts...> operator<=> (const Variant<Ts...>& lhs, const Variant<Ts...>& rhs)
     {
-        return lhs.lower (rhs);
-    }
-
-    /**
-     * @brief compare if greater than.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if greater than.
-     */
-    template <typename... Ts>
-    constexpr bool operator> (const Variant<Ts...>& lhs, const Variant<Ts...>& rhs)
-    {
-        return rhs < lhs;
-    }
-
-    /**
-     * @brief compare if lower or equal than.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if lower or equal than.
-     */
-    template <typename... Ts>
-    constexpr bool operator<= (const Variant<Ts...>& lhs, const Variant<Ts...>& rhs)
-    {
-        return !(rhs < lhs);
-    }
-
-    /**
-     * @brief compare if greater or equal than.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if greater or equal than.
-     */
-    template <typename... Ts>
-    constexpr bool operator>= (const Variant<Ts...>& lhs, const Variant<Ts...>& rhs)
-    {
-        return !(lhs < rhs);
+        return lhs.compare (rhs);
     }
 
     /**
