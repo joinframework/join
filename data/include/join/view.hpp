@@ -692,7 +692,6 @@ namespace join
 
     /**
      * @brief trait to determine if a view type is seekable.
-     * @tparam ViewType view type to check.
      */
     template <typename ViewType>
     inline constexpr bool is_seekable_v = false;

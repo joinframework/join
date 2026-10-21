@@ -1207,7 +1207,7 @@ namespace join
     };
 
     /**
-     * @brief compare if two TLS decorators have the same underlying socket handle.
+     * @brief compare if TLS decorators are equal.
      * @param a first TLS decorator.
      * @param b second TLS decorator.
      * @return true if equal.
@@ -1219,10 +1219,10 @@ namespace join
     }
 
     /**
-     * @brief three-way compare two TLS decorators based on their underlying socket handle.
+     * @brief three-way compare TLS decorators.
      * @param a first TLS decorator.
      * @param b second TLS decorator.
-     * @return ordering of the handle of a relative to the handle of b.
+     * @return ordering of a relative to b.
      */
     template <class Protocol>
     inline std::strong_ordering operator<=> (const BasicTls<Protocol>& a, const BasicTls<Protocol>& b) noexcept

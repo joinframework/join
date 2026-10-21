@@ -110,7 +110,6 @@ namespace join
 
     /**
      * @brief primary trait: all sync policies need sequence numbers by default.
-     * @tparam SyncPolicy instantiated sync policy type.
      */
     template <typename SyncPolicy>
     inline constexpr bool needs_seq_v = true;

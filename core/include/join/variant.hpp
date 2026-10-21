@@ -121,7 +121,6 @@ namespace join
 
             /**
              * @brief three-way compare two objects of the same alternative.
-             * @tparam Ordering comparison category of the variant.
              * @param which internal storage index of the active alternative.
              * @param a first storage pointer.
              * @param b second storage pointer.
@@ -153,7 +152,6 @@ namespace join
 
             /**
              * @brief copy construct a T into dst from src.
-             * @tparam T type of the alternative to copy.
              * @param src source storage pointer.
              * @param dst destination storage pointer.
              */
@@ -165,7 +163,6 @@ namespace join
 
             /**
              * @brief move construct a T into dst from src.
-             * @tparam T type of the alternative to move.
              * @param src source storage pointer.
              * @param dst destination storage pointer.
              */
@@ -177,7 +174,6 @@ namespace join
 
             /**
              * @brief destroy a T in place.
-             * @tparam T type of the alternative to destroy.
              * @param data storage pointer.
              */
             template <typename T>
@@ -188,7 +184,6 @@ namespace join
 
             /**
              * @brief compare two T objects for equality.
-             * @tparam T type of the alternative to compare.
              * @param a first storage pointer.
              * @param b second storage pointer.
              * @return true if equal, false otherwise.
@@ -200,9 +195,7 @@ namespace join
             }
 
             /**
-             * @brief three-way comparison, always equivalent for nullptr_t.
-             * @tparam Ordering comparison category of the variant.
-             * @tparam T type of the alternative to compare.
+             * @brief three-way compare two T objects.
              * @param a first storage pointer.
              * @param b second storage pointer.
              * @return ordering of a relative to b.
