@@ -33,8 +33,10 @@
 #include <sys/syscall.h>
 #include <linux/futex.h>
 #include <unistd.h>
+#include <cerrno>
 
 // C++.
+#include <cstdlib>
 #include <atomic>
 
 namespace join
@@ -99,6 +101,12 @@ namespace join
             while (::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_LOCK_PI_PRIVATE, 0, nullptr,
                               nullptr, 0) == -1)
             {
+                // LCOV_EXCL_START
+                if (errno != EAGAIN)
+                {
+                    std::abort ();
+                }
+                // LCOV_EXCL_STOP
             }
         }
 
@@ -202,6 +210,12 @@ namespace join
             while (::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_LOCK_PI, 0, nullptr, nullptr,
                               0) == -1)
             {
+                // LCOV_EXCL_START
+                if (errno != EAGAIN)
+                {
+                    std::abort ();
+                }
+                // LCOV_EXCL_STOP
             }
         }
 

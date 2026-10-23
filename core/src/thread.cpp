@@ -46,14 +46,14 @@ void* Invoker::_routine (void* context)
 
     self->_id.store (Thread::currentId (), std::memory_order_release);
 
-    if (self->_prefault)
-    {
-        prefault ();
-    }
-
     if (self->_core.load (std::memory_order_relaxed) != -1)
     {
         Thread::affinity (pthread_self (), self->_core.load (std::memory_order_relaxed));
+    }
+
+    if (self->_prefault)
+    {
+        prefault ();
     }
 
     if (self->_priority.load (std::memory_order_relaxed) > 0)
