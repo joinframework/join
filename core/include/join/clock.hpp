@@ -26,10 +26,14 @@
 #define JOIN_CORE_CLOCK_HPP
 
 // C++.
+#include <stdexcept>
 #include <chrono>
 #include <mutex>
 
 // C.
+#if defined(__x86_64__) || defined(__i386__)
+#include <cpuid.h>
+#endif
 #include <ctime>
 
 namespace join
@@ -188,10 +192,34 @@ namespace join
 
         /**
          * @brief default constructor.
+         * @throw std::runtime_error if the cycle counter is not invariant.
          */
-        Rdtsc () noexcept
+        Rdtsc ()
         {
+            if (!invariant ())
+            {
+                throw std::runtime_error ("cycle counter is not invariant");  // LCOV_EXCL_LINE
+            }
             calibrate ();
+        }
+
+        /**
+         * @brief check if the cycle counter is invariant.
+         * @return true if invariant.
+         */
+        static bool invariant () noexcept
+        {
+#if defined(__x86_64__) || defined(__i386__)
+            unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
+            if (__get_cpuid_max (0x80000000, nullptr) < 0x80000007)
+            {
+                return false;  // LCOV_EXCL_LINE
+            }
+            __cpuid (0x80000007, eax, ebx, ecx, edx);
+            return (edx & (1U << 8)) != 0;
+#else
+            return true;
+#endif
         }
 
         /**

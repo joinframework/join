@@ -126,12 +126,15 @@ int join::BasicProactor<IoPolicy>::flush (bool sync) noexcept
 template <typename IoPolicy>
 void join::BasicProactor<IoPolicy>::run ()
 {
-    _threadId.store (pthread_self (), std::memory_order_release);
+    _threadId.store (Thread::currentId (), std::memory_order_release);
 
+    const int slack = prctl (PR_GET_TIMERSLACK, 0, 0, 0, 0);
+    prctl (PR_SET_TIMERSLACK, 1UL, 0, 0, 0);
     _running.store (true, std::memory_order_release);
     eventLoop ();
+    prctl (PR_SET_TIMERSLACK, static_cast<unsigned long> (slack), 0, 0, 0);
 
-    _threadId.store (_invalidThreadId, std::memory_order_release);
+    _threadId.store (Thread::invalidId, std::memory_order_release);
 }
 
 // =========================================================================
@@ -170,7 +173,7 @@ void join::BasicProactor<IoPolicy>::waitStopped () const noexcept
 {
     Backoff backoff;
 
-    while (_threadId.load (std::memory_order_acquire) != _invalidThreadId)
+    while (_threadId.load (std::memory_order_acquire) != Thread::invalidId)
     {
         backoff ();
     }
@@ -413,7 +416,7 @@ int join::BasicProactor<IoPolicy>::mlock () const noexcept
 template <typename IoPolicy>
 bool join::BasicProactor<IoPolicy>::isRunning () const noexcept
 {
-    return _threadId.load (std::memory_order_acquire) != _invalidThreadId;
+    return _threadId.load (std::memory_order_acquire) != Thread::invalidId;
 }
 
 // =========================================================================
@@ -423,7 +426,7 @@ bool join::BasicProactor<IoPolicy>::isRunning () const noexcept
 template <typename IoPolicy>
 bool join::BasicProactor<IoPolicy>::isProactorThread () const noexcept
 {
-    return _threadId.load (std::memory_order_acquire) == pthread_self ();
+    return _threadId.load (std::memory_order_acquire) == Thread::currentId ();
 }
 
 // =========================================================================

@@ -43,6 +43,7 @@ Mutex::Mutex ()
 {
     pthread_mutexattr_t attr;
     pthread_mutexattr_init (&attr);
+    pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
     pthread_mutex_init (&_handle, &attr);
     pthread_mutexattr_destroy (&attr);
 }
@@ -101,6 +102,7 @@ RecursiveMutex::RecursiveMutex ()
     pthread_mutexattr_t attr;
     pthread_mutexattr_init (&attr);
     pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
     pthread_mutex_init (&_handle, &attr);
     pthread_mutexattr_destroy (&attr);
 }
@@ -160,6 +162,7 @@ SharedMutex::SharedMutex ()
     pthread_mutexattr_init (&attr);
     pthread_mutexattr_setpshared (&attr, PTHREAD_PROCESS_SHARED);
     pthread_mutexattr_setrobust (&attr, PTHREAD_MUTEX_ROBUST);
+    pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
     pthread_mutex_init (&_handle, &attr);
     pthread_mutexattr_destroy (&attr);
 }

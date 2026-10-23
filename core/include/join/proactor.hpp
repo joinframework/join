@@ -47,6 +47,7 @@
 
 // C.
 #include <sys/eventfd.h>
+#include <sys/prctl.h>
 #include <cerrno>
 
 namespace join
@@ -793,11 +794,8 @@ private:
     /// in-flight operations.
     std::vector<IoOperation*> _pendingOps;
 
-    /// invalid thread id sentinel.
-    static constexpr pthread_t _invalidThreadId = static_cast<pthread_t> (-1);
-
     /// proactor thread id.
-    std::atomic<pthread_t> _threadId{_invalidThreadId};
+    std::atomic<pid_t> _threadId{Thread::invalidId};
 
     /// running flag.
     std::atomic<bool> _running{false};

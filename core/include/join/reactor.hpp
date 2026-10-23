@@ -506,11 +506,8 @@ namespace join
         /// running flag for dispatcher thread.
         std::atomic<bool> _running{false};
 
-        /// invalid thread ID constant.
-        static constexpr pthread_t _invalidThreadId = static_cast<pthread_t> (-1);
-
         /// event loop thread ID.
-        std::atomic<pthread_t> _threadId{_invalidThreadId};
+        std::atomic<pid_t> _threadId{Thread::invalidId};
     };
 
     /**

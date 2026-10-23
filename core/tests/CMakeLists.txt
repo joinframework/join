@@ -96,6 +96,11 @@ target_link_libraries(rdtsc_wheel.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME rdtsc_wheel.gtest COMMAND rdtsc_wheel.gtest)
 install(TARGETS rdtsc_wheel.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(rdtsc.gtest rdtsc_test.cpp)
+target_link_libraries(rdtsc.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME rdtsc.gtest COMMAND rdtsc.gtest)
+install(TARGETS rdtsc.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(monotonic_stats.gtest monotonic_stats_test.cpp)
 target_link_libraries(monotonic_stats.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME monotonic_stats.gtest COMMAND monotonic_stats.gtest)

@@ -26,6 +26,7 @@
 #define JOIN_CORE_FUTEX_HPP
 
 // libjoin.
+#include <join/thread.hpp>
 #include <join/mutex.hpp>
 
 // Linux.
@@ -89,22 +90,16 @@ namespace join
         void lock () noexcept
         {
             uint32_t expected = 0;
-            if (_futex.compare_exchange_strong (expected, 1, std::memory_order_acquire, std::memory_order_relaxed))
+            if (_futex.compare_exchange_strong (expected, static_cast<uint32_t> (Thread::currentId ()),
+                                                std::memory_order_acquire, std::memory_order_relaxed))
             {
                 return;
             }
 
-            do
+            while (::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_LOCK_PI_PRIVATE, 0, nullptr,
+                              nullptr, 0) == -1)
             {
-                if (expected == 2 ||
-                    _futex.compare_exchange_strong (expected, 2, std::memory_order_relaxed, std::memory_order_relaxed))
-                {
-                    ::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_WAIT_PRIVATE, 2, nullptr,
-                               nullptr, 0);
-                }
-                expected = 0;
             }
-            while (!_futex.compare_exchange_strong (expected, 2, std::memory_order_acquire, std::memory_order_relaxed));
         }
 
         /**
@@ -114,19 +109,23 @@ namespace join
         bool tryLock () noexcept
         {
             uint32_t expected = 0;
-            return _futex.compare_exchange_strong (expected, 1, std::memory_order_acquire, std::memory_order_relaxed);
+            return _futex.compare_exchange_strong (expected, static_cast<uint32_t> (Thread::currentId ()),
+                                                   std::memory_order_acquire, std::memory_order_relaxed);
         }
 
         /**
-         * @brief unlock the futex, waking one waiter if any.
+         * @brief unlock the futex.
          */
         void unlock () noexcept
         {
-            if (_futex.exchange (0, std::memory_order_release) == 2)
+            uint32_t expected = static_cast<uint32_t> (Thread::currentId ());
+            if (_futex.compare_exchange_strong (expected, 0, std::memory_order_release, std::memory_order_relaxed))
             {
-                ::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr,
-                           0);
+                return;
             }
+
+            ::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_UNLOCK_PI_PRIVATE, 0, nullptr, nullptr,
+                       0);
         }
 
         /**
@@ -194,21 +193,16 @@ namespace join
         void lock () noexcept
         {
             uint32_t expected = 0;
-            if (_futex.compare_exchange_strong (expected, 1, std::memory_order_acquire, std::memory_order_relaxed))
+            if (_futex.compare_exchange_strong (expected, static_cast<uint32_t> (Thread::currentId ()),
+                                                std::memory_order_acquire, std::memory_order_relaxed))
             {
                 return;
             }
 
-            do
+            while (::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_LOCK_PI, 0, nullptr, nullptr,
+                              0) == -1)
             {
-                if (expected == 2 ||
-                    _futex.compare_exchange_strong (expected, 2, std::memory_order_relaxed, std::memory_order_relaxed))
-                {
-                    ::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_WAIT, 2, nullptr, nullptr, 0);
-                }
-                expected = 0;
             }
-            while (!_futex.compare_exchange_strong (expected, 2, std::memory_order_acquire, std::memory_order_relaxed));
         }
 
         /**
@@ -218,18 +212,22 @@ namespace join
         bool tryLock () noexcept
         {
             uint32_t expected = 0;
-            return _futex.compare_exchange_strong (expected, 1, std::memory_order_acquire, std::memory_order_relaxed);
+            return _futex.compare_exchange_strong (expected, static_cast<uint32_t> (Thread::currentId ()),
+                                                   std::memory_order_acquire, std::memory_order_relaxed);
         }
 
         /**
-         * @brief unlock the futex, waking one waiter if any.
+         * @brief unlock the futex.
          */
         void unlock () noexcept
         {
-            if (_futex.exchange (0, std::memory_order_release) == 2)
+            uint32_t expected = static_cast<uint32_t> (Thread::currentId ());
+            if (_futex.compare_exchange_strong (expected, 0, std::memory_order_release, std::memory_order_relaxed))
             {
-                ::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_WAKE, 1, nullptr, nullptr, 0);
+                return;
             }
+
+            ::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_UNLOCK_PI, 0, nullptr, nullptr, 0);
         }
 
         /**
@@ -242,7 +240,7 @@ namespace join
         }
 
     private:
-        /// Futex word: 0=unlocked, 1=locked, 2=locked+waiters.
+        /// Futex word: 0=unlocked, owner tid otherwise.
         alignas (4) std::atomic_uint32_t _futex;
     };
 }

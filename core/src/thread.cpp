@@ -27,11 +27,14 @@
 #include <join/error.hpp>
 
 // C.
+#include <sys/mman.h>
 #include <signal.h>
 #include <unistd.h>
 
 using join::Invoker;
 using join::Thread;
+
+constexpr pid_t Thread::invalidId;
 
 // =========================================================================
 //   CLASS     : Invoker
@@ -40,6 +43,13 @@ using join::Thread;
 void* Invoker::_routine (void* context)
 {
     Invoker* self = static_cast<Invoker*> (context);
+
+    self->_id.store (Thread::currentId (), std::memory_order_release);
+
+    if (self->_prefault)
+    {
+        prefault ();
+    }
 
     if (self->_core.load (std::memory_order_relaxed) != -1)
     {
@@ -68,6 +78,38 @@ void* Invoker::routine ()
     _done.store (true, std::memory_order_release);
 
     return nullptr;
+}
+
+// =========================================================================
+//   CLASS     : Invoker
+//   METHOD    : prefault
+// =========================================================================
+int Invoker::prefault () noexcept
+{
+    pthread_attr_t attr;
+    const int err = pthread_getattr_np (pthread_self (), &attr);
+    if (err != 0)
+    {
+        // LCOV_EXCL_START
+        lastError = std::error_code (err, std::generic_category ());
+        return -1;
+        // LCOV_EXCL_STOP
+    }
+
+    void* addr = nullptr;
+    size_t size = 0;
+    pthread_attr_getstack (&attr, &addr, &size);
+    pthread_attr_destroy (&attr);
+
+    if (::madvise (addr, size, MADV_POPULATE_WRITE) == -1)
+    {
+        // LCOV_EXCL_START
+        lastError = std::error_code (errno, std::generic_category ());
+        return -1;
+        // LCOV_EXCL_STOP
+    }
+
+    return 0;
 }
 
 // =========================================================================
@@ -292,6 +334,15 @@ void Thread::cancel () noexcept
 void Thread::swap (Thread& other) noexcept
 {
     std::swap (_invoker, other._invoker);
+}
+
+// =========================================================================
+//   CLASS     : Thread
+//   METHOD    : id
+// =========================================================================
+pid_t Thread::id () const noexcept
+{
+    return joinable () ? _invoker->_id.load (std::memory_order_acquire) : invalidId;
 }
 
 // =========================================================================

@@ -25,6 +25,9 @@
 #ifndef JOIN_CORE_THREAD_HPP
 #define JOIN_CORE_THREAD_HPP
 
+// libjoin.
+#include <join/utils.hpp>
+
 // C++.
 #include <system_error>
 #include <functional>
@@ -32,7 +35,9 @@
 #include <atomic>
 
 // C.
+#include <sys/syscall.h>
 #include <pthread.h>
+#include <unistd.h>
 
 namespace join
 {
@@ -50,29 +55,19 @@ namespace join
     private:
         /**
          * @brief creates a new thread of execution.
-         * @param func callable object to execute in the new thread of execution.
-         * @param args... arguments to pass to the callable object to execute.
-         * @throw std::system_error if the thread of execution cannot be created.
-         */
-        template <class Function, class... Args>
-        explicit Invoker (Function&& func, Args&&... args)
-        : Invoker (-1, 0, std::forward<Function> (func), std::forward<Args> (args)...)
-        {
-        }
-
-        /**
-         * @brief creates a new thread of execution.
          * @param core thread core affinity (-1 no pinning).
          * @param prio thread priority (0 = SCHED_OTHER, 1-99 = SCHED_FIFO).
+         * @param prefault prefault thread stack.
          * @param func callable object to execute in the new thread of execution.
          * @param args... arguments to pass to the callable object to execute.
          * @throw std::system_error if the thread of execution cannot be created.
          */
         template <class Function, class... Args>
-        explicit Invoker (int core, int prio, Function&& func, Args&&... args)
+        explicit Invoker (int core, int prio, bool prefault, Function&& func, Args&&... args)
         : _func (std::bind (std::forward<Function> (func), std::forward<Args> (args)...))
         , _core (core)
         , _priority (prio)
+        , _prefault (prefault)
         , _done (false)
         {
             const int err = pthread_create (&_handle, nullptr, _routine, this);
@@ -116,6 +111,12 @@ namespace join
 
     private:
         /**
+         * @brief prefault calling thread stack.
+         * @return 0 on success, -1 on failure.
+         */
+        static int prefault () noexcept;
+
+        /**
          * @brief thread routine.
          * @param context context passed to the new thread of execution.
          * @return thread return statement.
@@ -140,6 +141,15 @@ namespace join
         /// thread priority.
         std::atomic_int _priority{0};
 
+        /// prefault stack flag.
+        bool _prefault = false;
+
+        /// invalid thread id.
+        static constexpr pid_t _invalidId = -1;
+
+        /// thread id.
+        std::atomic<pid_t> _id{_invalidId};
+
         /// completed flag.
         std::atomic_bool _done;
 
@@ -153,6 +163,9 @@ namespace join
     class Thread
     {
     public:
+        /// invalid thread id.
+        static constexpr pid_t invalidId = Invoker::_invalidId;
+
         /**
          * @brief default constructor.
          */
@@ -180,7 +193,22 @@ namespace join
          */
         template <class Function, class... Args>
         explicit Thread (int core, int prio, Function&& func, Args&&... args)
-        : _invoker (new Invoker (core, prio, std::forward<Function> (func), std::forward<Args> (args)...))
+        : Thread (core, prio, false, std::forward<Function> (func), std::forward<Args> (args)...)
+        {
+        }
+
+        /**
+         * @brief creates a new thread object associated with a thread of execution.
+         * @param core thread core affinity (-1 no pinning).
+         * @param prio thread priority (0 = SCHED_OTHER, 1-99 = SCHED_FIFO).
+         * @param prefault prefault thread stack.
+         * @param func callable object to execute in the new thread.
+         * @param args... arguments to pass to the new function.
+         * @throw std::system_error if the thread of execution cannot be created.
+         */
+        template <class Function, class... Args>
+        explicit Thread (int core, int prio, bool prefault, Function&& func, Args&&... args)
+        : _invoker (new Invoker (core, prio, prefault, std::forward<Function> (func), std::forward<Args> (args)...))
         {
         }
 
@@ -292,8 +320,32 @@ namespace join
         void swap (Thread& other) noexcept;
 
         /**
+         * @brief get calling thread id.
+         * @return calling thread id.
+         */
+        static pid_t currentId () noexcept
+        {
+            static thread_local pid_t tid __attribute__ ((tls_model ("initial-exec"))) = 0;
+            if (JOIN_UNLIKELY (tid == 0))
+            {
+                static const int registered = ::pthread_atfork (nullptr, nullptr, [] () {
+                    tid = 0;
+                });
+                static_cast<void> (registered);
+                tid = static_cast<pid_t> (::syscall (SYS_gettid));
+            }
+            return tid;
+        }
+
+        /**
+         * @brief get thread id.
+         * @return thread id or invalidId.
+         */
+        pid_t id () const noexcept;
+
+        /**
          * @brief get the handle of the thread of execution.
-         * @retunr thread of execution handle.
+         * @return thread of execution handle.
          */
         pthread_t handle () const noexcept;
 
