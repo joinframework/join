@@ -30,6 +30,7 @@
 
 // C++.
 #include <system_error>
+#include <type_traits>
 #include <functional>
 #include <memory>
 #include <atomic>
@@ -57,20 +58,35 @@ namespace join
          * @brief creates a new thread of execution.
          * @param core thread core affinity (-1 no pinning).
          * @param prio thread priority (0 = SCHED_OTHER, 1-99 = SCHED_FIFO).
+         * @param stackSize thread stack size (0 = default).
          * @param prefault prefault thread stack.
          * @param func callable object to execute in the new thread of execution.
          * @param args... arguments to pass to the callable object to execute.
          * @throw std::system_error if the thread of execution cannot be created.
          */
         template <class Function, class... Args>
-        explicit Invoker (int core, int prio, bool prefault, Function&& func, Args&&... args)
+        explicit Invoker (int core, int prio, size_t stackSize, bool prefault, Function&& func, Args&&... args)
         : _func (std::bind (std::forward<Function> (func), std::forward<Args> (args)...))
         , _core (core)
         , _priority (prio)
         , _prefault (prefault)
         , _done (false)
         {
-            const int err = pthread_create (&_handle, nullptr, _routine, this);
+            pthread_attr_t attr;
+            pthread_attr_init (&attr);
+
+            if (stackSize > 0)
+            {
+                const int err = pthread_attr_setstacksize (&attr, stackSize);
+                if (err != 0)
+                {
+                    pthread_attr_destroy (&attr);
+                    throw std::system_error (err, std::system_category (), "pthread_attr_setstacksize failed");
+                }
+            }
+
+            const int err = pthread_create (&_handle, &attr, _routine, this);
+            pthread_attr_destroy (&attr);
             if (err != 0)
             {
                 throw std::system_error (err, std::system_category (), "pthread_create failed");  // LCOV_EXCL_LINE
@@ -177,9 +193,10 @@ namespace join
          * @param args... arguments to pass to the new function.
          * @throw std::system_error if the thread of execution cannot be created.
          */
-        template <class Function, class... Args>
+        template <class Function, class... Args,
+                  typename = std::enable_if_t<!std::is_arithmetic<std::decay_t<Function>>::value>>
         explicit Thread (Function&& func, Args&&... args)
-        : Thread (-1, 0, std::forward<Function> (func), std::forward<Args> (args)...)
+        : Thread (-1, 0, 0, false, std::forward<Function> (func), std::forward<Args> (args)...)
         {
         }
 
@@ -191,9 +208,10 @@ namespace join
          * @param args... arguments to pass to the new function.
          * @throw std::system_error if the thread of execution cannot be created.
          */
-        template <class Function, class... Args>
+        template <class Function, class... Args,
+                  typename = std::enable_if_t<!std::is_arithmetic<std::decay_t<Function>>::value>>
         explicit Thread (int core, int prio, Function&& func, Args&&... args)
-        : Thread (core, prio, false, std::forward<Function> (func), std::forward<Args> (args)...)
+        : Thread (core, prio, 0, false, std::forward<Function> (func), std::forward<Args> (args)...)
         {
         }
 
@@ -201,14 +219,16 @@ namespace join
          * @brief creates a new thread object associated with a thread of execution.
          * @param core thread core affinity (-1 no pinning).
          * @param prio thread priority (0 = SCHED_OTHER, 1-99 = SCHED_FIFO).
+         * @param stackSize thread stack size (0 = default).
          * @param prefault prefault thread stack.
          * @param func callable object to execute in the new thread.
          * @param args... arguments to pass to the new function.
          * @throw std::system_error if the thread of execution cannot be created.
          */
         template <class Function, class... Args>
-        explicit Thread (int core, int prio, bool prefault, Function&& func, Args&&... args)
-        : _invoker (new Invoker (core, prio, prefault, std::forward<Function> (func), std::forward<Args> (args)...))
+        explicit Thread (int core, int prio, size_t stackSize, bool prefault, Function&& func, Args&&... args)
+        : _invoker (new Invoker (core, prio, stackSize, prefault, std::forward<Function> (func),
+                                 std::forward<Args> (args)...))
         {
         }
 

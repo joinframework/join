@@ -116,15 +116,38 @@ TEST (Thread, prefaultConstruct)
         }
     };
 
-    Thread th1 (-1, 0, false, measure);
+    Thread th1 (-1, 0, 0, false, measure);
     th1.join ();
     EXPECT_GT (total, 0u);
     EXPECT_LT (resident, total);
 
-    Thread th2 (-1, 0, true, measure);
+    Thread th2 (-1, 0, 0, true, measure);
     th2.join ();
     EXPECT_GT (total, 0u);
     EXPECT_EQ (resident, total);
+}
+
+/**
+ * @brief test stack size construction.
+ */
+TEST (Thread, stackSizeConstruct)
+{
+    const size_t requested = 256 * 1024;
+    size_t size = 0;
+
+    Thread th (-1, 0, requested, false, [&size] () {
+        pthread_attr_t attr;
+        void* addr = nullptr;
+        ASSERT_EQ (pthread_getattr_np (pthread_self (), &attr), 0);
+        pthread_attr_getstack (&attr, &addr, &size);
+        pthread_attr_destroy (&attr);
+    });
+    th.join ();
+    EXPECT_EQ (size, requested);
+
+    auto noop = [] () {
+    };
+    EXPECT_THROW (Thread (-1, 0, 1, false, noop), std::system_error);
 }
 
 /**
