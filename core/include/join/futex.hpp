@@ -39,6 +39,23 @@
 #include <cstdlib>
 #include <atomic>
 
+#if defined(__SANITIZE_THREAD__)
+#define JOIN_TSAN 1
+#elif defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define JOIN_TSAN 1
+#endif
+#endif
+
+#ifdef JOIN_TSAN
+#include <sanitizer/tsan_interface.h>
+#define JOIN_TSAN_ACQUIRE(addr) __tsan_acquire (addr)
+#define JOIN_TSAN_RELEASE(addr) __tsan_release (addr)
+#else
+#define JOIN_TSAN_ACQUIRE(addr)
+#define JOIN_TSAN_RELEASE(addr)
+#endif
+
 namespace join
 {
     /**
@@ -108,6 +125,8 @@ namespace join
                 }
                 // LCOV_EXCL_STOP
             }
+
+            JOIN_TSAN_ACQUIRE (&_futex);
         }
 
         /**
@@ -132,6 +151,7 @@ namespace join
                 return;
             }
 
+            JOIN_TSAN_RELEASE (&_futex);
             ::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_UNLOCK_PI_PRIVATE, 0, nullptr, nullptr,
                        0);
         }
@@ -217,6 +237,8 @@ namespace join
                 }
                 // LCOV_EXCL_STOP
             }
+
+            JOIN_TSAN_ACQUIRE (&_futex);
         }
 
         /**
@@ -241,6 +263,7 @@ namespace join
                 return;
             }
 
+            JOIN_TSAN_RELEASE (&_futex);
             ::syscall (SYS_futex, reinterpret_cast<uint32_t*> (&_futex), FUTEX_UNLOCK_PI, 0, nullptr, nullptr, 0);
         }
 
