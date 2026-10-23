@@ -223,13 +223,22 @@ namespace join
         }
 
         /**
-         * @brief calibrate against CLOCK_MONOTONIC.
+         * @brief calibrate against CLOCK_MONOTONIC, or CNTFRQ on ARM.
          */
         static void calibrate () noexcept
         {
             static std::once_flag flag;
 
             std::call_once (flag, [] {
+#if defined(__aarch64__)
+                uint64_t freq;
+                __asm__ volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
+                cycleToNs () = (1'000'000'000ULL << 32) / freq;
+#elif defined(__arm__)
+                uint32_t freq;
+                __asm__ volatile ("mrc p15, 0, %0, c14, c0, 0" : "=r"(freq));
+                cycleToNs () = (1'000'000'000ULL << 32) / freq;
+#else
                 timespec t0{}, t1{};
                 ::clock_gettime (CLOCK_MONOTONIC, &t0);
                 const uint64_t c0 = readCycles ();
@@ -244,6 +253,7 @@ namespace join
                 const uint64_t cycles = c1 - c0;
 
                 cycleToNs () = (static_cast<uint64_t> (ns) << 32) / cycles;
+#endif
             });
         }
 
