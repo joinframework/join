@@ -1313,6 +1313,46 @@ TEST (JsonReader, dbl)
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isDouble ());
     EXPECT_EQ (value[0].getDouble (), 2.2250738585072014e-308);
+
+    stream.clear ();
+    stream.str ("[57507.7647e38]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, document), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    EXPECT_EQ (value[0].getDouble (), 57507.7647e38);
+
+    stream.clear ();
+    stream.str ("[0.759154e41]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, document), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    EXPECT_EQ (value[0].getDouble (), 0.759154e41);
+
+    stream.clear ();
+    stream.str ("[1e126]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, document), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    EXPECT_EQ (value[0].getDouble (), 1e126);
+
+    stream.clear ();
+    stream.str ("[2e126]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, document), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    EXPECT_EQ (value[0].getDouble (), 2e126);
+
+    stream.clear ();
+    stream.str ("[9007199254740993.0]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, document), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isDouble ());
+    EXPECT_EQ (value[0].getDouble (), 9007199254740992.0);
 }
 
 /**

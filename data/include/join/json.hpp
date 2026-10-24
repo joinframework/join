@@ -1364,6 +1364,34 @@ namespace join
         }
 
         /**
+         * @brief multiply two 64 bits unsigned integers.
+         * @param a multiplicand.
+         * @param b multiplier.
+         * @param high high 64 bits of the 128-bit result.
+         * @param low low 64 bits of the 128-bit result.
+         */
+        inline void umul128 (uint64_t a, uint64_t b, uint64_t& high, uint64_t& low) noexcept
+        {
+#if defined(__SIZEOF_INT128__)
+            __uint128_t p = static_cast<__uint128_t> (a) * b;
+
+            high = static_cast<uint64_t> (p >> 64);
+            low = static_cast<uint64_t> (p);
+#else
+            uint64_t b_lo = static_cast<uint32_t> (b);
+            uint64_t b_hi = b >> 32;
+            uint64_t p0 = (a & 0xFFFFFFFF) * b_lo;
+            uint64_t p1 = (a >> 32) * b_lo;
+            uint64_t p2 = (a & 0xFFFFFFFF) * b_hi;
+            uint64_t p3 = (a >> 32) * b_hi;
+            uint64_t carry = (p0 >> 32) + (p1 & 0xFFFFFFFF) + (p2 & 0xFFFFFFFF);
+
+            low = (carry << 32) | (p0 & 0xFFFFFFFF);
+            high = (carry >> 32) + (p1 >> 32) + (p2 >> 32) + p3;
+#endif
+        }
+
+        /**
          * @brief multiply 192 bits unsigned integer by 64 bits unsigned integer.
          * @param hi high 64 bits of the 128-bit multiplicand.
          * @param lo low 64 bits of the 128-bit multiplicand.
@@ -1375,39 +1403,12 @@ namespace join
         inline void umul192 (uint64_t hi, uint64_t lo, uint64_t significand, uint64_t& high, uint64_t& middle,
                              uint64_t& low) noexcept
         {
-#if defined(__SIZEOF_INT128__)
-            __uint128_t h = static_cast<__uint128_t> (hi) * significand;
-            __uint128_t l = static_cast<__uint128_t> (lo) * significand;
-            __uint128_t s = h + (l >> 64);
+            uint64_t hi_hi, hi_lo, lo_hi;
+            umul128 (hi, significand, hi_hi, hi_lo);
+            umul128 (lo, significand, lo_hi, low);
 
-            high = static_cast<uint64_t> (s >> 64);
-            middle = static_cast<uint64_t> (s);
-            low = static_cast<uint64_t> (l);
-#else
-            uint64_t hi_hi, hi_lo, lo_hi, lo_lo;
-
-            uint64_t m_lo = static_cast<uint32_t> (significand);
-            uint64_t m_hi = significand >> 32;
-            uint64_t p0 = (hi & 0xFFFFFFFF) * m_lo;
-            uint64_t p1 = (hi >> 32) * m_lo;
-            uint64_t p2 = (hi & 0xFFFFFFFF) * m_hi;
-            uint64_t p3 = (hi >> 32) * m_hi;
-            uint64_t carry = (p0 >> 32) + (p1 & 0xFFFFFFFF) + (p2 & 0xFFFFFFFF);
-            hi_lo = (carry << 32) | (p0 & 0xFFFFFFFF);
-            hi_hi = (carry >> 32) + (p1 >> 32) + (p2 >> 32) + p3;
-
-            p0 = (lo & 0xFFFFFFFF) * m_lo;
-            p1 = (lo >> 32) * m_lo;
-            p2 = (lo & 0xFFFFFFFF) * m_hi;
-            p3 = (lo >> 32) * m_hi;
-            carry = (p0 >> 32) + (p1 & 0xFFFFFFFF) + (p2 & 0xFFFFFFFF);
-            lo_lo = (carry << 32) | (p0 & 0xFFFFFFFF);
-            lo_hi = (carry >> 32) + (p1 >> 32) + (p2 >> 32) + p3;
-
-            low = lo_lo;
             middle = hi_lo + lo_hi;
-            high = hi_hi + (middle < hi_lo ? 1 : 0);
-#endif
+            high = hi_hi + (middle < hi_lo);
         }
 
         /**
@@ -1424,16 +1425,20 @@ namespace join
 
             value = static_cast<double> (significand);
 
-            if (JOIN_UNLIKELY ((exponent > 22) && (exponent < (22 + 16))))
-            {
-                value *= pow10[exponent - 22];
-                exponent = 22;
-            }
-
             if (JOIN_LIKELY ((exponent >= -22) && (exponent <= 22) && (value <= 9007199254740991.0)))
             {
                 value = (exponent < 0) ? (value / pow10[-exponent]) : (value * pow10[exponent]);
                 return true;
+            }
+
+            if (JOIN_UNLIKELY ((exponent > 22) && (exponent < (22 + 16))))
+            {
+                const double scaled = value * pow10[exponent - 22];
+                if (scaled <= 9007199254740991.0)
+                {
+                    value = scaled * pow10[22];
+                    return true;
+                }
             }
 
             if (JOIN_UNLIKELY (value == 0.0))
@@ -1448,8 +1453,24 @@ namespace join
 
             uint64_t high, middle, low;
             const details::Power& power = details::atodpow[exponent + 325];
-            umul192 (power.hi, power.lo, significand, high, middle, low);
             int64_t exp = ((exponent * 217706) >> 16) + 1087;
+
+            umul128 (power.hi, significand, high, middle);
+            if (JOIN_LIKELY (high != 0))
+            {
+                const int shift = __builtin_clzll (high);
+                const uint64_t top = (shift != 0) ? ((high << shift) | (middle >> (64 - shift))) : high;
+                const uint64_t frac = top & 0x7FF;
+
+                if (JOIN_LIKELY (((frac < 0x3FE) || (frac > 0x400)) && (exp - shift > 0) && (exp - shift < 2047)))
+                {
+                    uint64_t bits = (static_cast<uint64_t> (exp - shift) << 52) | ((top >> 11) & 0xFFFFFFFFFFFFF);
+                    bits += (frac > 0x400);
+                    std::memcpy (&value, &bits, sizeof (double));
+                    return true;
+                }
+            }
+            umul192 (power.hi, power.lo, significand, high, middle, low);
 
             int lz;
             if (high != 0)
@@ -1489,8 +1510,12 @@ namespace join
             uint64_t bits = (static_cast<uint64_t> (exp) << 52) | mant;
             uint64_t frac = high & 0x7FF;
 
-            bool roundUp = ((frac > 0x400) | ((frac == 0x400) && ((middle != 0) || (mant & 1))) |
-                            ((frac == 0x3FF) && ((middle != 0))));
+            if (JOIN_UNLIKELY ((frac == 0x3FF) && ((middle >> 8) == (~0ULL >> 8))))
+            {
+                return false;
+            }
+
+            bool roundUp = (frac > 0x400) | ((frac == 0x400) && ((middle != 0) || (mant & 1)));
 
             bits += roundUp;
             std::memcpy (&value, &bits, sizeof (double));
