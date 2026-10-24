@@ -31,7 +31,7 @@
 #include <join/utf16.hpp>
 #include <join/utf8.hpp>
 #include <join/dtoa.hpp>
-#include <join/view.hpp>
+#include <join/probe.hpp>
 #include <join/sax.hpp>
 
 // C++.
@@ -1053,7 +1053,7 @@ namespace join
         template <typename Handler>
         int deserialize (const char* document, size_t length, Handler& handler)
         {
-            StringView in (document, length);
+            StringProbe in (document, length);
             return read (in, handler);
         }
 
@@ -1067,7 +1067,7 @@ namespace join
         template <typename Handler>
         int deserialize (const char* first, const char* last, Handler& handler)
         {
-            StringView in (first, last);
+            StringProbe in (first, last);
             return read (in, handler);
         }
 
@@ -1080,7 +1080,7 @@ namespace join
         template <typename Handler>
         int deserialize (const std::string& document, Handler& handler)
         {
-            StringView in (document.c_str (), document.size ());
+            StringProbe in (document.c_str (), document.size ());
             return read (in, handler);
         }
 
@@ -1093,7 +1093,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::stringstream& document, Handler& handler)
         {
-            StringStreamView in (document);
+            StringStreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1106,7 +1106,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::istringstream& document, Handler& handler)
         {
-            StringStreamView in (document);
+            StringStreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1119,7 +1119,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::fstream& document, Handler& handler)
         {
-            FileStreamView in (document);
+            FileStreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1132,7 +1132,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::ifstream& document, Handler& handler)
         {
-            FileStreamView in (document);
+            FileStreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1145,7 +1145,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::iostream& document, Handler& handler)
         {
-            StreamView in (document);
+            StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1158,7 +1158,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::istream& document, Handler& handler)
         {
-            StreamView in (document);
+            StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1169,8 +1169,8 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int read (ViewType& document, Handler& handler)
+        template <typename ProbeType, typename Handler>
+        int read (ProbeType& document, Handler& handler)
         {
             try
             {
@@ -1194,8 +1194,8 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readDocument (ViewType& document, Handler& handler)
+        template <typename ProbeType, typename Handler>
+        int readDocument (ProbeType& document, Handler& handler)
         {
             if (skipWhitespaces (document) != 0)
             {
@@ -1233,8 +1233,8 @@ namespace join
          * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readValue (ViewType& document, Handler& handler, size_t depth)
+        template <typename ProbeType, typename Handler>
+        int readValue (ProbeType& document, Handler& handler, size_t depth)
         {
             int ch = document.peek ();
             switch (ch)
@@ -1268,8 +1268,8 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readNull (ViewType& document, Handler& handler)
+        template <typename ProbeType, typename Handler>
+        int readNull (ProbeType& document, Handler& handler)
         {
             if (JOIN_UNLIKELY ((document.get () != 'u') || (document.get () != 'l') || (document.get () != 'l')))
             {
@@ -1286,8 +1286,8 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readTrue (ViewType& document, Handler& handler)
+        template <typename ProbeType, typename Handler>
+        int readTrue (ProbeType& document, Handler& handler)
         {
             if (JOIN_UNLIKELY ((document.get () != 'r') || (document.get () != 'u') || (document.get () != 'e')))
             {
@@ -1304,8 +1304,8 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readFalse (ViewType& document, Handler& handler)
+        template <typename ProbeType, typename Handler>
+        int readFalse (ProbeType& document, Handler& handler)
         {
             if (JOIN_UNLIKELY ((document.get () != 'a') || (document.get () != 'l') || (document.get () != 's') ||
                                (document.get () != 'e')))
@@ -1323,8 +1323,8 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readInf (ViewType& document, Handler& handler, bool negative)
+        template <typename ProbeType, typename Handler>
+        int readInf (ProbeType& document, Handler& handler, bool negative)
         {
             if (JOIN_UNLIKELY (!(document.getIfNoCase ('n') && document.getIfNoCase ('f'))))
             {
@@ -1350,8 +1350,8 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readNan (ViewType& document, Handler& handler, bool negative)
+        template <typename ProbeType, typename Handler>
+        int readNan (ProbeType& document, Handler& handler, bool negative)
         {
             if (JOIN_UNLIKELY (!(document.getIfNoCase ('a') && document.getIfNoCase ('n'))))
             {
@@ -1518,12 +1518,12 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readNumber (ViewType& document, Handler& handler)
+        template <typename ProbeType, typename Handler>
+        int readNumber (ProbeType& document, Handler& handler)
         {
-            BufferingView<ViewType> view (document);
+            BufferingProbe<ProbeType> probe (document);
 
-            bool negative = view.getIf ('-');
+            bool negative = probe.getIf ('-');
 
             uint64_t max64 = std::numeric_limits<uint64_t>::max ();
             if (negative)
@@ -1535,21 +1535,21 @@ namespace join
             bool isDouble = false;
             uint64_t u = 0;
 
-            if (JOIN_UNLIKELY (view.getIf ('0')))
+            if (JOIN_UNLIKELY (probe.getIf ('0')))
             {
-                if (JOIN_UNLIKELY (isDigit (view.peek ())))
+                if (JOIN_UNLIKELY (isDigit (probe.peek ())))
                 {
                     join::lastError = make_error_code (SaxErrc::InvalidValue);
                     return -1;
                 }
             }
-            else if (JOIN_LIKELY (isDigit (view.peek ())))
+            else if (JOIN_LIKELY (isDigit (probe.peek ())))
             {
-                digits = view.readDigits (u, 18);
+                digits = probe.readDigits (u, 18);
 
-                while (JOIN_LIKELY (isDigit (view.peek ())))
+                while (JOIN_LIKELY (isDigit (probe.peek ())))
                 {
-                    int digit = view.peek () - '0';
+                    int digit = probe.peek () - '0';
 
                     if (JOIN_UNLIKELY (u > ((max64 - digit) / 10)))
                     {
@@ -1557,7 +1557,7 @@ namespace join
                         break;
                     }
 
-                    u = (u * 10) + (view.get () - '0');
+                    u = (u * 10) + (probe.get () - '0');
                     ++digits;
                 }
             }
@@ -1577,45 +1577,45 @@ namespace join
 
             if (isDouble)
             {
-                digits += view.readDigits (u);
+                digits += probe.readDigits (u);
             }
 
             int64_t frac = 0;
-            if (view.getIf ('.'))
+            if (probe.getIf ('.'))
             {
                 isDouble = true;
 
                 if (JOIN_UNLIKELY (digits == 0))
                 {
-                    while (view.getIf ('0'))
+                    while (probe.getIf ('0'))
                     {
                         --frac;
                     }
                 }
 
-                size_t count = view.readDigits (u);
+                size_t count = probe.readDigits (u);
                 digits += count;
                 frac -= static_cast<int64_t> (count);
             }
 
             int64_t exponent = 0;
-            if (view.getIf ('e') || view.getIf ('E'))
+            if (probe.getIf ('e') || probe.getIf ('E'))
             {
                 isDouble = true;
 
                 bool negExp = false;
-                if (isSign (view.peek ()))
+                if (isSign (probe.peek ()))
                 {
-                    negExp = (view.get () == '-');
+                    negExp = (probe.get () == '-');
                 }
 
-                if (JOIN_LIKELY (isDigit (view.peek ())))
+                if (JOIN_LIKELY (isDigit (probe.peek ())))
                 {
-                    exponent = (view.get () - '0');
+                    exponent = (probe.get () - '0');
 
-                    while (JOIN_LIKELY (isDigit (view.peek ())))
+                    while (JOIN_LIKELY (isDigit (probe.peek ())))
                     {
-                        int digit = view.get () - '0';
+                        int digit = probe.get () - '0';
 
                         if (JOIN_LIKELY (exponent <= ((std::numeric_limits<int>::max () - digit) / 10)))
                         {
@@ -1650,7 +1650,7 @@ namespace join
             }
 
             std::string number;
-            view.snapshot (number);
+            probe.snapshot (number);
 
             double d = 0.0;
             if (strtodSlow (number, d))
@@ -1668,8 +1668,8 @@ namespace join
          * @param u output variable to store the parsed hexadecimal value.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        inline int readHex (ViewType& document, uint32_t& u)
+        template <typename ProbeType>
+        inline int readHex (ProbeType& document, uint32_t& u)
         {
             for (int i = 0; i < 4; ++i)
             {
@@ -1705,8 +1705,8 @@ namespace join
          * @param output parse output string.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        inline int readUnicode (ViewType& document, std::string& output)
+        template <typename ProbeType>
+        inline int readUnicode (ProbeType& document, std::string& output)
         {
             uint32_t u = 0;
 
@@ -1757,8 +1757,8 @@ namespace join
          * @param output parse output string.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        inline int readEscaped (ViewType& document, std::string& output)
+        template <typename ProbeType>
+        inline int readEscaped (ProbeType& document, std::string& output)
         {
             int ch = document.get ();
             switch (ch)
@@ -1804,8 +1804,8 @@ namespace join
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readString (ViewType& document, Handler& handler, bool isKey = false)
+        template <typename ProbeType, typename Handler>
+        int readString (ProbeType& document, Handler& handler, bool isKey = false)
         {
             thread_local Value output{std::string ()};
             output.clear ();
@@ -1856,8 +1856,8 @@ namespace join
          * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        JOIN_ALWAYS_INLINE int readArray (ViewType& document, Handler& handler, size_t depth)
+        template <typename ProbeType, typename Handler>
+        JOIN_ALWAYS_INLINE int readArray (ProbeType& document, Handler& handler, size_t depth)
         {
             if (JOIN_UNLIKELY (depth == saxMaxDepth))
             {
@@ -1926,8 +1926,8 @@ namespace join
          * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        JOIN_ALWAYS_INLINE int readObject (ViewType& document, Handler& handler, size_t depth)
+        template <typename ProbeType, typename Handler>
+        JOIN_ALWAYS_INLINE int readObject (ProbeType& document, Handler& handler, size_t depth)
         {
             if (JOIN_UNLIKELY (depth == saxMaxDepth))
             {
@@ -2024,8 +2024,8 @@ namespace join
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        inline int skipWhitespaces (ViewType& document)
+        template <typename ProbeType>
+        inline int skipWhitespaces (ProbeType& document)
         {
             if constexpr (ReadMode & JsonReadMode::ParseComments)
             {

@@ -9,7 +9,7 @@ set(PUBLIC_HEADERS
     include/join/dtoa.hpp
     include/join/utf8.hpp
     include/join/utf16.hpp
-    include/join/view.hpp
+    include/join/probe.hpp
     include/join/value.hpp
     include/join/document.hpp
     include/join/sax.hpp
