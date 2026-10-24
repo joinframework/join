@@ -139,18 +139,6 @@ namespace join
             return this->_socket.ttl ();
         }
     };
-
-    /**
-     * @brief compare two DTLS decorators based on their underlying socket handle.
-     * @param a first DTLS decorator.
-     * @param b second DTLS decorator.
-     * @return true if the handle of a is less than the handle of b, false otherwise.
-     */
-    template <class Protocol>
-    inline bool operator< (const BasicDtlsWrapper<Protocol>& a, const BasicDtlsWrapper<Protocol>& b) noexcept
-    {
-        return a.handle () < b.handle ();
-    }
 }
 
 #endif

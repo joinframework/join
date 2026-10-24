@@ -193,9 +193,9 @@ namespace join
          * @param args... arguments to pass to the new function.
          * @throw std::system_error if the thread of execution cannot be created.
          */
-        template <class Function, class... Args,
-                  typename = std::enable_if_t<!std::is_arithmetic<std::decay_t<Function>>::value>>
+        template <class Function, class... Args>
         explicit Thread (Function&& func, Args&&... args)
+            requires (!std::is_arithmetic_v<std::decay_t<Function>>)
         : Thread (-1, 0, 0, false, std::forward<Function> (func), std::forward<Args> (args)...)
         {
         }
@@ -208,9 +208,9 @@ namespace join
          * @param args... arguments to pass to the new function.
          * @throw std::system_error if the thread of execution cannot be created.
          */
-        template <class Function, class... Args,
-                  typename = std::enable_if_t<!std::is_arithmetic<std::decay_t<Function>>::value>>
+        template <class Function, class... Args>
         explicit Thread (int core, int prio, Function&& func, Args&&... args)
+            requires (!std::is_arithmetic_v<std::decay_t<Function>>)
         : Thread (core, prio, 0, false, std::forward<Function> (func), std::forward<Args> (args)...)
         {
         }

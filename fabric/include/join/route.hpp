@@ -30,8 +30,10 @@
 #include <join/mutex.hpp>
 
 // C++.
+#include <compare>
 #include <memory>
 #include <vector>
+#include <tuple>
 
 // C.
 #include <linux/rtnetlink.h>
@@ -69,22 +71,14 @@ namespace join
     }
 
     /**
-     * @brief compare two route keys for ordering.
+     * @brief three-way compare route keys.
      * @param lhs left side key.
      * @param rhs right side key.
-     * @return true if lhs is less than rhs.
+     * @return ordering of lhs relative to rhs.
      */
-    inline bool operator< (const RouteKey& lhs, const RouteKey& rhs) noexcept
+    inline std::strong_ordering operator<=> (const RouteKey& lhs, const RouteKey& rhs) noexcept
     {
-        if (lhs._index != rhs._index)
-        {
-            return lhs._index < rhs._index;
-        }
-        if (lhs._dest != rhs._dest)
-        {
-            return lhs._dest < rhs._dest;
-        }
-        return lhs._prefix < rhs._prefix;
+        return std::tie (lhs._index, lhs._dest, lhs._prefix) <=> std::tie (rhs._index, rhs._dest, rhs._prefix);
     }
 
     /**
@@ -283,8 +277,8 @@ namespace join
         // friendship with equal operator.
         friend bool operator== (const Route::Ptr& lhs, const Route::Ptr& rhs) noexcept;
 
-        // friendship with less operator.
-        friend bool operator< (const Route::Ptr& lhs, const Route::Ptr& rhs) noexcept;
+        // friendship with three-way comparison operator.
+        friend std::strong_ordering operator<=> (const Route::Ptr& lhs, const Route::Ptr& rhs) noexcept;
 
         // friendship with route manager.
         friend class RouteManager;
@@ -310,30 +304,18 @@ namespace join
     }
 
     /**
-     * @brief compare two routes for ordering.
+     * @brief three-way compare routes.
      * @param lhs left side route.
      * @param rhs right side route.
-     * @return true if lhs is less than rhs.
+     * @return ordering of lhs relative to rhs.
      */
-    inline bool operator< (const Route::Ptr& lhs, const Route::Ptr& rhs) noexcept
+    inline std::strong_ordering operator<=> (const Route::Ptr& lhs, const Route::Ptr& rhs) noexcept
     {
-        if (!lhs)
+        if (!lhs || !rhs)
         {
-            return true;
+            return bool (lhs) <=> bool (rhs);
         }
-        if (!rhs)
-        {
-            return false;
-        }
-        if (lhs->_index != rhs->_index)
-        {
-            return lhs->_index < rhs->_index;
-        }
-        if (lhs->_dest != rhs->_dest)
-        {
-            return lhs->_dest < rhs->_dest;
-        }
-        return lhs->_prefix < rhs->_prefix;
+        return std::tie (lhs->_index, lhs->_dest, lhs->_prefix) <=> std::tie (rhs->_index, rhs->_dest, rhs->_prefix);
     }
 
     /// list of routes.

@@ -52,8 +52,8 @@ struct StringCounter : public SaxHandler
     size_t strings = 0;
 };
 
-static_assert (!std::is_polymorphic<SaxHandler>::value, "SaxHandler must not have a vtable");
-static_assert (std::is_empty<SaxHandler>::value, "SaxHandler must be empty");
+static_assert (!std::is_polymorphic_v<SaxHandler>, "SaxHandler must not have a vtable");
+static_assert (std::is_empty_v<SaxHandler>, "SaxHandler must be empty");
 static_assert (sizeof (StringCounter) == sizeof (size_t), "SaxHandler must not add any size");
 
 /**

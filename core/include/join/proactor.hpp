@@ -269,11 +269,11 @@ public:
     using InvokeHandler = Function<void (), 64>;
 
 #ifdef JOIN_HAS_IO_URING
-    static_assert (sleep_ns<IoPolicy>::value == 0 || tick_ns<IoPolicy>::value >= sleep_ns<IoPolicy>::value,
+    static_assert (sleep_ns_v<IoPolicy> == 0 || tick_ns_v<IoPolicy> >= sleep_ns_v<IoPolicy>,
                    "tick must not be finer than the backoff sleep");
 
     /// timer wheel, able to arm a timer for every queued command.
-    using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, tick_ns<IoPolicy>::value>;
+    using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, tick_ns_v<IoPolicy>>;
 #else
     /// timer wheel of the underlying reactor.
     using Wheel = Reactor::Wheel;
@@ -455,66 +455,6 @@ public:
     Wheel& wheel () noexcept;
 
 private:
-#ifdef JOIN_HAS_IO_URING
-    /**
-     * @brief create the wakeup eventfd descriptor.
-     * @return eventfd descriptor on success, -1 on failure.
-     */
-    int initWakeup (std::true_type) noexcept;
-
-    /**
-     * @brief no-op stub; returns -1 for policies that do not use a wakeup eventfd.
-     * @return -1.
-     */
-    int initWakeup (std::false_type) noexcept;
-
-    /**
-     * @brief init wakeup operation.
-     */
-    void initWakeupOp (std::true_type) noexcept;
-
-    /**
-     * @brief no-op stub for policies that do not use a wakeup operation.
-     */
-    void initWakeupOp (std::false_type) noexcept;
-
-    /**
-     * @brief init completion queue entries.
-     * @param params parameters.
-     */
-    void initCqEntries (io_uring_params&, std::false_type) noexcept;
-
-    /**
-     * @brief init completion queue entries.
-     * @param params parameters.
-     */
-    void initCqEntries (io_uring_params& params, std::true_type) noexcept;
-
-    /**
-     * @brief init sqpoll thread idle timeout.
-     * @param params parameters.
-     */
-    void initSqThreadIdle (io_uring_params&, std::false_type) noexcept;
-
-    /**
-     * @brief init sqpoll thread idle timeout.
-     * @param params parameters.
-     */
-    void initSqThreadIdle (io_uring_params& params, std::true_type) noexcept;
-
-    /**
-     * @brief init sqpoll thread cpu affinity.
-     * @param params parameters.
-     */
-    void initSqThreadCpu (io_uring_params&, std::false_type) noexcept;
-
-    /**
-     * @brief init sqpoll thread cpu affinity.
-     * @param params parameters.
-     */
-    void initSqThreadCpu (io_uring_params& params, std::true_type) noexcept;
-#endif
-
     /**
      * @brief event loop wakeup state.
      */
@@ -565,18 +505,6 @@ private:
      * @return 0 on success, -1 on failure.
      */
     int wakeup () noexcept;
-
-    /**
-     * @brief write to the wakeup eventfd if the event loop is asleep.
-     * @return 0 on success, -1 on failure.
-     */
-    int wakeup (std::true_type) noexcept;
-
-    /**
-     * @brief no-op, the polling event loop needs no wakeup signal.
-     * @return 0.
-     */
-    int wakeup (std::false_type) noexcept;
 #endif
 
     /**
@@ -676,18 +604,6 @@ private:
      * @param cqe completion queue entry.
      */
     void dispatchCqe (io_uring_cqe* cqe) noexcept;
-
-    /**
-     * @brief dispatch a completion queue entry to the appropriate handler.
-     * @param cqe completion queue entry.
-     */
-    void dispatchCqe (io_uring_cqe* cqe, std::true_type) noexcept;
-
-    /**
-     * @brief dispatch a completion queue entry to the appropriate handler.
-     * @param cqe completion queue entry.
-     */
-    void dispatchCqe (io_uring_cqe* cqe, std::false_type) noexcept;
 
     /**
      * @brief run the backend event loop until stop() is called.

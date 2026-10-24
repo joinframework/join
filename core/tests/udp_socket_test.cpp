@@ -641,6 +641,23 @@ TEST_F (UdpSocket, mtu)
 }
 
 /**
+ * @brief Test is equal method.
+ */
+TEST_F (UdpSocket, equal)
+{
+    Udp::Socket udpSocket1, udpSocket2;
+
+    ASSERT_TRUE (udpSocket1 == udpSocket2);
+    ASSERT_EQ (udpSocket1.open (Udp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_TRUE (udpSocket1 == udpSocket1);
+    ASSERT_FALSE (udpSocket1 == udpSocket2);
+    ASSERT_EQ (udpSocket2.open (Udp::v4 ()), 0) << join::lastError.message ();
+    ASSERT_TRUE (udpSocket1 != udpSocket2);
+    udpSocket1.close ();
+    udpSocket2.close ();
+}
+
+/**
  * @brief Test is lower method.
  */
 TEST_F (UdpSocket, lower)

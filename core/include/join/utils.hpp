@@ -29,6 +29,7 @@
 #include <join/error.hpp>
 
 // C++.
+#include <type_traits>
 #include <stdexcept>
 #include <iostream>
 #include <iomanip>
@@ -481,9 +482,10 @@ namespace join
      * @return random number.
      */
     template <typename Type>
-    std::enable_if_t<std::numeric_limits<Type>::is_integer, Type> randomize ()
+    Type randomize ()
     {
-        std::random_device rnd;
+        static_assert (std::is_integral_v<Type>, "randomize requires an integral type");
+        thread_local std::random_device rnd;
         std::uniform_int_distribution<Type> dist{};
         return dist (rnd);
     }

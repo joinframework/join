@@ -33,8 +33,11 @@
 
 // C++.
 #include <type_traits>
-#include <limits>
+#include <concepts>
 #include <sstream>
+#include <utility>
+#include <compare>
+#include <limits>
 #include <string>
 #include <vector>
 #include <map>
@@ -458,34 +461,6 @@ namespace join
         }
 
         /**
-         * @brief check that a signed value can be represented by the target type.
-         * @param value value to check.
-         * @return true if the value fits, false otherwise.
-         */
-        template <typename Target, typename Source>
-        static typename std::enable_if<std::is_signed<Source>::value, bool>::type fits (Source value) noexcept
-        {
-            if (value < 0)
-            {
-                return std::is_signed<Target>::value &&
-                       static_cast<int64_t> (value) >= static_cast<int64_t> (std::numeric_limits<Target>::min ());
-            }
-
-            return static_cast<uint64_t> (value) <= static_cast<uint64_t> (std::numeric_limits<Target>::max ());
-        }
-
-        /**
-         * @brief check that an unsigned value can be represented by the target type.
-         * @param value value to check.
-         * @return true if the value fits, false otherwise.
-         */
-        template <typename Target, typename Source>
-        static typename std::enable_if<!std::is_signed<Source>::value, bool>::type fits (Source value) noexcept
-        {
-            return static_cast<uint64_t> (value) <= static_cast<uint64_t> (std::numeric_limits<Target>::max ());
-        }
-
-        /**
          * @brief store an integer value as the given target type.
          * @param info option description.
          * @param value value to store.
@@ -495,7 +470,7 @@ namespace join
         template <typename Target, typename Source>
         static bool store (const Info& info, Source value, DhcpOptionValue& out)
         {
-            if (!fits<Target> (value) || !accepts (info, static_cast<uint32_t> (value)))
+            if (!std::in_range<Target> (value) || !accepts (info, static_cast<uint32_t> (value)))
             {
                 lastError = make_error_code (Errc::InvalidParam);
                 return false;
@@ -524,8 +499,8 @@ namespace join
          * @return true on success, false otherwise.
          */
         template <typename T>
-        static typename std::enable_if<std::is_integral<typename std::decay<T>::type>::value, bool>::type convert (
-            uint8_t code, T value, DhcpOptionValue& out)
+        static bool convert (uint8_t code, T value, DhcpOptionValue& out)
+            requires std::integral<T>
         {
             const Info* info = describe (code);
             if (info == nullptr)
@@ -648,20 +623,8 @@ namespace join
         /// friendship with equal operator.
         friend bool operator== (const DhcpOption& lhs, const DhcpOption& rhs);
 
-        /// friendship with not equal operator.
-        friend bool operator!= (const DhcpOption& lhs, const DhcpOption& rhs);
-
-        /// friendship with lower operator.
-        friend bool operator< (const DhcpOption& lhs, const DhcpOption& rhs);
-
-        /// friendship with greater operator.
-        friend bool operator> (const DhcpOption& lhs, const DhcpOption& rhs);
-
-        /// friendship with lower or equal operator.
-        friend bool operator<= (const DhcpOption& lhs, const DhcpOption& rhs);
-
-        /// friendship with greater or equal operator.
-        friend bool operator>= (const DhcpOption& lhs, const DhcpOption& rhs);
+        /// friendship with three-way comparison operator.
+        friend std::weak_ordering operator<=> (const DhcpOption& lhs, const DhcpOption& rhs);
     };
 
     /**
@@ -676,58 +639,14 @@ namespace join
     }
 
     /**
-     * @brief compare if not equal.
+     * @brief three-way compare options.
      * @param lhs options to compare.
      * @param rhs options to compare to.
-     * @return true if not equal.
+     * @return ordering of lhs relative to rhs.
      */
-    inline bool operator!= (const DhcpOption& lhs, const DhcpOption& rhs)
+    inline std::weak_ordering operator<=> (const DhcpOption& lhs, const DhcpOption& rhs)
     {
-        return lhs._options != rhs._options;
-    }
-
-    /**
-     * @brief compare if lower.
-     * @param lhs options to compare.
-     * @param rhs options to compare to.
-     * @return true if lower.
-     */
-    inline bool operator< (const DhcpOption& lhs, const DhcpOption& rhs)
-    {
-        return lhs._options < rhs._options;
-    }
-
-    /**
-     * @brief compare if greater.
-     * @param lhs options to compare.
-     * @param rhs options to compare to.
-     * @return true if greater.
-     */
-    inline bool operator> (const DhcpOption& lhs, const DhcpOption& rhs)
-    {
-        return lhs._options > rhs._options;
-    }
-
-    /**
-     * @brief compare if lower or equal.
-     * @param lhs options to compare.
-     * @param rhs options to compare to.
-     * @return true if lower or equal.
-     */
-    inline bool operator<= (const DhcpOption& lhs, const DhcpOption& rhs)
-    {
-        return lhs._options <= rhs._options;
-    }
-
-    /**
-     * @brief compare if greater or equal.
-     * @param lhs options to compare.
-     * @param rhs options to compare to.
-     * @return true if greater or equal.
-     */
-    inline bool operator>= (const DhcpOption& lhs, const DhcpOption& rhs)
-    {
-        return lhs._options >= rhs._options;
+        return lhs._options <=> rhs._options;
     }
 
     /**

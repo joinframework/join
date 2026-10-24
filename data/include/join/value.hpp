@@ -30,6 +30,7 @@
 #include <join/error.hpp>
 
 // C++.
+#include <compare>
 #include <string>
 #include <vector>
 #include <limits>
@@ -89,7 +90,7 @@ namespace join
          * @param value null value.
          */
         constexpr Value (std::nullptr_t value)
-        : _data (in_place_index_t<Null>{}, value)
+        : _data (std::in_place_index<Null>, value)
         {
         }
 
@@ -98,7 +99,7 @@ namespace join
          * @param value boolean value.
          */
         constexpr Value (bool value)
-        : _data (in_place_index_t<Boolean>{}, value)
+        : _data (std::in_place_index<Boolean>, value)
         {
         }
 
@@ -107,7 +108,7 @@ namespace join
          * @param value integer value.
          */
         constexpr Value (int32_t value)
-        : _data (in_place_index_t<Integer>{}, value)
+        : _data (std::in_place_index<Integer>, value)
         {
         }
 
@@ -116,7 +117,7 @@ namespace join
          * @param value unsigned integer value.
          */
         constexpr Value (uint32_t value)
-        : _data (in_place_index_t<Unsigned>{}, value)
+        : _data (std::in_place_index<Unsigned>, value)
         {
         }
 
@@ -125,7 +126,7 @@ namespace join
          * @param value 64 bits integer value.
          */
         constexpr Value (int64_t value)
-        : _data (in_place_index_t<Integer64>{}, value)
+        : _data (std::in_place_index<Integer64>, value)
         {
         }
 
@@ -134,7 +135,7 @@ namespace join
          * @param value 64 bits unsigned integer value.
          */
         constexpr Value (uint64_t value)
-        : _data (in_place_index_t<Unsigned64>{}, value)
+        : _data (std::in_place_index<Unsigned64>, value)
         {
         }
 
@@ -143,7 +144,7 @@ namespace join
          * @param value real value.
          */
         constexpr Value (double value)
-        : _data (in_place_index_t<Real>{}, value)
+        : _data (std::in_place_index<Real>, value)
         {
         }
 
@@ -152,7 +153,7 @@ namespace join
          * @param value string value.
          */
         Value (const char* value)
-        : _data (in_place_index_t<String>{}, value)
+        : _data (std::in_place_index<String>, value)
         {
         }
 
@@ -161,7 +162,7 @@ namespace join
          * @param value string value.
          */
         Value (const std::string& value)
-        : _data (in_place_index_t<String>{}, value)
+        : _data (std::in_place_index<String>, value)
         {
         }
 
@@ -170,7 +171,7 @@ namespace join
          * @param value string value.
          */
         Value (std::string&& value)
-        : _data (in_place_index_t<String>{}, std::move (value))
+        : _data (std::in_place_index<String>, std::move (value))
         {
         }
 
@@ -179,7 +180,7 @@ namespace join
          * @param value array value.
          */
         Value (const Array& value)
-        : _data (in_place_index_t<ArrayValue>{}, value)
+        : _data (std::in_place_index<ArrayValue>, value)
         {
         }
 
@@ -188,7 +189,7 @@ namespace join
          * @param value array value.
          */
         Value (Array&& value)
-        : _data (in_place_index_t<ArrayValue>{}, std::move (value))
+        : _data (std::in_place_index<ArrayValue>, std::move (value))
         {
         }
 
@@ -197,7 +198,7 @@ namespace join
          * @param value object value.
          */
         Value (const Object& value)
-        : _data (in_place_index_t<ObjectValue>{}, value)
+        : _data (std::in_place_index<ObjectValue>, value)
         {
         }
 
@@ -206,7 +207,7 @@ namespace join
          * @param value object value.
          */
         Value (Object&& value)
-        : _data (in_place_index_t<ObjectValue>{}, std::move (value))
+        : _data (std::in_place_index<ObjectValue>, std::move (value))
         {
         }
 
@@ -1336,8 +1337,8 @@ namespace join
         // friendship with equal operator.
         friend constexpr bool operator== (const Value& lhs, const Value& rhs);
 
-        // friendship with lower operator.
-        friend constexpr bool operator< (const Value& lhs, const Value& rhs);
+        // friendship with three-way comparison operator.
+        friend constexpr std::partial_ordering operator<=> (const Value& lhs, const Value& rhs);
 
     private:
         /**
@@ -1567,74 +1568,38 @@ namespace join
     }
 
     /**
-     * @brief compare if not equal.
+     * @brief three-way compare values.
      * @param lhs value to compare.
      * @param rhs value to compare to.
-     * @return true if not equal.
+     * @return ordering of lhs relative to rhs.
      */
-    constexpr bool operator!= (const Value& lhs, const Value& rhs)
-    {
-        return !(lhs == rhs);
-    }
-
-    /**
-     * @brief compare if lower than.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if lower than.
-     */
-    constexpr bool operator< (const Value& lhs, const Value& rhs)
+    constexpr std::partial_ordering operator<=> (const Value& lhs, const Value& rhs)
     {
         if (lhs.isNumber () && rhs.isNumber () && (lhs.index () != rhs.index ()))
         {
             if (lhs.isInt64 () && rhs.isUint64 ())
             {
-                return lhs.getInt64 () < 0 || uint64_t (lhs.getInt64 ()) < rhs.getUint64 ();
+                if (lhs.getInt64 () < 0)
+                {
+                    return std::partial_ordering::less;
+                }
+                return uint64_t (lhs.getInt64 ()) <=> rhs.getUint64 ();
             }
             else if (lhs.isUint64 () && rhs.isInt64 ())
             {
-                return rhs.getInt64 () >= 0 && lhs.getUint64 () < uint64_t (rhs.getInt64 ());
+                if (rhs.getInt64 () < 0)
+                {
+                    return std::partial_ordering::greater;
+                }
+                return lhs.getUint64 () <=> uint64_t (rhs.getInt64 ());
             }
             else
             {
-                return lhs.getDouble () < rhs.getDouble ();
+                return lhs.getDouble () <=> rhs.getDouble ();
             }
         }
 
-        return lhs._data < rhs._data;
-    }
-
-    /**
-     * @brief compare if greater than.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if greater than.
-     */
-    constexpr bool operator> (const Value& lhs, const Value& rhs)
-    {
-        return rhs < lhs;
-    }
-
-    /**
-     * @brief compare if lower or equal than.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if lower or equal than.
-     */
-    constexpr bool operator<= (const Value& lhs, const Value& rhs)
-    {
-        return !(rhs < lhs);
-    }
-
-    /**
-     * @brief compare if greater or equal than.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return true if greater or equal than.
-     */
-    constexpr bool operator>= (const Value& lhs, const Value& rhs)
-    {
-        return !(lhs < rhs);
+        return lhs._data <=> rhs._data;
     }
 }
 

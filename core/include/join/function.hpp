@@ -110,16 +110,13 @@ namespace join
          * @brief construct with a callable object.
          * @param callable callable object.
          */
-        template <typename Func, typename DecayedFunc = std::decay_t<Func>,
-                  typename = std::enable_if_t<
-                      !std::is_same<DecayedFunc, Function>::value &&
-                      (std::is_void<Return>::value ||
-                       std::is_convertible<typename std::result_of<DecayedFunc&(Args...)>::type, Return>::value)>>
+        template <typename Func, typename DecayedFunc = std::decay_t<Func>>
         Function (Func&& callable)
+            requires (!std::is_same_v<DecayedFunc, Function>) && std::is_invocable_r_v<Return, DecayedFunc&, Args...>
         {
             static_assert (sizeof (DecayedFunc) <= Capacity, "Callable size exceeds Function capacity.");
             static_assert (alignof (DecayedFunc) <= Alignment, "Callable alignment exceeds Function alignment.");
-            static_assert (std::is_nothrow_move_constructible<DecayedFunc>::value,
+            static_assert (std::is_nothrow_move_constructible_v<DecayedFunc>,
                            "Callable must be nothrow move constructible.");
 
             new (&_storage) DecayedFunc (std::forward<Func> (callable));
@@ -131,7 +128,7 @@ namespace join
             _manager = nullptr;
             _destructor = nullptr;
 
-            if (!std::is_trivially_copyable<DecayedFunc>::value)
+            if constexpr (!std::is_trivially_copyable_v<DecayedFunc>)
             {
                 _manager = [] (void* dst, void* src) noexcept {
                     DecayedFunc* source = static_cast<DecayedFunc*> (src);
@@ -140,7 +137,7 @@ namespace join
                 };
             }
 
-            if (!std::is_trivially_destructible<DecayedFunc>::value)
+            if constexpr (!std::is_trivially_destructible_v<DecayedFunc>)
             {
                 _destructor = [] (void* storage) noexcept {
                     static_cast<DecayedFunc*> (storage)->~DecayedFunc ();
@@ -149,7 +146,7 @@ namespace join
 
             // an empty target holds no state, so relocating it copies nothing at all and never
             // reads the storage, which is left uninitialized by the placement new above.
-            _size = std::is_empty<DecayedFunc>::value ? 0 : sizeof (DecayedFunc);
+            _size = std::is_empty_v<DecayedFunc> ? 0 : sizeof (DecayedFunc);
         }
 
         /**

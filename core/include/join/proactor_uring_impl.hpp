@@ -29,15 +29,29 @@
 template <typename IoPolicy>
 join::BasicProactor<IoPolicy>::BasicProactor ()
 : _commands (_queueSize)
-, _wakeup (initWakeup (is_default<IoPolicy>{}))
+, _wakeup (is_default_v<IoPolicy> ? eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC) : -1)
 {
-    static_assert (has_spin<IoPolicy>::value || !has_sqpoll<IoPolicy>::value, "spin required for sq poll policy");
+    static_assert (has_spin_v<IoPolicy> || !has_sqpoll_v<IoPolicy>, "spin required for sq poll policy");
 
     io_uring_params params{};
     params.flags = IoPolicy::flags;
-    initCqEntries (params, has_cq_entries<IoPolicy>{});
-    initSqThreadIdle (params, has_sq_thread_idle<IoPolicy>{});
-    initSqThreadCpu (params, has_sq_thread_cpu<IoPolicy>{});
+
+    if constexpr (has_cq_entries_v<IoPolicy>)
+    {
+        params.flags |= IORING_SETUP_CQSIZE;
+        params.cq_entries = IoPolicy::cqEntries;
+    }
+
+    if constexpr (has_sq_thread_idle_v<IoPolicy>)
+    {
+        params.sq_thread_idle = IoPolicy::sqThreadIdle;
+    }
+
+    if constexpr (has_sq_thread_cpu_v<IoPolicy>)
+    {
+        params.flags |= IORING_SETUP_SQ_AFF;
+        params.sq_thread_cpu = IoPolicy::sqThreadCpu;
+    }
 
     if (io_uring_queue_init_params (IoPolicy::sqEntries, &_ring, &params) < 0)
     {
@@ -47,7 +61,11 @@ join::BasicProactor<IoPolicy>::BasicProactor ()
         // LCOV_EXCL_STOP
     }
 
-    initWakeupOp (is_default<IoPolicy>{});
+    if constexpr (is_default_v<IoPolicy>)
+    {
+        _wakeupOp = IoOperation::makeRead (_wakeup, &_wakeupBuf, sizeof (_wakeupBuf), nullptr);
+    }
+
     _pendingOps.reserve (IoPolicy::sqEntries);
 }
 
@@ -441,108 +459,6 @@ typename join::BasicProactor<IoPolicy>::Wheel& join::BasicProactor<IoPolicy>::wh
 
 // =========================================================================
 //   CLASS     : BasicProactor
-//   METHOD    : initWakeup
-// =========================================================================
-template <typename IoPolicy>
-int join::BasicProactor<IoPolicy>::initWakeup (std::true_type) noexcept
-{
-    return eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : initWakeup
-// =========================================================================
-template <typename IoPolicy>
-int join::BasicProactor<IoPolicy>::initWakeup (std::false_type) noexcept
-{
-    return -1;
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : initWakeupOp
-// =========================================================================
-template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::initWakeupOp (std::true_type) noexcept
-{
-    _wakeupOp = IoOperation::makeRead (_wakeup, &_wakeupBuf, sizeof (_wakeupBuf), nullptr);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : initWakeupOp
-// =========================================================================
-template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::initWakeupOp (std::false_type) noexcept
-{
-    // no-op.
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : initCqEntries
-// =========================================================================
-template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::initCqEntries (io_uring_params&, std::false_type) noexcept
-{
-    // no-op.
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : initCqEntries
-// =========================================================================
-template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::initCqEntries (io_uring_params& params, std::true_type) noexcept
-{
-    params.flags |= IORING_SETUP_CQSIZE;
-    params.cq_entries = IoPolicy::cqEntries;
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : initSqThreadIdle
-// =========================================================================
-template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::initSqThreadIdle (io_uring_params&, std::false_type) noexcept
-{
-    // no-op.
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : initSqThreadIdle
-// =========================================================================
-template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::initSqThreadIdle (io_uring_params& params, std::true_type) noexcept
-{
-    params.sq_thread_idle = IoPolicy::sqThreadIdle;
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : initSqThreadCpu
-// =========================================================================
-template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::initSqThreadCpu (io_uring_params&, std::false_type) noexcept
-{
-    // no-op.
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : initSqThreadCpu
-// =========================================================================
-template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::initSqThreadCpu (io_uring_params& params, std::true_type) noexcept
-{
-    params.flags |= IORING_SETUP_SQ_AFF;
-    params.sq_thread_cpu = IoPolicy::sqThreadCpu;
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
 //   METHOD    : writeCommand
 // =========================================================================
 template <typename IoPolicy>
@@ -563,45 +479,28 @@ int join::BasicProactor<IoPolicy>::writeCommand (const Command& cmd) noexcept
 template <typename IoPolicy>
 int join::BasicProactor<IoPolicy>::wakeup () noexcept
 {
-    return wakeup (is_default<IoPolicy>{});
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : wakeup
-// =========================================================================
-template <typename IoPolicy>
-int join::BasicProactor<IoPolicy>::wakeup (std::true_type) noexcept
-{
-    // pairs with the fence in the event loop: an acquire load would let the push above be
-    // reordered after it, the loop would sleep and the wakeup would be lost.
-    std::atomic_thread_fence (std::memory_order_seq_cst);
-
-    WakeupState state = _wakeupState.load (std::memory_order_relaxed);
-    if (state != WakeupState::Sleeping)
+    if constexpr (is_default_v<IoPolicy>)
     {
-        return 0;
-    }
+        // pairs with the fence in the event loop: an acquire load would let the push above be
+        // reordered after it, the loop would sleep and the wakeup would be lost.
+        std::atomic_thread_fence (std::memory_order_seq_cst);
 
-    if (_wakeupState.compare_exchange_strong (state, WakeupState::Waking, std::memory_order_seq_cst))
-    {
-        uint64_t value = 1;
-        if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
+        WakeupState state = _wakeupState.load (std::memory_order_relaxed);
+        if (state != WakeupState::Sleeping)
         {
-            _wakeupState.store (WakeupState::Sleeping, std::memory_order_seq_cst);  // LCOV_EXCL_LINE
+            return 0;
+        }
+
+        if (_wakeupState.compare_exchange_strong (state, WakeupState::Waking, std::memory_order_seq_cst))
+        {
+            uint64_t value = 1;
+            if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
+            {
+                _wakeupState.store (WakeupState::Sleeping, std::memory_order_seq_cst);  // LCOV_EXCL_LINE
+            }
         }
     }
 
-    return 0;
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : wakeup
-// =========================================================================
-template <typename IoPolicy>
-int join::BasicProactor<IoPolicy>::wakeup (std::false_type) noexcept
-{
     return 0;
 }
 
@@ -991,41 +890,23 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
 //   METHOD    : dispatchCqe
 // =========================================================================
 template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe) noexcept
-{
-    dispatchCqe (cqe, is_default<IoPolicy>{});
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : dispatchCqe
-// =========================================================================
-template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe, std::true_type) noexcept
+inline void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe) noexcept
 {
     IoOperation* op = static_cast<IoOperation*> (io_uring_cqe_get_data (cqe));
 
-    if (JOIN_UNLIKELY (op == &_wakeupOp))
+    if constexpr (is_default_v<IoPolicy>)
     {
-        endOperation (*op, cqe->res, false);
-        if (JOIN_LIKELY (_running.load (std::memory_order_acquire)))
+        if (JOIN_UNLIKELY (op == &_wakeupOp))
         {
-            submitOperation (_wakeupOp, true);
+            endOperation (*op, cqe->res, false);
+            if (JOIN_LIKELY (_running.load (std::memory_order_acquire)))
+            {
+                submitOperation (_wakeupOp, true);
+            }
+            return;
         }
-        return;
     }
 
-    dispatchCqe (cqe, std::false_type{});
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : dispatchCqe
-// =========================================================================
-template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe, std::false_type) noexcept
-{
-    IoOperation* op = static_cast<IoOperation*> (io_uring_cqe_get_data (cqe));
     if (JOIN_UNLIKELY (op == nullptr))
     {
         return;
@@ -1115,7 +996,7 @@ void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe, std::false_t
 template <typename IoPolicy>
 void join::BasicProactor<IoPolicy>::eventLoop () noexcept
 {
-    eventLoop (has_spin<IoPolicy>{}, has_sqpoll<IoPolicy>{});
+    eventLoop (std::bool_constant<has_spin_v<IoPolicy>>{}, std::bool_constant<has_sqpoll_v<IoPolicy>>{});
 }
 
 // =========================================================================
@@ -1186,9 +1067,8 @@ void join::BasicProactor<IoPolicy>::eventLoop (std::false_type, std::false_type)
 template <typename IoPolicy>
 void join::BasicProactor<IoPolicy>::eventLoop (std::true_type, std::false_type) noexcept
 {
-    Backoff backoff{std::chrono::nanoseconds (spin_ns<IoPolicy>::value),
-                    std::chrono::nanoseconds (yield_ns<IoPolicy>::value),
-                    std::chrono::nanoseconds (sleep_ns<IoPolicy>::value)};
+    Backoff backoff{std::chrono::nanoseconds (spin_ns_v<IoPolicy>), std::chrono::nanoseconds (yield_ns_v<IoPolicy>),
+                    std::chrono::nanoseconds (sleep_ns_v<IoPolicy>)};
     bool running;
 
     while ((running = _running.load (std::memory_order_acquire)) || !_pendingOps.empty ())
@@ -1229,9 +1109,8 @@ void join::BasicProactor<IoPolicy>::eventLoop (std::true_type, std::false_type) 
 template <typename IoPolicy>
 void join::BasicProactor<IoPolicy>::eventLoop (std::true_type, std::true_type) noexcept
 {
-    Backoff backoff{std::chrono::nanoseconds (spin_ns<IoPolicy>::value),
-                    std::chrono::nanoseconds (yield_ns<IoPolicy>::value),
-                    std::chrono::nanoseconds (sleep_ns<IoPolicy>::value)};
+    Backoff backoff{std::chrono::nanoseconds (spin_ns_v<IoPolicy>), std::chrono::nanoseconds (yield_ns_v<IoPolicy>),
+                    std::chrono::nanoseconds (sleep_ns_v<IoPolicy>)};
     bool running;
 
     while ((running = _running.load (std::memory_order_acquire)) || !_pendingOps.empty ())

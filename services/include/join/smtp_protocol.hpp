@@ -106,17 +106,6 @@ namespace join
     }
 
     /**
-     * @brief check if not equals.
-     * @param a protocol to check.
-     * @param b protocol to check.
-     * @return true if not equals.
-     */
-    constexpr bool operator!= (const Smtp& a, const Smtp& b) noexcept
-    {
-        return !(a == b);
-    }
-
-    /**
      * @brief SMTPS protocol class (SMTP over TLS).
      */
     class Smtps
@@ -183,17 +172,6 @@ namespace join
     constexpr bool operator== (const Smtps& a, const Smtps& b) noexcept
     {
         return a.family () == b.family ();
-    }
-
-    /**
-     * @brief check if not equals.
-     * @param a protocol to check.
-     * @param b protocol to check.
-     * @return true if not equals.
-     */
-    constexpr bool operator!= (const Smtps& a, const Smtps& b) noexcept
-    {
-        return !(a == b);
     }
 }
 

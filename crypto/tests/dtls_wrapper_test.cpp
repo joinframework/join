@@ -948,6 +948,24 @@ TEST_F (DtlsSocket, verify)
 }
 
 /**
+ * @brief Test is equal method.
+ */
+TEST_F (DtlsSocket, isEqual)
+{
+    TlsContext ctx (TlsContext::DtlsClient);
+    Dtls::Socket dtls1 (ctx), dtls2 (ctx);
+
+    ASSERT_TRUE (dtls1 == dtls2);
+    ASSERT_EQ (dtls1.open (Dtls (IpAddress (_hostv4).family ())), 0) << join::lastError.message ();
+    ASSERT_TRUE (dtls1 == dtls1);
+    ASSERT_FALSE (dtls1 == dtls2);
+    ASSERT_EQ (dtls2.open (Dtls (IpAddress (_hostv4).family ())), 0) << join::lastError.message ();
+    ASSERT_TRUE (dtls1 != dtls2);
+    dtls1.close ();
+    dtls2.close ();
+}
+
+/**
  * @brief Test is lower method.
  */
 TEST_F (DtlsSocket, isLower)

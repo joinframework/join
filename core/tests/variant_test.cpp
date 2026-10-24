@@ -29,32 +29,22 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <compare>
+#include <memory>
+#include <limits>
 #include <mutex>
 
 using join::Variant;
-
-/**
- * @brief Test is_first_default_constructible trait.
- */
-TEST (Variant, is_first_default_constructible)
-{
-    auto can = join::details::is_first_default_constructible<int, double, std::string, bool, std::nullptr_t>::value;
-    EXPECT_TRUE (can);
-
-    can = join::details::is_first_default_constructible<std::lock_guard<std::mutex>, int, double, std::string, bool,
-                                                        std::nullptr_t>::value;
-    EXPECT_FALSE (can);
-}
 
 /**
  * @brief test triviality.
  */
 TEST (Variant, trivial)
 {
-    EXPECT_TRUE ((std::is_trivially_copyable<Variant<int, double, bool>>::value));
-    EXPECT_TRUE ((std::is_trivially_destructible<Variant<int, double, bool>>::value));
-    EXPECT_FALSE ((std::is_trivially_copyable<Variant<int, std::string>>::value));
-    EXPECT_FALSE ((std::is_trivially_destructible<Variant<int, std::string>>::value));
+    EXPECT_TRUE ((std::is_trivially_copyable_v<Variant<int, double, bool>>));
+    EXPECT_TRUE ((std::is_trivially_destructible_v<Variant<int, double, bool>>));
+    EXPECT_FALSE ((std::is_trivially_copyable_v<Variant<int, std::string>>));
+    EXPECT_FALSE ((std::is_trivially_destructible_v<Variant<int, std::string>>));
 
     Variant<int, double, bool> a (2.5), b (true);
     a.swap (b);
@@ -67,6 +57,9 @@ TEST (Variant, trivial)
  */
 TEST (Variant, defaultConstruction)
 {
+    EXPECT_TRUE ((std::is_default_constructible_v<Variant<int, std::string>>));
+    EXPECT_FALSE ((std::is_default_constructible_v<Variant<std::lock_guard<std::mutex>, int>>));
+
     Variant<int, double, std::string, bool, std::nullptr_t> var;
 
     EXPECT_TRUE (var.is<int> ());
@@ -81,6 +74,10 @@ TEST (Variant, defaultConstruction)
  */
 TEST (Variant, copyConstruction)
 {
+    EXPECT_TRUE ((std::is_copy_constructible_v<Variant<int, std::string>>));
+    EXPECT_FALSE ((std::is_copy_constructible_v<Variant<int, std::unique_ptr<int>>>));
+    EXPECT_FALSE ((std::is_copy_constructible_v<Variant<int, std::lock_guard<std::mutex>>>));
+
     Variant<int, double, std::string, bool, std::nullptr_t> var;
 
     var = 6;
@@ -161,6 +158,10 @@ TEST (Variant, copyConstruction)
  */
 TEST (Variant, moveConstruction)
 {
+    EXPECT_TRUE ((std::is_move_constructible_v<Variant<int, std::string>>));
+    EXPECT_TRUE ((std::is_move_constructible_v<Variant<int, std::unique_ptr<int>>>));
+    EXPECT_FALSE ((std::is_move_constructible_v<Variant<int, std::lock_guard<std::mutex>>>));
+
     Variant<int, double, std::string, bool, std::nullptr_t> var;
 
     var = 6;
@@ -312,7 +313,7 @@ TEST (Variant, convertConstruction)
  */
 TEST (Variant, explicitConstruction)
 {
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var (join::in_place_type_t<int>{}, 120);
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var (std::in_place_type<int>, 120);
     ASSERT_TRUE (var.is<int> ());
     EXPECT_EQ (var.get<int> (), 120);
     EXPECT_EQ (var.get<0> (), 120);
@@ -322,7 +323,7 @@ TEST (Variant, explicitConstruction)
     EXPECT_EQ (*var.getIf<0> (), 120);
 
     volatile int volatileInt (4);
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var1 (join::in_place_type_t<int>{},
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var1 (std::in_place_type<int>,
                                                                                     volatileInt);
     ASSERT_TRUE (var1.is<int> ());
     EXPECT_EQ (var1.get<int> (), 4);
@@ -332,8 +333,7 @@ TEST (Variant, explicitConstruction)
     ASSERT_NE (var1.getIf<0> (), nullptr);
     EXPECT_EQ (*var1.getIf<0> (), 4);
 
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var2 (join::in_place_type_t<double>{},
-                                                                                    0.5);
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var2 (std::in_place_type<double>, 0.5);
     ASSERT_TRUE (var2.is<double> ());
     EXPECT_DOUBLE_EQ (var2.get<double> (), 0.5);
     EXPECT_DOUBLE_EQ (var2.get<1> (), 0.5);
@@ -342,8 +342,8 @@ TEST (Variant, explicitConstruction)
     ASSERT_NE (var2.getIf<1> (), nullptr);
     EXPECT_DOUBLE_EQ (*var2.getIf<1> (), 0.5);
 
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var4 (
-        join::in_place_type_t<std::string>{}, std::string ("foobar1"));
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var4 (std::in_place_type<std::string>,
+                                                                                    std::string ("foobar1"));
     ASSERT_TRUE (var4.is<std::string> ());
     EXPECT_STREQ (var4.get<std::string> ().c_str (), "foobar1");
     EXPECT_STREQ (var4.get<2> ().c_str (), "foobar1");
@@ -353,8 +353,8 @@ TEST (Variant, explicitConstruction)
     EXPECT_STREQ (var4.getIf<2> ()->c_str (), "foobar1");
 
     const std::string constString ("foobar2");
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var5 (
-        join::in_place_type_t<std::string>{}, constString);
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var5 (std::in_place_type<std::string>,
+                                                                                    constString);
     ASSERT_TRUE (var5.is<std::string> ());
     EXPECT_STREQ (var5.get<std::string> ().c_str (), "foobar2");
     EXPECT_STREQ (var5.get<2> ().c_str (), "foobar2");
@@ -363,8 +363,7 @@ TEST (Variant, explicitConstruction)
     ASSERT_NE (var5.getIf<2> (), nullptr);
     EXPECT_STREQ (var5.getIf<2> ()->c_str (), "foobar2");
 
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var6 (join::in_place_type_t<bool>{},
-                                                                                    false);
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var6 (std::in_place_type<bool>, false);
     ASSERT_TRUE (var6.is<bool> ());
     EXPECT_FALSE (var6.get<bool> ());
     EXPECT_FALSE (var6.get<3> ());
@@ -373,8 +372,8 @@ TEST (Variant, explicitConstruction)
     ASSERT_NE (var6.getIf<3> (), nullptr);
     EXPECT_FALSE (*var6.getIf<3> ());
 
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var7 (
-        join::in_place_type_t<std::nullptr_t>{}, nullptr);
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var7 (std::in_place_type<std::nullptr_t>,
+                                                                                    nullptr);
     ASSERT_TRUE (var7.is<std::nullptr_t> ());
     EXPECT_EQ (var7.get<std::nullptr_t> (), nullptr);
     EXPECT_EQ (var7.get<4> (), nullptr);
@@ -384,7 +383,7 @@ TEST (Variant, explicitConstruction)
     EXPECT_EQ (*var7.getIf<4> (), nullptr);
 
     Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var8 (
-        join::in_place_type_t<std::vector<int>>{}, {0, 1, 2, 3});
+        std::in_place_type<std::vector<int>>, {0, 1, 2, 3});
     ASSERT_TRUE (var8.is<std::vector<int>> ());
     ASSERT_EQ (var8.get<std::vector<int>> ().size (), 4);
     EXPECT_EQ (var8.get<std::vector<int>> ()[0], 0);
@@ -404,7 +403,7 @@ TEST (Variant, explicitConstruction)
  */
 TEST (Variant, indexConstruction)
 {
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var (join::in_place_index_t<0>{}, 120);
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var (std::in_place_index<0>, 120);
     ASSERT_TRUE (var.is<int> ());
     EXPECT_EQ (var.get<int> (), 120);
     EXPECT_EQ (var.get<0> (), 120);
@@ -414,7 +413,7 @@ TEST (Variant, indexConstruction)
     EXPECT_EQ (*var.getIf<0> (), 120);
 
     volatile int volatileInt (4);
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var1 (join::in_place_index_t<0>{},
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var1 (std::in_place_index<0>,
                                                                                     volatileInt);
     ASSERT_TRUE (var1.is<int> ());
     EXPECT_EQ (var1.get<int> (), 4);
@@ -424,7 +423,7 @@ TEST (Variant, indexConstruction)
     ASSERT_NE (var1.getIf<0> (), nullptr);
     EXPECT_EQ (*var1.getIf<0> (), 4);
 
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var2 (join::in_place_index_t<1>{}, 0.5);
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var2 (std::in_place_index<1>, 0.5);
     ASSERT_TRUE (var2.is<double> ());
     EXPECT_DOUBLE_EQ (var2.get<double> (), 0.5);
     EXPECT_DOUBLE_EQ (var2.get<1> (), 0.5);
@@ -433,7 +432,7 @@ TEST (Variant, indexConstruction)
     ASSERT_NE (var2.getIf<1> (), nullptr);
     EXPECT_DOUBLE_EQ (*var2.getIf<1> (), 0.5);
 
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var4 (join::in_place_index_t<2>{},
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var4 (std::in_place_index<2>,
                                                                                     std::string ("foobar1"));
     ASSERT_TRUE (var4.is<std::string> ());
     EXPECT_STREQ (var4.get<std::string> ().c_str (), "foobar1");
@@ -444,7 +443,7 @@ TEST (Variant, indexConstruction)
     EXPECT_STREQ (var4.getIf<2> ()->c_str (), "foobar1");
 
     const std::string constString ("foobar2");
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var5 (join::in_place_index_t<2>{},
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var5 (std::in_place_index<2>,
                                                                                     constString);
     ASSERT_TRUE (var5.is<std::string> ());
     EXPECT_STREQ (var5.get<std::string> ().c_str (), "foobar2");
@@ -454,7 +453,7 @@ TEST (Variant, indexConstruction)
     ASSERT_NE (var5.getIf<2> (), nullptr);
     EXPECT_STREQ (var5.getIf<2> ()->c_str (), "foobar2");
 
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var6 (join::in_place_index_t<3>{}, false);
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var6 (std::in_place_index<3>, false);
     ASSERT_TRUE (var6.is<bool> ());
     EXPECT_FALSE (var6.get<bool> ());
     EXPECT_FALSE (var6.get<3> ());
@@ -463,8 +462,7 @@ TEST (Variant, indexConstruction)
     ASSERT_NE (var6.getIf<3> (), nullptr);
     EXPECT_FALSE (*var6.getIf<3> ());
 
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var7 (join::in_place_index_t<4>{},
-                                                                                    nullptr);
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var7 (std::in_place_index<4>, nullptr);
     ASSERT_TRUE (var7.is<std::nullptr_t> ());
     EXPECT_EQ (var7.get<std::nullptr_t> (), nullptr);
     EXPECT_EQ (var7.get<4> (), nullptr);
@@ -473,7 +471,7 @@ TEST (Variant, indexConstruction)
     ASSERT_NE (var7.getIf<4> (), nullptr);
     EXPECT_EQ (*var7.getIf<4> (), nullptr);
 
-    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var8 (join::in_place_index_t<5>{},
+    Variant<int, double, std::string, bool, std::nullptr_t, std::vector<int>> var8 (std::in_place_index<5>,
                                                                                     {0, 1, 2, 3});
     ASSERT_TRUE (var8.is<std::vector<int>> ());
     ASSERT_EQ (var8.get<std::vector<int>> ().size (), 4);
@@ -494,6 +492,10 @@ TEST (Variant, indexConstruction)
  */
 TEST (Variant, copyAssign)
 {
+    EXPECT_TRUE ((std::is_copy_assignable_v<Variant<int, std::string>>));
+    EXPECT_FALSE ((std::is_copy_assignable_v<Variant<int, std::unique_ptr<int>>>));
+    EXPECT_FALSE ((std::is_copy_assignable_v<Variant<int, std::lock_guard<std::mutex>>>));
+
     Variant<int, double, std::string, bool, std::nullptr_t> var;
 
     var = 6;
@@ -581,6 +583,10 @@ TEST (Variant, copyAssign)
  */
 TEST (Variant, moveAssign)
 {
+    EXPECT_TRUE ((std::is_move_assignable_v<Variant<int, std::string>>));
+    EXPECT_TRUE ((std::is_move_assignable_v<Variant<int, std::unique_ptr<int>>>));
+    EXPECT_FALSE ((std::is_move_assignable_v<Variant<int, std::lock_guard<std::mutex>>>));
+
     Variant<int, double, std::string, bool, std::nullptr_t> var;
 
     var = 6;
@@ -1468,6 +1474,37 @@ TEST (Variant, greater_or_equal)
 
     EXPECT_FALSE (var1 >= var2);
     EXPECT_TRUE (var1 >= var3);
+}
+
+/**
+ * @brief Test three-way comparison operator.
+ */
+TEST (Variant, compare)
+{
+    Variant<int, double, std::string, bool, std::nullptr_t> var1, var2;
+
+    EXPECT_TRUE ((std::is_same_v<decltype (var1 <=> var2), std::partial_ordering>));
+    EXPECT_TRUE ((std::is_same_v<decltype (Variant<int, std::string> () <=> Variant<int, std::string> ()),
+                                 std::strong_ordering>));
+
+    var1.set<int> (3);
+    var2.set<int> (4);
+    EXPECT_EQ (var1 <=> var2, std::partial_ordering::less);
+    EXPECT_EQ (var2 <=> var1, std::partial_ordering::greater);
+    EXPECT_EQ (var1 <=> var1, std::partial_ordering::equivalent);
+
+    var1.set<std::nullptr_t> (nullptr);
+    var2.set<std::nullptr_t> (nullptr);
+    EXPECT_EQ (var1 <=> var2, std::partial_ordering::equivalent);
+
+    var1.set<double> (std::numeric_limits<double>::quiet_NaN ());
+    var2.set<double> (0.5);
+    EXPECT_EQ (var1 <=> var2, std::partial_ordering::unordered);
+
+    var1.set<int> (3);
+    var2.set<std::string> ("foo");
+    EXPECT_EQ (var1 <=> var2, std::partial_ordering::less);
+    EXPECT_EQ (var2 <=> var1, std::partial_ordering::greater);
 }
 
 /**

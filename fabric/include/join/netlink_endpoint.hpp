@@ -191,67 +191,20 @@ namespace join
     }
 
     /**
-     * @brief compare if endpoints are not equal.
+     * @brief three-way compare endpoints.
      * @param a endpoint to compare.
      * @param b endpoint to compare to.
-     * @return true if endpoints are not equal, false otherwise.
+     * @return ordering of a relative to b.
      */
     template <class Protocol>
-    bool operator!= (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
+    std::strong_ordering operator<=> (const BasicNetlinkEndpoint<Protocol>& a,
+                                      const BasicNetlinkEndpoint<Protocol>& b) noexcept
     {
-        return !(a == b);
-    }
-
-    /**
-     * @brief compare if endpoint is lower.
-     * @param a endpoint to compare.
-     * @param b endpoint to compare to.
-     * @return true if lower, false otherwise.
-     */
-    template <class Protocol>
-    bool operator< (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
-    {
-        if (a.pid () != b.pid ())
+        if (auto cmp = a.pid () <=> b.pid (); cmp != 0)
         {
-            return a.pid () < b.pid ();
+            return cmp;
         }
-        return a.groups () < b.groups ();
-    }
-
-    /**
-     * @brief compare if endpoint is greater.
-     * @param a endpoint to compare.
-     * @param b endpoint to compare to.
-     * @return true if greater, false otherwise.
-     */
-    template <class Protocol>
-    bool operator> (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
-    {
-        return b < a;
-    }
-
-    /**
-     * @brief compare if endpoint is lower or equal.
-     * @param a endpoint to compare.
-     * @param b endpoint to compare to.
-     * @return true if lower or equal, false otherwise.
-     */
-    template <class Protocol>
-    bool operator<= (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
-    {
-        return !(b < a);
-    }
-
-    /**
-     * @brief compare if endpoint is greater or equal.
-     * @param a endpoint to compare.
-     * @param b endpoint to compare to.
-     * @return true if greater or equal, false otherwise.
-     */
-    template <class Protocol>
-    bool operator>= (const BasicNetlinkEndpoint<Protocol>& a, const BasicNetlinkEndpoint<Protocol>& b) noexcept
-    {
-        return !(a < b);
+        return a.groups () <=> b.groups ();
     }
 
     /**

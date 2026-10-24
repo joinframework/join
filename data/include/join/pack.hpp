@@ -1257,7 +1257,8 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename Type, typename ViewType, typename Output>
-        static std::enable_if_t<std::is_arithmetic<Type>::value, int> unpack (ViewType& document, Output& output)
+        static int unpack (ViewType& document, Output& output)
+            requires std::is_arithmetic_v<Type>
         {
             Type value;
             if (JOIN_UNLIKELY (document.read (reinterpret_cast<char*> (&value), sizeof (value)) != sizeof (value)))

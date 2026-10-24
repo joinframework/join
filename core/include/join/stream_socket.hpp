@@ -619,18 +619,6 @@ namespace join
         /// remote endpoint.
         mutable Endpoint _remote;
     };
-
-    /**
-     * @brief compare if socket handle is inferior.
-     * @param a socket handle to compare.
-     * @param b socket handle to compare to.
-     * @return true if inferior.
-     */
-    template <class Protocol>
-    inline bool operator< (const BasicStreamSocket<Protocol>& a, const BasicStreamSocket<Protocol>& b) noexcept
-    {
-        return a.handle () < b.handle ();
-    }
 }
 
 #endif

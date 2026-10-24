@@ -110,20 +110,15 @@ namespace join
 
     /**
      * @brief primary trait: all sync policies need sequence numbers by default.
-     * @tparam SyncPolicy instantiated sync policy type.
      */
     template <typename SyncPolicy>
-    struct needs_seq : std::true_type
-    {
-    };
+    inline constexpr bool needs_seq_v = true;
 
     /**
      * @brief specialization for SPSC: no sequence number needed.
      */
     template <typename Type, typename Backend>
-    struct needs_seq<Spsc<Type, Backend>> : std::false_type
-    {
-    };
+    inline constexpr bool needs_seq_v<Spsc<Type, Backend>> = false;
 
     /**
      * @brief queue base class.
@@ -131,13 +126,12 @@ namespace join
     template <typename Type, typename Backend, typename SyncPolicy>
     class BasicQueue
     {
-        static_assert (std::is_trivially_copyable<Type>::value, "type must be trivially copyable");
-        static_assert (std::is_trivially_destructible<Type>::value, "type must be trivially destructible");
+        static_assert (std::is_trivially_copyable_v<Type>, "type must be trivially copyable");
+        static_assert (std::is_trivially_destructible_v<Type>, "type must be trivially destructible");
 
     public:
         using ValueType = Type;
-        using Slot =
-            typename std::conditional<needs_seq<SyncPolicy>::value, QueueSlotFull<Type>, QueueSlotLight<Type>>::type;
+        using Slot = std::conditional_t<needs_seq_v<SyncPolicy>, QueueSlotFull<Type>, QueueSlotLight<Type>>;
         using Segment = QueueSegment<Type, Slot>;
 
         /**
@@ -164,7 +158,7 @@ namespace join
                 _segment->_sync._tail.store (0, std::memory_order_relaxed);
                 _segment->_sync._cachedHead = 0;
 
-                initSlots<needs_seq<SyncPolicy>::value> ();
+                initSlots ();
 
                 _segment->_sync._magic.store (QueueSync::MAGIC, std::memory_order_release);
             }
@@ -436,23 +430,16 @@ namespace join
 
     private:
         /**
-         * @brief initialize slots for policies that do not require sequence numbers (SPSC).
+         * @brief initialize sequence numbers for policies that require them (MPSC/MPMC).
          */
-        template <bool NeedsSeq, typename std::enable_if<!NeedsSeq>::type* = nullptr>
         void initSlots () noexcept
         {
-            // nothing to initialize.
-        }
-
-        /**
-         * @brief initialize sequence numbers for policies that require sequence numbers (MPSC/MPMC).
-         */
-        template <bool NeedsSeq, typename std::enable_if<NeedsSeq>::type* = nullptr>
-        void initSlots () noexcept
-        {
-            for (uint64_t i = 0; i < _capacity; ++i)
+            if constexpr (needs_seq_v<SyncPolicy>)
             {
-                _segment->_elements[i]._seq.store (i, std::memory_order_relaxed);
+                for (uint64_t i = 0; i < _capacity; ++i)
+                {
+                    _segment->_elements[i]._seq.store (i, std::memory_order_relaxed);
+                }
             }
         }
 

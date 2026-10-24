@@ -26,53 +26,11 @@
 #define JOIN_CORE_TRAITS_HPP
 
 // C++.
-#include <bits/enable_special_members.h>
 #include <type_traits>
 #include <utility>
 
 namespace join
 {
-    /**
-     * @brief disambiguation tag to indicate that the contained object should be constructed in-place.
-     */
-    struct in_place_t
-    {
-        explicit in_place_t () = default;
-    };
-
-    /**
-     * @brief disambiguation tag to indicate that the contained object should be constructed in-place.
-     */
-    template <typename T>
-    struct in_place_type_t
-    {
-        explicit in_place_type_t () = default;
-    };
-
-    /**
-     * @brief disambiguation tag to indicate that the contained object should be constructed in-place.
-     */
-    template <std::size_t I>
-    struct in_place_index_t
-    {
-        explicit in_place_index_t () = default;
-    };
-
-    /**
-     * @brief return type unchanged.
-     */
-    template <typename T>
-    struct identity
-    {
-        using type = T;
-    };
-
-    /**
-     * @brief return type unchanged.
-     */
-    template <typename T>
-    using identity_t = typename identity<T>::type;
-
     /**
      * @brief overload resolution.
      */
@@ -96,7 +54,7 @@ namespace join
     {
         using overload<Ts...>::operator();
 
-        identity<First> operator() (First) const;
+        std::type_identity<First> operator() (First) const;
     };
 
     /**
@@ -107,226 +65,39 @@ namespace join
     {
         using overload<Ts...>::operator();
 
-        identity<void> operator() () const;
+        std::type_identity<void> operator() () const;
     };
 
     /**
      * @brief find a type that match one of the alternatives of a parameter pack.
      */
     template <typename T, typename... Ts>
-    using match_t = typename std::result_of_t<overload<Ts...> (T)>::type;
+    using match_t = typename std::invoke_result_t<overload<Ts...>, T>::type;
 
     /**
      * @brief get element position in a parameter pack according its type.
      */
     template <typename T, typename... Ts>
-    struct find_index : std::integral_constant<std::size_t, 0>
-    {
-    };
+    inline constexpr std::size_t find_index_v = 0;
 
     /**
      * @brief get element position in a parameter pack according its type.
      */
     template <typename T, typename First, typename... Ts>
-    struct find_index<T, First, Ts...>
-    : std::integral_constant<std::size_t, std::is_same<T, First>::value ? 0 : find_index<T, Ts...>::value + 1>
-    {
-    };
-
-    /**
-     * @brief get element type in a parameter pack according its position.
-     */
-    template <std::size_t I, typename T, typename... Ts>
-    struct find_element
-    {
-        using type = typename find_element<I - 1, Ts...>::type;
-    };
-
-    /**
-     * @brief get element type in a parameter pack according its position.
-     */
-    template <typename T, typename... Ts>
-    struct find_element<0, T, Ts...>
-    {
-        using type = T;
-    };
-
-    /**
-     * @brief get element type in a parameter pack according its position.
-     */
-    template <std::size_t I, typename... Ts>
-    using find_element_t = typename find_element<I, Ts...>::type;
-
-    /**
-     * @brief get element type in a parameter pack according its position.
-     */
-    template <std::size_t I, typename T>
-    struct find_element<I, const T>
-    {
-        using type = std::add_const_t<find_element_t<I, T>>;
-    };
-
-    /**
-     * @brief get element type in a parameter pack according its position.
-     */
-    template <std::size_t I, typename T>
-    struct find_element<I, volatile T>
-    {
-        using type = std::add_volatile_t<find_element_t<I, T>>;
-    };
-
-    /**
-     * @brief get element type in a parameter pack according its position.
-     */
-    template <std::size_t I, typename T>
-    struct find_element<I, const volatile T>
-    {
-        using type = std::add_cv_t<find_element_t<I, T>>;
-    };
-
-    /**
-     * @brief check if a type exists in a parameter pack.
-     */
-    template <typename T, typename... Ts>
-    struct is_alternative : std::integral_constant<bool, false>
-    {
-    };
-
-    /**
-     * @brief check if a type exists in a parameter pack.
-     */
-    template <typename T, typename First, typename... Ts>
-    struct is_alternative<T, First, Ts...>
-    : std::integral_constant<bool, std::is_same<T, First>::value || is_alternative<T, Ts...>::value>
-    {
-    };
-
-    /**
-     * @brief check if index exists in a parameter pack.
-     */
-    template <std::size_t I, typename... Ts>
-        struct is_index : std::integral_constant < bool,
-        I<sizeof...(Ts)>
-    {
-    };
+    inline constexpr std::size_t find_index_v<T, First, Ts...> =
+        std::is_same_v<T, First> ? 0 : find_index_v<T, Ts...> + 1;
 
     /**
      * @brief count the number of time a type appears in a parameter pack.
      */
     template <typename T, typename... Ts>
-    struct count : std::integral_constant<std::size_t, 0>
-    {
-    };
-
-    /**
-     * @brief count the number of time a type appears in a parameter pack.
-     */
-    template <typename T, typename First, typename... Ts>
-    struct count<T, First, Ts...>
-    : std::integral_constant<std::size_t, count<T, Ts...>::value + std::is_same<T, First>::value>
-    {
-    };
+    inline constexpr std::size_t count_v = (std::size_t{0} + ... + std::is_same_v<T, Ts>);
 
     /**
      * @brief check if a type only appears one time in a parameter pack.
      */
     template <typename T, typename... Ts>
-    struct is_unique : std::integral_constant<bool, count<T, Ts...>::value == 1>
-    {
-    };
-
-    /**
-     * @brief check if an entire sequence is true.
-     */
-    template <bool... Ts>
-    using all = std::is_same<std::integer_sequence<bool, true, Ts...>, std::integer_sequence<bool, Ts..., true>>;
-
-    /**
-     * @brief check if types in a parameter pack are copy constructible.
-     */
-    template <typename... Ts>
-    struct are_copy_constructible : std::integral_constant<bool, all<std::is_copy_constructible<Ts>::value...>::value>
-    {
-    };
-
-    /**
-     * @brief check if types in a parameter pack are move constructible.
-     */
-    template <typename... Ts>
-    struct are_move_constructible : std::integral_constant<bool, all<std::is_move_constructible<Ts>::value...>::value>
-    {
-    };
-
-    /**
-     * @brief check if types in a parameter pack are copy assignable.
-     */
-    template <typename... Ts>
-    struct are_copy_assignable
-    : std::integral_constant<bool, are_copy_constructible<Ts...>::value && are_move_constructible<Ts...>::value &&
-                                       all<std::is_copy_assignable<Ts>::value...>::value>
-    {
-    };
-
-    /**
-     * @brief check if types in a parameter pack are move assignable.
-     */
-    template <typename... Ts>
-    struct are_move_assignable : std::integral_constant<bool, are_move_constructible<Ts...>::value &&
-                                                                  all<std::is_move_assignable<Ts>::value...>::value>
-    {
-    };
-
-    /**
-     * @brief check if types in a parameter pack are trivially copyable.
-     */
-    template <typename... Ts>
-    struct are_trivially_copyable : std::integral_constant<bool, all<std::is_trivially_copyable<Ts>::value...>::value>
-    {
-    };
-
-    /**
-     * @brief allow construction when default constructor is disabled.
-     */
-    struct EnableDefaultTag
-    {
-        explicit constexpr EnableDefaultTag () = default;
-    };
-
-    /**
-     * @brief enable default constructor.
-     */
-    template <bool _Switch, typename _Tag = void>
-    struct EnableDefault
-    {
-        constexpr EnableDefault () noexcept = default;
-        constexpr EnableDefault (EnableDefault const&) noexcept = default;
-        constexpr EnableDefault (EnableDefault&&) noexcept = default;
-
-        constexpr explicit EnableDefault (EnableDefaultTag)
-        {
-        }
-
-        EnableDefault& operator= (EnableDefault const&) noexcept = default;
-        EnableDefault& operator= (EnableDefault&&) noexcept = default;
-    };
-
-    /**
-     * @brief disable default constructor.
-     */
-    template <typename _Tag>
-    struct EnableDefault<false, _Tag>
-    {
-        constexpr EnableDefault () noexcept = delete;
-        constexpr EnableDefault (EnableDefault const&) noexcept = default;
-        constexpr EnableDefault (EnableDefault&&) noexcept = default;
-
-        constexpr explicit EnableDefault (EnableDefaultTag)
-        {
-        }
-
-        EnableDefault& operator= (EnableDefault const&) noexcept = default;
-        EnableDefault& operator= (EnableDefault&&) noexcept = default;
-    };
+    inline constexpr bool is_unique_v = count_v<T, Ts...> == 1;
 }
 
 #endif

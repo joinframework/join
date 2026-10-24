@@ -31,8 +31,10 @@
 #include <join/mutex.hpp>
 
 // C++.
+#include <compare>
 #include <memory>
 #include <vector>
+#include <tuple>
 
 // C.
 #include <linux/neighbour.h>
@@ -67,18 +69,14 @@ namespace join
     }
 
     /**
-     * @brief compare two neighbor keys for ordering.
+     * @brief three-way compare neighbor keys.
      * @param lhs left side key.
      * @param rhs right side key.
-     * @return true if lhs is less than rhs.
+     * @return ordering of lhs relative to rhs.
      */
-    inline bool operator< (const NeighborKey& lhs, const NeighborKey& rhs) noexcept
+    inline std::strong_ordering operator<=> (const NeighborKey& lhs, const NeighborKey& rhs) noexcept
     {
-        if (lhs._index != rhs._index)
-        {
-            return lhs._index < rhs._index;
-        }
-        return lhs._ip < rhs._ip;
+        return std::tie (lhs._index, lhs._ip) <=> std::tie (rhs._index, rhs._ip);
     }
 
     /**
@@ -199,8 +197,8 @@ namespace join
         // friendship with equal operator.
         friend bool operator== (const Neighbor::Ptr& lhs, const Neighbor::Ptr& rhs) noexcept;
 
-        // friendship with less operator.
-        friend bool operator< (const Neighbor::Ptr& lhs, const Neighbor::Ptr& rhs) noexcept;
+        // friendship with three-way comparison operator.
+        friend std::strong_ordering operator<=> (const Neighbor::Ptr& lhs, const Neighbor::Ptr& rhs) noexcept;
 
         // friendship with neighbor manager.
         friend class NeighborManager;
@@ -226,26 +224,18 @@ namespace join
     }
 
     /**
-     * @brief compare two neighbor for ordering.
-     * @param lhs left side key.
-     * @param rhs right side key.
-     * @return true if lhs is less than rhs.
+     * @brief three-way compare neighbors.
+     * @param lhs left side neighbor.
+     * @param rhs right side neighbor.
+     * @return ordering of lhs relative to rhs.
      */
-    inline bool operator< (const Neighbor::Ptr& lhs, const Neighbor::Ptr& rhs) noexcept
+    inline std::strong_ordering operator<=> (const Neighbor::Ptr& lhs, const Neighbor::Ptr& rhs) noexcept
     {
-        if (!lhs)
+        if (!lhs || !rhs)
         {
-            return true;
+            return bool (lhs) <=> bool (rhs);
         }
-        if (!rhs)
-        {
-            return false;
-        }
-        if (lhs->_index != rhs->_index)
-        {
-            return lhs->_index < rhs->_index;
-        }
-        return lhs->_ip < rhs->_ip;
+        return std::tie (lhs->_index, lhs->_ip) <=> std::tie (rhs->_index, rhs->_ip);
     }
 
     /// list of neighbors.

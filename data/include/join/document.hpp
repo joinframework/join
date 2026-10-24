@@ -31,6 +31,7 @@
 #include <join/sax.hpp>
 
 // C++.
+#include <algorithm>
 #include <iterator>
 #include <utility>
 #include <string>
@@ -69,14 +70,29 @@ namespace join
          * @brief move constructor.
          * @param other object to move.
          */
-        Document (Document&& other) = delete;
+        Document (Document&& other) noexcept
+        : _depth (other._depth)
+        , _stack (std::move (other._stack))
+        , _root (std::move (other._root))
+        {
+            std::copy_n (other._starts, _depth, _starts);
+            other._depth = 0;
+        }
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        Document& operator= (Document&& other) = delete;
+        Document& operator= (Document&& other) noexcept
+        {
+            std::copy_n (other._starts, other._depth, _starts);
+            _depth = other._depth;
+            _stack = std::move (other._stack);
+            _root = std::move (other._root);
+            other._depth = 0;
+            return *this;
+        }
 
         /**
          * @brief destroy instance.

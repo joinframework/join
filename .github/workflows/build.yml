@@ -77,7 +77,7 @@ jobs:
       - name: Check formatting
         uses: jidicula/clang-format-action@v4.18.0
         with:
-          clang-format-version: '18'
+          clang-format-version: '19'
           check-path: '.'
           exclude-regex: 'build'
 

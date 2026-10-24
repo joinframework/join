@@ -654,8 +654,8 @@ namespace join
          * @brief get input position indicator.
          * @return current position.
          */
-        template <bool S = Seekable>
-        inline typename std::enable_if<S, ViewPos>::type tell () const noexcept
+        inline ViewPos tell () const noexcept
+            requires Seekable
         {
             return _in->pubseekoff (0, std::ios::cur, std::ios::in);
         }
@@ -664,8 +664,8 @@ namespace join
          * @brief seek to the specified position.
          * @param pos position to seek to.
          */
-        template <bool S = Seekable>
-        inline typename std::enable_if<S, void>::type seek (ViewPos pos) noexcept
+        inline void seek (ViewPos pos) noexcept
+            requires Seekable
         {
             _in->pubseekpos (pos, std::ios::in);
         }
@@ -692,33 +692,26 @@ namespace join
 
     /**
      * @brief trait to determine if a view type is seekable.
-     * @tparam ViewType view type to check.
      */
     template <typename ViewType>
-    struct is_seekable : std::false_type
-    {
-    };
+    inline constexpr bool is_seekable_v = false;
 
     /**
      * @brief specialization for StringView (seekable).
      */
     template <>
-    struct is_seekable<StringView> : std::true_type
-    {
-    };
+    inline constexpr bool is_seekable_v<StringView> = true;
 
     /**
      * @brief specialization for seekable view.
      */
     template <>
-    struct is_seekable<BasicStreamView<true>> : std::true_type
-    {
-    };
+    inline constexpr bool is_seekable_v<BasicStreamView<true>> = true;
 
     /**
      * @brief buffering view adapter
      */
-    template <typename ViewType, bool Seekable = is_seekable<ViewType>::value>
+    template <typename ViewType, bool Seekable = is_seekable_v<ViewType>>
     class BufferingView;
 
     /**

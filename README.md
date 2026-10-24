@@ -83,7 +83,7 @@ Install required libraries and test dependencies:
 sudo apt install pkg-config libssl-dev zlib1g-dev libgtest-dev libgmock-dev
 ```
 
-> **Compilers:** Both GCC and Clang are supported. Clang requires `libclang-rt-dev` for coverage instrumentation (`--coverage`).  
+> **Compilers:** GCC 11+ or Clang 16+ (C++20). Clang requires `libclang-rt-dev` for coverage instrumentation (`--coverage`).  
 > **OpenSSL** provides the core TLS runtime.  
 > **Platform:** Linux 5.11+ and glibc 2.35+ (`epoll_pwait2`). The io_uring backend requires Linux 6.0+ (multishot `recv`).
 

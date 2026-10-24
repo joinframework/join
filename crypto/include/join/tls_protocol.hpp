@@ -105,17 +105,6 @@ namespace join
     }
 
     /**
-     * @brief check if not equals.
-     * @param a protocol to check.
-     * @param b protocol to check.
-     * @return true if not equals.
-     */
-    constexpr bool operator!= (const Tls& a, const Tls& b) noexcept
-    {
-        return !(a == b);
-    }
-
-    /**
      * @brief DTLS protocol class (DTLS over UDP).
      */
     class Dtls
@@ -177,17 +166,6 @@ namespace join
     constexpr bool operator== (const Dtls& a, const Dtls& b) noexcept
     {
         return a.family () == b.family ();
-    }
-
-    /**
-     * @brief check if not equals.
-     * @param a protocol to check.
-     * @param b protocol to check.
-     * @return true if not equals.
-     */
-    constexpr bool operator!= (const Dtls& a, const Dtls& b) noexcept
-    {
-        return !(a == b);
     }
 }
 

@@ -536,47 +536,11 @@ bool join::operator== (const MacAddress& a, const MacAddress& b)
 
 // =========================================================================
 //   CLASS     :
-//   METHOD    : operator!=
+//   METHOD    : operator<=>
 // =========================================================================
-bool join::operator!= (const MacAddress& a, const MacAddress& b)
+std::strong_ordering join::operator<=> (const MacAddress& a, const MacAddress& b)
 {
-    return !(a == b);
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : operator<
-// =========================================================================
-bool join::operator< (const MacAddress& a, const MacAddress& b)
-{
-    return memcmp (a.addr (), b.addr (), a.length ()) < 0;
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : operator<=
-// =========================================================================
-bool join::operator<= (const MacAddress& a, const MacAddress& b)
-{
-    return !(b < a);
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : operator>
-// =========================================================================
-bool join::operator> (const MacAddress& a, const MacAddress& b)
-{
-    return b < a;
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : operator>=
-// =========================================================================
-bool join::operator>= (const MacAddress& a, const MacAddress& b)
-{
-    return !(a < b);
+    return memcmp (a.addr (), b.addr (), a.length ()) <=> 0;
 }
 
 // =========================================================================

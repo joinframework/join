@@ -29,9 +29,10 @@
 #include <join/ip_address.hpp>
 
 // C++
-#include <array>
-#include <string>
 #include <ostream>
+#include <compare>
+#include <string>
+#include <array>
 
 // C
 #include <unistd.h>
@@ -338,44 +339,12 @@ namespace join
     bool operator== (const MacAddress& a, const MacAddress& b);
 
     /**
-     * @brief compare if two MAC address are different.
-     * @param a MAC address to compare.
-     * @param b MAC address to compare to.
-     * @return true if different.
+     * @brief three-way compare MAC addresses.
+     * @param a address to compare.
+     * @param b address to compare to.
+     * @return ordering of a relative to b.
      */
-    bool operator!= (const MacAddress& a, const MacAddress& b);
-
-    /**
-     * @brief compare if MAC address is inferior.
-     * @param a MAC address to compare.
-     * @param b MAC address to compare to.
-     * @return true if inferior.
-     */
-    bool operator< (const MacAddress& a, const MacAddress& b);
-
-    /**
-     * @brief compare if MAC address is inferior or equal.
-     * @param a MAC address to compare.
-     * @param b MAC address to compare to.
-     * @return true if inferior or equal.
-     */
-    bool operator<= (const MacAddress& a, const MacAddress& b);
-
-    /**
-     * @brief compare if MAC address is superior.
-     * @param a MAC address to compare.
-     * @param b MAC address to compare to.
-     * @return true if superior.
-     */
-    bool operator> (const MacAddress& a, const MacAddress& b);
-
-    /**
-     * @brief compare if MAC address is superior or equal.
-     * @param a MAC address to compare.
-     * @param b MAC address to compare to.
-     * @return true if superior or equal.
-     */
-    bool operator>= (const MacAddress& a, const MacAddress& b);
+    std::strong_ordering operator<=> (const MacAddress& a, const MacAddress& b);
 
     /**
      * @brief perform AND operation on MAC address.

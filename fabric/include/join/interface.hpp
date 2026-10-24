@@ -31,6 +31,7 @@
 #include <join/mutex.hpp>
 
 // C++.
+#include <compare>
 #include <string>
 #include <memory>
 #include <vector>
@@ -345,8 +346,8 @@ namespace join
         // friendship with equal operator.
         friend bool operator== (const Interface::Ptr& lhs, const Interface::Ptr& rhs) noexcept;
 
-        // friendship with less operator.
-        friend bool operator< (const Interface::Ptr& lhs, const Interface::Ptr& rhs) noexcept;
+        // friendship with three-way comparison operator.
+        friend std::strong_ordering operator<=> (const Interface::Ptr& lhs, const Interface::Ptr& rhs) noexcept;
 
         // friendship with interface manager.
         friend class InterfaceManager;
@@ -372,22 +373,18 @@ namespace join
     }
 
     /**
-     * @brief compare if interface is inferior.
+     * @brief three-way compare interfaces.
      * @param lhs interface to compare.
      * @param rhs interface to compare to.
-     * @return true if inferior.
+     * @return ordering of lhs relative to rhs.
      */
-    inline bool operator< (const Interface::Ptr& lhs, const Interface::Ptr& rhs) noexcept
+    inline std::strong_ordering operator<=> (const Interface::Ptr& lhs, const Interface::Ptr& rhs) noexcept
     {
-        if (!lhs)
+        if (!lhs || !rhs)
         {
-            return true;
+            return bool (lhs) <=> bool (rhs);
         }
-        if (!rhs)
-        {
-            return false;
-        }
-        return lhs->_index < rhs->_index;
+        return lhs->_index <=> rhs->_index;
     }
 
     /// list of interfaces.

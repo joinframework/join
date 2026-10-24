@@ -1605,57 +1605,21 @@ bool join::operator== (const IpAddress& a, const IpAddress& b)
 
 // =========================================================================
 //   CLASS     :
-//   METHOD    : operator!=
+//   METHOD    : operator<=>
 // =========================================================================
-bool join::operator!= (const IpAddress& a, const IpAddress& b)
-{
-    return !(a == b);
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : operator<
-// =========================================================================
-bool join::operator< (const IpAddress& a, const IpAddress& b)
+std::strong_ordering join::operator<=> (const IpAddress& a, const IpAddress& b)
 {
     if (a.family () == b.family ())
     {
         if (a.scope () != b.scope ())
         {
-            return a.scope () < b.scope ();
+            return a.scope () <=> b.scope ();
         }
 
-        return memcmp (a.addr (), b.addr (), a.length ()) < 0;
+        return memcmp (a.addr (), b.addr (), a.length ()) <=> 0;
     }
 
-    return a.length () < b.length ();
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : operator<=
-// =========================================================================
-bool join::operator<= (const IpAddress& a, const IpAddress& b)
-{
-    return !(b < a);
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : operator>
-// =========================================================================
-bool join::operator> (const IpAddress& a, const IpAddress& b)
-{
-    return b < a;
-}
-
-// =========================================================================
-//   CLASS     :
-//   METHOD    : operator>=
-// =========================================================================
-bool join::operator>= (const IpAddress& a, const IpAddress& b)
-{
-    return !(a < b);
+    return a.length () <=> b.length ();
 }
 
 // =========================================================================

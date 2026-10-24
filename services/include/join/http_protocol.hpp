@@ -135,17 +135,6 @@ namespace join
     }
 
     /**
-     * @brief check if not equals.
-     * @param a protocol to check.
-     * @param b protocol to check.
-     * @return true if not equals.
-     */
-    constexpr bool operator!= (const Http& a, const Http& b) noexcept
-    {
-        return !(a == b);
-    }
-
-    /**
      * @brief HTTPS protocol class (HTTP over TLS).
      */
     class Https
@@ -215,17 +204,6 @@ namespace join
     constexpr bool operator== (const Https& a, const Https& b) noexcept
     {
         return a.family () == b.family ();
-    }
-
-    /**
-     * @brief check if not equals.
-     * @param a protocol to check.
-     * @param b protocol to check.
-     * @return true if not equals.
-     */
-    constexpr bool operator!= (const Https& a, const Https& b) noexcept
-    {
-        return !(a == b);
     }
 }
 

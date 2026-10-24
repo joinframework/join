@@ -128,6 +128,57 @@ struct Counter : public join::SaxHandler
 };
 
 /**
+ * @brief Test move constructor.
+ */
+TEST (Document, moveConstruct)
+{
+    Document document;
+    ASSERT_EQ (JsonReader ().deserialize (std::string ("[1,{\"a\":2}]"), document), 0) << join::lastError.message ();
+    Document moved (std::move (document));
+    ASSERT_EQ (moved.root (), (Array{1, Object{{"a", 2}}}));
+
+    Document partial;
+    ASSERT_EQ (partial.startArray (), 0);
+    ASSERT_EQ (partial.setInt (1), 0);
+    ASSERT_EQ (partial.startObject (), 0);
+    ASSERT_EQ (partial.setKey (Value ("a")), 0);
+    Document resumed (std::move (partial));
+    ASSERT_EQ (resumed.setInt (2), 0);
+    ASSERT_EQ (resumed.stopObject (), 0);
+    ASSERT_EQ (resumed.stopArray (), 0);
+    ASSERT_EQ (resumed.root (), (Array{1, Object{{"a", 2}}}));
+    ASSERT_EQ (partial.stopArray (), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+}
+
+/**
+ * @brief Test move assignment.
+ */
+TEST (Document, moveAssign)
+{
+    Document document;
+    ASSERT_EQ (JsonReader ().deserialize (std::string ("[1,{\"a\":2}]"), document), 0) << join::lastError.message ();
+    Document moved;
+    moved = std::move (document);
+    ASSERT_EQ (moved.root (), (Array{1, Object{{"a", 2}}}));
+
+    Document partial;
+    ASSERT_EQ (partial.startArray (), 0);
+    ASSERT_EQ (partial.setInt (1), 0);
+    ASSERT_EQ (partial.startObject (), 0);
+    ASSERT_EQ (partial.setKey (Value ("a")), 0);
+    Document resumed;
+    ASSERT_EQ (resumed.startArray (), 0);
+    resumed = std::move (partial);
+    ASSERT_EQ (resumed.setInt (2), 0);
+    ASSERT_EQ (resumed.stopObject (), 0);
+    ASSERT_EQ (resumed.stopArray (), 0);
+    ASSERT_EQ (resumed.root (), (Array{1, Object{{"a", 2}}}));
+    ASSERT_EQ (partial.stopArray (), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+}
+
+/**
  * @brief Test root method.
  */
 TEST (Document, root)
