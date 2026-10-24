@@ -1424,16 +1424,20 @@ namespace join
 
             value = static_cast<double> (significand);
 
-            if (JOIN_UNLIKELY ((exponent > 22) && (exponent < (22 + 16))))
-            {
-                value *= pow10[exponent - 22];
-                exponent = 22;
-            }
-
             if (JOIN_LIKELY ((exponent >= -22) && (exponent <= 22) && (value <= 9007199254740991.0)))
             {
                 value = (exponent < 0) ? (value / pow10[-exponent]) : (value * pow10[exponent]);
                 return true;
+            }
+
+            if (JOIN_UNLIKELY ((exponent > 22) && (exponent < (22 + 16))))
+            {
+                const double scaled = value * pow10[exponent - 22];
+                if (scaled <= 9007199254740991.0)
+                {
+                    value = scaled * pow10[22];
+                    return true;
+                }
             }
 
             if (JOIN_UNLIKELY (value == 0.0))
@@ -1489,8 +1493,12 @@ namespace join
             uint64_t bits = (static_cast<uint64_t> (exp) << 52) | mant;
             uint64_t frac = high & 0x7FF;
 
-            bool roundUp = ((frac > 0x400) | ((frac == 0x400) && ((middle != 0) || (mant & 1))) |
-                            ((frac == 0x3FF) && ((middle != 0))));
+            if (JOIN_UNLIKELY ((frac == 0x3FF) && ((middle >> 8) == (~0ULL >> 8))))
+            {
+                return false;
+            }
+
+            bool roundUp = (frac > 0x400) | ((frac == 0x400) && ((middle != 0) || (mant & 1)));
 
             bits += roundUp;
             std::memcpy (&value, &bits, sizeof (double));
