@@ -196,10 +196,12 @@ namespace join
          */
         Rdtsc ()
         {
+#if defined(__x86_64__) || defined(__i386__)
             if (!invariant ())
             {
                 throw std::runtime_error ("cycle counter is not invariant");  // LCOV_EXCL_LINE
             }
+#endif
             calibrate ();
         }
 

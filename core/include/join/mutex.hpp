@@ -38,8 +38,9 @@ namespace join
     public:
         /**
          * @brief default constructor.
+         * @param inherit enable priority inheritance.
          */
-        Mutex ();
+        explicit Mutex (bool inherit = false);
 
         /**
          * @brief copy constructor.
@@ -107,8 +108,9 @@ namespace join
     public:
         /**
          * @brief default constructor.
+         * @param inherit enable priority inheritance.
          */
-        RecursiveMutex ();
+        explicit RecursiveMutex (bool inherit = false);
 
         /**
          * @brief copy constructor.
@@ -177,8 +179,9 @@ namespace join
     public:
         /**
          * @brief default constructor.
+         * @param inherit enable priority inheritance.
          */
-        SharedMutex ();
+        explicit SharedMutex (bool inherit = false);
 
         /**
          * @brief copy constructor.

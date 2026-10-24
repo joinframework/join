@@ -32,7 +32,6 @@
 #include <future>
 #include <thread>
 
-using join::Thread;
 using join::Futex;
 using join::ScopedLock;
 
@@ -44,12 +43,9 @@ using namespace std::chrono_literals;
 TEST (Futex, lock)
 {
     Futex futex;
-    uint32_t waiters = 0;
-    auto task = std::async (std::launch::async, [&futex, &waiters] () {
+    auto task = std::async (std::launch::async, [&futex] () {
         futex.lock ();
-        EXPECT_EQ (futex.handle ()->load (), static_cast<uint32_t> (Thread::currentId ()));
         std::this_thread::sleep_for (15ms);
-        waiters = futex.handle ()->load () & FUTEX_WAITERS;
         futex.unlock ();
     });
     std::this_thread::sleep_for (5ms);
@@ -57,11 +53,8 @@ TEST (Futex, lock)
     futex.lock ();
     auto end = std::chrono::high_resolution_clock::now ();
     EXPECT_GT (std::chrono::duration_cast<std::chrono::milliseconds> (end - beg), 5ms);
-    EXPECT_EQ (futex.handle ()->load () & FUTEX_TID_MASK, static_cast<uint32_t> (Thread::currentId ()));
     futex.unlock ();
-    EXPECT_EQ (futex.handle ()->load (), 0u);
     task.wait ();
-    EXPECT_NE (waiters, 0u);
 }
 
 /**
@@ -79,7 +72,6 @@ TEST (Futex, tryLock)
     EXPECT_FALSE (futex.tryLock ());
     std::this_thread::sleep_for (15ms);
     EXPECT_TRUE (futex.tryLock ());
-    EXPECT_EQ (futex.handle ()->load (), static_cast<uint32_t> (Thread::currentId ()));
     futex.unlock ();
     task.wait ();
 }

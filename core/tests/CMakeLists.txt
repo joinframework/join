@@ -211,10 +211,20 @@ target_link_libraries(futex.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME futex.gtest COMMAND futex.gtest)
 install(TARGETS futex.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(pi_futex.gtest pi_futex_test.cpp)
+target_link_libraries(pi_futex.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME pi_futex.gtest COMMAND pi_futex.gtest)
+install(TARGETS pi_futex.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(shared_futex.gtest shared_futex_test.cpp)
 target_link_libraries(shared_futex.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME shared_futex.gtest COMMAND shared_futex.gtest)
 install(TARGETS shared_futex.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(shared_pi_futex.gtest shared_pi_futex_test.cpp)
+target_link_libraries(shared_pi_futex.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME shared_pi_futex.gtest COMMAND shared_pi_futex.gtest)
+install(TARGETS shared_pi_futex.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
 add_executable(function.gtest function_test.cpp)
 target_link_libraries(function.gtest ${JOIN_CORE} GTest::gtest_main)
