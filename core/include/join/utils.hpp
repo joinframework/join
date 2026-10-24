@@ -37,9 +37,9 @@
 #include <chrono>
 #include <random>
 #include <limits>
+#include <bit>
 
 // C.
-#include <endian.h>
 #include <cstdint>
 #include <cstddef>
 #include <cstring>
@@ -57,118 +57,6 @@ namespace join
 {
     namespace details
     {
-        template <typename Type, size_t sz>
-        struct _byteswap
-        {
-            inline Type operator() ([[maybe_unused]] Type val)
-            {
-                throw std::out_of_range ("data size");
-            }
-        };
-
-        template <typename Type>
-        struct _byteswap<Type, 1>
-        {
-            inline Type operator() (Type val)
-            {
-                return val;
-            }
-        };
-
-        template <typename Type>
-        struct _byteswap<Type, 2>
-        {
-            inline Type operator() (Type val)
-            {
-                if (BYTE_ORDER == LITTLE_ENDIAN)
-                {
-                    return (val >> 8) | (val << 8);
-                }
-                return val;
-            }
-        };
-
-        template <typename Type>
-        struct _byteswap<Type, 4>
-        {
-            inline Type operator() (Type val)
-            {
-                if (BYTE_ORDER == LITTLE_ENDIAN)
-                {
-                    return ((val & 0xff000000) >> 24) | ((val & 0x00ff0000) >> 8) | ((val & 0x0000ff00) << 8) |
-                           ((val & 0x000000ff) << 24);
-                }
-                return val;
-            }
-        };
-
-        template <typename Type>
-        struct _byteswap<Type, 8>
-        {
-            inline Type operator() (Type val)
-            {
-                if (BYTE_ORDER == LITTLE_ENDIAN)
-                {
-                    return ((val & 0xff00000000000000ull) >> 56) | ((val & 0x00ff000000000000ull) >> 40) |
-                           ((val & 0x0000ff0000000000ull) >> 24) | ((val & 0x000000ff00000000ull) >> 8) |
-                           ((val & 0x00000000ff000000ull) << 8) | ((val & 0x0000000000ff0000ull) << 24) |
-                           ((val & 0x000000000000ff00ull) << 40) | ((val & 0x00000000000000ffull) << 56);
-                }
-                return val;
-            }
-        };
-
-        template <>
-        struct _byteswap<float, 4>
-        {
-            inline float operator() (float val)
-            {
-                if (BYTE_ORDER == LITTLE_ENDIAN)
-                {
-                    union
-                    {
-                        float f;
-                        uint32_t i;
-                    } tmp;
-
-                    tmp.f = val;
-                    tmp.i = _byteswap<uint32_t, sizeof (uint32_t)> () (tmp.i);
-                    return tmp.f;
-                }
-                return val;
-            }
-        };
-
-        template <>
-        struct _byteswap<double, 8>
-        {
-            inline double operator() (double val)
-            {
-                if (BYTE_ORDER == LITTLE_ENDIAN)
-                {
-                    union
-                    {
-                        double f;
-                        uint64_t i;
-                    } tmp;
-
-                    tmp.f = val;
-                    tmp.i = _byteswap<uint64_t, sizeof (uint64_t)> () (tmp.i);
-                    return tmp.f;
-                }
-                return val;
-            }
-        };
-
-        template <class Type>
-        struct _swap
-        {
-            inline Type operator() (Type val)
-            {
-                return _byteswap<Type, sizeof (Type)> () (val);
-            }
-        };
-
         struct lessNoCase
         {
             bool operator() (const std::string& a, const std::string& b) const noexcept
@@ -185,8 +73,23 @@ namespace join
      */
     template <class Type>
     inline Type& swap (Type& val)
+        requires (std::is_arithmetic_v<Type> && sizeof (Type) <= sizeof (uint64_t))
     {
-        val = details::_swap<Type> () (val);
+        if constexpr (std::endian::native == std::endian::little)
+        {
+            if constexpr (sizeof (Type) == sizeof (uint16_t))
+            {
+                val = std::bit_cast<Type> (__builtin_bswap16 (std::bit_cast<uint16_t> (val)));
+            }
+            else if constexpr (sizeof (Type) == sizeof (uint32_t))
+            {
+                val = std::bit_cast<Type> (__builtin_bswap32 (std::bit_cast<uint32_t> (val)));
+            }
+            else if constexpr (sizeof (Type) == sizeof (uint64_t))
+            {
+                val = std::bit_cast<Type> (__builtin_bswap64 (std::bit_cast<uint64_t> (val)));
+            }
+        }
         return val;
     }
 
@@ -414,11 +317,14 @@ namespace join
 
         if (len == 1)
         {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-            sum += *reinterpret_cast<const uint8_t*> (data);
-#else
-            sum += *reinterpret_cast<const uint8_t*> (data) << 8;
-#endif
+            if constexpr (std::endian::native == std::endian::little)
+            {
+                sum += *reinterpret_cast<const uint8_t*> (data);
+            }
+            else
+            {
+                sum += *reinterpret_cast<const uint8_t*> (data) << 8;
+            }
         }
 
         sum = (sum >> 16) + (sum & 0xffff);

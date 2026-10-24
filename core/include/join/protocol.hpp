@@ -28,6 +28,9 @@
 // libjoin.
 #include <join/endpoint.hpp>
 
+// C++.
+#include <bit>
+
 // C.
 #include <net/ethernet.h>
 #ifdef JOIN_HAS_XDP
@@ -133,7 +136,7 @@ namespace join
          */
         constexpr int protocol () const noexcept
         {
-            if (BYTE_ORDER == LITTLE_ENDIAN)
+            if constexpr (std::endian::native == std::endian::little)
             {
                 return (ETH_P_ALL >> 8) | (ETH_P_ALL << 8);
             }

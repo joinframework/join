@@ -714,7 +714,8 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::None, int>::type writeEscaped (const std::string& value)
+        int writeEscaped (const std::string& value)
+            requires (Mode == JsonWriteMode::None)
         {
             const char* cur = value.data ();
             const char* end = cur + value.size ();
@@ -781,7 +782,8 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonWriteMode Mode = WriteMode>
-        typename std::enable_if<Mode == JsonWriteMode::Canonical, int>::type writeEscaped (const std::string& value)
+        int writeEscaped (const std::string& value)
+            requires (Mode == JsonWriteMode::Canonical)
         {
             if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
             {
