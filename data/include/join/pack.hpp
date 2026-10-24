@@ -28,7 +28,7 @@
 // libjoin.
 #include <join/value.hpp>
 #include <join/utils.hpp>
-#include <join/view.hpp>
+#include <join/probe.hpp>
 #include <join/sax.hpp>
 
 // C++.
@@ -617,7 +617,7 @@ namespace join
         template <typename Handler>
         int deserialize (const char* document, size_t length, Handler& handler)
         {
-            StringView in (document, length);
+            StringProbe in (document, length);
             return read (in, handler);
         }
 
@@ -631,7 +631,7 @@ namespace join
         template <typename Handler>
         int deserialize (const char* first, const char* last, Handler& handler)
         {
-            StringView in (first, last);
+            StringProbe in (first, last);
             return read (in, handler);
         }
 
@@ -644,7 +644,7 @@ namespace join
         template <typename Handler>
         int deserialize (const std::string& document, Handler& handler)
         {
-            StringView in (document.c_str (), document.size ());
+            StringProbe in (document.c_str (), document.size ());
             return read (in, handler);
         }
 
@@ -657,7 +657,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::stringstream& document, Handler& handler)
         {
-            StringStreamView in (document);
+            StringStreamProbe in (document);
             return read (in, handler);
         }
 
@@ -670,7 +670,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::istringstream& document, Handler& handler)
         {
-            StringStreamView in (document);
+            StringStreamProbe in (document);
             return read (in, handler);
         }
 
@@ -683,7 +683,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::fstream& document, Handler& handler)
         {
-            FileStreamView in (document);
+            FileStreamProbe in (document);
             return read (in, handler);
         }
 
@@ -696,7 +696,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::ifstream& document, Handler& handler)
         {
-            FileStreamView in (document);
+            FileStreamProbe in (document);
             return read (in, handler);
         }
 
@@ -709,7 +709,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::iostream& document, Handler& handler)
         {
-            StreamView in (document);
+            StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -722,7 +722,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::istream& document, Handler& handler)
         {
-            StreamView in (document);
+            StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -733,8 +733,8 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int read (ViewType& document, Handler& handler)
+        template <typename ProbeType, typename Handler>
+        int read (ProbeType& document, Handler& handler)
         {
             try
             {
@@ -764,8 +764,8 @@ namespace join
          * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readValue (ViewType& document, Handler& handler, size_t depth)
+        template <typename ProbeType, typename Handler>
+        int readValue (ProbeType& document, Handler& handler, size_t depth)
         {
             int ch = document.peek ();
             if (JOIN_UNLIKELY (ch == std::char_traits<char>::eof ()))
@@ -822,8 +822,8 @@ namespace join
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readNull (ViewType& document, Handler& handler, bool isKey = false)
+        template <typename ProbeType, typename Handler>
+        int readNull (ProbeType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
             return (isKey) ? handler.setKey (Value (nullptr)) : handler.setNull ();
@@ -836,8 +836,8 @@ namespace join
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readFalse (ViewType& document, Handler& handler, bool isKey = false)
+        template <typename ProbeType, typename Handler>
+        int readFalse (ProbeType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
             return (isKey) ? handler.setKey (Value (false)) : handler.setBool (false);
@@ -850,8 +850,8 @@ namespace join
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readTrue (ViewType& document, Handler& handler, bool isKey = false)
+        template <typename ProbeType, typename Handler>
+        int readTrue (ProbeType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
             return (isKey) ? handler.setKey (Value (true)) : handler.setBool (true);
@@ -864,8 +864,8 @@ namespace join
          * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readArray (ViewType& document, Handler& handler, size_t depth)
+        template <typename ProbeType, typename Handler>
+        int readArray (ProbeType& document, Handler& handler, size_t depth)
         {
             if (JOIN_UNLIKELY (depth == saxMaxDepth))
             {
@@ -919,8 +919,8 @@ namespace join
          * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readObject (ViewType& document, Handler& handler, size_t depth)
+        template <typename ProbeType, typename Handler>
+        int readObject (ProbeType& document, Handler& handler, size_t depth)
         {
             if (JOIN_UNLIKELY (depth == saxMaxDepth))
             {
@@ -978,8 +978,8 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readKey (ViewType& document, Handler& handler)
+        template <typename ProbeType, typename Handler>
+        int readKey (ProbeType& document, Handler& handler)
         {
             int ch = document.peek ();
             if (JOIN_UNLIKELY (ch == std::char_traits<char>::eof ()))
@@ -1024,8 +1024,8 @@ namespace join
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readString (ViewType& document, Handler& handler, bool isKey = false)
+        template <typename ProbeType, typename Handler>
+        int readString (ProbeType& document, Handler& handler, bool isKey = false)
         {
             uint32_t len = 0;
 
@@ -1070,8 +1070,8 @@ namespace join
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readBin (ViewType& document, Handler& handler)
+        template <typename ProbeType, typename Handler>
+        int readBin (ProbeType& document, Handler& handler)
         {
             uint32_t len = 0;
 
@@ -1113,8 +1113,8 @@ namespace join
          * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType, typename Handler>
-        int readNumber (ViewType& document, Handler& handler, bool isKey = false)
+        template <typename ProbeType, typename Handler>
+        int readNumber (ProbeType& document, Handler& handler, bool isKey = false)
         {
             uint8_t head = document.get ();
 
@@ -1232,8 +1232,8 @@ namespace join
          * @param output string receiving the bytes.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ViewType>
-        static int readBytes (ViewType& document, uint32_t len, std::string& output)
+        template <typename ProbeType>
+        static int readBytes (ProbeType& document, uint32_t len, std::string& output)
         {
             while (len)
             {
@@ -1256,8 +1256,8 @@ namespace join
          * @param output unpacked value.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename Type, typename ViewType, typename Output>
-        static int unpack (ViewType& document, Output& output)
+        template <typename Type, typename ProbeType, typename Output>
+        static int unpack (ProbeType& document, Output& output)
             requires std::is_arithmetic_v<Type>
         {
             Type value;

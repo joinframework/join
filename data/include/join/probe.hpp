@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_DATA_VIEW_HPP
-#define JOIN_DATA_VIEW_HPP
+#ifndef JOIN_DATA_PROBE_HPP
+#define JOIN_DATA_PROBE_HPP
 
 // libjoin.
 #include <join/utils.hpp>
@@ -78,19 +78,19 @@ namespace join
     }
 
     /**
-     * @brief string view.
+     * @brief string probe.
      */
-    class StringView
+    class StringProbe
     {
     public:
-        using ViewPos = const char*;
+        using ProbePos = const char*;
 
         /**
          * @brief default constructor.
          * @param in input string.
          * @param count number of characters.
          */
-        constexpr StringView (const char* in, size_t count)
+        constexpr StringProbe (const char* in, size_t count)
         : _cur (in)
         , _beg (in)
         , _end (in ? in + count : in)
@@ -102,7 +102,7 @@ namespace join
          * @param first pointer to the first character of the string.
          * @param last pointer to the last character of the string.
          */
-        constexpr StringView (const char* first, const char* last)
+        constexpr StringProbe (const char* first, const char* last)
         : _cur (first)
         , _beg (first)
         , _end (last)
@@ -113,7 +113,7 @@ namespace join
          * @brief default constructor.
          * @param in input string.
          */
-        StringView (const char* in)
+        StringProbe (const char* in)
         : _cur (in)
         , _beg (in)
         , _end (in ? in + std::char_traits<char>::length (in) : in)
@@ -124,32 +124,32 @@ namespace join
          * @brief copy constructor.
          * @param other object to copy.
          */
-        StringView (const StringView& other) = default;
+        StringProbe (const StringProbe& other) = default;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        StringView& operator= (const StringView& other) = default;
+        StringProbe& operator= (const StringProbe& other) = default;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        StringView (StringView&& other) = default;
+        StringProbe (StringProbe&& other) = default;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        StringView& operator= (StringView&& other) = default;
+        StringProbe& operator= (StringProbe&& other) = default;
 
         /**
          * @brief destroy instance.
          */
-        ~StringView () = default;
+        ~StringProbe () = default;
 
         /**
          * @brief get character without extracting it.
@@ -388,7 +388,7 @@ namespace join
          * @brief get input position indicator.
          * @return current position.
          */
-        inline ViewPos tell () const noexcept
+        inline ProbePos tell () const noexcept
         {
             return _cur;
         }
@@ -397,7 +397,7 @@ namespace join
          * @brief seek to the specified position.
          * @param pos position to seek to.
          */
-        inline void seek (ViewPos pos) noexcept
+        inline void seek (ProbePos pos) noexcept
         {
             if (JOIN_LIKELY (pos >= _beg && pos <= _end))
             {
@@ -425,19 +425,19 @@ namespace join
     };
 
     /**
-     * @brief basic stream view.
+     * @brief basic stream probe.
      */
     template <bool Seekable = true>
-    class BasicStreamView
+    class BasicStreamProbe
     {
     public:
-        using ViewPos = std::streampos;
+        using ProbePos = std::streampos;
 
         /**
          * @brief default constructor.
          * @param in input stream.
          */
-        BasicStreamView (std::istream& in)
+        BasicStreamProbe (std::istream& in)
         : _in (in.rdbuf ())
         {
         }
@@ -446,32 +446,32 @@ namespace join
          * @brief copy constructor.
          * @param other object to copy.
          */
-        BasicStreamView (const BasicStreamView& other) = delete;
+        BasicStreamProbe (const BasicStreamProbe& other) = delete;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        BasicStreamView& operator= (const BasicStreamView& other) = delete;
+        BasicStreamProbe& operator= (const BasicStreamProbe& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        BasicStreamView (BasicStreamView&& other) = delete;
+        BasicStreamProbe (BasicStreamProbe&& other) = delete;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        BasicStreamView& operator= (BasicStreamView&& other) = delete;
+        BasicStreamProbe& operator= (BasicStreamProbe&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        ~BasicStreamView () = default;
+        ~BasicStreamProbe () = default;
 
         /**
          * @brief get character without extracting it.
@@ -654,7 +654,7 @@ namespace join
          * @brief get input position indicator.
          * @return current position.
          */
-        inline ViewPos tell () const noexcept
+        inline ProbePos tell () const noexcept
             requires Seekable
         {
             return _in->pubseekoff (0, std::ios::cur, std::ios::in);
@@ -664,7 +664,7 @@ namespace join
          * @brief seek to the specified position.
          * @param pos position to seek to.
          */
-        inline void seek (ViewPos pos) noexcept
+        inline void seek (ProbePos pos) noexcept
             requires Seekable
         {
             _in->pubseekpos (pos, std::ios::in);
@@ -676,58 +676,58 @@ namespace join
     };
 
     /**
-     * @brief string stream view (seekable).
+     * @brief string stream probe (seekable).
      */
-    using StringStreamView = BasicStreamView<true>;
+    using StringStreamProbe = BasicStreamProbe<true>;
 
     /**
-     * @brief file stream view (seekable).
+     * @brief file stream probe (seekable).
      */
-    using FileStreamView = BasicStreamView<true>;
+    using FileStreamProbe = BasicStreamProbe<true>;
 
     /**
-     * @brief stream view (non-seekable, for pipes/network streams).
+     * @brief stream probe (non-seekable, for pipes/network streams).
      */
-    using StreamView = BasicStreamView<false>;
+    using StreamProbe = BasicStreamProbe<false>;
 
     /**
-     * @brief trait to determine if a view type is seekable.
+     * @brief trait to determine if a probe type is seekable.
      */
-    template <typename ViewType>
+    template <typename ProbeType>
     inline constexpr bool is_seekable_v = false;
 
     /**
-     * @brief specialization for StringView (seekable).
+     * @brief specialization for StringProbe (seekable).
      */
     template <>
-    inline constexpr bool is_seekable_v<StringView> = true;
+    inline constexpr bool is_seekable_v<StringProbe> = true;
 
     /**
-     * @brief specialization for seekable view.
+     * @brief specialization for seekable probe.
      */
     template <>
-    inline constexpr bool is_seekable_v<BasicStreamView<true>> = true;
+    inline constexpr bool is_seekable_v<BasicStreamProbe<true>> = true;
 
     /**
-     * @brief buffering view adapter
+     * @brief buffering probe adapter
      */
-    template <typename ViewType, bool Seekable = is_seekable_v<ViewType>>
-    class BufferingView;
+    template <typename ProbeType, bool Seekable = is_seekable_v<ProbeType>>
+    class BufferingProbe;
 
     /**
-     * @brief buffering view specialization for seekable view.
+     * @brief buffering probe specialization for seekable probe.
      */
-    template <typename ViewType>
-    class BufferingView<ViewType, true>
+    template <typename ProbeType>
+    class BufferingProbe<ProbeType, true>
     {
     public:
         /**
          * @brief default constructor.
-         * @param view view.
+         * @param probe probe.
          */
-        explicit BufferingView (ViewType& view)
-        : _view (view)
-        , _beg (view.tell ())
+        explicit BufferingProbe (ProbeType& probe)
+        : _probe (probe)
+        , _beg (probe.tell ())
         {
         }
 
@@ -737,7 +737,7 @@ namespace join
          */
         inline int peek () const noexcept
         {
-            return _view.peek ();
+            return _probe.peek ();
         }
 
         /**
@@ -746,7 +746,7 @@ namespace join
          */
         inline int get () noexcept
         {
-            return _view.get ();
+            return _probe.get ();
         }
 
         /**
@@ -756,7 +756,7 @@ namespace join
          */
         inline bool getIf (char expected) noexcept
         {
-            return _view.getIf (expected);
+            return _probe.getIf (expected);
         }
 
         /**
@@ -766,7 +766,7 @@ namespace join
          */
         inline bool getIfNoCase (char expected) noexcept
         {
-            return _view.getIfNoCase (expected);
+            return _probe.getIfNoCase (expected);
         }
 
         /**
@@ -777,7 +777,7 @@ namespace join
          */
         inline size_t readDigits (uint64_t& value, size_t max = std::numeric_limits<size_t>::max ()) noexcept
         {
-            return _view.readDigits (value, max);
+            return _probe.readDigits (value, max);
         }
 
         /**
@@ -786,11 +786,11 @@ namespace join
          */
         inline void snapshot (std::string& out)
         {
-            size_t len = _view.tell () - _beg;
+            size_t len = _probe.tell () - _beg;
             out.resize (len);
 
-            _view.seek (_beg);
-            _view.read (&out[0], len);
+            _probe.seek (_beg);
+            _probe.read (&out[0], len);
         }
 
         /**
@@ -800,30 +800,30 @@ namespace join
         inline void consume (std::string& out)
         {
             snapshot (out);
-            _beg = _view.tell ();
+            _beg = _probe.tell ();
         }
 
     private:
-        /// underlying view.
-        ViewType& _view;
+        /// underlying probe.
+        ProbeType& _probe;
 
         /// start position.
-        typename ViewType::ViewPos _beg;
+        typename ProbeType::ProbePos _beg;
     };
 
     /**
-     * @brief buffering view specialization for non-seekable view.
+     * @brief buffering probe specialization for non-seekable probe.
      */
-    template <typename ViewType>
-    class BufferingView<ViewType, false>
+    template <typename ProbeType>
+    class BufferingProbe<ProbeType, false>
     {
     public:
         /**
          * @brief default constructor.
-         * @param view view.
+         * @param probe probe.
          */
-        explicit BufferingView (ViewType& view)
-        : _view (view)
+        explicit BufferingProbe (ProbeType& probe)
+        : _probe (probe)
         {
             static thread_local std::vector<char> buffer;
             buffer.clear ();
@@ -837,7 +837,7 @@ namespace join
          */
         inline int peek () const noexcept
         {
-            return _view.peek ();
+            return _probe.peek ();
         }
 
         /**
@@ -846,7 +846,7 @@ namespace join
          */
         inline int get () noexcept
         {
-            const int c = _view.get ();
+            const int c = _probe.get ();
             if (JOIN_LIKELY (c != std::char_traits<char>::eof ()))
             {
                 _buf->push_back (static_cast<char> (c));
@@ -861,9 +861,9 @@ namespace join
          */
         inline bool getIf (char expected) noexcept
         {
-            if (_view.peek () == static_cast<int> (static_cast<unsigned char> (expected)))
+            if (_probe.peek () == static_cast<int> (static_cast<unsigned char> (expected)))
             {
-                _buf->push_back (static_cast<char> (_view.get ()));
+                _buf->push_back (static_cast<char> (_probe.get ()));
                 return true;
             }
             return false;
@@ -876,12 +876,12 @@ namespace join
          */
         inline bool getIfNoCase (char expected) noexcept
         {
-            const int c = _view.peek ();
+            const int c = _probe.peek ();
             if (JOIN_LIKELY (c != std::char_traits<char>::eof ()))
             {
                 if ((static_cast<char> (c) | 32) == (expected | 32))
                 {
-                    _buf->push_back (static_cast<char> (_view.get ()));
+                    _buf->push_back (static_cast<char> (_probe.get ()));
                     return true;
                 }
             }
@@ -925,8 +925,8 @@ namespace join
         }
 
     private:
-        /// underlying view.
-        ViewType& _view;
+        /// underlying probe.
+        ProbeType& _probe;
 
         /// buffer for consumed data.
         std::vector<char>* _buf = nullptr;
