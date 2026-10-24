@@ -178,42 +178,42 @@ TEST (StreamProbe, skipWhitespaces)
 TEST (StreamProbe, skipWhitespacesAndComments)
 {
     std::stringstream msg ("   // comment\nhello");
-    StringStreamProbe view1 (msg);
-    ASSERT_EQ (view1.skipWhitespacesAndComments (), 0);
-    ASSERT_EQ (view1.peek (), 'h');
+    StringStreamProbe probe1 (msg);
+    ASSERT_EQ (probe1.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (probe1.peek (), 'h');
 
     msg.str ("   /* comment */hello");
     msg.clear ();
-    StringStreamProbe view2 (msg);
-    ASSERT_EQ (view2.skipWhitespacesAndComments (), 0);
-    ASSERT_EQ (view2.peek (), 'h');
+    StringStreamProbe probe2 (msg);
+    ASSERT_EQ (probe2.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (probe2.peek (), 'h');
 
     msg.str ("// comment");
     msg.clear ();
-    StringStreamProbe view3 (msg);
-    ASSERT_EQ (view3.skipWhitespacesAndComments (), 0);
-    ASSERT_EQ (view3.peek (), std::char_traits<char>::eof ());
+    StringStreamProbe probe3 (msg);
+    ASSERT_EQ (probe3.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (probe3.peek (), std::char_traits<char>::eof ());
 
     msg.str ("/* comment */");
     msg.clear ();
-    StringStreamProbe view4 (msg);
-    ASSERT_EQ (view4.skipWhitespacesAndComments (), 0);
-    ASSERT_EQ (view4.peek (), std::char_traits<char>::eof ());
+    StringStreamProbe probe4 (msg);
+    ASSERT_EQ (probe4.skipWhitespacesAndComments (), 0);
+    ASSERT_EQ (probe4.peek (), std::char_traits<char>::eof ());
 
     msg.str ("/");
     msg.clear ();
-    StringStreamProbe view5 (msg);
-    ASSERT_EQ (view5.skipWhitespacesAndComments (), -1);
+    StringStreamProbe probe5 (msg);
+    ASSERT_EQ (probe5.skipWhitespacesAndComments (), -1);
 
     msg.str ("/*");
     msg.clear ();
-    StringStreamProbe view6 (msg);
-    ASSERT_EQ (view6.skipWhitespacesAndComments (), -1);
+    StringStreamProbe probe6 (msg);
+    ASSERT_EQ (probe6.skipWhitespacesAndComments (), -1);
 
     msg.str ("/!");
     msg.clear ();
-    StringStreamProbe view7 (msg);
-    ASSERT_EQ (view7.skipWhitespacesAndComments (), -1);
+    StringStreamProbe probe7 (msg);
+    ASSERT_EQ (probe7.skipWhitespacesAndComments (), -1);
 }
 
 /**

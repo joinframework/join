@@ -40,14 +40,14 @@ TEST (StringProbe, create)
 {
     char msg[] = "hello world";
 
-    StringProbe view1 (msg);
-    ASSERT_NE (view1.peek (), std::char_traits<char>::eof ());
+    StringProbe probe1 (msg);
+    ASSERT_NE (probe1.peek (), std::char_traits<char>::eof ());
 
-    StringProbe view2 (msg, strlen (msg));
-    ASSERT_NE (view2.peek (), std::char_traits<char>::eof ());
+    StringProbe probe2 (msg, sizeof (msg) - 1);
+    ASSERT_NE (probe2.peek (), std::char_traits<char>::eof ());
 
-    StringProbe view3 (msg, msg + strlen (msg));
-    ASSERT_NE (view3.peek (), std::char_traits<char>::eof ());
+    StringProbe probe3 (msg, msg + sizeof (msg) - 1);
+    ASSERT_NE (probe3.peek (), std::char_traits<char>::eof ());
 }
 
 /**
