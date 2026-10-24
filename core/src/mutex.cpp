@@ -39,10 +39,14 @@ using join::ScopedLock;
 //   CLASS     : Mutex
 //   METHOD    : Mutex
 // =========================================================================
-Mutex::Mutex ()
+Mutex::Mutex (bool inherit)
 {
     pthread_mutexattr_t attr;
     pthread_mutexattr_init (&attr);
+    if (inherit)
+    {
+        pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
+    }
     pthread_mutex_init (&_handle, &attr);
     pthread_mutexattr_destroy (&attr);
 }
@@ -96,11 +100,15 @@ pthread_mutex_t* Mutex::handle () noexcept
 //   CLASS     : RecursiveMutex
 //   METHOD    : RecursiveMutex
 // =========================================================================
-RecursiveMutex::RecursiveMutex ()
+RecursiveMutex::RecursiveMutex (bool inherit)
 {
     pthread_mutexattr_t attr;
     pthread_mutexattr_init (&attr);
     pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_RECURSIVE);
+    if (inherit)
+    {
+        pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
+    }
     pthread_mutex_init (&_handle, &attr);
     pthread_mutexattr_destroy (&attr);
 }
@@ -154,12 +162,16 @@ pthread_mutex_t* RecursiveMutex::handle () noexcept
 //   CLASS     : SharedMutex
 //   METHOD    : SharedMutex
 // =========================================================================
-SharedMutex::SharedMutex ()
+SharedMutex::SharedMutex (bool inherit)
 {
     pthread_mutexattr_t attr;
     pthread_mutexattr_init (&attr);
     pthread_mutexattr_setpshared (&attr, PTHREAD_PROCESS_SHARED);
     pthread_mutexattr_setrobust (&attr, PTHREAD_MUTEX_ROBUST);
+    if (inherit)
+    {
+        pthread_mutexattr_setprotocol (&attr, PTHREAD_PRIO_INHERIT);
+    }
     pthread_mutex_init (&_handle, &attr);
     pthread_mutexattr_destroy (&attr);
 }

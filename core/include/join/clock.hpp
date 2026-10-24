@@ -26,10 +26,14 @@
 #define JOIN_CORE_CLOCK_HPP
 
 // C++.
+#include <stdexcept>
 #include <chrono>
 #include <mutex>
 
 // C.
+#if defined(__x86_64__) || defined(__i386__)
+#include <cpuid.h>
+#endif
 #include <ctime>
 
 namespace join
@@ -188,20 +192,55 @@ namespace join
 
         /**
          * @brief default constructor.
+         * @throw std::runtime_error if the cycle counter is not invariant.
          */
-        Rdtsc () noexcept
+        Rdtsc ()
         {
+#if defined(__x86_64__) || defined(__i386__)
+            if (!invariant ())
+            {
+                throw std::runtime_error ("cycle counter is not invariant");  // LCOV_EXCL_LINE
+            }
+#endif
             calibrate ();
         }
 
         /**
-         * @brief calibrate against CLOCK_MONOTONIC.
+         * @brief check if the cycle counter is invariant.
+         * @return true if invariant.
+         */
+        static bool invariant () noexcept
+        {
+#if defined(__x86_64__) || defined(__i386__)
+            unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
+            if (__get_cpuid_max (0x80000000, nullptr) < 0x80000007)
+            {
+                return false;  // LCOV_EXCL_LINE
+            }
+            __cpuid (0x80000007, eax, ebx, ecx, edx);
+            return (edx & (1U << 8)) != 0;
+#else
+            return true;
+#endif
+        }
+
+        /**
+         * @brief calibrate against CLOCK_MONOTONIC, or CNTFRQ on ARM.
          */
         static void calibrate () noexcept
         {
             static std::once_flag flag;
 
             std::call_once (flag, [] {
+#if defined(__aarch64__)
+                uint64_t freq;
+                __asm__ volatile ("mrs %0, cntfrq_el0" : "=r"(freq));
+                cycleToNs () = (1'000'000'000ULL << 32) / freq;
+#elif defined(__arm__)
+                uint32_t freq;
+                __asm__ volatile ("mrc p15, 0, %0, c14, c0, 0" : "=r"(freq));
+                cycleToNs () = (1'000'000'000ULL << 32) / freq;
+#else
                 timespec t0{}, t1{};
                 ::clock_gettime (CLOCK_MONOTONIC, &t0);
                 const uint64_t c0 = readCycles ();
@@ -216,6 +255,7 @@ namespace join
                 const uint64_t cycles = c1 - c0;
 
                 cycleToNs () = (static_cast<uint64_t> (ns) << 32) / cycles;
+#endif
             });
         }
 

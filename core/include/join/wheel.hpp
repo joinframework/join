@@ -67,6 +67,7 @@ namespace join
          * @brief create instance.
          * @param args arguments forwarded to the run policy.
          * @throw std::system_error on failure.
+         * @throw std::runtime_error if the clock is not invariant.
          */
         template <typename... Args>
         explicit BasicWheel (Args&&... args)
@@ -995,7 +996,7 @@ namespace join
             _dispatcher = Thread (_core, _priority, &SpinPolicy::loop<Wheel>, this, &wheel);
 
             Backoff backoff;
-            while (_threadId.load (std::memory_order_acquire) == _invalidThreadId)
+            while (_threadId.load (std::memory_order_acquire) == Thread::invalidId)
             {
                 backoff ();
             }
@@ -1016,7 +1017,7 @@ namespace join
             }
 
             Backoff backoff;
-            while (_threadId.load (std::memory_order_acquire) != _invalidThreadId)
+            while (_threadId.load (std::memory_order_acquire) != Thread::invalidId)
             {
                 backoff ();
             }
@@ -1028,7 +1029,7 @@ namespace join
          */
         bool isRunnerThread () const noexcept
         {
-            return pthread_equal (_threadId.load (std::memory_order_acquire), pthread_self ()) != 0;
+            return _threadId.load (std::memory_order_acquire) == Thread::currentId ();
         }
 
         /**
@@ -1077,7 +1078,7 @@ namespace join
         template <class Wheel>
         void loop (Wheel* wheel) noexcept
         {
-            _threadId.store (pthread_self (), std::memory_order_release);
+            _threadId.store (Thread::currentId (), std::memory_order_release);
 
             while (JOIN_LIKELY (_running.load (std::memory_order_relaxed)))
             {
@@ -1093,14 +1094,11 @@ namespace join
                 }
             }
 
-            _threadId.store (_invalidThreadId, std::memory_order_release);
+            _threadId.store (Thread::invalidId, std::memory_order_release);
         }
 
-        /// invalid thread id sentinel.
-        static constexpr pthread_t _invalidThreadId = static_cast<pthread_t> (-1);
-
         /// spinning thread id.
-        alignas (64) std::atomic<pthread_t> _threadId{_invalidThreadId};
+        alignas (64) std::atomic<pid_t> _threadId{Thread::invalidId};
 
         /// running flag.
         alignas (64) std::atomic_bool _running{false};

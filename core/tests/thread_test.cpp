@@ -30,7 +30,13 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <cstring>
 #include <thread>
+#include <vector>
+
+// C.
+#include <sys/mman.h>
+#include <sys/wait.h>
 
 using join::Thread;
 
@@ -82,6 +88,66 @@ TEST (Thread, moveAssign)
     EXPECT_FALSE (th3.joinable ());
     EXPECT_TRUE (th4.joinable ());
     th4.join ();
+}
+
+/**
+ * @brief test prefault construction.
+ */
+TEST (Thread, prefaultConstruct)
+{
+    size_t resident = 0, total = 0;
+
+    auto measure = [&resident, &total] () {
+        pthread_attr_t attr;
+        ASSERT_EQ (pthread_getattr_np (pthread_self (), &attr), 0);
+        void* addr = nullptr;
+        size_t size = 0;
+        pthread_attr_getstack (&attr, &addr, &size);
+        pthread_attr_destroy (&attr);
+
+        const size_t pageSize = sysconf (_SC_PAGESIZE);
+        std::vector<unsigned char> pages ((size + pageSize - 1) / pageSize);
+        ASSERT_EQ (mincore (addr, size, pages.data ()), 0);
+        resident = 0;
+        total = pages.size ();
+        for (auto page : pages)
+        {
+            resident += page & 1;
+        }
+    };
+
+    Thread th1 (-1, 0, 0, false, measure);
+    th1.join ();
+    EXPECT_GT (total, 0u);
+    EXPECT_LT (resident, total);
+
+    Thread th2 (-1, 0, 0, true, measure);
+    th2.join ();
+    EXPECT_GT (total, 0u);
+    EXPECT_EQ (resident, total);
+}
+
+/**
+ * @brief test stack size construction.
+ */
+TEST (Thread, stackSizeConstruct)
+{
+    const size_t requested = 256 * 1024;
+    size_t size = 0;
+
+    Thread th (-1, 0, requested, false, [&size] () {
+        pthread_attr_t attr;
+        void* addr = nullptr;
+        ASSERT_EQ (pthread_getattr_np (pthread_self (), &attr), 0);
+        pthread_attr_getstack (&attr, &addr, &size);
+        pthread_attr_destroy (&attr);
+    });
+    th.join ();
+    EXPECT_EQ (size, requested);
+
+    auto noop = [] () {
+    };
+    EXPECT_THROW (Thread (-1, 0, 1, false, noop), std::system_error);
 }
 
 /**
@@ -226,6 +292,60 @@ TEST (Thread, swap)
     EXPECT_TRUE (th1.joinable ());
     EXPECT_FALSE (th2.joinable ());
     th1.join ();
+}
+
+/**
+ * @brief test currentId.
+ */
+TEST (Thread, currentId)
+{
+    const pid_t self = Thread::currentId ();
+    ASSERT_EQ (self, static_cast<pid_t> (::syscall (SYS_gettid)));
+    ASSERT_EQ (Thread::currentId (), self);
+
+    pid_t other = 0, expected = -1;
+    Thread th ([&] () {
+        other = Thread::currentId ();
+        expected = static_cast<pid_t> (::syscall (SYS_gettid));
+    });
+    th.join ();
+    ASSERT_EQ (other, expected);
+    ASSERT_NE (other, self);
+
+    pid_t child = fork ();
+    if (child == 0)
+    {
+        exit ((Thread::currentId () == static_cast<pid_t> (::syscall (SYS_gettid))) ? EXIT_SUCCESS : EXIT_FAILURE);
+    }
+    ASSERT_NE (child, -1) << strerror (errno);
+    int status = -1;
+    waitpid (child, &status, 0);
+    ASSERT_TRUE (WIFEXITED (status));
+    ASSERT_EQ (WEXITSTATUS (status), EXIT_SUCCESS);
+}
+
+/**
+ * @brief test id.
+ */
+TEST (Thread, id)
+{
+    Thread th;
+    ASSERT_EQ (th.id (), Thread::invalidId);
+
+    std::atomic<pid_t> tid{Thread::invalidId};
+    th = Thread ([&tid] () {
+        tid.store (Thread::currentId ());
+        std::this_thread::sleep_for (100ms);
+    });
+    while (tid.load () == Thread::invalidId)
+    {
+        std::this_thread::yield ();
+    }
+    ASSERT_EQ (th.id (), tid.load ());
+    ASSERT_NE (th.id (), Thread::currentId ());
+
+    th.join ();
+    ASSERT_EQ (th.id (), Thread::invalidId);
 }
 
 /**

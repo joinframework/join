@@ -45,6 +45,18 @@ using namespace std::chrono_literals;
 const std::string _name = "/test_mutex";
 
 /**
+ * @brief test inherit construct.
+ */
+TEST (SharedMutex, inheritConstruct)
+{
+    SharedMutex none;
+    EXPECT_EQ (none.handle ()->__data.__kind & 32, 0);
+
+    SharedMutex inherit (true);
+    EXPECT_NE (inherit.handle ()->__data.__kind & 32, 0);
+}
+
+/**
  * @brief test lock.
  */
 TEST (SharedMutex, lock)
@@ -113,6 +125,69 @@ cleanup:
 }
 
 /**
+ * @brief test lock with owner dead.
+ */
+TEST (SharedMutex, lockOwnerDead)
+{
+    SharedMutex* mutex = nullptr;
+    void* shm = nullptr;
+    pid_t child = -1;
+
+    int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
+    ASSERT_NE (fd, -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedMutex)), -1) << strerror (errno);
+    if (HasFailure ())
+    {
+        goto cleanup;
+    }
+    shm = ::mmap (nullptr, sizeof (SharedMutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    EXPECT_NE (shm, nullptr) << strerror (errno);
+    if (HasFailure ())
+    {
+        goto cleanup;
+    }
+
+    mutex = static_cast<SharedMutex*> (shm);
+    new (mutex) SharedMutex ();
+
+    child = fork ();
+    if (child == 0)
+    {
+        mutex->lock ();
+        _exit (EXIT_SUCCESS);
+    }
+    else
+    {
+        EXPECT_NE (child, -1) << strerror (errno);
+        if (HasFailure ())
+        {
+            goto cleanup;
+        }
+        int status = -1;
+        waitpid (child, &status, 0);
+        EXPECT_TRUE (WIFEXITED (status));
+        mutex->lock ();
+        mutex->unlock ();
+        EXPECT_TRUE (mutex->tryLock ());
+        mutex->unlock ();
+    }
+
+cleanup:
+    if ((shm != nullptr) && (shm != MAP_FAILED))
+    {
+        mutex->~SharedMutex ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedMutex)), -1) << strerror (errno);
+    }
+
+    if (fd != -1)
+    {
+        EXPECT_NE (::close (fd), -1) << strerror (errno);
+    }
+
+    ::shm_unlink (_name.c_str ());
+}
+
+/**
  * @brief test tryLock.
  */
 TEST (SharedMutex, tryLock)
@@ -162,6 +237,69 @@ TEST (SharedMutex, tryLock)
         waitpid (child, &status, 0);
         EXPECT_TRUE (WIFEXITED (status));
         EXPECT_EQ (WEXITSTATUS (status), 0);
+    }
+
+cleanup:
+    if ((shm != nullptr) && (shm != MAP_FAILED))
+    {
+        mutex->~SharedMutex ();
+        EXPECT_NE (::munmap (shm, sizeof (SharedMutex)), -1) << strerror (errno);
+    }
+
+    if (fd != -1)
+    {
+        EXPECT_NE (::close (fd), -1) << strerror (errno);
+    }
+
+    ::shm_unlink (_name.c_str ());
+}
+
+/**
+ * @brief test tryLock with owner dead.
+ */
+TEST (SharedMutex, tryLockOwnerDead)
+{
+    SharedMutex* mutex = nullptr;
+    void* shm = nullptr;
+    pid_t child = -1;
+
+    int fd = ::shm_open (_name.c_str (), O_CREAT | O_RDWR, 0644);
+    ASSERT_NE (fd, -1) << strerror (errno);
+    EXPECT_NE (::ftruncate (fd, sizeof (SharedMutex)), -1) << strerror (errno);
+    if (HasFailure ())
+    {
+        goto cleanup;
+    }
+    shm = ::mmap (nullptr, sizeof (SharedMutex), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    EXPECT_NE (shm, nullptr) << strerror (errno);
+    if (HasFailure ())
+    {
+        goto cleanup;
+    }
+
+    mutex = static_cast<SharedMutex*> (shm);
+    new (mutex) SharedMutex ();
+
+    child = fork ();
+    if (child == 0)
+    {
+        mutex->lock ();
+        _exit (EXIT_SUCCESS);
+    }
+    else
+    {
+        EXPECT_NE (child, -1) << strerror (errno);
+        if (HasFailure ())
+        {
+            goto cleanup;
+        }
+        int status = -1;
+        waitpid (child, &status, 0);
+        EXPECT_TRUE (WIFEXITED (status));
+        EXPECT_TRUE (mutex->tryLock ());
+        mutex->unlock ();
+        EXPECT_TRUE (mutex->tryLock ());
+        mutex->unlock ();
     }
 
 cleanup:

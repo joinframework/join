@@ -38,6 +38,18 @@ using join::ScopedLock;
 using namespace std::chrono_literals;
 
 /**
+ * @brief test inherit construct.
+ */
+TEST (Mutex, inheritConstruct)
+{
+    Mutex none;
+    EXPECT_EQ (none.handle ()->__data.__kind & 32, 0);
+
+    Mutex inherit (true);
+    EXPECT_NE (inherit.handle ()->__data.__kind & 32, 0);
+}
+
+/**
  * @brief test lock.
  */
 TEST (Mutex, lock)

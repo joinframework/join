@@ -55,6 +55,7 @@ namespace join
         /**
          * @brief create instance.
          * @param name metric name.
+         * @throw std::runtime_error if the clock is not invariant.
          */
         explicit BasicStats (const std::string& name = {})
         : _countsMem (_countsSize)
