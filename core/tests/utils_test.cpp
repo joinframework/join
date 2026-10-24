@@ -50,6 +50,9 @@ TEST (Utils, swap)
     int16_t int16Val = 12;
     ASSERT_EQ (join::swap (int16Val), 3072);
 
+    int16_t negInt16Val = -300;
+    ASSERT_EQ (join::swap (negInt16Val), -11010);
+
     uint16_t uint16Val = 12;
     ASSERT_EQ (join::swap (uint16Val), 3072);
 

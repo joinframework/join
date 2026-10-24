@@ -213,6 +213,13 @@ TEST (PackReader, pass)
     ASSERT_EQ (value[0], 1);
 
     stream.clear ();
+    stream.str (std::string ({'\xdc', '\x00', '\x01', '\xd1', '\xfe', '\xd4'}));
+    ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt16 ());
+    ASSERT_EQ (value[0], -300);
+
+    stream.clear ();
     stream.str (std::string ({'\xdc', '\x00', '\x01', '\xd2', '\x00', '\x00', '\x00', '\x01'}));
     ASSERT_EQ (PackReader ().deserialize (stream, document), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
