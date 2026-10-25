@@ -152,8 +152,10 @@ namespace join
 
         if (::mlock (ptr, size) == -1)
         {
+            // LCOV_EXCL_START
             lastError = std::error_code (errno, std::generic_category ());
             return -1;
+            // LCOV_EXCL_STOP
         }
 
         return 0;

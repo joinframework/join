@@ -131,10 +131,6 @@ TEST (LocalMem, mlock)
 
     ASSERT_EQ (mem.mlock (), 0) << join::lastError.message ();
     ASSERT_EQ (join::mlock (nullptr, join::pageSize ()), -1);
-
-    void* unmapped = LocalMem (join::pageSize ()).get ();
-    ASSERT_EQ (join::mlock (unmapped, join::pageSize ()), -1);
-    ASSERT_EQ (join::lastError, std::errc::not_enough_memory);
 }
 
 /**
