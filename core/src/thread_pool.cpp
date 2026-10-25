@@ -100,7 +100,10 @@ ThreadPool::ThreadPool (int workers)
 // =========================================================================
 ThreadPool::~ThreadPool () noexcept
 {
-    _stop.store (true, std::memory_order_relaxed);
+    {
+        ScopedLock<Mutex> lock (_mutex);
+        _stop.store (true, std::memory_order_relaxed);
+    }
     _condition.broadcast ();
     _workers.clear ();
 }
