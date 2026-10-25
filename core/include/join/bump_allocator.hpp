@@ -30,8 +30,11 @@
 #include <join/utils.hpp>
 
 // C++.
+#include <type_traits>
+#include <algorithm>
 #include <utility>
 #include <atomic>
+#include <new>
 
 // C.
 #include <cstdint>
@@ -40,7 +43,7 @@
 namespace join
 {
     /**
-     * @brief bump allocator owning a backend of fixed capacity.
+     * @brief bump allocator owning its backends.
      */
     template <typename Backend, size_t Capacity, typename SyncPolicy>
     class BasicBumpAllocator
@@ -78,10 +81,14 @@ namespace join
          */
         BasicBumpAllocator (BasicBumpAllocator&& other) noexcept
         : _backend (std::move (other._backend))
+        , _previous (other._previous)
         , _base (other._base)
+        , _capacity (other._capacity)
         , _cursor (std::move (other._cursor))
         {
+            other._previous = nullptr;
             other._base = nullptr;
+            other._capacity = Capacity;
             other._cursor.store (0);
         }
 
@@ -92,12 +99,21 @@ namespace join
          */
         BasicBumpAllocator& operator= (BasicBumpAllocator&& other) noexcept
         {
-            _backend = std::move (other._backend);
-            _base = other._base;
-            _cursor = std::move (other._cursor);
+            if (this != &other)
+            {
+                release ();
 
-            other._base = nullptr;
-            other._cursor.store (0);
+                _backend = std::move (other._backend);
+                _previous = other._previous;
+                _base = other._base;
+                _capacity = other._capacity;
+                _cursor = std::move (other._cursor);
+
+                other._previous = nullptr;
+                other._base = nullptr;
+                other._capacity = Capacity;
+                other._cursor.store (0);
+            }
 
             return *this;
         }
@@ -105,7 +121,10 @@ namespace join
         /**
          * @brief destroy instance.
          */
-        ~BasicBumpAllocator () = default;
+        ~BasicBumpAllocator ()
+        {
+            release ();
+        }
 
         /**
          * @brief allocate memory at the cursor, aligned on the largest power of 2 dividing size, up to max_align_t.
@@ -139,8 +158,12 @@ namespace join
             {
                 offset = ((base + current + alignment - 1) & ~(alignment - 1)) - base;
 
-                if (JOIN_UNLIKELY ((offset > Capacity) || (size > Capacity - offset)))
+                if (JOIN_UNLIKELY ((offset > _capacity) || (size > _capacity - offset)))
                 {
+                    if constexpr (std::is_same_v<SyncPolicy, BumpPlain>)
+                    {
+                        return grow (size, alignment);
+                    }
                     return nullptr;
                 }
             }
@@ -150,15 +173,25 @@ namespace join
         }
 
         /**
+         * @brief release memory (no-op).
+         * @param p memory to release.
+         * @param size allocation size (ignored).
+         */
+        void deallocate ([[maybe_unused]] void* p, [[maybe_unused]] size_t size) noexcept
+        {
+        }
+
+        /**
          * @brief release all allocations at once.
          */
         void reset () noexcept
         {
+            release ();
             _cursor.store (0);
         }
 
         /**
-         * @brief get the capacity.
+         * @brief get the initial capacity.
          * @return capacity in bytes.
          */
         static constexpr size_t capacity () noexcept
@@ -167,7 +200,7 @@ namespace join
         }
 
         /**
-         * @brief get the number of bytes consumed, alignment padding included.
+         * @brief get the number of bytes consumed in the current block, alignment padding included.
          * @return consumed bytes.
          */
         size_t used () const noexcept
@@ -186,7 +219,7 @@ namespace join
 
 #ifdef JOIN_HAS_NUMA
         /**
-         * @brief bind memory to a NUMA node.
+         * @brief bind the current block to a NUMA node.
          * @param numa NUMA node ID.
          * @return 0 on success, -1 on failure.
          */
@@ -197,7 +230,7 @@ namespace join
 #endif
 
         /**
-         * @brief lock memory in RAM.
+         * @brief lock the current block in RAM.
          * @return 0 on success, -1 on failure.
          */
         int mlock () const noexcept
@@ -206,11 +239,62 @@ namespace join
         }
 
     private:
+        /**
+         * @brief chain a new backend.
+         * @param size allocation size.
+         * @param alignment allocation alignment.
+         * @return pointer to the allocated memory, or nullptr on failure.
+         */
+        void* grow (size_t size, size_t alignment) noexcept
+        {
+            if (JOIN_UNLIKELY (size + alignment + sizeof (BasicBumpAllocator) + alignof (BasicBumpAllocator) < size))
+            {
+                return nullptr;
+            }
+
+            try
+            {
+                const uint64_t capacity =
+                    (std::max<uint64_t> (_capacity * 2, size + alignment) + alignof (BasicBumpAllocator) - 1) &
+                    ~(alignof (BasicBumpAllocator) - 1);
+                Backend backend (capacity + sizeof (BasicBumpAllocator));
+                _previous =
+                    ::new (static_cast<char*> (backend.get ()) + capacity) BasicBumpAllocator (std::move (*this));
+                _backend = std::move (backend);
+                _base = static_cast<char*> (_backend.get ());
+                _capacity = capacity;
+                _cursor.store (0);
+            }
+            catch (...)
+            {
+                return nullptr;
+            }
+            return allocate (size, alignment);
+        }
+
+        /**
+         * @brief release the chained allocators.
+         */
+        void release () noexcept
+        {
+            if (_previous != nullptr)
+            {
+                _previous->~BasicBumpAllocator ();
+                _previous = nullptr;
+            }
+        }
+
         /// memory backend.
         Backend _backend;
 
+        /// chained allocator.
+        BasicBumpAllocator* _previous = nullptr;
+
         /// start of the backend region.
         char* _base = nullptr;
+
+        /// backend capacity.
+        uint64_t _capacity = Capacity;
 
         /// allocation cursor.
         SyncPolicy _cursor;
