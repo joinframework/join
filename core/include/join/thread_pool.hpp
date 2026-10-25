@@ -33,7 +33,6 @@
 // C++.
 #include <functional>
 #include <memory>
-#include <atomic>
 #include <vector>
 #include <deque>
 
@@ -174,7 +173,7 @@ namespace join
         Mutex _mutex;
 
         /// gracefully stop all threads.
-        std::atomic<bool> _stop;
+        bool _stop = false;
 
         /// jobs queue.
         std::deque<std::function<void ()>> _jobs;
