@@ -29,6 +29,7 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <typeinfo>
 #include <sstream>
 #include <thread>
 
@@ -363,6 +364,15 @@ TEST (Utils, nextPow2)
 
     static_assert (join::nextPow2 (300) == 512, "nextPow2 must be usable at compile time");
     static_assert (join::isPow2 (join::nextPow2 (300)), "nextPow2 must yield a power of two");
+}
+
+/**
+ * @brief test throwException.
+ */
+TEST (Utils, throwException)
+{
+    EXPECT_THROW (join::throwException<std::bad_cast> (), std::bad_cast);
+    EXPECT_THROW (join::throwException<std::out_of_range> ("invalid key"), std::out_of_range);
 }
 
 /**

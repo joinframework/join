@@ -43,7 +43,7 @@ using join::JsonReader;
  */
 struct StringCounter : public SaxHandler
 {
-    int setString (const std::string&)
+    int setString (std::string_view)
     {
         ++strings;
         return 0;

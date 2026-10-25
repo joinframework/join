@@ -31,6 +31,7 @@
 
 // C++.
 #include <system_error>
+#include <string_view>
 #include <string>
 
 // C.
@@ -174,7 +175,7 @@ namespace join
          * @param value string value to set.
          * @return 0.
          */
-        int setString ([[maybe_unused]] const std::string& value) noexcept
+        int setString ([[maybe_unused]] std::string_view value) noexcept
         {
             return 0;
         }

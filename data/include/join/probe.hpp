@@ -29,6 +29,7 @@
 #include <join/utils.hpp>
 
 // C++.
+#include <string_view>
 #include <istream>
 #include <string>
 #include <vector>
@@ -261,10 +262,10 @@ namespace join
         }
 
         /**
-         * @brief read characters until escaped.
-         * @param out output buffer.
+         * @brief read characters until escaped, without copying them.
+         * @return characters read.
          */
-        inline void readUntilEscaped (std::string& out) noexcept
+        inline std::string_view readUntilEscaped () noexcept
         {
             const char* beg = _cur;
             const char* cur = _cur;
@@ -293,8 +294,17 @@ namespace join
                 ++cur;
             }
 
-            out.append (beg, static_cast<size_t> (cur - beg));
             _cur = cur;
+            return std::string_view (beg, static_cast<size_t> (cur - beg));
+        }
+
+        /**
+         * @brief read characters until escaped.
+         * @param out output buffer.
+         */
+        inline void readUntilEscaped (std::string& out) noexcept
+        {
+            out.append (readUntilEscaped ());
         }
 
         /**

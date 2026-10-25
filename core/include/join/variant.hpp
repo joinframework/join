@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/traits.hpp>
+#include <join/utils.hpp>
 
 // C++.
 #include <algorithm>
@@ -36,6 +37,7 @@
 
 // C.
 #include <cstddef>
+#include <cstdint>
 
 namespace join
 {
@@ -505,7 +507,7 @@ namespace join
         {
             if (index () != find_index_v<T, Ts...>)
             {
-                throw std::bad_cast ();
+                throwException<std::bad_cast> ();
             }
             return *reinterpret_cast<T*> (storage ());
         }
@@ -520,7 +522,7 @@ namespace join
         {
             if (index () != find_index_v<T, Ts...>)
             {
-                throw std::bad_cast ();
+                throwException<std::bad_cast> ();
             }
             return *reinterpret_cast<const T*> (storage ());
         }
@@ -535,7 +537,7 @@ namespace join
         {
             if (index () != I)
             {
-                throw std::bad_cast ();
+                throwException<std::bad_cast> ();
             }
             return *reinterpret_cast<std::tuple_element_t<I, std::tuple<Ts...>>*> (storage ());
         }
@@ -550,7 +552,7 @@ namespace join
         {
             if (index () != I)
             {
-                throw std::bad_cast ();
+                throwException<std::bad_cast> ();
             }
             return *reinterpret_cast<const std::tuple_element_t<I, std::tuple<Ts...>>*> (storage ());
         }
@@ -621,6 +623,10 @@ namespace join
          */
         constexpr std::size_t index () const noexcept
         {
+            if (_which >= sizeof...(Ts))
+            {
+                __builtin_unreachable ();
+            }
             return _which;
         }
 
@@ -710,7 +716,7 @@ namespace join
         alignas (Ts...) unsigned char _data[std::max ({sizeof (Ts)...})];
 
         /// index of the alternative that is currently held by the variant.
-        std::size_t _which = 0;
+        uint32_t _which = 0;
     };
 
     /**

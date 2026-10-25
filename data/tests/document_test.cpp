@@ -113,7 +113,7 @@ struct Counter : public join::SaxHandler
         return count ();
     }
 
-    int setString (const std::string&)
+    int setString (std::string_view)
     {
         return count ();
     }

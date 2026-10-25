@@ -383,7 +383,7 @@ namespace join
          * @param value string value to set.
          * @return 0 on success, -1 otherwise.
          */
-        int setString (const std::string& value)
+        int setString (std::string_view value)
         {
             array ();
             append ('"');
@@ -433,8 +433,7 @@ namespace join
             --_depth;
             if (!_first)
             {
-                endLine ();
-                indent ();
+                newLine ();
             }
             append (']');
             endValue ();
@@ -489,8 +488,8 @@ namespace join
                 {
                     return !a.first.isString () && b.first.isString ();
                 }
-                const std::string& sa = a.first.getString ();
-                const std::string& sb = b.first.getString ();
+                std::string_view sa = a.first.getString ();
+                std::string_view sb = b.first.getString ();
                 return utf8::compareUtf16Order (sa.data (), sa.data () + sa.size (), sb.data (),
                                                 sb.data () + sb.size ()) < 0;
             });
@@ -517,8 +516,7 @@ namespace join
                 return -1;
             }
             comma ();
-            endLine ();
-            indent ();
+            newLine ();
             append ('"');
             if (writeEscaped (key.getString ()) == -1)
             {
@@ -547,8 +545,7 @@ namespace join
             --_depth;
             if (!_first)
             {
-                endLine ();
-                indent ();
+                newLine ();
             }
             append ('}');
             endValue ();
@@ -714,7 +711,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonWriteMode Mode = WriteMode>
-        int writeEscaped (const std::string& value)
+        int writeEscaped (std::string_view value)
             requires (Mode == JsonWriteMode::None)
         {
             const char* cur = value.data ();
@@ -782,7 +779,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <JsonWriteMode Mode = WriteMode>
-        int writeEscaped (const std::string& value)
+        int writeEscaped (std::string_view value)
             requires (Mode == JsonWriteMode::Canonical)
         {
             if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
@@ -857,10 +854,7 @@ namespace join
          */
         inline void endLine ()
         {
-            if (_indentation)
-            {
-                append ('\n');
-            }
+            append ('\n');
         }
 
         /**
@@ -868,17 +862,46 @@ namespace join
          */
         inline void indent ()
         {
+            static constexpr char spaces[] = "                                                                ";
+            size_t count = _depth * _indentation;
+            while (count)
+            {
+                size_t n = (count < sizeof (spaces) - 1) ? count : sizeof (spaces) - 1;
+                append (spaces, n);
+                count -= n;
+            }
+        }
+
+        /**
+         * @brief write end of line and indentation.
+         */
+        inline void newLine ()
+        {
             if (_indentation)
             {
-                static constexpr char spaces[] = "                                                                ";
-                size_t count = _depth * _indentation;
-                while (count)
-                {
-                    size_t n = (count < sizeof (spaces) - 1) ? count : sizeof (spaces) - 1;
-                    append (spaces, n);
-                    count -= n;
-                }
+                indentLine ();
             }
+        }
+
+        /**
+         * @brief write end of line and indentation, out of the compact writing path.
+         */
+        __attribute__ ((noinline)) void indentLine ()
+        {
+            static constexpr char spaces[] = "\n                                                                ";
+            size_t count = _depth * _indentation;
+            if (JOIN_LIKELY (count < sizeof (spaces) - 1))
+            {
+                if (JOIN_UNLIKELY (sizeof (_buffer) - _size < sizeof (spaces) - 1))
+                {
+                    flush ();
+                }
+                std::memcpy (_buffer + _size, spaces, sizeof (spaces) - 1);
+                _size += count + 1;
+                return;
+            }
+            endLine ();
+            indent ();
         }
 
         /**
@@ -900,8 +923,7 @@ namespace join
             comma ();
             if (_depth && ((_arrays[(_depth - 1) >> 6] >> ((_depth - 1) & 63)) & 1))
             {
-                endLine ();
-                indent ();
+                newLine ();
             }
         }
 
@@ -1832,16 +1854,34 @@ namespace join
         template <typename ProbeType, typename Handler>
         int readString (ProbeType& document, Handler& handler, bool isKey = false)
         {
-            thread_local Value output{std::string ()};
-            output.clear ();
-            output.reserve (64);
+            std::string_view chunk;
+
+            if constexpr (requires { document.readUntilEscaped (); })
+            {
+                chunk = document.readUntilEscaped ();
+
+                if (JOIN_UNLIKELY (validateChunk (chunk) == -1))
+                {
+                    return -1;
+                }
+
+                if (JOIN_LIKELY (document.peek () == '"'))
+                {
+                    document.get ();
+                    return isKey ? handler.setKey (Value (std::string (chunk))) : handler.setString (chunk);
+                }
+            }
+
+            thread_local std::string cache;
+            std::string output = std::move (cache);
+            output.assign (chunk);
 
             for (;;)
             {
-                size_t pos = output.getString ().size ();
-                document.readUntilEscaped (output.getString ());
+                size_t pos = output.size ();
+                document.readUntilEscaped (output);
 
-                if (JOIN_UNLIKELY (validateChunk (output.getString (), pos) == -1))
+                if (JOIN_UNLIKELY (validateChunk (std::string_view (output).substr (pos)) == -1))
                 {
                     return -1;
                 }
@@ -1857,7 +1897,7 @@ namespace join
                 if (ch == '\\')
                 {
                     document.get ();
-                    if (readEscaped (document, output.getString ()) == -1)
+                    if (readEscaped (document, output) == -1)
                     {
                         return -1;
                     }
@@ -1871,7 +1911,9 @@ namespace join
                 }
             }
 
-            return isKey ? handler.setKey (Value (output)) : handler.setString (std::string (output.getString ()));
+            int result = isKey ? handler.setKey (Value (output)) : handler.setString (output);
+            cache = std::move (output);
+            return result;
         }
 
         /**
@@ -2064,15 +2106,14 @@ namespace join
 
         /**
          * @brief validate the encoding of the last chunk read, when encoding validation is enabled.
-         * @param output parse output string.
-         * @param pos position of the chunk in the output string.
+         * @param chunk last chunk read.
          * @return 0 on success, -1 otherwise.
          */
-        inline int validateChunk ([[maybe_unused]] const std::string& output, [[maybe_unused]] size_t pos) noexcept
+        inline int validateChunk ([[maybe_unused]] std::string_view chunk) noexcept
         {
             if constexpr (ReadMode & JsonReadMode::ValidateEncoding)
             {
-                if (JOIN_UNLIKELY (utf8::validate (output.data () + pos, output.data () + output.size ()) == -1))
+                if (JOIN_UNLIKELY (utf8::validate (chunk.data (), chunk.data () + chunk.size ()) == -1))
                 {
                     join::lastError = make_error_code (JsonErrc::InvalidEncoding);
                     return -1;

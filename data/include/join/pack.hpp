@@ -309,7 +309,7 @@ namespace join
          * @param value string value to set.
          * @return 0 on success, -1 otherwise.
          */
-        int setString (const std::string& value)
+        int setString (std::string_view value)
         {
             if (value.size () < 32)
             {
@@ -330,7 +330,7 @@ namespace join
                 append (0xdb);
                 pack (static_cast<uint32_t> (value.size ()));
             }
-            append (value.c_str (), static_cast<uint32_t> (value.size ()));
+            append (value.data (), static_cast<uint32_t> (value.size ()));
             endValue ();
             return 0;
         }
@@ -1055,13 +1055,17 @@ namespace join
                 len = static_cast<uint8_t> (document.get ()) & ~0xa0u;
             }
 
-            std::string output;
+            thread_local std::string cache;
+            std::string output = std::move (cache);
+            output.clear ();
             if (JOIN_UNLIKELY (readBytes (document, len, output) == -1))
             {
                 return -1;
             }
 
-            return isKey ? handler.setKey (Value (std::move (output))) : handler.setString (std::move (output));
+            int result = isKey ? handler.setKey (Value (output)) : handler.setString (output);
+            cache = std::move (output);
+            return result;
         }
 
         /**
@@ -1097,13 +1101,17 @@ namespace join
                 }
             }
 
-            std::string output;
+            thread_local std::string cache;
+            std::string output = std::move (cache);
+            output.clear ();
             if (JOIN_UNLIKELY (readBytes (document, len, output) == -1))
             {
                 return -1;
             }
 
-            return handler.setString (std::move (output));
+            int result = handler.setString (output);
+            cache = std::move (output);
+            return result;
         }
 
         /**
