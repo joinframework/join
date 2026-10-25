@@ -487,8 +487,10 @@ namespace join
                                MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
                 if (_ptr != MAP_FAILED)
                 {
+                    // LCOV_EXCL_START
                     _size = size;
                     return;
+                    // LCOV_EXCL_STOP
                 }
 
                 if ((errno != ENOMEM) && (errno != EINVAL))
@@ -735,9 +737,11 @@ namespace join
 
                 if (fstat (_fd, &st) == -1)
                 {
+                    // LCOV_EXCL_START
                     int err = errno;
                     ::close (_fd);
                     throw std::system_error (err, std::generic_category (), "fstat failed");
+                    // LCOV_EXCL_STOP
                 }
 
                 if (static_cast<uint64_t> (st.st_size) != _size)
