@@ -33,6 +33,7 @@
 #include <system_error>
 #include <stdexcept>
 #include <limits>
+#include <new>
 
 // C.
 #include <sys/types.h>
@@ -44,12 +45,16 @@
 #include <numa.h>
 #endif
 #include <fcntl.h>
+#include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 
 namespace join
 {
     /// allocator forward declarations.
     class BumpAtomic;
+
+    class BumpPlain;
 
     template <typename Backend, size_t Capacity, typename SyncPolicy>
     class BasicBumpAllocator;
@@ -147,12 +152,167 @@ namespace join
 
         if (::mlock (ptr, size) == -1)
         {
+            // LCOV_EXCL_START
             lastError = std::error_code (errno, std::generic_category ());
             return -1;
+            // LCOV_EXCL_STOP
         }
 
         return 0;
     }
+
+    /**
+     * @brief heap memory provider.
+     */
+    class HeapMem
+    {
+    public:
+        template <size_t Capacity, typename SyncPolicy = BumpAtomic>
+        using BumpAllocator = BasicBumpAllocator<HeapMem, Capacity, SyncPolicy>;
+
+        /**
+         * @brief default constructor.
+         */
+        HeapMem () noexcept = default;
+
+        /**
+         * @brief allocates a heap memory segment.
+         * @param size allocation size in bytes.
+         * @throw std::bad_alloc if size is 0, too large or malloc fails.
+         */
+        explicit HeapMem (uint64_t size)
+        : _ptr (((size != 0) && (size <= static_cast<uint64_t> (std::numeric_limits<ptrdiff_t>::max ())))
+                    ? std::malloc (size)
+                    : nullptr)
+        {
+            if (_ptr == nullptr)
+            {
+                throw std::bad_alloc ();
+            }
+            _size = size;
+        }
+
+        /**
+         * @brief copy constructor.
+         * @param other other object to copy.
+         */
+        HeapMem (const HeapMem& other) = delete;
+
+        /**
+         * @brief copy assignment operator.
+         * @param other other object to copy.
+         * @return this.
+         */
+        HeapMem& operator= (const HeapMem& other) = delete;
+
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         */
+        HeapMem (HeapMem&& other) noexcept
+        : _ptr (other._ptr)
+        , _size (other._size)
+        {
+            other._ptr = nullptr;
+            other._size = 0;
+        }
+
+        /**
+         * @brief move assignment operator.
+         * @param other other object to move.
+         * @return this.
+         */
+        HeapMem& operator= (HeapMem&& other) noexcept
+        {
+            cleanup ();
+
+            _ptr = other._ptr;
+            _size = other._size;
+
+            other._ptr = nullptr;
+            other._size = 0;
+
+            return *this;
+        }
+
+        /**
+         * @brief releases the memory.
+         */
+        ~HeapMem () noexcept
+        {
+            cleanup ();
+        }
+
+        /**
+         * @brief check if the memory is allocated.
+         * @return true if the memory is allocated, false otherwise.
+         */
+        bool mapped () const noexcept
+        {
+            return _ptr != nullptr;
+        }
+
+        /**
+         * @brief get a const pointer to the memory at a given offset.
+         * @param offset byte offset from the start of the memory.
+         * @return pointer to the memory at the specified offset.
+         * @throw std::runtime_error if memory is not allocated.
+         * @throw std::out_of_range if offset is out of bounds.
+         */
+        const void* get (uint64_t offset = 0) const
+        {
+            if (JOIN_UNLIKELY (_ptr == nullptr))
+            {
+                throw std::runtime_error ("memory not mapped");
+            }
+
+            if (JOIN_UNLIKELY (offset >= _size))
+            {
+                throw std::out_of_range ("offset out of bounds");
+            }
+
+            return static_cast<const char*> (_ptr) + offset;
+        }
+
+        /**
+         * @brief get a pointer to the memory at a given offset.
+         * @param offset byte offset from the start of the memory.
+         * @return pointer to the memory at the specified offset.
+         * @throw std::runtime_error if memory is not allocated.
+         * @throw std::out_of_range if offset is out of bounds.
+         */
+        void* get (uint64_t offset = 0)
+        {
+            if (JOIN_UNLIKELY (_ptr == nullptr))
+            {
+                throw std::runtime_error ("memory not mapped");
+            }
+
+            if (JOIN_UNLIKELY (offset >= _size))
+            {
+                throw std::out_of_range ("offset out of bounds");
+            }
+
+            return static_cast<char*> (_ptr) + offset;
+        }
+
+    private:
+        /**
+         * @brief cleanup the memory.
+         */
+        void cleanup () noexcept
+        {
+            std::free (_ptr);
+            _ptr = nullptr;
+            _size = 0;
+        }
+
+        /// pointer to allocated memory.
+        void* _ptr = nullptr;
+
+        /// memory size.
+        uint64_t _size = 0;
+    };
 
     /**
      * @brief local anonymous memory provider.
@@ -329,8 +489,10 @@ namespace join
                                MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
                 if (_ptr != MAP_FAILED)
                 {
+                    // LCOV_EXCL_START
                     _size = size;
                     return;
+                    // LCOV_EXCL_STOP
                 }
 
                 if ((errno != ENOMEM) && (errno != EINVAL))
@@ -577,9 +739,11 @@ namespace join
 
                 if (fstat (_fd, &st) == -1)
                 {
+                    // LCOV_EXCL_START
                     int err = errno;
                     ::close (_fd);
                     throw std::system_error (err, std::generic_category (), "fstat failed");
+                    // LCOV_EXCL_STOP
                 }
 
                 if (static_cast<uint64_t> (st.st_size) != _size)

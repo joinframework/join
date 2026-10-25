@@ -428,6 +428,16 @@ namespace join
         }
 
         /**
+         * @brief return memory to the appropriate pool.
+         * @param p memory to return.
+         * @param size allocation size (ignored).
+         */
+        void deallocate (void* p, [[maybe_unused]] size_t size) noexcept
+        {
+            deallocate (p);
+        }
+
+        /**
          * @brief check if the slab allocator still owns a memory region.
          * @return true if the slab allocator owns a memory region, false if it has been moved from.
          */

@@ -142,7 +142,7 @@ TEST (LocalSlab, deallocate)
 
     ASSERT_NO_THROW (allocator.deallocate (nullptr));
     ASSERT_NO_THROW (allocator.deallocate (p2));
-    ASSERT_NO_THROW (allocator.deallocate (p1));
+    ASSERT_NO_THROW (allocator.deallocate (p1, 64));
 
     int dummy;
     void* dummyPtr = &dummy;

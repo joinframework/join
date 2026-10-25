@@ -29,8 +29,10 @@
 #include <gtest/gtest.h>
 
 // C.
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <csignal>
 #include <cstring>
 #include <cerrno>
 
@@ -84,6 +86,17 @@ TEST_F (PosixMem, create)
     ASSERT_THROW (mem1.get (), std::runtime_error);
     ASSERT_NE (mem2.get (), nullptr);
     ASSERT_THROW (ShmMem (2 * page, _name), std::runtime_error);
+
+    ASSERT_EQ (ShmMem::unlink (_name), 0) << join::lastError.message ();
+    struct rlimit limit;
+    ASSERT_EQ (::getrlimit (RLIMIT_FSIZE, &limit), 0) << strerror (errno);
+    struct rlimit small = limit;
+    small.rlim_cur = page;
+    sighandler_t handler = ::signal (SIGXFSZ, SIG_IGN);
+    ASSERT_EQ (::setrlimit (RLIMIT_FSIZE, &small), 0) << strerror (errno);
+    EXPECT_THROW (ShmMem (2 * page, _name), std::system_error);
+    ASSERT_EQ (::setrlimit (RLIMIT_FSIZE, &limit), 0) << strerror (errno);
+    ::signal (SIGXFSZ, handler);
 }
 
 TEST_F (PosixMem, get)

@@ -61,9 +61,9 @@ void WorkerThread::work ()
         {
             ScopedLock<Mutex> lock (_pool->_mutex);
             _pool->_condition.wait (lock, [&] () {
-                return _pool->_stop.load (std::memory_order_relaxed) || !_pool->_jobs.empty ();
+                return _pool->_stop || !_pool->_jobs.empty ();
             });
-            if (_pool->_stop.load (std::memory_order_relaxed) && _pool->_jobs.empty ())
+            if (_pool->_stop && _pool->_jobs.empty ())
             {
                 return;
             }
@@ -79,7 +79,6 @@ void WorkerThread::work ()
 //   METHOD    : ThreadPool
 // =========================================================================
 ThreadPool::ThreadPool (int workers)
-: _stop (false)
 {
     if (workers <= 0)
     {
@@ -100,7 +99,10 @@ ThreadPool::ThreadPool (int workers)
 // =========================================================================
 ThreadPool::~ThreadPool () noexcept
 {
-    _stop.store (true, std::memory_order_relaxed);
+    {
+        ScopedLock<Mutex> lock (_mutex);
+        _stop = true;
+    }
     _condition.broadcast ();
     _workers.clear ();
 }

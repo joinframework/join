@@ -116,6 +116,16 @@ target_link_libraries(rdtsc_stats.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME rdtsc_stats.gtest COMMAND rdtsc_stats.gtest)
 install(TARGETS rdtsc_stats.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(heap_mem.gtest heap_mem_test.cpp)
+target_link_libraries(heap_mem.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME heap_mem.gtest COMMAND heap_mem.gtest)
+install(TARGETS heap_mem.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(heap_bump.gtest heap_bump_test.cpp)
+target_link_libraries(heap_bump.gtest ${JOIN_CORE} GTest::gtest_main rt)
+add_test(NAME heap_bump.gtest COMMAND heap_bump.gtest)
+install(TARGETS heap_bump.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(local_mem.gtest local_mem_test.cpp)
 target_link_libraries(local_mem.gtest ${JOIN_CORE} GTest::gtest_main rt)
 add_test(NAME local_mem.gtest COMMAND local_mem.gtest)

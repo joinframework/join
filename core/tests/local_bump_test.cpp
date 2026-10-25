@@ -81,7 +81,14 @@ TEST (LocalBump, move)
     ASSERT_TRUE (plain3.hasBackend ());
     ASSERT_EQ (plain3.used (), 32);
     ASSERT_NE (plain3.allocate (32), nullptr);
-    ASSERT_EQ (plain3.allocate (1), nullptr);
+    ASSERT_NE (plain3.allocate (1), nullptr);
+    ASSERT_EQ (plain3.used (), 1);
+
+    LocalMem::BumpAllocator<64, BumpPlain>& self = plain3;
+    plain3 = std::move (self);
+
+    ASSERT_TRUE (plain3.hasBackend ());
+    ASSERT_EQ (plain3.used (), 1);
 }
 
 /**
@@ -145,7 +152,33 @@ TEST (LocalBump, allocate)
     ASSERT_EQ (u3 - u1, 64);
 
     ASSERT_NE (plain.allocate (176), nullptr);
-    ASSERT_EQ (plain.allocate (1), nullptr);
+    ASSERT_NE (plain.allocate (1), nullptr);
+    ASSERT_EQ (plain.used (), 1);
+
+    ASSERT_NE (plain.allocate (4096), nullptr);
+    ASSERT_EQ (plain.used (), 4096);
+
+    ASSERT_EQ (plain.allocate (SIZE_MAX / 2), nullptr);
+}
+
+/**
+ * @brief test deallocate.
+ */
+TEST (LocalBump, deallocate)
+{
+    LocalMem::BumpAllocator<64> allocator;
+
+    void* p1 = allocator.allocate (32);
+    ASSERT_NE (p1, nullptr);
+    allocator.deallocate (p1, 32);
+    ASSERT_EQ (allocator.used (), 32);
+
+    LocalMem::BumpAllocator<64, BumpPlain> plain;
+
+    void* u1 = plain.allocate (32);
+    ASSERT_NE (u1, nullptr);
+    plain.deallocate (u1, 32);
+    ASSERT_EQ (plain.used (), 32);
 }
 
 /**
@@ -165,13 +198,13 @@ TEST (LocalBump, reset)
 
     LocalMem::BumpAllocator<64, BumpPlain> plain;
 
-    void* u1 = plain.allocate (64);
+    ASSERT_NE (plain.allocate (64), nullptr);
+    void* u1 = plain.allocate (1);
     ASSERT_NE (u1, nullptr);
-    ASSERT_EQ (plain.allocate (1), nullptr);
 
     plain.reset ();
     ASSERT_EQ (plain.used (), 0);
-    ASSERT_EQ (plain.allocate (64), u1);
+    ASSERT_EQ (plain.allocate (1), u1);
 }
 
 /**
