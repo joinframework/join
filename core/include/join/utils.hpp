@@ -34,6 +34,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <utility>
 #include <chrono>
 #include <random>
 #include <limits>
@@ -64,6 +65,16 @@ namespace join
                 return ::strcasecmp (a.c_str (), b.c_str ()) < 0;
             }
         };
+    }
+
+    /**
+     * @brief throw an exception out of the hot path.
+     * @param args exception constructor arguments.
+     */
+    template <typename Exception, typename... Args>
+    [[noreturn]] __attribute__ ((cold, noinline)) void throwException (Args&&... args)
+    {
+        throw Exception (std::forward<Args> (args)...);
     }
 
     /**

@@ -31,6 +31,7 @@
 #include <join/sax.hpp>
 
 // C++.
+#include <string_view>
 #include <algorithm>
 #include <iterator>
 #include <utility>
@@ -215,19 +216,9 @@ namespace join
          * @param value string value to set.
          * @return 0 on success, -1 otherwise.
          */
-        int setString (const std::string& value)
+        int setString (std::string_view value)
         {
-            return emplaceValue (value);
-        }
-
-        /**
-         * @brief set string value.
-         * @param value string value to move.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setString (std::string&& value)
-        {
-            return emplaceValue (std::move (value));
+            return emplaceValue (std::string (value));
         }
 
         /**

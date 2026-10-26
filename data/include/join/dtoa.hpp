@@ -71,7 +71,16 @@ namespace join
             }
             else if ((0 < kk) && (kk <= 21))
             {
-                memmove (&buffer[kk + 1], &buffer[kk], length - kk);
+                if ((length - kk <= 16) && (kk <= 7))
+                {
+                    char tmp[16];
+                    memcpy (tmp, &buffer[kk], 16);
+                    memcpy (&buffer[kk + 1], tmp, 16);
+                }
+                else
+                {
+                    memmove (&buffer[kk + 1], &buffer[kk], length - kk);
+                }
                 buffer[kk] = '.';
                 return &buffer[length + 1];
             }
@@ -170,10 +179,8 @@ namespace join
                 delta *= 10;
                 unit *= 10;
                 char d = static_cast<char> (p2 >> -one._exponent);
-                if (d || length)
-                {
-                    buffer[length++] = '0' + d;
-                }
+                buffer[length] = '0' + d;
+                length += (d || length);
                 p2 &= one._mantissa - 1;
                 --kappa;
                 if (p2 < delta)

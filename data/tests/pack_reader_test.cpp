@@ -33,6 +33,8 @@
 // C++.
 #include <stdexcept>
 #include <sstream>
+#include <string>
+#include <vector>
 
 // C.
 #include <cmath>
@@ -53,10 +55,33 @@ using join::Document;
  */
 struct Throwing : public join::SaxHandler
 {
-    int setString (const std::string&)
+    int setString (std::string_view)
     {
         throw std::range_error ("user");
     }
+};
+
+/**
+ * @brief handler parsing the strings it receives as nested documents.
+ */
+struct Nested : public join::SaxHandler
+{
+    int setString (std::string_view value)
+    {
+        if (value.starts_with ('\x91'))
+        {
+            Nested inner;
+            if (PackReader ().deserialize (value.data (), value.size (), inner) == -1)
+            {
+                return -1;
+            }
+            strings.insert (strings.end (), inner.strings.begin (), inner.strings.end ());
+        }
+        strings.emplace_back (value);
+        return 0;
+    }
+
+    std::vector<std::string> strings;
 };
 
 /**
@@ -1306,6 +1331,13 @@ TEST (PackReader, str)
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "\xF0\x9D\x84\x9E");
+
+    Nested nested;
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xa4', '\x91', '\xa2', 'a', 'b'}), nested), 0)
+        << join::lastError.message ();
+    ASSERT_EQ (nested.strings.size (), 2);
+    EXPECT_EQ (nested.strings[0], "ab");
+    EXPECT_EQ (nested.strings[1], std::string ({'\x91', '\xa2', 'a', 'b'}));
 }
 
 /**
@@ -1393,6 +1425,14 @@ TEST (PackReader, bin)
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "\xF0\x9D\x84\x9E");
+
+    Nested nested;
+    ASSERT_EQ (
+        PackReader ().deserialize (std::string ({'\x91', '\xc4', '\x05', '\x91', '\xc4', '\x02', 'a', 'b'}), nested), 0)
+        << join::lastError.message ();
+    ASSERT_EQ (nested.strings.size (), 2);
+    EXPECT_EQ (nested.strings[0], "ab");
+    EXPECT_EQ (nested.strings[1], std::string ({'\x91', '\xc4', '\x02', 'a', 'b'}));
 }
 
 /**

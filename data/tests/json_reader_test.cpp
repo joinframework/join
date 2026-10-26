@@ -32,6 +32,8 @@
 // C++.
 #include <stdexcept>
 #include <sstream>
+#include <string>
+#include <vector>
 
 // C.
 #include <cmath>
@@ -67,6 +69,29 @@ struct FailingBuffer : public std::streambuf
 
     bool failed = false;
     std::string written;
+};
+
+/**
+ * @brief handler parsing the strings it receives as nested documents.
+ */
+struct Nested : public join::SaxHandler
+{
+    int setString (std::string_view value)
+    {
+        if (value.starts_with ('['))
+        {
+            Nested inner;
+            if (JsonReader ().deserialize (value.data (), value.size (), inner) == -1)
+            {
+                return -1;
+            }
+            strings.insert (strings.end (), inner.strings.begin (), inner.strings.end ());
+        }
+        strings.emplace_back (value);
+        return 0;
+    }
+
+    std::vector<std::string> strings;
 };
 
 /**
@@ -1443,6 +1468,24 @@ TEST (JsonReader, str)
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
     EXPECT_STREQ (value[0].getString ().c_str (), "/");
+
+    ASSERT_EQ (JsonReader ().deserialize (std::string ("[\"Hello\"]"), document), 0) << join::lastError.message ();
+    EXPECT_STREQ (value[0].getString ().c_str (), "Hello");
+
+    ASSERT_EQ (JsonReader ().deserialize (std::string ("{\"key\":\"Hello\\nWorld\"}"), document), 0)
+        << join::lastError.message ();
+    EXPECT_STREQ (value["key"].getString ().c_str (), "Hello\nWorld");
+
+    ASSERT_EQ (JsonReader ().deserialize (std::string ("[\"Hello"), document), -1);
+
+    ASSERT_EQ (JsonReader ().deserialize (std::string ("[\"Hello\x01World\"]"), document), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::IllegalCharacter);
+
+    Nested nested;
+    ASSERT_EQ (JsonReader ().deserialize (std::string (R"(["[\"x\\ny\"]"])"), nested), 0) << join::lastError.message ();
+    ASSERT_EQ (nested.strings.size (), 2);
+    EXPECT_EQ (nested.strings[0], "x\ny");
+    EXPECT_EQ (nested.strings[1], R"(["x\ny"])");
 }
 
 /**
@@ -1562,6 +1605,10 @@ TEST (JsonReader, encoding)
     EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
     ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (str.substr (0, 8) + "]", document), 0)
         << join::lastError.message ();
+
+    ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (std::string ("{\"\xFF\":1}"), document),
+               -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
 }
 
 /**

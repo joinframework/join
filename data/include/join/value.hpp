@@ -386,7 +386,7 @@ namespace join
                 }
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -460,7 +460,7 @@ namespace join
                 }
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -535,7 +535,7 @@ namespace join
                 }
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -609,7 +609,7 @@ namespace join
                 }
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1112,7 +1112,7 @@ namespace join
                     break;
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1137,7 +1137,7 @@ namespace join
                     break;
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1165,7 +1165,7 @@ namespace join
                     break;
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1192,7 +1192,7 @@ namespace join
                     break;
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1365,7 +1365,7 @@ namespace join
                     break;
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1398,7 +1398,7 @@ namespace join
                     break;
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1425,7 +1425,7 @@ namespace join
                 }
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1452,7 +1452,7 @@ namespace join
                 }
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1479,7 +1479,7 @@ namespace join
                 }
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1506,7 +1506,7 @@ namespace join
                 }
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /**
@@ -1533,7 +1533,7 @@ namespace join
                     break;
             }
 
-            throw std::bad_cast ();
+            throwException<std::bad_cast> ();
         }
 
         /// variant holding the value.
