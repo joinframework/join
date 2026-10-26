@@ -1868,7 +1868,7 @@ namespace join
                 if (JOIN_LIKELY (document.peek () == '"'))
                 {
                     document.get ();
-                    return isKey ? handler.setKey (Value (std::string (chunk))) : handler.setString (chunk);
+                    return isKey ? handler.setKey (Value (chunk)) : handler.setString (chunk);
                 }
             }
 

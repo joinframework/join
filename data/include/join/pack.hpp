@@ -433,25 +433,25 @@ namespace join
             }
             switch (key.index ())
             {
-                case Value::Boolean:
+                case Value::BooleanValue:
                     return setBool (key.getBool ());
 
-                case Value::Integer:
+                case Value::IntegerValue:
                     return setInt (key.getInt ());
 
-                case Value::Unsigned:
+                case Value::UnsignedValue:
                     return setUint (key.getUint ());
 
-                case Value::Integer64:
+                case Value::Integer64Value:
                     return setInt64 (key.getInt64 ());
 
-                case Value::Unsigned64:
+                case Value::Unsigned64Value:
                     return setUint64 (key.getUint64 ());
 
-                case Value::Real:
+                case Value::RealValue:
                     return setDouble (key.getDouble ());
 
-                case Value::String:
+                case Value::StringValue:
                     return setString (key.getString ());
 
                 default:

@@ -30,6 +30,7 @@
 #include <join/error.hpp>
 
 // C++.
+#include <string_view>
 #include <compare>
 #include <string>
 #include <vector>
@@ -68,16 +69,16 @@ namespace join
          */
         enum Index : size_t
         {
-            Null = 0,        /**< index of the std::nullptr_t alternative. */
-            Boolean = 1,     /**< index of the boolean alternative. */
-            Integer = 2,     /**< index of the 32 bits integer alternative. */
-            Unsigned = 3,    /**< index of the 32 bits unsigned integer alternative. */
-            Integer64 = 4,   /**< index of the 64 bits integer alternative. */
-            Unsigned64 = 5,  /**< index of the 64 bits unsigned integer alternative. */
-            Real = 6,        /**< index of the real alternative. */
-            String = 7,      /**< index of the std::string alternative. */
-            ArrayValue = 8,  /**< index of the Array alternative. */
-            ObjectValue = 9, /**< index of the Object alternative. */
+            NullValue = 0,       /**< index of the std::nullptr_t alternative. */
+            BooleanValue = 1,    /**< index of the boolean alternative. */
+            IntegerValue = 2,    /**< index of the 32 bits integer alternative. */
+            UnsignedValue = 3,   /**< index of the 32 bits unsigned integer alternative. */
+            Integer64Value = 4,  /**< index of the 64 bits integer alternative. */
+            Unsigned64Value = 5, /**< index of the 64 bits unsigned integer alternative. */
+            RealValue = 6,       /**< index of the real alternative. */
+            StringValue = 7,     /**< index of the std::string alternative. */
+            ArrayValue = 8,      /**< index of the Array alternative. */
+            ObjectValue = 9,     /**< index of the Object alternative. */
         };
 
         /**
@@ -90,7 +91,7 @@ namespace join
          * @param value null value.
          */
         constexpr Value (std::nullptr_t value)
-        : _data (std::in_place_index<Null>, value)
+        : _data (std::in_place_index<NullValue>, value)
         {
         }
 
@@ -99,7 +100,7 @@ namespace join
          * @param value boolean value.
          */
         constexpr Value (bool value)
-        : _data (std::in_place_index<Boolean>, value)
+        : _data (std::in_place_index<BooleanValue>, value)
         {
         }
 
@@ -108,7 +109,7 @@ namespace join
          * @param value integer value.
          */
         constexpr Value (int32_t value)
-        : _data (std::in_place_index<Integer>, value)
+        : _data (std::in_place_index<IntegerValue>, value)
         {
         }
 
@@ -117,7 +118,7 @@ namespace join
          * @param value unsigned integer value.
          */
         constexpr Value (uint32_t value)
-        : _data (std::in_place_index<Unsigned>, value)
+        : _data (std::in_place_index<UnsignedValue>, value)
         {
         }
 
@@ -126,7 +127,7 @@ namespace join
          * @param value 64 bits integer value.
          */
         constexpr Value (int64_t value)
-        : _data (std::in_place_index<Integer64>, value)
+        : _data (std::in_place_index<Integer64Value>, value)
         {
         }
 
@@ -135,7 +136,7 @@ namespace join
          * @param value 64 bits unsigned integer value.
          */
         constexpr Value (uint64_t value)
-        : _data (std::in_place_index<Unsigned64>, value)
+        : _data (std::in_place_index<Unsigned64Value>, value)
         {
         }
 
@@ -144,7 +145,7 @@ namespace join
          * @param value real value.
          */
         constexpr Value (double value)
-        : _data (std::in_place_index<Real>, value)
+        : _data (std::in_place_index<RealValue>, value)
         {
         }
 
@@ -153,7 +154,16 @@ namespace join
          * @param value string value.
          */
         Value (const char* value)
-        : _data (std::in_place_index<String>, value)
+        : _data (std::in_place_index<StringValue>, value)
+        {
+        }
+
+        /**
+         * @brief constructs a string value from a string view.
+         * @param value string value.
+         */
+        Value (std::string_view value)
+        : _data (std::in_place_index<StringValue>, value)
         {
         }
 
@@ -162,7 +172,7 @@ namespace join
          * @param value string value.
          */
         Value (const std::string& value)
-        : _data (std::in_place_index<String>, value)
+        : _data (std::in_place_index<StringValue>, value)
         {
         }
 
@@ -171,7 +181,7 @@ namespace join
          * @param value string value.
          */
         Value (std::string&& value)
-        : _data (std::in_place_index<String>, std::move (value))
+        : _data (std::in_place_index<StringValue>, std::move (value))
         {
         }
 
@@ -257,7 +267,7 @@ namespace join
          */
         constexpr bool isNull () const
         {
-            return _data.index () == Null;
+            return _data.index () == NullValue;
         }
 
         /**
@@ -266,7 +276,7 @@ namespace join
          */
         constexpr bool isBool () const
         {
-            return _data.index () == Boolean;
+            return _data.index () == BooleanValue;
         }
 
         /**
@@ -276,9 +286,9 @@ namespace join
          */
         constexpr bool getBool () const
         {
-            if (_data.index () == Boolean)
+            if (_data.index () == BooleanValue)
             {
-                return _data.get<Boolean> ();
+                return _data.get<BooleanValue> ();
             }
 
             return convertBool ();
@@ -320,8 +330,8 @@ namespace join
          */
         constexpr bool isNumber () const
         {
-            return _data.index () == Integer || _data.index () == Unsigned || _data.index () == Integer64 ||
-                   _data.index () == Unsigned64 || _data.index () == Real;
+            return _data.index () == IntegerValue || _data.index () == UnsignedValue ||
+                   _data.index () == Integer64Value || _data.index () == Unsigned64Value || _data.index () == RealValue;
         }
 
         /**
@@ -332,24 +342,24 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Integer:
-                    return _data.get<Integer> () >= static_cast<int32_t> (std::numeric_limits<int8_t>::min ()) &&
-                           _data.get<Integer> () <= static_cast<int32_t> (std::numeric_limits<int8_t>::max ());
+                case IntegerValue:
+                    return _data.get<IntegerValue> () >= static_cast<int32_t> (std::numeric_limits<int8_t>::min ()) &&
+                           _data.get<IntegerValue> () <= static_cast<int32_t> (std::numeric_limits<int8_t>::max ());
 
-                case Unsigned:
-                    return _data.get<Unsigned> () <= static_cast<uint32_t> (std::numeric_limits<int8_t>::max ());
+                case UnsignedValue:
+                    return _data.get<UnsignedValue> () <= static_cast<uint32_t> (std::numeric_limits<int8_t>::max ());
 
-                case Integer64:
-                    return _data.get<Integer64> () >= static_cast<int64_t> (std::numeric_limits<int8_t>::min ()) &&
-                           _data.get<Integer64> () <= static_cast<int64_t> (std::numeric_limits<int8_t>::max ());
+                case Integer64Value:
+                    return _data.get<Integer64Value> () >= static_cast<int64_t> (std::numeric_limits<int8_t>::min ()) &&
+                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<int8_t>::max ());
 
-                case Unsigned64:
-                    return _data.get<Unsigned64> () <= static_cast<uint64_t> (std::numeric_limits<int8_t>::max ());
+                case Unsigned64Value:
+                    return _data.get<Unsigned64Value> () <= static_cast<uint64_t> (std::numeric_limits<int8_t>::max ());
 
-                case Real:
-                    return std::trunc (_data.get<Real> ()) == _data.get<Real> () &&
-                           _data.get<Real> () >= static_cast<double> (std::numeric_limits<int8_t>::min ()) &&
-                           _data.get<Real> () <= static_cast<double> (std::numeric_limits<int8_t>::max ());
+                case RealValue:
+                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
+                           _data.get<RealValue> () >= static_cast<double> (std::numeric_limits<int8_t>::min ()) &&
+                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<int8_t>::max ());
 
                 default:
                     break;
@@ -369,20 +379,20 @@ namespace join
             {
                 switch (_data.index ())
                 {
-                    case Integer:
-                        return static_cast<int8_t> (_data.get<Integer> ());
+                    case IntegerValue:
+                        return static_cast<int8_t> (_data.get<IntegerValue> ());
 
-                    case Unsigned:
-                        return static_cast<int8_t> (_data.get<Unsigned> ());
+                    case UnsignedValue:
+                        return static_cast<int8_t> (_data.get<UnsignedValue> ());
 
-                    case Integer64:
-                        return static_cast<int8_t> (_data.get<Integer64> ());
+                    case Integer64Value:
+                        return static_cast<int8_t> (_data.get<Integer64Value> ());
 
-                    case Unsigned64:
-                        return static_cast<int8_t> (_data.get<Unsigned64> ());
+                    case Unsigned64Value:
+                        return static_cast<int8_t> (_data.get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<int8_t> (_data.get<Real> ());
+                        return static_cast<int8_t> (_data.get<RealValue> ());
                 }
             }
 
@@ -407,23 +417,25 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Integer:
-                    return _data.get<Integer> () >= 0 &&
-                           _data.get<Integer> () <= static_cast<int32_t> (std::numeric_limits<uint8_t>::max ());
+                case IntegerValue:
+                    return _data.get<IntegerValue> () >= 0 &&
+                           _data.get<IntegerValue> () <= static_cast<int32_t> (std::numeric_limits<uint8_t>::max ());
 
-                case Unsigned:
-                    return _data.get<Unsigned> () <= static_cast<uint32_t> (std::numeric_limits<uint8_t>::max ());
+                case UnsignedValue:
+                    return _data.get<UnsignedValue> () <= static_cast<uint32_t> (std::numeric_limits<uint8_t>::max ());
 
-                case Integer64:
-                    return _data.get<Integer64> () >= 0 &&
-                           _data.get<Integer64> () <= static_cast<int64_t> (std::numeric_limits<uint8_t>::max ());
+                case Integer64Value:
+                    return _data.get<Integer64Value> () >= 0 &&
+                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<uint8_t>::max ());
 
-                case Unsigned64:
-                    return _data.get<Unsigned64> () <= static_cast<uint64_t> (std::numeric_limits<uint8_t>::max ());
+                case Unsigned64Value:
+                    return _data.get<Unsigned64Value> () <=
+                           static_cast<uint64_t> (std::numeric_limits<uint8_t>::max ());
 
-                case Real:
-                    return std::trunc (_data.get<Real> ()) == _data.get<Real> () && _data.get<Real> () >= 0 &&
-                           _data.get<Real> () <= static_cast<double> (std::numeric_limits<uint8_t>::max ());
+                case RealValue:
+                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
+                           _data.get<RealValue> () >= 0 &&
+                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<uint8_t>::max ());
 
                 default:
                     break;
@@ -443,20 +455,20 @@ namespace join
             {
                 switch (_data.index ())
                 {
-                    case Integer:
-                        return static_cast<uint8_t> (_data.get<Integer> ());
+                    case IntegerValue:
+                        return static_cast<uint8_t> (_data.get<IntegerValue> ());
 
-                    case Unsigned:
-                        return static_cast<uint8_t> (_data.get<Unsigned> ());
+                    case UnsignedValue:
+                        return static_cast<uint8_t> (_data.get<UnsignedValue> ());
 
-                    case Integer64:
-                        return static_cast<uint8_t> (_data.get<Integer64> ());
+                    case Integer64Value:
+                        return static_cast<uint8_t> (_data.get<Integer64Value> ());
 
-                    case Unsigned64:
-                        return static_cast<uint8_t> (_data.get<Unsigned64> ());
+                    case Unsigned64Value:
+                        return static_cast<uint8_t> (_data.get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<uint8_t> (_data.get<Real> ());
+                        return static_cast<uint8_t> (_data.get<RealValue> ());
                 }
             }
 
@@ -481,24 +493,26 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Integer:
-                    return _data.get<Integer> () >= static_cast<int32_t> (std::numeric_limits<int16_t>::min ()) &&
-                           _data.get<Integer> () <= static_cast<int32_t> (std::numeric_limits<int16_t>::max ());
+                case IntegerValue:
+                    return _data.get<IntegerValue> () >= static_cast<int32_t> (std::numeric_limits<int16_t>::min ()) &&
+                           _data.get<IntegerValue> () <= static_cast<int32_t> (std::numeric_limits<int16_t>::max ());
 
-                case Unsigned:
-                    return _data.get<Unsigned> () <= static_cast<uint32_t> (std::numeric_limits<int16_t>::max ());
+                case UnsignedValue:
+                    return _data.get<UnsignedValue> () <= static_cast<uint32_t> (std::numeric_limits<int16_t>::max ());
 
-                case Integer64:
-                    return _data.get<Integer64> () >= static_cast<int64_t> (std::numeric_limits<int16_t>::min ()) &&
-                           _data.get<Integer64> () <= static_cast<int64_t> (std::numeric_limits<int16_t>::max ());
+                case Integer64Value:
+                    return _data.get<Integer64Value> () >=
+                               static_cast<int64_t> (std::numeric_limits<int16_t>::min ()) &&
+                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<int16_t>::max ());
 
-                case Unsigned64:
-                    return _data.get<Unsigned64> () <= static_cast<uint64_t> (std::numeric_limits<int16_t>::max ());
+                case Unsigned64Value:
+                    return _data.get<Unsigned64Value> () <=
+                           static_cast<uint64_t> (std::numeric_limits<int16_t>::max ());
 
-                case Real:
-                    return std::trunc (_data.get<Real> ()) == _data.get<Real> () &&
-                           _data.get<Real> () >= static_cast<double> (std::numeric_limits<int16_t>::min ()) &&
-                           _data.get<Real> () <= static_cast<double> (std::numeric_limits<int16_t>::max ());
+                case RealValue:
+                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
+                           _data.get<RealValue> () >= static_cast<double> (std::numeric_limits<int16_t>::min ()) &&
+                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<int16_t>::max ());
 
                 default:
                     break;
@@ -518,20 +532,20 @@ namespace join
             {
                 switch (_data.index ())
                 {
-                    case Integer:
-                        return static_cast<int16_t> (_data.get<Integer> ());
+                    case IntegerValue:
+                        return static_cast<int16_t> (_data.get<IntegerValue> ());
 
-                    case Unsigned:
-                        return static_cast<int16_t> (_data.get<Unsigned> ());
+                    case UnsignedValue:
+                        return static_cast<int16_t> (_data.get<UnsignedValue> ());
 
-                    case Integer64:
-                        return static_cast<int16_t> (_data.get<Integer64> ());
+                    case Integer64Value:
+                        return static_cast<int16_t> (_data.get<Integer64Value> ());
 
-                    case Unsigned64:
-                        return static_cast<int16_t> (_data.get<Unsigned64> ());
+                    case Unsigned64Value:
+                        return static_cast<int16_t> (_data.get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<int16_t> (_data.get<Real> ());
+                        return static_cast<int16_t> (_data.get<RealValue> ());
                 }
             }
 
@@ -556,23 +570,25 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Integer:
-                    return _data.get<Integer> () >= 0 &&
-                           _data.get<Integer> () <= static_cast<int32_t> (std::numeric_limits<uint16_t>::max ());
+                case IntegerValue:
+                    return _data.get<IntegerValue> () >= 0 &&
+                           _data.get<IntegerValue> () <= static_cast<int32_t> (std::numeric_limits<uint16_t>::max ());
 
-                case Unsigned:
-                    return _data.get<Unsigned> () <= static_cast<uint32_t> (std::numeric_limits<uint16_t>::max ());
+                case UnsignedValue:
+                    return _data.get<UnsignedValue> () <= static_cast<uint32_t> (std::numeric_limits<uint16_t>::max ());
 
-                case Integer64:
-                    return _data.get<Integer64> () >= 0 &&
-                           _data.get<Integer64> () <= static_cast<int64_t> (std::numeric_limits<uint16_t>::max ());
+                case Integer64Value:
+                    return _data.get<Integer64Value> () >= 0 &&
+                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<uint16_t>::max ());
 
-                case Unsigned64:
-                    return _data.get<Unsigned64> () <= static_cast<uint64_t> (std::numeric_limits<uint16_t>::max ());
+                case Unsigned64Value:
+                    return _data.get<Unsigned64Value> () <=
+                           static_cast<uint64_t> (std::numeric_limits<uint16_t>::max ());
 
-                case Real:
-                    return std::trunc (_data.get<Real> ()) == _data.get<Real> () && _data.get<Real> () >= 0 &&
-                           _data.get<Real> () <= static_cast<double> (std::numeric_limits<uint16_t>::max ());
+                case RealValue:
+                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
+                           _data.get<RealValue> () >= 0 &&
+                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<uint16_t>::max ());
 
                 default:
                     break;
@@ -592,20 +608,20 @@ namespace join
             {
                 switch (_data.index ())
                 {
-                    case Integer:
-                        return static_cast<uint16_t> (_data.get<Integer> ());
+                    case IntegerValue:
+                        return static_cast<uint16_t> (_data.get<IntegerValue> ());
 
-                    case Unsigned:
-                        return static_cast<uint16_t> (_data.get<Unsigned> ());
+                    case UnsignedValue:
+                        return static_cast<uint16_t> (_data.get<UnsignedValue> ());
 
-                    case Integer64:
-                        return static_cast<uint16_t> (_data.get<Integer64> ());
+                    case Integer64Value:
+                        return static_cast<uint16_t> (_data.get<Integer64Value> ());
 
-                    case Unsigned64:
-                        return static_cast<uint16_t> (_data.get<Unsigned64> ());
+                    case Unsigned64Value:
+                        return static_cast<uint16_t> (_data.get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<uint16_t> (_data.get<Real> ());
+                        return static_cast<uint16_t> (_data.get<RealValue> ());
                 }
             }
 
@@ -630,23 +646,25 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Integer:
+                case IntegerValue:
                     return true;
 
-                case Unsigned:
-                    return _data.get<Unsigned> () <= static_cast<uint32_t> (std::numeric_limits<int32_t>::max ());
+                case UnsignedValue:
+                    return _data.get<UnsignedValue> () <= static_cast<uint32_t> (std::numeric_limits<int32_t>::max ());
 
-                case Integer64:
-                    return _data.get<Integer64> () >= static_cast<int64_t> (std::numeric_limits<int32_t>::min ()) &&
-                           _data.get<Integer64> () <= static_cast<int64_t> (std::numeric_limits<int32_t>::max ());
+                case Integer64Value:
+                    return _data.get<Integer64Value> () >=
+                               static_cast<int64_t> (std::numeric_limits<int32_t>::min ()) &&
+                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<int32_t>::max ());
 
-                case Unsigned64:
-                    return _data.get<Unsigned64> () <= static_cast<uint64_t> (std::numeric_limits<int32_t>::max ());
+                case Unsigned64Value:
+                    return _data.get<Unsigned64Value> () <=
+                           static_cast<uint64_t> (std::numeric_limits<int32_t>::max ());
 
-                case Real:
-                    return std::trunc (_data.get<Real> ()) == _data.get<Real> () &&
-                           _data.get<Real> () >= static_cast<double> (std::numeric_limits<int32_t>::min ()) &&
-                           _data.get<Real> () <= static_cast<double> (std::numeric_limits<int32_t>::max ());
+                case RealValue:
+                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
+                           _data.get<RealValue> () >= static_cast<double> (std::numeric_limits<int32_t>::min ()) &&
+                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<int32_t>::max ());
 
                 default:
                     break;
@@ -662,9 +680,9 @@ namespace join
          */
         constexpr int32_t getInt () const
         {
-            if (_data.index () == Integer)
+            if (_data.index () == IntegerValue)
             {
-                return _data.get<Integer> ();
+                return _data.get<IntegerValue> ();
             }
 
             return convertInt ();
@@ -688,22 +706,24 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Integer:
-                    return _data.get<Integer> () >= 0;
+                case IntegerValue:
+                    return _data.get<IntegerValue> () >= 0;
 
-                case Unsigned:
+                case UnsignedValue:
                     return true;
 
-                case Integer64:
-                    return _data.get<Integer64> () >= 0 &&
-                           _data.get<Integer64> () <= static_cast<int64_t> (std::numeric_limits<uint32_t>::max ());
+                case Integer64Value:
+                    return _data.get<Integer64Value> () >= 0 &&
+                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<uint32_t>::max ());
 
-                case Unsigned64:
-                    return _data.get<Unsigned64> () <= static_cast<uint64_t> (std::numeric_limits<uint32_t>::max ());
+                case Unsigned64Value:
+                    return _data.get<Unsigned64Value> () <=
+                           static_cast<uint64_t> (std::numeric_limits<uint32_t>::max ());
 
-                case Real:
-                    return std::trunc (_data.get<Real> ()) == _data.get<Real> () && _data.get<Real> () >= 0 &&
-                           _data.get<Real> () <= static_cast<double> (std::numeric_limits<uint32_t>::max ());
+                case RealValue:
+                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
+                           _data.get<RealValue> () >= 0 &&
+                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<uint32_t>::max ());
 
                 default:
                     break;
@@ -719,9 +739,9 @@ namespace join
          */
         constexpr uint32_t getUint () const
         {
-            if (_data.index () == Unsigned)
+            if (_data.index () == UnsignedValue)
             {
-                return _data.get<Unsigned> ();
+                return _data.get<UnsignedValue> ();
             }
 
             return convertUint ();
@@ -745,18 +765,19 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Integer:
-                case Unsigned:
-                case Integer64:
+                case IntegerValue:
+                case UnsignedValue:
+                case Integer64Value:
                     return true;
 
-                case Unsigned64:
-                    return _data.get<Unsigned64> () <= static_cast<uint64_t> (std::numeric_limits<int64_t>::max ());
+                case Unsigned64Value:
+                    return _data.get<Unsigned64Value> () <=
+                           static_cast<uint64_t> (std::numeric_limits<int64_t>::max ());
 
-                case Real:
-                    return std::trunc (_data.get<Real> ()) == _data.get<Real> () &&
-                           _data.get<Real> () >= static_cast<double> (std::numeric_limits<int64_t>::min ()) &&
-                           _data.get<Real> () < static_cast<double> (std::numeric_limits<int64_t>::max ());
+                case RealValue:
+                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
+                           _data.get<RealValue> () >= static_cast<double> (std::numeric_limits<int64_t>::min ()) &&
+                           _data.get<RealValue> () < static_cast<double> (std::numeric_limits<int64_t>::max ());
 
                 default:
                     break;
@@ -772,9 +793,9 @@ namespace join
          */
         constexpr int64_t getInt64 () const
         {
-            if (_data.index () == Integer64)
+            if (_data.index () == Integer64Value)
             {
-                return _data.get<Integer64> ();
+                return _data.get<Integer64Value> ();
             }
 
             return convertInt64 ();
@@ -798,21 +819,22 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Integer:
-                    return _data.get<Integer> () >= 0;
+                case IntegerValue:
+                    return _data.get<IntegerValue> () >= 0;
 
-                case Unsigned:
+                case UnsignedValue:
                     return true;
 
-                case Integer64:
-                    return _data.get<Integer64> () >= 0;
+                case Integer64Value:
+                    return _data.get<Integer64Value> () >= 0;
 
-                case Unsigned64:
+                case Unsigned64Value:
                     return true;
 
-                case Real:
-                    return std::trunc (_data.get<Real> ()) == _data.get<Real> () && _data.get<Real> () >= 0 &&
-                           _data.get<Real> () < static_cast<double> (std::numeric_limits<uint64_t>::max ());
+                case RealValue:
+                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
+                           _data.get<RealValue> () >= 0 &&
+                           _data.get<RealValue> () < static_cast<double> (std::numeric_limits<uint64_t>::max ());
 
                 default:
                     break;
@@ -828,9 +850,9 @@ namespace join
          */
         constexpr uint64_t getUint64 () const
         {
-            if (_data.index () == Unsigned64)
+            if (_data.index () == Unsigned64Value)
             {
-                return _data.get<Unsigned64> ();
+                return _data.get<Unsigned64Value> ();
             }
 
             return convertUint64 ();
@@ -862,9 +884,9 @@ namespace join
          */
         constexpr float getFloat () const
         {
-            if (_data.index () == Real)
+            if (_data.index () == RealValue)
             {
-                return static_cast<float> (_data.get<Real> ());
+                return static_cast<float> (_data.get<RealValue> ());
             }
 
             return convertFloat ();
@@ -896,9 +918,9 @@ namespace join
          */
         constexpr double getDouble () const
         {
-            if (_data.index () == Real)
+            if (_data.index () == RealValue)
             {
-                return _data.get<Real> ();
+                return _data.get<RealValue> ();
             }
 
             return convertDouble ();
@@ -920,7 +942,7 @@ namespace join
          */
         constexpr bool isString () const
         {
-            return _data.index () == String;
+            return _data.index () == StringValue;
         }
 
         /**
@@ -930,7 +952,7 @@ namespace join
          */
         constexpr const std::string& getString () const
         {
-            return _data.get<String> ();
+            return _data.get<StringValue> ();
         }
 
         /**
@@ -940,7 +962,7 @@ namespace join
          */
         constexpr std::string& getString ()
         {
-            return _data.get<String> ();
+            return _data.get<StringValue> ();
         }
 
         /**
@@ -1072,7 +1094,7 @@ namespace join
                 return _data.get<ArrayValue> ()[key.getUint64 ()];
             }
 
-            if (_data.index () == Null)
+            if (_data.index () == NullValue)
             {
                 _data.set<ObjectValue> ();
             }
@@ -1099,8 +1121,8 @@ namespace join
         {
             switch (_data.index ())
             {
-                case String:
-                    return _data.get<String> ().empty ();
+                case StringValue:
+                    return _data.get<StringValue> ().empty ();
 
                 case ArrayValue:
                     return _data.get<ArrayValue> ().empty ();
@@ -1124,8 +1146,8 @@ namespace join
         {
             switch (_data.index ())
             {
-                case String:
-                    return _data.get<String> ().size ();
+                case StringValue:
+                    return _data.get<StringValue> ().size ();
 
                 case ArrayValue:
                     return _data.get<ArrayValue> ().size ();
@@ -1149,8 +1171,8 @@ namespace join
         {
             switch (_data.index ())
             {
-                case String:
-                    _data.get<String> ().reserve (cap);
+                case StringValue:
+                    _data.get<StringValue> ().reserve (cap);
                     return;
 
                 case ArrayValue:
@@ -1176,8 +1198,8 @@ namespace join
         {
             switch (_data.index ())
             {
-                case String:
-                    _data.get<String> ().clear ();
+                case StringValue:
+                    _data.get<StringValue> ().clear ();
                     return;
 
                 case ArrayValue:
@@ -1251,7 +1273,7 @@ namespace join
         template <typename... Args>
         Value& emplaceBack (Args&&... args)
         {
-            if (_data.index () == Null)
+            if (_data.index () == NullValue)
             {
                 _data.set<ArrayValue> ();
             }
@@ -1267,7 +1289,7 @@ namespace join
          */
         Value& pushBack (const Value& value)
         {
-            if (_data.index () == Null)
+            if (_data.index () == NullValue)
             {
                 _data.set<ArrayValue> ();
             }
@@ -1283,7 +1305,7 @@ namespace join
          */
         Value& pushBack (Value&& value)
         {
-            if (_data.index () == Null)
+            if (_data.index () == NullValue)
             {
                 _data.set<ArrayValue> ();
             }
@@ -1349,17 +1371,17 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Integer:
-                    return static_cast<float> (_data.get<Integer> ());
+                case IntegerValue:
+                    return static_cast<float> (_data.get<IntegerValue> ());
 
-                case Unsigned:
-                    return static_cast<float> (_data.get<Unsigned> ());
+                case UnsignedValue:
+                    return static_cast<float> (_data.get<UnsignedValue> ());
 
-                case Integer64:
-                    return static_cast<float> (_data.get<Integer64> ());
+                case Integer64Value:
+                    return static_cast<float> (_data.get<Integer64Value> ());
 
-                case Unsigned64:
-                    return static_cast<float> (_data.get<Unsigned64> ());
+                case Unsigned64Value:
+                    return static_cast<float> (_data.get<Unsigned64Value> ());
 
                 default:
                     break;
@@ -1376,23 +1398,23 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Null:
+                case NullValue:
                     return false;
 
-                case Integer:
-                    return _data.get<Integer> ();
+                case IntegerValue:
+                    return _data.get<IntegerValue> ();
 
-                case Unsigned:
-                    return _data.get<Unsigned> ();
+                case UnsignedValue:
+                    return _data.get<UnsignedValue> ();
 
-                case Integer64:
-                    return _data.get<Integer64> ();
+                case Integer64Value:
+                    return _data.get<Integer64Value> ();
 
-                case Unsigned64:
-                    return _data.get<Unsigned64> ();
+                case Unsigned64Value:
+                    return _data.get<Unsigned64Value> ();
 
-                case Real:
-                    return _data.get<Real> ();
+                case RealValue:
+                    return _data.get<RealValue> ();
 
                 default:
                     break;
@@ -1411,17 +1433,17 @@ namespace join
             {
                 switch (_data.index ())
                 {
-                    case Unsigned:
-                        return static_cast<int32_t> (_data.get<Unsigned> ());
+                    case UnsignedValue:
+                        return static_cast<int32_t> (_data.get<UnsignedValue> ());
 
-                    case Integer64:
-                        return static_cast<int32_t> (_data.get<Integer64> ());
+                    case Integer64Value:
+                        return static_cast<int32_t> (_data.get<Integer64Value> ());
 
-                    case Unsigned64:
-                        return static_cast<int32_t> (_data.get<Unsigned64> ());
+                    case Unsigned64Value:
+                        return static_cast<int32_t> (_data.get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<int32_t> (_data.get<Real> ());
+                        return static_cast<int32_t> (_data.get<RealValue> ());
                 }
             }
 
@@ -1438,17 +1460,17 @@ namespace join
             {
                 switch (_data.index ())
                 {
-                    case Integer:
-                        return static_cast<uint32_t> (_data.get<Integer> ());
+                    case IntegerValue:
+                        return static_cast<uint32_t> (_data.get<IntegerValue> ());
 
-                    case Integer64:
-                        return static_cast<uint32_t> (_data.get<Integer64> ());
+                    case Integer64Value:
+                        return static_cast<uint32_t> (_data.get<Integer64Value> ());
 
-                    case Unsigned64:
-                        return static_cast<uint32_t> (_data.get<Unsigned64> ());
+                    case Unsigned64Value:
+                        return static_cast<uint32_t> (_data.get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<uint32_t> (_data.get<Real> ());
+                        return static_cast<uint32_t> (_data.get<RealValue> ());
                 }
             }
 
@@ -1465,17 +1487,17 @@ namespace join
             {
                 switch (_data.index ())
                 {
-                    case Integer:
-                        return static_cast<int64_t> (_data.get<Integer> ());
+                    case IntegerValue:
+                        return static_cast<int64_t> (_data.get<IntegerValue> ());
 
-                    case Unsigned:
-                        return static_cast<int64_t> (_data.get<Unsigned> ());
+                    case UnsignedValue:
+                        return static_cast<int64_t> (_data.get<UnsignedValue> ());
 
-                    case Unsigned64:
-                        return static_cast<int64_t> (_data.get<Unsigned64> ());
+                    case Unsigned64Value:
+                        return static_cast<int64_t> (_data.get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<int64_t> (_data.get<Real> ());
+                        return static_cast<int64_t> (_data.get<RealValue> ());
                 }
             }
 
@@ -1492,17 +1514,17 @@ namespace join
             {
                 switch (_data.index ())
                 {
-                    case Integer:
-                        return static_cast<uint64_t> (_data.get<Integer> ());
+                    case IntegerValue:
+                        return static_cast<uint64_t> (_data.get<IntegerValue> ());
 
-                    case Unsigned:
-                        return static_cast<uint64_t> (_data.get<Unsigned> ());
+                    case UnsignedValue:
+                        return static_cast<uint64_t> (_data.get<UnsignedValue> ());
 
-                    case Integer64:
-                        return static_cast<uint64_t> (_data.get<Integer64> ());
+                    case Integer64Value:
+                        return static_cast<uint64_t> (_data.get<Integer64Value> ());
 
                     default:
-                        return static_cast<uint64_t> (_data.get<Real> ());
+                        return static_cast<uint64_t> (_data.get<RealValue> ());
                 }
             }
 
@@ -1517,17 +1539,17 @@ namespace join
         {
             switch (_data.index ())
             {
-                case Integer:
-                    return static_cast<double> (_data.get<Integer> ());
+                case IntegerValue:
+                    return static_cast<double> (_data.get<IntegerValue> ());
 
-                case Unsigned:
-                    return static_cast<double> (_data.get<Unsigned> ());
+                case UnsignedValue:
+                    return static_cast<double> (_data.get<UnsignedValue> ());
 
-                case Integer64:
-                    return static_cast<double> (_data.get<Integer64> ());
+                case Integer64Value:
+                    return static_cast<double> (_data.get<Integer64Value> ());
 
-                case Unsigned64:
-                    return static_cast<double> (_data.get<Unsigned64> ());
+                case Unsigned64Value:
+                    return static_cast<double> (_data.get<Unsigned64Value> ());
 
                 default:
                     break;
