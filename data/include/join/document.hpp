@@ -395,25 +395,25 @@ namespace join
         {
             switch (value.index ())
             {
-                case Value::Boolean:
+                case Value::BooleanValue:
                     return handler.setBool (value.getBool ());
 
-                case Value::Integer:
+                case Value::IntegerValue:
                     return handler.setInt (value.getInt ());
 
-                case Value::Unsigned:
+                case Value::UnsignedValue:
                     return handler.setUint (value.getUint ());
 
-                case Value::Integer64:
+                case Value::Integer64Value:
                     return handler.setInt64 (value.getInt64 ());
 
-                case Value::Unsigned64:
+                case Value::Unsigned64Value:
                     return handler.setUint64 (value.getUint64 ());
 
-                case Value::Real:
+                case Value::RealValue:
                     return handler.setDouble (value.getDouble ());
 
-                case Value::String:
+                case Value::StringValue:
                     return handler.setString (value.getString ());
 
                 case Value::ArrayValue:
